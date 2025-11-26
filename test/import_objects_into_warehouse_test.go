@@ -23,7 +23,7 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	defer c.Stop()
 
 	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummy, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -54,7 +54,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check if the profiles have been imported - and then returned - correctly.

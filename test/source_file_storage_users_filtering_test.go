@@ -31,7 +31,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
 	fs1 := c.CreateSourceFileSystem()
 
-	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
+	pipeline1 := c.CreatePipeline(fs1, "User", meergotester.PipelineToSet{
 		Name:    "CSV",
 		Enabled: true,
 		Path:    "users.csv",
@@ -65,7 +65,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecuteAction(action1)
+	exec1 := c.ExecutePipeline(pipeline1)
 
 	c.WaitForExecutionsCompletionAllowFailed(fs1, exec1)
 

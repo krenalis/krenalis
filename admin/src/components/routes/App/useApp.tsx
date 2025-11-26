@@ -19,11 +19,11 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
-import { hasFilters } from '../../../lib/core/action';
+import { hasFilters } from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
-import { ActionTarget } from '../../../lib/api/types/action';
+import { PipelineTarget } from '../../../lib/api/types/pipeline';
 import { IS_PASSWORDLESS_KEY, storageKeysToBeRemoved, WORKSPACE_ID_KEY } from '../../../constants/storage';
 
 const FILTER_STEP = 2;
@@ -50,11 +50,11 @@ const useApp = (
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
-	const executeActionButtonRefs = useRef<{
+	const executePipelineButtonRefs = useRef<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
-	const executeActionDropdownButtonRefs = useRef<{
+	const executePipelineDropdownButtonRefs = useRef<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
@@ -241,7 +241,7 @@ const useApp = (
 					c.name,
 					connector,
 					c.role,
-					c.actionsCount,
+					c.pipelinesCount,
 					c.health,
 					c.storage,
 					c.compression,
@@ -253,7 +253,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
-				transformedConnection.actionsInfo = c.actionsInfo;
+				transformedConnection.pipelinesInfo = c.pipelinesInfo;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -313,7 +313,7 @@ const useApp = (
 					c.name,
 					connector,
 					c.role,
-					c.actionsCount,
+					c.pipelinesCount,
 					c.health,
 					c.storage,
 					c.compression,
@@ -325,7 +325,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
-				transformedConnection.actionsInfo = c.actionsInfo;
+				transformedConnection.pipelinesInfo = c.pipelinesInfo;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -398,20 +398,24 @@ const useApp = (
 		}
 	}, [selectedWorkspace]);
 
-	const executeAction = async (connection: TransformedConnection, actionID: number, actionTarget: ActionTarget) => {
-		executeActionButtonRefs.current[actionID]?.current?.load();
-		executeActionDropdownButtonRefs.current[actionID]?.current?.load();
+	const executePipeline = async (
+		connection: TransformedConnection,
+		pipelineID: number,
+		pipelineTarget: PipelineTarget,
+	) => {
+		executePipelineButtonRefs.current[pipelineID]?.current?.load();
+		executePipelineDropdownButtonRefs.current[pipelineID]?.current?.load();
 		let executionID: number;
 		try {
-			executionID = await api.workspaces.connections.executeAction(actionID);
+			executionID = await api.workspaces.connections.executePipeline(pipelineID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				executeActionButtonRefs.current[actionID]?.current?.error(err.message);
-				executeActionDropdownButtonRefs.current[actionID]?.current?.error(err.message);
+				executePipelineButtonRefs.current[pipelineID]?.current?.error(err.message);
+				executePipelineDropdownButtonRefs.current[pipelineID]?.current?.error(err.message);
 				return;
 			}
-			executeActionButtonRefs.current[actionID]?.current?.stop();
-			executeActionDropdownButtonRefs.current[actionID]?.current?.error(err.message);
+			executePipelineButtonRefs.current[pipelineID]?.current?.stop();
+			executePipelineDropdownButtonRefs.current[pipelineID]?.current?.error(err.message);
 			handleError(err);
 			return;
 		}
@@ -432,27 +436,27 @@ const useApp = (
 
 		let link = `connections/${connection.id}/metrics`;
 		if (execution.error) {
-			link += `?failed-execution-action=${actionID}`;
+			link += `?failed-execution-pipeline=${pipelineID}`;
 		}
-		link += `?target=${actionTarget === 'Event' ? 'event' : 'user'}`;
+		link += `?target=${pipelineTarget === 'Event' ? 'event' : 'user'}`;
 		const metricsLink = (
-			<div className='connection-actions__link-to-metrics'>
+			<div className='connection-pipelines__link-to-metrics'>
 				Go to{' '}
 				<Link path={link}>
-					<span className='connection-actions__link'>Metrics</span>
+					<span className='connection-pipelines__link'>Metrics</span>
 				</Link>{' '}
 				for details.
 			</div>
 		);
 
 		if (execution.error !== '') {
-			executeActionButtonRefs.current[actionID]?.current?.error(
+			executePipelineButtonRefs.current[pipelineID]?.current?.error(
 				<>
 					{execution.error}
 					{metricsLink}
 				</>,
 			);
-			executeActionDropdownButtonRefs.current[actionID]?.current?.error(
+			executePipelineDropdownButtonRefs.current[pipelineID]?.current?.error(
 				<>
 					{execution.error}
 					{metricsLink}
@@ -464,10 +468,10 @@ const useApp = (
 		const passed = execution.passed[5];
 		const failed = execution.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
 
-		const action = connection.actions.find((a) => a.id === actionID);
+		const pipeline = connection.pipelines.find((p) => p.id === pipelineID);
 
 		let filteredItem: ReactNode;
-		if (hasFilters(connection, action.target)) {
+		if (hasFilters(connection, pipeline.target)) {
 			const filtered = execution.failed[FILTER_STEP];
 			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
 		}
@@ -477,8 +481,8 @@ const useApp = (
 		const executed = connection.isSource ? 'imported' : 'exported';
 
 		const infoMessage = (
-			<div className='connection-actions__execution-info'>
-				<div className='connection-actions__execution-info-title'>
+			<div className='connection-pipelines__execution-info'>
+				<div className='connection-pipelines__execution-info-title'>
 					{connection.isSource ? 'Import' : 'Export'} completed
 				</div>
 				<ul>
@@ -493,8 +497,8 @@ const useApp = (
 				{metricsLink}
 			</div>
 		);
-		executeActionButtonRefs.current[actionID]?.current?.info(infoMessage);
-		executeActionDropdownButtonRefs.current[actionID]?.current?.info(infoMessage);
+		executePipelineButtonRefs.current[pipelineID]?.current?.info(infoMessage);
+		executePipelineDropdownButtonRefs.current[pipelineID]?.current?.info(infoMessage);
 	};
 
 	return {
@@ -511,9 +515,9 @@ const useApp = (
 		selectedWorkspace,
 		setSelectedWorkspace,
 		api,
-		executeAction,
-		executeActionButtonRefs,
-		executeActionDropdownButtonRefs,
+		executePipeline,
+		executePipelineButtonRefs,
+		executePipelineDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
 		publicMetadata,

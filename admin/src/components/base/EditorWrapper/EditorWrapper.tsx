@@ -23,7 +23,7 @@ interface EditorWrapperProps {
 	languageChoices?: string[];
 	onLanguageChange?: (e) => void;
 	languageDropdownRef?: any;
-	actions?: ReactNode;
+	pipelines?: ReactNode;
 	width?: number;
 	height?: number;
 	name: string;
@@ -42,7 +42,7 @@ const EditorWrapper = ({
 	languageChoices,
 	onLanguageChange,
 	languageDropdownRef,
-	actions,
+	pipelines,
 	width,
 	height,
 	name,

@@ -78,7 +78,7 @@ func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 	var b strings.Builder
 	b.WriteString(`CREATE TABLE IF NOT EXISTS "_IDENTITIES" (
 		"__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
-		"__ACTION__" INT NOT NULL,
+		"__PIPELINE__" INT NOT NULL,
 		"__IS_ANONYMOUS__" BOOLEAN NOT NULL DEFAULT FALSE,
 		"__IDENTITY_ID__" VARCHAR NOT NULL,
 		"__CONNECTION__" INT NOT NULL,

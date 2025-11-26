@@ -59,26 +59,26 @@ var storageTimeout = 10 * time.Second
 type File struct {
 	connector   string
 	state       *state.State
-	action      *state.Action
+	pipeline    *state.Pipeline
 	timeLayouts *state.TimeLayouts
 	inner       any
 	err         error
 }
 
-// File returns a file for the provided action.
+// File returns a file for the provided pipeline.
 // Errors are deferred until a file's method is called.
-func (c *Connections) File(action *state.Action) *File {
-	format := action.Format()
-	connection := action.Connection()
+func (c *Connections) File(pipeline *state.Pipeline) *File {
+	format := pipeline.Format()
+	connection := pipeline.Connection()
 	file := &File{
 		connector:   connection.Connector().Code,
 		state:       c.state,
-		action:      action,
+		pipeline:    pipeline,
 		timeLayouts: &format.TimeLayouts,
 	}
 	file.inner, file.err = connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
-		Settings:    action.FormatSettings,
-		SetSettings: setActionSettingsFunc(c.state, action),
+		Settings:    pipeline.FormatSettings,
+		SetSettings: setPipelineSettingsFunc(c.state, pipeline),
 	})
 	file.err = connectorError(file.err)
 	return file
@@ -96,54 +96,54 @@ func (file *File) Connector() string {
 // file must support reading of records, otherwise this method panics.
 //
 // Each returned record contains, in its Attributes field, the properties of the
-// action's input schema with the same types.
+// pipeline's input schema with the same types.
 //
-// If the action's input schema does not align with the file's schema, the
+// If the pipeline's input schema does not align with the file's schema, the
 // iterator, not Records, will return a *schemas.Error error.
 //
-// If the identity column specified in the action exists in the file schema but
+// If the identity column specified in the pipeline exists in the file schema but
 // its type differs, the iterator returns an error. The same applies to the last
 // change time column, if specified.
 //
-// If the action's sheet is not found in the file, the All method of the
+// If the pipeline's sheet is not found in the file, the All method of the
 // iterator returns immediately and a subsequent call to Err returns
 // connectors.ErrSheetNotExist. The same happens if the file has no columns; in
 // that case Err returns ErrNoColumnsFound.
 //
-// It returns an error if a non-zero starting time is provided and the action
+// It returns an error if a non-zero starting time is provided and the pipeline
 // has no last change property.
 func (file *File) Records(ctx context.Context, startTime time.Time) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
-	if !startTime.IsZero() && file.action.LastChangeTimeColumn == "" {
-		return nil, fmt.Errorf("a start time has been provided, but the action does not have the last change property")
+	if !startTime.IsZero() && file.pipeline.LastChangeTimeColumn == "" {
+		return nil, fmt.Errorf("a start time has been provided, but the pipeline does not have the last change property")
 	}
 	storage, err := file.storage()
 	if err != nil {
 		return nil, err
 	}
-	s := newCompressedStorage(storage, file.action.Compression)
-	rc, storageLastChangeTime, err := s.Reader(ctx, file.action.Path)
+	s := newCompressedStorage(storage, file.pipeline.Compression)
+	rc, storageLastChangeTime, err := s.Reader(ctx, file.pipeline.Path)
 	if err != nil {
 		return nil, err
 	}
 	if err = validateLastChangeTime(storageLastChangeTime); err != nil {
 		return nil, fmt.Errorf("invalid last change time returned by the storage: %s", err)
 	}
-	rw := newRecordWriter(file.action.Format().Code, file.action,
+	rw := newRecordWriter(file.pipeline.Format().Code, file.pipeline,
 		storageLastChangeTime, file.timeLayouts, startTime, math.MaxInt)
 	records := &fileRecords{
 		rw:    rw,
 		rc:    rc,
-		sheet: file.action.Sheet,
+		sheet: file.pipeline.Sheet,
 		inner: file.inner.(fileReadConnection),
 	}
 	return records, nil
 }
 
 // Writer returns a Writer for writing records into the file located at the path
-// of the file's action. schema contains the properties of the records to be
+// of the file's pipeline. schema contains the properties of the records to be
 // written.
 //
 // This method panics if either the FileStorage or the file does not support
@@ -161,9 +161,9 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 	if err != nil {
 		return nil, err
 	}
-	s := newCompressedStorage(storage, file.action.Compression)
-	extension := file.action.Format().FileExtension
-	path := file.action.Path
+	s := newCompressedStorage(storage, file.pipeline.Compression)
+	extension := file.pipeline.Format().FileExtension
+	path := file.pipeline.Path
 	if pathReplacer != nil {
 		var err error
 		path, err = ReplacePlaceholders(path, pathReplacer)
@@ -180,9 +180,9 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 	writeCtx, cancelWrite := context.WithCancel(context.Background())
 	// Call the connector's Write method in its own goroutine.
 	go func() {
-		columns := file.action.InSchema.Properties().Slice()
+		columns := file.pipeline.InSchema.Properties().Slice()
 		r := newRecordReader(columns, records)
-		err = file.inner.(fileWriteConnection).Write(writeCtx, sw, file.action.Sheet, r)
+		err = file.inner.(fileWriteConnection).Write(writeCtx, sw, file.pipeline.Sheet, r)
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
 		}
@@ -198,8 +198,8 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 
 // storage returns the inner storage connection of the file.
 func (file *File) storage() (any, error) {
-	conn := file.action.Connection()
-	connector := file.action.Connection().Connector()
+	conn := file.pipeline.Connection()
+	connector := file.pipeline.Connection().Connector()
 	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
@@ -597,10 +597,10 @@ func (rr *recordReader) Record(ctx context.Context) (map[string]any, error) {
 // property.
 //
 // The close method should be called when there are no more records to write.
-func newRecordWriter(format string, action *state.Action, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
+func newRecordWriter(format string, pipeline *state.Pipeline, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
 		format:                format,
-		action:                action,
+		pipeline:              pipeline,
 		storageLastChangeTime: storageLastChangeTime,
 		timeLayouts:           layout,
 		startTime:             startTime,
@@ -614,7 +614,7 @@ func newRecordWriter(format string, action *state.Action, storageLastChangeTime 
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
 	format                 string
-	action                 *state.Action
+	pipeline               *state.Pipeline
 	storageLastChangeTime  time.Time
 	timeLayouts            *state.TimeLayouts
 	startTime              time.Time
@@ -622,7 +622,7 @@ type recordWriter struct {
 	identityColumnIndex    int
 	lastChangeTimeIndex    int
 	numPropertiesPerRecord int
-	properties             []types.Property // properties of the action's schema, or the file's columns if an action has not been provided
+	properties             []types.Property // properties of the pipeline's schema, or the file's columns if a pipeline has not been provided
 	issues                 []string
 	record                 Record
 	yield                  func(Record) bool
@@ -642,15 +642,15 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	if err != nil {
 		return connectorError(rewriteColumnErrors(err))
 	}
-	if rw.action == nil {
+	if rw.pipeline == nil {
 		rw.properties = columns
 	} else {
-		// Check that the action's input schema is aligned with the file's schema.
-		err := schemas.CheckAlignment(rw.action.InSchema, fileSchema, nil)
+		// Check that the pipeline's input schema is aligned with the file's schema.
+		err := schemas.CheckAlignment(rw.pipeline.InSchema, fileSchema, nil)
 		if err != nil {
 			return err
 		}
-		inSchemaProperties := rw.action.InSchema.Properties()
+		inSchemaProperties := rw.pipeline.InSchema.Properties()
 		rw.properties = make([]types.Property, len(columns))
 		for i, c := range columns {
 			p, ok := inSchemaProperties.ByName(c.Name)
@@ -658,19 +658,19 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 				continue
 			}
 			rw.properties[i] = p
-			if p.Name == rw.action.IdentityColumn {
+			if p.Name == rw.pipeline.IdentityColumn {
 				rw.identityColumnIndex = i
 			}
-			if p.Name == rw.action.LastChangeTimeColumn {
+			if p.Name == rw.pipeline.LastChangeTimeColumn {
 				rw.lastChangeTimeIndex = i
 			}
 			rw.numPropertiesPerRecord++
 		}
-		if rw.action.IdentityColumn != "" && rw.identityColumnIndex == -1 {
-			return fmt.Errorf("there is no identity column %q", rw.action.IdentityColumn)
+		if rw.pipeline.IdentityColumn != "" && rw.identityColumnIndex == -1 {
+			return fmt.Errorf("there is no identity column %q", rw.pipeline.IdentityColumn)
 		}
-		if rw.action.LastChangeTimeColumn != "" && rw.lastChangeTimeIndex == -1 {
-			return fmt.Errorf("there is no last change time column %q", rw.action.LastChangeTimeColumn)
+		if rw.pipeline.LastChangeTimeColumn != "" && rw.lastChangeTimeIndex == -1 {
+			return fmt.Errorf("there is no last change time column %q", rw.pipeline.LastChangeTimeColumn)
 		}
 	}
 	if rw.limit == 0 {
@@ -696,7 +696,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.pipeline.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t
@@ -770,7 +770,7 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.pipeline.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t
@@ -845,7 +845,7 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.pipeline.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t

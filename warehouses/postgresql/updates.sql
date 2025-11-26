@@ -23,3 +23,6 @@ ALTER TABLE _identities RENAME TO meergo_identities;
 ALTER TABLE _profiles_3 RENAME TO meergo_profiles_3;
 ALTER TYPE _operation RENAME TO system_operation_type;
 CREATE VIEW events AS SELECT * FROM meergo_events;
+
+ALTER TABLE meergo_destination_profiles RENAME COLUMN __action__ TO __pipeline__;
+ALTER TABLE meergo_identities RENAME COLUMN __action__ TO __pipeline__;

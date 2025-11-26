@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	ActionDisabled                errors.Code = "ActionDisabled"
 	AlterSchemaInExecution        errors.Code = "AlterSchemaInExecution"
 	AuthenticationFailed          errors.Code = "AuthenticationFailed"
 	CannotExecuteIncrementally    errors.Code = "CannotExecuteIncrementally"
@@ -24,10 +23,10 @@ const (
 	FormatNotExist                errors.Code = "FormatNotExist"
 	IdentityResolutionInExecution errors.Code = "IdentityResolutionInExecution"
 	InspectionMode                errors.Code = "InspectionMode"
+	InvalidAlterSchema            errors.Code = "InvalidAlterSchema"
 	InvalidEvent                  errors.Code = "InvalidEvent"
 	InvalidPath                   errors.Code = "InvalidPath"
 	InvalidPlaceholder            errors.Code = "InvalidPlaceholder"
-	InvalidAlterSchema            errors.Code = "InvalidAlterSchema"
 	InvalidSettings               errors.Code = "InvalidSettings"
 	InvalidWarehouseSettings      errors.Code = "InvalidWarehouseSettings"
 	InvitationTokenExpired        errors.Code = "InvitationTokenExpired"
@@ -40,6 +39,7 @@ const (
 	OrderNotExist                 errors.Code = "OrderNotExist"
 	OrderTypeNotSortable          errors.Code = "OrderTypeNotSortable"
 	OrganizationNotExist          errors.Code = "OrganizationNotExist"
+	PipelineDisabled              errors.Code = "PipelineDisabled"
 	PropertyNotExist              errors.Code = "PropertyNotExist"
 	SchemaNotAligned              errors.Code = "SchemaNotAligned"
 	SheetNotExist                 errors.Code = "SheetNotExist"
@@ -50,7 +50,7 @@ const (
 	TransformationFailed          errors.Code = "TransformationFailed"
 	TypeNotAllowed                errors.Code = "TypeNotAllowed"
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
-	WarehouseNonInitializable     errors.Code = "WarehouseNonInitializable"
 	WarehouseDriverNotExist       errors.Code = "WarehouseDriverNotExist"
+	WarehouseNonInitializable     errors.Code = "WarehouseNonInitializable"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
 )

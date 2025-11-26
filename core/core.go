@@ -45,19 +45,19 @@ import (
 )
 
 type Core struct {
-	db               *db.DB
-	dbPoolMetrics    *dbPoolMetrics
-	state            *state.State
-	datastore        *datastore.Datastore
-	connections      *connections.Connections
-	metrics          *coremetrics.Collector
-	collector        *collector.Collector
-	functionProvider transformers.FunctionProvider
-	actionCleaner    *actionCleaner
-	actionScheduler  *actionScheduler
-	memberEmailFrom  string
-	smtp             *SMTPConfig
-	close            struct {
+	db                *db.DB
+	dbPoolMetrics     *dbPoolMetrics
+	state             *state.State
+	datastore         *datastore.Datastore
+	connections       *connections.Connections
+	metrics           *coremetrics.Collector
+	collector         *collector.Collector
+	functionProvider  transformers.FunctionProvider
+	pipelineCleaner   *pipelineCleaner
+	pipelineScheduler *pipelineScheduler
+	memberEmailFrom   string
+	smtp              *SMTPConfig
+	close             struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		sync.WaitGroup
@@ -241,11 +241,11 @@ func New(conf *Config) (*Core, error) {
 		return nil, err
 	}
 
-	// Create the action cleaner.
-	core.actionCleaner = newActionCleaner(core, core.functionProvider)
+	// Create the pipeline cleaner.
+	core.pipelineCleaner = newPipelineCleaner(core, core.functionProvider)
 
-	// Create the action scheduler.
-	core.actionScheduler = newActionScheduler(core)
+	// Create the pipeline scheduler.
+	core.pipelineScheduler = newPipelineScheduler(core)
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 
@@ -264,17 +264,17 @@ func New(conf *Config) (*Core, error) {
 	core.state.AddListener(core.onCreateWorkspace)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
-	core.state.AddListener(core.onExecuteAction)
+	core.state.AddListener(core.onExecutePipeline)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
-	// Try to start pending action executions.
-	for _, action := range core.state.Actions() {
-		if exe, ok := action.Execution(); ok {
+	// Try to start pending pipeline executions.
+	for _, pipeline := range core.state.Pipelines() {
+		if exe, ok := pipeline.Execution(); ok {
 			if _, ok := exe.Node(); !ok {
-				core.tryStartActionExecution(action.ID)
+				core.tryStartPipelineExecution(pipeline.ID)
 			}
 		}
 	}
@@ -410,14 +410,14 @@ func (core *Core) Close() {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel the execution of actions initiated via API.
+	// Cancel the execution of pipelines initiated via API.
 	core.close.cancelCtx()
-	// Close the action scheduler.
-	core.actionScheduler.Close()
-	// Wait for the completion of actions initiated via API.
+	// Close the pipeline scheduler.
+	core.pipelineScheduler.Close()
+	// Wait for the completion of pipelines initiated via API.
 	core.close.Wait()
-	// Close the action cleaner.
-	core.actionCleaner.Close(context.Background())
+	// Close the pipeline cleaner.
+	core.pipelineCleaner.Close(context.Background())
 	// Close the MCP warehouse connections.
 	core.mcpMu.Lock()
 	for _, mcp := range core.mcp {
@@ -830,7 +830,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	action := &state.Action{
+	pipeline := &state.Pipeline{
 		InSchema:  inSchema,
 		OutSchema: outSchema,
 		Transformation: state.Transformation{
@@ -848,8 +848,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
-		action.Transformation.InPaths = mapping.InPaths()
-		action.Transformation.OutPaths = mapping.OutPaths()
+		pipeline.Transformation.InPaths = mapping.InPaths()
+		pipeline.Transformation.OutPaths = mapping.OutPaths()
 	case transformation.Function != nil:
 		if transformation.Function.Source == "" {
 			return nil, errors.BadRequest("function source is empty")
@@ -868,23 +868,23 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		default:
 			return nil, errors.BadRequest("function language %q is not valid", transformation.Function.Language)
 		}
-		action.Transformation.Function = &state.TransformationFunction{
+		pipeline.Transformation.Function = &state.TransformationFunction{
 			Source:  transformation.Function.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary function.
 		}
 		name := transformationFunctionName(0)
 		switch transformation.Function.Language {
 		case "JavaScript":
-			action.Transformation.Function.Language = state.JavaScript
+			pipeline.Transformation.Function.Language = state.JavaScript
 		case "Python":
-			action.Transformation.Function.Language = state.Python
+			pipeline.Transformation.Function.Language = state.Python
 		}
-		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
+		pipeline.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 		// In InPaths and OutPaths, list only top-level property names; there is
 		// no need to list sub-property paths (as the behavior is the same).
-		action.Transformation.InPaths = action.InSchema.Properties().SortedNames()
-		action.Transformation.OutPaths = action.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, core.functionProvider)
+		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
+		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
+		provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
@@ -895,7 +895,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(action, provider, nil)
+	transformer, err := transformers.New(pipeline, provider, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -978,42 +978,42 @@ func (core *Core) mustBeOpen() {
 	}
 }
 
-// onExecuteAction is called when an action is executed.
-func (core *Core) onExecuteAction(n state.ExecuteAction) {
-	core.tryStartActionExecution(n.Action)
+// onExecutePipeline is called when a pipeline is executed.
+func (core *Core) onExecutePipeline(n state.ExecutePipeline) {
+	core.tryStartPipelineExecution(n.Pipeline)
 }
 
-// actionError represents an action error.
-type actionError struct {
+// pipelineError represents a pipeline error.
+type pipelineError struct {
 	step coremetrics.Step
 	err  error
 }
 
-func newActionError(step coremetrics.Step, err error) *actionError {
-	return &actionError{step, err}
+func newPipelineError(step coremetrics.Step, err error) *pipelineError {
+	return &pipelineError{step, err}
 }
 
-func (err actionError) Error() string {
+func (err pipelineError) Error() string {
 	return err.err.Error()
 }
 
-// tryStartActionExecution attempts to start an action execution.
+// tryStartPipelineExecution attempts to start a pipeline execution.
 // It returns immediately and spawns a new goroutine to handle the execution.
-func (core *Core) tryStartActionExecution(actionID int) {
+func (core *Core) tryStartPipelineExecution(pipelineID int) {
 
 	core.close.Go(func() {
 
 		ctx := core.close.ctx
 
-		var action *state.Action
-		var execution *state.ActionExecution
+		var pipeline *state.Pipeline
+		var execution *state.PipelineExecution
 
 		var ok bool
-		action, ok = core.state.Action(actionID)
+		pipeline, ok = core.state.Pipeline(pipelineID)
 		if !ok {
 			return
 		}
-		execution, ok = action.Execution()
+		execution, ok = pipeline.Execution()
 		if !ok {
 			return
 		}
@@ -1026,7 +1026,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		for bo.Next(ctx) {
 			var node uuid.UUID
 			err := core.db.QueryRow(core.close.ctx,
-				"UPDATE actions_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
+				"UPDATE pipelines_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
 				core.state.ID(), execution.ID).Scan(&node)
 			if err != nil {
 				if err == sql.ErrNoRows {
@@ -1037,7 +1037,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start action execution, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error(fmt.Sprintf("core: cannot start pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
 			if node != core.state.ID() {
@@ -1059,9 +1059,9 @@ func (core *Core) tryStartActionExecution(actionID int) {
 				select {
 				case <-ticker.C:
 					pingTime := time.Now().UTC()
-					_, err := core.db.Exec(pingCtx, "UPDATE actions_executions SET ping_time = $1 WHERE id = $2", pingTime, id)
+					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_executions SET ping_time = $1 WHERE id = $2", pingTime, id)
 					if err != nil && pingCtx.Err() == nil {
-						slog.Error("core: cannot update action execution ping time", "err", err)
+						slog.Error("core: cannot update pipeline execution ping time", "err", err)
 					}
 				case <-pingCtx.Done():
 					return
@@ -1075,7 +1075,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
-				// If statistics from previous executions of the same action are available,
+				// If statistics from previous executions of the same pipeline are available,
 				// they are subtracted from the current execution's statistics. This ensures
 				// that when all slot statistics are merged into those of this execution,
 				// the resulting data will be accurate and consistent.
@@ -1083,15 +1083,15 @@ func (core *Core) tryStartActionExecution(actionID int) {
 					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
 					" -passed_4 as passed_4, -passed_5 as passed_5, -failed_0 as failed_0, -failed_1 as failed_1,"+
 					" -failed_2 as failed_2, -failed_3 as failed_3, -failed_4 as failed_4, -failed_5 as failed_5\n"+
-					"	FROM actions_metrics\n"+
-					"	WHERE action = $2 AND timeslot = $3\n"+
+					"	FROM pipelines_metrics\n"+
+					"	WHERE pipeline = $2 AND timeslot = $3\n"+
 					")\n"+
-					"UPDATE actions_executions\n"+
+					"UPDATE pipelines_executions\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
 					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
 					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", execution.ID, action.ID, timeSlot)
+					"WHERE id = $1", execution.ID, pipeline.ID, timeSlot)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					// The execution no longer exists.
@@ -1101,7 +1101,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start action execution, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error(fmt.Sprintf("core: cannot start pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
 			break
@@ -1113,21 +1113,21 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		}
 
 		// Starts the execution.
-		c := action.Connection()
+		c := pipeline.Connection()
 		ws := c.Workspace()
 		store := core.datastore.Store(ws.ID)
 		connection := &Connection{core: core, store: store, connection: c}
-		a := &Action{core: core, action: action, connection: connection}
+		p := &Pipeline{core: core, pipeline: pipeline, connection: connection}
 
 		var err error
 		if c.Role == state.Source {
-			err = a.importUsers(ctx)
+			err = p.importUsers(ctx)
 		} else {
-			err = a.exportProfiles(ctx)
+			err = p.exportProfiles(ctx)
 		}
 
 		// Mark the execution as ended.
-		a.endExecution(err)
+		p.endExecution(err)
 
 		// Stop pinging as it is no longer required.
 		stopPing()
@@ -1139,7 +1139,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
 				} else {
-					slog.Error("core: cannot start Identity Resolution at the end of import", "action", action.ID, "execution", execution.ID, "err", err)
+					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "execution", execution.ID, "err", err)
 				}
 			}
 		}

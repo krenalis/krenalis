@@ -186,7 +186,7 @@ type Warehouse interface {
 	// ones. columns are the columns whose values are present in the rows and
 	// contain at least the columns:
 	//
-	//   __action__
+	//   __pipeline__
 	//   __is_anonymous__
 	//   __identity_id__
 	//   __connection__
@@ -274,9 +274,9 @@ type Warehouse interface {
 	Truncate(ctx context.Context, table string) error
 
 	// UnsetIdentityColumns unsets values for the specified identity columns for the
-	// given action. columns must not be empty. If the provided action does not
+	// given pipeline. columns must not be empty. If the provided pipeline does not
 	// exist, it does nothing.
-	UnsetIdentityColumns(ctx context.Context, action int, columns []Column) error
+	UnsetIdentityColumns(ctx context.Context, pipeline int, columns []Column) error
 }
 
 // Table represents a database table.

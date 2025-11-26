@@ -14,7 +14,7 @@ import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
 import appContext from '../../../context/AppContext';
 import { debounceWithAbort } from '../../../utils/debounce';
 import ConnectionContext from '../../../context/ConnectionContext';
-import actionContext from '../../../context/ActionContext';
+import pipelineContext from '../../../context/PipelineContext';
 import Type from '../../../lib/api/types/types';
 
 const CONSTANT_REGEX = /"([^"]*)"/;
@@ -85,7 +85,7 @@ const Combobox = ({
 
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
-	const { actionType } = useContext(actionContext);
+	const { pipelineType } = useContext(pipelineContext);
 
 	useLayoutEffect(() => {
 		setIsErrorExpanded(false);
@@ -315,13 +315,13 @@ const Combobox = ({
 	}, []);
 
 	const validateExpression = async (name: string, value: string, signal: AbortSignal) => {
-		if (!isExpression || connection == null || type == null || actionType == null) {
+		if (!isExpression || connection == null || type == null || pipelineType == null) {
 			return;
 		}
 		let errorMessage = '';
 		if (value !== '') {
 			try {
-				errorMessage = await api.validateExpression(value, actionType.inputSchema.properties, type, signal);
+				errorMessage = await api.validateExpression(value, pipelineType.inputSchema.properties, type, signal);
 			} catch (err) {
 				if (err.name === 'AbortError') {
 					return;
@@ -334,8 +334,8 @@ const Combobox = ({
 			errorMessage = `Property "${value}" does not exist`;
 		}
 		const doesNotExist = errorMessage.endsWith('does not exist');
-		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'User';
-		const isAppEventsExport = connection.isAPI && connection.isDestination && actionType.target === 'Event';
+		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
+		const isAppEventsExport = connection.isAPI && connection.isDestination && pipelineType.target === 'Event';
 		if (doesNotExist) {
 			if (isEventBasedUserImport) {
 				errorMessage += `, perhaps you meant "traits.${value}"?`;
@@ -346,7 +346,7 @@ const Combobox = ({
 		updateError(name, errorMessage);
 	};
 
-	const debouncedValidateExpression = useMemo(() => debounceWithAbort(validateExpression, 750), [actionType, type]);
+	const debouncedValidateExpression = useMemo(() => debounceWithAbort(validateExpression, 750), [pipelineType, type]);
 
 	const validate = async (name: string, value: string) => {
 		debouncedValidateExpression(name, value);

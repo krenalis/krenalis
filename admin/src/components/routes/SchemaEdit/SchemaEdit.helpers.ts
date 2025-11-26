@@ -18,7 +18,7 @@ interface EditableProperty {
 
 type EditableSchema = Record<string, EditableProperty>;
 
-// TODO: see comment on flattenSchema in transformedAction.ts.
+// TODO: see comment on flattenSchema in transformedPipeline.ts.
 const transformSchema = (schema: ObjectType): EditableSchema | null => {
 	if (schema == null || schema.kind !== 'object') return null;
 	const flattenSubProperties = (parentName: string, parentIndentation: number, properties: Property[]) => {

@@ -4,16 +4,16 @@ import Type, { Property, ObjectType, Role } from './types/types';
 import { Connection, ConnectionRole, ConnectionToAdd, ConnectionToSet } from './types/connection';
 import { Identifiers } from './types/identifiers';
 import {
-	ActionTarget,
+	PipelineTarget,
 	SchedulePeriod,
-	ActionToSet,
+	PipelineToSet,
 	ExpressionToBeExtracted,
 	Transformation,
 	TransformationPurpose,
-	ActionStep,
-	ActionMetrics,
+	PipelineStep,
+	PipelineMetrics,
 	Filter,
-} from './types/action';
+} from './types/pipeline';
 import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
@@ -25,8 +25,8 @@ import Workspace, {
 } from './types/workspace';
 import {
 	AccessKeyResponse,
-	ActionErrorsResponse,
-	ActionSchemasResponse,
+	PipelineErrorsResponse,
+	PipelineSchemasResponse,
 	APIUsersResponse,
 	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
@@ -242,10 +242,10 @@ class Connections {
 			http.GET,
 			this.workspaceID,
 		);
-		// Transform the 'actions.transformation' field to match the expected format used throughout the rest of the codebase.
-		for (let action of c.actions) {
-			if (action.transformation == null) {
-				action.transformation = {
+		// Transform the 'pipelines.transformation' field to match the expected format used throughout the rest of the codebase.
+		for (let pipeline of c.pipelines) {
+			if (pipeline.transformation == null) {
+				pipeline.transformation = {
 					mapping: null,
 					function: null,
 				};
@@ -272,11 +272,11 @@ class Connections {
 	};
 
 	execution = async (id: number): Promise<Execution> => {
-		return await call(`${this.apiURL}/actions/executions/${id}`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/pipelines/executions/${id}`, http.GET, this.workspaceID);
 	};
 
 	executions = async (): Promise<Execution[]> => {
-		return await call(`${this.apiURL}/actions/executions`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/pipelines/executions`, http.GET, this.workspaceID);
 	};
 
 	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
@@ -393,9 +393,9 @@ class Connections {
 
 	// TODO(Gianluca): this method is deprecated. See the issue
 	// https://github.com/meergo/meergo/issues/1265.
-	actionTypes = async (connection: number) => {
+	pipelineTypes = async (connection: number) => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/action-types`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipeline-types`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -403,22 +403,22 @@ class Connections {
 
 	// TODO(Gianluca): this method is deprecated. See the issue
 	// https://github.com/meergo/meergo/issues/1266.
-	actionSchemas = async (
+	pipelineSchemas = async (
 		connection: number,
-		target: ActionTarget,
+		target: PipelineTarget,
 		eventType: string,
-	): Promise<ActionSchemasResponse> => {
+	): Promise<PipelineSchemasResponse> => {
 		if (eventType != null) {
 			return await call(
 				`${this.apiURL}/connections/${encodeURIComponent(
 					connection,
-				)}/actions/schemas/Events?type=${encodeURIComponent(eventType)}`,
+				)}/pipelines/schemas/Events?type=${encodeURIComponent(eventType)}`,
 				http.GET,
 				this.workspaceID,
 			);
 		} else {
 			return await call(
-				`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/schemas/${encodeURIComponent(
+				`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipelines/schemas/${encodeURIComponent(
 					target,
 				)}`,
 				http.GET,
@@ -427,55 +427,65 @@ class Connections {
 		}
 	};
 
-	createAction = async (
+	createPipeline = async (
 		connection: number,
-		target: ActionTarget,
+		target: PipelineTarget,
 		eventType: string,
-		action: ActionToSet,
+		pipeline: PipelineToSet,
 	): Promise<number> => {
-		// Transform the 'actions.transformation' field to match the API expected format.
-		if ('transformation' in action) {
-			if (action.transformation.mapping == null && action.transformation.function == null) {
-				action.transformation = null;
+		// Transform the 'pipelines.transformation' field to match the API expected format.
+		if ('transformation' in pipeline) {
+			if (pipeline.transformation.mapping == null && pipeline.transformation.function == null) {
+				pipeline.transformation = null;
 			}
 		}
-		return await call(`${this.apiURL}/actions`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/pipelines`, http.POST, this.workspaceID, {
 			connection,
 			target,
 			eventType,
-			...action,
+			...pipeline,
 		});
 	};
 
-	updateAction = async (id: number, action: ActionToSet): Promise<void> => {
-		// Transform the 'actions.transformation' field to match the API expected format.
-		if ('transformation' in action) {
-			if (action.transformation.mapping == null && action.transformation.function == null) {
-				action.transformation = null;
+	updatePipeline = async (id: number, pipeline: PipelineToSet): Promise<void> => {
+		// Transform the 'pipelines.transformation' field to match the API expected format.
+		if ('transformation' in pipeline) {
+			if (pipeline.transformation.mapping == null && pipeline.transformation.function == null) {
+				pipeline.transformation = null;
 			}
 		}
-		return await call(`${this.apiURL}/actions/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, action);
+		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, pipeline);
 	};
 
-	deleteAction = async (action: number): Promise<void> => {
-		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}`, http.DELETE, this.workspaceID);
+	deletePipeline = async (pipeline: number): Promise<void> => {
+		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}`, http.DELETE, this.workspaceID);
 	};
 
-	setActionStatus = async (action: number, enabled: boolean): Promise<void> => {
-		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/status`, http.PUT, this.workspaceID, {
-			enabled,
-		});
+	setPipelineStatus = async (pipeline: number, enabled: boolean): Promise<void> => {
+		return await call(
+			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/status`,
+			http.PUT,
+			this.workspaceID,
+			{
+				enabled,
+			},
+		);
 	};
 
-	setActionSchedulePeriod = async (action: number, period: SchedulePeriod | null): Promise<void> => {
-		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/schedule`, http.PUT, this.workspaceID, {
-			period,
-		});
+	setPipelineSchedulePeriod = async (pipeline: number, period: SchedulePeriod | null): Promise<void> => {
+		return await call(
+			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/schedule`,
+			http.PUT,
+			this.workspaceID,
+			{
+				period,
+			},
+		);
 	};
 
-	executeAction = async (action: number): Promise<number> => {
+	executePipeline = async (pipeline: number): Promise<number> => {
 		const res = await call(
-			`${this.apiURL}/actions/${encodeURIComponent(action)}/exec`,
+			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/exec`,
 			http.POST,
 			this.workspaceID,
 			{
@@ -485,13 +495,13 @@ class Connections {
 		return res.id as number;
 	};
 
-	actionUiEvent = async (
-		action: number,
+	pipelineUiEvent = async (
+		pipeline: number,
 		event: string,
 		formatSettings: ConnectorSettings,
 	): Promise<ConnectorUIResponse> => {
 		return await call(
-			`${this.apiURL}/actions/${encodeURIComponent(action)}/ui-event`,
+			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/ui-event`,
 			http.POST,
 			this.workspaceID,
 			{
@@ -869,23 +879,23 @@ class Workspaces {
 		});
 	};
 
-	actionErrors = async (
+	pipelineErrors = async (
 		start: Date,
 		end: Date,
-		actions: number[],
+		pipelines: number[],
 		first: number,
 		limit: number,
-		step?: ActionStep,
-	): Promise<ActionErrorsResponse> => {
-		let actionsQueryString = '';
-		for (let i = 0; i < actions.length; i++) {
+		step?: PipelineStep,
+	): Promise<PipelineErrorsResponse> => {
+		let pipelinesQueryString = '';
+		for (let i = 0; i < pipelines.length; i++) {
 			if (i > 0) {
-				actionsQueryString += '&';
+				pipelinesQueryString += '&';
 			}
-			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
+			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
 		}
-		const r: ActionErrorsResponse = await call(
-			`${this.apiURL}/actions/errors/${encodeURIComponent(start.toISOString())}/${encodeURIComponent(end.toISOString())}?${actionsQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
+		const r: PipelineErrorsResponse = await call(
+			`${this.apiURL}/pipelines/errors/${encodeURIComponent(start.toISOString())}/${encodeURIComponent(end.toISOString())}?${pipelinesQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -895,18 +905,18 @@ class Workspaces {
 		return r;
 	};
 
-	actionMetricsPerDate = async (start: Date, end: Date, actions: number[]): Promise<ActionMetrics> => {
-		let actionsQueryString = '';
-		for (let i = 0; i < actions.length; i++) {
+	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: number[]): Promise<PipelineMetrics> => {
+		let pipelinesQueryString = '';
+		for (let i = 0; i < pipelines.length; i++) {
 			if (i > 0) {
-				actionsQueryString += '&';
+				pipelinesQueryString += '&';
 			}
-			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
+			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
 		}
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
-			`${this.apiURL}/actions/metrics/dates/${encodeURIComponent(sd)}/${encodeURIComponent(ed)}?${actionsQueryString}`,
+			`${this.apiURL}/pipelines/metrics/dates/${encodeURIComponent(sd)}/${encodeURIComponent(ed)}?${pipelinesQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -915,16 +925,16 @@ class Workspaces {
 		return r;
 	};
 
-	actionMetricsPerDay = async (days: number, actions: number[]): Promise<ActionMetrics> => {
-		let actionsQueryString = '';
-		for (let i = 0; i < actions.length; i++) {
+	pipelineMetricsPerDay = async (days: number, pipelines: number[]): Promise<PipelineMetrics> => {
+		let pipelinesQueryString = '';
+		for (let i = 0; i < pipelines.length; i++) {
 			if (i > 0) {
-				actionsQueryString += '&';
+				pipelinesQueryString += '&';
 			}
-			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
+			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/actions/metrics/days/${encodeURIComponent(days)}?${actionsQueryString}`,
+			`${this.apiURL}/pipelines/metrics/days/${encodeURIComponent(days)}?${pipelinesQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -933,16 +943,16 @@ class Workspaces {
 		return r;
 	};
 
-	actionMetricsPerHour = async (hours: number, actions: number[]): Promise<ActionMetrics> => {
-		let actionsQueryString = '';
-		for (let i = 0; i < actions.length; i++) {
+	pipelineMetricsPerHour = async (hours: number, pipelines: number[]): Promise<PipelineMetrics> => {
+		let pipelinesQueryString = '';
+		for (let i = 0; i < pipelines.length; i++) {
 			if (i > 0) {
-				actionsQueryString += '&';
+				pipelinesQueryString += '&';
 			}
-			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
+			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/actions/metrics/hours/${encodeURIComponent(hours)}?${actionsQueryString}`,
+			`${this.apiURL}/pipelines/metrics/hours/${encodeURIComponent(hours)}?${pipelinesQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -951,16 +961,16 @@ class Workspaces {
 		return r;
 	};
 
-	actionMetricsPerMinute = async (minutes: number, actions: number[]): Promise<ActionMetrics> => {
-		let actionsQueryString = '';
-		for (let i = 0; i < actions.length; i++) {
+	pipelineMetricsPerMinute = async (minutes: number, pipelines: number[]): Promise<PipelineMetrics> => {
+		let pipelinesQueryString = '';
+		for (let i = 0; i < pipelines.length; i++) {
 			if (i > 0) {
-				actionsQueryString += '&';
+				pipelinesQueryString += '&';
 			}
-			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
+			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/actions/metrics/minutes/${encodeURIComponent(minutes)}?${actionsQueryString}`,
+			`${this.apiURL}/pipelines/metrics/minutes/${encodeURIComponent(minutes)}?${pipelinesQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);

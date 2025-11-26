@@ -101,11 +101,11 @@ func Test_Records(t *testing.T) {
 	destinationsUsersTable := warehouses.Table{
 		Name: "meergo_destination_profiles",
 		Columns: []warehouses.Column{
-			{Name: "__action__", Type: types.Int(32)},
+			{Name: "__pipeline__", Type: types.Int(32)},
 			{Name: "__external_id__", Type: types.Text()},
 			{Name: "__out_matching_value__", Type: types.Text()},
 		},
-		Keys: []string{"__action__", "__external_id__"},
+		Keys: []string{"__pipeline__", "__external_id__"},
 	}
 
 	err = wh.Initialize(ctx, profilesTable.Columns[2:])
@@ -129,17 +129,17 @@ func Test_Records(t *testing.T) {
 		t.Fatalf("cannot merge profiles: %s", err)
 	}
 
-	const actionID = 623
+	const pipelineID = 623
 
 	initDestinations := [][]any{
 		{85, "Ex1", "1"},
 		{85, "Ex2", "2"},
-		{actionID, "Ex1", "1"},
-		{actionID, "Ex2", "2"},
-		{actionID, "Ex3", "2"},
-		{actionID, "Ex4", "3"},
-		{actionID, "Ex5", "3"},
-		{actionID, "Ex6", "5"},
+		{pipelineID, "Ex1", "1"},
+		{pipelineID, "Ex2", "2"},
+		{pipelineID, "Ex3", "2"},
+		{pipelineID, "Ex4", "3"},
+		{pipelineID, "Ex5", "3"},
+		{pipelineID, "Ex6", "5"},
 		{719, "034", "a"},
 		{719, "089", "b"},
 	}
@@ -242,7 +242,7 @@ func Test_Records(t *testing.T) {
 			for _, inProperty := range []string{"id", "other.id"} {
 
 				matching := &Matching{
-					Action:             actionID,
+					Pipeline:           pipelineID,
 					InProperty:         inProperty,
 					ExportMode:         test.mode,
 					UpdateOnDuplicates: test.updateOnDuplicates,

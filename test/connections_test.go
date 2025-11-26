@@ -47,8 +47,8 @@ func TestConnections(t *testing.T) {
 		t.Fatalf("expected name %q, got %q", expectedName, gotName)
 	}
 
-	// Retrieve the input and the output schema, which must me both valid.
-	schemas := c.ActionSchemas(dummyID, core.TargetUser, "")
+	// Retrieve the input and the output schema, which must be both valid.
+	schemas := c.PipelineSchemas(dummyID, core.TargetUser, "")
 	if err := isValidSchema(schemas["in"]); err != nil {
 		t.Fatal(err)
 	}

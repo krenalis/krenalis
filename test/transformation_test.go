@@ -27,9 +27,9 @@ func TestImportWithTransformation(t *testing.T) {
 
 	c.UpdateIdentityResolution(false, []string{"email"})
 
-	// Create an action with a transformation function which imports users, then
+	// Create a pipeline with a transformation function which imports users, then
 	// execute it.
-	importUsersID := c.CreateAction(dummyID, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummyID, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -60,7 +60,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummyID, exec)
 
 	c.RunIdentityResolution()

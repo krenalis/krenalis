@@ -103,11 +103,11 @@ func TestIdentityResolution2(t *testing.T) {
 		"last_change_time": "2000-01-03 12:00:00",
 	})
 
-	// Create and execute the actions.
+	// Create and execute the pipelines.
 
-	addJSONAction := func(source int, filename string, properties map[string]bool) int {
-		return c.CreateAction(source, "User", meergotester.ActionToSet{
-			Name:    "Action",
+	addJSONPipeline := func(source int, filename string, properties map[string]bool) int {
+		return c.CreatePipeline(source, "User", meergotester.PipelineToSet{
+			Name:    "Pipeline",
 			Enabled: true,
 			Path:    filename,
 			InSchema: types.Object([]types.Property{
@@ -139,13 +139,13 @@ func TestIdentityResolution2(t *testing.T) {
 		})
 	}
 
-	actionA := addJSONAction(sourceA, "A.json", properties)
-	actionB := addJSONAction(sourceB, "B.json", properties)
-	actionC := addJSONAction(sourceC, "C.json", properties)
+	pipelineA := addJSONPipeline(sourceA, "A.json", properties)
+	pipelineB := addJSONPipeline(sourceB, "B.json", properties)
+	pipelineC := addJSONPipeline(sourceC, "C.json", properties)
 
-	exec1 := c.ExecuteAction(actionA)
-	exec2 := c.ExecuteAction(actionB)
-	exec3 := c.ExecuteAction(actionC)
+	exec1 := c.ExecutePipeline(pipelineA)
+	exec2 := c.ExecutePipeline(pipelineB)
+	exec3 := c.ExecutePipeline(pipelineC)
 	c.WaitForExecutionsCompletion(sourceA, exec1)
 	c.WaitForExecutionsCompletion(sourceB, exec2)
 	c.WaitForExecutionsCompletion(sourceC, exec3)

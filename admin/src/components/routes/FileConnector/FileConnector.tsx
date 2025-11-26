@@ -58,9 +58,9 @@ const FileConnector = () => {
 		setSelectedStorage(Number(e.target.value));
 	};
 
-	const onAddActionType = (target: String) => {
+	const onAddPipelineType = (target: String) => {
 		const id = storages.find((s) => s.id === selectedStorage).id;
-		redirect(`connections/${id}/actions/add/${target}?format=${file.code}`);
+		redirect(`connections/${id}/pipelines/add/${target}?format=${file.code}`);
 	};
 
 	return (
@@ -106,9 +106,9 @@ const FileConnector = () => {
 						</div>
 					)}
 					{selectedStorage != null && (
-						<div className='file-connector__action-types'>
+						<div className='file-connector__pipeline-types'>
 							<ListTile
-								key={'users-action-type'}
+								key={'users-pipeline-type'}
 								icon={<LittleLogo code={file.code} path={CONNECTORS_ASSETS_PATH} />}
 								name={`${role === 'Source' ? 'Import' : 'Export'} users`}
 								description={
@@ -116,13 +116,13 @@ const FileConnector = () => {
 										? `Import users from a${startsWithVowelSound(file.label) ? 'n' : ''} ${file.label} file`
 										: `Export users to a${startsWithVowelSound(file.label) ? 'n' : ''} ${file.label} file`
 								}
-								className='file-connector__action-type'
+								className='file-connector__pipeline-type'
 								action={
 									<SlButton
 										size='small'
 										variant='primary'
 										onClick={() => {
-											onAddActionType('user');
+											onAddPipelineType('user');
 										}}
 									>
 										Add
@@ -131,17 +131,17 @@ const FileConnector = () => {
 							/>
 							{/* // TODO(Gianluca: https://github.com/meergo/meergo/issues/895
 							<ListTile
-								key={'groups-action-type'}
+								key={'groups-pipeline-type'}
 								icon={getConnectorLogo(file.icon)}
 								name='Import groups'
 								description={`Import groups from ${file.label} into the data warehouse`}
-								className='file-connector__action-type'
+								className='file-connector__pipeline-type'
 								action={
 									<SlButton
 										size='small'
 										variant='primary'
 										onClick={() => {
-											onAddActionType('group');
+											onAddPipelineType('group');
 										}}
 									>
 										Add

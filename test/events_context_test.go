@@ -25,7 +25,7 @@ func TestEventsContext(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	// Create a webhook connection, with an action to ingest the events.
+	// Create a webhook connection, with a pipeline to ingest the events.
 	var webhookID int
 	var webhookEventWriteKey string
 	{
@@ -35,7 +35,7 @@ func TestEventsContext(t *testing.T) {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		webhookEventWriteKey = keys[0]
-		c.CreateAction(webhookID, "Event", meergotester.ActionToSet{
+		c.CreatePipeline(webhookID, "Event", meergotester.PipelineToSet{
 			Name:    "Ingest events",
 			Enabled: true,
 		})

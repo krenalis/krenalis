@@ -231,7 +231,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 								return (
 									<div className='profile-drawer__event' key={event.sentAt}>
 										<div className='profile-drawer__event-head'>
-											<Link path={`connections/${source.id}/actions`}>
+											<Link path={`connections/${source.id}/pipelines`}>
 												<div className='profile-drawer__event-logo'>{logo}</div>
 											</Link>
 											<div className='profile-drawer__event-type'>{event.type}</div>
@@ -264,17 +264,17 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 										<div className='profile-drawer__identity-head'>
 											<SlTooltip className='profile-drawer__action' placement='left' hoist>
 												<div slot='content'>
-													Imported from action{' '}
-													<span className='profile-drawer__identity-action-link'>
+													Imported from pipeline{' '}
+													<span className='profile-drawer__identity-pipeline-link'>
 														<Link
-															path={`connections/${connection.id}/actions/edit/${identity.action}`}
+															path={`connections/${connection.id}/pipelines/edit/${identity.pipeline}`}
 														>
-															{identity.action}
+															{identity.pipeline}
 														</Link>
 													</span>
 												</div>
 												<Link
-													path={`connections/${connection.id}/actions`}
+													path={`connections/${connection.id}/pipelines`}
 													className='profile-drawer__identity-connection'
 												>
 													<div className='profile-drawer__identity-connection-logo'>

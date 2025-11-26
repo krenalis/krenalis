@@ -57,14 +57,14 @@ type Connection struct {
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
-	ActionsCount      int           `json:"actionsCount"`
+	PipelinesCount    int           `json:"pipelinesCount"`
 	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
 
-	// Actions is populated only by the (*Workspace).Connection method.
-	Actions *[]Action `json:"actions,omitzero"`
+	// Pipelines is populated only by the (*Workspace).Connection method.
+	Pipelines *[]Pipeline `json:"pipelines,omitzero"`
 
-	// ActionsInfo is populated only by the (*Workspace).Connections method.
-	ActionsInfo *[]ActionInfo `json:"actionsInfo,omitzero"`
+	// PipelinesInfo is populated only by the (*Workspace).Connections method.
+	PipelinesInfo *[]PipelineInfo `json:"pipelinesInfo,omitzero"`
 
 	// EventTypes is populated only by the (*Workspace).Connection method.
 	EventTypes *[]EventType `json:"eventTypes,omitzero"`
@@ -78,7 +78,7 @@ type EventType struct {
 	Filter      string `json:"filter"`
 }
 
-type ActionInfo struct {
+type PipelineInfo struct {
 	ID             int             `json:"id"`
 	Target         Target          `json:"target"`
 	Enabled        bool            `json:"enabled"`
@@ -90,13 +90,13 @@ type ActionInfo struct {
 // Can be "Conversion", "Fusion", "Isolation", and "Preservation".
 type Strategy string
 
-type ActionSchemas struct {
-	In        types.Type              `json:"in"`
-	Out       types.Type              `json:"out"`
-	Matchings *ActionSchemasMatchings `json:"matchings,omitzero"` // only for destination apps on users.
+type PipelineSchemas struct {
+	In        types.Type                `json:"in"`
+	Out       types.Type                `json:"out"`
+	Matchings *PipelineSchemasMatchings `json:"matchings,omitzero"` // only for destination APIs on users.
 }
 
-type ActionSchemasMatchings struct {
+type PipelineSchemasMatchings struct {
 	Internal types.Type `json:"internal"`
 	External types.Type `json:"external"`
 }
@@ -108,8 +108,8 @@ var dummyGroupsSchema = types.Object([]types.Property{
 	{Name: "id", Type: types.Int(32)},
 })
 
-// ActionType represents an action type.
-type ActionType struct {
+// PipelineType represents a pipeline type.
+type PipelineType struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Target      Target  `json:"target"`
@@ -140,7 +140,7 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 			return "", false
 		})
 		if err != nil {
-			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
+			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source pipelines")
 		}
 	case state.Destination:
 		replacer = newPathPlaceholderReplacer(time.Now().UTC())
@@ -158,355 +158,6 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 		return "", err
 	}
 	return path, nil
-}
-
-// ActionSchemas returns the input and the output schemas of an action with the
-// given target and event type.
-//
-// TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1266.
-//
-// It returns an errors.UnprocessableError error with code EventTypeNotExist, if
-// the event type does not exist for the connection.
-func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
-
-	this.core.mustBeOpen()
-
-	// Validate the target and the event type.
-	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
-	if err != nil {
-		return nil, err
-	}
-
-	profiles := this.connection.Workspace().ProfileSchema
-	groups := dummyGroupsSchema
-
-	c := this.connection
-
-	switch connector := c.Connector(); connector.Type {
-
-	case state.API:
-		switch target {
-		case TargetUser:
-			var err error
-			// Retrieve the API's source or target schema, depending on the connection's role.
-			schema, err := this.api().Schema(ctx, state.TargetUser, "")
-			if err != nil {
-				if _, ok := err.(*connections.UnavailableError); ok {
-					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
-				}
-				return nil, err
-			}
-			if c.Role == state.Source {
-				// Source/API/User.
-				return &ActionSchemas{In: schema, Out: profiles}, nil
-			} else {
-				// Destination/API/User.
-				//
-				// The API's destination schema is already available here, but
-				// we need to get the source one too because it's needed for the
-				// matching properties.
-				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
-				if err != nil {
-					if _, ok := err.(*connections.UnavailableError); ok {
-						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
-					}
-					return nil, err
-				}
-				actionSchemas := &ActionSchemas{In: profiles, Out: schema}
-				actionSchemas.Matchings = &ActionSchemasMatchings{
-					Internal: onlyForMatching(profiles),
-					External: onlyForMatching(sourceSchema),
-				}
-				return actionSchemas, nil
-			}
-		case TargetGroup:
-			var err error
-			schema, err := this.api().Schema(ctx, state.TargetGroup, "")
-			if err != nil {
-				if _, ok := err.(*connections.UnavailableError); ok {
-					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
-				}
-				return nil, err
-			}
-			if c.Role == state.Source {
-				// Source/API/Group.
-				return &ActionSchemas{In: schema, Out: groups}, nil
-			} else {
-				// Destination/API/Group.
-				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
-				if err != nil {
-					if _, ok := err.(*connections.UnavailableError); ok {
-						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
-					}
-					return nil, err
-				}
-				actionSchemas := &ActionSchemas{In: groups, Out: schema}
-				actionSchemas.Matchings = &ActionSchemasMatchings{
-					Internal: onlyForMatching(groups),
-					External: onlyForMatching(sourceSchema),
-				}
-				return actionSchemas, nil
-			}
-		case TargetEvent:
-			return &ActionSchemas{In: schemas.Event, Out: eventTypeSchema}, nil
-		}
-
-	case state.Database:
-		switch target {
-		case TargetUser:
-			if c.Role == state.Source {
-				// Source/Database/User.
-				//
-				// The input schema is not set here because it is retrieved via
-				// a separate API call, since it depends on the query, which in
-				// the UI case is entered interactively by the user.
-				return &ActionSchemas{Out: profiles}, nil
-			} else {
-				// Destination/Database/User.
-				//
-				// The output schema depends on the table chosen for export, and
-				// must be retrieved separately.
-				return &ActionSchemas{In: profiles}, nil
-			}
-		case TargetGroup:
-			if c.Role == state.Source {
-				// Source/Database/Group.
-				return &ActionSchemas{Out: groups}, nil
-			} else {
-				// Destination/Database/Group.
-				return &ActionSchemas{In: groups}, nil
-			}
-		}
-
-	case state.FileStorage:
-		switch target {
-		case TargetUser:
-			if c.Role == state.Source {
-				// Source/FileStorage/Source.
-				//
-				// The input schema is not set here because it is retrieved via
-				// a separate API call, since it depends on the file, which in
-				// the UI case is entered interactively by the user.
-				return &ActionSchemas{Out: profiles}, nil
-			} else {
-				// Destination/FileStorage/Source.
-				return &ActionSchemas{In: profiles}, nil
-			}
-		case TargetGroup:
-			if c.Role == state.Source {
-				// Source/FileStorage/Group.
-				return &ActionSchemas{Out: groups}, nil
-			} else {
-				// Destination/FileStorage/Group.
-				return &ActionSchemas{In: groups}, nil
-			}
-		}
-
-	case state.MessageBroker, state.SDK, state.Webhook:
-		if eventType != "" {
-			return nil, errors.NotFound("event type not expected")
-		}
-		// TODO(Gianluca): regarding message broker connectors, see the issue
-		// https://github.com/meergo/meergo/issues/1264.
-		switch target {
-		case TargetUser:
-			// Source/SDK/User.
-			return &ActionSchemas{In: schemas.Event, Out: profiles}, nil
-		case TargetGroup:
-			// Source/SDK/Group.
-			return &ActionSchemas{In: schemas.Event, Out: groups}, nil
-		case TargetEvent:
-			// Source/SDK/Event.
-			return &ActionSchemas{In: schemas.Event}, nil
-		}
-		return &ActionSchemas{}, nil
-
-	}
-
-	panic("unreachable code")
-}
-
-// ActionTypes returns the action types for the connection.
-//
-// TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1265.
-//
-// Refer to the specifications in the file "core/Actions.csv" for more details.
-func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
-	this.core.mustBeOpen()
-	var actionTypes []ActionType
-	c := this.connection
-	connector := c.Connector()
-	var targets state.ConnectorTargets
-	if c.Role == state.Source {
-		targets = connector.SourceTargets
-	} else {
-		targets = connector.DestinationTargets
-	}
-	if targets.Contains(state.TargetUser) {
-		switch typ := c.Connector().Type; typ {
-		case
-			state.API:
-			var name, description string
-			if c.Role == state.Source {
-				// Source/API/User.
-				name = "Import " + connector.Label + " " + connector.Terms.Users
-				description = "Import " + connector.Terms.Users
-				if connector.Terms.Users != "users" {
-					description += " as users"
-				}
-				description += " into the data warehouse"
-			} else {
-				// Destination/API/User.
-				name = "Export " + connector.Terms.Users
-				description = "Export users from the data warehouse"
-				if connector.Terms.Users != "users" {
-					description += " as " + connector.Terms.Users
-				}
-				description += " to " + connector.Label
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      TargetUser,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.Database,
-			state.FileStorage:
-			var name, description string
-			if c.Role == state.Source {
-				// Source/FileStorage/Users.
-				// Source/Database/Users.
-				name = "Import users"
-				description = "Import users from " + connector.Label + " into the data warehouse"
-			} else {
-				// Destination/FileStorage/Users.
-				// Destination/Database/Users.
-				name = "Export users"
-				description = "Export users to " + connector.Label
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      TargetUser,
-			}
-			actionTypes = append(actionTypes, at)
-		case state.SDK, state.Webhook:
-			if c.Role == state.Source {
-				// Source/SDK/Users.
-				// Source/Webhook/Users.
-				at := ActionType{
-					Name:        "Import users into warehouse",
-					Description: "Import users from " + connector.Label + " into the data warehouse",
-					Target:      TargetUser,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		}
-	}
-	// TODO(marco): Implement groups
-	//if targets.Contains(state.Group) {
-	//	switch typ := c.Connector().Type; typ {
-	//	case
-	//		state.API:
-	//		var name, description string
-	//		if c.Role == state.Source {
-	//			// Source/API/Group.
-	//		    name = "Import " + connector.Name + " " + connector.Terms.Groups
-	//			description = "Import " + connector.Terms.Groups
-	//			if connector.Terms.Groups != "groups" {
-	//				description += " as groups"
-	//			}
-	//			description += " into the data warehouse"
-	//		} else {
-	//			// Destination/API/Group.
-	//			name = "Export " + connector.Terms.Groups
-	//			description = "Export groups "
-	//			if connector.Terms.Groups != "groups" {
-	//				description += " as " + connector.Terms.Groups
-	//			}
-	//			description += " to " + connector.Name
-	//		}
-	//		at := ActionType{
-	//			Name:        name,
-	//			Description: description,
-	//			Target:      Group,
-	//		}
-	//		actionTypes = append(actionTypes, at)
-	//	case
-	//		state.Database,
-	//		state.FileStorage:
-	//		var name, description string
-	//		if c.Role == state.Source {
-	//			// Source/FileStorage/Group.
-	//			// Source/Database/Group.
-	//			name = "Import groups"
-	//			description = "Import groups from " + connector.Name + " into the data warehouse"
-	//		} else {
-	//			// Destination/FileStorage/Group.
-	//			// Destination/Database/Group.
-	//			name = "Export groups"
-	//			description = "Export groups to " + connector.Name
-	//		}
-	//		at := ActionType{
-	//			Name:        name,
-	//			Description: description,
-	//			Target:      Group,
-	//		}
-	//		actionTypes = append(actionTypes, at)
-	//	case state.SDK:
-	//		if c.Role == state.Source {
-	//			// Source/SDK/Group.
-	//			at := ActionType{
-	//				Name:        "Import groups into warehouse",
-	//				Description: "Import groups from " + connector.Name + " into the data warehouse",
-	//				Target:      Group,
-	//			}
-	//			actionTypes = append(actionTypes, at)
-	//		}
-	//	}
-	//}
-	if targets.Contains(state.TargetEvent) {
-		switch typ := c.Connector().Type; typ {
-		case state.SDK, state.Webhook:
-			if c.Role == state.Source {
-				// Source/SDK/Event.
-				// Source/Webhook/Event.
-				at := ActionType{
-					Name:        "Import events into warehouse",
-					Description: "Import events from " + connector.Label + " into the data warehouse",
-					Target:      TargetEvent,
-				}
-				actionTypes = slices.Insert(actionTypes, 0, at)
-			}
-		case state.API:
-			if c.Role == state.Destination {
-				eventTypes, err := this.api().EventTypes(ctx)
-				if err != nil {
-					if _, ok := err.(*connections.UnavailableError); ok {
-						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
-					}
-					return nil, err
-				}
-				// Destination/API/Event.
-				for _, et := range eventTypes {
-					id := et.ID
-					actionTypes = append(actionTypes, ActionType{
-						Name:        et.Name,
-						Description: et.Description,
-						Target:      TargetEvent,
-						EventType:   &id,
-					})
-				}
-			}
-		}
-	}
-	if actionTypes == nil {
-		actionTypes = []ActionType{}
-	}
-	return actionTypes, nil
 }
 
 // APIEventSchema returns the schema of the provided event type of the
@@ -658,29 +309,31 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 	return marshaledUsers, cursor, nil
 }
 
-// CreateAction creates an action for the connection returning the identifier of
-// the created action. target is the target of the action and must be supported
-// by the connector of the connection.
+// CreatePipeline creates a pipeline for the connection returning the identifier
+// of the created pipeline. target is the target of the pipeline and must be
+// supported by the connector of the connection.
 //
-// Refer to the specifications in the file "core/Actions.csv" for more details.
+// Refer to the specifications in the file "core/Pipelines.csv" for more
+// details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
 // anymore, and returns an errors.UnprocessableError error with code
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
-//   - FormatNotExist, if the format of the action does not exist.
+//   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
-//   - TargetExist, if an action already exists for a target for the connection.
+//   - TargetExist, if a pipeline already exists for a target for the
+//     connection.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (this *Connection) CreateAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
+func (this *Connection) CreatePipeline(ctx context.Context, target Target, eventType string, pipeline PipelineToSet) (int, error) {
 
 	this.core.mustBeOpen()
 
-	// Retrieve the format, if specified in the action.
+	// Retrieve the format, if specified in the pipeline.
 	var format *state.Connector
-	if action.Format != "" {
-		format, _ = this.core.state.Connector(action.Format)
+	if pipeline.Format != "" {
+		format, _ = this.core.state.Connector(pipeline.Format)
 	}
 
 	c := this.connection
@@ -699,18 +352,18 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	if !connectorsTargets.Contains(state.Target(target)) {
 		role := strings.ToLower(c.Role.String())
 		typ := connector.Type.String()
-		return 0, errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
+		return 0, errors.BadRequest("pipeline with target '%s' not allowed for %s %s connections", target, role, typ)
 	}
 
 	// Validate the event type.
 	requiresEventType := c.Role == state.Destination && connector.Type == state.API && target == TargetEvent
 	if requiresEventType && eventType == "" {
-		return 0, errors.BadRequest("eventType is required for actions that send events to apps")
+		return 0, errors.BadRequest("eventType is required for pipelines that send events to apps")
 	}
 	if !requiresEventType && eventType != "" {
 		role := strings.ToLower(c.Role.String())
 		typ := strings.ToLower(connector.Type.String())
-		return 0, errors.BadRequest("actions with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
+		return 0, errors.BadRequest("pipelines with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
 	}
 	if eventType != "" {
 		if err := util.ValidateStringField("eventType", eventType, 100); err != nil {
@@ -718,7 +371,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		}
 	}
 
-	// Validate the action.
+	// Validate the pipeline.
 	v := validationState{}
 	v.target = state.Target(target)
 	v.connection.role = c.Role
@@ -734,58 +387,58 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
-	err := validateActionToSet(action, v)
+	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return 0, err
 	}
 
 	// Determine the input schema.
-	inSchema := action.InSchema
+	inSchema := pipeline.InSchema
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, c.Role, state.Target(target))
 	dispatchEventsToAPIs := isDispatchingEventsToAPIs(connector.Type, c.Role, state.Target(target))
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, c.Role, state.Target(target))
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
-		inSchema = eventActionSchema
+		inSchema = eventPipelineSchema
 	}
 
-	n := state.CreateAction{
+	n := state.CreatePipeline{
 		Connection:           c.ID,
 		Target:               state.Target(target),
-		Name:                 action.Name,
-		Enabled:              action.Enabled,
+		Name:                 pipeline.Name,
+		Enabled:              pipeline.Enabled,
 		EventType:            eventType,
 		InSchema:             inSchema,
-		OutSchema:            action.OutSchema,
-		Transformation:       toStateTransformation(action.Transformation, inSchema, action.OutSchema),
-		Query:                action.Query,
-		Format:               action.Format,
-		Path:                 action.Path,
-		Sheet:                action.Sheet,
-		Compression:          state.Compression(action.Compression),
-		OrderBy:              action.OrderBy,
-		ExportMode:           state.ExportMode(action.ExportMode),
-		Matching:             state.Matching(action.Matching),
-		UpdateOnDuplicates:   action.UpdateOnDuplicates,
-		TableName:            action.TableName,
-		TableKey:             action.TableKey,
-		IdentityColumn:       action.IdentityColumn,
-		LastChangeTimeColumn: action.LastChangeTimeColumn,
-		LastChangeTimeFormat: action.LastChangeTimeFormat,
-		Incremental:          action.Incremental,
+		OutSchema:            pipeline.OutSchema,
+		Transformation:       toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
+		Query:                pipeline.Query,
+		Format:               pipeline.Format,
+		Path:                 pipeline.Path,
+		Sheet:                pipeline.Sheet,
+		Compression:          state.Compression(pipeline.Compression),
+		OrderBy:              pipeline.OrderBy,
+		ExportMode:           state.ExportMode(pipeline.ExportMode),
+		Matching:             state.Matching(pipeline.Matching),
+		UpdateOnDuplicates:   pipeline.UpdateOnDuplicates,
+		TableName:            pipeline.TableName,
+		TableKey:             pipeline.TableKey,
+		IdentityColumn:       pipeline.IdentityColumn,
+		LastChangeTimeColumn: pipeline.LastChangeTimeColumn,
+		LastChangeTimeFormat: pipeline.LastChangeTimeFormat,
+		Incremental:          pipeline.Incremental,
 	}
 
 	// Set the scheduler.
 	if n.Target == state.TargetUser || n.Target == state.TargetGroup {
 		n.ScheduleStart = int16(mathrand.IntN(24 * 60))
-		n.SchedulePeriod = 0 // do not automatically schedule the action when creating it.
+		n.SchedulePeriod = 0 // do not automatically schedule the pipeline when creating it.
 	}
 
 	// Add the filter to the notification.
-	if action.Filter != nil {
-		n.Filter, _ = convertFilterToWhere(action.Filter, inSchema).MarshalJSON()
+	if pipeline.Filter != nil {
+		n.Filter, _ = convertFilterToWhere(pipeline.Filter, inSchema).MarshalJSON()
 	}
 
-	// Determine the connector code, for file actions.
+	// Determine the connector code, for file pipelines.
 	var formatCode *string
 	if format != nil {
 		code := format.Code
@@ -803,14 +456,14 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	if err != nil {
 		return 0, err
 	}
-	rawOutSchema, err := marshalSchema(action.OutSchema)
+	rawOutSchema, err := marshalSchema(pipeline.OutSchema)
 	if err != nil {
 		return 0, err
 	}
 
 	// Marshal the mapping.
 	var mapping []byte
-	if tr := action.Transformation; tr != nil && tr.Mapping != nil {
+	if tr := pipeline.Transformation; tr != nil && tr.Mapping != nil {
 		mapping, err = json.Marshal(tr.Mapping)
 		if err != nil {
 			return 0, err
@@ -828,11 +481,11 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	}
 
 	// Format settings.
-	if format != nil && action.FormatSettings != nil {
+	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
 			Role: this.connection.Role,
 		}
-		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, action.FormatSettings)
+		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
 			switch err.(type) {
 			case *connectors.InvalidSettingsError:
@@ -844,30 +497,30 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		}
 	}
 
-	// Add the action.
+	// Add the pipeline.
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		switch n.Target {
 		case state.TargetEvent:
 			switch connector.Type {
 			case state.SDK, state.Webhook:
-				exists, err := tx.QueryExists(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Event'", n.Connection)
+				exists, err := tx.QueryExists(ctx, "SELECT FROM pipelines WHERE connection = $1 AND target = 'Event'", n.Connection)
 				if err != nil {
 					return nil, err
 				}
 				if exists {
 					return nil, errors.Unprocessable(TargetExist,
-						"action with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
+						"pipeline with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
 				}
 			}
 		case state.TargetUser, state.TargetGroup:
-			// Make sure that users and groups actions have the same schedule start.
-			err = tx.QueryRow(ctx, "SELECT schedule_start FROM actions WHERE connection = $1\n"+
+			// Make sure that users and groups pipelines have the same schedule start.
+			err = tx.QueryRow(ctx, "SELECT schedule_start FROM pipelines WHERE connection = $1\n"+
 				" AND target IN ('User', 'Group') LIMIT 1", n.Connection).Scan(&n.ScheduleStart)
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
 		}
-		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
+		query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
 			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
@@ -883,7 +536,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
 		if err != nil {
-			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "actions_connection_fkey" {
+			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
 			}
 			return nil, err
@@ -967,17 +620,17 @@ func (this *Connection) Delete(ctx context.Context) error {
 		// Mark the connection's functions as discontinued.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT a.transformation_id, $1\n"+
-			"FROM actions AS a\n"+
-			"WHERE a.transformation_id != '' AND a.connection = $2\n"+
+			"SELECT p.transformation_id, $1\n"+
+			"FROM pipelines AS p\n"+
+			"WHERE p.transformation_id != '' AND p.connection = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
 			return nil, err
 		}
-		// Mark the connection's actions on Users as deleted.
+		// Mark the connection's pipelines on Users as deleted.
 		if c.Role == state.Source {
-			_, err := tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_cat(actions_to_purge, (\n"+
-				"\tSELECT array_agg(a.id) FROM actions a WHERE a.connection = $1 AND a.target = 'User'\n"+
+			_, err := tx.Exec(ctx, "UPDATE workspaces SET pipelines_to_purge = array_cat(pipelines_to_purge, (\n"+
+				"\tSELECT array_agg(a.id) FROM pipelines a WHERE a.connection = $1 AND a.target = 'User'\n"+
 				"))\nWHERE id = $2", n.ID, workspace.ID)
 			if err != nil {
 				return nil, err
@@ -1202,10 +855,10 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	return marshaledRows, schema, issues, nil
 }
 
-// An Execution describes an action execution as returned by Executions.
+// An Execution describes a pipeline execution as returned by Executions.
 type Execution struct {
 	ID        int        `json:"id"`
-	Action    int        `json:"action"`
+	Pipeline  int        `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
 	Passed    [6]int     `json:"passed"`
@@ -1431,6 +1084,356 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	return err
 }
 
+// PipelineSchemas returns the input and the output schemas of a pipeline with
+// the given target and event type.
+//
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1266.
+//
+// It returns an errors.UnprocessableError error with code EventTypeNotExist, if
+// the event type does not exist for the connection.
+func (this *Connection) PipelineSchemas(ctx context.Context, target Target, eventType string) (*PipelineSchemas, error) {
+
+	this.core.mustBeOpen()
+
+	// Validate the target and the event type.
+	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles := this.connection.Workspace().ProfileSchema
+	groups := dummyGroupsSchema
+
+	c := this.connection
+
+	switch connector := c.Connector(); connector.Type {
+
+	case state.API:
+		switch target {
+		case TargetUser:
+			var err error
+			// Retrieve the API's source or target schema, depending on the connection's role.
+			schema, err := this.api().Schema(ctx, state.TargetUser, "")
+			if err != nil {
+				if _, ok := err.(*connections.UnavailableError); ok {
+					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+				}
+				return nil, err
+			}
+			if c.Role == state.Source {
+				// Source/API/User.
+				return &PipelineSchemas{In: schema, Out: profiles}, nil
+			} else {
+				// Destination/API/User.
+				//
+				// The API's destination schema is already available here, but
+				// we need to get the source one too because it's needed for the
+				// matching properties.
+				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
+				if err != nil {
+					if _, ok := err.(*connections.UnavailableError); ok {
+						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+					}
+					return nil, err
+				}
+				pipelineSchemas := &PipelineSchemas{In: profiles, Out: schema}
+				pipelineSchemas.Matchings = &PipelineSchemasMatchings{
+					Internal: onlyForMatching(profiles),
+					External: onlyForMatching(sourceSchema),
+				}
+				return pipelineSchemas, nil
+			}
+		case TargetGroup:
+			var err error
+			schema, err := this.api().Schema(ctx, state.TargetGroup, "")
+			if err != nil {
+				if _, ok := err.(*connections.UnavailableError); ok {
+					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+				}
+				return nil, err
+			}
+			if c.Role == state.Source {
+				// Source/API/Group.
+				return &PipelineSchemas{In: schema, Out: groups}, nil
+			} else {
+				// Destination/API/Group.
+				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
+				if err != nil {
+					if _, ok := err.(*connections.UnavailableError); ok {
+						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+					}
+					return nil, err
+				}
+				pipelineSchemas := &PipelineSchemas{In: groups, Out: schema}
+				pipelineSchemas.Matchings = &PipelineSchemasMatchings{
+					Internal: onlyForMatching(groups),
+					External: onlyForMatching(sourceSchema),
+				}
+				return pipelineSchemas, nil
+			}
+		case TargetEvent:
+			return &PipelineSchemas{In: schemas.Event, Out: eventTypeSchema}, nil
+		}
+
+	case state.Database:
+		switch target {
+		case TargetUser:
+			if c.Role == state.Source {
+				// Source/Database/User.
+				//
+				// The input schema is not set here because it is retrieved via
+				// a separate API call, since it depends on the query, which in
+				// the UI case is entered interactively by the user.
+				return &PipelineSchemas{Out: profiles}, nil
+			} else {
+				// Destination/Database/User.
+				//
+				// The output schema depends on the table chosen for export, and
+				// must be retrieved separately.
+				return &PipelineSchemas{In: profiles}, nil
+			}
+		case TargetGroup:
+			if c.Role == state.Source {
+				// Source/Database/Group.
+				return &PipelineSchemas{Out: groups}, nil
+			} else {
+				// Destination/Database/Group.
+				return &PipelineSchemas{In: groups}, nil
+			}
+		}
+
+	case state.FileStorage:
+		switch target {
+		case TargetUser:
+			if c.Role == state.Source {
+				// Source/FileStorage/Source.
+				//
+				// The input schema is not set here because it is retrieved via
+				// a separate API call, since it depends on the file, which in
+				// the UI case is entered interactively by the user.
+				return &PipelineSchemas{Out: profiles}, nil
+			} else {
+				// Destination/FileStorage/Source.
+				return &PipelineSchemas{In: profiles}, nil
+			}
+		case TargetGroup:
+			if c.Role == state.Source {
+				// Source/FileStorage/Group.
+				return &PipelineSchemas{Out: groups}, nil
+			} else {
+				// Destination/FileStorage/Group.
+				return &PipelineSchemas{In: groups}, nil
+			}
+		}
+
+	case state.MessageBroker, state.SDK, state.Webhook:
+		if eventType != "" {
+			return nil, errors.NotFound("event type not expected")
+		}
+		// TODO(Gianluca): regarding message broker connectors, see the issue
+		// https://github.com/meergo/meergo/issues/1264.
+		switch target {
+		case TargetUser:
+			// Source/SDK/User.
+			return &PipelineSchemas{In: schemas.Event, Out: profiles}, nil
+		case TargetGroup:
+			// Source/SDK/Group.
+			return &PipelineSchemas{In: schemas.Event, Out: groups}, nil
+		case TargetEvent:
+			// Source/SDK/Event.
+			return &PipelineSchemas{In: schemas.Event}, nil
+		}
+		return &PipelineSchemas{}, nil
+
+	}
+
+	panic("unreachable code")
+}
+
+// PipelineTypes returns the pipeline types for the connection.
+//
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1265.
+//
+// Refer to the specifications in the file "core/Pipelines.csv" for more
+// details.
+func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, error) {
+	this.core.mustBeOpen()
+	var pipelineTypes []PipelineType
+	c := this.connection
+	connector := c.Connector()
+	var targets state.ConnectorTargets
+	if c.Role == state.Source {
+		targets = connector.SourceTargets
+	} else {
+		targets = connector.DestinationTargets
+	}
+	if targets.Contains(state.TargetUser) {
+		switch typ := c.Connector().Type; typ {
+		case
+			state.API:
+			var name, description string
+			if c.Role == state.Source {
+				// Source/API/User.
+				name = "Import " + connector.Label + " " + connector.Terms.Users
+				description = "Import " + connector.Terms.Users
+				if connector.Terms.Users != "users" {
+					description += " as users"
+				}
+				description += " into the data warehouse"
+			} else {
+				// Destination/API/User.
+				name = "Export " + connector.Terms.Users
+				description = "Export users from the data warehouse"
+				if connector.Terms.Users != "users" {
+					description += " as " + connector.Terms.Users
+				}
+				description += " to " + connector.Label
+			}
+			at := PipelineType{
+				Name:        name,
+				Description: description,
+				Target:      TargetUser,
+			}
+			pipelineTypes = append(pipelineTypes, at)
+		case
+			state.Database,
+			state.FileStorage:
+			var name, description string
+			if c.Role == state.Source {
+				// Source/FileStorage/Users.
+				// Source/Database/Users.
+				name = "Import users"
+				description = "Import users from " + connector.Label + " into the data warehouse"
+			} else {
+				// Destination/FileStorage/Users.
+				// Destination/Database/Users.
+				name = "Export users"
+				description = "Export users to " + connector.Label
+			}
+			at := PipelineType{
+				Name:        name,
+				Description: description,
+				Target:      TargetUser,
+			}
+			pipelineTypes = append(pipelineTypes, at)
+		case state.SDK, state.Webhook:
+			if c.Role == state.Source {
+				// Source/SDK/Users.
+				// Source/Webhook/Users.
+				at := PipelineType{
+					Name:        "Import users into warehouse",
+					Description: "Import users from " + connector.Label + " into the data warehouse",
+					Target:      TargetUser,
+				}
+				pipelineTypes = append(pipelineTypes, at)
+			}
+		}
+	}
+	// TODO(marco): Implement groups
+	//if targets.Contains(state.Group) {
+	//	switch typ := c.Connector().Type; typ {
+	//	case
+	//		state.API:
+	//		var name, description string
+	//		if c.Role == state.Source {
+	//			// Source/API/Group.
+	//		    name = "Import " + connector.Name + " " + connector.Terms.Groups
+	//			description = "Import " + connector.Terms.Groups
+	//			if connector.Terms.Groups != "groups" {
+	//				description += " as groups"
+	//			}
+	//			description += " into the data warehouse"
+	//		} else {
+	//			// Destination/API/Group.
+	//			name = "Export " + connector.Terms.Groups
+	//			description = "Export groups "
+	//			if connector.Terms.Groups != "groups" {
+	//				description += " as " + connector.Terms.Groups
+	//			}
+	//			description += " to " + connector.Name
+	//		}
+	//		at := PipelineType{
+	//			Name:        name,
+	//			Description: description,
+	//			Target:      Group,
+	//		}
+	//		pipelineTypes = append(pipelineTypes, at)
+	//	case
+	//		state.Database,
+	//		state.FileStorage:
+	//		var name, description string
+	//		if c.Role == state.Source {
+	//			// Source/FileStorage/Group.
+	//			// Source/Database/Group.
+	//			name = "Import groups"
+	//			description = "Import groups from " + connector.Name + " into the data warehouse"
+	//		} else {
+	//			// Destination/FileStorage/Group.
+	//			// Destination/Database/Group.
+	//			name = "Export groups"
+	//			description = "Export groups to " + connector.Name
+	//		}
+	//		at := PipelineType{
+	//			Name:        name,
+	//			Description: description,
+	//			Target:      Group,
+	//		}
+	//		pipelineTypes = append(pipelineTypes, at)
+	//	case state.SDK:
+	//		if c.Role == state.Source {
+	//			// Source/SDK/Group.
+	//			at := PipelineType{
+	//				Name:        "Import groups into warehouse",
+	//				Description: "Import groups from " + connector.Name + " into the data warehouse",
+	//				Target:      Group,
+	//			}
+	//			pipelineTypes = append(pipelineTypes, at)
+	//		}
+	//	}
+	//}
+	if targets.Contains(state.TargetEvent) {
+		switch typ := c.Connector().Type; typ {
+		case state.SDK, state.Webhook:
+			if c.Role == state.Source {
+				// Source/SDK/Event.
+				// Source/Webhook/Event.
+				at := PipelineType{
+					Name:        "Import events into warehouse",
+					Description: "Import events from " + connector.Label + " into the data warehouse",
+					Target:      TargetEvent,
+				}
+				pipelineTypes = slices.Insert(pipelineTypes, 0, at)
+			}
+		case state.API:
+			if c.Role == state.Destination {
+				eventTypes, err := this.api().EventTypes(ctx)
+				if err != nil {
+					if _, ok := err.(*connections.UnavailableError); ok {
+						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+					}
+					return nil, err
+				}
+				// Destination/API/Event.
+				for _, et := range eventTypes {
+					id := et.ID
+					pipelineTypes = append(pipelineTypes, PipelineType{
+						Name:        et.Name,
+						Description: et.Description,
+						Target:      TargetEvent,
+						EventType:   &id,
+					})
+				}
+			}
+		}
+	}
+	if pipelineTypes == nil {
+		pipelineTypes = []PipelineType{}
+	}
+	return pipelineTypes, nil
+}
+
 // PreviewSendEvent returns a preview of an event as it would be sent to an API.
 // The connection must be a destination API connection, and it is expected to
 // have an event type with identifier typ. If there is a transformation,
@@ -1492,7 +1495,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			return nil, errors.BadRequest("out schema is not an object")
 		}
 
-		action := &state.Action{
+		pipeline := &state.Pipeline{
 			InSchema:  schemas.Event,
 			OutSchema: outSchema,
 			Transformation: state.Transformation{
@@ -1510,8 +1513,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}
-			action.Transformation.InPaths = mapping.InPaths()
-			action.Transformation.OutPaths = mapping.OutPaths()
+			pipeline.Transformation.InPaths = mapping.InPaths()
+			pipeline.Transformation.OutPaths = mapping.OutPaths()
 		case transformation.Function != nil:
 			if transformation.Function.Source == "" {
 				return nil, errors.BadRequest("function source is empty")
@@ -1530,30 +1533,30 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			default:
 				return nil, errors.BadRequest("function language %q is not valid", transformation.Function.Language)
 			}
-			action.Transformation.Function = &state.TransformationFunction{
+			pipeline.Transformation.Function = &state.TransformationFunction{
 				Source:  transformation.Function.Source,
 				Version: "1", // no matter the version, it will be overwritten by the temporary function.
 			}
 			name := transformationFunctionName(0)
 			switch transformation.Function.Language {
 			case "JavaScript":
-				action.Transformation.Function.Language = state.JavaScript
+				pipeline.Transformation.Function.Language = state.JavaScript
 			case "Python":
-				action.Transformation.Function.Language = state.Python
+				pipeline.Transformation.Function.Language = state.Python
 			}
-			action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
+			pipeline.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 			// In InPaths and OutPaths, list only top-level property names;
 			// there is no need to list sub-property paths (as the behavior is
 			// the same).
-			action.Transformation.InPaths = action.InSchema.Properties().SortedNames()
-			action.Transformation.OutPaths = action.OutSchema.Properties().SortedNames()
-			provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, this.core.functionProvider)
+			pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
+			pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
+			provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(action, provider, nil)
+		transformer, err := transformers.New(pipeline, provider, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2056,7 +2059,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
 	}
 	// Perform a validation based on the connection's type and role (refer to
-	// the specifications in the file "core/Actions.csv" for more details).
+	// the specifications in the file "core/Pipelines.csv" for more details).
 	c := this.connection
 	connector := c.Connector()
 	if target == TargetEvent {

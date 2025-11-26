@@ -824,7 +824,7 @@ func Test_validateFilter(t *testing.T) {
 			},
 			target: state.TargetUser,
 			role:   state.Destination,
-			err:    fmt.Errorf(`operator "is empty" cannot be used on object properties for destination actions on users`),
+			err:    fmt.Errorf(`operator "is empty" cannot be used on object properties for destination pipelines on users`),
 		},
 		{
 			filter: Filter{
@@ -835,7 +835,7 @@ func Test_validateFilter(t *testing.T) {
 			},
 			target: state.TargetEvent,
 			role:   state.Source,
-			err:    fmt.Errorf(`operator "is not empty" cannot be used on object properties for actions on events`),
+			err:    fmt.Errorf(`operator "is not empty" cannot be used on object properties for pipelines on events`),
 		},
 		{
 			filter: Filter{

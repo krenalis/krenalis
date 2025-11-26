@@ -1,4 +1,4 @@
-import { ActionError } from './action';
+import { PipelineError } from './pipeline';
 import { AccessKey } from './organization';
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
@@ -19,7 +19,7 @@ interface ConnectorUIResponse {
 
 interface Execution {
 	id: number;
-	action: number;
+	pipeline: number;
 	startTime: string;
 	endTime?: string;
 	passed: number[];
@@ -38,15 +38,15 @@ interface CreateEventListenerResponse {
 	id: string;
 }
 
-interface ActionMatchingSchemas {
+interface PipelineMatchingSchemas {
 	internal: ObjectType;
 	external: ObjectType;
 }
 
-interface ActionSchemasResponse {
+interface PipelineSchemasResponse {
 	in: ObjectType;
 	out: ObjectType;
-	matchings: ActionMatchingSchemas;
+	matchings: PipelineMatchingSchemas;
 }
 
 interface ExecQueryResponse {
@@ -164,8 +164,8 @@ interface PreviewAlterProfileSchemaResponse {
 	queries: string[];
 }
 
-interface ActionErrorsResponse {
-	errors: ActionError[];
+interface PipelineErrorsResponse {
+	errors: PipelineError[];
 }
 
 interface PublicMetadata {
@@ -183,9 +183,9 @@ interface PublicMetadata {
 export type {
 	authCodeURLResponse,
 	profileAttributesResponse,
-	ActionError,
-	ActionErrorsResponse,
-	ActionSchemasResponse,
+	PipelineError,
+	PipelineErrorsResponse,
+	PipelineSchemasResponse,
 	APIUsersResponse,
 	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,

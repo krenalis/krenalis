@@ -30,7 +30,7 @@ type Record struct {
 // to an API. It filters users based on whether they have or do not have a match
 // with the API users.
 type Matching struct {
-	Action             int
+	Pipeline           int
 	InProperty         string
 	ExportMode         state.ExportMode
 	UpdateOnDuplicates bool
@@ -42,8 +42,8 @@ type Matching struct {
 // property to the relative column, and omitNil indicates whether attributes
 // with a nil value should be omitted from each record.
 //
-// action and appExport parameters (if specified) represent the action
-// identifier and the export options for an API action, respectively. When
+// pipeline and appExport parameters (if specified) represent the pipeline
+// identifier and the export options for an API pipeline, respectively. When
 // provided, the resulting records are compared against the destination users
 // table.
 //
@@ -98,7 +98,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			{
 				Table: "meergo_destination_profiles",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, matching.Action),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, matching.Pipeline),
 					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "__out_matching_value__", Type: types.Text()}),
 				}),
 			},
@@ -109,7 +109,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			joins[0].Type = warehouses.InnerJoin
 		case state.CreateOnly:
 			// Include only users without a corresponding match.
-			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull))
+			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIsNull))
 			fallthrough
 		case state.CreateOrUpdate:
 			// Perform a LEFT JOIN to also return users without a matching destination user.

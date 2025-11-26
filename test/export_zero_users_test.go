@@ -37,7 +37,7 @@ func TestExportZeroProfiles(t *testing.T) {
 	// Test the export of zero profiles to an API (Dummy).
 	func() {
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportProfilesActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
+		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", meergotester.PipelineToSet{
 			Name:    "Export profiles to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -60,7 +60,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		exec := c.ExecuteAction(exportProfilesActionID)
+		exec := c.ExecutePipeline(exportProfilesPipelineID)
 		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}()
 
@@ -80,8 +80,8 @@ func TestExportZeroProfiles(t *testing.T) {
 		exportedFilename := "exported-profiles.tmp.csv"
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-		// Create an action for the File System for exporting the profiles.
-		exportProfilesActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
+		// Create a pipeline for the File System for exporting the profiles.
+		exportProfilesPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
 			Name:    "Export profiles to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -109,8 +109,8 @@ func TestExportZeroProfiles(t *testing.T) {
 			"compression": core.NoCompression,
 		}, nil)
 
-		// Execute the action that export profiles.
-		exec := c.ExecuteAction(exportProfilesActionID)
+		// Execute the pipeline that export profiles.
+		exec := c.ExecutePipeline(exportProfilesPipelineID)
 
 		// Wait for the export to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)

@@ -48,12 +48,12 @@ func New(st *state.State) *Datastore {
 		store: map[int]*Store{},
 	}
 	st.Freeze()
-	ds.state.AddListener(ds.onCreateAction)
+	ds.state.AddListener(ds.onCreatePipeline)
 	ds.state.AddListener(ds.onCreateWorkspace)
-	ds.state.AddListener(ds.onDeleteAction)
 	ds.state.AddListener(ds.onDeleteConnection)
+	ds.state.AddListener(ds.onDeletePipeline)
 	ds.state.AddListener(ds.onEndAlterProfileSchema)
-	ds.state.AddListener(ds.onUpdateAction)
+	ds.state.AddListener(ds.onUpdatePipeline)
 	ds.state.AddListener(ds.onUpdateWarehouse)
 	ds.state.AddListener(ds.onUpdateWarehouseMode)
 	for _, ws := range st.Workspaces() {
@@ -185,8 +185,8 @@ func (ds *Datastore) mustBeOpen() {
 	}
 }
 
-// onCreateAction is called when an action is created.
-func (ds *Datastore) onCreateAction(n state.CreateAction) {
+// onCreatePipeline is called when a pipeline is created.
+func (ds *Datastore) onCreatePipeline(n state.CreatePipeline) {
 	connection, _ := ds.state.Connection(n.Connection)
 	ws := connection.Workspace()
 	ds.mu.Lock()
@@ -195,7 +195,7 @@ func (ds *Datastore) onCreateAction(n state.CreateAction) {
 	if !ok {
 		return
 	}
-	store.onCreateAction(n)
+	store.onCreatePipeline(n)
 }
 
 // onCreateWorkspace is called when a workspace is created.
@@ -205,18 +205,6 @@ func (ds *Datastore) onCreateWorkspace(n state.CreateWorkspace) {
 	ds.mu.Lock()
 	ds.store[ws.ID] = store
 	ds.mu.Unlock()
-}
-
-// onDeleteAction is called when an action is deleted.
-func (ds *Datastore) onDeleteAction(n state.DeleteAction) {
-	ws := n.Action().Connection().Workspace()
-	ds.mu.Lock()
-	store, ok := ds.store[ws.ID]
-	ds.mu.Unlock()
-	if !ok {
-		return
-	}
-	store.onDeleteAction(n)
 }
 
 // onDeleteConnection is called when a connection is deleted.
@@ -231,6 +219,18 @@ func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) {
 	store.onDeleteConnection(n)
 }
 
+// onDeletePipeline is called when a pipeline is deleted.
+func (ds *Datastore) onDeletePipeline(n state.DeletePipeline) {
+	ws := n.Pipeline().Connection().Workspace()
+	ds.mu.Lock()
+	store, ok := ds.store[ws.ID]
+	ds.mu.Unlock()
+	if !ok {
+		return
+	}
+	store.onDeletePipeline(n)
+}
+
 // onEndAlterProfileSchema is called when the alter of the profile schema ends.
 func (ds *Datastore) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	ds.mu.Lock()
@@ -239,17 +239,17 @@ func (ds *Datastore) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	store.onEndAlterProfileSchema(n)
 }
 
-// onUpdateAction is called when an action is updated.
-func (ds *Datastore) onUpdateAction(n state.UpdateAction) {
-	action, _ := ds.state.Action(n.ID)
-	ws := action.Connection().Workspace()
+// onUpdatePipeline is called when a pipeline is updated.
+func (ds *Datastore) onUpdatePipeline(n state.UpdatePipeline) {
+	pipeline, _ := ds.state.Pipeline(n.ID)
+	ws := pipeline.Connection().Workspace()
 	ds.mu.Lock()
 	store, ok := ds.store[ws.ID]
 	ds.mu.Unlock()
 	if !ok {
 		return
 	}
-	store.onUpdateAction(n)
+	store.onUpdatePipeline(n)
 }
 
 // onUpdateWarehouse is called when a warehouse is updated.
@@ -295,7 +295,7 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 	for _, c := range columns {
 		name := strings.ToLower(c.Name)
 		if _, ok := names[name]; ok {
-			return fmt.Errorf("two %s action schema properties would have the same column name %q in the data warehouse, case-insensitively", io, name)
+			return fmt.Errorf("two %s pipeline schema properties would have the same column name %q in the data warehouse, case-insensitively", io, name)
 		}
 		names[name] = struct{}{}
 	}

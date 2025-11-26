@@ -41,7 +41,7 @@ func TestExportUsersToFile(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -64,7 +64,7 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID)
+		exec := c.ExecutePipeline(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -81,8 +81,8 @@ func TestExportUsersToFile(t *testing.T) {
 	exportedFilename := "exported-profiles.tmp.csv"
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-	// Create an action for the CSV for exporting the users.
-	exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
+	// Create a pipeline for the CSV for exporting the users.
+	exportUsersPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
 		Name:    "Export users to the CSV on File System",
 		Enabled: true,
 		Path:    exportedFilename,
@@ -120,7 +120,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/api/v1/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
+		c.MustCall("PUT", "/api/v1/pipelines/"+strconv.Itoa(exportUsersPipelineID), meergotester.PipelineToSet{
 			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -138,8 +138,8 @@ func TestExportUsersToFile(t *testing.T) {
 			OrderBy:     "email",
 		}, nil)
 
-		// Execute the action that export users.
-		exec := c.ExecuteAction(exportUsersActionID)
+		// Execute the pipeline that export users.
+		exec := c.ExecutePipeline(exportUsersPipelineID)
 
 		// Wait for the export to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)

@@ -22,7 +22,7 @@ import (
 //
 // This works by importing users through a JSON file, which is created (or
 // updated) every time a user is imported, then it's loaded into Meergo by
-// running the import action on the JSON.
+// running the import pipeline on the JSON.
 func TestIdentityResolution(t *testing.T) {
 
 	storage := meergotester.NewTempStorage(t)
@@ -58,16 +58,16 @@ func TestIdentityResolution(t *testing.T) {
 
 	c.UpdateIdentityResolution(false, []string{"dummy_id", "email"})
 
-	// Create an action for the JSON for importing the users.
+	// Create a pipeline for the JSON for importing the users.
 	mapping := map[string]string{
 		"dummy_id":      "dummyId",
 		"email":         "email",
 		"phone_numbers": "phoneNumbers",
 	}
 
-	// Create the action A.
-	actionA := c.CreateAction(fsID, "User", meergotester.ActionToSet{
-		Name:      "Action A",
+	// Create the pipeline A.
+	pipelineA := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+		Name:      "Pipeline A",
 		Enabled:   true,
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
@@ -80,9 +80,9 @@ func TestIdentityResolution(t *testing.T) {
 		FormatSettings: meergotester.SettingsProperties(properties),
 	})
 
-	// Create the action B.
-	actionB := c.CreateAction(fsID, "User", meergotester.ActionToSet{
-		Name:      "Action B",
+	// Create the pipeline B.
+	pipelineB := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+		Name:      "Pipeline B",
 		Enabled:   true,
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
@@ -116,7 +116,7 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Define a function "importUser" which imports the user into the data
 	// warehouse.
-	importUser := func(action int, props map[string]any) {
+	importUser := func(pipeline int, props map[string]any) {
 
 		// Create a JSON file with the user.
 		t.Logf("importing user %v", props)
@@ -146,7 +146,7 @@ func TestIdentityResolution(t *testing.T) {
 		}
 
 		// Import the users in the JSON.
-		exec := c.ExecuteAction(action)
+		exec := c.ExecutePipeline(pipeline)
 		c.WaitForExecutionsCompletion(fsID, exec)
 		c.RunIdentityResolution()
 
@@ -157,28 +157,28 @@ func TestIdentityResolution(t *testing.T) {
 	expectProfiles([]map[string]any{})
 
 	expectProfiles([]map[string]any{})
-	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{}})
+	importUser(pipelineA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{}})
 	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{}},
 	})
 
-	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}})
+	importUser(pipelineA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}})
 	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionA, map[string]any{"dummyId": "BBB", "email": "", "phoneNumbers": []any{"333"}})
+	importUser(pipelineA, map[string]any{"dummyId": "BBB", "email": "", "phoneNumbers": []any{"333"}})
 	expectProfiles([]map[string]any{
 		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionB, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"333"}})
+	importUser(pipelineB, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"333"}})
 	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333"}},
 		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
-	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"444"}})
+	importUser(pipelineA, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"444"}})
 	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333", "444"}},
 	})

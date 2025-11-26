@@ -31,7 +31,7 @@ type uiHandlerConnection interface {
 	ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error)
 }
 
-// ServeActionUI serves the user interface of the specified file action and
+// ServePipelineUI serves the user interface of the specified file pipeline and
 // returns the serialized interface to send back to the client. event indicates
 // the event to serve and settings are the format settings.
 //
@@ -40,12 +40,12 @@ type uiHandlerConnection interface {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (c *Connections) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
-	role := connectors.Role(action.Connection().Role)
-	format := action.Format()
+func (c *Connections) ServePipelineUI(ctx context.Context, pipeline *state.Pipeline, event string, settings json.Value) (json.Value, error) {
+	role := connectors.Role(pipeline.Connection().Role)
+	format := pipeline.Format()
 	inner, err := connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
-		Settings:    action.FormatSettings,
-		SetSettings: setActionSettingsFunc(c.state, action),
+		Settings:    pipeline.FormatSettings,
+		SetSettings: setPipelineSettingsFunc(c.state, pipeline),
 	})
 	if err != nil {
 		return nil, connectorError(err)

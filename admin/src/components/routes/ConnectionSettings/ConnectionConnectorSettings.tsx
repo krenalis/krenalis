@@ -63,7 +63,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		fetchUI();
 	}, []);
 
-	const onActionClick = async (eventName: string, confirmationButtonIndex?: number) => {
+	const onPipelineClick = async (eventName: string, confirmationButtonIndex?: number) => {
 		let confirmationButton: FeedbackButtonRef | null = null;
 		if (confirmationButtonIndex != null) {
 			confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
@@ -159,7 +159,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 					key={b.event}
 					variant={b.variant}
 					onClick={async () => {
-						await onActionClick(b.event, i);
+						await onPipelineClick(b.event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
@@ -171,7 +171,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		}
 	}
 	buttonsToRender.push(
-		<SlButton variant='primary' onClick={() => onActionClick('save')}>
+		<SlButton variant='primary' onClick={() => onPipelineClick('save')}>
 			Save
 		</SlButton>,
 	);

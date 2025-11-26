@@ -94,9 +94,9 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 	return (
 		<Section
 			title={`Add Meergo to your ${applicationType}`}
-			className='connection-actions__instructions'
+			className='connection-pipelines__instructions'
 			description={
-				<div className='connection-actions__instructions-text'>
+				<div className='connection-pipelines__instructions-text'>
 					Copy this snippet and paste it into your {applicationType} to receive events
 					<a target='_blank' href={documentationLink}>
 						See documentation

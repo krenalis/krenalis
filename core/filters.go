@@ -575,9 +575,9 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			case types.ObjectKind:
 				if disallowEmptyOnObject {
 					if target == state.TargetEvent {
-						return nil, fmt.Errorf("operator %q cannot be used on object properties for actions on events", op)
+						return nil, fmt.Errorf("operator %q cannot be used on object properties for pipelines on events", op)
 					}
-					return nil, fmt.Errorf("operator %q cannot be used on object properties for destination actions on users", op)
+					return nil, fmt.Errorf("operator %q cannot be used on object properties for destination pipelines on users", op)
 				}
 			default:
 				return nil, fmt.Errorf("operator %q can only be used with json, text, object, array, and map properties", op)

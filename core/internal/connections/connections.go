@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file.
 
 // Package connections provides the interface to interact with API, database,
-// file storage, and message broker connections, and to file actions.
+// file storage, and message broker connections, and to file pipelines.
 package connections
 
 import (
@@ -579,36 +579,6 @@ func rewriteColumnErrors(err error) error {
 	return err
 }
 
-// setActionSettings sets the settings of the provided action.
-func setActionSettings(ctx context.Context, st *state.State, action int, settings []byte) error {
-	if !utf8.Valid(settings) {
-		return errors.New("settings is not valid UTF-8")
-	}
-	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
-		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
-	}
-	n := state.SetActionFormatSettings{
-		Action:   action,
-		Settings: settings,
-	}
-	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "UPDATE actions SET format_settings = $1 WHERE id = $2", n.Settings, n.Action)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
-	})
-	return err
-}
-
-// setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
-// the settings for the action.
-func setActionSettingsFunc(st *state.State, a *state.Action) connectors.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
-		return setActionSettings(ctx, st, a.ID, settings)
-	}
-}
-
 // setConnectionSettings sets the settings of the provided connection.
 func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
 	if !utf8.Valid(settings) {
@@ -636,6 +606,36 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 func setConnectionSettingsFunc(st *state.State, c *state.Connection) connectors.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setConnectionSettings(ctx, st, c.ID, settings)
+	}
+}
+
+// setPipelineSettings sets the settings of the provided pipeline.
+func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, settings []byte) error {
+	if !utf8.Valid(settings) {
+		return errors.New("settings is not valid UTF-8")
+	}
+	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
+		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
+	}
+	n := state.SetPipelineFormatSettings{
+		Pipeline: pipeline,
+		Settings: settings,
+	}
+	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		_, err := tx.Exec(ctx, "UPDATE pipelines SET format_settings = $1 WHERE id = $2", n.Settings, n.Pipeline)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	return err
+}
+
+// setPipelineSettingsFunc returns a connector.SetSettingsFunc function that
+// sets the settings for the pipeline.
+func setPipelineSettingsFunc(st *state.State, p *state.Pipeline) connectors.SetSettingsFunc {
+	return func(ctx context.Context, settings []byte) error {
+		return setPipelineSettings(ctx, st, p.ID, settings)
 	}
 }
 

@@ -5,7 +5,7 @@ import './Section.css';
 interface SectionProps {
 	title: string;
 	description?: ReactNode;
-	actions?: ReactNode[] | ReactNode;
+	pipelines?: ReactNode[] | ReactNode;
 	children: ReactNode;
 	padded?: boolean;
 	annotated?: boolean;
@@ -13,7 +13,7 @@ interface SectionProps {
 }
 
 const Section = forwardRef<any, SectionProps>(
-	({ title, description, actions, children, padded, annotated, className }: SectionProps, ref) => {
+	({ title, description, pipelines, children, padded, annotated, className }: SectionProps, ref) => {
 		return (
 			<div
 				className={`section${className ? ' ' + className : ''}${padded ? ' section--padded' : ''}${annotated ? ' section--annotated' : ''}`}
@@ -24,8 +24,8 @@ const Section = forwardRef<any, SectionProps>(
 						<div className='section__title'>{title}</div>
 						{description && <div className='section__description'>{description}</div>}
 					</div>
-					<Flex className='section__actions' justifyContent='end' alignItems='center'>
-						{actions}
+					<Flex className='section__pipelines' justifyContent='end' alignItems='center'>
+						{pipelines}
 					</Flex>
 				</div>
 				<div className='section__content'>{children}</div>

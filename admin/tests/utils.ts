@@ -218,58 +218,58 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const fillUserActionFilters = async (page: Page): Promise<void> => {
+const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await page.waitForTimeout(1000);
 
-	await page.locator('.action__filters-add-condition').click();
-	await page.locator('.action__filters-add-condition').click();
-	await page.locator('.action__filters-add-condition').click();
+	await page.locator('.pipeline__filters-add-condition').click();
+	await page.locator('.pipeline__filters-add-condition').click();
+	await page.locator('.pipeline__filters-add-condition').click();
 
-	let filters = page.locator('.action__filters-filter');
+	let filters = page.locator('.pipeline__filters-filter');
 
-	await filters.nth(0).locator('.action__filters-property sl-input').click();
+	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
 	await filters.nth(0).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
-	await filters.nth(0).locator('.action__filters-operator sl-option[value="10"]').click(); // option is "is one of".
-	await filters.nth(0).locator('.action__filters-add-value').click();
-	await filters.nth(0).locator('.action__filters-add-value').click();
+	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="10"]').click(); // option is "is one of".
+	await filters.nth(0).locator('.pipeline__filters-add-value').click();
+	await filters.nth(0).locator('.pipeline__filters-add-value').click();
 
 	await page.waitForTimeout(1000);
 
 	await filters
 		.nth(0)
-		.locator('.action__filters-is-one-of-values > .action__filters-value-input:nth-child(1) >> input')
+		.locator('.pipeline__filters-is-one-of-values > .pipeline__filters-value-input:nth-child(1) >> input')
 		.fill('acme@meergo.com');
 	await filters
 		.nth(0)
-		.locator('.action__filters-is-one-of-values > .action__filters-value:nth-child(2) >> input')
+		.locator('.pipeline__filters-is-one-of-values > .pipeline__filters-value:nth-child(2) >> input')
 		.fill('test@meergo.com');
 	await filters
 		.nth(0)
-		.locator('.action__filters-is-one-of-values > .action__filters-value:nth-child(3) >> input')
+		.locator('.pipeline__filters-is-one-of-values > .pipeline__filters-value:nth-child(3) >> input')
 		.fill('foo@meergo.com');
 	await filters
 		.nth(0)
 		.locator(
-			'.action__filters-is-one-of-values > .action__filters-value:nth-child(3) .action__filters-value-remove',
+			'.pipeline__filters-is-one-of-values > .pipeline__filters-value:nth-child(3) .pipeline__filters-value-remove',
 		)
 		.click(); // remove the last value.
 
-	await page.locator('.action__filters-logical sl-button:nth-child(2)').click(); // set the logical to 'or'.
+	await page.locator('.pipeline__filters-logical sl-button:nth-child(2)').click(); // set the logical to 'or'.
 
-	await filters.nth(1).locator('.action__filters-property sl-input').click();
+	await filters.nth(1).locator('.pipeline__filters-property sl-input').click();
 	await filters.nth(1).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'dummy_id' }).click();
-	await filters.nth(1).locator('.action__filters-operator sl-option[value="6"]').click(); // option is "is between".
-	await filters.nth(1).locator('.action__filters-value-input:nth-child(2) >> input').fill('1200');
-	await filters.nth(1).locator('.action__filters-value-input:nth-child(4) >> input').fill('1800');
+	await filters.nth(1).locator('.pipeline__filters-operator sl-option[value="6"]').click(); // option is "is between".
+	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(2) >> input').fill('1200');
+	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(4) >> input').fill('1800');
 
-	await filters.nth(2).locator('.action__filters-remove-condition').click(); // remove the last filter.
+	await filters.nth(2).locator('.pipeline__filters-remove-condition').click(); // remove the last filter.
 };
 
-const deepCompareActionSchema = (actual: object, expected: object) => {
+const deepComparePipelineSchema = (actual: object, expected: object) => {
 	const actualCopy: any = structuredClone(actual);
 	const expectedCopy: any = structuredClone(expected);
 
-	// sort the properties of the action schemas.
+	// sort the properties of the pipeline schemas.
 	if (actualCopy.inSchema && actualCopy.inSchema.properties) {
 		actualCopy.inSchema.properties.sort((a: Property, b: Property) =>
 			a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1,
@@ -331,7 +331,7 @@ export {
 	addFileSystemSource,
 	addFileSystemDestination,
 	addJavascriptSource,
-	fillUserActionFilters,
-	deepCompareActionSchema,
+	fillUserPipelineFilters,
+	deepComparePipelineSchema,
 	logValidationErrors,
 };

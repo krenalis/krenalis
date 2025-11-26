@@ -430,8 +430,8 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 // versionFromFilename returns the version from the filename relative to a
 // function with the given name.
 //
-// For example, if a function is named "meergo-action12345" and the filename is
-// "meergo-action12345.v10.py", then 10 and true are returned.
+// For example, if a function is named "meergo-pipeline12345" and the filename
+// is "meergo-pipeline12345.v10.py", then 10 and true are returned.
 //
 // The boolean value reports whether the filename (and thus the returned
 // version) is valid for the given name or not.

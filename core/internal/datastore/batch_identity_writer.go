@@ -19,7 +19,7 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
-var ErrActionNotExist = errors.New("action does not exist")
+var ErrPipelineNotExist = errors.New("pipeline does not exist")
 
 // ErrPurgeSkipped is returned when the purge phase is skipped because some
 // records without known IDs encountered an error.
@@ -38,7 +38,7 @@ type Identity struct {
 
 // identityKey represents a key in the meergo_identities table.
 type identityKey struct {
-	action      int
+	pipeline    int
 	isAnonymous bool
 	// identityID is the identity ID for non-anonymous identities, while it is
 	// the anonymous ID for anonymous ones.
@@ -49,7 +49,7 @@ type identityKey struct {
 // when identities are imported in batch.
 type BatchIdentityWriter struct {
 	store      *Store
-	action     int
+	pipeline   int
 	connection int
 	execution  int
 	ack        IdentityWriterAckFunc
@@ -73,54 +73,54 @@ type BatchIdentityWriter struct {
 }
 
 // newBatchIdentityWriter returns an identity writer for writing identities in
-// batch, relative to the given action (which must be in execution) on the data
-// warehouse. purge reports whether identities should be purged from the data
-// warehouse after all identities have been written. The ack parameter is the
-// acknowledgment function.
+// batch, relative to the given pipeline (which must be in execution) on the
+// data warehouse. purge reports whether identities should be purged from the
+// data warehouse after all identities have been written. The ack parameter is
+// the acknowledgment function.
 //
-// If the action's output schema does not align with the profile schema, it
+// If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
 //
 // It panics if the ack function is nil.
-func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 
 	if ack == nil {
 		panic("nil ack function")
 	}
 
-	connection := action.Connection()
-	execution, ok := action.Execution()
+	connection := pipeline.Connection()
+	execution, ok := pipeline.Execution()
 	if !ok {
-		return nil, fmt.Errorf("action is not in execution")
+		return nil, fmt.Errorf("pipeline is not in execution")
 	}
 
-	// Check that action's output schema is aligned with the profile schema.
+	// Check that pipeline's output schema is aligned with the profile schema.
 	workspace := connection.Workspace()
-	err := schemas.CheckAlignment(action.OutSchema, workspace.ProfileSchema, nil)
+	err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 	if err != nil {
 		return nil, err
 	}
 	iw := BatchIdentityWriter{
 		store:      store,
-		action:     action.ID,
+		pipeline:   pipeline.ID,
 		connection: connection.ID,
 		execution:  execution.ID,
-		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
+		flatter:    newFlatter(pipeline.OutSchema, store.identityColumnByProperty()),
 		index:      map[identityKey]int{},
 		ack:        ack,
 		purge:      purge,
 	}
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
-	iw.columns = make([]warehouses.Column, 7, 7+len(action.Transformation.OutPaths))
-	iw.columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
+	iw.columns = make([]warehouses.Column, 7, 7+len(pipeline.Transformation.OutPaths))
+	iw.columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
 	iw.columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
 	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
 	iw.columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
 	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
 	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.profileColumnByProperty())
+	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	return &iw, nil
 }
@@ -145,7 +145,7 @@ func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.
 //
-// If purge needs to be done, it purges all identities of the action for which
+// If purge needs to be done, it purges all identities of the pipeline for which
 // neither the Write method nor the Keep method has been called. If Keep was
 // called with an empty identifier, the purge is skipped and ErrPurgeSkipped is
 // returned.
@@ -193,7 +193,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 			return ErrPurgeSkipped
 		}
 		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, iw.action),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, iw.pipeline),
 			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OpIsNot, iw.execution),
 		})
 		err := iw.store.warehouse().Delete(ctx, "meergo_identities", where)
@@ -221,10 +221,10 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 		iw.skipPurge = true
 		return
 	}
-	key := identityKey{action: iw.action, identityID: id}
+	key := identityKey{pipeline: iw.pipeline, identityID: id}
 	row := map[string]any{
 		"$purge":           false,
-		"__action__":       key.action,
+		"__pipeline__":     key.pipeline,
 		"__is_anonymous__": false,
 		"__identity_id__":  key.identityID,
 		"__connection__":   iw.connection,
@@ -247,10 +247,10 @@ func (iw *BatchIdentityWriter) Write(identity Identity) {
 	if iw.close.Load() {
 		panic("call Write on a closed identity writer")
 	}
-	key := identityKey{action: iw.action, identityID: identity.ID}
+	key := identityKey{pipeline: iw.pipeline, identityID: identity.ID}
 	row := identity.Attributes
 	iw.flatter.flat(row)
-	row["__action__"] = key.action
+	row["__pipeline__"] = key.pipeline
 	row["__is_anonymous__"] = false
 	row["__identity_id__"] = key.identityID
 	row["__connection__"] = iw.connection

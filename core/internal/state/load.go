@@ -266,7 +266,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		" alter_profile_schema_start_time, alter_profile_schema_end_time,"+
 		" alter_profile_schema_error, profile_schema, resolve_identities_on_batch_import,"+
 		" identifiers, ir_id, ir_start_time, ir_end_time, ui_profile_image,"+
-		" ui_profile_first_name, ui_profile_last_name, ui_profile_extra, actions_to_purge "+
+		" ui_profile_first_name, ui_profile_last_name, ui_profile_extra, pipelines_to_purge "+
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID uuid.UUID
@@ -279,7 +279,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[int]*Connection{},
-					executions:  map[int]*ActionExecution{},
+					executions:  map[int]*PipelineExecution{},
 					accounts:    map[int]*Account{},
 				}
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
@@ -290,7 +290,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers, &ws.IR.ID,
 					&ws.IR.StartTime, &ws.IR.EndTime, &ws.UIPreferences.Profile.Image,
 					&ws.UIPreferences.Profile.FirstName, &ws.UIPreferences.Profile.LastName,
-					&ws.UIPreferences.Profile.Extra, &ws.actionsToPurge); err != nil {
+					&ws.UIPreferences.Profile.Extra, &ws.pipelinesToPurge); err != nil {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
@@ -389,7 +389,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				return fmt.Errorf("the %s connector required by the %s '%s' is not included in the executable. "+
 					"Recompile the executable with the %s connector to resolve the issue", connector, c.Role, c.Name, connector)
 			}
-			c.actions = map[int]*Action{}
+			c.pipelines = map[int]*Pipeline{}
 			if account > 0 {
 				c.account = ws.accounts[account]
 			}
@@ -444,14 +444,14 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return err
 	}
 
-	// Read all actions.
+	// Read all pipelines.
 	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 		"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_id,\n"+
 		"transformation_version, transformation_language, transformation_source, transformation_preserve_json,\n"+
 		"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression::TEXT,\n"+
 		"order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates, table_name,\n"+
 		"table_key, identity_column, last_change_time_column, last_change_time_format, health, properties_to_unset\n"+
-		"FROM actions",
+		"FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID int
@@ -459,56 +459,56 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				var rawInSchema, rawOutSchema, filter, mapping []byte
 				var function TransformationFunction
 				var format *string
-				action := Action{}
-				err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
-					&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
+				pipeline := Pipeline{}
+				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
+					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
 					&filter, &mapping, &function.ID, &function.Version, &function.Language, &function.Source, &function.PreserveJSON,
-					&action.Transformation.InPaths, &action.Transformation.OutPaths, &action.Query, &format,
-					&action.Path, &action.Sheet, &action.Compression, &action.OrderBy, &action.FormatSettings, &action.ExportMode,
-					&action.Matching.In, &action.Matching.Out, &action.UpdateOnDuplicates, &action.TableName,
-					&action.TableKey, &action.IdentityColumn, &action.LastChangeTimeColumn,
-					&action.LastChangeTimeFormat, &action.Health, &action.propertiesToUnset)
+					&pipeline.Transformation.InPaths, &pipeline.Transformation.OutPaths, &pipeline.Query, &format,
+					&pipeline.Path, &pipeline.Sheet, &pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
+					&pipeline.Matching.In, &pipeline.Matching.Out, &pipeline.UpdateOnDuplicates, &pipeline.TableName,
+					&pipeline.TableKey, &pipeline.IdentityColumn, &pipeline.LastChangeTimeColumn,
+					&pipeline.LastChangeTimeFormat, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return err
 				}
 				c := state.connections[connectionID]
 				if format != nil {
-					action.format = state.connectors[*format]
-					if action.format == nil {
+					pipeline.format = state.connectors[*format]
+					if pipeline.format == nil {
 						return fmt.Errorf("the %s connector required by the %s '%s' is not included in the executable. "+
 							"Recompile the executable with the %s connector to resolve the issue", *format, c.Role, c.Name, *format)
 					}
 				}
-				action.mu = new(sync.Mutex)
-				action.connection = c
-				action.EventType = eventType
-				err = action.InSchema.UnmarshalJSON(rawInSchema)
+				pipeline.mu = new(sync.Mutex)
+				pipeline.connection = c
+				pipeline.EventType = eventType
+				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
-					// TODO(marco) disable the action instead of returning an error
+					// TODO(marco) disable the pipeline instead of returning an error
 					return err
 				}
-				err = action.OutSchema.UnmarshalJSON(rawOutSchema)
+				err = pipeline.OutSchema.UnmarshalJSON(rawOutSchema)
 				if err != nil {
-					// TODO(marco) disable the action instead of returning an error
+					// TODO(marco) disable the pipeline instead of returning an error
 					return err
 				}
 				if filter != nil {
-					action.Filter, err = unmarshalWhere(filter, action.InSchema)
+					pipeline.Filter, err = unmarshalWhere(filter, pipeline.InSchema)
 					if err != nil {
 						return err
 					}
 				}
 				if len(mapping) > 0 {
-					err = json.Unmarshal(mapping, &action.Transformation.Mapping)
+					err = json.Unmarshal(mapping, &pipeline.Transformation.Mapping)
 					if err != nil {
 						return err
 					}
 				}
 				if function.Source != "" {
-					action.Transformation.Function = &function
+					pipeline.Transformation.Function = &function
 				}
-				state.actions[action.ID] = &action
-				c.actions[action.ID] = &action
+				state.pipelines[pipeline.ID] = &pipeline
+				c.pipelines[pipeline.ID] = &pipeline
 			}
 			return nil
 		})
@@ -516,23 +516,23 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return err
 	}
 
-	// Read running action executions.
-	err = tx.QueryScan(ctx, "SELECT id, action, cursor, incremental, start_time\n"+
-		"FROM actions_executions\nWHERE end_time IS NULL",
+	// Read running pipeline executions.
+	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
+		"FROM pipelines_executions\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				exe := ActionExecution{
+				exe := PipelineExecution{
 					mu: &sync.Mutex{},
 				}
-				var actionID int
-				err := rows.Scan(&exe.ID, &actionID, &exe.Cursor, &exe.Incremental, &exe.StartTime)
+				var pipelineID int
+				err := rows.Scan(&exe.ID, &pipelineID, &exe.Cursor, &exe.Incremental, &exe.StartTime)
 				if err != nil {
 					return err
 				}
-				action := state.actions[actionID]
-				exe.action = action
-				action.execution = &exe
-				ws := exe.action.connection.workspace
+				pipeline := state.pipelines[pipelineID]
+				exe.pipeline = pipeline
+				pipeline.execution = &exe
+				ws := exe.pipeline.connection.workspace
 				ws.executions[exe.ID] = &exe
 			}
 			return nil
