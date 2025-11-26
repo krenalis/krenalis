@@ -38,21 +38,39 @@ const sidebarItems: sidebarItem[] = [
 			},
 		],
 	},
-	{ name: 'profiles', label: 'Profiles', link: 'profiles', icon: 'people' },
+	{
+		name: 'profile-unification',
+		label: 'Profile Unification',
+		link: 'profile-unification',
+		icon: 'people',
+		subItems: [
+			{
+				name: 'profile-unification/profiles',
+				label: 'Profiles',
+				link: 'profile-unification/profiles',
+				icon: 'people',
+			},
+			{
+				name: 'profile-unification/schema',
+				label: 'Schema',
+				link: 'profile-unification/schema',
+				icon: 'bookmark-check',
+			},
+			{
+				name: 'profile-unification/rules',
+				label: 'Rules',
+				link: 'profile-unification/rules',
+				icon: 'sliders2',
+			},
+		],
+	},
 	{
 		name: 'settings',
-		label: 'Customization',
+		label: 'Settings',
 		link: 'settings',
 		icon: 'gear',
 		subItems: [
-			{ name: 'settings/general', label: 'General', link: 'settings/general', icon: 'sliders2' },
-			{ name: 'schema', label: 'Profile Schema', link: 'schema', icon: 'bookmark-check' },
-			{
-				name: 'settings/identityResolution',
-				label: 'Identity Resolution',
-				link: 'settings/identity-resolution',
-				icon: 'person-arms-up',
-			},
+			{ name: 'settings/general', label: 'General', link: 'settings/general', icon: 'list' },
 			{
 				name: 'settings/dataWarehouse',
 				label: 'Data Warehouse',

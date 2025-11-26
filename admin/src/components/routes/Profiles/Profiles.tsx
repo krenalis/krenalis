@@ -12,7 +12,7 @@ const Profiles = () => {
 	const { profiles, profilesTotal, profilesProperties, isLoading, profileIDList, fetchProfiles } = useProfiles();
 
 	useLayoutEffect(() => {
-		setTitle('Profiles');
+		setTitle('Profile Unification / Profiles');
 	}, []);
 
 	return (

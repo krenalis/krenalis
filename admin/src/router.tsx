@@ -28,6 +28,7 @@ import Members from './components/routes/Members/Members';
 import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
 import Workspaces from './components/routes/Workspaces/Workspaces';
+import { ProfileUnification } from './components/routes/ProfileUnification/ProfileUnification';
 import SignUp from './components/routes/SignUp/SignUp';
 import { FileConnector } from './components/routes/FileConnector/FileConnector';
 import { Schema } from './components/routes/Schema/Schema';
@@ -95,23 +96,6 @@ const router = createBrowserRouter([
 					},
 					{ path: 'connections', element: <ConnectionsMap /> },
 					{ path: 'oauth/authorize', element: <OAuth /> },
-					{ path: 'profiles', element: <Profiles /> },
-					{
-						path: 'schema',
-						element: <Schema />,
-						children: [
-							{
-								path: '',
-								element: <SchemaGrid />,
-								children: [
-									{
-										path: 'edit',
-										element: <SchemaEditWrapper />,
-									},
-								],
-							},
-						],
-					},
 					{
 						path: 'settings',
 						element: <Settings />,
@@ -121,12 +105,38 @@ const router = createBrowserRouter([
 								element: <GeneralSettings />,
 							},
 							{
-								path: 'identity-resolution',
-								element: <IdentityResolutionSettings />,
-							},
-							{
 								path: 'data-warehouse',
 								element: <DataWarehouse />,
+							},
+						],
+					},
+					{
+						path: 'profile-unification',
+						element: <ProfileUnification />,
+						children: [
+							{
+								path: 'profiles',
+								element: <Profiles />,
+							},
+							{
+								path: 'schema',
+								element: <Schema />,
+								children: [
+									{
+										path: '',
+										element: <SchemaGrid />,
+										children: [
+											{
+												path: 'edit',
+												element: <SchemaEditWrapper />,
+											},
+										],
+									},
+								],
+							},
+							{
+								path: 'rules',
+								element: <IdentityResolutionSettings />,
 							},
 						],
 					},

@@ -24,7 +24,7 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 				setTimeout(() => setIsLoading(false), 200);
 				if (err instanceof NotFoundError) {
 					handleError('This profile does not exist');
-					redirect('profiles');
+					redirect('profile-unification/profiles');
 					return;
 				}
 				if (err instanceof UnprocessableError) {
@@ -58,7 +58,7 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
 						handleError('This profile does not exist');
-						redirect('profiles');
+						redirect('profile-unification/profiles');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -85,7 +85,7 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
 						handleError('This profile does not exist');
-						redirect('profiles');
+						redirect('profile-unification/profiles');
 						return;
 					}
 					if (err instanceof UnprocessableError) {

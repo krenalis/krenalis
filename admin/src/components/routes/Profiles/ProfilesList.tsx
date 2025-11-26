@@ -167,7 +167,7 @@ const ProfilesList = () => {
 							) : (
 								<SlIcon slot='prefix' name='play' />
 							)}
-							{secondsSinceIRStart ? 'Identity Resolution' : 'Resolve identities'}
+							{secondsSinceIRStart ? 'Identity Resolution' : 'Run Profile Unification'}
 						</SlButton>
 						<span className='profiles-list__identity-resolution-progress'>
 							{secondsSinceIRStart ? (
@@ -190,7 +190,7 @@ const ProfilesList = () => {
 							<>
 								<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
 								<SlButton variant='primary' onClick={onStartIdentityResolution}>
-									Run identity resolution
+									Run Profile Unification
 								</SlButton>
 							</>
 						}

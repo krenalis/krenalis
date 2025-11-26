@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import './IdentityResolutionSettings.css';
 import Section from '../../base/Section/Section';
 import * as icons from '../../../constants/icons';
@@ -27,8 +27,12 @@ const IdentityResolutionSettings = () => {
 
 	const onRunOnBatchImportChange = () => setRunOnBatchImport(!runOnBatchImport);
 
-	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace } =
+	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace, setTitle } =
 		useContext(AppContext);
+
+	useLayoutEffect(() => {
+		setTitle('Profile Unification / Rules');
+	}, []);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -146,7 +150,7 @@ const IdentityResolutionSettings = () => {
 					<div className='identifiers__no-schema-description'>
 						The current profile schema doesn't include any property that can be used as an identifier
 					</div>
-					<Link path='schema'>
+					<Link path='profile-unification/schema'>
 						<SlButton variant='primary' className='identifiers__no-schema-button'>
 							See schema
 						</SlButton>
@@ -154,21 +158,6 @@ const IdentityResolutionSettings = () => {
 				</div>
 			) : (
 				<div>
-					<Section
-						title='Automatic execution'
-						description='Define when the Identity Resolution should be automatically started'
-						padded={true}
-						annotated={true}
-					>
-						<SlCheckbox
-							className='identifiers__automatic-execution'
-							checked={runOnBatchImport}
-							onSlChange={onRunOnBatchImportChange}
-						>
-							Automatically run the Identity Resolution when importing users from apps, files and
-							databases
-						</SlCheckbox>
-					</Section>
 					<Section
 						title='Identifiers'
 						description='Define the identifiers used to resolve the identity of the users'
@@ -233,6 +222,21 @@ const IdentityResolutionSettings = () => {
 						>
 							<SlIcon name='plus' />
 						</SlButton>
+					</Section>
+					<Section
+						title='Automatic unification'
+						description='Define when the Profile Unification should be automatically started'
+						padded={true}
+						annotated={true}
+					>
+						<SlCheckbox
+							className='identifiers__automatic-execution'
+							checked={runOnBatchImport}
+							onSlChange={onRunOnBatchImportChange}
+						>
+							Automatically run Profile Unification when ingesting identities from apps, files and
+							databases
+						</SlCheckbox>
 					</Section>
 					<SlButton
 						className='identifiers__save-button'

@@ -33,15 +33,24 @@ const getRouteFromPathname = (route: string, connections: TransformedConnection[
 		}
 	} else if (fragments.includes('users')) {
 		currentRoute = 'users';
-	} else if (fragments.includes('schema')) {
-		currentRoute = 'schema';
+	} else if (fragments.includes('profile-unification')) {
+		currentRoute = 'profile-unification';
+		const i = fragments.findIndex((s) => s === 'profile-unification');
+		if (i !== -1 && fragments.length - 1 > i) {
+			const resource = fragments[i + 1];
+			if (resource === 'profiles') {
+				currentRoute = 'profile-unification/profiles';
+			} else if (resource === 'schema') {
+				currentRoute = 'profile-unification/schema';
+			} else if (resource === 'rules') {
+				currentRoute = 'profile-unification/rules';
+			}
+		}
 	} else if (fragments.includes('settings')) {
 		currentRoute = 'settings';
 		const lastFragment = fragments[fragments.length - 1];
 		if (lastFragment === 'general') {
 			currentRoute = 'settings/general';
-		} else if (lastFragment === 'identity-resolution') {
-			currentRoute = 'settings/identityResolution';
 		} else if (lastFragment === 'data-warehouse') {
 			currentRoute = 'settings/dataWarehouse';
 		}

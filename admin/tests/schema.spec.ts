@@ -10,7 +10,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test(`Add schema property`, async ({ page }) => {
-	await page.goto(`${adminURL}/schema`);
+	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
@@ -46,7 +46,7 @@ test(`Add schema property`, async ({ page }) => {
 });
 
 test(`Edit schema property`, async ({ page }) => {
-	await page.goto(`${adminURL}/schema`);
+	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await page.click('.schema-grid__alter-button');
 
@@ -86,7 +86,7 @@ test(`Edit schema property`, async ({ page }) => {
 });
 
 test(`Check that RePaths are sent correctly`, async ({ page }) => {
-	await page.goto(`${adminURL}/schema`);
+	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await page.click('.schema-grid__alter-button');
 
@@ -139,7 +139,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 });
 
 test(`Add schema object property with sub-property`, async ({ page }) => {
-	await page.goto(`${adminURL}/schema`);
+	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
@@ -214,7 +214,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 });
 
 test(`Remove schema properties`, async ({ page }) => {
-	await page.goto(`${adminURL}/schema`);
+	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await page.click('.schema-grid__alter-button');
 
@@ -257,7 +257,7 @@ test(`Remove schema properties`, async ({ page }) => {
 });
 
 test(`Check that the property name is correctly validated`, async ({ page }) => {
-	await page.goto(`${adminURL}/schema`);
+	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
