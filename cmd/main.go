@@ -32,6 +32,7 @@ func Main(assets fs.FS) {
 
 	var help bool
 	flag.BoolVar(&help, "help", false, "print the help for meergo and exit")
+	flag.BoolVar(&help, "initdb", false, "initializes the PostgreSQL database if it is empty")
 	flag.Parse()
 	if help {
 		flag.Usage()

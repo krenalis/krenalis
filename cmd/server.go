@@ -97,6 +97,8 @@ type LocalConfig struct {
 // return any error.
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
+	initDB := true // REVIEW
+
 	config := core.Config{
 		DB:                   settings.DB,
 		MaxMindDBPath:        settings.MaxMindDBPath,

@@ -176,6 +176,10 @@ func New(conf *Config) (*Core, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
+	if initDB && isEmpty(db) {
+		initializeDb(db)
+	}
+
 	var smtp *SMTPConfig
 	if conf.SMTP.Host != "" {
 		smtp = &conf.SMTP

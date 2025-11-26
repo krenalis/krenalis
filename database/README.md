@@ -1,3 +1,5 @@
+# TODO: aggiornare questo file e questa directory
+
 # database
 
 ## About the [initialization](./initialization/) directory

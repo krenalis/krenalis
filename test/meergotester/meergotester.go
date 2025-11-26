@@ -260,6 +260,9 @@ func (c *Meergo) Start() {
 	containersStarted.Wait()
 	c.t.Log("containers started")
 
+	// TODO: dopo la modifica, questo serve ancora? O si può far inizializzare
+	// il database direttamente a Meergo?
+
 	// Initialize the PostgreSQL database.
 	err := initializePostgreSQLDatabase(ctx, testsSettings.Database)
 	if err != nil {
