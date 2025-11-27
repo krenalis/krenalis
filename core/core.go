@@ -184,11 +184,11 @@ func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
 	// initialize it is provided.
 	dbInitCtx := context.Background()
 	if initDBIfEmpty {
-		empty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
+		isEmpty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
 		if err != nil {
 			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 		}
-		if empty {
+		if isEmpty {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			err := initdb.Initialize(dbInitCtx, db)
 			if err != nil {

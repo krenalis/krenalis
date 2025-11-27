@@ -33,7 +33,7 @@ func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 }
 
 //go:embed "DB_initialization_queries.sql"
-var script1 string
+var initSQLQueries string
 
 // Initialize initializes the provided PostgreSQL database, creating all the
 // database objects (tables, types, etc.) needed to run Meergo.
@@ -41,7 +41,7 @@ var script1 string
 // This function must be called on an empty database. Otherwise, the behavior is
 // undefined.
 func Initialize(ctx context.Context, db *db.DB) error {
-	for query := range strings.SplitSeq(script1, ";\n") {
+	for query := range strings.SplitSeq(initSQLQueries, ";\n") {
 		query = strings.TrimSpace(query)
 		if query == "" {
 			continue
