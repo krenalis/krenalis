@@ -13,10 +13,53 @@ import (
 	"github.com/meergo/meergo/core/internal/db"
 )
 
-// InitializeDockerMember initializes a Meergo member for certain scenarios
-// where Meergo is running with Docker, e.g., with the configuration we provide
-// in Docker Compose (this user is treated differently, for example, by the
-// Admin).
+// DatabaseIsEmpty reports whether the given PostgreSQL database is empty, that
+// is, if it does not contain any database objects (such as tables, views,
+// types, etc.).
+func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
+	const query = `SELECT COUNT(*)
+	FROM
+		"pg_class" "c"
+		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
+	WHERE
+		"n"."nspname" = current_schema()
+		AND "n"."nspname" NOT LIKE 'pg_\toast%'`
+	var count int
+	err := db.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
+//go:embed "DB_initialization_queries.sql"
+var script1 string
+
+// Initialize initializes the provided PostgreSQL database, creating all the
+// database objects (tables, types, etc.) needed to run Meergo.
+//
+// This function must be called on an empty database. Otherwise, the behavior is
+// undefined.
+func Initialize(ctx context.Context, db *db.DB) error {
+	for query := range strings.SplitSeq(script1, ";\n") {
+		query = strings.TrimSpace(query)
+		if query == "" {
+			continue
+		}
+		_, err := db.Exec(ctx, query)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InitializeDockerMember initializes a Meergo member on the given PostgreSQL
+// database for certain scenarios where Meergo is running with Docker, e.g.,
+// with the configuration we provide in Docker Compose (this user is treated
+// differently, for example, by the Admin).
+//
+// This function is intended to be called after a successful call to Initialize.
 //
 // Specifically, this function:
 //
@@ -37,38 +80,4 @@ func InitializeDockerMember(ctx context.Context, db *db.DB) error {
 		return err
 	}
 	return err
-}
-
-func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
-	const query = `SELECT COUNT(*)
-	FROM
-		"pg_class" "c"
-		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
-	WHERE
-		"n"."nspname" = current_schema()
-		AND "n"."nspname" NOT LIKE 'pg_\toast%'`
-	var count int
-	err := db.QueryRow(ctx, query).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count == 0, nil
-}
-
-//go:embed "DB_initialization_queries.sql"
-var script1 string
-
-func Initialize(ctx context.Context, db *db.DB) error {
-	queries := strings.Split(string(script1), ";\n") // TODO: c'è un warning dell'editor
-	for _, query := range queries {
-		query = strings.TrimSpace(query)
-		if query == "" {
-			continue
-		}
-		_, err := db.Exec(ctx, query)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
