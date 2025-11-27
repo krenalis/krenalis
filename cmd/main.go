@@ -32,12 +32,20 @@ func Main(assets fs.FS) {
 
 	var help bool
 	var initDBIfEmpty bool
+	var initDockerMember bool
 	flag.BoolVar(&help, "help", false, "print the help for meergo and exit")
-	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initializes the PostgreSQL database if it is empty")
+	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
+	flag.BoolVar(&initDockerMember, "init-docker-member", false,
+		"when initializing the PostgreSQL database, also initialize the Docker member."+
+			" This flag is primarily intended for automated scenarios involving Docker and testing purposes.")
 	flag.Parse()
 	if help {
 		flag.Usage()
 		os.Exit(0)
+	}
+	if initDockerMember && !initDBIfEmpty {
+		flag.Usage()
+		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
 
 	if assets != nil {
@@ -111,7 +119,7 @@ func Main(assets fs.FS) {
 		cancel()
 	}()
 
-	err = Run(ctx, settings, assets, initDBIfEmpty)
+	err = Run(ctx, settings, assets, initDBIfEmpty, initDockerMember)
 	if err != nil {
 		slog.Error("meergo: error occurred running server", "err", err)
 		fatal(1, err.Error())

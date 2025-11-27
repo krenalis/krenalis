@@ -148,8 +148,9 @@ type ExpressionToBeExtracted struct {
 
 // New returns a *Core instance. It can only be called once.
 // initDBIfEmpty controls whether the PostgreSQL database should be initialized
-// in case it is empty.
-func New(conf *Config, initDBIfEmpty bool) (*Core, error) {
+// in case it is empty; if initDockerMember is true in addition to
+// initDBIfEmpty, a member specific for Docker scenarios is initialized.
+func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -194,6 +195,17 @@ func New(conf *Config, initDBIfEmpty bool) (*Core, error) {
 				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 			}
 			slog.Info("PostgreSQL database initialized correctly")
+			// Also initialize the Docker member, if requested.
+			if initDockerMember {
+				slog.Info("initializing Docker member")
+				err := initdb.InitializeDockerMember(dbInitCtx, db)
+				if err != nil {
+					return nil, fmt.Errorf("cannot initialize the Docker member: %s", err)
+				}
+				slog.Info("Docker member initialized")
+			}
+		} else {
+			slog.Info("the PostgreSQL database is not empty, so it won't be initialized")
 		}
 	}
 

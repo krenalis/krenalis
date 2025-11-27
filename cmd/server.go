@@ -96,8 +96,9 @@ type LocalConfig struct {
 // Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
 // return any error.
 // initDBIfEmpty controls whether the PostgreSQL database should be initialized
-// in case it is empty.
-func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty bool) error {
+// in case it is empty; if initDockerMember is true in addition to
+// initDBIfEmpty, a member specific for Docker scenarios is initialized.
+func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
 	config := core.Config{
 		DB:                   settings.DB,
@@ -116,7 +117,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty 
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
-	core, err := core.New(&config, initDBIfEmpty)
+	core, err := core.New(&config, initDBIfEmpty, initDockerMember)
 	if err != nil {
 		return err
 	}

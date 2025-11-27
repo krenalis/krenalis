@@ -13,6 +13,10 @@ import (
 	"github.com/meergo/meergo/core/internal/db"
 )
 
+func InitializeDockerMember(ctx context.Context, db *db.DB) error {
+	panic("TODO")
+}
+
 func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 	const query = `SELECT COUNT(*)
 	FROM
@@ -32,10 +36,8 @@ func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 //go:embed "DB_initialization_queries.sql"
 var script1 string
 
-// TODO: inizializzare anche l'utente Docker
-
 func InitializeDB(ctx context.Context, db *db.DB) error {
-	queries := strings.Split(string(script1), ";\n")
+	queries := strings.Split(string(script1), ";\n") // TODO: c'è un warning dell'editor
 	for _, query := range queries {
 		query = strings.TrimSpace(query)
 		if query == "" {
