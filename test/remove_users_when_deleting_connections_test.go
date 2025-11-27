@@ -14,6 +14,8 @@ import (
 
 func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 
+	t.Skip() // TODO: skipped until https://github.com/meergo/meergo/issues/2017 is resolved.
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
