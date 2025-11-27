@@ -197,7 +197,7 @@ func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
 			slog.Info("PostgreSQL database initialized correctly")
 			// Also initialize the Docker member, if requested.
 			if initDockerMember {
-				slog.Info("initializing Docker member")
+				slog.Info("initializing Docker member...")
 				err := initdb.InitializeDockerMember(dbInitCtx, db)
 				if err != nil {
 					return nil, fmt.Errorf("cannot initialize the Docker member: %s", err)
