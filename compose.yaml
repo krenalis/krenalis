@@ -1,6 +1,6 @@
 services:
   meergo:
-    image: meergocdp/meergo:v0.8.6
+    image: meergocdp/meergo:v0.9.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
