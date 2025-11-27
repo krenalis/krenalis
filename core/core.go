@@ -23,6 +23,7 @@ import (
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/initdb"
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
@@ -182,13 +183,13 @@ func New(conf *Config, initDBIfEmpty bool) (*Core, error) {
 	// initialize it is provided.
 	dbInitCtx := context.Background()
 	if initDBIfEmpty {
-		empty, err := databaseIsEmpty(dbInitCtx, db)
+		empty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
 		if err != nil {
 			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 		}
 		if empty {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
-			err := initializeDB(dbInitCtx, db)
+			err := initdb.InitializeDB(dbInitCtx, db)
 			if err != nil {
 				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 			}

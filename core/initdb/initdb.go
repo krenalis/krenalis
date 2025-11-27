@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package core
+package initdb
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/meergo/meergo/core/internal/db"
 )
 
-func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
+func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 	const query = `SELECT COUNT(*)
 	FROM
 		"pg_class" "c"
@@ -29,16 +29,12 @@ func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 	return count == 0, nil
 }
 
-//go:embed "database_init_scripts/1 - postgres.sql"
+//go:embed "DB_initialization_queries.sql"
 var script1 string
 
-// TODO: c'è davvero bisogno di questo secondo script? O riusciamo a fare il
-// tutto semplicemente eseguendo una query codificata nel codice in Go?
+// TODO: inizializzare anche l'utente Docker
 
-//go:embed "database_init_scripts/2 - docker user.sql"
-var script2 string
-
-func initializeDB(ctx context.Context, db *db.DB) error {
+func InitializeDB(ctx context.Context, db *db.DB) error {
 	queries := strings.Split(string(script1), ";\n")
 	for _, query := range queries {
 		query = strings.TrimSpace(query)
