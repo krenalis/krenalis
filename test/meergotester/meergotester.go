@@ -374,7 +374,7 @@ func (c *Meergo) Start() {
 				}
 				_ = f.Close()
 			}
-			err = cmd.Run(ctxWithCancel, &setts, assets, true)
+			err = cmd.Run(ctxWithCancel, &setts, assets, true, false)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return
