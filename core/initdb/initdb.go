@@ -6,9 +6,8 @@ package initdb
 
 import (
 	"context"
-	"strings"
-
 	_ "embed"
+	"strings"
 
 	"github.com/meergo/meergo/core/internal/db"
 )
