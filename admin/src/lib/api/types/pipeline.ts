@@ -12,7 +12,7 @@ type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
 
 type Mapping = Record<string, string>;
 
-type TransformationPurpose = 'Create' | 'Update';
+type TransformationPurpose = 'Import' | 'Create' | 'Update';
 
 interface Transformation {
 	mapping: Mapping | null;

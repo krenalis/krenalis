@@ -451,6 +451,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					}
 					if !p.Nullable {
 						if p.Type.Kind() != types.JSONKind || preserveJSON {
+							if purpose == Import {
+								continue
+							}
 							return nil, newRecordValidationError(p.Name, fmt.Sprintf("cannot be «%s», but it is set to «%s»", d.opts.terms.Null, d.opts.terms.Null))
 						}
 						value = json.Value("null")

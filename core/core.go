@@ -827,10 +827,11 @@ type DataTransformationFunction struct {
 }
 
 // Purpose represents the purpose of a data transformation.
-// It can be "Create" or "Update".
+// It can be "Import", "Create", or "Update".
 type Purpose string
 
 const (
+	Import Purpose = "Import"
 	Create Purpose = "Create"
 	Update Purpose = "Update"
 )
@@ -838,8 +839,8 @@ const (
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data. inSchema is the schema of data, and
 // outSchema is the schema of the transformed data. Only one of mapping and
-// transformation must be non-nil. purpose indicates the purpose of the
-// transformation and can be either "Create" or "Update".
+// transformation must be non-nil. purpose indicates the intent of the
+// transformation and can be "Import", "Create", or "Update".
 //
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
@@ -856,8 +857,10 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	if !outSchema.Valid() {
 		return nil, errors.BadRequest("output schema is not valid")
 	}
-	if purpose != Create && purpose != Update {
-		return nil, errors.BadRequest(`purpose must be "Create" or "Update"`)
+	switch purpose {
+	case Import, Create, Update:
+	default:
+		return nil, errors.BadRequest(`purpose must be "Import", "Create" or "Update"`)
 	}
 	if transformation.Mapping != nil && transformation.Function != nil {
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
@@ -933,9 +936,11 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, err
 	}
 	records := []transformers.Record{
-		{Purpose: transformers.Create, Attributes: attributes},
+		{Purpose: transformers.Import, Attributes: attributes},
 	}
-	if purpose == "Update" {
+	if purpose == "Create" {
+		records[0].Purpose = transformers.Create
+	} else if purpose == "Update" {
 		records[0].Purpose = transformers.Update
 	}
 	err = transformer.Transform(ctx, records)

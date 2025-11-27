@@ -1773,7 +1773,11 @@ const FullscreenTransformation = ({
 		let s = normalizeSample(pipelineToSet.inSchema, sample);
 
 		let purpose: TransformationPurpose =
-			pipeline.exportMode != null && pipeline.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
+			connection.role == 'Source'
+				? 'Import'
+				: pipeline.exportMode != null && pipeline.exportMode === 'UpdateOnly'
+					? 'Update'
+					: 'Create';
 		let res: TransformDataResponse;
 		try {
 			res = await api.transformData(s, inSchema, pipelineToSet.outSchema, pipelineToSet.transformation, purpose);
@@ -1862,7 +1866,11 @@ const FullscreenTransformation = ({
 		}
 
 		let purpose: TransformationPurpose =
-			pipeline.exportMode != null && pipeline.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
+			connection.role == 'Source'
+				? 'Import'
+				: pipeline.exportMode != null && pipeline.exportMode === 'UpdateOnly'
+					? 'Update'
+					: 'Create';
 		let res: TransformDataResponse;
 		try {
 			const data = event.full;

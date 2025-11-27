@@ -276,6 +276,12 @@ func Test_Unmarshal(t *testing.T) {
 			records:      []Record{{Attributes: map[string]any{"JSON_nil": nil}}},
 		},
 		{
+			language: state.Python,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Boolean":null}}]}`,
+			records:  []Record{{Purpose: Import, Attributes: map[string]any{}}},
+		},
+		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     ``,
@@ -383,12 +389,6 @@ func Test_Unmarshal(t *testing.T) {
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":"a \" \\ b"}}]}`,
 			records:  []Record{{Err: newRecordValidationError("Boolean", `property «Boolean» has a value that is not of type «bool»`)}},
-		},
-		{
-			language: state.Python,
-			schema:   schema,
-			data:     `{"records":[{"value":{"Boolean":null}}]}`,
-			records:  []Record{{Err: newRecordValidationError("Boolean", `property «Boolean» cannot be «None», but it is set to «None»`)}},
 		},
 		{
 			language: state.Python,
