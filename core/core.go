@@ -147,7 +147,7 @@ type ExpressionToBeExtracted struct {
 
 // New returns a *Core instance. It can only be called once.
 // initDB .... TODO ...
-func New(conf *Config, initDB bool) (*Core, error) {
+func New(conf *Config, initDBIfEmpty bool) (*Core, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -177,17 +177,21 @@ func New(conf *Config, initDB bool) (*Core, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	if initDB {
+	// Initializes the PostgreSQL database if it is empty and the option to
+	// initialize it is provided.
+	if initDBIfEmpty {
 		ctx := context.Background()              // TODO
 		empty, err := isEmpty(ctx, db, "public") // TODO
 		if err != nil {
-			panic(err) // TODO
+			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 		}
 		if empty {
+			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			err := initializeDB(ctx, db)
 			if err != nil {
-				panic(err)
+				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 			}
+			slog.Info("PostgreSQL database initialized correctly")
 		}
 	}
 

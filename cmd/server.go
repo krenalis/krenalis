@@ -95,7 +95,7 @@ type LocalConfig struct {
 // Run runs the server.
 // Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
 // return any error.
-func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDB bool) error {
+func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty bool) error {
 
 	config := core.Config{
 		DB:                   settings.DB,
@@ -114,7 +114,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDB bool) e
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
-	core, err := core.New(&config, initDB)
+	core, err := core.New(&config, initDBIfEmpty)
 	if err != nil {
 		return err
 	}

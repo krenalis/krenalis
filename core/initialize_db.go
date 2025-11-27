@@ -20,9 +20,7 @@ func isEmpty(ctx context.Context, db *db.DB, schema string) (bool, error) {
 		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
 	WHERE
 		"n"."nspname" = $1
-		AND "n"."nspname" NOT LIKE 'pg_\toast%'
-	ORDER BY
-		"c"."relname"`
+		AND "n"."nspname" NOT LIKE 'pg_\toast%'`
 	var count int
 	err := db.QueryRow(ctx, query, schema).Scan(&count)
 	if err != nil {
