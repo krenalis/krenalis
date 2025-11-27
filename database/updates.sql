@@ -83,7 +83,3 @@ DROP TYPE notification_name;
 ALTER TYPE notification_name_new RENAME TO notification_name;
 
 COMMIT;
-
-
-
-
