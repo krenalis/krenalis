@@ -1281,7 +1281,7 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__samples-reload {
-	margin-left: auto;
+	margin-right: auto;
 }
 
 .fullscreen-transformation__samples-reload sl-relative-time {
@@ -1289,7 +1289,7 @@ inherit the disabled style */
 	font-weight: 400;
 	color: var(--sl-color-neutral-500);
 	position: relative;
-	left: -3px;
+	left: 3px;
 }
 
 .fullscreen-transformation__samples-loading {

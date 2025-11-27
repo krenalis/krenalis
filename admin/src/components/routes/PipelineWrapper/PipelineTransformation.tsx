@@ -1970,16 +1970,16 @@ const FullscreenTransformation = ({
 				</div>
 			)}
 			<div className='fullscreen-transformation__samples-reload'>
-				<SlRelativeTime date={lastSamplesFetchTime} sync lang='en-US' />
 				<SlButton
 					variant='default'
 					size='small'
 					loading={isReloadingSamples}
 					onClick={() => setIsReloadingSamples(true)}
 				>
-					reload
+					Reload
 					<SlIcon name='arrow-clockwise' slot='suffix' />
 				</SlButton>
+				<SlRelativeTime date={lastSamplesFetchTime} sync lang='en-US' />
 			</div>
 		</div>
 	);
