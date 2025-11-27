@@ -13,16 +13,16 @@ import (
 	"github.com/meergo/meergo/core/internal/db"
 )
 
-func isEmpty(ctx context.Context, db *db.DB, schema string) (bool, error) {
+func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 	const query = `SELECT COUNT(*)
 	FROM
 		"pg_class" "c"
 		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
 	WHERE
-		"n"."nspname" = $1
+		"n"."nspname" = current_schema()
 		AND "n"."nspname" NOT LIKE 'pg_\toast%'`
 	var count int
-	err := db.QueryRow(ctx, query, schema).Scan(&count)
+	err := db.QueryRow(ctx, query).Scan(&count)
 	if err != nil {
 		return false, err
 	}

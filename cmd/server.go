@@ -95,6 +95,8 @@ type LocalConfig struct {
 // Run runs the server.
 // Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
 // return any error.
+// initDBIfEmpty controls whether the PostgreSQL database should be initialized
+// in case it is empty.
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty bool) error {
 
 	config := core.Config{

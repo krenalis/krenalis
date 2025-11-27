@@ -146,7 +146,8 @@ type ExpressionToBeExtracted struct {
 }
 
 // New returns a *Core instance. It can only be called once.
-// initDB .... TODO ...
+// initDBIfEmpty controls whether the PostgreSQL database should be initialized
+// in case it is empty.
 func New(conf *Config, initDBIfEmpty bool) (*Core, error) {
 
 	if hasBeenCalled {
@@ -179,15 +180,15 @@ func New(conf *Config, initDBIfEmpty bool) (*Core, error) {
 
 	// Initializes the PostgreSQL database if it is empty and the option to
 	// initialize it is provided.
+	dbInitCtx := context.Background()
 	if initDBIfEmpty {
-		ctx := context.Background()              // TODO
-		empty, err := isEmpty(ctx, db, "public") // TODO
+		empty, err := databaseIsEmpty(dbInitCtx, db)
 		if err != nil {
 			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 		}
 		if empty {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
-			err := initializeDB(ctx, db)
+			err := initializeDB(dbInitCtx, db)
 			if err != nil {
 				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 			}
