@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -260,12 +259,6 @@ func (c *Meergo) Start() {
 	containersStarted.Wait()
 	c.t.Log("containers started")
 
-	// Initialize the PostgreSQL database.
-	err := initializePostgreSQLDatabase(ctx, testsSettings.Database)
-	if err != nil {
-		c.t.Fatalf("cannot initialize the PostgreSQL database: %s", err)
-	}
-
 	// Create the HTTP client.
 	jar, err := cookiejar.New(nil)
 	if err != nil {
@@ -381,7 +374,7 @@ func (c *Meergo) Start() {
 				}
 				_ = f.Close()
 			}
-			err = cmd.Run(ctxWithCancel, &setts, assets)
+			err = cmd.Run(ctxWithCancel, &setts, assets, true, false)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return
@@ -536,20 +529,6 @@ func (c *Meergo) login() error {
 	return c.call("POST", "/api/v1/members/login", body, nil)
 }
 
-func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) error {
-	err := validDatabaseNameForTests(dbSetts.Database)
-	if err != nil {
-		return err
-	}
-	pool, err := ConnectionPool(ctx, dbSetts)
-	if err != nil {
-		return fmt.Errorf("cannot establish connection to database: %s", err)
-	}
-	defer pool.Close()
-	err = execQueries(ctx, pool, "../database/initialization/1 - postgres.sql")
-	return err
-}
-
 // ExecQueryTestDatabase executes a query on the test database.
 func (c *Meergo) ExecQueryTestDatabase(ctx context.Context, query string, args ...any) {
 	pool, err := ConnectionPool(ctx, testsSettings.Database)
@@ -584,40 +563,6 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 // operates.
 func (c *Meergo) WorkspaceID() int {
 	return c.ws
-}
-
-// execQueries executes on db the queries read from queriesFile, separated by a
-// ";" character and a newline.
-func execQueries(ctx context.Context, pool *pgxpool.Pool, queriesFile string) error {
-
-	content, err := os.ReadFile(queriesFile)
-	if err != nil {
-		abs, err2 := filepath.Abs(queriesFile)
-		if err2 != nil {
-			log.Panic(err)
-		}
-		return fmt.Errorf("cannot read %q: %s", abs, err)
-	}
-
-	queries := strings.Split(string(content), ";\n")
-
-	// Recreate the schema from "1 - postgres.sql".
-	for _, query := range queries {
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		query = strings.TrimSpace(query)
-		if query == "" {
-			continue
-		}
-		_, err := pool.Exec(ctx, query)
-		if err != nil {
-			return err
-		}
-		cancel()
-	}
-
-	return nil
-
 }
 
 func ConnectionPool(ctx context.Context, s *DBSettings) (*pgxpool.Pool, error) {

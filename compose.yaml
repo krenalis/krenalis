@@ -1,6 +1,7 @@
 services:
   meergo:
     image: meergocdp/meergo:v0.8.6
+    command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
       - 2022:2022
@@ -77,7 +78,6 @@ services:
       POSTGRES_PASSWORD: meergo
       POSTGRES_DB: meergo
     volumes:
-      - ./database/initialization:/docker-entrypoint-initdb.d
       - db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U meergo"]

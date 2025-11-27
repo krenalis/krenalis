@@ -23,6 +23,7 @@ import (
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/initdb"
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
@@ -146,7 +147,10 @@ type ExpressionToBeExtracted struct {
 }
 
 // New returns a *Core instance. It can only be called once.
-func New(conf *Config) (*Core, error) {
+// initDBIfEmpty controls whether the PostgreSQL database should be initialized
+// in case it is empty; if initDockerMember is true in addition to
+// initDBIfEmpty, a member specific for Docker scenarios is initialized.
+func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -174,6 +178,35 @@ func New(conf *Config) (*Core, error) {
 	err = db.Ping(pingCtx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+
+	// Initializes the PostgreSQL database if it is empty and the option to
+	// initialize it is provided.
+	dbInitCtx := context.Background()
+	if initDBIfEmpty {
+		isEmpty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
+		if err != nil {
+			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
+		}
+		if isEmpty {
+			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
+			err := initdb.Initialize(dbInitCtx, db)
+			if err != nil {
+				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
+			}
+			slog.Info("PostgreSQL database initialized correctly")
+			// Also initialize the Docker member, if requested.
+			if initDockerMember {
+				slog.Info("initializing Docker member...")
+				err := initdb.InitializeDockerMember(dbInitCtx, db)
+				if err != nil {
+					return nil, fmt.Errorf("cannot initialize the Docker member: %s", err)
+				}
+				slog.Info("Docker member initialized")
+			}
+		} else {
+			slog.Info("the PostgreSQL database is not empty, so it won't be initialized")
+		}
 	}
 
 	var smtp *SMTPConfig
