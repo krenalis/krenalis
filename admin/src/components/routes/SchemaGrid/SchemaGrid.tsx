@@ -18,7 +18,7 @@ const SchemaGrid = () => {
 	const { columns, rows } = useSchemaGrid(schema, isLoadingSchema);
 
 	const onEditClick = () => {
-		redirect('schema/edit');
+		redirect('profile-unification/schema/edit');
 	};
 
 	const onExpandClick = () => {

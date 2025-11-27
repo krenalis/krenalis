@@ -77,7 +77,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Delete also the other Dummy connection; now the total number of profiles
 	// should be zero.
 	c.DeleteConnection(dummy2)
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 	c.RunIdentityResolution()
 	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 0 {

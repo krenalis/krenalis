@@ -12,7 +12,7 @@ const FULLSCREEN_PATHS = [
 	`${UI_BASE_PATH}connections/:id/pipelines/add/event/:eventType`,
 	`${UI_BASE_PATH}connections/:id/pipelines/add/event`,
 	`${UI_BASE_PATH}connections/:id/pipelines/add/:pipelineTarget`,
-	`${UI_BASE_PATH}schema/edit`,
+	`${UI_BASE_PATH}profile-unification/schema/edit`,
 ];
 const CONNECTORS_ASSETS_PATH = 'connectors';
 const WAREHOUSES_ASSETS_PATH = 'warehouses';

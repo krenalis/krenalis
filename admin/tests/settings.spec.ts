@@ -54,7 +54,7 @@ test(`Change the UI user profile properties`, async ({ page }) => {
 });
 
 test(`Change the automatic execution of the identity resolution`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/identity-resolution`);
+	await page.goto(`${adminURL}/profile-unification/rules`);
 
 	const automaticExecution = page.locator('.identifiers__automatic-execution');
 	const automaticExecutionLabel = page.locator('.identifiers__automatic-execution >> label');
@@ -85,7 +85,7 @@ test(`Change the automatic execution of the identity resolution`, async ({ page 
 });
 
 test(`Change the identifiers`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/identity-resolution`);
+	await page.goto(`${adminURL}/profile-unification/rules`);
 
 	expect(await page.locator('.identifiers__identifier').count()).toBe(0);
 
@@ -112,7 +112,7 @@ test(`Change the identifiers`, async ({ page }) => {
 });
 
 test(`Sort the identifiers`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/identity-resolution`);
+	await page.goto(`${adminURL}/profile-unification/rules`);
 
 	const identifiers = page.locator('.identifiers__identifier');
 	await identifiers.nth(0).locator('.identifiers__identifier-menu').click();
@@ -129,7 +129,7 @@ test(`Sort the identifiers`, async ({ page }) => {
 });
 
 test(`Remove the identifiers`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/identity-resolution`);
+	await page.goto(`${adminURL}/profile-unification/rules`);
 
 	let identifiers = page.locator('.identifiers__identifier');
 

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, ReactNode, useMemo } from 'react';
+import React, { useState, useContext, useEffect, ReactNode, useMemo, useLayoutEffect } from 'react';
 import './DataWarehouse.css';
 import appContext from '../../../context/AppContext';
 import { Warehouse, warehouses } from './DataWarehouse.helpers';
@@ -20,7 +20,11 @@ const DataWarehouse = () => {
 	const [warehouseMCPSettings, setWarehouseMCPSettings] = useState<WarehouseSettings>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
-	const { api, handleError, selectedWorkspace, workspaces } = useContext(appContext);
+	const { api, handleError, selectedWorkspace, workspaces, setTitle } = useContext(appContext);
+
+	useLayoutEffect(() => {
+		setTitle('Settings / Data Warehouse');
+	}, [setTitle]);
 
 	useEffect(() => {
 		const fetchWarehouse = async () => {

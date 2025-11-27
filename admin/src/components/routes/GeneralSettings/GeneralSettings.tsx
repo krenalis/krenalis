@@ -36,7 +36,12 @@ const GeneralSettings = () => {
 		selectedWorkspace,
 		setSelectedWorkspace,
 		setIsLoadingState,
+		setTitle,
 	} = useContext(appContext);
+
+	useLayoutEffect(() => {
+		setTitle('Settings / General');
+	}, [setTitle]);
 
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);

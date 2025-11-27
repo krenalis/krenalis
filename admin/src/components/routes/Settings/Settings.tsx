@@ -11,7 +11,11 @@ const Settings = () => {
 
 	const location = useLocation();
 
-	useLayoutEffect(() => setTitle('Customization'));
+	useLayoutEffect(() => {
+		if (location.pathname.endsWith('settings')) {
+			setTitle('Settings');
+		}
+	}, [location.pathname, setTitle]);
 
 	let content: ReactNode;
 
@@ -21,27 +25,9 @@ const Settings = () => {
 				<Link path='settings/general'>
 					<ListTile
 						className='settings__setting'
-						icon={<SlIcon name='sliders2' />}
+						icon={<SlIcon name='list' />}
 						name={'General'}
 						description='Update your workspace name or delete it'
-						action={<SlIcon name='chevron-right' />}
-					/>
-				</Link>
-				<Link path='schema'>
-					<ListTile
-						className='settings__setting'
-						icon={<SlIcon name='bookmark-check' />}
-						name={'Profile Schema'}
-						description='Define and manage the schema of your customer data used to model and understand your customers'
-						action={<SlIcon name='chevron-right' />}
-					/>
-				</Link>
-				<Link path='settings/identity-resolution'>
-					<ListTile
-						className='settings__setting'
-						icon={<SlIcon name='person-arms-up' />}
-						name={'Identity Resolution'}
-						description='Modify the settings of the Identity Resolution, used to resolve the identity of the users'
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>

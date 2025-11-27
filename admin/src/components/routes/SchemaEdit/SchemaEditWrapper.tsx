@@ -9,7 +9,7 @@ const SchemaEditWrapper = () => {
 	const { setIsLoadingSchema } = useContext(SchemaContext);
 
 	const onClose = () => {
-		redirect('schema');
+		redirect('profile-unification/schema');
 		setIsLoadingSchema(true);
 	};
 
