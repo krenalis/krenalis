@@ -1,13 +1,11 @@
-# This is the Docker Compose file that builds the Meergo image from the
-# repository.
-# 
-# Keep this file synchronized with the other Compose file,
-# "compose-release.yaml," which refers to the latest Meergo release.
+# This is the Docker Compose file that runs the latest released image of Meergo.
+#
+# Keep this file synchronized with the other Compose file, "compose.yaml," which
+# builds and runs Meergo from the repository.
 
 services:
   meergo:
-    build:
-      context: .
+    image: meergocdp/meergo:v0.9.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
