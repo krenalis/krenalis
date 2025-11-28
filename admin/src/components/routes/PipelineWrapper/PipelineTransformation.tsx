@@ -1773,7 +1773,7 @@ const FullscreenTransformation = ({
 		let s = normalizeSample(pipelineToSet.inSchema, sample);
 
 		let purpose: TransformationPurpose =
-			connection.role == 'Source'
+			connection.role === 'Source'
 				? 'Import'
 				: pipeline.exportMode != null && pipeline.exportMode === 'UpdateOnly'
 					? 'Update'
@@ -1866,7 +1866,7 @@ const FullscreenTransformation = ({
 		}
 
 		let purpose: TransformationPurpose =
-			connection.role == 'Source'
+			connection.role === 'Source'
 				? 'Import'
 				: pipeline.exportMode != null && pipeline.exportMode === 'UpdateOnly'
 					? 'Update'
@@ -3365,9 +3365,17 @@ const TransformationProperty = ({
 	if (language === '') {
 		typeName = toMeergoStringType(property.type, property.nullable);
 	} else if (language === 'Python') {
-		typeName = toPythonType(property.type, pipeline.transformation.function.preserveJSON, property.nullable);
+		typeName = toPythonType(
+			property.type,
+			pipeline.transformation.function.preserveJSON,
+			property.nullable || isImport,
+		);
 	} else {
-		typeName = toJavascriptType(property.type, pipeline.transformation.function.preserveJSON, property.nullable);
+		typeName = toJavascriptType(
+			property.type,
+			pipeline.transformation.function.preserveJSON,
+			property.nullable || isImport,
+		);
 	}
 
 	return (
