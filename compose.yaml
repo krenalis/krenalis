@@ -4,6 +4,8 @@
 # Keep this file synchronized with the other Compose file,
 # "compose-release.yaml," which refers to the latest Meergo release.
 
+name: meergo
+
 services:
   meergo:
     build:

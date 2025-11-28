@@ -3,6 +3,8 @@
 # Keep this file synchronized with the other Compose file, "compose.yaml," which
 # builds and runs Meergo from the repository.
 
+name: meergo_v0.9.0
+
 services:
   meergo:
     image: meergocdp/meergo:v0.9.0
