@@ -48,6 +48,7 @@ info-circle.svg
 input-cursor.svg
 key.svg
 layout-three-columns.svg
+list.svg
 pencil.svg
 people.svg
 person-arms-up.svg
