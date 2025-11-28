@@ -57,19 +57,19 @@ services:
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
-      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
+      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/storage
       MEERGO_TRANSFORMERS_LOCAL_SUDO_USER: transformeruser
 
       # This configures the File System connector to access the mounted directory
       # via Docker. If you change these settings, also change the volumes
       # settings.
-      MEERGO_CONNECTOR_FILESYSTEM_ROOT: /bin/meergo-files/sample-filesystem
-      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/docker-compose/sample-filesystem
+      MEERGO_CONNECTOR_FILESYSTEM_ROOT: /var/meergo/storage
+      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
 
     # If you change the volumes settings, also change the File System env vars
     # settings to point to the mount point.
     volumes:
-      - ./docker-compose:/bin/meergo-files
+      - ./storage:/var/meergo/storage
     depends_on:
       db:
         condition: service_healthy
