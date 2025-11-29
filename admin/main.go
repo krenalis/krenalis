@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/admin/debugid"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/json"
 
 	"github.com/andybalholm/brotli"
 	"github.com/evanw/esbuild/pkg/api"

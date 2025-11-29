@@ -7,8 +7,8 @@ package connections
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_sameValue(t *testing.T) {

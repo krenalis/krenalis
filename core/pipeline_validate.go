@@ -13,15 +13,15 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 const (

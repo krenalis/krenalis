@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_checkSchemaAlignment(t *testing.T) {

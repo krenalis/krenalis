@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/json"
 
 	"github.com/evanw/esbuild/pkg/api"
 )

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Purpose represents the purpose of a record transformation.

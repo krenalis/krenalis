@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_Identities(t *testing.T) {

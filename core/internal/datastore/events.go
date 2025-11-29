@@ -6,7 +6,7 @@ package datastore
 
 import (
 	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 

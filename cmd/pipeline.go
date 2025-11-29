@@ -8,8 +8,8 @@ import (
 	"net/http"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
 )
 
 type pipeline struct {

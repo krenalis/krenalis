@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 

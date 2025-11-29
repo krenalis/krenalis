@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // profileSchemaInfoForMCPClient takes the profile schema, a function that maps

@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	_core "github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/tools/errors"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"

@@ -18,7 +18,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/validation"
+	"github.com/meergo/meergo/tools/validation"
 )
 
 // parseEnvSettings parses the settings from the process environment variables.

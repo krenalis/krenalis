@@ -13,7 +13,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/json"
 )
 
 type uiHandlerConnection interface {

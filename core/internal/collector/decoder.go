@@ -20,11 +20,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/avct/uasurfer"
 	"github.com/google/uuid"

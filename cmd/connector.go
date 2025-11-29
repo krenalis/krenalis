@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/tools/errors"
 )
 
 type connector struct {

@@ -22,7 +22,7 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/embed"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 const functionsDir = "meergo-functions"

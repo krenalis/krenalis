@@ -12,7 +12,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/dotenv"
+	"github.com/meergo/meergo/tools/dotenv"
 )
 
 var (

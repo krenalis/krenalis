@@ -14,7 +14,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
-	_json "github.com/meergo/meergo/core/json"
+	_json "github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"

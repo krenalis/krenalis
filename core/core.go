@@ -21,8 +21,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/initdb"
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
@@ -36,8 +34,10 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers/local"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/getsentry/sentry-go"

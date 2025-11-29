@@ -5,7 +5,7 @@
 package schemas
 
 import (
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Event is the event schema.

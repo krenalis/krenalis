@@ -5,7 +5,7 @@
 package sender
 
 import (
-	"github.com/meergo/meergo/core/metrics"
+	"github.com/meergo/meergo/tools/metrics"
 )
 
 // Queue available.
