@@ -1623,7 +1623,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 		switch ct {
 		case "application/json":
-			indented, err := json.IndentSorted(body, "", "  ")
+			indented, err := json.Indent(body, "", "  ")
 			if err != nil {
 				b.Write(body)
 				break
@@ -1647,7 +1647,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				if !first {
 					b.WriteByte('\n')
 				}
-				indented, err := json.IndentSorted(value, "", "    ")
+				indented, err := json.Indent(value, "", "    ")
 				if err != nil {
 					break
 				}
