@@ -6,6 +6,7 @@ package json
 
 import (
 	"bytes"
+	jsonv1 "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -98,11 +99,11 @@ func Encode(out io.Writer, v any) error {
 	return err
 }
 
-// Indent returns a copy of data with the JSON code indented and object keys
-// sorted. Each element in a JSON object or array begins on a new line with the
-// specified prefix followed by copies of the indent string, added according to
-// nesting depth. The returned data does not start or end with the prefix or any
-// indentation.
+// Indent returns a copy of data with the JSON code indented. The order of
+// object keys is preserved. Each element in a JSON object or array begins on a
+// new line with the specified prefix followed by copies of the indent string,
+// added according to nesting depth. The returned data does not start or end
+// with the prefix or any indentation.
 //
 // Example usage:
 //
@@ -112,6 +113,31 @@ func Encode(out io.Writer, v any) error {
 // It panics if prefix or indent strings do not contain only spaces or tabs
 // (' ' or '\t').
 func Indent(data []byte, prefix, indent string) ([]byte, error) {
+	if !Valid(data) {
+		return nil, ErrInvalidJSON
+	}
+	var buf bytes.Buffer
+	err := jsonv1.Indent(&buf, TrimSpace(data), prefix, indent)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Clone(buf.Bytes()), nil
+}
+
+// IndentSorted returns a copy of data with the JSON code indented and object
+// keys sorted. Each element in a JSON object or array begins on a new line with
+// the specified prefix followed by copies of the indent string, added according
+// to nesting depth. The returned data does not start or end with the prefix or
+// any indentation.
+//
+// Example usage:
+//
+//	data, err = json.IndentSorted(data, "", "\t")
+//
+// If data does not contain valid JSON, it returns nil and ErrInvalidJSON.
+// It panics if prefix or indent strings do not contain only spaces or tabs
+// (' ' or '\t').
+func IndentSorted(data []byte, prefix, indent string) ([]byte, error) {
 	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return nil, ErrInvalidJSON
