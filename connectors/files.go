@@ -9,7 +9,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // ErrSheetNotExist indicates that a file does not contain a sheet.

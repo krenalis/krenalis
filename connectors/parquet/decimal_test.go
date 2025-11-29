@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/meergo/meergo/core/decimal"
+	"github.com/meergo/meergo/tools/decimal"
 )
 
 func Test_decimalToInt64(t *testing.T) {

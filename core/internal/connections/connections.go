@@ -19,12 +19,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/itchyny/timefmt-go"
 	"github.com/relvacode/iso8601"

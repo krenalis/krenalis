@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 var (

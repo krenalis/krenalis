@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // quoteIdent quotes the identifier name.

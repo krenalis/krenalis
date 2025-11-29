@@ -17,7 +17,7 @@ import (
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // destinations is responsible for dispatching events to destination apps.

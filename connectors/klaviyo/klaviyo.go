@@ -26,9 +26,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
-	"github.com/meergo/meergo/core/validation"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
+	"github.com/meergo/meergo/tools/validation"
 )
 
 //go:embed documentation/source/overview.md

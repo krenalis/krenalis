@@ -18,8 +18,8 @@ import (
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 )

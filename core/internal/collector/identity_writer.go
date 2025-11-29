@@ -15,7 +15,7 @@ import (
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/core/metrics"
+	meergoMetrics "github.com/meergo/meergo/tools/metrics"
 )
 
 var maxQueuedIdentities = 1000

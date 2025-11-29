@@ -19,8 +19,8 @@ import (
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // exportProfiles exports the profiles for the pipeline.

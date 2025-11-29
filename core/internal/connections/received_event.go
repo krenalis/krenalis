@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/tools/decimal"
 )
 
 // receivedEvent implements the connectors.ReceivedEvent interface.

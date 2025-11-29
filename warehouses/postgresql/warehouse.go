@@ -19,8 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"

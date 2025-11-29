@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 type api struct {

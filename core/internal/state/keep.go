@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	_json "github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	_json "github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"

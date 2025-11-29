@@ -5,7 +5,7 @@
 package stripe
 
 import (
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // https://docs.stripe.com/api/customers/create and

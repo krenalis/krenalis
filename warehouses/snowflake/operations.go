@@ -10,7 +10,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/meergo/meergo/core/backoff"
+	"github.com/meergo/meergo/tools/backoff"
 	"github.com/meergo/meergo/warehouses"
 )
 

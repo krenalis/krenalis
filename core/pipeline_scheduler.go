@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/tools/errors"
 )
 
 var periods = [...]int16{5, 15, 30, 60, 120, 180, 360, 480, 720, 1440}

@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/meergo/meergo/core/backoff"
+	"github.com/meergo/meergo/tools/backoff"
 	"github.com/meergo/meergo/warehouses"
 )
 
