@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"slices"
 
 	"github.com/meergo/meergo/core/json/internal/json/internal/jsonflags"
 	"github.com/meergo/meergo/core/json/internal/json/internal/jsonopts"
@@ -48,8 +49,7 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 	}
 
 	if v.Type() == jsontextValueType {
-		// TODO(https://go.dev/issue/62121): Use reflect.Value.AssertTo.
-		b := *v.Addr().Interface().(*jsontext.Value)
+		b, _ := reflect.TypeAssert[jsontext.Value](v.Value)
 		if len(b) == 0 { // TODO: Should this be nil? What if it were all whitespace?
 			return nil
 		}
@@ -145,7 +145,7 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 				mk.SetIterKey(iter)
 				(*names)[i] = mk.String()
 			}
-			names.Sort()
+			slices.Sort(*names)
 			for _, name := range *names {
 				mk.SetString(name)
 				if err := marshalKey(mk); err != nil {
@@ -172,7 +172,7 @@ func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo
 	v = v.indirect(true)
 
 	if v.Type() == jsontextValueType {
-		b := v.Addr().Interface().(*jsontext.Value)
+		b, _ := reflect.TypeAssert[*jsontext.Value](v.Addr())
 		if len(*b) == 0 { // TODO: Should this be nil? What if it were all whitespace?
 			*b = append(*b, '{')
 		} else {

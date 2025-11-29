@@ -9,8 +9,6 @@ import (
 	"encoding"
 	"io"
 	"reflect"
-	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -438,8 +436,9 @@ func UnmarshalRead(in io.Reader, out any, opts ...Options) (err error) {
 // Unlike [Unmarshal] and [UnmarshalRead], decode options are ignored because
 // they must have already been specified on the provided [jsontext.Decoder].
 //
-// The input may be a stream of one or more JSON values,
+// The input may be a stream of zero or more JSON values,
 // where this only unmarshals the next JSON value in the stream.
+// If there are no more top-level JSON values, it reports [io.EOF].
 // The output must be a non-nil pointer.
 // See [Unmarshal] for details about the conversion of JSON into a Go value.
 func UnmarshalDecode(in *jsontext.Decoder, out any, opts ...Options) (err error) {
@@ -570,9 +569,6 @@ func putStrings(s *stringSlice) {
 	if cap(*s) > 1<<10 {
 		*s = nil // avoid pinning arbitrarily large amounts of memory
 	}
+	clear(*s) // avoid pinning a reference to each string
 	stringsPools.Put(s)
-}
-
-func (ss *stringSlice) Sort() {
-	slices.SortFunc(*ss, func(x, y string) int { return strings.Compare(x, y) })
 }
