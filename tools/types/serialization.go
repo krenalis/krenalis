@@ -84,7 +84,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 		}
 		switch vl := t.vl.(type) {
 		case *regexp.Regexp:
-			b.WriteString(`,"regexp":`)
+			b.WriteString(`,"pattern":`)
 			_ = marshalString(b, vl.String())
 		case []string:
 			b.WriteString(`,"values":[`)
@@ -302,7 +302,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var minimum, maximum json.Number
 	var real bool
 	var precision, scale, maxByteLength, maxLength int
-	var re *regexp.Regexp
+	var pattern *regexp.Regexp
 	var values []string
 	var elementType Type
 	var minElements, maxElements = 0, MaxElements
@@ -387,25 +387,25 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid real")
 			}
 			hasReal = true
-		case "regexp":
-			if re != nil {
-				return Type{}, errors.New("repeated 'regexp' key")
+		case "pattern":
+			if pattern != nil {
+				return Type{}, errors.New("repeated 'pattern' key")
 			}
 			if values != nil {
-				return Type{}, errors.New("regular expression cannot be provided if values are provided")
+				return Type{}, errors.New("pattern cannot be provided if values are provided")
 			}
 			if expr, ok := tok.(string); ok {
-				re, _ = regexp.Compile(expr)
+				pattern, _ = regexp.Compile(expr)
 			}
-			if re == nil {
-				return Type{}, errors.New("invalid regular expression")
+			if pattern == nil {
+				return Type{}, errors.New("invalid pattern")
 			}
 		case "values":
 			if values != nil {
 				return Type{}, errors.New(`repeated value`)
 			}
-			if re != nil {
-				return Type{}, errors.New("values cannot be provided if regular expression is provided")
+			if pattern != nil {
+				return Type{}, errors.New("values cannot be provided if pattern is provided")
 			}
 			if tok != json.Delim('[') {
 				return Type{}, errors.New("invalid values")
@@ -565,11 +565,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.generic = true
 		t.vl = kind
 	}
-	if re != nil {
+	if pattern != nil {
 		if t.kind != StringKind {
 			return Type{}, errors.New("unexpected regular expression for non-string type")
 		}
-		t.vl = re
+		t.vl = pattern
 	}
 	if values != nil {
 		if t.kind != StringKind {
