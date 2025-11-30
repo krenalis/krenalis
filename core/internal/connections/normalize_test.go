@@ -59,7 +59,7 @@ func Test_normalize(t *testing.T) {
 		// string.
 		{types.String(), "foo", "foo", false, nil},
 		{types.String().WithValues("foo", "boo"), "boo", "boo", false, nil},
-		{types.String().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo", false, nil},
+		{types.String().WithPattern(regexp.MustCompile(`oo$`)), "foo", "foo", false, nil},
 		{types.String().WithMaxByteLength(3), "boo", "boo", false, nil},
 		{types.String().WithMaxLength(3), "bòò", "bòò", false, nil},
 		{types.String().WithValues("foo", "boo"), "", nil, true, nil},
@@ -220,7 +220,7 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "nilNotNullable", typ: types.String(), value: nil, wantContains: "has value null but it is not nullable"},
 		{name: "textInvalidType", typ: types.String(), value: 5, wantContains: "has type int"},
 		{name: "textInvalidUTF8", typ: types.String(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
-		{name: "textRegexpMismatch", typ: types.String().WithRegexp(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
+		{name: "textRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
 		{name: "textUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: "baz", wantContains: "contains an unsupported value"},
 		{name: "textTooLong", typ: types.String().WithMaxByteLength(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
 		{name: "textTooManyChars", typ: types.String().WithMaxLength(2), value: "bòò", wantContains: "has a value longer than 2 characters"},

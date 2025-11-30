@@ -182,8 +182,8 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 				}
 			}
 		}
-		re1 := t1.Regexp()
-		re2 := t2.Regexp()
+		re1 := t1.Pattern()
+		re2 := t2.Pattern()
 		var v1, v2 = "none", "none"
 		if re1 != nil {
 			v1 = `"` + re1.String() + `"`

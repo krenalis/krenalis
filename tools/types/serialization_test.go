@@ -236,7 +236,7 @@ func TestTypeSerialization(t *testing.T) {
 			Type: String().WithMaxLength(10000),
 		}, {
 			Data: `{"kind":"string","regexp":"\\d+$"}`,
-			Type: String().WithRegexp(regexp.MustCompile(`\d+$`)),
+			Type: String().WithPattern(regexp.MustCompile(`\d+$`)),
 		}, {
 			Data: `{"kind":"int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),

@@ -36,7 +36,7 @@ func Test_Decode(t *testing.T) {
 		},
 		{
 			Name:     "Text_regexp",
-			Type:     String().WithRegexp(regexp.MustCompile(`oo$`)),
+			Type:     String().WithPattern(regexp.MustCompile(`oo$`)),
 			Nullable: true,
 		},
 		{

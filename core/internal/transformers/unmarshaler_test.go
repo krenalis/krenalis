@@ -34,8 +34,8 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.String().WithValues("a", "b", "c"),
 		},
 		{
-			Name: "String_regexp",
-			Type: types.String().WithRegexp(regexp.MustCompile(`o/o$`)),
+			Name: "String_pattern",
+			Type: types.String().WithPattern(regexp.MustCompile(`o/o$`)),
 		},
 		{
 			Name:     "String_nil",
@@ -417,14 +417,14 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"String_regexp":"fo/o"}}]}`,
-			records:  []Record{{Attributes: map[string]any{"String_regexp": "fo/o"}}},
+			data:     `{"records":[{"value":{"String_pattern":"fo/o"}}]}`,
+			records:  []Record{{Attributes: map[string]any{"String_pattern": "fo/o"}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"String_regexp":"faa"}}]}`,
-			records:  []Record{{Err: newRecordValidationError("String_regexp", `property «String_regexp» does not match «/o\/o$/»`)}},
+			data:     `{"records":[{"value":{"String_pattern":"faa"}}]}`,
+			records:  []Record{{Err: newRecordValidationError("String_pattern", `property «String_pattern» does not match «/o\/o$/»`)}},
 		},
 		{
 			language: state.Python,

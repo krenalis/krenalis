@@ -547,7 +547,7 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 		}
 		return s, nil
 	}
-	if rx := t.Regexp(); rx != nil {
+	if rx := t.Pattern(); rx != nil {
 		if !rx.MatchString(s) {
 			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not valid", name)
 		}

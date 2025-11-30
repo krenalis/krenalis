@@ -102,7 +102,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if !slices.Contains(values, v) {
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}
-		} else if rx := typ.Regexp(); rx != nil {
+		} else if rx := typ.Pattern(); rx != nil {
 			if !rx.MatchString(v) {
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}

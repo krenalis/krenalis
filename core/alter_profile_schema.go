@@ -171,8 +171,8 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			if p.Type.Values() != nil {
 				return fmt.Errorf("profile schema properties with type string cannot specify values")
 			}
-			if p.Type.Regexp() != nil {
-				return fmt.Errorf("profile schema properties with type string cannot specify regexp")
+			if p.Type.Pattern() != nil {
+				return fmt.Errorf("profile schema properties with type string cannot specify pattern")
 			}
 		case types.ArrayKind:
 			k := p.Type.Elem().Kind()

@@ -776,30 +776,29 @@ func (t Type) WithMaxLength(l int) Type {
 	return t
 }
 
-// Regexp returns the regular expression of t. If t has no regular expression,
-// it returns nil. Panics if t is not a string type.
-func (t Type) Regexp() *regexp.Regexp {
+// Pattern returns the pattern of t. If t has no pattern, it returns nil.
+// Panics if t is not a string type.
+func (t Type) Pattern() *regexp.Regexp {
 	if t.kind != StringKind {
-		panic("cannot return regular expression for a non-string type")
+		panic("cannot return pattern for a non-string type")
 	}
 	re, _ := t.vl.(*regexp.Regexp)
 	return re
 }
 
-// WithRegexp returns t with the regular expression re.
-// Panics if t is not a string type, or t has already a regular expression or has
-// values.
-func (t Type) WithRegexp(re *regexp.Regexp) Type {
+// WithPattern returns t with the pattern p.
+// Panics if t is not a string type, or t has already apattern or has values.
+func (t Type) WithPattern(p *regexp.Regexp) Type {
 	if t.kind != StringKind {
-		panic("cannot set regular expression for a non-string type")
+		panic("cannot set pattern for a non-string type")
 	}
 	switch t.vl.(type) {
 	case []string:
-		panic("cannot set regular expression when t has values")
+		panic("cannot set pattern when t has values")
 	case *regexp.Regexp:
-		panic("t already has a regular expression")
+		panic("t already has a pattern")
 	}
-	t.vl = re
+	t.vl = p
 	return t
 }
 
@@ -832,7 +831,7 @@ func (t Type) WithValues(values ...string) Type {
 	case []string:
 		panic("t already has values")
 	case *regexp.Regexp:
-		panic("t already has a regular expression")
+		panic("t already has a pattern")
 	}
 	if t.p != 0 {
 		panic("t already has a maximum byte length")

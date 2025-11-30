@@ -431,7 +431,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
-		if re := ex.Regexp(); re != nil && !re.MatchString(s) {
+		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return s, nil

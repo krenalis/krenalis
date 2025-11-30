@@ -548,7 +548,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 					return nil, newRecordValidationError("", "is not one of the allowed values")
 				}
 				return s, nil
-			} else if re := t.Regexp(); re != nil {
+			} else if re := t.Pattern(); re != nil {
 				if !re.MatchString(s) {
 					return nil, newRecordValidationError("", fmt.Sprintf("does not match «/%s/»", quoteRegExpr(re)))
 				}

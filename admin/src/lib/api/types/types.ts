@@ -56,7 +56,7 @@ interface StringType {
 	kind: 'string';
 	maxByteLength?: number;
 	maxLength?: number;
-	regexp?: string;
+	pattern?: string;
 	values?: string[];
 }
 

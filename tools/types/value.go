@@ -322,7 +322,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 						d.formatString(v), formatValues(values)), "")
 				}
 				return s, nil
-			} else if rx := t.Regexp(); rx != nil {
+			} else if rx := t.Pattern(); rx != nil {
 				if !rx.MatchString(s) {
 					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
 						d.formatString(v)), "")

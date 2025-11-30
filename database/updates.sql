@@ -53,3 +53,21 @@ WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"byteLen": %';
 UPDATE pipelines
 SET out_schema = REPLACE(out_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"byteLen": %';
+
+-- rename regexp to pattern
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"regexp": %';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE profile_schema::text LIKE '%"byteLen": %';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"regexp": %';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"regexp": %';

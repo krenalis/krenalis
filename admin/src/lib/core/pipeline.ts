@@ -1663,7 +1663,7 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 		return (
 			aType.maxByteLength === t.maxByteLength &&
 			aType.maxLength === t.maxLength &&
-			aType.regexp === t.regexp &&
+			aType.pattern === t.pattern &&
 			JSON.stringify(aType.values) === JSON.stringify(t.values)
 		);
 	}

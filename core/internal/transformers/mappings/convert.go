@@ -35,7 +35,7 @@ var (
 	errMinConversion           = errors.New("too small")
 	errParseConversion         = errors.New("cannot parse")
 	errRangeConversion         = errors.New("out of range")
-	errRegexpConversion        = errors.New("regexp mismatch")
+	errPatternConversion       = errors.New("pattern mismatch")
 	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
@@ -78,7 +78,7 @@ var (
 //   - errMinConversion
 //   - errParseConversion
 //   - errRangeConversion
-//   - errRegexpConversion
+//   - errPatternConversion
 //   - errYearRangeConversion
 func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
 	sk := st.Kind()
@@ -154,12 +154,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return s, nil
 			}
 			return v, errEnumConversion
-		} else if re := dt.Regexp(); re != nil {
+		} else if re := dt.Pattern(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
 					return nil, nil
 				}
-				return v, errRegexpConversion
+				return v, errPatternConversion
 			}
 		} else {
 			if l, ok := dt.MaxByteLength(); ok && l < len(s) {
