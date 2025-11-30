@@ -158,6 +158,8 @@ type publicMetadata struct {
 //   - externalEventURL: external event URL - https://example.com/api/v1/events
 //   - externalAssetsURLs: external assets URLs.
 //   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
+//   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/meergo.min.js
+//   - memberEmailVerificationRequired: require verification of a new member's email address?
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //
