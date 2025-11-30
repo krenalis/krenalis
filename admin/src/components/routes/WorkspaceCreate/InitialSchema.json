@@ -6,7 +6,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 36,
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "Customer ID"
 		},
@@ -15,7 +15,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 100,
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "First name"
 		},
@@ -24,7 +24,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 100,
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "Last name"
 		},
@@ -33,7 +33,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 254,
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "Email"
 		},
@@ -42,7 +42,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 20,
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "Phone number"
 		},
@@ -58,7 +58,7 @@
 			"name": "gender",
 			"readOptional": true,
 			"type": {
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "Gender"
 		},
@@ -73,7 +73,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 255,
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": "Street"
 					},
@@ -82,7 +82,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 100,
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": "City"
 					},
@@ -91,7 +91,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 20,
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": "Postal code"
 					},
@@ -100,7 +100,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 2,
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": "Country"
 					}
@@ -128,7 +128,7 @@
 						"type": {
 							"kind": "array",
 							"elementType": {
-								"kind": "text"
+								"kind": "string"
 							}
 						},
 						"description": "Preferences categories"
@@ -137,7 +137,7 @@
 						"name": "language",
 						"readOptional": true,
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 2
 						},
 						"description": "Language"

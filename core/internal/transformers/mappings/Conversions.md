@@ -1,23 +1,23 @@
 
 
-| from/to  | text | boolean | int  | uint | float | decimal | datetime | date | time | year | uuid | json | inet | array(T) | object | map(T) |
-|----------|------|---------|------|------|-------|---------|----------|------|------|------|------|------|------|----------|--------|--------|
-| text     | ✓    | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |          |        |        |
-| boolean  | ✓    | ✓       | [^1] | [^1] |       |         |          |      |      |      |      | ✓    |      |          |        |        |
-| int      | ✓    | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      |          |        |        |
-| uint     | ✓    | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      |          |        |        |
-| float    | ✓    |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      |          |        |        |
-| decimal  | ✓    |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      |          |        |        |
-| datetime | ✓    |         |      |      |       |         | ✓        | ✓    | ✓    |      |      | ✓    |      |          |        |        |
-| date     | ✓    |         |      |      |       |         | ✓        | ✓    |      |      |      | ✓    |      |          |        |        |
-| time     | ✓    |         |      |      |       |         |          |      | ✓    |      |      | ✓    |      |          |        |        |
-| year     | ✓    |         | ✓    | ✓    |       |         |          |      |      | ✓    |      | ✓    |      |          |        |        |
-| uuid     | ✓    |         |      |      |       |         |          |      |      |      | ✓    | ✓    |      |          |        |        |
-| json     | ✓    | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓        | ✓      | ✓      |
-| inet     | ✓    |         |      |      |       |         |          |      |      |      |      | ✓    | ✓    |          |        |        |
-| array(T) |      |         |      |      |       |         |          |      |      |      |      | ✓    |      | ✓        |        |        |
-| object   |      |         |      |      |       |         |          |      |      |      |      | ✓    |      |          | ✓      | ✓      |
-| map(T)   |      |         |      |      |       |         |          |      |      |      |      | ✓    |      |          | ✓      | ✓      |
+| from/to  | string | boolean | int  | uint | float | decimal | datetime | date | time | year | uuid | json | inet | array(T) | object | map(T) |
+|----------|--------|---------|------|------|-------|---------|----------|------|------|------|------|------|------|----------|--------|--------|
+| string   | ✓      | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |          |        |        |
+| boolean  | ✓      | ✓       | [^1] | [^1] |       |         |          |      |      |      |      | ✓    |      |          |        |        |
+| int      | ✓      | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      |          |        |        |
+| uint     | ✓      | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      |          |        |        |
+| float    | ✓      |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      |          |        |        |
+| decimal  | ✓      |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      |          |        |        |
+| datetime | ✓      |         |      |      |       |         | ✓        | ✓    | ✓    |      |      | ✓    |      |          |        |        |
+| date     | ✓      |         |      |      |       |         | ✓        | ✓    |      |      |      | ✓    |      |          |        |        |
+| time     | ✓      |         |      |      |       |         |          |      | ✓    |      |      | ✓    |      |          |        |        |
+| year     | ✓      |         | ✓    | ✓    |       |         |          |      |      | ✓    |      | ✓    |      |          |        |        |
+| uuid     | ✓      |         |      |      |       |         |          |      |      |      | ✓    | ✓    |      |          |        |        |
+| json     | ✓      | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓        | ✓      | ✓      |
+| inet     | ✓      |         |      |      |       |         |          |      |      |      |      | ✓    | ✓    |          |        |        |
+| array(T) |        |         |      |      |       |         |          |      |      |      |      | ✓    |      | ✓        |        |        |
+| object   |        |         |      |      |       |         |          |      |      |      |      | ✓    |      |          | ✓      | ✓      |
+| map(T)   |        |         |      |      |       |         |          |      |      |      |      | ✓    |      |          | ✓      | ✓      |
 
 [^1]: Only for `int(8)` and `uint(8)`.
 
@@ -36,6 +36,6 @@ A value `v` is converted to `nil` if the destination property is nullable and on
 
 * `v` is `nil`
 * `v` is **json** `null`, and the destination type is not **json**
-* `v` is an empty **text**, and `v` is not constant, and the destination type is neither **text** nor **json** 
-* `v` is an empty **text**, and the destination type is **text** with enums
-* `v` is an empty **text**, and the destination type is **text** with a regular expression, and `v` does not match
+* `v` is an empty **string**, and `v` is not constant, and the destination type is neither **string** nor **json** 
+* `v` is an empty **string**, and the destination type is **string** with enums
+* `v` is an empty **string**, and the destination type is **string** with a regular expression, and `v` does not match

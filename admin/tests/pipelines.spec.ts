@@ -67,19 +67,19 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "text" }, "description": "Email", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "text" }, "description": "Dummy ID" },
-				{ "name": "firstName", "type": { "kind": "text" }, "description": "First name", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "text" }, "description": "Last name", "nullable": true }
+				{ "name": "email", "type": { "kind": "string" }, "description": "Email", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "string" }, "description": "Dummy ID" },
+				{ "name": "firstName", "type": { "kind": "string" }, "description": "First name", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "string" }, "description": "Last name", "nullable": true }
 			]
 		},
 		"outSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "text", "charLen": 300 }, "readOptional": true, "description": "" },
-				{ "name": "dummy_id", "type": { "kind": "text" }, "readOptional": true, "description": "" },
-				{ "name": "first_name", "type": { "kind": "text", "charLen": 300 }, "readOptional": true, "description": "" },
-				{ "name": "last_name", "type": { "kind": "text", "charLen": 300 }, "readOptional": true, "description": "" }
+				{ "name": "email", "type": { "kind": "string", "charLen": 300 }, "readOptional": true, "description": "" },
+				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true, "description": "" },
+				{ "name": "first_name", "type": { "kind": "string", "charLen": 300 }, "readOptional": true, "description": "" },
+				{ "name": "last_name", "type": { "kind": "string", "charLen": 300 }, "readOptional": true, "description": "" }
 			]
 		},
 		"incremental": false,
@@ -202,7 +202,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "first_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -211,7 +211,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "last_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -220,7 +220,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "email",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -229,7 +229,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "dummy_id",
 					"type": {
-						"kind": "text"
+						"kind": "string"
 					},
 					"readOptional": true,
 					"description": ""
@@ -242,7 +242,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "firstName",
 					"type": {
-						"kind": "text"
+						"kind": "string"
 					},
 					"nullable": true,
 					"description": "First name"
@@ -250,7 +250,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "lastName",
 					"type": {
-						"kind": "text"
+						"kind": "string"
 					},
 					"nullable": true,
 					"description": "Last name"
@@ -258,7 +258,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "email",
 					"type": {
-						"kind": "text"
+						"kind": "string"
 					},
 					"nullable": true,
 					"description": "Email"
@@ -339,7 +339,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 				{
 					"name": "email",
 					"type": {
-						"kind": "text"
+						"kind": "string"
 					},
 					"createRequired": true,
 					"description": "Email"
@@ -430,7 +430,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "first_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"nullable": true,
@@ -439,7 +439,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "last_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"nullable": true,
@@ -448,7 +448,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "email",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"nullable": true,
@@ -462,7 +462,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "first_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -471,7 +471,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "last_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -596,7 +596,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "email",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -605,7 +605,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "first_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -614,7 +614,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "last_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"readOptional": true,
@@ -623,7 +623,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "dummy_id",
 					"type": {
-						"kind": "text"
+						"kind": "string"
 					},
 					"readOptional": true,
 					"description": ""
@@ -636,7 +636,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "email",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"createRequired": true,
@@ -647,7 +647,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "first_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"nullable": true,
@@ -656,7 +656,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				{
 					"name": "last_name",
 					"type": {
-						"kind": "text",
+						"kind": "string",
 						"charLen": 300
 					},
 					"nullable": true,
@@ -774,21 +774,21 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "email",
 						"type": {
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": ""
 					},
 					{
 						"name": "first_name",
 						"type": {
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": ""
 					},
 					{
 						"name": "last_name",
 						"type": {
-							"kind": "text"
+							"kind": "string"
 						},
 						"description": ""
 					}
@@ -800,7 +800,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "email",
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 300
 						},
 						"readOptional": true,
@@ -809,7 +809,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "first_name",
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 300
 						},
 						"readOptional": true,
@@ -818,7 +818,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "last_name",
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 300
 						},
 						"readOptional": true,
@@ -951,7 +951,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "email",
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 300
 						},
 						"readOptional": true,
@@ -960,7 +960,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "dummy_id",
 						"type": {
-							"kind": "text"
+							"kind": "string"
 						},
 						"readOptional": true,
 						"description": ""
@@ -973,7 +973,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "id",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -981,7 +981,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "idfa",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -989,7 +989,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "push_token",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1007,7 +1007,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "id",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1015,7 +1015,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "idfa",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1023,7 +1023,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "push_token",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1036,7 +1036,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "first_name",
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 300
 						},
 						"readOptional": true,
@@ -1045,7 +1045,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "last_name",
 						"type": {
-							"kind": "text",
+							"kind": "string",
 							"charLen": 300
 						},
 						"readOptional": true,
@@ -1054,7 +1054,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					{
 						"name": "gender",
 						"type": {
-							"kind": "text"
+							"kind": "string"
 						},
 						"readOptional": true,
 						"description": ""
@@ -1067,7 +1067,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "drink",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1075,7 +1075,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "fruit",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1090,7 +1090,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "array",
 							"elementType": {
-								"kind": "text",
+								"kind": "string",
 								"charLen": 300
 							}
 						},
@@ -1105,7 +1105,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								{
 									"name": "title",
 									"type": {
-										"kind": "text"
+										"kind": "string"
 									},
 									"readOptional": true,
 									"description": ""
@@ -1127,7 +1127,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 											{
 												"name": "title",
 												"type": {
-													"kind": "text"
+													"kind": "string"
 												},
 												"readOptional": true,
 												"description": ""
@@ -1135,7 +1135,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 											{
 												"name": "author",
 												"type": {
-													"kind": "text"
+													"kind": "string"
 												},
 												"readOptional": true,
 												"description": ""
@@ -1152,7 +1152,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 											{
 												"name": "genre",
 												"type": {
-													"kind": "text"
+													"kind": "string"
 												},
 												"readOptional": true,
 												"description": ""

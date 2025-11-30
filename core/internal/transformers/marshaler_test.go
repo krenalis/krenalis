@@ -18,8 +18,8 @@ import (
 
 var schema = types.Object([]types.Property{
 	{
-		Name:         "Text",
-		Type:         types.Text(),
+		Name:         "String",
+		Type:         types.String(),
 		ReadOptional: true,
 	},
 	{
@@ -134,7 +134,7 @@ var schema = types.Object([]types.Property{
 	},
 	{
 		Name:         "Array",
-		Type:         types.Array(types.Text()),
+		Type:         types.Array(types.String()),
 		ReadOptional: true,
 	},
 	{
@@ -158,13 +158,13 @@ var schema = types.Object([]types.Property{
 	},
 	{
 		Name:         "MapArray",
-		Type:         types.Map(types.Array(types.Text())),
+		Type:         types.Map(types.Array(types.String())),
 		ReadOptional: true,
 	},
 })
 
 var records = []Record{{Attributes: map[string]any{
-	"Text":      "some text",
+	"String":    "some text",
 	"Boolean":   true,
 	"Int8":      -12,
 	"Int16":     8023,
@@ -224,7 +224,7 @@ func Test_MarshalErrors(t *testing.T) {
 	})
 
 	t.Run("schema not object", func(t *testing.T) {
-		_, err := Marshal(nil, types.Text(), record, state.JavaScript, false)
+		_, err := Marshal(nil, types.String(), record, state.JavaScript, false)
 		if err == nil || err.Error() != "core/transformers: schema is not an object" {
 			t.Fatalf("expected schema error, got %v", err)
 		}
@@ -250,10 +250,10 @@ func Test_MarshalJavaScript(t *testing.T) {
 			preserveJSON: false,
 			records:      records,
 			results: [][]byte{
-				[]byte(`[{Text:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
-				[]byte(`[{Text:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,3],'foo':true},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
-				[]byte(`[{Text:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
-				[]byte(`[{Text:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,8],'foo':true},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,3],'foo':true},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,8],'foo':true},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
 			},
 		},
 		{
@@ -261,7 +261,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			records:      records,
-			result:       []byte(`[{Text:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:'{\"foo\":true,\"boo\":[5,8]}',JSON_null:'null',Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+			result:       []byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:'{\"foo\":true,\"boo\":[5,8]}',JSON_null:'null',Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
 		},
 		{
 			name:    "Map",
@@ -305,11 +305,11 @@ func Test_MarshalJavaScript(t *testing.T) {
 			result: []byte(`[{},{},{}]`),
 		},
 		{
-			name: "Text encoding",
+			name: "String encoding",
 			schema: types.Object([]types.Property{
 				{
 					Name: "a",
-					Type: types.Text(),
+					Type: types.String(),
 				},
 			}),
 			records: []Record{
@@ -327,7 +327,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			name: "Nullable property",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.JSON(), Nullable: true},
-				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.String(), Nullable: true},
 			}),
 			records: []Record{
 				{Attributes: map[string]any{"a": nil, "b": nil}},
@@ -339,7 +339,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{
 					Name: "a",
-					Type: types.Text(),
+					Type: types.String(),
 				},
 				{
 					Name: "b",
@@ -393,7 +393,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 		{
 			name: "Spurious properties",
 			schema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.String()},
 			}),
 			records: []Record{{Attributes: map[string]any{
 				"a": "foo",
@@ -453,10 +453,10 @@ func Test_MarshalPython(t *testing.T) {
 			preserveJSON: false,
 			records:      records,
 			results: [][]byte{
-				[]byte(`[{'Text':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
-				[]byte(`[{'Text':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
-				[]byte(`[{'Text':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
-				[]byte(`[{'Text':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
 			},
 		},
 		{
@@ -464,7 +464,7 @@ func Test_MarshalPython(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			records:      records,
-			result:       []byte(`[{'Text':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':'{\"foo\":true,\"boo\":[5,8]}','JSON_null':'null','Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+			result:       []byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':'{\"foo\":true,\"boo\":[5,8]}','JSON_null':'null','Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
 		},
 		{
 			name:    "Map",
@@ -508,11 +508,11 @@ func Test_MarshalPython(t *testing.T) {
 			result: []byte(`[{},{},{}]`),
 		},
 		{
-			name: "Text encoding",
+			name: "String encoding",
 			schema: types.Object([]types.Property{
 				{
 					Name: "a",
-					Type: types.Text(),
+					Type: types.String(),
 				},
 			}),
 			records: []Record{
@@ -530,7 +530,7 @@ func Test_MarshalPython(t *testing.T) {
 			name: "Nullable property",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.JSON(), Nullable: true},
-				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.String(), Nullable: true},
 			}),
 			records: []Record{
 				{Attributes: map[string]any{"a": nil, "b": nil}},
@@ -542,7 +542,7 @@ func Test_MarshalPython(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{
 					Name: "a",
-					Type: types.Text(),
+					Type: types.String(),
 				},
 				{
 					Name: "b",
@@ -596,7 +596,7 @@ func Test_MarshalPython(t *testing.T) {
 		{
 			name: "Spurious properties",
 			schema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text()},
+				{Name: "a", Type: types.String()},
 			}),
 			records: []Record{{Attributes: map[string]any{
 				"a": "foo",

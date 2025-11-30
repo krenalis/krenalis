@@ -16,7 +16,7 @@ func Test_suitableAsIdentifier(t *testing.T) {
 		t        types.Type
 		expected bool
 	}{
-		{types.Text(), true},
+		{types.String(), true},
 		{types.Boolean(), false},
 		{types.Int(16), true},
 		{types.Int(32), true},
@@ -34,12 +34,12 @@ func Test_suitableAsIdentifier(t *testing.T) {
 		{types.Year(), false},
 		{types.UUID(), true},
 		{types.Inet(), true},
-		{types.Array(types.Text()), false},
+		{types.Array(types.String()), false},
 		{types.Array(types.Float(32)), false},
 		{types.Array(types.Decimal(10, 0)), false},
-		{types.Array(types.Array(types.Text())), false},
-		{types.Object([]types.Property{{Name: "a", Type: types.Text()}}), false},
-		{types.Map(types.Text()), false},
+		{types.Array(types.Array(types.String())), false},
+		{types.Object([]types.Property{{Name: "a", Type: types.String()}}), false},
+		{types.Map(types.String()), false},
 	}
 	for _, test := range tests {
 		got := suitableAsIdentifier(test.t)

@@ -73,9 +73,9 @@ func (s *scanner) Scan(dest ...any) error {
 // normalize normalizes the value v read from PostgreSQL.
 func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	switch typ.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateText(name, typ, v)
+			return warehouses.ValidateString(name, typ, v)
 		}
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {

@@ -53,7 +53,7 @@ const (
 	MaxDecimalPrecision = 76             // Maximum precision for a decimal type
 	MaxDecimalScale     = 37             // Maximum scale for a decimal type
 	MaxElements         = math.MaxInt32  // Maximum number of elements of an array type
-	MaxTextLen          = math.MaxUint32 // Maximum length in bytes and characters for a text type
+	MaxStringLen        = math.MaxUint32 // Maximum length in bytes and characters for a string type
 	MaxYear             = 9999           // Maximum year for datetime, date and year types
 	MinYear             = 1              // Minimum year for datetime, date and year types
 
@@ -78,7 +78,7 @@ type Kind int8
 
 const (
 	InvalidKind Kind = iota
-	TextKind
+	StringKind
 	BooleanKind
 	IntKind
 	UintKind
@@ -97,7 +97,7 @@ const (
 )
 
 var kindName = []string{
-	"text",
+	"string",
 	"boolean",
 	"int",
 	"uint",
@@ -170,7 +170,7 @@ type Type struct {
 	//   - minimum value for int with 8, 16, 24, and 32 bits
 	//   - minimum value, as uint32(p), for uint with 8, 16, 24, and 32 bits
 	//   - precision for decimal
-	//   - length in bytes, as uint32(p), for text
+	//   - length in bytes, as uint32(p), for string
 	//   - minimum length for array
 	p int32
 
@@ -178,13 +178,13 @@ type Type struct {
 	//   - maximum value for int with 8, 16, 24, and 32 bits
 	//   - maximum value, as uint32(s), for uint with 8, 16, 24, and 32 bits
 	//   - scale for decimal
-	//   - length in characters, as uint32(s), for text
+	//   - length in characters, as uint32(s), for string
 	//   - maximum length for array
 	s int32
 
 	// vl can contain one of
-	//   - []string with the values for text
-	//   - *regexp.Regexp value for text
+	//   - []string with the values for string
+	//   - *regexp.Regexp value for string
 	//   - intRange value for int with 64 bits
 	//   - uintRange value for uint with 64 bits
 	//   - floatRange value for float
@@ -214,9 +214,9 @@ func Parameter(name string) Type {
 	return Type{kind: InvalidKind, generic: true, vl: name}
 }
 
-// Text returns a text type.
-func Text() Type {
-	return Type{kind: TextKind}
+// String returns a string type.
+func String() Type {
+	return Type{kind: StringKind}
 }
 
 // Boolean returns the boolean type.
@@ -715,29 +715,29 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// ByteLen returns the maximum length in bytes of a text type and true.
+// ByteLen returns the maximum length in bytes of a string type and true.
 // If t has no maximum length in bytes, it returns 0 and false.
-// Panics if t is not a text type.
+// Panics if t is not a string type.
 func (t Type) ByteLen() (int, bool) {
-	if t.kind != TextKind {
-		panic("cannot get byte length of a non-text type")
+	if t.kind != StringKind {
+		panic("cannot get byte length of a non-string type")
 	}
 	return int(uint32(t.p)), t.p != 0
 }
 
-// WithByteLen returns t with a maximum length of l of a text type. l must be in
-// range [1, MaxTextLen].
-// Panics if t is not a text type, or if l is not in range, or if t has already
+// WithByteLen returns t with a maximum length of l of a string type. l must be in
+// range [1, MaxStringLen].
+// Panics if t is not a string type, or if l is not in range, or if t has already
 // a byte length, or if t already has values.
 func (t Type) WithByteLen(l int) Type {
-	if t.kind != TextKind {
-		panic("cannot set byte length of a non-text type")
+	if t.kind != StringKind {
+		panic("cannot set byte length of a non-string type")
 	}
 	if t.p > 0 {
 		panic("repeated length in bytes")
 	}
-	if l < 1 || MaxTextLen < l {
-		panic("invalid text length")
+	if l < 1 || MaxStringLen < l {
+		panic("invalid string length")
 	}
 	if _, ok := t.vl.([]string); ok {
 		panic("t already has values")
@@ -746,28 +746,28 @@ func (t Type) WithByteLen(l int) Type {
 	return t
 }
 
-// CharLen returns the maximum length in characters of a text type and true. If
+// CharLen returns the maximum length in characters of a string type and true. If
 // t has no maximum length in characters, it returns 0 and false. Panics if t is
-// not a text type.
+// not a string type.
 func (t Type) CharLen() (int, bool) {
-	if t.kind != TextKind {
-		panic("cannot get character length of non-text types")
+	if t.kind != StringKind {
+		panic("cannot get character length of non-string types")
 	}
 	return int(uint32(t.s)), t.s != 0
 }
 
-// WithCharLen returns t with a maximum length of l of a text type. l must be in
-// range [1, MaxTextLen]. Panics if t is not a text type, or if l is not in
+// WithCharLen returns t with a maximum length of l of a string type. l must be in
+// range [1, MaxStringLen]. Panics if t is not a string type, or if l is not in
 // range, or if t has already a char length, or if t already has values.
 func (t Type) WithCharLen(l int) Type {
-	if t.kind != TextKind {
-		panic("cannot set character length of non-text types")
+	if t.kind != StringKind {
+		panic("cannot set character length of non-string types")
 	}
 	if t.s > 0 {
 		panic("repeated length in characters")
 	}
-	if l < 1 || MaxTextLen < l {
-		panic("invalid text length")
+	if l < 1 || MaxStringLen < l {
+		panic("invalid string length")
 	}
 	if _, ok := t.vl.([]string); ok {
 		panic("t already has values")
@@ -777,21 +777,21 @@ func (t Type) WithCharLen(l int) Type {
 }
 
 // Regexp returns the regular expression of t. If t has no regular expression,
-// it returns nil. Panics if t is not a text type.
+// it returns nil. Panics if t is not a string type.
 func (t Type) Regexp() *regexp.Regexp {
-	if t.kind != TextKind {
-		panic("cannot return regular expression for a non-text type")
+	if t.kind != StringKind {
+		panic("cannot return regular expression for a non-string type")
 	}
 	re, _ := t.vl.(*regexp.Regexp)
 	return re
 }
 
 // WithRegexp returns t with the regular expression re.
-// Panics if t is not a text type, or t has already a regular expression or has
+// Panics if t is not a string type, or t has already a regular expression or has
 // values.
 func (t Type) WithRegexp(re *regexp.Regexp) Type {
-	if t.kind != TextKind {
-		panic("cannot set regular expression for a non-text type")
+	if t.kind != StringKind {
+		panic("cannot set regular expression for a non-string type")
 	}
 	switch t.vl.(type) {
 	case []string:
@@ -804,10 +804,10 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 }
 
 // Values returns the values of t. Returns nil if t has no values. Panics if t
-// is not a text type.
+// is not a string type.
 func (t Type) Values() []string {
-	if t.kind != TextKind {
-		panic("cannot get values for a non-text type")
+	if t.kind != StringKind {
+		panic("cannot get values for a non-string type")
 	}
 	if vl, ok := t.vl.([]string); ok {
 		values := make([]string, len(vl))
@@ -817,13 +817,13 @@ func (t Type) Values() []string {
 	return nil
 }
 
-// WithValues returns t but restricted to some values. t must be a text type.
-// It panics if t is not of text type, if the values is empty or contains an
+// WithValues returns t but restricted to some values. t must be a string type.
+// It panics if t is not of string type, if the values is empty or contains an
 // invalid UTF-8 string, or if t already has values, a regular expression, or
 // if it is already restricted by byte or character length.
 func (t Type) WithValues(values ...string) Type {
-	if t.kind != TextKind {
-		panic("cannot set values for a non-text type")
+	if t.kind != StringKind {
+		panic("cannot set values for a non-string type")
 	}
 	if len(values) == 0 {
 		panic("values is empty")

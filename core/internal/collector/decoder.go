@@ -832,54 +832,54 @@ var contextSections = map[string]*contextSection{
 	"app": {
 		name: "app",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text(), readOptional: true},
-			{name: "version", typ: types.Text(), readOptional: true},
-			{name: "build", typ: types.Text(), readOptional: true},
-			{name: "namespace", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.String(), readOptional: true},
+			{name: "version", typ: types.String(), readOptional: true},
+			{name: "build", typ: types.String(), readOptional: true},
+			{name: "namespace", typ: types.String(), readOptional: true},
 		},
 	},
 	"browser": {
 		name: "browser",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text(), readOptional: true},
-			{name: "version", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.String(), readOptional: true},
+			{name: "version", typ: types.String(), readOptional: true},
 		},
 	},
 	"campaign": {
 		name: "campaign",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text(), readOptional: true},
-			{name: "source", typ: types.Text(), readOptional: true},
-			{name: "medium", typ: types.Text(), readOptional: true},
-			{name: "term", typ: types.Text(), readOptional: true},
-			{name: "content", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.String(), readOptional: true},
+			{name: "source", typ: types.String(), readOptional: true},
+			{name: "medium", typ: types.String(), readOptional: true},
+			{name: "term", typ: types.String(), readOptional: true},
+			{name: "content", typ: types.String(), readOptional: true},
 		},
 	},
 	"device": {
 		name: "device",
 		properties: []contextProperty{
-			{name: "id", typ: types.Text(), readOptional: true},
-			{name: "advertisingId", typ: types.Text(), readOptional: true},
+			{name: "id", typ: types.String(), readOptional: true},
+			{name: "advertisingId", typ: types.String(), readOptional: true},
 			{name: "adTrackingEnabled", typ: types.Boolean(), readOptional: true},
-			{name: "manufacturer", typ: types.Text(), readOptional: true},
-			{name: "model", typ: types.Text(), readOptional: true},
-			{name: "name", typ: types.Text(), readOptional: true},
-			{name: "type", typ: types.Text(), readOptional: true},
-			{name: "token", typ: types.Text(), readOptional: true},
+			{name: "manufacturer", typ: types.String(), readOptional: true},
+			{name: "model", typ: types.String(), readOptional: true},
+			{name: "name", typ: types.String(), readOptional: true},
+			{name: "type", typ: types.String(), readOptional: true},
+			{name: "token", typ: types.String(), readOptional: true},
 		},
 	},
 	"library": {
 		name: "library",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text(), readOptional: true},
-			{name: "version", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.String(), readOptional: true},
+			{name: "version", typ: types.String(), readOptional: true},
 		},
 	},
 	"location": {
 		name: "location",
 		properties: []contextProperty{
-			{name: "city", typ: types.Text(), readOptional: true},
-			{name: "country", typ: types.Text(), readOptional: true},
+			{name: "city", typ: types.String(), readOptional: true},
+			{name: "country", typ: types.String(), readOptional: true},
 			{name: "latitude", typ: types.Float(64), readOptional: true},
 			{name: "longitude", typ: types.Float(64), readOptional: true},
 			{name: "speed", typ: types.Float(64), readOptional: true},
@@ -889,7 +889,7 @@ var contextSections = map[string]*contextSection{
 		name: "network",
 		properties: []contextProperty{
 			{name: "bluetooth", typ: types.Boolean(), readOptional: true},
-			{name: "carrier", typ: types.Text(), readOptional: true},
+			{name: "carrier", typ: types.String(), readOptional: true},
 			{name: "cellular", typ: types.Boolean(), readOptional: true},
 			{name: "wifi", typ: types.Boolean(), readOptional: true},
 		},
@@ -897,25 +897,25 @@ var contextSections = map[string]*contextSection{
 	"os": {
 		name: "os",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text(), readOptional: true},
-			{name: "version", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.String(), readOptional: true},
+			{name: "version", typ: types.String(), readOptional: true},
 		},
 	},
 	"page": {
 		name: "page",
 		properties: []contextProperty{
-			{name: "path", typ: types.Text(), readOptional: true},
-			{name: "referrer", typ: types.Text(), readOptional: true},
-			{name: "search", typ: types.Text(), readOptional: true},
-			{name: "title", typ: types.Text(), readOptional: true},
-			{name: "url", typ: types.Text(), readOptional: true},
+			{name: "path", typ: types.String(), readOptional: true},
+			{name: "referrer", typ: types.String(), readOptional: true},
+			{name: "search", typ: types.String(), readOptional: true},
+			{name: "title", typ: types.String(), readOptional: true},
+			{name: "url", typ: types.String(), readOptional: true},
 		},
 	},
 	"referrer": {
 		name: "referrer",
 		properties: []contextProperty{
-			{name: "id", typ: types.Text(), readOptional: true},
-			{name: "type", typ: types.Text(), readOptional: true},
+			{name: "id", typ: types.String(), readOptional: true},
+			{name: "type", typ: types.String(), readOptional: true},
 		},
 	},
 	"screen": {
@@ -970,7 +970,7 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 		tok, _ = d.dec.ReadToken()
 		var v any
 		switch typ.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			if tok.Kind() != '"' {
 				return nil, errors.BadRequest("property 'context.%s.%s' is not a string", section.name, name)
 			}
@@ -1055,7 +1055,7 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 		}
 		var v any
 		switch p.typ.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			v = ""
 		case types.BooleanKind:
 			v = false

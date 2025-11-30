@@ -161,10 +161,10 @@ func Test_Len(t *testing.T) {
 		Type     Type
 		Expected Expected
 	}{
-		{Text(), Expected{false, 0}},
-		{Text().WithByteLen(1).WithCharLen(1), Expected{true, 1}},
-		{Text().WithByteLen(math.MaxInt32).WithCharLen(math.MaxInt32), Expected{true, math.MaxInt32}},
-		{Text().WithByteLen(MaxTextLen).WithCharLen(MaxTextLen), Expected{true, MaxTextLen}},
+		{String(), Expected{false, 0}},
+		{String().WithByteLen(1).WithCharLen(1), Expected{true, 1}},
+		{String().WithByteLen(math.MaxInt32).WithCharLen(math.MaxInt32), Expected{true, math.MaxInt32}},
+		{String().WithByteLen(MaxStringLen).WithCharLen(MaxStringLen), Expected{true, MaxStringLen}},
 	}
 
 	for _, test := range tests {
@@ -192,9 +192,9 @@ func Test_ObjectOf_Errors(t *testing.T) {
 
 	// Test InvalidPropertyNameError.
 	_, err := ObjectOf([]Property{
-		{Name: "firstName", Type: Text()},
-		{Name: "last name", Type: Text()},
-		{Name: "phone", Type: Text()},
+		{Name: "firstName", Type: String()},
+		{Name: "last name", Type: String()},
+		{Name: "phone", Type: String()},
 	})
 	if err == nil {
 		t.Error("expected InvalidPropertyNameError error, got no error")
@@ -212,9 +212,9 @@ func Test_ObjectOf_Errors(t *testing.T) {
 
 	// Test RepeatedPropertyNameError.
 	_, err = ObjectOf([]Property{
-		{Name: "firstName", Type: Text()},
-		{Name: "lastName", Type: Text()},
-		{Name: "firstName", Type: Text()},
+		{Name: "firstName", Type: String()},
+		{Name: "lastName", Type: String()},
+		{Name: "firstName", Type: String()},
 	})
 	if err == nil {
 		t.Error("expected RepeatedPropertyNameError error, got no error")
@@ -237,7 +237,7 @@ func Test_ObjectOf_Errors(t *testing.T) {
 
 func Test_Unique(t *testing.T) {
 	t.Run("array unique", func(t *testing.T) {
-		a := Array(Text()).WithUnique()
+		a := Array(String()).WithUnique()
 		if !a.Unique() {
 			t.Fatal("expected unique true")
 		}
@@ -248,7 +248,7 @@ func Test_Unique(t *testing.T) {
 				t.Fatal("expected panic")
 			}
 		}()
-		Text().Unique()
+		String().Unique()
 	})
 	t.Run("invalid element type", func(t *testing.T) {
 		defer func() {
@@ -370,7 +370,7 @@ func sameType(t1, t2 Type) error {
 	// Precision, byte length or elements minimum length.
 	if t1.p != t2.p {
 		switch t1.kind {
-		case TextKind:
+		case StringKind:
 			return fmt.Errorf("expected byte length %d, got %d", t1.p, t2.p)
 		case DecimalKind:
 			return fmt.Errorf("expected precision %d, got %d", t1.p, t2.p)
@@ -382,7 +382,7 @@ func sameType(t1, t2 Type) error {
 	// Scale, character length or elements maximum length.
 	if t1.s != t2.s {
 		switch t1.kind {
-		case TextKind:
+		case StringKind:
 			return fmt.Errorf("expected character length %d, got %d", t1.s, t2.s)
 		case DecimalKind:
 			return fmt.Errorf("expected scale %d, got %d", t1.s, t2.s)
@@ -392,7 +392,7 @@ func sameType(t1, t2 Type) error {
 		return fmt.Errorf("expected s == 0, got %d", t2.s)
 	}
 	// Regular expression or values.
-	if t1.kind == TextKind {
+	if t1.kind == StringKind {
 		switch vl1 := t1.vl.(type) {
 		case nil:
 			if t2.vl != nil {

@@ -115,9 +115,9 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, 
 	iw.columns = make([]warehouses.Column, 7, 7+len(pipeline.Transformation.OutPaths))
 	iw.columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
 	iw.columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
+	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
 	iw.columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
 	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())

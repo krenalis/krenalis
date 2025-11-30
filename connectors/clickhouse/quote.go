@@ -71,7 +71,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 	case nil:
 		b.WriteString("NULL")
 	case string:
-		if t.Kind() == types.TextKind {
+		if t.Kind() == types.StringKind {
 			quoteString(b, v)
 		} else {
 			b.WriteByte('\'')

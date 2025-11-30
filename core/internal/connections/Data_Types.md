@@ -5,7 +5,7 @@
 
 | Kind      | Go              | json.Unmarshal               | ClickHouse           | PostgreSQL  | MySQL     | Snowflake   | Parquet      | JSON            | CSV    | Excel  |
 |-----------|-----------------|------------------------------|----------------------|-------------|-----------|-------------|--------------|-----------------|--------|--------|
-| text      | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
+| string    | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
 | boolean   | bool            | bool                         | bool                 | bool        | -         | bool        | bool         | -               | -      | -      |
 | int(8)    | int             | float64, json.Number         | int8                 | -           | int64     | -           |              | -               | -      | -      |
 | int(16)   | int             | float64, json.Number         | int16                | int64       | int64     | -           |              | -               | -      | -      |

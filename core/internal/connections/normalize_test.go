@@ -56,14 +56,14 @@ func Test_normalize(t *testing.T) {
 		null     bool
 		layout   *state.TimeLayouts
 	}{
-		// text.
-		{types.Text(), "foo", "foo", false, nil},
-		{types.Text().WithValues("foo", "boo"), "boo", "boo", false, nil},
-		{types.Text().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo", false, nil},
-		{types.Text().WithByteLen(3), "boo", "boo", false, nil},
-		{types.Text().WithCharLen(3), "bòò", "bòò", false, nil},
-		{types.Text().WithValues("foo", "boo"), "", nil, true, nil},
-		{types.Text(), []byte(nil), nil, true, nil},
+		// string.
+		{types.String(), "foo", "foo", false, nil},
+		{types.String().WithValues("foo", "boo"), "boo", "boo", false, nil},
+		{types.String().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo", false, nil},
+		{types.String().WithByteLen(3), "boo", "boo", false, nil},
+		{types.String().WithCharLen(3), "bòò", "bòò", false, nil},
+		{types.String().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.String(), []byte(nil), nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -169,22 +169,22 @@ func Test_normalize(t *testing.T) {
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
-		{types.Array(types.Array(types.Text())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
+		{types.Array(types.Array(types.String())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
 		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []string(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []decimal.Decimal(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []map[string][]map[string][]int(nil), nil, true, nil},
 		// object.
-		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.Inet(), Nullable: true}}), map[string]any{"foo": ""}, map[string]any{"foo": nil}, true, nil},
-		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int(32)}}), map[string]any(nil), nil, true, nil},
-		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int(32), ReadOptional: true}}), map[string]any{"foo": "alt", "spurious": 5}, map[string]any{"foo": "alt"}, false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any(nil), nil, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32), ReadOptional: true}}), map[string]any{"foo": "alt", "spurious": 5}, map[string]any{"foo": "alt"}, false, nil},
 		// map.
-		{types.Map(types.Text()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, false, nil},
+		{types.Map(types.String()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, false, nil},
 		{types.Map(types.Array(types.Boolean())), map[string]any{"foo": []any{true, false}}, map[string]any{"foo": []any{true, false}}, false, nil},
-		{types.Map(types.Text()), map[string]any(nil), nil, true, nil},
-		{types.Map(types.Text()), map[string]string(nil), nil, true, nil},
+		{types.Map(types.String()), map[string]any(nil), nil, true, nil},
+		{types.Map(types.String()), map[string]string(nil), nil, true, nil},
 	}
 
 	for _, test := range tests {
@@ -217,13 +217,13 @@ func Test_normalize_errors(t *testing.T) {
 		layout       *state.TimeLayouts
 		wantContains string
 	}{
-		{name: "nilNotNullable", typ: types.Text(), value: nil, wantContains: "has value null but it is not nullable"},
-		{name: "textInvalidType", typ: types.Text(), value: 5, wantContains: "has type int"},
-		{name: "textInvalidUTF8", typ: types.Text(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
-		{name: "textRegexpMismatch", typ: types.Text().WithRegexp(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
-		{name: "textUnsupportedValue", typ: types.Text().WithValues("foo", "bar"), value: "baz", wantContains: "contains an unsupported value"},
-		{name: "textTooLong", typ: types.Text().WithByteLen(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
-		{name: "textTooManyChars", typ: types.Text().WithCharLen(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
+		{name: "nilNotNullable", typ: types.String(), value: nil, wantContains: "has value null but it is not nullable"},
+		{name: "textInvalidType", typ: types.String(), value: 5, wantContains: "has type int"},
+		{name: "textInvalidUTF8", typ: types.String(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
+		{name: "textRegexpMismatch", typ: types.String().WithRegexp(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
+		{name: "textUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: "baz", wantContains: "contains an unsupported value"},
+		{name: "textTooLong", typ: types.String().WithByteLen(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
+		{name: "textTooManyChars", typ: types.String().WithCharLen(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
@@ -279,19 +279,19 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "inetInvalidType", typ: types.Inet(), value: 5, wantContains: "has type int that is not allowed for type inet"},
 		{name: "arrayInvalidType", typ: types.Array(types.Int(32)), value: 5, wantContains: "has type int that is not allowed"},
 		{name: "arrayElementError", typ: types.Array(types.Int(16)), value: []any{1, "bad"}, wantContains: "has a string value that does not represent an int value"},
-		{name: "arrayTooFewElements", typ: types.Array(types.Text()).WithMinElements(2), value: []any{"ok"}, wantContains: "is an array with 1 elements"},
+		{name: "arrayTooFewElements", typ: types.Array(types.String()).WithMinElements(2), value: []any{"ok"}, wantContains: "is an array with 1 elements"},
 		{name: "arrayStringNotJSON", typ: types.Array(types.JSON()), value: "notjson", wantContains: "has a string value but does not contain a JSON array"},
 		{name: "arrayStringInvalidJSON", typ: types.Array(types.JSON()), value: "[bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "arrayStringTooManyElements", typ: types.Array(types.JSON()).WithMaxElements(1), value: "[1,2]", wantContains: "is an array with more than 1 elements"},
 		{name: "arrayStringTooFewElements", typ: types.Array(types.JSON()).WithMinElements(2), value: "[1]", wantContains: "is an array with less than 2 elements"},
 		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, wantContains: "contains the duplicated value 1"},
-		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.Text()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
+		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
-		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.Text()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
-		{name: "mapStringNotJSONObject", typ: types.Map(types.Text()), value: "not json", wantContains: "has a string value but does not contain a JSON object"},
+		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
+		{name: "mapStringNotJSONObject", typ: types.Map(types.String()), value: "not json", wantContains: "has a string value but does not contain a JSON object"},
 		{name: "mapStringInvalidJSON", typ: types.Map(types.JSON()), value: "{bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "mapValueTypeError", typ: types.Map(types.Int(32)), value: map[string]any{"ok": 1, "bad": "nope"}, wantContains: "property 'k[\"bad\"]' has a string value that does not represent an int value"},
-		{name: "mapInvalidType", typ: types.Map(types.Text()), value: 5, wantContains: "has type int that is not allowed for type map"},
+		{name: "mapInvalidType", typ: types.Map(types.String()), value: 5, wantContains: "has type int that is not allowed for type map"},
 	}
 
 	for _, tt := range tests {

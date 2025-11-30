@@ -65,7 +65,7 @@ type FilterCondition struct {
 	Operator FilterOperator `json:"operator"`
 
 	// Values.
-	// If the property has a text type with allowed values,
+	// If the property has a string type with allowed values,
 	// the unique value of values must be one of the allowed values.
 	// In all other cases, each value must be at most 60 runes and must not
 	// contain the NUL byte.
@@ -145,7 +145,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 		for i, value := range cond.Values {
 			var v any
 			switch kind {
-			case types.TextKind:
+			case types.StringKind:
 				v = value
 			case types.BooleanKind:
 				v = value == "true"
@@ -466,34 +466,34 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 
 		// Validate the operator and its kind.
 		//
-		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, text
-		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, text
-		// is less than                : int, uint, float, decimal, json, text [^1]
-		// is less than or equal to    : int, uint, float, decimal, json, text [^1]
-		// is greater than             : int, uint, float, decimal, json, text [^1]
-		// is greater than or equal to : int, uint, float, decimal, json, text [^1]
-		// is between                  : int, uint, float, decimal, year, datetime, date, time, json, text [^1]
-		// is not between              : int, uint, float, decimal, year, datetime, date, time, json, text [^1]
-		// contains                    : json, text, array [^2]
-		// does not contain            : json, text, array [^2]
-		// is one of                   : int, uint, float, decimal, year, datetime, date, time, json, text
-		// is not one of               : int, uint, float, decimal, year, datetime, date, time, json, text
-		// starts with                 : json, text [^1]
-		// ends with                   : json, text [^1]
+		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, string
+		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, string
+		// is less than                : int, uint, float, decimal, json, string [^1]
+		// is less than or equal to    : int, uint, float, decimal, json, string [^1]
+		// is greater than             : int, uint, float, decimal, json, string [^1]
+		// is greater than or equal to : int, uint, float, decimal, json, string [^1]
+		// is between                  : int, uint, float, decimal, year, datetime, date, time, json, string [^1]
+		// is not between              : int, uint, float, decimal, year, datetime, date, time, json, string [^1]
+		// contains                    : json, string, array [^2]
+		// does not contain            : json, string, array [^2]
+		// is one of                   : int, uint, float, decimal, year, datetime, date, time, json, string
+		// is not one of               : int, uint, float, decimal, year, datetime, date, time, json, string
+		// starts with                 : json, string [^1]
+		// ends with                   : json, string [^1]
 		// is before                   : datetime, date, time, year
 		// is on or before             : datetime, date, time, year
 		// is after                    : datetime, date, time, year
 		// is on or after              : datetime, date, time, year
 		// is true                     : boolean, json
 		// is false                    : boolean, json
-		// is empty                    : json, text, object, array, map [^3]
-		// is not empty                : json, text, object, array, map [^3]
+		// is empty                    : json, string, object, array, map [^3]
+		// is not empty                : json, string, object, array, map [^3]
 		// is null                     : All types [^4]
 		// is not null                 : All types [^4]
 		// exists                      : All types [^5]
 		// does not exist              : All types [^5]
 		//
-		// [1]: text with values is not supported.
+		// [1]: string with values is not supported.
 		// [2]: array(T) is supported if T is a type that is supported by the 'is' operator.
 		// [3]: object is disallowed on users when role is destination and on events.
 		// [4]: only if the property is nullable or 'json'.
@@ -507,9 +507,9 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpIsBetween, OpIsNotBetween:
 			switch kind {
-			case types.TextKind:
+			case types.StringKind:
 				if p.Type.Values() != nil {
-					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
+					return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
 				}
 			case types.BooleanKind, types.UUIDKind, types.InetKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
@@ -521,9 +521,9 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpIsLessThan, OpIsLessThanOrEqualTo, OpIsGreaterThan, OpIsGreaterThanOrEqualTo:
 			switch kind {
-			case types.TextKind:
+			case types.StringKind:
 				if p.Type.Values() != nil {
-					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
+					return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
 				}
 			case types.IntKind, types.UintKind, types.FloatKind, types.DecimalKind:
 			case types.JSONKind:
@@ -532,7 +532,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpContains, OpDoesNotContain:
 			switch kind {
-			case types.TextKind, types.JSONKind:
+			case types.StringKind, types.JSONKind:
 			case types.ArrayKind:
 				switch k := p.Type.Elem().Kind(); k {
 				case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
@@ -543,9 +543,9 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpStartsWith, OpEndsWith:
 			switch kind {
-			case types.TextKind:
+			case types.StringKind:
 				if p.Type.Values() != nil {
-					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
+					return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
 				}
 			case types.JSONKind:
 			default:
@@ -565,10 +565,10 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpIsEmpty, OpIsNotEmpty:
 			switch kind {
-			case types.TextKind:
+			case types.StringKind:
 				if values := p.Type.Values(); len(values) > 0 {
 					if !slices.Contains(values, "") {
-						return nil, fmt.Errorf("operator %q cannot be used on text properties that exclude the empty string from allowed values", op)
+						return nil, fmt.Errorf("operator %q cannot be used on string properties that exclude the empty string from allowed values", op)
 					}
 				}
 			case types.JSONKind, types.ArrayKind, types.MapKind:
@@ -580,7 +580,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 					return nil, fmt.Errorf("operator %q cannot be used on object properties for destination pipelines on users", op)
 				}
 			default:
-				return nil, fmt.Errorf("operator %q can only be used with json, text, object, array, and map properties", op)
+				return nil, fmt.Errorf("operator %q can only be used with json, string, object, array, and map properties", op)
 			}
 		case OpIsNull, OpIsNotNull:
 			if !p.Nullable && kind != types.JSONKind {
@@ -616,8 +616,8 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 		if cond.Values == nil {
 			continue
 		}
-		// Handles separately the text type case with allowed values.
-		if kind == types.TextKind {
+		// Handles separately the string type case with allowed values.
+		if kind == types.StringKind {
 			if values := p.Type.Values(); values != nil {
 				for _, value := range cond.Values {
 					if !slices.Contains(values, value) {
@@ -637,7 +637,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 			var valid bool
 			switch k {
-			case types.TextKind, types.JSONKind:
+			case types.StringKind, types.JSONKind:
 				valid = utf8.ValidString(value)
 			case types.IntKind:
 				_, valid = parseInt(value)

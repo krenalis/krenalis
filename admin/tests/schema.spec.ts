@@ -23,7 +23,7 @@ test(`Add schema property`, async ({ page }) => {
 	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
-	}, 'text');
+	}, 'string');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
@@ -112,7 +112,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
-	}, 'text');
+	}, 'string');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
@@ -169,7 +169,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
-	}, 'text');
+	}, 'string');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 	

@@ -26,22 +26,22 @@ func Test_Decode(t *testing.T) {
 
 	object := Object([]Property{
 		{
-			Name: "Text",
-			Type: Text().WithCharLen(10),
+			Name: "String",
+			Type: String().WithCharLen(10),
 		},
 		{
 			Name:     "Text_values",
-			Type:     Text().WithValues("a", "b", "c"),
+			Type:     String().WithValues("a", "b", "c"),
 			Nullable: true,
 		},
 		{
 			Name:     "Text_regexp",
-			Type:     Text().WithRegexp(regexp.MustCompile(`oo$`)),
+			Type:     String().WithRegexp(regexp.MustCompile(`oo$`)),
 			Nullable: true,
 		},
 		{
 			Name:     "Text_nil",
-			Type:     Text(),
+			Type:     String(),
 			Nullable: true,
 		},
 		{
@@ -134,7 +134,7 @@ func Test_Decode(t *testing.T) {
 		},
 		{
 			Name: "Array",
-			Type: Array(Text()),
+			Type: Array(String()),
 		},
 		{
 			Name: "Object",
@@ -161,9 +161,9 @@ func Test_Decode(t *testing.T) {
 		},
 	})
 
-	data := `{"Text":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
+	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
 	expected := map[string]any{
-		"Text":        "some text",
+		"String":      "some text",
 		"Text_values": "c",
 		"Text_regexp": "foo",
 		"Text_nil":    nil,
@@ -274,8 +274,8 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue(`does not have a valid value: "2023-02-30"`, "Date"),
 		},
 		{
-			data: `{"Text":"some long text"}`,
-			err:  newErrInvalidValue(`is longer than 10 characters: "some long text"`, "Text"),
+			data: `{"String":"some long text"}`,
+			err:  newErrInvalidValue(`is longer than 10 characters: "some long text"`, "String"),
 		},
 		{
 			data: `{"Text_values":"foo"}`,
@@ -329,7 +329,7 @@ func Test_Marshal(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			value:  value,
-			result: []byte(`{"Text":"some text","Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
+			result: []byte(`{"String":"some text","Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
 		},
 		{
 			name:   "Empty",
@@ -501,8 +501,8 @@ func equalValues(t Type, v1, v2 any) error {
 
 var schema = Object([]Property{
 	{
-		Name: "Text",
-		Type: Text(),
+		Name: "String",
+		Type: String(),
 	},
 	{
 		Name: "Boolean",
@@ -606,7 +606,7 @@ var schema = Object([]Property{
 	},
 	{
 		Name: "Array",
-		Type: Array(Text()),
+		Type: Array(String()),
 	},
 	{
 		Name: "Object",
@@ -628,7 +628,7 @@ var schema = Object([]Property{
 })
 
 var value = map[string]any{
-	"Text":                      "some text",
+	"String":                    "some text",
 	"Boolean":                   true,
 	"Int8":                      -12,
 	"Int16":                     8023,

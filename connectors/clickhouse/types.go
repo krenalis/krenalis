@@ -63,7 +63,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		case "Bool":
 			t = types.Boolean()
 		case "String":
-			t = types.Text()
+			t = types.String()
 		case "UUID":
 			t = types.UUID()
 		case "Date", "Date32":
@@ -97,7 +97,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if n == 0 || s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.Text().WithByteLen(n), false, s[1:]
+		return types.String().WithByteLen(n), false, s[1:]
 	case "DateTime":
 		_, s, ok := parseString(s[i+1:])
 		if !ok || s == "" {
@@ -144,7 +144,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.Text().WithValues(values...), false, s[1:]
+		return types.String().WithValues(values...), false, s[1:]
 	case "LowCardinality":
 		t, _, s := parseType(s[i+1:], false)
 		if s == "" {
@@ -169,7 +169,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 	case "Map":
 		key, _, s := parseType(s[i+1:], false)
 		s, comma := trimComma(s)
-		if !key.Valid() || key.Kind() != types.TextKind || !comma {
+		if !key.Valid() || key.Kind() != types.StringKind || !comma {
 			return types.Type{}, false, ""
 		}
 		value, _, s := parseType(s, false)

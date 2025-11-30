@@ -17,18 +17,18 @@ func Test_Flatter(t *testing.T) {
 	schema := types.Object([]types.Property{
 		{
 			Name: "name",
-			Type: types.Text(),
+			Type: types.String(),
 		},
 		{
 			Name: "address",
 			Type: types.Object([]types.Property{
 				{
 					Name: "street",
-					Type: types.Text(),
+					Type: types.String(),
 				},
 				{
 					Name: "city",
-					Type: types.Text(),
+					Type: types.String(),
 				},
 			}),
 		},
@@ -59,15 +59,15 @@ func Test_Flatter(t *testing.T) {
 	columnByProperty := map[string]warehouses.Column{
 		"name": {
 			Name: "name",
-			Type: types.Text(),
+			Type: types.String(),
 		},
 		"address.street": {
 			Name: "address_street",
-			Type: types.Text(),
+			Type: types.String(),
 		},
 		"address.city": {
 			Name: "address_city",
-			Type: types.Text(),
+			Type: types.String(),
 		},
 		"score.a.b": {
 			Name: "score_a_b",

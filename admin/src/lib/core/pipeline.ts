@@ -23,14 +23,14 @@ import Type, {
 	ObjectType,
 	Property,
 	Role,
-	TextType,
+	StringType,
 	UintType,
 } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
 import {
-	formatText,
+	formatString,
 	isDate,
 	isDateTime,
 	isDecimal,
@@ -87,28 +87,28 @@ const UNARY_OPERATORS = new Set<FilterOperator>([
 ]);
 
 const typesByFilterOperator: string[][] = [
-	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'text'], // is
-	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'text'], // is not
-	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is less than
-	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is less than or equal to
-	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is greater than
-	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is greater than or equal to
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is between
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is not between
-	['json', 'text', 'array'], // contains
-	['json', 'text', 'array'], // does not contain
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is one of
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is not one of
-	['json', 'text'], // starts with
-	['json', 'text'], // ends with
+	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'string'], // is
+	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'string'], // is not
+	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is less than
+	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is less than or equal to
+	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is greater than
+	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is greater than or equal to
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is between
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not between
+	['json', 'string', 'array'], // contains
+	['json', 'string', 'array'], // does not contain
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is one of
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
+	['json', 'string'], // starts with
+	['json', 'string'], // ends with
 	['datetime', 'date', 'time', 'year'], // is before
 	['datetime', 'date', 'time', 'year'], // is on or before
 	['datetime', 'date', 'time', 'year'], // is after
 	['datetime', 'date', 'time', 'year'], // is on or after
 	['boolean', 'json'], // is true
 	['boolean', 'json'], // is false
-	['json', 'text', 'object', 'array', 'map'], // is empty
-	['json', 'text', 'object', 'array', 'map'], // is not empty
+	['json', 'string', 'object', 'array', 'map'], // is empty
+	['json', 'string', 'object', 'array', 'map'], // is not empty
 	[
 		'boolean',
 		'int',
@@ -122,7 +122,7 @@ const typesByFilterOperator: string[][] = [
 		'uuid',
 		'json',
 		'inet',
-		'text',
+		'string',
 		'array',
 		'object',
 		'map',
@@ -140,7 +140,7 @@ const typesByFilterOperator: string[][] = [
 		'uuid',
 		'json',
 		'inet',
-		'text',
+		'string',
 		'array',
 		'object',
 		'map',
@@ -158,7 +158,7 @@ const typesByFilterOperator: string[][] = [
 		'uuid',
 		'json',
 		'inet',
-		'text',
+		'string',
 		'array',
 		'object',
 		'map',
@@ -176,7 +176,7 @@ const typesByFilterOperator: string[][] = [
 		'uuid',
 		'json',
 		'inet',
-		'text',
+		'string',
 		'array',
 		'object',
 		'map',
@@ -309,7 +309,7 @@ const getCompatibleFilterOperators = (
 
 		// text property with values can only be used with the operators
 		// 'is', 'is not', 'is one of', and 'is not one of'.
-		if (property.type === 'text' && (property.full.type as TextType).values != null) {
+		if (property.type === 'string' && (property.full.type as StringType).values != null) {
 			switch (op) {
 				case 'is':
 				case 'is not':
@@ -604,7 +604,7 @@ const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): Transf
 				values = null;
 			} else {
 				for (const v of condition.values) {
-					const formatted = formatText(v);
+					const formatted = formatString(v);
 					values.push(formatted);
 				}
 			}
@@ -1486,7 +1486,7 @@ const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema
 		return false;
 	}
 	const type = p.type;
-	return type === 'json' || type === 'text';
+	return type === 'json' || type === 'string';
 };
 
 const validateCustomLastChangeTimeFormat = (format: string) => {
@@ -1542,10 +1542,10 @@ const validateAndNormalizeFilterCondition = (
 		throw new Error(`Operator of filter condition is required`);
 	}
 
-	let isJsonOrText = property.type === 'json' || property.type === 'text';
+	let isJsonOrText = property.type === 'json' || property.type === 'string';
 	if (property.type === 'array') {
 		const typ = property.full.type as ArrayType;
-		if (typ.elementType.kind === 'json' || typ.elementType.kind === 'text') {
+		if (typ.elementType.kind === 'json' || typ.elementType.kind === 'string') {
 			isJsonOrText = true;
 		}
 	}
@@ -1613,7 +1613,7 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 		} else if (type.kind === 'inet') {
 			throwIfInvalid(isInet(v), type.kind);
 		} else if (type.kind === 'array') {
-			if (type.elementType.kind !== 'json' && type.elementType.kind !== 'text') {
+			if (type.elementType.kind !== 'json' && type.elementType.kind !== 'string') {
 				validateFilterConditionValues(type.elementType, [v], propertyName);
 			}
 		}
@@ -1622,7 +1622,7 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 
 const validateMatching = (inMatching: Property, outMatching: Property) => {
 	const inTyp = inMatching.type.kind;
-	if (inTyp !== 'int' && inTyp !== 'uint' && inTyp !== 'text' && inTyp !== 'uuid') {
+	if (inTyp !== 'int' && inTyp !== 'uint' && inTyp !== 'string' && inTyp !== 'uuid') {
 		throw new Error(`Matching property cannot be of type "${inTyp}"`);
 	}
 
@@ -1632,19 +1632,19 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 	const conversionError = new Error(`Matching property of type "${inTyp}" cannot be converted to type "${exTyp}"`);
 
 	if (inTyp === 'int') {
-		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'text') {
+		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'string') {
 			throw conversionError;
 		}
 	} else if (inTyp === 'uint') {
-		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'text') {
+		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'string') {
 			throw conversionError;
 		}
-	} else if (inTyp === 'text') {
-		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'uuid' && exTyp !== 'text') {
+	} else if (inTyp === 'string') {
+		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'uuid' && exTyp !== 'string') {
 			throw conversionError;
 		}
 	} else if (inTyp === 'uuid') {
-		if (exTyp !== 'uuid' && exTyp !== 'text') {
+		if (exTyp !== 'uuid' && exTyp !== 'string') {
 			throw conversionError;
 		}
 	}
@@ -1658,8 +1658,8 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 	if (aType.kind === 'int' || aType.kind === 'uint') {
 		const t = bType as IntType | UintType;
 		return aType.bitSize === t.bitSize && aType.minimum === t.minimum && aType.maximum === t.maximum;
-	} else if (aType.kind === 'text') {
-		const t = bType as TextType;
+	} else if (aType.kind === 'string') {
+		const t = bType as StringType;
 		return (
 			aType.byteLen === t.byteLen &&
 			aType.charLen === t.charLen &&

@@ -47,10 +47,10 @@ type databaseConnection interface {
 	// value is nil.
 	//
 	// value is the time value to quote, and typ specifies its type, which can be
-	// datetime, date, text, or json:
+	// datetime, date, string, or json:
 	//
 	//   - For datetime and date types, value is a time.Time.
-	//   - For text and json types, value is a string.
+	//   - For string and json types, value is a string.
 	QuoteTime(value any, typ types.Type) string
 }
 
@@ -126,7 +126,7 @@ func (database *Database) LastChangeTimePlaceholder(pipeline *state.Pipeline) (s
 	p, _ := pipeline.InSchema.Properties().ByName(property)
 	var value any
 	switch p.Type.Kind() {
-	case types.TextKind, types.JSONKind:
+	case types.StringKind, types.JSONKind:
 		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
 	case types.DateTimeKind:
 		value = execution.Cursor

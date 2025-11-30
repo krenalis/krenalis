@@ -490,9 +490,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("identity column %q not found within input schema", pipeline.IdentityColumn)
 		}
 		switch k := identityColumn.Type.Kind(); k {
-		case types.TextKind, types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind:
+		case types.StringKind, types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind:
 		default:
-			return errors.BadRequest("identity column %q has kind %s instead of int, uint uuid, json, or text", pipeline.IdentityColumn, k)
+			return errors.BadRequest("identity column %q has kind %s instead of int, uint uuid, json, or string", pipeline.IdentityColumn, k)
 		}
 		if identityColumn.ReadOptional {
 			return errors.BadRequest("identity column cannot be optional")
@@ -506,11 +506,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("last change time column %q not found within input schema", pipeline.LastChangeTimeColumn)
 			}
 			switch k := lastChangeTime.Type.Kind(); k {
-			case types.TextKind, types.JSONKind:
+			case types.StringKind, types.JSONKind:
 				requiresLastChangeTimeFormat = true
 			case types.DateTimeKind, types.DateKind:
 			default:
-				return errors.BadRequest("last change time column %q has kind %s instead of datetime, date, json, or text", pipeline.LastChangeTimeColumn, k)
+				return errors.BadRequest("last change time column %q has kind %s instead of datetime, date, json, or string", pipeline.LastChangeTimeColumn, k)
 			}
 			usedInPaths = append(usedInPaths, pipeline.LastChangeTimeColumn)
 		}
@@ -558,7 +558,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		// We can use the same criteria as for the allowed types of workspace identifiers,
 		// to simplify the specifications for warehouse drivers.
 		switch p.Type.Kind() {
-		case types.TextKind, types.IntKind, types.UintKind, types.UUIDKind, types.InetKind:
+		case types.StringKind, types.IntKind, types.UintKind, types.UUIDKind, types.InetKind:
 			// Ok.
 		case types.DecimalKind:
 			if p.Type.Precision() != 0 {
@@ -723,15 +723,15 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an API.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only int, uint, uuid, and text types are allowed.
-	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
+	// Only int, uint, uuid, and string types are allowed.
+	return k == types.StringKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
-	// Only int, uint, uuid, and text types are allowed.
-	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
+	// Only int, uint, uuid, and string types are allowed.
+	return k == types.StringKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
 }
 
 // unusedPropertyPath returns the path of an unused property in the schema and

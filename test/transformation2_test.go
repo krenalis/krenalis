@@ -33,13 +33,13 @@ func TestTransformation2(t *testing.T) {
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
 			{Name: "address", Type: types.Object([]types.Property{
-				{Name: "street", Type: types.Text(), Nullable: true},
+				{Name: "street", Type: types.String(), Nullable: true},
 			}), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{

@@ -81,7 +81,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 	} else {
 
 		// Also select the __external_id__ column.
-		externalIDColumn := warehouses.Column{Name: "__external_id__", Type: types.Text(), Nullable: true}
+		externalIDColumn := warehouses.Column{Name: "__external_id__", Type: types.String(), Nullable: true}
 		columns = append(columns, externalIDColumn)
 		// Update the WHERE condition and join the meergo_destination_profiles table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
@@ -99,7 +99,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 				Table: "meergo_destination_profiles",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
 					warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, matching.Pipeline),
-					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "__out_matching_value__", Type: types.Text()}),
+					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "__out_matching_value__", Type: types.String()}),
 				}),
 			},
 		}

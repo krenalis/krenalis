@@ -208,7 +208,7 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 // specified in the file 'core/datastore/README.md',
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		var charLen int
 		if l, ok := t.ByteLen(); ok {
 			charLen = l

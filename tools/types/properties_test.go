@@ -13,9 +13,9 @@ import (
 
 func Test_Properties_All(t *testing.T) {
 	properties := []Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
 		{Name: "c", Type: Boolean()},
 	}
@@ -35,9 +35,9 @@ func Test_Properties_All(t *testing.T) {
 // Test_Properties_ByName tests Properties.ByName.
 func Test_Properties_ByName(t *testing.T) {
 	schema := Object([]Property{
-		{Name: "k", Type: Text()},
+		{Name: "k", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
 		{Name: "a", Type: Boolean()},
 	})
@@ -46,8 +46,8 @@ func Test_Properties_ByName(t *testing.T) {
 		expected Property
 		ok       bool
 	}{
-		{"k", Property{Name: "k", Type: Text()}, true},
-		{"b", Property{Name: "b", Type: Object([]Property{{Name: "x", Type: Text()}})}, true},
+		{"k", Property{Name: "k", Type: String()}, true},
+		{"b", Property{Name: "b", Type: Object([]Property{{Name: "x", Type: String()}})}, true},
 		{"a", Property{Name: "a", Type: Boolean()}, true},
 		{"x", Property{}, false},
 		{"", Property{}, false},
@@ -79,18 +79,18 @@ func Test_Properties_ByPath(t *testing.T) {
 		err      error
 	}{
 		{
-			name: "path with single component - property (of type text) exists",
+			name: "path with single component - property (of type string) exists",
 			t: Object([]Property{
-				{Name: "first_name", Type: Text()},
+				{Name: "first_name", Type: String()},
 			}),
 			path:     "first_name",
-			expected: Property{Name: "first_name", Type: Text()},
+			expected: Property{Name: "first_name", Type: String()},
 			err:      nil,
 		},
 		{
 			name: "path with single component - property does not exist",
 			t: Object([]Property{
-				{Name: "first_name", Type: Text()},
+				{Name: "first_name", Type: String()},
 			}),
 			path:     "email",
 			expected: Property{},
@@ -100,64 +100,64 @@ func Test_Properties_ByPath(t *testing.T) {
 			name: "path with single component - property (of type object) exists",
 			t: Object([]Property{
 				{Name: "billing_address", Type: Object([]Property{
-					{Name: "street", Type: Text()},
+					{Name: "street", Type: String()},
 				})},
 			}),
 			path: "billing_address",
 			expected: Property{
 				Name: "billing_address", Type: Object([]Property{
-					{Name: "street", Type: Text()},
+					{Name: "street", Type: String()},
 				})},
 			err: nil,
 		},
 		{
-			name: "path with two components - property (of type text) exists",
+			name: "path with two components - property (of type string) exists",
 			t: Object([]Property{
 				{Name: "billing_address", Type: Object([]Property{
-					{Name: "street", Type: Text()},
+					{Name: "street", Type: String()},
 				})},
 			}),
 			path:     "billing_address.street",
-			expected: Property{Name: "street", Type: Text()},
+			expected: Property{Name: "street", Type: String()},
 			err:      nil,
 		},
 		{
 			name: "path with two components - property does not exist",
 			t: Object([]Property{
 				{Name: "billing_address", Type: Object([]Property{
-					{Name: "street", Type: Text()},
+					{Name: "street", Type: String()},
 				})},
 			}),
 			path: "billing_address.city",
 			expected: Property{
 				Name: "billing_address", Type: Object([]Property{
-					{Name: "street", Type: Text()},
+					{Name: "street", Type: String()},
 				})},
 			err: errors.New("property path \"billing_address.city\" does not exist"),
 		},
 		{
-			name: "path with three components - property (text within an object within an object) exists",
+			name: "path with three components - property (string within an object within an object) exists",
 			t: Object([]Property{
 				{Name: "movie", Type: Object([]Property{
 					{Name: "director", Type: Object([]Property{
-						{Name: "name", Type: Text()},
-						{Name: "last_name", Type: Text()},
+						{Name: "name", Type: String()},
+						{Name: "last_name", Type: String()},
 					})},
 				})},
 			}),
 			path:     "movie.director.last_name",
-			expected: Property{Name: "last_name", Type: Text()},
+			expected: Property{Name: "last_name", Type: String()},
 			err:      nil,
 		},
 		{
 			name: "path with four components - second component of path is not an object",
 			t: Object([]Property{
 				{Name: "movie", Type: Object([]Property{
-					{Name: "writer", Type: Text()},
+					{Name: "writer", Type: String()},
 				})},
 			}),
 			path:     "movie.writer.address.last_name",
-			expected: Property{Name: "writer", Type: Text()},
+			expected: Property{Name: "writer", Type: String()},
 			err:      errors.New("property path \"movie.writer.address\" does not exist"),
 		},
 		{
@@ -165,14 +165,14 @@ func Test_Properties_ByPath(t *testing.T) {
 			t: Object([]Property{
 				{Name: "movie", Type: Object([]Property{
 					{Name: "director", Type: Object([]Property{
-						{Name: "name", Type: Text()},
-						{Name: "last_name", Type: Text()},
+						{Name: "name", Type: String()},
+						{Name: "last_name", Type: String()},
 					})},
-					{Name: "writer", Type: Text()},
+					{Name: "writer", Type: String()},
 				})},
 			}),
 			path:     "movie.writer.last_name",
-			expected: Property{Name: "writer", Type: Text()},
+			expected: Property{Name: "writer", Type: String()},
 			err:      errors.New("property path \"movie.writer.last_name\" does not exist"),
 		},
 	}
@@ -224,7 +224,7 @@ func Test_Properties_ByPath(t *testing.T) {
 		})
 	}
 	// Test ByPathSlice with nil and empty path values.
-	properties := Object([]Property{{Name: "first_name", Type: Text()}}).Properties()
+	properties := Object([]Property{{Name: "first_name", Type: String()}}).Properties()
 	for _, path := range [][]string{nil, {}} {
 		func() {
 			defer func() {
@@ -243,9 +243,9 @@ func Test_Properties_ByPath(t *testing.T) {
 
 func Test_Properties_ContainsName(t *testing.T) {
 	properties := []Property{
-		{Name: "k", Type: Text()},
+		{Name: "k", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
 		{Name: "a", Type: Boolean()},
 	}
@@ -273,15 +273,15 @@ func Test_Properties_ContainsName(t *testing.T) {
 
 func Test_Properties_ContainsPath(t *testing.T) {
 	o := Object([]Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
-		{Name: "c", Type: Array(Text())},
+		{Name: "c", Type: Array(String())},
 		{Name: "d", Type: Array(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
 		}))},
@@ -327,9 +327,9 @@ func Test_Properties_ContainsPath(t *testing.T) {
 
 func Test_Properties_Len(t *testing.T) {
 	properties := []Property{
-		{Name: "a", Type: Text()},
-		{Name: "b", Type: Text()},
-		{Name: "c", Type: Text()},
+		{Name: "a", Type: String()},
+		{Name: "b", Type: String()},
+		{Name: "c", Type: String()},
 	}
 	if got := Object(properties).Properties().Len(); len(properties) != got {
 		t.Errorf("expected %d, got %d", len(properties), got)
@@ -339,9 +339,9 @@ func Test_Properties_Len(t *testing.T) {
 // Test_Properties_Names tests Properties.Names and Properties.SortedNames.
 func Test_Properties_Names(t *testing.T) {
 	properties := []Property{
-		{Name: "profile", Type: Object([]Property{{Name: "first_name", Type: Text()}})},
-		{Name: "tags", Type: Array(Text())},
-		{Name: "attributes", Type: Map(Object([]Property{{Name: "value", Type: Text()}}))},
+		{Name: "profile", Type: Object([]Property{{Name: "first_name", Type: String()}})},
+		{Name: "tags", Type: Array(String())},
+		{Name: "attributes", Type: Map(Object([]Property{{Name: "value", Type: String()}}))},
 		{Name: "id", Type: Int(64)},
 	}
 	pp := Object(properties).Properties()
@@ -370,9 +370,9 @@ func Test_Properties_Names(t *testing.T) {
 
 func Test_Properties_Slice(t *testing.T) {
 	properties := []Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
 		{Name: "c", Type: Boolean()},
 	}
@@ -391,18 +391,18 @@ func Test_Properties_Slice(t *testing.T) {
 
 func Test_WalkAll(t *testing.T) {
 	properties := []Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
-		{Name: "c", Type: Array(Text())},
+		{Name: "c", Type: Array(String())},
 		{Name: "d", Type: Array(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))},
 	}
 	type entry struct {
@@ -410,28 +410,28 @@ func Test_WalkAll(t *testing.T) {
 		property Property
 	}
 	iterations := []entry{
-		{"a", Property{Name: "a", Type: Text()}},
+		{"a", Property{Name: "a", Type: String()}},
 		{"b", Property{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})}},
-		{"b.x", Property{Name: "x", Type: Text()}},
-		{"c", Property{Name: "c", Type: Array(Text())}},
+		{"b.x", Property{Name: "x", Type: String()}},
+		{"c", Property{Name: "c", Type: Array(String())}},
 		{"d", Property{Name: "d", Type: Array(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))}},
 		{"d.x", Property{Name: "x", Type: Map(Boolean())}},
 		{"d.y", Property{Name: "y", Type: Map(Object([]Property{
-			{Name: "a", Type: Text()},
+			{Name: "a", Type: String()},
 			{Name: "b", Type: Int(32)},
 		}))}},
-		{"d.y.a", Property{Name: "a", Type: Text()}},
+		{"d.y.a", Property{Name: "a", Type: String()}},
 		{"d.y.b", Property{Name: "b", Type: Int(32)}},
-		{"d.z", Property{Name: "z", Type: Text()}},
+		{"d.z", Property{Name: "z", Type: String()}},
 	}
 	walk := Object(properties).Properties().WalkAll()
 	var i = 0
@@ -455,26 +455,26 @@ func Test_WalkAll(t *testing.T) {
 
 func Test_WalkObjects(t *testing.T) {
 	properties := []Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
-		{Name: "c", Type: Array(Text())},
+		{Name: "c", Type: Array(String())},
 		{Name: "d", Type: Array(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))},
 		{Name: "e", Type: Map(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))},
 	}
 	type entry struct {
@@ -482,27 +482,27 @@ func Test_WalkObjects(t *testing.T) {
 		property Property
 	}
 	iterations := []entry{
-		{"a", Property{Name: "a", Type: Text()}},
+		{"a", Property{Name: "a", Type: String()}},
 		{"b", Property{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})}},
-		{"b.x", Property{Name: "x", Type: Text()}},
-		{"c", Property{Name: "c", Type: Array(Text())}},
+		{"b.x", Property{Name: "x", Type: String()}},
+		{"c", Property{Name: "c", Type: Array(String())}},
 		{"d", Property{Name: "d", Type: Array(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))}},
 		{"e", Property{Name: "e", Type: Map(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))}},
 	}
 	walk := Object(properties).Properties().WalkObjects()

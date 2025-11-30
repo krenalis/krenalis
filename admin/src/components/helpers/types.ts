@@ -1,4 +1,4 @@
-import Type, { TextType } from '../../lib/api/types/types';
+import Type, { StringType } from '../../lib/api/types/types';
 
 function toMeergoStringType(type: Type, nullable?: boolean) {
 	let t: string;
@@ -10,7 +10,7 @@ function toMeergoStringType(type: Type, nullable?: boolean) {
 	} else if (type.kind === 'array' || type.kind === 'map') {
 		t = `${type.kind} of ${toMeergoStringType(type.elementType)}`;
 	} else if ('values' in type) {
-		const typ = type as TextType;
+		const typ = type as StringType;
 		t = type.kind + ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
 	} else {
 		t = type.kind;
@@ -66,7 +66,7 @@ function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean)
 		case 'inet':
 			t = 'string';
 			break;
-		case 'text':
+		case 'string':
 			t = 'string';
 			break;
 		case 'array':
@@ -134,7 +134,7 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 		case 'inet':
 			t = 'str';
 			break;
-		case 'text':
+		case 'string':
 			t = 'str';
 			break;
 		case 'array':

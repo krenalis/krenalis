@@ -30,10 +30,10 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 		{
 			name: "Add a first level text property",
 			columns: []warehouses.Column{
-				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "a", Type: types.String(), Nullable: true},
 			},
 			ops: []warehouses.AlterOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.String()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying",
@@ -69,14 +69,14 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 		{
 			name: "Add a second level property",
 			columns: []warehouses.Column{
-				{Name: "a", Type: types.Text(), Nullable: true},
-				{Name: "b", Type: types.Text(), Nullable: true},
-				{Name: "x_a", Type: types.Text(), Nullable: true},
-				{Name: "x_a", Type: types.Text(), Nullable: true},
+				{Name: "a", Type: types.String(), Nullable: true},
+				{Name: "b", Type: types.String(), Nullable: true},
+				{Name: "x_a", Type: types.String(), Nullable: true},
+				{Name: "x_a", Type: types.String(), Nullable: true},
 			},
 			ops: []warehouses.AlterOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
-				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.String()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.String()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
@@ -86,11 +86,11 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 		{
 			name: "Add a first level array property",
 			columns: []warehouses.Column{
-				{Name: "z", Type: types.Text(), Nullable: true},
-				{Name: "a", Type: types.Array(types.Text()), Nullable: true},
+				{Name: "z", Type: types.String(), Nullable: true},
+				{Name: "a", Type: types.Array(types.String()), Nullable: true},
 			},
 			ops: []warehouses.AlterOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Array(types.String())},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying[]",
@@ -100,11 +100,11 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 		{
 			name: "Add a first level text property",
 			columns: []warehouses.Column{
-				{Name: "z", Type: types.Text(), Nullable: true},
-				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "z", Type: types.String(), Nullable: true},
+				{Name: "a", Type: types.String(), Nullable: true},
 			},
 			ops: []warehouses.AlterOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.String()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying",
@@ -114,12 +114,12 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 		{
 			name: "Add a first level object property",
 			columns: []warehouses.Column{
-				{Name: "a", Type: types.Text(), Nullable: true},
-				{Name: "x_a", Type: types.Text(), Nullable: true},
+				{Name: "a", Type: types.String(), Nullable: true},
+				{Name: "x_a", Type: types.String(), Nullable: true},
 				{Name: "x_b", Type: types.Int(32), Nullable: true},
 			},
 			ops: []warehouses.AlterOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.String()},
 				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
@@ -130,12 +130,12 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 		{
 			name: "Add two first level text properties",
 			columns: []warehouses.Column{
-				{Name: "z", Type: types.Text(), Nullable: true},
-				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "z", Type: types.String(), Nullable: true},
+				{Name: "a", Type: types.String(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
 			ops: []warehouses.AlterOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.String()},
 				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
@@ -197,8 +197,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Name: "t", Type: types.Time(), Nullable: true},
 				{Name: "u", Type: types.UUID(), Nullable: true},
 				{Name: "j", Type: types.JSON(), Nullable: true},
-				{Name: "t", Type: types.Text(), Nullable: true},
-				{Name: "at", Type: types.Array(types.Text()), Nullable: true},
+				{Name: "t", Type: types.String(), Nullable: true},
+				{Name: "at", Type: types.Array(types.String()), Nullable: true},
 				{Name: "ai32", Type: types.Array(types.Int(32)), Nullable: true},
 			},
 			name: "Test many types",
@@ -215,8 +215,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.Time()},
 				{Operation: warehouses.OperationAddColumn, Column: "u", Type: types.UUID()},
 				{Operation: warehouses.OperationAddColumn, Column: "j", Type: types.JSON()},
-				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.Text()},
-				{Operation: warehouses.OperationAddColumn, Column: "at", Type: types.Array(types.Text())},
+				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.String()},
+				{Operation: warehouses.OperationAddColumn, Column: "at", Type: types.Array(types.String())},
 				{Operation: warehouses.OperationAddColumn, Column: "ai32", Type: types.Array(types.Int(32))},
 			},
 			expectedQueries: []string{
@@ -345,20 +345,20 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Inet(), "inet"},
 
 		// text.
-		{types.Text(), "character varying"},
-		{types.Text().WithByteLen(256), "character varying(256)"},
-		{types.Text().WithCharLen(300), "character varying(300)"},
-		{types.Text().WithByteLen(10).WithCharLen(10), "character varying(10)"},
-		{types.Text().WithByteLen(5).WithCharLen(10), "character varying(5)"},
-		{types.Text().WithByteLen(500).WithCharLen(10), "character varying(10)"},
+		{types.String(), "character varying"},
+		{types.String().WithByteLen(256), "character varying(256)"},
+		{types.String().WithCharLen(300), "character varying(300)"},
+		{types.String().WithByteLen(10).WithCharLen(10), "character varying(10)"},
+		{types.String().WithByteLen(5).WithCharLen(10), "character varying(5)"},
+		{types.String().WithByteLen(500).WithCharLen(10), "character varying(10)"},
 
 		// array.
-		{types.Array(types.Text()), "character varying[]"},
+		{types.Array(types.String()), "character varying[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
 		{types.Array(types.Uint(32)), "bigint[]"},
 
 		// map.
-		{types.Map(types.Text()), "jsonb"},
+		{types.Map(types.String()), "jsonb"},
 	}
 
 	for _, test := range tests {

@@ -31,7 +31,7 @@
 		]
 	},
 	"inet": "2001:db8:85a3::8a2e:370:7334",
-	"text": "abc \u0000 \b\t\n\u000b\f\r \u0018 \"\u0026\u0027\u003c\u003e\\ \u00e9 \u65e5 \ud83c\udf0d \u2028 \u2029",
+	"string": "abc \u0000 \b\t\n\u000b\f\r \u0018 \"\u0026\u0027\u003c\u003e\\ \u00e9 \u65e5 \ud83c\udf0d \u2028 \u2029",
 	"array_int": [
 		846,
 		106728,

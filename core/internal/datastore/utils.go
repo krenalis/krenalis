@@ -113,9 +113,9 @@ func identityColumnByProperty(profileColumnByProperty map[string]warehouses.Colu
 		"__pk__":               {Name: "__pk__", Type: types.Int(32)},
 		"__pipeline__":         {Name: "__pipeline__", Type: types.Int(32)},
 		"__is_anonymous__":     {Name: "__is_anonymous__", Type: types.Boolean()},
-		"__identity_id__":      {Name: "__identity_id__", Type: types.Text()},
+		"__identity_id__":      {Name: "__identity_id__", Type: types.String()},
 		"__connection__":       {Name: "__connection__", Type: types.Int(32)},
-		"__anonymous_ids__":    {Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
+		"__anonymous_ids__":    {Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true},
 		"__last_change_time__": {Name: "__last_change_time__", Type: types.DateTime()},
 		"__mpid__":             {Name: "__mpid__", Type: types.UUID(), Nullable: true},
 	}

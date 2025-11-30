@@ -226,11 +226,11 @@ func newRowEncoder(columns []connectors.Column) (*rowEncoder, bool) {
 	for i, c := range columns {
 		switch c.Type.Kind() {
 		case types.ArrayKind:
-			if k := c.Type.Elem().Kind(); k != types.TextKind && k != types.JSONKind {
+			if k := c.Type.Elem().Kind(); k != types.StringKind && k != types.JSONKind {
 				continue
 			}
 			fallthrough
-		case types.TextKind, types.JSONKind, types.MapKind:
+		case types.StringKind, types.JSONKind, types.MapKind:
 			if ct == nil {
 				ct = map[int]types.Type{i: c.Type}
 			} else {
@@ -253,7 +253,7 @@ func (enc rowEncoder) encode(row []any) error {
 			continue
 		}
 		switch t.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			row[i] = stripZeroBytes(row[i].(string))
 		case types.JSONKind:
 			row[i] = json.Value(json.StripZeroBytes(row[i].(json.Value)))

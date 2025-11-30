@@ -127,7 +127,7 @@ func (d decorators) optional() bool {
 // For instance, the Expression `"foo" x " " true a.b` is parsed as `"foo" x`,
 // `" true" a.b`.
 type part struct {
-	// Value. If there is a path, value, if present, can only be of type text.
+	// Value. If there is a path, value, if present, can only be of type string.
 	value any
 
 	// Property path or function name.
@@ -145,7 +145,7 @@ type part struct {
 	start, end int
 }
 
-// appendValue appends v to p.value, converting it to type text is necessary,
+// appendValue appends v to p.value, converting it to type string is necessary,
 // and returns the appended value and its new type.
 // multipart reports whether p is a part of a multipart expression.
 func (p part) appendValue(v any, multipart bool) (any, types.Type) {
@@ -155,7 +155,7 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 		case nil:
 			return nil, types.JSON()
 		case string:
-			return v, types.Text()
+			return v, types.String()
 		case decimal.Decimal:
 			i, err := decimalToInt(v)
 			if err != nil {
@@ -167,7 +167,7 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 		}
 		panic("unexpected value type")
 	}
-	// Convert the value to text.
+	// Convert the value to string.
 	var s string
 	switch v := v.(type) {
 	case string:
@@ -178,11 +178,11 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 		s = v.String()
 	}
 	// Append the value.
-	t := types.Text()
+	t := types.String()
 	switch p.typ.Kind() {
 	case types.InvalidKind:
 		return s, t
-	case types.TextKind:
+	case types.StringKind:
 		return p.value.(string) + s, t
 	case types.BooleanKind:
 		return strconv.FormatBool(p.value.(bool)) + s, t
@@ -264,7 +264,7 @@ Expression:
 					}
 				}
 				dot = false
-				// If there is a non-text value, convert it to text.
+				// If there is a non-string value, convert it to string.
 				switch p.typ.Kind() {
 				case types.BooleanKind:
 					p.value = strconv.FormatBool(p.value.(bool))

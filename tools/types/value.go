@@ -35,7 +35,7 @@ import (
 //
 // The following are the expected JSON values for each type:
 //
-//   - text: a JSON String
+//   - string: a JSON String
 //   - boolean: true or false
 //   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
 //   - int (64 bits): a JSON String representing an integer
@@ -313,7 +313,7 @@ func (d decoder) formatString(v json.Value) string {
 // value returns the unmarshalled value of v according to t.
 func (d decoder) value(v json.Value, t Type) (any, error) {
 	switch t.Kind() {
-	case TextKind:
+	case StringKind:
 		if v.Kind() == '"' {
 			s := string(d.unquoteString(v))
 			if values := t.Values(); values != nil {

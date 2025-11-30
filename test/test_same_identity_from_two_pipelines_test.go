@@ -32,10 +32,10 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 		Name:    "Import users (1)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "firstName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -51,10 +51,10 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 		Name:    "Import users (2)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "lastName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{

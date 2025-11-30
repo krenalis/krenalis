@@ -275,7 +275,7 @@ func newTestAPI(*APIEnv) (testAPIConnector, error) {
 type testAPIConnector struct{}
 
 func (testAPIConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
-	return types.Text(), nil
+	return types.String(), nil
 }
 
 func (testAPIConnector) EventTypes(context.Context) ([]*EventType, error) {

@@ -90,9 +90,9 @@ func Test_Records(t *testing.T) {
 		Columns: []warehouses.Column{
 			{Name: "__mpid__", Type: types.UUID()},
 			{Name: "__last_change_time__", Type: types.DateTime()},
-			{Name: "id", Type: types.Text()},
-			{Name: "other_id", Type: types.Text()},
-			{Name: "name", Type: types.Text()},
+			{Name: "id", Type: types.String()},
+			{Name: "other_id", Type: types.String()},
+			{Name: "name", Type: types.String()},
 			{Name: "age", Type: types.Int(8)},
 		},
 		Keys: []string{"__mpid__"},
@@ -102,8 +102,8 @@ func Test_Records(t *testing.T) {
 		Name: "meergo_destination_profiles",
 		Columns: []warehouses.Column{
 			{Name: "__pipeline__", Type: types.Int(32)},
-			{Name: "__external_id__", Type: types.Text()},
-			{Name: "__out_matching_value__", Type: types.Text()},
+			{Name: "__external_id__", Type: types.String()},
+			{Name: "__out_matching_value__", Type: types.String()},
 		},
 		Keys: []string{"__pipeline__", "__external_id__"},
 	}
@@ -223,9 +223,9 @@ func Test_Records(t *testing.T) {
 
 	profileColumnByProperty := map[string]warehouses.Column{
 		"__mpid__": {Name: "__mpid__", Type: types.UUID()},
-		"id":       {Name: "id", Type: types.Text()},
-		"other.id": {Name: "other_id", Type: types.Text()},
-		"name":     {Name: "name", Type: types.Text()},
+		"id":       {Name: "id", Type: types.String()},
+		"other.id": {Name: "other_id", Type: types.String()},
+		"name":     {Name: "name", Type: types.String()},
 		"age":      {Name: "age", Type: types.Int(8)},
 	}
 

@@ -174,7 +174,7 @@ func checkInitCap(args [][]part, schema, dt types.Type, nullable bool, attribute
 	if n != 1 {
 		return types.Type{}, errors.New("'initcap' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -186,7 +186,7 @@ func checkJSONParse(args [][]part, schema, dt types.Type, nullable bool, attribu
 	if len(args) != 1 {
 		return types.Type{}, errors.New("'json_parse' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -211,7 +211,7 @@ func checkLower(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	if n != 1 {
 		return types.Type{}, errors.New("'lower' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -223,11 +223,11 @@ func checkLTrim(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	if len(args) != 1 {
 		return types.Type{}, errors.New("'ltrim' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
-	return types.Text(), nil
+	return types.String(), nil
 }
 
 // checkMap type checks a call to 'map' with the given arguments.
@@ -241,11 +241,11 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 		if len(args[i]) != 1 || args[i][0].path.elements != nil {
 			return types.Type{}, errors.New("'map' key is not constant")
 		}
-		if args[i][0].typ.Kind() != types.TextKind {
-			return types.Type{}, errors.New("'map' key is not text")
+		if args[i][0].typ.Kind() != types.StringKind {
+			return types.Type{}, errors.New("'map' key is not string")
 		}
 
-		if err := typeCheck(args[i], schema, types.Text(), false, attributes); err != nil {
+		if err := typeCheck(args[i], schema, types.String(), false, attributes); err != nil {
 			return types.Type{}, err
 		}
 		if err := typeCheck(args[i+1], schema, types.JSON(), false, attributes); err != nil {
@@ -320,11 +320,11 @@ func checkRTrim(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	if len(args) != 1 {
 		return types.Type{}, errors.New("'rtrim' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
-	return types.Text(), nil
+	return types.String(), nil
 }
 
 // checkSubstring type checks a call to 'substring' with the given arguments.
@@ -333,7 +333,7 @@ func checkSubstring(args [][]part, schema, dt types.Type, nullable bool, attribu
 	if n < 2 || n > 3 {
 		return types.Type{}, errors.New("'substring' function requires two or three arguments")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -355,11 +355,11 @@ func checkTrim(args [][]part, schema, dt types.Type, nullable bool, attributes m
 	if len(args) != 1 {
 		return types.Type{}, errors.New("'trim' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
-	return types.Text(), nil
+	return types.String(), nil
 }
 
 // checkUpper type checks a call to 'upper' with the given arguments.
@@ -368,7 +368,7 @@ func checkUpper(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	if n != 1 {
 		return types.Type{}, errors.New("'upper' function requires a single argument")
 	}
-	err := typeCheck(args[0], schema, types.Text(), true, attributes)
+	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -385,7 +385,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, attributes map
 	n := nullable
 	concatenate := len(expr) > 1 || expr[0].value != nil
 	if concatenate {
-		typ = types.Text()
+		typ = types.String()
 		n = true
 	}
 
@@ -437,8 +437,8 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, attributes map
 					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", p.path.slice(0, j+1), p.path.slice(0, j), t)
 				}
 			}
-			if concatenate && !convertibleTo(t, types.Text()) {
-				return fmt.Errorf("cannot convert %s (type %s) to text", p.path, t)
+			if concatenate && !convertibleTo(t, types.String()) {
+				return fmt.Errorf("cannot convert %s (type %s) to string", p.path, t)
 			}
 			attributes[b.String()] = struct{}{}
 			expr[i].typ = t
@@ -491,8 +491,8 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, attributes map
 			return err
 		}
 		if concatenate {
-			if st := expr[i].typ; st.Valid() && !convertibleTo(st, types.Text()) {
-				return fmt.Errorf("cannot convert %s(...) (type %s) to text", p.path, st)
+			if st := expr[i].typ; st.Valid() && !convertibleTo(st, types.String()) {
+				return fmt.Errorf("cannot convert %s(...) (type %s) to string", p.path, st)
 			}
 		}
 	}
@@ -578,7 +578,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		expr[0].typ = dt
 		return nil
 	}
-	st := types.Text()
+	st := types.String()
 	if len(expr) == 1 && p.value == nil {
 		st = p.typ
 		// If it is not valid, it should not be validated.
@@ -596,7 +596,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 func typeOf(expr []part) types.Type {
 	p := expr[0]
 	if len(expr) > 1 || p.value != nil && p.path.elements != nil {
-		return types.Text()
+		return types.String()
 	}
 	return p.typ
 }

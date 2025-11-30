@@ -155,7 +155,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(qname)
 		var s string
 		switch c.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			s = " = ''"
 		// See issue https://github.com/meergo/meergo/issues/1804.
 		// case types.JSONKind:
@@ -179,7 +179,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(qname)
 		var s string
 		switch c.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			s = " <> ''"
 		// See issue https://github.com/meergo/meergo/issues/1804.
 		// case types.JSONKind:

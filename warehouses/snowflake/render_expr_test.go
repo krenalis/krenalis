@@ -22,7 +22,7 @@ func Test_renderExpr(t *testing.T) {
 		invalid bool
 	}{
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIs, "qwerty"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "qwerty"),
 			query: `"ID" = 'qwerty'`,
 		},
 		{
@@ -30,7 +30,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `"AGE" <> 18`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Text()}, warehouses.OpIs, warehouses.Column{Name: "b", Type: types.Text()}),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.String()}, warehouses.OpIs, warehouses.Column{Name: "b", Type: types.String()}),
 			query: `"A" = "B"`,
 		},
 		{
@@ -74,11 +74,11 @@ func Test_renderExpr(t *testing.T) {
 			query: `"ID" BETWEEN 5 AND 10`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.Text()}, warehouses.OpContains, "foo"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.String()}, warehouses.OpContains, "foo"),
 			query: `CONTAINS("NAME", 'foo')`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.Text()}, warehouses.OpDoesNotContain, "boo"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.String()}, warehouses.OpDoesNotContain, "boo"),
 			query: `NOT CONTAINS("NAME", 'boo')`,
 		},
 		{
@@ -90,11 +90,11 @@ func Test_renderExpr(t *testing.T) {
 			query: `"A" IN (5.3,12.6,9)`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.Text()}, warehouses.OpStartsWith, "foo"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.String()}, warehouses.OpStartsWith, "foo"),
 			query: `STARTSWITH("NAME", 'foo')`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.Text()}, warehouses.OpEndsWith, "foo"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.String()}, warehouses.OpEndsWith, "foo"),
 			query: `ENDSWITH("NAME", 'foo')`,
 		},
 		{
@@ -106,11 +106,11 @@ func Test_renderExpr(t *testing.T) {
 			query: `NOT "ACTIVE"`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIsNull),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),
 			query: `"ID" IS NULL`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIsNotNull),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNotNull),
 			query: `"ID" IS NOT NULL`,
 		},
 		{
@@ -144,9 +144,9 @@ func Test_renderExpr(t *testing.T) {
 				warehouses.OpAnd,
 				[]warehouses.Expr{
 					warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIs, "abc_42"),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIs, "abc_50"),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIs, "abc_60"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "abc_42"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "abc_50"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "abc_60"),
 					}),
 					warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
 						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.MustInt(100)),
@@ -160,10 +160,10 @@ func Test_renderExpr(t *testing.T) {
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpOr,
 				[]warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.Text(), Nullable: true}, warehouses.OpIsNotEmpty),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String(), Nullable: true}, warehouses.OpIsNotEmpty),
 					// warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty), // See issue https://github.com/meergo/meergo/issues/1804.
 					warehouses.NewBaseExpr(warehouses.Column{Name: "scores", Type: types.Array(types.Int(32)), Nullable: true}, warehouses.OpIsEmpty),
-					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.Map(types.Text())}, warehouses.OpIsNotEmpty),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.Map(types.String())}, warehouses.OpIsNotEmpty),
 				}),
 			query: `("TYPE" IS NOT NULL AND "TYPE" <> '') OR ("SCORES" IS NULL OR "SCORES" = ARRAY_CONSTRUCT()) OR "PROPERTIES" <> OBJECT_CONSTRUCT()`,
 		},

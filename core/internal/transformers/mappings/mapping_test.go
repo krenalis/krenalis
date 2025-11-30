@@ -20,22 +20,22 @@ import (
 func Test_InOutPaths(t *testing.T) {
 
 	inSchema := types.Object([]types.Property{
-		{Name: "a", Type: types.Text()},
+		{Name: "a", Type: types.String()},
 		{Name: "b", Type: types.Map(types.Object([]types.Property{
-			{Name: "x", Type: types.Text()},
+			{Name: "x", Type: types.String()},
 			{Name: "y", Type: types.Uint(32)},
-			{Name: "z", Type: types.Text(), Nullable: true},
+			{Name: "z", Type: types.String(), Nullable: true},
 		}))},
 		{Name: "c", Type: types.Object([]types.Property{
-			{Name: "x", Type: types.Text()},
+			{Name: "x", Type: types.String()},
 			{Name: "y", Type: types.Uint(32)},
-			{Name: "z", Type: types.Text(), Nullable: true},
+			{Name: "z", Type: types.String(), Nullable: true},
 		})},
 		{Name: "d", Type: types.JSON()},
 	})
 
 	outSchema := types.Object([]types.Property{
-		{Name: "foo", Type: types.Text()},
+		{Name: "foo", Type: types.String()},
 		{Name: "boo", Type: types.Uint(32)},
 	})
 
@@ -99,29 +99,29 @@ func Test_InOutPaths(t *testing.T) {
 func Test_Transform(t *testing.T) {
 
 	inSchema := types.Object([]types.Property{
-		{Name: "a", Type: types.Text()},
+		{Name: "a", Type: types.String()},
 		{Name: "b", Type: types.Map(types.Object([]types.Property{
-			{Name: "x", Type: types.Text()},
+			{Name: "x", Type: types.String()},
 			{Name: "y", Type: types.Uint(32)},
-			{Name: "z", Type: types.Text(), Nullable: true},
+			{Name: "z", Type: types.String(), Nullable: true},
 		}))},
 		{Name: "c", Type: types.Object([]types.Property{
-			{Name: "x", Type: types.Text()},
+			{Name: "x", Type: types.String()},
 			{Name: "y", Type: types.Uint(32)},
-			{Name: "z", Type: types.Text(), Nullable: true},
+			{Name: "z", Type: types.String(), Nullable: true},
 		})},
 		{Name: "d", Type: types.JSON()},
 		{Name: "e", Type: types.JSON(), Nullable: true},
 	})
 
 	outSchema := types.Object([]types.Property{
-		{Name: "A", Type: types.Text()},
-		{Name: "B", Type: types.Text(), Nullable: true},
+		{Name: "A", Type: types.String()},
+		{Name: "B", Type: types.String(), Nullable: true},
 		{Name: "C", Type: types.JSON()},
 		{Name: "D", Type: types.JSON(), Nullable: true},
 		{Name: "E", Type: types.Int(32)},
-		{Name: "F", Type: types.Text(), CreateRequired: true},
-		{Name: "G", Type: types.Text(), UpdateRequired: true},
+		{Name: "F", Type: types.String(), CreateRequired: true},
+		{Name: "G", Type: types.String(), UpdateRequired: true},
 	})
 
 	tests := []struct {
@@ -373,19 +373,19 @@ func Test_inPlace(t *testing.T) {
 	}{
 		{
 			inType:   types.Array(types.Int(32)),
-			outType:  types.Array(types.Text()),
+			outType:  types.Array(types.String()),
 			value:    []any{1, 2, 3},
 			expected: []any{"1", "2", "3"},
 		},
 		{
 			inType:   types.Map(types.Boolean()),
-			outType:  types.Map(types.Text()),
+			outType:  types.Map(types.String()),
 			value:    map[string]any{"a": true, "b": false},
 			expected: map[string]any{"a": "true", "b": "false"},
 		},
 		{
 			inType:   types.Object([]types.Property{{Name: "a", Type: types.Int(16)}, {Name: "b", Type: types.UUID()}}),
-			outType:  types.Object([]types.Property{{Name: "a", Type: types.Text()}}),
+			outType:  types.Object([]types.Property{{Name: "a", Type: types.String()}}),
 			value:    map[string]any{"a": 22, "b": "90620928-691e-4aab-9b5c-ce202cad156f"},
 			expected: map[string]any{"a": "22"},
 		},
@@ -397,7 +397,7 @@ func Test_inPlace(t *testing.T) {
 		},
 		{
 			inType:   types.Map(types.Array(types.Float(64))),
-			outType:  types.Map(types.Array(types.Text())),
+			outType:  types.Map(types.Array(types.String())),
 			value:    map[string]any{"foo": []any{4.67, -1.02}},
 			expected: map[string]any{"foo": []any{"4.67", "-1.02"}},
 		},

@@ -61,12 +61,12 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from a CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text()},
-					{Name: "Email", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "identity", Type: types.String()},
+					{Name: "Email", Type: types.String()},
+					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
@@ -91,12 +91,12 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text()},
-					{Name: "__email__", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "identity", Type: types.String()},
+					{Name: "__email__", Type: types.String()},
+					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "__email__", Type: types.Text()},
+					{Name: "__email__", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Transformation: &meergotester.Transformation{
@@ -122,7 +122,7 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Export profiles to a CSV on File System",
 				Path: "profiles.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Format:  "csv",
@@ -139,12 +139,12 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text()},
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "identity", Type: types.String()},
+					{Name: "email", Type: types.String()},
+					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
@@ -169,11 +169,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
@@ -198,11 +198,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Transformation: &meergotester.Transformation{
@@ -226,11 +226,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -268,11 +268,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -296,11 +296,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -319,11 +319,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Query: `SELECT "id", "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -341,11 +341,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -364,11 +364,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Query: `SELECT "id", "email", "my_last_change_time" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "my_last_change_time", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -387,7 +387,7 @@ func TestPipelinesCreation(t *testing.T) {
 				Filter:   meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -404,11 +404,11 @@ func TestPipelinesCreation(t *testing.T) {
 				Filter:  meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Object([]types.Property{
 					{Name: "traits", Type: types.Object([]types.Property{
-						{Name: "email", Type: types.Text()},
+						{Name: "email", Type: types.String()},
 					})},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{

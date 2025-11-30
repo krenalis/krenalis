@@ -20,10 +20,10 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "No errors",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
@@ -31,15 +31,15 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Nullable object",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true, Nullable: true},
 			}),
@@ -48,20 +48,20 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Array with object item",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Object([]types.Property{
 					{Name: "a", Type: types.Int(32), ReadOptional: true},
-					{Name: "b", Type: types.Text(), ReadOptional: true},
+					{Name: "b", Type: types.String(), ReadOptional: true},
 				})), ReadOptional: true},
 			}),
 			err: `profile schema properties cannot have type array(object)`,
@@ -69,15 +69,15 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Property with a prefilled value",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 				{Name: "billing_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), Prefilled: "1234"},
 				}), ReadOptional: true},
 			}),
@@ -86,10 +86,10 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Meta properties",
 			schema: types.Object([]types.Property{
-				{Name: "__id__", Type: types.Text(), ReadOptional: true},
+				{Name: "__id__", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text(), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String(), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
@@ -98,7 +98,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Array with unique elements",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Int(32)).WithUnique(), ReadOptional: true},
 			}),
 			err: "profile schema properties with type array cannot specify unique elements",
@@ -106,7 +106,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Arrays which specify a minimum number of elements",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Int(32)).WithMinElements(1), ReadOptional: true},
 			}),
 			err: "profile schema properties with type array cannot specify minimum elements count",
@@ -114,7 +114,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Arrays which specify a maximum number of elements",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Int(32)).WithMaxElements(types.MaxElements - 1), ReadOptional: true},
 			}),
 			err: "profile schema properties with type array cannot specify maximum elements count",
@@ -122,24 +122,24 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Map with object item",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "data", Type: types.Map(types.Object([]types.Property{
-					{Name: "a", Type: types.Text(), ReadOptional: true},
+					{Name: "a", Type: types.String(), ReadOptional: true},
 				})), ReadOptional: true},
 			}),
 			err: "profile schema properties cannot have type map(object)",
 		},
 		{
-			name: "Text with values",
+			name: "String with values",
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text().WithValues("a", "b", "c"), ReadOptional: true},
-					{Name: "street2", Type: types.Text(), ReadOptional: true},
+					{Name: "street1", Type: types.String().WithValues("a", "b", "c"), ReadOptional: true},
+					{Name: "street2", Type: types.String(), ReadOptional: true},
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
-			err: "profile schema properties with type text cannot specify values",
+			err: "profile schema properties with type string cannot specify values",
 		},
 	}
 
@@ -161,11 +161,11 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 func Test_validatePrimarySources(t *testing.T) {
 
 	schema := types.Object([]types.Property{
-		{Name: "first_name", Type: types.Text(), ReadOptional: true},
+		{Name: "first_name", Type: types.String(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
-			{Name: "street", Type: types.Text(), ReadOptional: true},
+			{Name: "street", Type: types.String(), ReadOptional: true},
 		}), ReadOptional: true},
-		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
+		{Name: "phone_numbers", Type: types.Array(types.String()), ReadOptional: true},
 	})
 
 	tests := []struct {
@@ -201,7 +201,7 @@ func Test_validatePrimarySources(t *testing.T) {
 			expectedErr:    "primary sources cannot be specified for object properties",
 		}, {
 			primarySources: map[string]int{"phone_numbers": 12345},
-			expectedErr:    "primary sources cannot be specified for array(text) properties",
+			expectedErr:    "primary sources cannot be specified for array(string) properties",
 		},
 	}
 	for _, test := range tests {

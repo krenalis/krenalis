@@ -127,11 +127,11 @@ func Test_PropertiesToColumns(t *testing.T) {
 			name: "flat",
 			typ: types.Object([]types.Property{
 				{Name: "id", Type: int32Type},
-				{Name: "name", Type: types.Text(), Nullable: true},
+				{Name: "name", Type: types.String(), Nullable: true},
 			}),
 			want: []warehouses.Column{
 				{Name: "id", Type: int32Type},
-				{Name: "name", Type: types.Text(), Nullable: true},
+				{Name: "name", Type: types.String(), Nullable: true},
 			},
 		},
 		{
@@ -139,14 +139,14 @@ func Test_PropertiesToColumns(t *testing.T) {
 			typ: types.Object([]types.Property{
 				{Name: "info", Type: types.Object([]types.Property{
 					{Name: "age", Type: int32Type},
-					{Name: "email", Type: types.Text(), Nullable: true},
+					{Name: "email", Type: types.String(), Nullable: true},
 				})},
-				{Name: "title", Type: types.Text()},
+				{Name: "title", Type: types.String()},
 			}),
 			want: []warehouses.Column{
 				{Name: "info_age", Type: int32Type},
-				{Name: "info_email", Type: types.Text(), Nullable: true},
-				{Name: "title", Type: types.Text()},
+				{Name: "info_email", Type: types.String(), Nullable: true},
+				{Name: "title", Type: types.String()},
 			},
 		},
 		{

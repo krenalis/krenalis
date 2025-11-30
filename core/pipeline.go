@@ -98,10 +98,10 @@ type Pipeline struct {
 // properties.
 //
 // Supported conversions:
-//   - int to int, uint, text
-//   - uint to int, uint, text
-//   - text to int uint, uuid, text
-//   - uuid to uuid, text
+//   - int to int, uint, string
+//   - uint to int, uint, string
+//   - string to int uint, uuid, string
+//   - uuid to uuid, string
 type Matching struct {
 	In  string `json:"in"`  // path of the property in the input schema
 	Out string `json:"out"` // path of the property in the output schema
@@ -1240,7 +1240,7 @@ type PipelineToSet struct {
 	// parsing the value read from the last change time column.
 	//
 	// Represents a format when a LastChangeTimeColumn is provided and its
-	// corresponding property kind is json or text, otherwise it is the empty
+	// corresponding property kind is json or string, otherwise it is the empty
 	// string.
 	//
 	// In case it is provided, accepted values are:

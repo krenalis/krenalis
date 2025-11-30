@@ -48,13 +48,13 @@ func TestImportUsersFromFile(t *testing.T) {
 		Enabled: true,
 		Path:    "users.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text()},
-			{Name: "name", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "identity", Type: types.String()},
+			{Name: "name", Type: types.String()},
+			{Name: "email", Type: types.String()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{

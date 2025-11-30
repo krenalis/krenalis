@@ -41,12 +41,12 @@ func TestExportZeroProfiles(t *testing.T) {
 			Name:    "Export profiles to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -86,10 +86,10 @@ func TestExportZeroProfiles(t *testing.T) {
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "gender", Type: types.Text(), ReadOptional: true},
+				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Format:  "csv",
 			OrderBy: "email",

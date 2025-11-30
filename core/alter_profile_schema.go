@@ -167,12 +167,12 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
 		switch p.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			if p.Type.Values() != nil {
-				return fmt.Errorf("profile schema properties with type text cannot specify values")
+				return fmt.Errorf("profile schema properties with type string cannot specify values")
 			}
 			if p.Type.Regexp() != nil {
-				return fmt.Errorf("profile schema properties with type text cannot specify regexp")
+				return fmt.Errorf("profile schema properties with type string cannot specify regexp")
 			}
 		case types.ArrayKind:
 			k := p.Type.Elem().Kind()

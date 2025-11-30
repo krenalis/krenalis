@@ -46,11 +46,11 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 			},
 		},
 		InSchema: types.Object([]types.Property{
-			{Name: "CSV_id", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "CSV_id", Type: types.String()},
+			{Name: "email", Type: types.String()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{

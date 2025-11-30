@@ -13,7 +13,7 @@ import (
 // NOTE: keep this in sync with the content of the file
 // 'core/internal/transformers/mappings/Conversions.md'.
 var convertMatrix = [...]int32{
-	//                ┌─── text
+	//                ┌─── string
 	//                │ ┌─── boolean
 	//                │ │ ┌────── int
 	//                │ │ │ ┌──── uint
@@ -23,7 +23,7 @@ var convertMatrix = [...]int32{
 	//                │ │ │ │ │  │   │  ┌── json
 	//                │ │ │ │ │  │   │  │  ┌── array
 	//                │ │ │ │ │  │   │  │  │
-	/* text     */ 0b_1_1_1_1_11_111_11_11_000,
+	/* string   */ 0b_1_1_1_1_11_111_11_11_000,
 	/* boolean  */ 0b_1_1_0_0_00_000_00_10_000,
 	/* int      */ 0b_1_0_1_1_11_000_10_10_000,
 	/* uint     */ 0b_1_0_1_1_11_000_10_10_000,

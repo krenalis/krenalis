@@ -636,7 +636,7 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 
 		// Set the column type.
 		switch property.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()
@@ -791,10 +791,10 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 	// (https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)
 	if lt := elem.LogicalType; lt != nil {
 		if lt.STRING != nil {
-			return types.Text(), nil
+			return types.String(), nil
 		}
 		if lt.ENUM != nil {
-			return types.Text(), nil
+			return types.String(), nil
 		}
 		if d := lt.DECIMAL; d != nil {
 			typ, ok := determineDecimalType(int(d.Precision), int(d.Scale), elem)
@@ -854,7 +854,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 	if ct := elem.ConvertedType; ct != nil {
 		switch *ct {
 		case parquet.ConvertedType_UTF8, parquet.ConvertedType_ENUM:
-			return types.Text(), nil
+			return types.String(), nil
 		case parquet.ConvertedType_INT_8:
 			return types.Int(8), nil
 		case parquet.ConvertedType_INT_16:
@@ -915,7 +915,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		// with old Parquet files.
 		return types.DateTime(), nil
 	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:
-		return types.Text(), nil
+		return types.String(), nil
 	}
 
 	return types.Type{}, nil

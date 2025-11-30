@@ -104,7 +104,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 	case warehouses.OpContains, warehouses.OpDoesNotContain:
 		switch c.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			b.WriteString("POSITION(")
 			serializeValue(b, baseExpr.Values[0], c.Type)
 			b.WriteString(" IN ")
@@ -176,7 +176,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			b.WriteString(qname)
 			var s string
 			switch k {
-			case types.TextKind:
+			case types.StringKind:
 				s = " = ''"
 			// See issue https://github.com/meergo/meergo/issues/1804.
 			// case types.JSONKind:
@@ -205,7 +205,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			b.WriteString(qname)
 			var s string
 			switch k {
-			case types.TextKind:
+			case types.StringKind:
 				s = " <> ''"
 			// See issue https://github.com/meergo/meergo/issues/1804.
 			// case types.JSONKind:

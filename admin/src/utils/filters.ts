@@ -7,15 +7,15 @@ const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
 
-// formatText formats a text value as a string.
-const formatText = (text: string): string => {
-	if (!/^[\s"']/.test(text) && !/[\s"']$/.test(text)) {
-		return text;
+// formatText formats a string value as a string.
+const formatString = (str: string): string => {
+	if (!/^[\s"']/.test(str) && !/[\s"']$/.test(str)) {
+		return str;
 	}
-	const quote = text.includes('"') ? "'" : '"';
+	const quote = str.includes('"') ? "'" : '"';
 	let s = quote;
-	for (let i = 0; i < text.length; i++) {
-		const c = text[i];
+	for (let i = 0; i < str.length; i++) {
+		const c = str[i];
 		if (c === '\\' || c === quote) {
 			s += '\\';
 		}
@@ -320,7 +320,7 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 };
 
 export {
-	formatText,
+	formatString,
 	isDate,
 	isDateTime,
 	isDecimal,

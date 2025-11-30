@@ -137,7 +137,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
 	}
 	switch k1 {
-	case types.TextKind:
+	case types.StringKind:
 		c1, ok1 := t1.CharLen()
 		c2, ok2 := t2.CharLen()
 		if c1 != c2 || ok1 != ok2 {

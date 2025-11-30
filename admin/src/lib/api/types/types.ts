@@ -13,7 +13,7 @@ type TypeKind =
 	| 'uuid'
 	| 'json'
 	| 'inet'
-	| 'text'
+	| 'string'
 	| 'array'
 	| 'object'
 	| 'map';
@@ -35,7 +35,7 @@ interface Property {
 }
 
 type Type =
-	| TextType
+	| StringType
 	| BooleanType
 	| IntType
 	| UintType
@@ -52,8 +52,8 @@ type Type =
 	| ObjectType
 	| MapType;
 
-interface TextType {
-	kind: 'text';
+interface StringType {
+	kind: 'string';
 	byteLen?: number;
 	charLen?: number;
 	regexp?: string;
@@ -147,7 +147,7 @@ export default Type;
 export type {
 	Property,
 	ArrayType,
-	TextType,
+	StringType,
 	ObjectType,
 	IntType,
 	UintType,

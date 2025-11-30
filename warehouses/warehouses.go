@@ -536,8 +536,8 @@ func ValidateInet(name string, s string) (any, error) {
 	return ip.String(), nil
 }
 
-// ValidateText validates a text value.
-func ValidateText(name string, t types.Type, s string) (any, error) {
+// ValidateString validates a string value.
+func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
 	}

@@ -39,7 +39,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 		b.WriteString("NULL")
 	case string:
 		b.WriteByte('"')
-		if t.Kind() == types.TextKind {
+		if t.Kind() == types.StringKind {
 			quoteString(b, v)
 		} else {
 			b.WriteString(v)

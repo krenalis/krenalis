@@ -27,13 +27,13 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
 			{Name: "ios", Type: types.Object([]types.Property{
-				{Name: "id", Type: types.Text(), ReadOptional: true},
-				{Name: "idfa", Type: types.Text(), ReadOptional: true},
+				{Name: "id", Type: types.String(), ReadOptional: true},
+				{Name: "idfa", Type: types.String(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{

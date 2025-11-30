@@ -90,11 +90,11 @@ func TestSendEvents(t *testing.T) {
 					Type: connectors.EventTypeInfo{
 						ID: "ad_impression",
 						Schema: types.Object([]types.Property{
-							{Name: "ad_platform", Type: types.Text()},
-							{Name: "ad_source", Type: types.Text()},
-							{Name: "ad_format", Type: types.Text()},
-							{Name: "ad_unit_name", Type: types.Text()},
-							{Name: "currency", Type: types.Text()},
+							{Name: "ad_platform", Type: types.String()},
+							{Name: "ad_source", Type: types.String()},
+							{Name: "ad_format", Type: types.String()},
+							{Name: "ad_unit_name", Type: types.String()},
+							{Name: "currency", Type: types.String()},
 							{Name: "value", Type: genericNumberType},
 						}),
 						Values: map[string]any{},

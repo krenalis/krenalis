@@ -77,7 +77,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		return nil, nil
 	}
 	switch k := typ.Kind(); k {
-	case types.TextKind:
+	case types.StringKind:
 		var v string
 		switch s := src.(type) {
 		case string:

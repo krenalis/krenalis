@@ -170,7 +170,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 		var field types.Property
 		switch f.Type {
 		case "text":
-			field.Type = types.Text().WithCharLen(255)
+			field.Type = types.String().WithCharLen(255)
 		case "number":
 			field.Type = types.Decimal(14, 2)
 			field.Nullable = true
@@ -189,7 +189,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 			if values == nil {
 				continue
 			}
-			field.Type = types.Text().WithValues(values...)
+			field.Type = types.String().WithValues(values...)
 			if !slices.Contains(values, "") {
 				field.Nullable = true
 			}
@@ -197,7 +197,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 			field.Type = types.Date()
 			field.Nullable = true
 		case "birthday":
-			field.Type = types.Text().WithCharLen(5)
+			field.Type = types.String().WithCharLen(5)
 		case "address":
 			field.Type = addressType
 			// If ADDRESS is an empty string, it will be set to nil.
@@ -205,11 +205,11 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 				field.Nullable = true
 			}
 		case "zip":
-			field.Type = types.Text().WithCharLen(5)
+			field.Type = types.String().WithCharLen(5)
 		case "phone":
-			field.Type = types.Text()
+			field.Type = types.String()
 		case "url":
-			field.Type = types.Text()
+			field.Type = types.String()
 		default:
 			continue
 		}
@@ -337,12 +337,12 @@ func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChan
 
 // addressType is the types.Type corresponding to the Mailchimp "address" type.
 var addressType = types.Object([]types.Property{
-	{Name: "addr1", Type: types.Text(), UpdateRequired: true, Description: "Street Address"},
-	{Name: "addr2", Type: types.Text(), Description: "Address Line 2"},
-	{Name: "city", Type: types.Text(), UpdateRequired: true, Description: "City"},
-	{Name: "state", Type: types.Text(), UpdateRequired: true, Description: "State/Province/Region"},
-	{Name: "zip", Type: types.Text(), UpdateRequired: true, Description: "Postal/Zip Code"},
-	{Name: "country", Type: types.Text(), Description: "Country"},
+	{Name: "addr1", Type: types.String(), UpdateRequired: true, Description: "Street Address"},
+	{Name: "addr2", Type: types.String(), Description: "Address Line 2"},
+	{Name: "city", Type: types.String(), UpdateRequired: true, Description: "City"},
+	{Name: "state", Type: types.String(), UpdateRequired: true, Description: "State/Province/Region"},
+	{Name: "zip", Type: types.String(), UpdateRequired: true, Description: "Postal/Zip Code"},
+	{Name: "country", Type: types.String(), Description: "Country"},
 })
 
 // ServeUI serves the connector's user interface.
@@ -799,34 +799,34 @@ func init() {
 	staticProperties = []types.Property{
 		{
 			Name:           "email_address",
-			Type:           types.Text(),
+			Type:           types.String(),
 			CreateRequired: true,
 			Description:    "Email address",
 		},
 		{
 			Name:           "status",
-			Type:           types.Text().WithValues("subscribed", "unsubscribed", "cleaned", "pending", "transactional", "archived"),
+			Type:           types.String().WithValues("subscribed", "unsubscribed", "cleaned", "pending", "transactional", "archived"),
 			CreateRequired: true,
 			Description:    "Status",
 		},
 		{
 			Name:        "id",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "ID",
 		},
 		{
 			Name:        "unique_email_id",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "Unique email ID",
 		},
 		{
 			Name:        "contact_id",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "Contact ID",
 		},
 		{
 			Name:        "full_name",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "Full name",
 		},
 		{
@@ -836,12 +836,12 @@ func init() {
 		},
 		{
 			Name:        "email_type",
-			Type:        types.Text().WithValues("html", "text"),
+			Type:        types.String().WithValues("html", "text"),
 			Description: "Email type",
 		},
 		{
 			Name:         "unsubscribe_reason",
-			Type:         types.Text(),
+			Type:         types.String(),
 			ReadOptional: true,
 			Description:  "Unsubscribe reason",
 		},
@@ -864,7 +864,7 @@ func init() {
 				{Name: "ecommerce_data", Type: types.Object([]types.Property{
 					{Name: "total_revenue", Type: types.Decimal(14, 2), Description: "Total revenue"},
 					{Name: "number_of_orders", Type: types.Decimal(14, 2), Description: "Number of orders"},
-					{Name: "currency_code", Type: types.Text().WithCharLen(3), Description: "Currency code"},
+					{Name: "currency_code", Type: types.String().WithCharLen(3), Description: "Currency code"},
 				}), ReadOptional: true, Nullable: true, Description: "Ecommerce"},
 			}),
 			Description: "Stats",
@@ -903,7 +903,7 @@ func init() {
 		},
 		{
 			Name:        "language",
-			Type:        types.Text().WithCharLen(5),
+			Type:        types.String().WithCharLen(5),
 			Description: "Language",
 		},
 		{
@@ -913,7 +913,7 @@ func init() {
 		},
 		{
 			Name:        "email_client",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "Email client",
 		},
 		{
@@ -923,17 +923,17 @@ func init() {
 				{Name: "longitude", Type: types.Int(32), Description: "Longitude"},
 				{Name: "gmtoff", Type: types.Int(32), Description: "GMT offset"},
 				{Name: "dstoff", Type: types.Int(32), Description: "DST offset"},
-				{Name: "country_code", Type: types.Text().WithCharLen(2), Description: "Country code"},
-				{Name: "timezone", Type: types.Text(), Description: "Location timezone"},
-				{Name: "region", Type: types.Text(), Description: "Location region"},
+				{Name: "country_code", Type: types.String().WithCharLen(2), Description: "Country code"},
+				{Name: "timezone", Type: types.String(), Description: "Location timezone"},
+				{Name: "region", Type: types.String(), Description: "Location region"},
 			}),
 			Description: "Location",
 		},
 		{
 			Name: "marketing_permissions",
 			Type: types.Object([]types.Property{
-				{Name: "marketing_permission_id", Type: types.Text(), Description: "ID"},
-				{Name: "text", Type: types.Text(), Description: "Text"},
+				{Name: "marketing_permission_id", Type: types.String(), Description: "ID"},
+				{Name: "text", Type: types.String(), Description: "Text"},
 				{Name: "enabled", Type: types.Boolean(), Description: "Opt-in"},
 			}),
 			ReadOptional: true,
@@ -945,15 +945,15 @@ func init() {
 			Type: types.Object([]types.Property{
 				{Name: "note_id", Type: types.Int(32), Description: "ID"},
 				{Name: "created_at", Type: types.DateTime(), Description: "Creation"},
-				{Name: "created_by", Type: types.Text(), Description: "Author"},
-				{Name: "note", Type: types.Text(), Description: "Content"},
+				{Name: "created_by", Type: types.String(), Description: "Author"},
+				{Name: "note", Type: types.String(), Description: "Content"},
 			}),
 			ReadOptional: true,
 			Description:  "Last note",
 		},
 		{
 			Name:        "source",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "Subscriber source",
 		},
 		{
@@ -965,7 +965,7 @@ func init() {
 			Name: "tags",
 			Type: types.Array(types.Object([]types.Property{
 				{Name: "id", Type: types.Int(32), Description: "ID"},
-				{Name: "name", Type: types.Text(), Description: "Name"},
+				{Name: "name", Type: types.String(), Description: "Name"},
 			})),
 			Description: "Tags",
 		},

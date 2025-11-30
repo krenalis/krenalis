@@ -59,8 +59,8 @@ func TestParquetImport(t *testing.T) {
 		Path:    "test.parquet",
 		InSchema: types.Object([]types.Property{
 			{Name: "parquet_id", Type: types.Int(64), Nullable: true},
-			{Name: "first_name", Type: types.Text(), Nullable: true},
-			{Name: "last_name", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.String(), Nullable: true},
+			{Name: "last_name", Type: types.String(), Nullable: true},
 			{Name: "date_of_birth", Type: types.Date(), Nullable: true},
 			{Name: "updated_at", Type: types.DateTime(), Nullable: true},
 			{Name: "lunch_time", Type: types.Time(), Nullable: true},

@@ -71,7 +71,7 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]conn
 			return nil, err
 		}
 		for name, values := range rawEnums {
-			enums[name] = types.Text().WithValues(values...)
+			enums[name] = types.String().WithValues(values...)
 		}
 	}
 
@@ -244,16 +244,16 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 			if err != nil {
 				return types.Type{}, "", fmt.Errorf("character_maximum_length value %q is not valid", *column.precision)
 			}
-			if chars < 1 || chars > types.MaxTextLen {
-				issue := fmt.Sprintf("Column %q has a character length of %d, which exceeds the maximum allowed length of %d", column.column, chars, types.MaxTextLen)
+			if chars < 1 || chars > types.MaxStringLen {
+				issue := fmt.Sprintf("Column %q has a character length of %d, which exceeds the maximum allowed length of %d", column.column, chars, types.MaxStringLen)
 				return types.Type{}, issue, nil
 			}
-			t = types.Text().WithCharLen(chars)
+			t = types.String().WithCharLen(chars)
 		} else {
-			t = types.Text()
+			t = types.String()
 		}
 	case "text":
-		t = types.Text()
+		t = types.String()
 	case "timestamp without time zone", "timestamp with time zone":
 		t = types.DateTime()
 	case "date":
@@ -297,7 +297,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 		case "_json", "_jsonb":
 			et = types.JSON()
 		case "_text":
-			et = types.Text()
+			et = types.String()
 		case "_time":
 			et = types.Time()
 		case "_timestamp":
@@ -311,9 +311,9 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 				if length < 1 {
 					return types.Type{}, "", fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
 				}
-				et = types.Text().WithCharLen(length)
+				et = types.String().WithCharLen(length)
 			} else {
-				et = types.Text()
+				et = types.String()
 			}
 		}
 		if !et.Valid() {

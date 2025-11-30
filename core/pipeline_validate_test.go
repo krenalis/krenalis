@@ -58,10 +58,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -88,10 +88,10 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -108,10 +108,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -136,10 +136,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -160,10 +160,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -185,10 +185,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -211,10 +211,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -256,10 +256,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -286,10 +286,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -316,7 +316,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Import users",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -334,7 +334,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Import users",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -352,7 +352,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Import users",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -378,7 +378,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Import users",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -432,7 +432,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Import users",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -458,12 +458,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -486,12 +486,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -514,12 +514,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "id", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -560,11 +560,11 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "id", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 					{Name: "id", Type: types.Int(32)},
 				}),
 				Transformation: &Transformation{
@@ -589,7 +589,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -607,7 +607,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -625,7 +625,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -651,7 +651,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -676,12 +676,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "name_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "name_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
-					{Name: "name_out", Type: types.Text(), Nullable: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
+					{Name: "name_out", Type: types.String(), Nullable: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -701,12 +701,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -734,9 +734,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
-					{Name: "last_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Type{},
 				Format:    "csv",
@@ -756,9 +756,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
-					{Name: "last_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Type{},
 				Format:    "csv",
@@ -784,9 +784,9 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
-					{Name: "last_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Type{},
 				Format:    "csv",
@@ -806,11 +806,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 					{Name: "__id__", Type: types.Int(32)},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -827,15 +827,15 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 					{Name: "additional_properties", Type: types.Object([]types.Property{
-						{Name: "a", Type: types.Text()},
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "a", Type: types.String()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -867,10 +867,10 @@ func Test_validatePipeline(t *testing.T) {
 			name: "BAD: Source/API/User - empty name",
 			pipeline: PipelineToSet{
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -888,10 +888,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "hello\xc5world",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -909,10 +909,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "qwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyq",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -930,10 +930,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -951,7 +951,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -969,7 +969,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -987,7 +987,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -1013,7 +1013,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -1039,10 +1039,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -1063,10 +1063,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -1091,10 +1091,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -1122,10 +1122,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1146,10 +1146,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1174,10 +1174,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1201,10 +1201,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1229,10 +1229,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1253,10 +1253,10 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1278,10 +1278,10 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1302,12 +1302,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Array(types.Text())},
+					{Name: "id", Type: types.Array(types.String())},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1321,17 +1321,17 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Database,
-			err:                     "identity column \"id\" has kind array instead of int, uint uuid, json, or text",
+			err:                     "identity column \"id\" has kind array instead of int, uint uuid, json, or string",
 		},
 		{
 			name: "BAD: Source/API/User - cannot specify an identity column",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1350,10 +1350,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1383,10 +1383,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1415,10 +1415,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1444,10 +1444,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1466,10 +1466,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1488,7 +1488,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1515,10 +1515,10 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1544,10 +1544,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1566,10 +1566,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1589,9 +1589,9 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Export users",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
-					{Name: "last_name", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+					{Name: "last_name", Type: types.String()},
 				}),
 				Format:      "csv",
 				Path:        "my_output_users.csv",
@@ -1612,10 +1612,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1633,7 +1633,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Int(32),
 				Transformation: &Transformation{
@@ -1653,7 +1653,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name:     "Import users",
 				InSchema: types.Int(32),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1671,11 +1671,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "x", Type: types.Object([]types.Property{
-						{Name: "email", Type: types.Text(), ReadOptional: true, Nullable: true},
+						{Name: "email", Type: types.String(), ReadOptional: true, Nullable: true},
 					}), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
@@ -1694,10 +1694,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true, ReadOptional: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true, ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1715,11 +1715,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true, Nullable: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true, Nullable: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1743,11 +1743,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), CreateRequired: true, ReadOptional: true},
+					{Name: "email_in", Type: types.String(), CreateRequired: true, ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1771,10 +1771,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 					{Name: "__id__", Type: types.Int(32), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
@@ -1794,12 +1794,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "__id__", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1823,10 +1823,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1845,10 +1845,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Dispatch events to api",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1866,10 +1866,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1887,7 +1887,7 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
-					{Name: "userID", Type: types.Text()},
+					{Name: "userID", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1905,10 +1905,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1926,10 +1926,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1948,10 +1948,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1971,11 +1971,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
-					{Name: "my_array_prop", Type: types.Array(types.Text()), CreateRequired: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
+					{Name: "my_array_prop", Type: types.Array(types.String()), CreateRequired: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -1995,10 +1995,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true, UpdateRequired: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2018,10 +2018,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true, Nullable: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true, Nullable: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2041,11 +2041,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "my_array_prop", Type: types.Array(types.Text()), CreateRequired: true},
+					{Name: "email_out", Type: types.String()},
+					{Name: "my_array_prop", Type: types.Array(types.String()), CreateRequired: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2058,20 +2058,20 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "type array(text) cannot be used as table key",
+			err:                     "type array(string) cannot be used as table key",
 		},
 		{
 			name: "BAD: Destination/Database/User - unmapped property in input schema",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
-					{Name: "a", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "a", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2092,13 +2092,13 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
-					{Name: "first_name", Type: types.Text()},
-					{Name: "x", Type: types.Text()},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
+					{Name: "first_name", Type: types.String()},
+					{Name: "x", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2119,10 +2119,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2142,12 +2142,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "a", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "a", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
-					{Name: "b", Type: types.Text()},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
+					{Name: "b", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2167,11 +2167,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "my_key", Type: types.Text(), CreateRequired: true},
+					{Name: "email_out", Type: types.String()},
+					{Name: "my_key", Type: types.String(), CreateRequired: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -2199,10 +2199,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2221,11 +2221,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
-					{Name: "tax_code", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
+					{Name: "tax_code", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -2251,11 +2251,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
-					{Name: "last_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -2281,10 +2281,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2301,14 +2301,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "additional", Type: types.Object([]types.Property{
-						{Name: "first_name", Type: types.Text(), ReadOptional: true},
+						{Name: "first_name", Type: types.String(), ReadOptional: true},
 					}), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "app_id", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "app_id", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2332,12 +2332,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 					{Name: "additional", Type: types.Object([]types.Property{
-						{Name: "first_name", Type: types.Text()},
+						{Name: "first_name", Type: types.String()},
 					})},
 				}),
 				Transformation: &Transformation{
@@ -2362,10 +2362,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), Prefilled: "Your Email"},
+					{Name: "email_in", Type: types.String(), Prefilled: "Your Email"},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2383,10 +2383,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), Prefilled: "Your Email"},
+					{Name: "email_out", Type: types.String(), Prefilled: "Your Email"},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2404,12 +2404,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 					{Name: "email", Type: types.Object([]types.Property{
-						{Name: "out", Type: types.Text(), ReadOptional: true},
+						{Name: "out", Type: types.String(), ReadOptional: true},
 					}), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
@@ -2429,15 +2429,15 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 					{Name: "many_values_in", Type: types.Array(types.Object([]types.Property{
-						{Name: "a", Type: types.Text()},
+						{Name: "a", Type: types.String()},
 					}))},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 					{Name: "many_values_out", Type: types.Array(types.Object([]types.Property{
-						{Name: "a", Type: types.Text(), ReadOptional: true},
+						{Name: "a", Type: types.String(), ReadOptional: true},
 					})), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
@@ -2467,11 +2467,11 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2505,12 +2505,12 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "__id__", Type: types.Text(), ReadOptional: true},
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "__id__", Type: types.String(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email", Type: types.String()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2552,14 +2552,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "address", Type: types.Object([]types.Property{
-						{Name: "email_out", Type: types.Text()},
+						{Name: "email_out", Type: types.String()},
 					})},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2584,12 +2584,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2614,15 +2614,15 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
-					{Name: "address_in", Type: types.Map(types.Text()), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "address_in", Type: types.Map(types.String()), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "address", Type: types.Object([]types.Property{
-						{Name: "email_out", Type: types.Text()},
+						{Name: "email_out", Type: types.String()},
 					})},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2647,11 +2647,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "id", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 					{Name: "personal", Type: types.Object([]types.Property{
 						{Name: "id", Type: types.Int(32)},
 					})},
@@ -2687,12 +2687,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "id", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -2725,15 +2725,15 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "id", Type: types.Int(32), ReadOptional: true},
-					{Name: "name", Type: types.Text(), ReadOptional: true},
+					{Name: "name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
 					{Name: "personal", Type: types.Object([]types.Property{
 						{Name: "id", Type: types.Int(32)},
-						{Name: "name", Type: types.Text()},
+						{Name: "name", Type: types.String()},
 					})},
 				}),
 				Transformation: &Transformation{
@@ -2767,11 +2767,11 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "first_name", Type: types.Text()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2812,10 +2812,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2845,7 +2845,7 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "anonymousId", Type: types.Text()},
+					{Name: "anonymousId", Type: types.String()},
 				}),
 				Name: "Import events into the data warehouse",
 			},
@@ -2858,7 +2858,7 @@ func Test_validatePipeline(t *testing.T) {
 			name: "BAD: Source/SDK/Event - cannot provide output schema",
 			pipeline: PipelineToSet{
 				OutSchema: types.Object([]types.Property{
-					{Name: "x", Type: types.Text()},
+					{Name: "x", Type: types.String()},
 				}),
 				Name: "Import events into the data warehouse",
 			},
@@ -2872,15 +2872,15 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 					{Name: "additional_properties", Type: types.Object([]types.Property{
-						{Name: "a", Type: types.Text()},
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "a", Type: types.String()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -2912,10 +2912,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2940,10 +2940,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -2985,10 +2985,10 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3006,10 +3006,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3029,10 +3029,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), CreateRequired: true},
+					{Name: "email_out", Type: types.String(), CreateRequired: true},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -3060,12 +3060,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "x", Type: types.Object([]types.Property{
-						{Name: "y", Type: types.Text(), ReadOptional: true},
-						{Name: "z", Type: types.Text(), ReadOptional: true},
+						{Name: "y", Type: types.String(), ReadOptional: true},
+						{Name: "z", Type: types.String(), ReadOptional: true},
 					}), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
@@ -3094,7 +3094,7 @@ func Test_validatePipeline(t *testing.T) {
 					},
 				},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3112,10 +3112,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{},
@@ -3131,12 +3131,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3159,12 +3159,12 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-					{Name: "first_name", Type: types.Text()},
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3189,10 +3189,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3215,10 +3215,10 @@ func Test_validatePipeline(t *testing.T) {
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3239,10 +3239,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3261,10 +3261,10 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
+					{Name: "email_in", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -3393,38 +3393,38 @@ func Test_unusedProperties(t *testing.T) {
 	}{
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
 			}),
 			paths: []string{"first_name"},
 		},
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "last_name", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
+				{Name: "last_name", Type: types.String()},
 			}),
 			paths: []string{"first_name", "last_name"},
 		},
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
 			}),
 			expected: "first_name",
 		},
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
+				{Name: "email", Type: types.String()},
 			}),
 			paths:    []string{"first_name"},
 			expected: "email",
 		},
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
+				{Name: "email", Type: types.String()},
 				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street", Type: types.Text()},
-					{Name: "zip_code", Type: types.Text()},
+					{Name: "street", Type: types.String()},
+					{Name: "zip_code", Type: types.String()},
 				})},
 			}),
 			paths:    []string{"first_name", "email"},
@@ -3432,11 +3432,11 @@ func Test_unusedProperties(t *testing.T) {
 		},
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
+				{Name: "email", Type: types.String()},
 				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street", Type: types.Text()},
-					{Name: "zip_code", Type: types.Text()},
+					{Name: "street", Type: types.String()},
+					{Name: "zip_code", Type: types.String()},
 				})},
 			}),
 			paths:    []string{"first_name", "email", "address.street"},
@@ -3444,11 +3444,11 @@ func Test_unusedProperties(t *testing.T) {
 		},
 		{
 			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
+				{Name: "first_name", Type: types.String()},
+				{Name: "email", Type: types.String()},
 				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street", Type: types.Text()},
-					{Name: "zip_code", Type: types.Text()},
+					{Name: "street", Type: types.String()},
+					{Name: "zip_code", Type: types.String()},
 				})},
 			}),
 			paths:    []string{"first_name", "email", "address.street", "address.zip_code"},
@@ -3457,19 +3457,19 @@ func Test_unusedProperties(t *testing.T) {
 		{
 			schema: types.Object([]types.Property{
 				{Name: "x1", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 				{Name: "x2", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3478,19 +3478,19 @@ func Test_unusedProperties(t *testing.T) {
 		{
 			schema: types.Object([]types.Property{
 				{Name: "x1", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 				{Name: "x2", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3500,19 +3500,19 @@ func Test_unusedProperties(t *testing.T) {
 		{
 			schema: types.Object([]types.Property{
 				{Name: "x1", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 				{Name: "x2", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3522,19 +3522,19 @@ func Test_unusedProperties(t *testing.T) {
 		{
 			schema: types.Object([]types.Property{
 				{Name: "x1", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 				{Name: "x2", Type: types.Object([]types.Property{
-					{Name: "y", Type: types.Text()},
-					{Name: "z", Type: types.Text()},
+					{Name: "y", Type: types.String()},
+					{Name: "z", Type: types.String()},
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "b", Type: types.Text()},
-						{Name: "c", Type: types.Text()},
+						{Name: "b", Type: types.String()},
+						{Name: "c", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3602,11 +3602,11 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			name: "Referencing a top-level property",
 			io:   "input",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
-				{Name: "xy", Type: types.Text()},
-				{Name: "x_y", Type: types.Text()},
-				{Name: "x_z", Type: types.Text()},
-				{Name: "z", Type: types.Text()},
+				{Name: "x", Type: types.String()},
+				{Name: "xy", Type: types.String()},
+				{Name: "x_y", Type: types.String()},
+				{Name: "x_z", Type: types.String()},
+				{Name: "z", Type: types.String()},
 			}),
 			paths: []string{"x_y", "x", "xy", "x_z", "z"},
 		},
@@ -3614,7 +3614,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			name: "Paths cannot be nil",
 			io:   "input",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
+				{Name: "x", Type: types.String()},
 			}),
 			paths:         nil,
 			expectedError: "input properties of transformation function cannot be null",
@@ -3623,7 +3623,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			name: "Paths cannot be empty",
 			io:   "input",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
+				{Name: "x", Type: types.String()},
 			}),
 			paths:         []string{},
 			expectedError: "there are no input properties in transformation function",
@@ -3632,7 +3632,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			name: "Paths can be empty when dispatching events",
 			io:   "input",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
+				{Name: "x", Type: types.String()},
 			}),
 			paths:                []string{},
 			dispatchEventsToApps: true,
@@ -3642,7 +3642,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.String()},
 				})},
 			}),
 			paths: []string{"x.a"},
@@ -3652,7 +3652,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.String()},
 				})},
 			}),
 			paths:         []string{"x.a", "x.a"},
@@ -3662,7 +3662,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			name: "Two identical paths (first level)",
 			io:   "input",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
+				{Name: "x", Type: types.String()},
 			}),
 			paths:         []string{"x", "x"},
 			expectedError: "transformation function input property path \"x\" is repeated",
@@ -3672,7 +3672,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.String()},
 				})},
 			}),
 			paths:         []string{"x.a", "x.a"},
@@ -3683,7 +3683,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.String()},
 				})},
 			}),
 			paths:         []string{"x.a", "x"},
@@ -3694,13 +3694,13 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "b", Type: types.String()},
+					{Name: "c", Type: types.String()},
+					{Name: "d", Type: types.String()},
 					{Name: "e", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3712,13 +3712,13 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "b", Type: types.String()},
+					{Name: "c", Type: types.String()},
+					{Name: "d", Type: types.String()},
 					{Name: "e", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3730,13 +3730,13 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "b", Type: types.String()},
+					{Name: "c", Type: types.String()},
+					{Name: "d", Type: types.String()},
 					{Name: "e", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					})},
 				})},
 			}),
@@ -3748,18 +3748,18 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "b", Type: types.String()},
+					{Name: "c", Type: types.String()},
+					{Name: "d", Type: types.String()},
 					{Name: "e", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					})},
 					{Name: "array", Type: types.Array(types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					}))},
 				})},
 			}),
@@ -3771,18 +3771,18 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{
-					{Name: "b", Type: types.Text()},
-					{Name: "c", Type: types.Text()},
-					{Name: "d", Type: types.Text()},
+					{Name: "b", Type: types.String()},
+					{Name: "c", Type: types.String()},
+					{Name: "d", Type: types.String()},
 					{Name: "e", Type: types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					})},
 					{Name: "map", Type: types.Map(types.Object([]types.Property{
-						{Name: "f", Type: types.Text()},
-						{Name: "g", Type: types.Text()},
-						{Name: "h", Type: types.Text()},
+						{Name: "f", Type: types.String()},
+						{Name: "g", Type: types.String()},
+						{Name: "h", Type: types.String()},
 					}))},
 				})},
 			}),
@@ -3793,7 +3793,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			name: "Invalid property path",
 			io:   "input",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
+				{Name: "x", Type: types.String()},
 			}),
 			paths:         []string{"x", "x.invalid-path.z"},
 			expectedError: "transformation function input property path \"x.invalid-path.z\" is not valid",

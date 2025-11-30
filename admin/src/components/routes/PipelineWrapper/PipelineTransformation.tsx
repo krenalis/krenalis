@@ -60,7 +60,7 @@ import {
 	TransformationLanguagesResponse,
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
-import Type, { ArrayType, MapType, ObjectType, Property, TextType } from '../../../lib/api/types/types';
+import Type, { ArrayType, MapType, ObjectType, Property, StringType } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -956,12 +956,12 @@ const TransformationBox = ({
 			}
 
 			const typ = property.full.type;
-			const isEnum = typ.kind === 'text' && (typ as TextType).values != null;
+			const isEnum = typ.kind === 'string' && (typ as StringType).values != null;
 			const isBool = typ.kind === 'boolean';
 
 			let enumValues: string[] = [];
 			if (isEnum) {
-				const values = (typ as TextType).values;
+				const values = (typ as StringType).values;
 				for (const v of values) {
 					enumValues.push(`"${v}"`);
 				}
@@ -3590,7 +3590,7 @@ function typeDescription(type: Type): ReactNode[] {
 	} else if (type.kind === 'year') {
 		elements.push(<div>Minimum: 1</div>);
 		elements.push(<div>Maximum: 9999</div>);
-	} else if (type.kind === 'text') {
+	} else if (type.kind === 'string') {
 		if (type.values != null) {
 			elements.push(<div>Values: {type.values.join(', ')}</div>);
 		}

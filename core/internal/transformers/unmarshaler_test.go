@@ -26,20 +26,20 @@ func Test_Unmarshal(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{
-			Name: "Text",
-			Type: types.Text().WithCharLen(10),
+			Name: "String",
+			Type: types.String().WithCharLen(10),
 		},
 		{
-			Name: "Text_values",
-			Type: types.Text().WithValues("a", "b", "c"),
+			Name: "String_values",
+			Type: types.String().WithValues("a", "b", "c"),
 		},
 		{
-			Name: "Text_regexp",
-			Type: types.Text().WithRegexp(regexp.MustCompile(`o/o$`)),
+			Name: "String_regexp",
+			Type: types.String().WithRegexp(regexp.MustCompile(`o/o$`)),
 		},
 		{
-			Name:     "Text_nil",
-			Type:     types.Text(),
+			Name:     "String_nil",
+			Type:     types.String(),
 			Nullable: true,
 		},
 		{
@@ -149,7 +149,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			Name: "Array",
-			Type: types.Array(types.Text()),
+			Type: types.Array(types.String()),
 		},
 		{
 			Name: "Object",
@@ -185,8 +185,8 @@ func Test_Unmarshal(t *testing.T) {
 	records := []Record{
 		{
 			Attributes: map[string]any{
-				"Text":                "some text",
-				"Text_nil":            nil,
+				"String":              "some text",
+				"String_nil":          nil,
 				"Boolean":             true,
 				"Int8":                -12,
 				"Int16":               8023,
@@ -234,7 +234,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: false,
 			timeTruncate: time.Millisecond,
-			data:         `{"records":[{"value":{"Text":"some text","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -242,7 +242,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Millisecond,
-			data:         `{"records":[{"value":{"Text":"some text","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -250,7 +250,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: false,
 			timeTruncate: time.Microsecond,
-			data:         `{"records":[{"value":{"Text":"some text","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -258,7 +258,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Microsecond,
-			data:         `{"records":[{"value":{"Text":"some text","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","Inet":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -399,32 +399,32 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"Text":"some long text"}}]}`,
-			records:  []Record{{Err: newRecordValidationError("Text", `property «Text» exceeds the 10-char limit`)}},
+			data:     `{"records":[{"value":{"String":"some long text"}}]}`,
+			records:  []Record{{Err: newRecordValidationError("String", `property «String» exceeds the 10-char limit`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"Text_values":"c"}}]}`,
-			records:  []Record{{Attributes: map[string]any{"Text_values": "c"}}},
+			data:     `{"records":[{"value":{"String_values":"c"}}]}`,
+			records:  []Record{{Attributes: map[string]any{"String_values": "c"}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"Text_values":"foo"}}]}`,
-			records:  []Record{{Err: newRecordValidationError("Text_values", `property «Text_values» is not one of the allowed values`)}},
+			data:     `{"records":[{"value":{"String_values":"foo"}}]}`,
+			records:  []Record{{Err: newRecordValidationError("String_values", `property «String_values» is not one of the allowed values`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"Text_regexp":"fo/o"}}]}`,
-			records:  []Record{{Attributes: map[string]any{"Text_regexp": "fo/o"}}},
+			data:     `{"records":[{"value":{"String_regexp":"fo/o"}}]}`,
+			records:  []Record{{Attributes: map[string]any{"String_regexp": "fo/o"}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
-			data:     `{"records":[{"value":{"Text_regexp":"faa"}}]}`,
-			records:  []Record{{Err: newRecordValidationError("Text_regexp", `property «Text_regexp» does not match «/o\/o$/»`)}},
+			data:     `{"records":[{"value":{"String_regexp":"faa"}}]}`,
+			records:  []Record{{Err: newRecordValidationError("String_regexp", `property «String_regexp» does not match «/o\/o$/»`)}},
 		},
 		{
 			language: state.Python,
@@ -574,7 +574,7 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("schema not object", func(t *testing.T) {
-		err := Unmarshal(buf, make([]Record, 1), types.Text(), state.JavaScript, false)
+		err := Unmarshal(buf, make([]Record, 1), types.String(), state.JavaScript, false)
 		if err == nil || err.Error() != "core/transformers: schema is not an object" {
 			t.Fatalf("expected schema error, got %v", err)
 		}
@@ -606,7 +606,7 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("array unique duplicated", func(t *testing.T) {
-		sch := types.Object([]types.Property{{Name: "a", Type: types.Array(types.Text()).WithUnique()}})
+		sch := types.Object([]types.Property{{Name: "a", Type: types.Array(types.String()).WithUnique()}})
 		rec := []Record{{}}
 		data := strings.NewReader(`{"records":[{"value":{"a":["x","x"]}}]}`)
 		err := Unmarshal(data, rec, sch, state.JavaScript, false)

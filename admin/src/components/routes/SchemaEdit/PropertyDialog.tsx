@@ -11,7 +11,7 @@ import {
 	IntBitSize,
 	IntType,
 	MapType,
-	TextType,
+	StringType,
 	TypeKind,
 	UintType,
 } from '../../../lib/api/types/types';
@@ -30,7 +30,7 @@ import { toMeergoStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const TYPE_KINDS: TypeKind[] = [
-	'text',
+	'string',
 	'boolean',
 	'int',
 	'uint',
@@ -308,7 +308,7 @@ const PropertyDialog = ({
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
-			const elementTyp = typ.elementType as TextType;
+			const elementTyp = typ.elementType as StringType;
 			if (length == null) {
 				delete elementTyp.byteLen;
 			} else {
@@ -318,7 +318,7 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.elementType as TextType;
+			const valueTyp = typ.elementType as StringType;
 			if (length == null) {
 				delete valueTyp.byteLen;
 			} else {
@@ -327,7 +327,7 @@ const PropertyDialog = ({
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
-			const typ = p.type as TextType;
+			const typ = p.type as StringType;
 			if (length == null) {
 				delete typ.byteLen;
 			} else {
@@ -346,7 +346,7 @@ const PropertyDialog = ({
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
-			const elementTyp = typ.elementType as TextType;
+			const elementTyp = typ.elementType as StringType;
 			if (length == null) {
 				delete elementTyp.charLen;
 			} else {
@@ -356,7 +356,7 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.elementType as TextType;
+			const valueTyp = typ.elementType as StringType;
 			if (length == null) {
 				delete valueTyp.charLen;
 			} else {
@@ -365,7 +365,7 @@ const PropertyDialog = ({
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
-			const typ = p.type as TextType;
+			const typ = p.type as StringType;
 			if (length == null) {
 				delete typ.charLen;
 			} else {
@@ -566,9 +566,9 @@ const PropertyDialog = ({
 		const isArray = property.type.kind === 'array';
 		const isMap = property.type.kind === 'map';
 		const hasText =
-			property.type.kind === 'text' ||
-			(isArray && (property.type as ArrayType).elementType.kind === 'text') ||
-			(isMap && (property.type as MapType).elementType.kind === 'text');
+			property.type.kind === 'string' ||
+			(isArray && (property.type as ArrayType).elementType.kind === 'string') ||
+			(isMap && (property.type as MapType).elementType.kind === 'string');
 		if (hasText) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType

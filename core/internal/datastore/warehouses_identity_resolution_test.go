@@ -42,10 +42,10 @@ import (
 // WARNING: the warehouses must be empty, as the tests will initialize them.
 
 var columns = []warehouses.Column{
-	{Name: "email", Type: types.Text(), Nullable: true},
-	{Name: "first_name", Type: types.Text(), Nullable: true},
-	{Name: "last_name", Type: types.Text(), Nullable: true},
-	{Name: "notes", Type: types.Array(types.Text()), Nullable: true},
+	{Name: "email", Type: types.String(), Nullable: true},
+	{Name: "first_name", Type: types.String(), Nullable: true},
+	{Name: "last_name", Type: types.String(), Nullable: true},
+	{Name: "notes", Type: types.Array(types.String()), Nullable: true},
 }
 
 var columnByName map[string]warehouses.Column
@@ -666,11 +666,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// in the case of profiles with the same email but with
 					// different values for first_name, etc..., the tests may
 					// randomly fail based on how Meergo returned them. For this
-					// reason, here the profiles are sorted based on all their text
+					// reason, here the profiles are sorted based on all their string
 					// properties, in ascending order.
 					slices.SortFunc(gotProfiles, func(u1, u2 map[string]any) int {
 						for _, c := range columns {
-							if c.Type.Kind() == types.TextKind {
+							if c.Type.Kind() == types.StringKind {
 								v1, _ := u1[c.Name].(string)
 								v2, _ := u2[c.Name].(string)
 								if v1 != v2 {
@@ -696,9 +696,9 @@ func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses
 	columns := make([]warehouses.Column, 7+len(iwColumns))
 	columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
 	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
+	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
 	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
 	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	i := 7

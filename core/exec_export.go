@@ -397,10 +397,10 @@ func errMatchingPropertyConversion(in, ex string) error {
 // are the types of the internal and external properties, respectively.
 //
 // Supported conversions are:
-//   - int to int, uint, and text
-//   - uint to int, uint, and text
-//   - text to int, uint, uuid, and text
-//   - uuid to uuid and text
+//   - int to int, uint, and string
+//   - uint to int, uint, and string
+//   - string to int, uint, uuid, and string
+//   - uuid to uuid and string
 //
 // It panics if v is nil or the types in and ex are not conforming to these
 // supported conversions. It returns an error if the converted value does not
@@ -410,7 +410,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
 	}
 	switch ex.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		var s string
 		switch v := v.(type) {
 		case int:
@@ -485,7 +485,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		return uint(i), nil
 	case types.UUIDKind:
 		switch in.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			u, ok := types.ParseUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inPath, outPath)
@@ -542,7 +542,7 @@ func setAttribute(attributes map[string]any, path string, value any) {
 // matching property. v cannot be nil.
 func stringifyMatchingValue(v any) string {
 	switch v := v.(type) {
-	case string: // text and uuid
+	case string: // string and uuid
 		return v
 	case int: // int(n)
 		return strconv.Itoa(v)

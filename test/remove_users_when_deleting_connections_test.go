@@ -33,14 +33,14 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 		Enabled: true,
 		Name:    "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "firstName", Type: types.String(), Nullable: true},
+			{Name: "lastName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{

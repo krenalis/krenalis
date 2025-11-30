@@ -19,14 +19,14 @@ func Test_AsRole(t *testing.T) {
 			object: Object([]Property{
 				{
 					Name: "FirstName",
-					Type: Text(),
+					Type: String(),
 				},
 			}),
 			role: Source,
 			expected: Object([]Property{
 				{
 					Name: "FirstName",
-					Type: Text(),
+					Type: String(),
 				},
 			}),
 		},
@@ -34,14 +34,14 @@ func Test_AsRole(t *testing.T) {
 			object: Object([]Property{
 				{
 					Name: "FirstName",
-					Type: Text(),
+					Type: String(),
 				},
 			}),
 			role: Destination,
 			expected: Object([]Property{
 				{
 					Name: "FirstName",
-					Type: Text(),
+					Type: String(),
 				},
 			}),
 		},
@@ -49,18 +49,18 @@ func Test_AsRole(t *testing.T) {
 			object: Object([]Property{
 				{
 					Name:         "ID",
-					Type:         Text(),
+					Type:         String(),
 					ReadOptional: true,
 				},
 				{
 					Name:           "FirstName",
-					Type:           Text(),
+					Type:           String(),
 					CreateRequired: true,
 					UpdateRequired: true,
 				},
 				{
 					Name:           "LastName",
-					Type:           Text(),
+					Type:           String(),
 					ReadOptional:   true,
 					CreateRequired: true,
 					UpdateRequired: true,
@@ -70,16 +70,16 @@ func Test_AsRole(t *testing.T) {
 			expected: Object([]Property{
 				{
 					Name:         "ID",
-					Type:         Text(),
+					Type:         String(),
 					ReadOptional: true,
 				},
 				{
 					Name: "FirstName",
-					Type: Text(),
+					Type: String(),
 				},
 				{
 					Name:         "LastName",
-					Type:         Text(),
+					Type:         String(),
 					ReadOptional: true,
 				},
 			}),
@@ -88,18 +88,18 @@ func Test_AsRole(t *testing.T) {
 			object: Object([]Property{
 				{
 					Name:         "ID",
-					Type:         Text(),
+					Type:         String(),
 					ReadOptional: true,
 				},
 				{
 					Name:           "FirstName",
-					Type:           Text(),
+					Type:           String(),
 					CreateRequired: true,
 					UpdateRequired: true,
 				},
 				{
 					Name:           "LastName",
-					Type:           Text(),
+					Type:           String(),
 					ReadOptional:   true,
 					CreateRequired: true,
 					UpdateRequired: true,
@@ -109,17 +109,17 @@ func Test_AsRole(t *testing.T) {
 			expected: Object([]Property{
 				{
 					Name: "ID",
-					Type: Text(),
+					Type: String(),
 				},
 				{
 					Name:           "FirstName",
-					Type:           Text(),
+					Type:           String(),
 					CreateRequired: true,
 					UpdateRequired: true,
 				},
 				{
 					Name:           "LastName",
-					Type:           Text(),
+					Type:           String(),
 					CreateRequired: true,
 					UpdateRequired: true,
 				},
@@ -130,9 +130,9 @@ func Test_AsRole(t *testing.T) {
 				{
 					Name: "Address",
 					Type: Object([]Property{
-						{Name: "Street", Type: Text(), ReadOptional: true},
-						{Name: "City", Type: Text()},
-						{Name: "Country", Type: Text(), UpdateRequired: true},
+						{Name: "Street", Type: String(), ReadOptional: true},
+						{Name: "City", Type: String()},
+						{Name: "Country", Type: String(), UpdateRequired: true},
 					}),
 					ReadOptional: true,
 				},
@@ -142,9 +142,9 @@ func Test_AsRole(t *testing.T) {
 				{
 					Name: "Address",
 					Type: Object([]Property{
-						{Name: "Street", Type: Text()},
-						{Name: "City", Type: Text()},
-						{Name: "Country", Type: Text(), UpdateRequired: true},
+						{Name: "Street", Type: String()},
+						{Name: "City", Type: String()},
+						{Name: "Country", Type: String(), UpdateRequired: true},
 					}),
 				},
 			}),
@@ -154,9 +154,9 @@ func Test_AsRole(t *testing.T) {
 				{
 					Name: "Address",
 					Type: Object([]Property{
-						{Name: "Street", Type: Text(), ReadOptional: true},
-						{Name: "City", Type: Text(), CreateRequired: true, UpdateRequired: true},
-						{Name: "Country", Type: Text(), ReadOptional: true, UpdateRequired: true},
+						{Name: "Street", Type: String(), ReadOptional: true},
+						{Name: "City", Type: String(), CreateRequired: true, UpdateRequired: true},
+						{Name: "Country", Type: String(), ReadOptional: true, UpdateRequired: true},
 					}),
 				},
 			}),
@@ -165,9 +165,9 @@ func Test_AsRole(t *testing.T) {
 				{
 					Name: "Address",
 					Type: Object([]Property{
-						{Name: "Street", Type: Text(), ReadOptional: true},
-						{Name: "City", Type: Text()},
-						{Name: "Country", Type: Text(), ReadOptional: true},
+						{Name: "Street", Type: String(), ReadOptional: true},
+						{Name: "City", Type: String()},
+						{Name: "Country", Type: String(), ReadOptional: true},
 					}),
 				},
 			}),
@@ -259,25 +259,25 @@ func Test_DecodeUUID(t *testing.T) {
 func Test_Filter(t *testing.T) {
 
 	o := Object([]Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
+			{Name: "x", Type: String()},
 		})},
-		{Name: "c", Type: Array(Text())},
+		{Name: "c", Type: Array(String())},
 		{Name: "d", Type: Array(Object([]Property{
 			{Name: "x", Type: Map(Boolean())},
 			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Int(32)},
 			}))},
-			{Name: "z", Type: Text()},
+			{Name: "z", Type: String()},
 		}))},
 	})
 
 	t.Run("Valid object expected (1)", func(t *testing.T) {
 		expected := Object([]Property{
-			{Name: "a", Type: Text()},
-			{Name: "c", Type: Array(Text())},
+			{Name: "a", Type: String()},
+			{Name: "c", Type: Array(String())},
 		})
 		got := Filter(o, func(p Property) bool {
 			return p.Name == "a" || p.Name == "c"
@@ -289,11 +289,11 @@ func Test_Filter(t *testing.T) {
 
 	t.Run("Valid object expected (2)", func(t *testing.T) {
 		expected := Object([]Property{
-			{Name: "a", Type: Text()},
+			{Name: "a", Type: String()},
 			{Name: "b", Type: Object([]Property{
-				{Name: "x", Type: Text()},
+				{Name: "x", Type: String()},
 			})},
-			{Name: "c", Type: Array(Text())},
+			{Name: "c", Type: Array(String())},
 		})
 		got := Filter(o, func(p Property) bool {
 			return p.Name != "d"
@@ -403,24 +403,24 @@ func Test_PropertyName(t *testing.T) {
 
 func Test_Prune(t *testing.T) {
 	testObject := Object([]Property{
-		{Name: "a", Type: Text()},
+		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
-			{Name: "with_description", Type: Text(), Description: "Some description"},
+			{Name: "x", Type: String()},
+			{Name: "with_description", Type: String(), Description: "Some description"},
 		})},
-		{Name: "c", Type: Array(Text())},
+		{Name: "c", Type: Array(String())},
 		{Name: "d", Type: Object([]Property{
 			{Name: "b", Type: Object([]Property{
-				{Name: "x", Type: Text(), Description: "Description of 'x'"},
-				{Name: "with_description", Type: Text()},
+				{Name: "x", Type: String(), Description: "Description of 'x'"},
+				{Name: "with_description", Type: String()},
 			}), Description: "Description of 'b'"},
 		}), Description: "Description of 'd'"},
 		{Name: "e", Type: Array(Map(Object([]Property{
-			{Name: "a", Type: Text()},
-			{Name: "b", Type: Text()},
+			{Name: "a", Type: String()},
+			{Name: "b", Type: String()},
 		})))},
 		{Name: "f", Type: Object([]Property{
-			{Name: "f1", Type: Text(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+			{Name: "f1", Type: String(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 		})},
 	})
 	tests := []struct {
@@ -431,7 +431,7 @@ func Test_Prune(t *testing.T) {
 		{
 			name:     "Just a top-level property",
 			f:        func(path string) bool { return path == "a" },
-			expected: Object([]Property{{Name: "a", Type: Text()}}),
+			expected: Object([]Property{{Name: "a", Type: String()}}),
 		},
 		{
 			name: "Two top level properties, one have descendants",
@@ -439,19 +439,19 @@ func Test_Prune(t *testing.T) {
 				return path == "a" || strings.HasPrefix(path, "b.")
 			},
 			expected: Object([]Property{
-				{Name: "a", Type: Text()},
+				{Name: "a", Type: String()},
 				{Name: "b", Type: Object([]Property{
-					{Name: "x", Type: Text()},
-					{Name: "with_description", Type: Text(), Description: "Some description"},
+					{Name: "x", Type: String()},
+					{Name: "with_description", Type: String(), Description: "Some description"},
 				})},
 			}),
 		},
 		{
-			name: "Two top level properties, one is an array(text)",
+			name: "Two top level properties, one is an array(string)",
 			f:    func(path string) bool { return path == "a" || path == "c" },
 			expected: Object([]Property{
-				{Name: "a", Type: Text()},
-				{Name: "c", Type: Array(Text())},
+				{Name: "a", Type: String()},
+				{Name: "c", Type: Array(String())},
 			}),
 		},
 		{
@@ -459,7 +459,7 @@ func Test_Prune(t *testing.T) {
 			f:    func(path string) bool { return path == "b.x" },
 			expected: Object([]Property{
 				{Name: "b", Type: Object([]Property{
-					{Name: "x", Type: Text()},
+					{Name: "x", Type: String()},
 				})},
 			}),
 		},
@@ -473,8 +473,8 @@ func Test_Prune(t *testing.T) {
 			f:    func(path string) bool { return strings.HasPrefix(path, "b.") },
 			expected: Object([]Property{
 				{Name: "b", Type: Object([]Property{
-					{Name: "x", Type: Text()},
-					{Name: "with_description", Type: Text(), Description: "Some description"},
+					{Name: "x", Type: String()},
+					{Name: "with_description", Type: String(), Description: "Some description"},
 				})},
 			}),
 		},
@@ -482,10 +482,10 @@ func Test_Prune(t *testing.T) {
 			name: "Top level property and third level property (with description)",
 			f:    func(path string) bool { return path == "c" || path == "d.b.x" },
 			expected: Object([]Property{
-				{Name: "c", Type: Array(Text())},
+				{Name: "c", Type: Array(String())},
 				{Name: "d", Type: Object([]Property{
 					{Name: "b", Type: Object([]Property{
-						{Name: "x", Type: Text(), Description: "Description of 'x'"},
+						{Name: "x", Type: String(), Description: "Description of 'x'"},
 					}), Description: "Description of 'b'"},
 				}), Description: "Description of 'd'"},
 			}),
@@ -495,8 +495,8 @@ func Test_Prune(t *testing.T) {
 			f:    func(path string) bool { return path == "e" },
 			expected: Object([]Property{
 				{Name: "e", Type: Array(Map(Object([]Property{
-					{Name: "a", Type: Text()},
-					{Name: "b", Type: Text()},
+					{Name: "a", Type: String()},
+					{Name: "b", Type: String()},
 				})))},
 			}),
 		},
@@ -505,7 +505,7 @@ func Test_Prune(t *testing.T) {
 			f:    func(path string) bool { return strings.HasPrefix(path, "f.") },
 			expected: Object([]Property{
 				{Name: "f", Type: Object([]Property{
-					{Name: "f1", Type: Text(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+					{Name: "f1", Type: String(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 				})},
 			}),
 		},
@@ -513,20 +513,20 @@ func Test_Prune(t *testing.T) {
 			name: "Removing all the properties of an object",
 			f:    func(path string) bool { return path != "b.x" && path != "b.with_description" },
 			expected: Object([]Property{
-				{Name: "a", Type: Text()},
-				{Name: "c", Type: Array(Text())},
+				{Name: "a", Type: String()},
+				{Name: "c", Type: Array(String())},
 				{Name: "d", Type: Object([]Property{
 					{Name: "b", Type: Object([]Property{
-						{Name: "x", Type: Text(), Description: "Description of 'x'"},
-						{Name: "with_description", Type: Text()},
+						{Name: "x", Type: String(), Description: "Description of 'x'"},
+						{Name: "with_description", Type: String()},
 					}), Description: "Description of 'b'"},
 				}), Description: "Description of 'd'"},
 				{Name: "e", Type: Array(Map(Object([]Property{
-					{Name: "a", Type: Text()},
-					{Name: "b", Type: Text()},
+					{Name: "a", Type: String()},
+					{Name: "b", Type: String()},
 				})))},
 				{Name: "f", Type: Object([]Property{
-					{Name: "f1", Type: Text(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+					{Name: "f1", Type: String(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 				})},
 			}),
 		},
@@ -544,15 +544,15 @@ func Test_Prune(t *testing.T) {
 func Test_PruneAtPath(t *testing.T) {
 
 	testObject := Object([]Property{
-		{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
+		{Name: "a", Type: String(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
 		{Name: "branch", Description: "branch description", Type: Object([]Property{
 			{Name: "leaf", Prefilled: "leaf-pref", Description: "leaf description", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true, Type: Object([]Property{
-				{Name: "target", Prefilled: "target-pref", Description: "target description", Nullable: true, Type: Text()},
-				{Name: "other_target", Type: Text()},
+				{Name: "target", Prefilled: "target-pref", Description: "target description", Nullable: true, Type: String()},
+				{Name: "other_target", Type: String()},
 			})},
-			{Name: "plain", Type: Text(), Prefilled: "plain-pref"},
-			{Name: "other", Type: Text()},
-			{Name: "values", Type: Array(Object([]Property{{Name: "value", Type: Text()}}))},
+			{Name: "plain", Type: String(), Prefilled: "plain-pref"},
+			{Name: "other", Type: String()},
+			{Name: "values", Type: Array(Object([]Property{{Name: "value", Type: String()}}))},
 		})},
 	})
 
@@ -562,7 +562,7 @@ func Test_PruneAtPath(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		expected := Object([]Property{
-			{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
+			{Name: "a", Type: String(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
 		})
 		if !Equal(got, expected) {
 			t.Fatalf("unexpected subset for top level property: %v", got)
@@ -606,8 +606,8 @@ func Test_PruneAtPath(t *testing.T) {
 		if target.Prefilled != "target-pref" || target.Description != "target description" || !target.Nullable {
 			t.Fatalf("target property metadata not preserved: %+v", target)
 		}
-		if target.Type.kind != TextKind {
-			t.Fatalf("expected target type to be text, got %v", target.Type.kind)
+		if target.Type.kind != StringKind {
+			t.Fatalf("expected target type to be string, got %v", target.Type.kind)
 		}
 	})
 

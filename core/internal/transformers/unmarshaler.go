@@ -141,7 +141,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
 //   - inet: a String representing an IP number
-//   - text: a String
+//   - string: a String
 //   - array: an array
 //   - object: an object
 //   - map: an object
@@ -162,7 +162,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - inet: a String representing an IP number
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
-//   - text: a String
+//   - string: a String
 //   - array: an array
 //   - object: an object
 //   - map: an object
@@ -540,7 +540,7 @@ func (d decoder) skipOut() error {
 // value returns the unmarshalled value of v according to t.
 func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
 			if values := t.Values(); values != nil {
@@ -732,7 +732,7 @@ func quoteRegExpr(re *regexp.Regexp) string {
 // t, to be used in error messages to represent the type in JavaScript.
 func toJavascriptType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		return "string"
 	case types.BooleanKind:
 		return "boolean"
@@ -768,7 +768,7 @@ func toJavascriptType(t types.Type) string {
 // used in error messages to represent the type in Python.
 func toPythonType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		return "str"
 	case types.BooleanKind:
 		return "bool"

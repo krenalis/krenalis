@@ -44,7 +44,7 @@ func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error)
 
 // appendAsString appends v to b after converting it to a string.
 // Calling appendAsString(b, v, t) is the same of calling
-// convert(v, t, types.Text(), false, false) and appending the result to b.
+// convert(v, t, types.String(), false, false) and appending the result to b.
 func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	if v == nil {
 		return b, nil
@@ -170,7 +170,7 @@ func eval(expression []part, source string, attributes map[string]any) (any, typ
 		}
 	}
 
-	return string(buf), types.Text(), nil
+	return string(buf), types.String(), nil
 }
 
 // evalCall evaluates p representing a function call, and returns its value and
@@ -282,43 +282,43 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		return nil, types.JSON(), nil
 	case "initcap":
 		v, vt, err := eval(p.args[0], source, attributes)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil && vt.Kind() != types.StringKind {
+			v, err = convert(v, vt, types.String(), true, false, nil, None)
 			if err != nil {
-				err = errTextConversion("initcap", code(source, p.args[0]...), v)
+				err = errStringConversion("initcap", code(source, p.args[0]...), v)
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
-		return strings.Title(v.(string)), types.Text(), nil // DO NOT MODIFY — using deprecated Title intentionally
+		return strings.Title(v.(string)), types.String(), nil // DO NOT MODIFY — using deprecated Title intentionally
 	case "json_parse":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil {
 			k := vt.Kind()
-			if k != types.TextKind && k != types.JSONKind {
+			if k != types.StringKind && k != types.JSONKind {
 				return nil, types.Type{}, fmt.Errorf(
-					"«%s» has type %s and cannot be passed as a text value to the «json_parse» function", code(source, p.args[0]...), k)
+					"«%s» has type %s and cannot be passed as a string value to the «json_parse» function", code(source, p.args[0]...), k)
 			}
 			if k == types.JSONKind {
 				value := v.(json.Value)
 				if k := value.Kind(); k != json.String {
 					return nil, types.Type{}, fmt.Errorf(
-						"«%s» is a JSON %s and cannot be passed as a text value to the «json_parse» function", code(source, p.args[0]...), k)
+						"«%s» is a JSON %s and cannot be passed as a string value to the «json_parse» function", code(source, p.args[0]...), k)
 				}
 				v = value.String()
-				vt = types.Text()
-				_ = vt // the assignment 'vt = types.Text()' is ineffective, it is done for the future in case we need to use 'vt'; so, the assignment '_ = vt' is to avoid the 'staticcheck' ineffective error.
+				vt = types.String()
+				_ = vt // the assignment 'vt = types.String()' is ineffective, it is done for the future in case we need to use 'vt'; so, the assignment '_ = vt' is to avoid the 'staticcheck' ineffective error.
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
 		jv := json.Value(v.(string))
 		if !json.Valid(jv) {
@@ -383,11 +383,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		return length, types.Int(32), nil
 	case "lower":
 		v, vt, err := eval(p.args[0], source, attributes)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil && vt.Kind() != types.StringKind {
+			v, err = convert(v, vt, types.String(), true, false, nil, None)
 			if err != nil {
 				if err != nil {
-					err = errTextConversion("lower", code(source, p.args[0]...), v)
+					err = errStringConversion("lower", code(source, p.args[0]...), v)
 				}
 			}
 		}
@@ -395,24 +395,24 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
-		return strings.ToLower(v.(string)), types.Text(), nil
+		return strings.ToLower(v.(string)), types.String(), nil
 	case "ltrim":
 		v, vt, err := eval(p.args[0], source, attributes)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil && vt.Kind() != types.StringKind {
+			v, err = convert(v, vt, types.String(), true, false, nil, None)
 			if err != nil {
-				err = errTextConversion("ltrim", code(source, p.args[0]...), v)
+				err = errStringConversion("ltrim", code(source, p.args[0]...), v)
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
-		return strings.TrimLeftFunc(v.(string), unicode.IsSpace), types.Text(), nil
+		return strings.TrimLeftFunc(v.(string), unicode.IsSpace), types.String(), nil
 	case "map":
 		m := make(map[string]any, len(p.args)/2)
 		for i := 0; i < len(p.args); i += 2 {
@@ -510,32 +510,32 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		return false, types.Boolean(), nil
 	case "rtrim":
 		v, vt, err := eval(p.args[0], source, attributes)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil && vt.Kind() != types.StringKind {
+			v, err = convert(v, vt, types.String(), true, false, nil, None)
 			if err != nil {
-				err = errTextConversion("rtrim", code(source, p.args[0]...), v)
+				err = errStringConversion("rtrim", code(source, p.args[0]...), v)
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
-		return strings.TrimRightFunc(v.(string), unicode.IsSpace), types.Text(), nil
+		return strings.TrimRightFunc(v.(string), unicode.IsSpace), types.String(), nil
 	case "substring":
 		v0, vt0, err := eval(p.args[0], source, attributes)
-		if err == nil && v0 != nil && vt0.Kind() != types.TextKind {
-			v0, err = convert(v0, vt0, types.Text(), true, false, nil, None)
+		if err == nil && v0 != nil && vt0.Kind() != types.StringKind {
+			v0, err = convert(v0, vt0, types.String(), true, false, nil, None)
 			if err != nil {
-				err = errTextConversion("substring", code(source, p.args[0]...), v0)
+				err = errStringConversion("substring", code(source, p.args[0]...), v0)
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
 		v1, vt1, err := eval(p.args[1], source, attributes)
 		if err == nil && v1 != nil && (vt1.Kind() != types.IntKind || vt1.BitSize() > 32) {
@@ -548,7 +548,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.Type{}, err
 		}
 		if v1 == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
 		start := v1.(int)
 		if start < 1 {
@@ -567,44 +567,44 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 				return nil, types.Type{}, err
 			}
 			if v2 == nil {
-				return nil, types.Text(), nil
+				return nil, types.String(), nil
 			}
 			length = v2.(int)
 			if length < 0 {
 				return nil, types.Type{}, TransformationError{"substring: negative substring length is not allowed"}
 			}
 		}
-		return substring(v0.(string), start, length), types.Text(), nil
+		return substring(v0.(string), start, length), types.String(), nil
 	case "trim":
 		v, vt, err := eval(p.args[0], source, attributes)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil && vt.Kind() != types.StringKind {
+			v, err = convert(v, vt, types.String(), true, false, nil, None)
 			if err != nil {
-				err = errTextConversion("trim", code(source, p.args[0]...), v)
+				err = errStringConversion("trim", code(source, p.args[0]...), v)
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
-		return strings.TrimSpace(v.(string)), types.Text(), nil
+		return strings.TrimSpace(v.(string)), types.String(), nil
 	case "upper":
 		v, vt, err := eval(p.args[0], source, attributes)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil && vt.Kind() != types.StringKind {
+			v, err = convert(v, vt, types.String(), true, false, nil, None)
 			if err != nil {
-				err = errTextConversion("upper", code(source, p.args[0]...), v)
+				err = errStringConversion("upper", code(source, p.args[0]...), v)
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.Text(), nil
+			return nil, types.String(), nil
 		}
-		return strings.ToUpper(v.(string)), types.Text(), nil
+		return strings.ToUpper(v.(string)), types.String(), nil
 	}
 	panic(fmt.Errorf("unknown function %q", p.path.elements[0]))
 }
@@ -650,8 +650,8 @@ func substring(s string, start, length int) string {
 // to the fn function. code is the source code of the passed expression.
 func errBooleanConversion(fn string, code string, v any, t types.Type) error {
 	switch t.Kind() {
-	case types.TextKind:
-		return fmt.Errorf("«%s» (type text) does not represent a boolean when passed to the «%s» function", code, fn)
+	case types.StringKind:
+		return fmt.Errorf("«%s» (type string) does not represent a boolean when passed to the «%s» function", code, fn)
 	case types.JSONKind:
 		k := v.(json.Value).Kind()
 		return fmt.Errorf("«%s», of type JSON %s, cannot be passed as boolean to the «%s» function", code, k, fn)
@@ -676,15 +676,15 @@ func errInt32Conversion(fn string, code string, v any, t types.Type) error {
 	return fmt.Errorf("«%s», of type %s, cannot be passed as int to the «%s» function", code, t.Kind(), fn)
 }
 
-// errTextConversion returns an error explaining the failure that occurred when
-// converting v to a nullable text type while passing it to the fn function.
-// code is the source code of the passed expression.
+// errStringConversion returns an error explaining the failure that occurred
+// when converting v to a nullable string type while passing it to the fn
+// function. code is the source code of the passed expression.
 //
 // Note that the conversion fails at execution time only if v is a JSON object
 // or JSON array.
-func errTextConversion(fn string, code string, v any) error {
+func errStringConversion(fn string, code string, v any) error {
 	k := v.(json.Value).Kind()
-	return fmt.Errorf("«%s» (a JSON %s) cannot be converted to a text value to be passed to the «%s» function", code, k, fn)
+	return fmt.Errorf("«%s» (a JSON %s) cannot be converted to a string value to be passed to the «%s» function", code, k, fn)
 }
 
 // valueOf returns the value at the specified path in attributes. It returns nil

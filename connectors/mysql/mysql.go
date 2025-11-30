@@ -301,7 +301,7 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	switch t.DatabaseTypeName() {
 	case "BLOB":
-		return types.Text(), "", nil
+		return types.String(), "", nil
 	case "DATE":
 		return types.Date(), "", nil
 	case "DATETIME":
@@ -326,10 +326,10 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	case "DOUBLE":
 		return types.Float(64), "", nil
 	case "ENUM":
-		return types.Text(), "", nil
+		return types.String(), "", nil
 	// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 	//case "SET":
-	//return types.Array(types.Text()), "", nil
+	//return types.Array(types.String()), "", nil
 	case "FLOAT":
 		return types.Float(32), "", nil
 	case "UNSIGNED MEDIUMINT":
@@ -353,17 +353,17 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	case "VARCHAR", "CHAR":
 		length, ok := t.Length()
 		if !ok {
-			return types.Text(), "", nil
+			return types.String(), "", nil
 		}
-		return types.Text().WithCharLen(int(length)), "", nil
+		return types.String().WithCharLen(int(length)), "", nil
 	case "VARBINARY", "BINARY":
 		length, ok := t.Length()
 		if !ok {
-			return types.Text(), "", nil
+			return types.String(), "", nil
 		}
-		return types.Text().WithByteLen(int(length)), "", nil
+		return types.String().WithByteLen(int(length)), "", nil
 	case "TEXT":
-		return types.Text(), "", nil
+		return types.String(), "", nil
 	case "TIME":
 		return types.Time(), "", nil
 	case "TIMESTAMP":

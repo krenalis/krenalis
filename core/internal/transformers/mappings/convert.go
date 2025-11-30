@@ -92,7 +92,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return nil, nil
 			}
 		case v == "":
-			if dk != types.TextKind && dk != types.JSONKind {
+			if dk != types.StringKind && dk != types.JSONKind {
 				return nil, nil
 			}
 		}
@@ -108,10 +108,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	}
 	// Convert the unparsed cases, v is not nil.
 	switch dk {
-	case types.TextKind:
+	case types.StringKind:
 		var s string
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			s = v.(string)
 		case types.BooleanKind:
 			s = "false"
@@ -167,7 +167,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			if l, ok := dt.CharLen(); ok {
 				runes := len(s)
-				if sk == types.JSONKind || sk == types.TextKind {
+				if sk == types.JSONKind || sk == types.StringKind {
 					runes = utf8.RuneCountInString(s)
 				}
 				if runes > l {
@@ -178,7 +178,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return s, nil
 	case types.BooleanKind:
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			switch v.(string) {
 			case "false", "False", "FALSE", "no", "No", "NO":
 				return false, nil
@@ -205,7 +205,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n int
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			n, err = strconv.Atoi(v.(string))
 			if err != nil {
 				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
@@ -263,7 +263,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n uint
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			var u uint64
 			u, err = strconv.ParseUint(v.(string), 10, 64)
 			if err != nil {
@@ -323,7 +323,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n float64
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
 			if err != nil {
 				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
@@ -371,7 +371,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n decimal.Decimal
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
@@ -418,7 +418,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var t time.Time
 		var err error
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			t, err = time.Parse(time.RFC3339Nano, v.(string))
 			if err != nil {
 				return v, errParseConversion
@@ -468,8 +468,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var t time.Time
 		var err error
 		switch sk {
-		case types.TextKind:
-			t, err = convertTextToDate(v.(string))
+		case types.StringKind:
+			t, err = convertStringToDate(v.(string))
 			if err != nil {
 				return v, err
 			}
@@ -505,7 +505,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.TimeKind:
 		var t time.Time
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			var ok bool
 			t, ok = util.ParseTime(v.(string))
 			if !ok {
@@ -539,7 +539,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n int
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			s := v.(string)
 			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
 				return v, errParseConversion
@@ -579,7 +579,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return n, nil
 	case types.UUIDKind:
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			u, err := uuid.Parse(v.(string))
 			if err != nil {
 				return v, errParseConversion
@@ -619,7 +619,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return value, nil
 	case types.InetKind:
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			ip, err := netip.ParseAddr(v.(string))
 			if err != nil {
 				return v, errParseConversion
@@ -877,7 +877,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	return v, errInvalidConversion
 }
 
-func convertTextToDate(s string) (time.Time, error) {
+func convertStringToDate(s string) (time.Time, error) {
 	month, day, year := -1, -1, -1
 	if len(s) == 10 {
 		if s[4] == '-' && s[7] == '-' {

@@ -73,7 +73,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
 	switch t.kind {
-	case TextKind:
+	case StringKind:
 		if t.p > 0 {
 			b.WriteString(`,"byteLen":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
@@ -462,7 +462,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid length in bytes")
 			}
 			byteLen, _ = strconv.Atoi(string(n))
-			if byteLen <= 0 || byteLen > MaxTextLen {
+			if byteLen <= 0 || byteLen > MaxStringLen {
 				return Type{}, errors.New("invalid length in bytes")
 			}
 		case "charLen":
@@ -474,7 +474,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid length in characters")
 			}
 			charLen, _ = strconv.Atoi(string(n))
-			if charLen <= 0 || charLen > MaxTextLen {
+			if charLen <= 0 || charLen > MaxStringLen {
 				return Type{}, errors.New("invalid length in characters")
 			}
 		case "minElements":
@@ -566,26 +566,26 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.vl = kind
 	}
 	if re != nil {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected regular expression for non-text type")
+		if t.kind != StringKind {
+			return Type{}, errors.New("unexpected regular expression for non-string type")
 		}
 		t.vl = re
 	}
 	if values != nil {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected values for non-text type")
+		if t.kind != StringKind {
+			return Type{}, errors.New("unexpected values for non-string type")
 		}
 		t.vl = values
 	}
 	if byteLen > 0 {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected length in bytes for non-text type")
+		if t.kind != StringKind {
+			return Type{}, errors.New("unexpected length in bytes for non-string type")
 		}
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected length in characters for non-text types")
+		if t.kind != StringKind {
+			return Type{}, errors.New("unexpected length in characters for non-string types")
 		}
 		t.s = int32(charLen)
 	}

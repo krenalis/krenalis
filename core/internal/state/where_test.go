@@ -18,10 +18,10 @@ func Test_unmarshalWhere(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Int(32)},
-		{Name: "b", Type: types.Text()},
+		{Name: "b", Type: types.String()},
 		{Name: "c", Type: types.Int(8)},
 		{Name: "d", Type: types.Float(64)},
-		{Name: "e", Type: types.Text()},
+		{Name: "e", Type: types.String()},
 		{Name: "f", Type: types.Boolean()},
 		{Name: "g", Type: types.Uint(32)},
 		{Name: "h", Type: types.JSON()},

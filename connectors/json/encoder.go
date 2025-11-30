@@ -45,7 +45,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		return append(b, "null"...)
 	}
 	switch k := t.Kind(); k {
-	case types.TextKind:
+	case types.StringKind:
 		return enc.appendString(b, v.(string))
 	case types.BooleanKind:
 		return strconv.AppendBool(b, v.(bool))

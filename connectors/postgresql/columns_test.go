@@ -28,9 +28,9 @@ func TestTypes(t *testing.T) {
 		{`numeric`, "", types.Decimal(10, 3), nil, pointer("10"), pointer("10"), pointer("3")},
 		{`real`, "", types.Float(32), nil, nil, nil, nil},
 		{`double precision`, "", types.Float(64), nil, nil, nil, nil},
-		{`character varying`, "", types.Text().WithCharLen(20), pointer("20"), nil, nil, nil},
-		{`character`, "", types.Text().WithCharLen(8), pointer("8"), nil, nil, nil},
-		{`text`, "", types.Text(), nil, nil, nil, nil},
+		{`character varying`, "", types.String().WithCharLen(20), pointer("20"), nil, nil, nil},
+		{`character`, "", types.String().WithCharLen(8), pointer("8"), nil, nil, nil},
+		{`text`, "", types.String(), nil, nil, nil, nil},
 		{`timestamp without time zone`, "", types.DateTime(), nil, nil, nil, nil},
 		{`timestamp with time zone`, "", types.DateTime(), nil, nil, nil, nil},
 		{`date`, "", types.Date(), nil, nil, nil, nil},
@@ -40,7 +40,7 @@ func TestTypes(t *testing.T) {
 		{`json`, "", types.JSON(), nil, nil, nil, nil},
 		{`jsonb`, "", types.JSON(), nil, nil, nil, nil},
 		{`ARRAY`, `_int4`, types.Array(types.Int(32)), nil, nil, nil, nil},
-		{`ARRAY`, `_varchar`, types.Array(types.Text()), nil, nil, nil, nil},
+		{`ARRAY`, `_varchar`, types.Array(types.String()), nil, nil, nil, nil},
 		{`ARRAY`, `_bool`, types.Array(types.Boolean()), nil, nil, nil, nil},
 	}
 

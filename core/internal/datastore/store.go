@@ -62,8 +62,8 @@ var destinationsProfilesTable = warehouses.Table{
 	Name: "meergo_destination_profiles",
 	Columns: []warehouses.Column{
 		{Name: "__pipeline__", Type: types.Int(32)},
-		{Name: "__external_id__", Type: types.Text()},
-		{Name: "__out_matching_value__", Type: types.Text()},
+		{Name: "__external_id__", Type: types.String()},
+		{Name: "__out_matching_value__", Type: types.String()},
 	},
 	Keys: []string{"__pipeline__", "__external_id__"},
 }
