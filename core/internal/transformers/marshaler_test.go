@@ -128,8 +128,8 @@ var schema = types.Object([]types.Property{
 		ReadOptional: true,
 	},
 	{
-		Name:         "Inet",
-		Type:         types.Inet(),
+		Name:         "IP",
+		Type:         types.IP(),
 		ReadOptional: true,
 	},
 	{
@@ -186,7 +186,7 @@ var records = []Record{{Attributes: map[string]any{
 	"UUID":      "550e8400-e29b-41d4-a716-446655440000",
 	"JSON":      json.Value(`{"foo":true,"boo":[5,8]}`),
 	"JSON_null": json.Value(`null`),
-	"Inet":      "192.158.1.38",
+	"IP":        "192.158.1.38",
 	"Array":     []any{"foo", "boo"},
 	"Object":    map[string]any{"a": 9, "b": false},
 	"Map":       map[string]any{},
@@ -250,10 +250,10 @@ func Test_MarshalJavaScript(t *testing.T) {
 			preserveJSON: false,
 			records:      records,
 			results: [][]byte{
-				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
-				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,3],'foo':true},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
-				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
-				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,8],'foo':true},JSON_null:null,Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,IP:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,3],'foo':true},JSON_null:null,IP:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'foo':true,'boo':[5,8]},JSON_null:null,IP:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:{'boo':[5,8],'foo':true},JSON_null:null,IP:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
 			},
 		},
 		{
@@ -261,7 +261,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			records:      records,
-			result:       []byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:'{\"foo\":true,\"boo\":[5,8]}',JSON_null:'null',Inet:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+			result:       []byte(`[{String:'some text',Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON:'{\"foo\":true,\"boo\":[5,8]}',JSON_null:'null',IP:'192.158.1.38',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
 		},
 		{
 			name:    "Map",
@@ -453,10 +453,10 @@ func Test_MarshalPython(t *testing.T) {
 			preserveJSON: false,
 			records:      records,
 			results: [][]byte{
-				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
-				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
-				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
-				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'IP':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'IP':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'foo':True,'boo':[5,8]},'JSON_null':None,'IP':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':{'boo':[5,8],'foo':True},'JSON_null':None,'IP':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
 			},
 		},
 		{
@@ -464,7 +464,7 @@ func Test_MarshalPython(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			records:      records,
-			result:       []byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':'{\"foo\":true,\"boo\":[5,8]}','JSON_null':'null','Inet':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+			result:       []byte(`[{'String':'some text','Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':decimal.Decimal('1752.064'),'DateTime':datetime.datetime(2023,10,17,9,34,25,836042),'Date':datetime.date(2023,10,17),'Time':datetime.time(9,34,25,836042),'Year':2023,'UUID':uuid.UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON':'{\"foo\":true,\"boo\":[5,8]}','JSON_null':'null','IP':'192.158.1.38','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
 		},
 		{
 			name:    "Map",

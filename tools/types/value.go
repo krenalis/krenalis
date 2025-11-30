@@ -51,7 +51,7 @@ import (
 //   - year: a JSON Number representing an integer
 //   - uuid: a JSON String representing a UUID
 //   - json: a JSON value; JSON null is always interpreted as Value("null")
-//   - inet: a JSON String representing an IP number
+//   - ip: a JSON String representing an IP number
 //   - array: a JSON Array
 //   - object: a JSON Object
 //   - map: a JSON Object
@@ -463,7 +463,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		if v.Kind() == '"' {
 			return v.AppendUnquote(nil), nil
 		}
-	case InetKind:
+	case IPKind:
 		if v.Kind() == '"' {
 			if ip, err := netip.ParseAddr(string(d.unquoteString(v))); err == nil {
 				return ip.String(), nil

@@ -87,7 +87,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		b = append(b, '"')
 		b = v.(time.Time).AppendFormat(b, "15:04:05.999999999Z")
 		return append(b, '"')
-	case types.UUIDKind, types.InetKind:
+	case types.UUIDKind, types.IPKind:
 		b = append(b, '"')
 		b = append(b, v.(string)...)
 		return append(b, '"')

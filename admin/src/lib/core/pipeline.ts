@@ -35,7 +35,7 @@ import {
 	isDateTime,
 	isDecimal,
 	isFloat,
-	isInet,
+	isIP,
 	isInt,
 	isUint,
 	isUUID,
@@ -87,8 +87,8 @@ const UNARY_OPERATORS = new Set<FilterOperator>([
 ]);
 
 const typesByFilterOperator: string[][] = [
-	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'string'], // is
-	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'string'], // is not
+	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is
+	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is not
 	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is less than
 	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is less than or equal to
 	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is greater than
@@ -121,7 +121,7 @@ const typesByFilterOperator: string[][] = [
 		'time',
 		'uuid',
 		'json',
-		'inet',
+		'ip',
 		'string',
 		'array',
 		'object',
@@ -139,7 +139,7 @@ const typesByFilterOperator: string[][] = [
 		'time',
 		'uuid',
 		'json',
-		'inet',
+		'ip',
 		'string',
 		'array',
 		'object',
@@ -157,7 +157,7 @@ const typesByFilterOperator: string[][] = [
 		'time',
 		'uuid',
 		'json',
-		'inet',
+		'ip',
 		'string',
 		'array',
 		'object',
@@ -175,7 +175,7 @@ const typesByFilterOperator: string[][] = [
 		'time',
 		'uuid',
 		'json',
-		'inet',
+		'ip',
 		'string',
 		'array',
 		'object',
@@ -1610,8 +1610,8 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 			throwIfInvalid(isYear(v), type.kind);
 		} else if (type.kind === 'uuid') {
 			throwIfInvalid(isUUID(v), type.kind);
-		} else if (type.kind === 'inet') {
-			throwIfInvalid(isInet(v), type.kind);
+		} else if (type.kind === 'ip') {
+			throwIfInvalid(isIP(v), type.kind);
 		} else if (type.kind === 'array') {
 			if (type.elementType.kind !== 'json' && type.elementType.kind !== 'string') {
 				validateFilterConditionValues(type.elementType, [v], propertyName);

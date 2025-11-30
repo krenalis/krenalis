@@ -385,7 +385,7 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target connectors.Targets, 
 				},
 				{
 					Name:        "ip",
-					Type:        types.Inet(),
+					Type:        types.IP(),
 					Nullable:    true,
 					Description: "IP address",
 				},

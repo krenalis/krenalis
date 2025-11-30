@@ -90,7 +90,7 @@ const (
 	YearKind
 	UUIDKind
 	JSONKind
-	InetKind
+	IPKind
 	ArrayKind
 	ObjectKind
 	MapKind
@@ -109,7 +109,7 @@ var kindName = []string{
 	"year",
 	"uuid",
 	"json",
-	"inet",
+	"ip",
 	"array",
 	"object",
 	"map",
@@ -337,9 +337,9 @@ func JSON() Type {
 	return Type{kind: JSONKind}
 }
 
-// Inet returns the inet type.
-func Inet() Type {
-	return Type{kind: InetKind}
+// IP returns the ip type.
+func IP() Type {
+	return Type{kind: IPKind}
 }
 
 // Array returns an array type with elements of type t.

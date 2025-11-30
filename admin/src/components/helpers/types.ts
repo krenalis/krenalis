@@ -63,7 +63,7 @@ function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean)
 				t = 'any';
 			}
 			break;
-		case 'inet':
+		case 'ip':
 			t = 'string';
 			break;
 		case 'string':
@@ -131,7 +131,7 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 				t = 'Any';
 			}
 			break;
-		case 'inet':
+		case 'ip':
 			t = 'str';
 			break;
 		case 'string':

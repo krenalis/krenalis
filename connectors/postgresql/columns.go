@@ -263,7 +263,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 	case "boolean":
 		t = types.Boolean()
 	case "inet":
-		t = types.Inet()
+		t = types.IP()
 	case "uuid":
 		t = types.UUID()
 	case "json", "jsonb":
@@ -287,7 +287,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 		case "_float8":
 			et = types.Float(64)
 		case "_inet":
-			et = types.Inet()
+			et = types.IP()
 		case "_int2":
 			et = types.Int(16)
 		case "_int4":

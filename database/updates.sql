@@ -71,3 +71,21 @@ WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"regexp": %';
 UPDATE pipelines
 SET out_schema = REPLACE(out_schema::text, '"regexp": ', '"pattern": ')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"regexp": %';
+
+-- rename inet to ip
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"kind": "inet"%';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE profile_schema::text LIKE '%"kind": "inet"%';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "inet"%';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "inet"%';

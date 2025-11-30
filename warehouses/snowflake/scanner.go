@@ -127,9 +127,9 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		}
 	case types.JSONKind:
 		return warehouses.ValidateJSON(name, v)
-	case types.InetKind:
+	case types.IPKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateInet(name, v)
+			return warehouses.ValidateIP(name, v)
 		}
 	case types.ArrayKind:
 		if v, ok := v.(string); ok {

@@ -173,7 +173,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 					jv.Number = &d
 				}
 				v = jv
-			case types.InetKind:
+			case types.IPKind:
 				addr, _ := netip.ParseAddr(value)
 				v = addr.String()
 			default:
@@ -466,8 +466,8 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 
 		// Validate the operator and its kind.
 		//
-		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, string
-		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, string
+		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, ip, string
+		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, ip, string
 		// is less than                : int, uint, float, decimal, json, string [^1]
 		// is less than or equal to    : int, uint, float, decimal, json, string [^1]
 		// is greater than             : int, uint, float, decimal, json, string [^1]
@@ -511,12 +511,12 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 				if p.Type.Values() != nil {
 					return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
 				}
-			case types.BooleanKind, types.UUIDKind, types.InetKind, types.ArrayKind, types.ObjectKind, types.MapKind:
+			case types.BooleanKind, types.UUIDKind, types.IPKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
 		case OpIsOneOf, OpIsNotOneOf:
 			switch kind {
-			case types.BooleanKind, types.UUIDKind, types.InetKind, types.ArrayKind, types.ObjectKind, types.MapKind:
+			case types.BooleanKind, types.UUIDKind, types.IPKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
 		case OpIsLessThan, OpIsLessThanOrEqualTo, OpIsGreaterThan, OpIsGreaterThanOrEqualTo:
@@ -663,7 +663,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 				_, valid = parseYear(value)
 			case types.UUIDKind:
 				_, valid = types.ParseUUID(value)
-			case types.InetKind:
+			case types.IPKind:
 				_, err := netip.ParseAddr(value)
 				valid = err == nil
 			default:

@@ -140,7 +140,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - uuid: a String representing a UUID
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
-//   - inet: a String representing an IP number
+//   - ip: a String representing an IP number
 //   - string: a String
 //   - array: an array
 //   - object: an object
@@ -159,7 +159,7 @@ var pythonDecoderOptions = decoderOptions{
 //   - time: a String representing a time formatted as "15:04:05.999999"
 //   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
-//   - inet: a String representing an IP number
+//   - ip: a String representing an IP number
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
 //   - string: a String
@@ -708,7 +708,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			}
 			return json.Value(data), nil
 		}
-	case types.InetKind:
+	case types.IPKind:
 		if v.Kind() == '"' {
 			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
 				return ip.String(), nil
@@ -749,7 +749,7 @@ func toJavascriptType(t types.Type) string {
 		return "Date"
 	case types.YearKind:
 		return "number"
-	case types.UUIDKind, types.JSONKind, types.InetKind:
+	case types.UUIDKind, types.JSONKind, types.IPKind:
 		return "string"
 	case types.ArrayKind:
 		et := toJavascriptType(t.Elem())
@@ -788,7 +788,7 @@ func toPythonType(t types.Type) string {
 		return "int"
 	case types.UUIDKind:
 		return "uuid.UUID"
-	case types.JSONKind, types.InetKind:
+	case types.JSONKind, types.IPKind:
 		return "str"
 	case types.ArrayKind:
 		et := toPythonType(t.Elem())

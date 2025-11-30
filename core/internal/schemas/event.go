@@ -66,7 +66,7 @@ var Event = types.Object([]types.Property{
 				ReadOptional: true,
 				Description:  "Device",
 			},
-			{Name: "ip", Type: types.Inet(), ReadOptional: true, Description: "IP"},
+			{Name: "ip", Type: types.IP(), ReadOptional: true, Description: "IP"},
 			{
 				Name: "library",
 				Type: types.Object([]types.Property{

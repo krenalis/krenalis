@@ -273,7 +273,7 @@ func typeToSnowflakeType(t types.Type) string {
 		return "VARCHAR"
 	case types.JSONKind:
 		return "VARIANT"
-	case types.InetKind:
+	case types.IPKind:
 		return "VARCHAR"
 	case types.ArrayKind:
 		return "ARRAY"

@@ -49,7 +49,7 @@ func TestConvert(t *testing.T) {
 		{types.Year(), types.String(), 1, "1", true, nil, nil},
 		{types.Year(), types.String(), 2023, "2023", true, nil, nil},
 		{types.UUID(), types.String(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.Inet(), types.String(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.IP(), types.String(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
 		{types.JSON(), types.String(), json.Value(`"foo"`), "foo", true, nil, nil},
 		{types.JSON(), types.String(), json.Value("23.8013"), "23.8013", true, nil, nil},
 		{types.JSON(), types.String(), json.Value("812"), "812", true, nil, nil},
@@ -206,10 +206,10 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.JSON(), json.Value(`{"foo":"boo"}`), json.Value(`{"foo":"boo"}`), true, nil, nil},
 		{types.JSON(), types.JSON(), json.Value(`[1,2,3]`), json.Value(`[1,2,3]`), true, nil, nil},
 
-		// inet.
-		{types.Inet(), types.Inet(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
-		{types.String(), types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true, nil, nil},
-		{types.JSON(), types.Inet(), json.Value(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true, nil, nil},
+		// ip.
+		{types.IP(), types.IP(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.String(), types.IP(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.JSON(), types.IP(), json.Value(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true, nil, nil},
 
 		// array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil, nil},

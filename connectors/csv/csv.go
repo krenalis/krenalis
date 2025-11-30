@@ -280,7 +280,7 @@ func toString(v any, t types.Type) string {
 		return ""
 	}
 	switch k := t.Kind(); k {
-	case types.StringKind, types.UUIDKind, types.InetKind:
+	case types.StringKind, types.UUIDKind, types.IPKind:
 		return v.(string)
 	case types.BooleanKind:
 		return strconv.FormatBool(v.(bool))

@@ -89,10 +89,10 @@ func TestConvertibleTo(t *testing.T) {
 		{types.JSON(), types.Array(types.Int(32)), true},
 		{types.JSON(), types.Object([]types.Property{{Name: "s", Type: types.String()}}), true},
 		{types.JSON(), types.Map(types.String()), true},
-		// inet.
-		{types.Inet(), types.Inet(), true},
-		// inet.
-		{types.Inet(), types.Inet(), true},
+		// ip.
+		{types.IP(), types.IP(), true},
+		// ip.
+		{types.IP(), types.IP(), true},
 		// array.
 		{types.Array(types.String()), types.Int(32), false},
 		{types.Array(types.String()), types.Uint(32), false},

@@ -224,7 +224,7 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 						to = "a time in ISO 8601 format"
 					case types.UUIDKind:
 						to = "a UUID"
-					case types.InetKind:
+					case types.IPKind:
 						to = "an IP address"
 					}
 					msg = fmt.Sprintf("«%s» is not parsable as %s while mapping to «%s»", code(e.expr.source), to, code(e.path))

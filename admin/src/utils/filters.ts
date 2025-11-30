@@ -106,9 +106,9 @@ const IPv4 = /^(?:25[0-5]|2[0-4]\d|1\d{2}|\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1\d{2
 const IPv6 =
 	/^((?:[0-9a-f]{1,4}:){7}(?:[0-9a-f]{1,4}|:)|(?:[0-9a-f]{1,4}:){1,7}:|(?:[0-9a-f]{1,4}:){1,6}(?::[0-9a-f]{1,4}){1,1}|(?:[0-9a-f]{1,4}:){1,5}(?::[0-9a-f]{1,4}){1,2}|(?:[0-9a-f]{1,4}:){1,4}(?::[0-9a-f]{1,4}){1,3}|(?:[0-9a-f]{1,4}:){1,3}(?::[0-9a-f]{1,4}){1,4}|(?:[0-9a-f]{1,4}:){1,2}(?::[0-9a-f]{1,4}){1,5}|[0-9a-f]?(?::(?::[0-9a-f]{1,4}){1,6})|::(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})$/i;
 
-// isInet checks whether the string s represents a valid inet value that can be
-// used as a filter value.
-const isInet = (s: string): boolean => {
+// isIP checks whether the string s represents a valid ip value that can be used
+//  as a filter value.
+const isIP = (s: string): boolean => {
 	return IPv4.test(s) || IPv6.test(s);
 };
 
@@ -325,7 +325,7 @@ export {
 	isDateTime,
 	isDecimal,
 	isFloat,
-	isInet,
+	isIP,
 	isInt,
 	isTime,
 	isUUID,

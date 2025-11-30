@@ -273,7 +273,7 @@ func typeToPostgresType(t types.Type) string {
 		return "uuid"
 	case types.JSONKind:
 		return "jsonb"
-	case types.InetKind:
+	case types.IPKind:
 		return "inet"
 	case types.ArrayKind:
 		typ := typeToPostgresType(t.Elem())

@@ -131,7 +131,7 @@ const filterOrderingPropertySchema = (schema: ObjectType): TransformedMapping | 
 			}
 			continue;
 		}
-		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'inet' || typ === 'string') {
+		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'ip' || typ === 'string') {
 			filteredSchema[k] = v;
 		}
 	}

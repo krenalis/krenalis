@@ -527,11 +527,11 @@ func ValidateJSON(name string, v any) (any, error) {
 	return json.Value(data), nil
 }
 
-// ValidateInet validates an inet value.
-func ValidateInet(name string, s string) (any, error) {
+// ValidateIP validates an ip value.
+func ValidateIP(name string, s string) (any, error) {
 	ip, err := netip.ParseAddr(s)
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an inet type", name)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an ip type", name)
 	}
 	return ip.String(), nil
 }

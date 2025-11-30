@@ -27,7 +27,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `"id" = 'qwerty'`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "ip_addr", Type: types.Inet()}, warehouses.OpIs, "127.0.0.1"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "ip_addr", Type: types.IP()}, warehouses.OpIs, "127.0.0.1"),
 			query: `"ip_addr" = '127.0.0.1'`,
 		},
 		{

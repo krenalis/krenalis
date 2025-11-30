@@ -33,7 +33,7 @@ func Test_suitableAsIdentifier(t *testing.T) {
 		{types.Time(), false},
 		{types.Year(), false},
 		{types.UUID(), true},
-		{types.Inet(), true},
+		{types.IP(), true},
 		{types.Array(types.String()), false},
 		{types.Array(types.Float(32)), false},
 		{types.Array(types.Decimal(10, 0)), false},

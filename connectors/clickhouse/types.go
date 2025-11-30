@@ -71,7 +71,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		case "DateTime":
 			t = types.DateTime()
 		case "IPv4", "IPv6":
-			t = types.Inet()
+			t = types.IP()
 		default:
 			return types.Type{}, false, ""
 		}

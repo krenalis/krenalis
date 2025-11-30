@@ -45,7 +45,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.Year()}, p2: types.Property{Type: types.Year()}},
 		{p1: types.Property{Type: types.UUID()}, p2: types.Property{Type: types.UUID()}, mode: &createOnlyMode},
 		{p1: types.Property{Type: types.JSON()}, p2: types.Property{Type: types.JSON()}},
-		{p1: types.Property{Type: types.Inet()}, p2: types.Property{Type: types.Inet()}},
+		{p1: types.Property{Type: types.IP()}, p2: types.Property{Type: types.IP()}},
 		{p1: types.Property{Type: types.Array(types.Int(8))}, p2: types.Property{Type: types.Array(types.Int(8))}},
 		{
 			p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Boolean(), Nullable: true, Description: "a property"}})},
@@ -105,7 +105,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.Array(types.Boolean()).WithMinElements(1)}, p2: types.Property{Type: types.Array(types.Boolean())}, err: `minimum number of "foo" property elements has been changed from 1 to 0`},
 		{p1: types.Property{Type: types.Array(types.Boolean()).WithMinElements(10)}, p2: types.Property{Type: types.Array(types.Boolean()).WithMinElements(12)}, err: `minimum number of "foo" property elements has been changed from 10 to 12`},
 		{p1: types.Property{Type: types.Array(types.UUID()).WithUnique()}, p2: types.Property{Type: types.Array(types.UUID())}, err: `"foo" property elements were initially required to be unique, but it is no longer required`},
-		{p1: types.Property{Type: types.Array(types.Inet())}, p2: types.Property{Type: types.Array(types.Inet()).WithUnique()}, err: `"foo" property elements were not required to be unique, but now it is required`},
+		{p1: types.Property{Type: types.Array(types.IP())}, p2: types.Property{Type: types.Array(types.IP()).WithUnique()}, err: `"foo" property elements were not required to be unique, but now it is required`},
 		{p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Float(32)}})}, p2: types.Property{Type: types.JSON()}, err: `"foo" property's type has changed from object to json`},
 		{p1: types.Property{Type: types.JSON()}, p2: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Float(32)}})}, err: `"foo" property's type has changed from json to object`},
 		{

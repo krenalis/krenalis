@@ -292,7 +292,7 @@ func TestExport(t *testing.T) {
 		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
 		{Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
 		{Name: "p_year", Type: types.Year(), ReadOptional: true},
-		{Name: "p_inet", Type: types.Inet(), ReadOptional: true},
+		{Name: "p_inet", Type: types.IP(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
 			{Name: "street", Type: types.String(), ReadOptional: true},
 			{Name: "zip_code", Type: types.Int(32), ReadOptional: true},

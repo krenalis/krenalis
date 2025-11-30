@@ -337,7 +337,7 @@ func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescripti
 	case pgtype.JSONOID, pgtype.JSONBOID:
 		return types.JSON(), "", nil
 	case pgtype.InetOID:
-		return types.Inet(), "", nil
+		return types.IP(), "", nil
 	case pgtype.BPCharOID, pgtype.VarcharOID:
 		length := int(fd.TypeModifier - 4)
 		if 1 <= length && length <= types.MaxStringLen {

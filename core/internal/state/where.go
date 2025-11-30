@@ -215,7 +215,7 @@ func (v JSONConditionValue) MarshalJSON() ([]byte, error) {
 // v is the value to unmarshal, and t is the type of the property.
 func unmarshalConditionValue(v any, t types.Type) (any, error) {
 	switch t.Kind() {
-	case types.StringKind, types.UUIDKind, types.InetKind:
+	case types.StringKind, types.UUIDKind, types.IPKind:
 		return v, nil
 	case types.IntKind:
 		n, err := strconv.ParseInt(string(v.(json.Number)), 10, 64)

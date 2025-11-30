@@ -42,7 +42,7 @@ const TYPE_KINDS: TypeKind[] = [
 	'year',
 	'uuid',
 	'json',
-	'inet',
+	'ip',
 	'array',
 	'object',
 	'map',

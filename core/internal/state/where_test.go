@@ -31,7 +31,7 @@ func Test_unmarshalWhere(t *testing.T) {
 		{Name: "l", Type: types.Time()},
 		{Name: "m", Type: types.Decimal(5, 3)},
 		{Name: "n", Type: types.UUID()},
-		{Name: "o", Type: types.Inet()},
+		{Name: "o", Type: types.IP()},
 	})
 
 	vDecimalInt := decimal.MustParse("34")

@@ -647,7 +647,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return nil, inputValidationErrorf(name, "is not valid JSON")
 		}
 		return json.Value(data), nil
-	case types.InetKind:
+	case types.IPKind:
 		var addr netip.Addr
 		switch ip := src.(type) {
 		case string:
@@ -661,7 +661,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var err error
 			addr, err = netip.ParseAddr(ip)
 			if err != nil {
-				return nil, inputValidationErrorf(name, "has a string value that cannot represent a valid inet value")
+				return nil, inputValidationErrorf(name, "has a string value that cannot represent a valid ip value")
 			}
 		case net.IP:
 			if ip == nil && nullable {
@@ -670,7 +670,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var ok bool
 			addr, ok = netip.AddrFromSlice(ip)
 			if !ok {
-				return nil, inputValidationErrorf(name, "has a net.IP value that cannot represent a valid inet value")
+				return nil, inputValidationErrorf(name, "has a net.IP value that cannot represent a valid ip value")
 			}
 			// Unmap an IPv6-mapped IPv4 address as the net.IP.String method does.
 			if addr.Is4In6() {

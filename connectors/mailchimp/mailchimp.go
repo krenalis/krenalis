@@ -871,7 +871,7 @@ func init() {
 		},
 		{
 			Name:        "ip_signup",
-			Type:        types.Inet(),
+			Type:        types.IP(),
 			Nullable:    true,
 			Description: "Sign-up IP address",
 		},
@@ -883,7 +883,7 @@ func init() {
 		},
 		{
 			Name:        "ip_opt",
-			Type:        types.Inet(),
+			Type:        types.IP(),
 			Description: "Opt-in IP address",
 		},
 		{

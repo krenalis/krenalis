@@ -341,10 +341,10 @@ func Test_typeToPostgresType(t *testing.T) {
 		// json.
 		{types.JSON(), "jsonb"},
 
-		// inet.
-		{types.Inet(), "inet"},
+		// ip.
+		{types.IP(), "inet"},
 
-		// text.
+		// string.
 		{types.String(), "character varying"},
 		{types.String().WithMaxByteLength(256), "character varying(256)"},
 		{types.String().WithMaxLength(300), "character varying(300)"},

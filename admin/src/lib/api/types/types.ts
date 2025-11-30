@@ -12,7 +12,7 @@ type TypeKind =
 	| 'year'
 	| 'uuid'
 	| 'json'
-	| 'inet'
+	| 'ip'
 	| 'string'
 	| 'array'
 	| 'object'
@@ -47,7 +47,7 @@ type Type =
 	| YearType
 	| UUIDType
 	| JSONType
-	| InetType
+	| IPType
 	| ArrayType
 	| ObjectType
 	| MapType;
@@ -121,8 +121,8 @@ interface JSONType {
 	maxLength?: number;
 }
 
-interface InetType {
-	kind: 'inet';
+interface IPType {
+	kind: 'ip';
 }
 
 interface ArrayType {

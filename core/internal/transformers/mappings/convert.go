@@ -134,7 +134,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			s = v.(time.Time).Format("15:04:05.999999999")
 		case types.YearKind:
 			s = strconv.Itoa(v.(int))
-		case types.UUIDKind, types.InetKind:
+		case types.UUIDKind, types.IPKind:
 			s = v.(string)
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -617,7 +617,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v, errInvalidConversion
 		}
 		return value, nil
-	case types.InetKind:
+	case types.IPKind:
 		switch sk {
 		case types.StringKind:
 			ip, err := netip.ParseAddr(v.(string))
@@ -625,7 +625,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errParseConversion
 			}
 			return ip.String(), nil
-		case types.InetKind:
+		case types.IPKind:
 			return v.(string), nil
 		case types.JSONKind:
 			v := v.(json.Value)
