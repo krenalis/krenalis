@@ -715,23 +715,23 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// ByteLen returns the maximum length in bytes of a string type and true.
+// MaxByteLength returns the maximum length in bytes of a string type and true.
 // If t has no maximum length in bytes, it returns 0 and false.
 // Panics if t is not a string type.
-func (t Type) ByteLen() (int, bool) {
+func (t Type) MaxByteLength() (int, bool) {
 	if t.kind != StringKind {
 		panic("cannot get byte length of a non-string type")
 	}
 	return int(uint32(t.p)), t.p != 0
 }
 
-// WithByteLen returns t with a maximum length of l of a string type. l must be in
-// range [1, MaxStringLen].
-// Panics if t is not a string type, or if l is not in range, or if t has already
-// a byte length, or if t already has values.
-func (t Type) WithByteLen(l int) Type {
+// WithMaxByteLength returns t with a maximum length of l of a string type.
+// l must be in range [1, MaxStringLen].
+// Panics if t is not a string type, or if l is not in range, or if t has
+// already a byte length, or if t already has values.
+func (t Type) WithMaxByteLength(l int) Type {
 	if t.kind != StringKind {
-		panic("cannot set byte length of a non-string type")
+		panic("cannot set max byte length of a non-string type")
 	}
 	if t.p > 0 {
 		panic("repeated length in bytes")
@@ -746,22 +746,22 @@ func (t Type) WithByteLen(l int) Type {
 	return t
 }
 
-// CharLen returns the maximum length in characters of a string type and true. If
-// t has no maximum length in characters, it returns 0 and false. Panics if t is
-// not a string type.
-func (t Type) CharLen() (int, bool) {
+// MaxLength returns the maximum length in characters of a string type and true.
+// If t has no maximum length in characters, it returns 0 and false. Panics if t
+// is not a string type.
+func (t Type) MaxLength() (int, bool) {
 	if t.kind != StringKind {
-		panic("cannot get character length of non-string types")
+		panic("cannot get max length of non-string types")
 	}
 	return int(uint32(t.s)), t.s != 0
 }
 
-// WithCharLen returns t with a maximum length of l of a string type. l must be in
-// range [1, MaxStringLen]. Panics if t is not a string type, or if l is not in
-// range, or if t has already a char length, or if t already has values.
-func (t Type) WithCharLen(l int) Type {
+// WithMaxLength returns t with a maximum length of l of a string type. l must
+// be in range [1, MaxStringLen]. Panics if t is not a string type, or if l is
+// not in range, or if t has already a char length, or if t already has values.
+func (t Type) WithMaxLength(l int) Type {
 	if t.kind != StringKind {
-		panic("cannot set character length of non-string types")
+		panic("cannot set max length of non-string types")
 	}
 	if t.s > 0 {
 		panic("repeated length in characters")

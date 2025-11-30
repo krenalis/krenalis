@@ -5,7 +5,7 @@
 			"name": "customer_id",
 			"readOptional": true,
 			"type": {
-				"charLen": 36,
+				"maxLength": 36,
 				"kind": "string"
 			},
 			"description": "Customer ID"
@@ -14,7 +14,7 @@
 			"name": "first_name",
 			"readOptional": true,
 			"type": {
-				"charLen": 100,
+				"maxLength": 100,
 				"kind": "string"
 			},
 			"description": "First name"
@@ -23,7 +23,7 @@
 			"name": "last_name",
 			"readOptional": true,
 			"type": {
-				"charLen": 100,
+				"maxLength": 100,
 				"kind": "string"
 			},
 			"description": "Last name"
@@ -32,7 +32,7 @@
 			"name": "email",
 			"readOptional": true,
 			"type": {
-				"charLen": 254,
+				"maxLength": 254,
 				"kind": "string"
 			},
 			"description": "Email"
@@ -41,7 +41,7 @@
 			"name": "phone_number",
 			"readOptional": true,
 			"type": {
-				"charLen": 20,
+				"maxLength": 20,
 				"kind": "string"
 			},
 			"description": "Phone number"
@@ -72,7 +72,7 @@
 						"name": "street",
 						"readOptional": true,
 						"type": {
-							"charLen": 255,
+							"maxLength": 255,
 							"kind": "string"
 						},
 						"description": "Street"
@@ -81,7 +81,7 @@
 						"name": "city",
 						"readOptional": true,
 						"type": {
-							"charLen": 100,
+							"maxLength": 100,
 							"kind": "string"
 						},
 						"description": "City"
@@ -90,7 +90,7 @@
 						"name": "postal_code",
 						"readOptional": true,
 						"type": {
-							"charLen": 20,
+							"maxLength": 20,
 							"kind": "string"
 						},
 						"description": "Postal code"
@@ -99,7 +99,7 @@
 						"name": "country",
 						"readOptional": true,
 						"type": {
-							"charLen": 2,
+							"maxLength": 2,
 							"kind": "string"
 						},
 						"description": "Country"
@@ -138,7 +138,7 @@
 						"readOptional": true,
 						"type": {
 							"kind": "string",
-							"charLen": 2
+							"maxLength": 2
 						},
 						"description": "Language"
 					}

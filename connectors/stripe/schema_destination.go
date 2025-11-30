@@ -57,7 +57,7 @@ var destinationSchema = types.Object([]types.Property{
 	},
 	{
 		Name:        "invoice_prefix",
-		Type:        types.String().WithByteLen(12),
+		Type:        types.String().WithMaxByteLength(12),
 		Description: "Invoice prefix",
 	},
 	{
@@ -258,7 +258,7 @@ var destinationInvoiceSettings = types.Object([]types.Property{
 		Type: types.Array(types.Object([]types.Property{
 			{
 				Name:           "name",
-				Type:           types.String().WithCharLen(40),
+				Type:           types.String().WithMaxLength(40),
 				Nullable:       true,
 				CreateRequired: true,
 				UpdateRequired: true,
@@ -266,7 +266,7 @@ var destinationInvoiceSettings = types.Object([]types.Property{
 			},
 			{
 				Name:           "value",
-				Type:           types.String().WithByteLen(140),
+				Type:           types.String().WithMaxByteLength(140),
 				Nullable:       true,
 				CreateRequired: true,
 				UpdateRequired: true,

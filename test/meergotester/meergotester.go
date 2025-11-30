@@ -486,7 +486,7 @@ func (c *Meergo) Stop() {
 }
 
 var minimalProfileSchema = types.Object([]types.Property{
-	{Name: "email", Type: types.String().WithCharLen(254), ReadOptional: true},
+	{Name: "email", Type: types.String().WithMaxLength(254), ReadOptional: true},
 })
 
 //go:embed tests_user_schema.json

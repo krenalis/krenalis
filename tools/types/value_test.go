@@ -27,7 +27,7 @@ func Test_Decode(t *testing.T) {
 	object := Object([]Property{
 		{
 			Name: "String",
-			Type: String().WithCharLen(10),
+			Type: String().WithMaxLength(10),
 		},
 		{
 			Name:     "Text_values",

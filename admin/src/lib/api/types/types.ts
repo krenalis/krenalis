@@ -54,8 +54,8 @@ type Type =
 
 interface StringType {
 	kind: 'string';
-	byteLen?: number;
-	charLen?: number;
+	maxByteLength?: number;
+	maxLength?: number;
 	regexp?: string;
 	values?: string[];
 }
@@ -118,7 +118,7 @@ interface UUIDType {
 
 interface JSONType {
 	kind: 'json';
-	charLen?: number;
+	maxLength?: number;
 }
 
 interface InetType {

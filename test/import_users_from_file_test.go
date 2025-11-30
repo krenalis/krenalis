@@ -53,8 +53,8 @@ func TestImportUsersFromFile(t *testing.T) {
 			{Name: "email", Type: types.String()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{

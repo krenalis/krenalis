@@ -97,7 +97,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		if n == 0 || s == "" {
 			return types.Type{}, false, ""
 		}
-		return types.String().WithByteLen(n), false, s[1:]
+		return types.String().WithMaxByteLength(n), false, s[1:]
 	case "DateTime":
 		_, s, ok := parseString(s[i+1:])
 		if !ok || s == "" {

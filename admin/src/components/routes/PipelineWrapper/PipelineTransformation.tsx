@@ -3597,11 +3597,11 @@ function typeDescription(type: Type): ReactNode[] {
 		if (type.regexp != null) {
 			elements.push(<div>Regular expression: {type.regexp}</div>);
 		}
-		if (type.byteLen != null) {
-			elements.push(<div>Max bytes: {type.byteLen}</div>);
+		if (type.maxByteLength != null) {
+			elements.push(<div>Max bytes: {type.maxByteLength}</div>);
 		}
-		if (type.charLen != null) {
-			elements.push(<div>Max characters: {type.charLen}</div>);
+		if (type.maxLength != null) {
+			elements.push(<div>Max characters: {type.maxLength}</div>);
 		}
 	} else if (type.kind === 'array' || type.kind === 'map') {
 		const elementTypeDescription = typeDescription(type.elementType);

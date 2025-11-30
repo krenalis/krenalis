@@ -50,9 +50,9 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
@@ -87,9 +87,9 @@ func TestExportUsersToFile(t *testing.T) {
 		Enabled: true,
 		Path:    exportedFilename,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "gender", Type: types.String(), ReadOptional: true},
 		}),
 		Format: "csv",
@@ -125,9 +125,9 @@ func TestExportUsersToFile(t *testing.T) {
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Format: "csv",

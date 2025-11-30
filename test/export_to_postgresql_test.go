@@ -34,9 +34,9 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
@@ -87,9 +87,9 @@ func TestExportToPostgreSQL(t *testing.T) {
 		TableName: "test_export_to_db",
 		TableKey:  "email",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String(), CreateRequired: true},
@@ -122,7 +122,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 		TableName: "test_export_to_db",
 		TableKey:  "email",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String(), CreateRequired: true},

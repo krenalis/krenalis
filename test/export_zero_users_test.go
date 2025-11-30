@@ -41,8 +41,8 @@ func TestExportZeroProfiles(t *testing.T) {
 			Name:    "Export profiles to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.String(), Nullable: true},
@@ -86,9 +86,9 @@ func TestExportZeroProfiles(t *testing.T) {
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Format:  "csv",

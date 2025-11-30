@@ -70,7 +70,7 @@ var sourceSchema = types.Object([]types.Property{
 	},
 	{
 		Name:        "invoice_prefix",
-		Type:        types.String().WithByteLen(12),
+		Type:        types.String().WithMaxByteLength(12),
 		Nullable:    true,
 		Description: "Invoice prefix",
 	},
@@ -336,12 +336,12 @@ var sourceInvoiceSettings = types.Object([]types.Property{
 		Type: types.Array(types.Object([]types.Property{
 			{
 				Name:        "name",
-				Type:        types.String().WithCharLen(40),
+				Type:        types.String().WithMaxLength(40),
 				Description: "Field name",
 			},
 			{
 				Name:        "value",
-				Type:        types.String().WithByteLen(140),
+				Type:        types.String().WithMaxByteLength(140),
 				Description: "Field value",
 			},
 		})),

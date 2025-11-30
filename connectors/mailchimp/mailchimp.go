@@ -170,7 +170,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 		var field types.Property
 		switch f.Type {
 		case "text":
-			field.Type = types.String().WithCharLen(255)
+			field.Type = types.String().WithMaxLength(255)
 		case "number":
 			field.Type = types.Decimal(14, 2)
 			field.Nullable = true
@@ -197,7 +197,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 			field.Type = types.Date()
 			field.Nullable = true
 		case "birthday":
-			field.Type = types.String().WithCharLen(5)
+			field.Type = types.String().WithMaxLength(5)
 		case "address":
 			field.Type = addressType
 			// If ADDRESS is an empty string, it will be set to nil.
@@ -205,7 +205,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 				field.Nullable = true
 			}
 		case "zip":
-			field.Type = types.String().WithCharLen(5)
+			field.Type = types.String().WithMaxLength(5)
 		case "phone":
 			field.Type = types.String()
 		case "url":
@@ -864,7 +864,7 @@ func init() {
 				{Name: "ecommerce_data", Type: types.Object([]types.Property{
 					{Name: "total_revenue", Type: types.Decimal(14, 2), Description: "Total revenue"},
 					{Name: "number_of_orders", Type: types.Decimal(14, 2), Description: "Number of orders"},
-					{Name: "currency_code", Type: types.String().WithCharLen(3), Description: "Currency code"},
+					{Name: "currency_code", Type: types.String().WithMaxLength(3), Description: "Currency code"},
 				}), ReadOptional: true, Nullable: true, Description: "Ecommerce"},
 			}),
 			Description: "Stats",
@@ -903,7 +903,7 @@ func init() {
 		},
 		{
 			Name:        "language",
-			Type:        types.String().WithCharLen(5),
+			Type:        types.String().WithMaxLength(5),
 			Description: "Language",
 		},
 		{
@@ -923,7 +923,7 @@ func init() {
 				{Name: "longitude", Type: types.Int(32), Description: "Longitude"},
 				{Name: "gmtoff", Type: types.Int(32), Description: "GMT offset"},
 				{Name: "dstoff", Type: types.Int(32), Description: "DST offset"},
-				{Name: "country_code", Type: types.String().WithCharLen(2), Description: "Country code"},
+				{Name: "country_code", Type: types.String().WithMaxLength(2), Description: "Country code"},
 				{Name: "timezone", Type: types.String(), Description: "Location timezone"},
 				{Name: "region", Type: types.String(), Description: "Location region"},
 			}),

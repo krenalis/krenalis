@@ -57,7 +57,7 @@ func Test_Merge_Query(t *testing.T) {
 		{"IPv6", net.ParseIP("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), types.Inet(), "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
 		{"String", "foo", types.String(), "foo"},
 		{"LowCardinality(String)", "foo", types.String(), "foo"},
-		{"FixedString(3)", "boo", types.String().WithByteLen(3), "boo"},
+		{"FixedString(3)", "boo", types.String().WithMaxByteLength(3), "boo"},
 		{"Enum8('hello' = 1, 'world' = 2)", "hello", types.String().WithValues("hello", "world"), "hello"},
 		{"Enum16('hello' = 1, 'world' = 2, 'clickhouse' = 3)", "clickhouse", types.String().WithValues("hello", "world", "clickhouse"), "clickhouse"},
 		{"Enum16('hello' = 1, 'world' = 2, 'clickhouse' = 3)", "clickhouse", types.String().WithValues("hello", "world", "clickhouse"), "clickhouse"},

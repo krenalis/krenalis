@@ -234,11 +234,11 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errRegexpConversion:
 					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Regexp(), code(e.path))
-				case errByteLenConversion:
-					n, _ := e.dt.ByteLen()
+				case errMaxByteLengthConversion:
+					n, _ := e.dt.MaxByteLength()
 					msg = fmt.Sprintf("«%s» exceeds the %d-byte limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errCharLenConversion:
-					n, _ := e.dt.CharLen()
+				case errMaxLengthConversion:
+					n, _ := e.dt.MaxLength()
 					msg = fmt.Sprintf("«%s» exceeds the %d-char limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
 				default:
 					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), e.dt.String(), code(e.path))

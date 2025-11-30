@@ -70,7 +70,7 @@ func TestDiff(t *testing.T) {
 				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "lastName", Type: types.String().WithCharLen(10), Nullable: true},
+				{Name: "lastName", Type: types.String().WithMaxLength(10), Nullable: true},
 			}),
 			rePaths: map[string]any{
 				"lastName": "firstName",

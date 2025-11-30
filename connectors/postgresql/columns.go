@@ -248,7 +248,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 				issue := fmt.Sprintf("Column %q has a character length of %d, which exceeds the maximum allowed length of %d", column.column, chars, types.MaxStringLen)
 				return types.Type{}, issue, nil
 			}
-			t = types.String().WithCharLen(chars)
+			t = types.String().WithMaxLength(chars)
 		} else {
 			t = types.String()
 		}
@@ -311,7 +311,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 				if length < 1 {
 					return types.Type{}, "", fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
 				}
-				et = types.String().WithCharLen(length)
+				et = types.String().WithMaxLength(length)
 			} else {
 				et = types.String()
 			}

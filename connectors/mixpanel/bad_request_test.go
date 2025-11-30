@@ -54,7 +54,7 @@ func TestBadRequest(t *testing.T) {
 		Type: connectors.EventTypeInfo{
 			ID: "track",
 			Schema: types.Object([]types.Property{
-				{Name: "event", Prefilled: "event", Type: types.String().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+				{Name: "event", Prefilled: "event", Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event Name"},
 				{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
 			}),
 			Values: map[string]any{

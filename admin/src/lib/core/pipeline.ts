@@ -1661,8 +1661,8 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 	} else if (aType.kind === 'string') {
 		const t = bType as StringType;
 		return (
-			aType.byteLen === t.byteLen &&
-			aType.charLen === t.charLen &&
+			aType.maxByteLength === t.maxByteLength &&
+			aType.maxLength === t.maxLength &&
 			aType.regexp === t.regexp &&
 			JSON.stringify(aType.values) === JSON.stringify(t.values)
 		);

@@ -220,20 +220,20 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"string"}`,
 			Type: String(),
 		}, {
-			Data: `{"kind":"string","charLen":10}`,
-			Type: String().WithCharLen(10),
+			Data: `{"kind":"string","maxLength":10}`,
+			Type: String().WithMaxLength(10),
 		}, {
-			Data: `{"kind":"string","byteLen":24}`,
-			Type: String().WithByteLen(24),
+			Data: `{"kind":"string","maxByteLength":24}`,
+			Type: String().WithMaxByteLength(24),
 		}, {
-			Data: `{"kind":"string","byteLen":80,"charLen":100}`,
-			Type: String().WithByteLen(80).WithCharLen(100),
+			Data: `{"kind":"string","maxByteLength":80,"maxLength":100}`,
+			Type: String().WithMaxByteLength(80).WithMaxLength(100),
 		}, {
 			Data: `{"kind":"string","values":["a","b"]}`,
 			Type: String().WithValues("a", "b"),
 		}, {
-			Data: `{"kind":"string","charLen":10000}`,
-			Type: String().WithCharLen(10000),
+			Data: `{"kind":"string","maxLength":10000}`,
+			Type: String().WithMaxLength(10000),
 		}, {
 			Data: `{"kind":"string","regexp":"\\d+$"}`,
 			Type: String().WithRegexp(regexp.MustCompile(`\d+$`)),

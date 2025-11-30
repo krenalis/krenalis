@@ -27,7 +27,7 @@ func Test_Unmarshal(t *testing.T) {
 	schema := types.Object([]types.Property{
 		{
 			Name: "String",
-			Type: types.String().WithCharLen(10),
+			Type: types.String().WithMaxLength(10),
 		},
 		{
 			Name: "String_values",

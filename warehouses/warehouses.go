@@ -553,10 +553,10 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 		}
 		return s, nil
 	}
-	if max, ok := t.ByteLen(); ok && len(s) > max {
+	if max, ok := t.MaxByteLength(); ok && len(s) > max {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d bytes", name, max)
 	}
-	if max, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > max {
+	if max, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > max {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d characters", name, max)
 	}
 	return s, nil

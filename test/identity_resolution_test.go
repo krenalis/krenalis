@@ -52,8 +52,8 @@ func TestIdentityResolution(t *testing.T) {
 	}
 	outSchemaProps := []types.Property{
 		{Name: "dummy_id", Type: types.String(), ReadOptional: true},
-		{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-		{Name: "phone_numbers", Type: types.Array(types.String().WithCharLen(300)), ReadOptional: true},
+		{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+		{Name: "phone_numbers", Type: types.Array(types.String().WithMaxLength(300)), ReadOptional: true},
 	}
 
 	c.UpdateIdentityResolution(false, []string{"dummy_id", "email"})

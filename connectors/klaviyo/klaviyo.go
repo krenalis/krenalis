@@ -112,10 +112,10 @@ type innerSettings struct {
 func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	if eventType == "create_event" {
 		return types.Object([]types.Property{
-			{Name: "metric_name", Type: types.String().WithCharLen(200), CreateRequired: true, Description: "Metric name"},
-			{Name: "email", Type: types.String().WithByteLen(100), CreateRequired: true, Description: "Email"},
+			{Name: "metric_name", Type: types.String().WithMaxLength(200), CreateRequired: true, Description: "Metric name"},
+			{Name: "email", Type: types.String().WithMaxByteLength(100), CreateRequired: true, Description: "Email"},
 			{Name: "value", Type: types.Float(64).AsReal(), Description: "Value"},
-			{Name: "value_currency", Type: types.String().WithByteLen(3), Description: "Currency (ISO code)"},
+			{Name: "value_currency", Type: types.String().WithMaxByteLength(3), Description: "Currency (ISO code)"},
 			{Name: "properties", Type: types.Map(types.JSON()), Description: "Properties"},
 		}), nil
 	}

@@ -346,11 +346,11 @@ func Test_typeToPostgresType(t *testing.T) {
 
 		// text.
 		{types.String(), "character varying"},
-		{types.String().WithByteLen(256), "character varying(256)"},
-		{types.String().WithCharLen(300), "character varying(300)"},
-		{types.String().WithByteLen(10).WithCharLen(10), "character varying(10)"},
-		{types.String().WithByteLen(5).WithCharLen(10), "character varying(5)"},
-		{types.String().WithByteLen(500).WithCharLen(10), "character varying(10)"},
+		{types.String().WithMaxByteLength(256), "character varying(256)"},
+		{types.String().WithMaxLength(300), "character varying(300)"},
+		{types.String().WithMaxByteLength(10).WithMaxLength(10), "character varying(10)"},
+		{types.String().WithMaxByteLength(5).WithMaxLength(10), "character varying(5)"},
+		{types.String().WithMaxByteLength(500).WithMaxLength(10), "character varying(10)"},
 
 		// array.
 		{types.Array(types.String()), "character varying[]"},

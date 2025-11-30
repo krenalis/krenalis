@@ -341,7 +341,7 @@ func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescripti
 	case pgtype.BPCharOID, pgtype.VarcharOID:
 		length := int(fd.TypeModifier - 4)
 		if 1 <= length && length <= types.MaxStringLen {
-			return types.String().WithCharLen(length), "", nil
+			return types.String().WithMaxLength(length), "", nil
 		}
 		return types.String(), "", nil
 	case pgtype.TextOID, pgtype.ByteaOID:

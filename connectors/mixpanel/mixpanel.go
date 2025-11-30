@@ -137,7 +137,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 	switch eventType {
 	case "order_completed":
 		schema = types.Object([]types.Property{
-			{Name: "event", Prefilled: `"Order Completed"`, Type: types.String().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{Name: "event", Prefilled: `"Order Completed"`, Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event name"},
 			{
 				Name: "properties",
 				Prefilled: `map(` +
@@ -157,7 +157,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 		})
 	case "product_purchased":
 		schema = types.Object([]types.Property{
-			{Name: "event", Prefilled: `"Product Purchased"`, Type: types.String().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{Name: "event", Prefilled: `"Product Purchased"`, Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event name"},
 			{
 				Name:           "products",
 				Prefilled:      "properties.products",
@@ -184,7 +184,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 			return types.Type{}, connectors.ErrEventTypeNotExist
 		}
 		schema = types.Object([]types.Property{
-			{Name: "event", Prefilled: event, Type: types.String().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{Name: "event", Prefilled: event, Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event name"},
 			{
 				Name:        "properties",
 				Type:        types.Map(types.JSON()),

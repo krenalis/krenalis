@@ -355,13 +355,13 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 		if !ok {
 			return types.String(), "", nil
 		}
-		return types.String().WithCharLen(int(length)), "", nil
+		return types.String().WithMaxLength(int(length)), "", nil
 	case "VARBINARY", "BINARY":
 		length, ok := t.Length()
 		if !ok {
 			return types.String(), "", nil
 		}
-		return types.String().WithByteLen(int(length)), "", nil
+		return types.String().WithMaxByteLength(int(length)), "", nil
 	case "TEXT":
 		return types.String(), "", nil
 	case "TIME":

@@ -554,10 +554,10 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				}
 				return s, nil
 			} else {
-				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
-				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxByteLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil

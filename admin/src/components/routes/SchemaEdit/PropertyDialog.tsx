@@ -72,8 +72,8 @@ const PropertyDialog = ({
 	const [primarySource, setPrimarySource] = useState<number | null>(null);
 	const [nameError, setNameError] = useState<string>('');
 	const [typeError, setTypeError] = useState<string>('');
-	const [isByteLengthEnabled, setIsByteLengthEnabled] = useState<boolean>(false);
-	const [isCharLengthEnabled, setIsCharLengthEnabled] = useState<boolean>(false);
+	const [isMaxByteLengthEnabled, setIsMaxByteLengthEnabled] = useState<boolean>(false);
+	const [isMaxLengthEnabled, setIsMaxLengthEnabled] = useState<boolean>(false);
 
 	const { connections } = useContext(AppContext);
 
@@ -81,8 +81,8 @@ const PropertyDialog = ({
 	const bitSizeSelectRef = useRef<any>();
 	const precisionInputRef = useRef<any>();
 	const elementTypeSelectRef = useRef<any>();
-	const byteLengthInputRef = useRef<any>();
-	const charLengthInputRef = useRef<any>();
+	const maxByteLengthInputRef = useRef<any>();
+	const maxLengthInputRef = useRef<any>();
 
 	const isEditing = useMemo(() => {
 		if (propertyToEdit == null) {
@@ -156,8 +156,8 @@ const PropertyDialog = ({
 		if (typeError !== '') {
 			setTypeError('');
 		}
-		setIsByteLengthEnabled(false);
-		setIsCharLengthEnabled(false);
+		setIsMaxByteLengthEnabled(false);
+		setIsMaxLengthEnabled(false);
 	};
 
 	const onChangeBitSize = (e) => {
@@ -282,37 +282,37 @@ const PropertyDialog = ({
 		}
 	};
 
-	const onToggleByteLength = () => {
-		setIsByteLengthEnabled(!isByteLengthEnabled);
-		if (isByteLengthEnabled) {
-			updateByteLength(null);
+	const onToggleMaxByteLength = () => {
+		setIsMaxByteLengthEnabled(!isMaxByteLengthEnabled);
+		if (isMaxByteLengthEnabled) {
+			updateMaxByteLength(null);
 		} else {
-			setTimeout(() => byteLengthInputRef.current?.focus(), 50);
+			setTimeout(() => maxByteLengthInputRef.current?.focus(), 50);
 		}
 	};
 
-	const onToggleCharLength = () => {
-		setIsCharLengthEnabled(!isCharLengthEnabled);
-		if (isCharLengthEnabled) {
-			updateCharLength(null);
+	const onToggleMaxLength = () => {
+		setIsMaxLengthEnabled(!isMaxLengthEnabled);
+		if (isMaxLengthEnabled) {
+			updateMaxLength(null);
 		} else {
-			setTimeout(() => charLengthInputRef.current?.focus(), 50);
+			setTimeout(() => maxLengthInputRef.current?.focus(), 50);
 		}
 	};
 
 	const onInputByteLength = (e) => {
-		updateByteLength(Number(e.target.value));
+		updateMaxByteLength(Number(e.target.value));
 	};
 
-	const updateByteLength = (length: number | null) => {
+	const updateMaxByteLength = (length: number | null) => {
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete elementTyp.byteLen;
+				delete elementTyp.maxByteLength;
 			} else {
-				elementTyp.byteLen = length;
+				elementTyp.maxByteLength = length;
 			}
 			typ.elementType = elementTyp;
 			p.type = typ;
@@ -320,37 +320,37 @@ const PropertyDialog = ({
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete valueTyp.byteLen;
+				delete valueTyp.maxByteLength;
 			} else {
-				valueTyp.byteLen = length;
+				valueTyp.maxByteLength = length;
 			}
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as StringType;
 			if (length == null) {
-				delete typ.byteLen;
+				delete typ.maxByteLength;
 			} else {
-				typ.byteLen = length;
+				typ.maxByteLength = length;
 			}
 			p.type = typ;
 		}
 		setProperty(p);
 	};
 
-	const onInputCharLength = (e) => {
-		updateCharLength(Number(e.target.value));
+	const onInputMaxLength = (e) => {
+		updateMaxLength(Number(e.target.value));
 	};
 
-	const updateCharLength = (length: number | null) => {
+	const updateMaxLength = (length: number | null) => {
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete elementTyp.charLen;
+				delete elementTyp.maxLength;
 			} else {
-				elementTyp.charLen = length;
+				elementTyp.maxLength = length;
 			}
 			typ.elementType = elementTyp;
 			p.type = typ;
@@ -358,18 +358,18 @@ const PropertyDialog = ({
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete valueTyp.charLen;
+				delete valueTyp.maxLength;
 			} else {
-				valueTyp.charLen = length;
+				valueTyp.maxLength = length;
 			}
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as StringType;
 			if (length == null) {
-				delete typ.charLen;
+				delete typ.maxLength;
 			} else {
-				typ.charLen = length;
+				typ.maxLength = length;
 			}
 			p.type = typ;
 		}
@@ -575,52 +575,52 @@ const PropertyDialog = ({
 				: isMap
 					? (property.type as MapType).elementType
 					: property.type;
-			const byteLengthSection = (
+			const maxByteLengthSection = (
 				<>
 					<SlCheckbox
-						className='property-dialog__byte-length-check'
-						checked={isByteLengthEnabled}
-						onSlChange={onToggleByteLength}
+						className='property-dialog__max-byte-length-check'
+						checked={isMaxByteLengthEnabled}
+						onSlChange={onToggleMaxByteLength}
 						size='small'
 					>
 						Max bytes:
 					</SlCheckbox>
 					<SlInput
-						className='property-dialog__byte-length'
-						ref={byteLengthInputRef}
+						className='property-dialog__max-byte-length'
+						ref={maxByteLengthInputRef}
 						size='small'
-						value={String(typ.byteLen)}
+						value={String(typ.maxByteLength)}
 						type='number'
 						onSlInput={onInputByteLength}
-						disabled={!isByteLengthEnabled}
+						disabled={!isMaxByteLengthEnabled}
 					/>
 				</>
 			);
-			const charLengthSection = (
+			const maxLengthSection = (
 				<>
 					<SlCheckbox
-						className='property-dialog__char-length-check'
-						checked={isCharLengthEnabled}
-						onSlChange={onToggleCharLength}
+						className='property-dialog__max-length-check'
+						checked={isMaxLengthEnabled}
+						onSlChange={onToggleMaxLength}
 						size='small'
 					>
 						Max characters:
 					</SlCheckbox>
 					<SlInput
-						className='property-dialog__char-length'
-						ref={charLengthInputRef}
+						className='property-dialog__max-length'
+						ref={maxLengthInputRef}
 						size='small'
-						value={String(typ.charLen)}
+						value={String(typ.maxLength)}
 						type='number'
-						onSlInput={onInputCharLength}
-						disabled={!isCharLengthEnabled}
+						onSlInput={onInputMaxLength}
+						disabled={!isMaxLengthEnabled}
 					/>
 				</>
 			);
 			lengthSection = (
 				<div className='property-dialog__length-section'>
-					{byteLengthSection}
-					{charLengthSection}
+					{maxByteLengthSection}
+					{maxLengthSection}
 				</div>
 			);
 		}

@@ -76,10 +76,10 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"outSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string", "charLen": 300 }, "readOptional": true, "description": "" },
+				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
 				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true, "description": "" },
-				{ "name": "first_name", "type": { "kind": "string", "charLen": 300 }, "readOptional": true, "description": "" },
-				{ "name": "last_name", "type": { "kind": "string", "charLen": 300 }, "readOptional": true, "description": "" }
+				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
+				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" }
 			]
 		},
 		"incremental": false,
@@ -203,7 +203,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 					"name": "first_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -212,7 +212,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 					"name": "last_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -221,7 +221,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 					"name": "email",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -431,7 +431,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "first_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"nullable": true,
 					"description": ""
@@ -440,7 +440,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "last_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"nullable": true,
 					"description": ""
@@ -449,7 +449,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "email",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"nullable": true,
 					"description": ""
@@ -463,7 +463,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "first_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -472,7 +472,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "last_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -597,7 +597,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "email",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -606,7 +606,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "first_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -615,7 +615,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "last_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"readOptional": true,
 					"description": ""
@@ -637,7 +637,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "email",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"createRequired": true,
 					"updateRequired": false,
@@ -648,7 +648,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "first_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"nullable": true,
 					"description": ""
@@ -657,7 +657,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"name": "last_name",
 					"type": {
 						"kind": "string",
-						"charLen": 300
+						"maxLength": 300
 					},
 					"nullable": true,
 					"description": ""
@@ -801,7 +801,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"name": "email",
 						"type": {
 							"kind": "string",
-							"charLen": 300
+							"maxLength": 300
 						},
 						"readOptional": true,
 						"description": ""
@@ -810,7 +810,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"name": "first_name",
 						"type": {
 							"kind": "string",
-							"charLen": 300
+							"maxLength": 300
 						},
 						"readOptional": true,
 						"description": ""
@@ -819,7 +819,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"name": "last_name",
 						"type": {
 							"kind": "string",
-							"charLen": 300
+							"maxLength": 300
 						},
 						"readOptional": true,
 						"description": ""
@@ -952,7 +952,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 						"name": "email",
 						"type": {
 							"kind": "string",
-							"charLen": 300
+							"maxLength": 300
 						},
 						"readOptional": true,
 						"description": ""
@@ -1037,7 +1037,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 						"name": "first_name",
 						"type": {
 							"kind": "string",
-							"charLen": 300
+							"maxLength": 300
 						},
 						"readOptional": true,
 						"description": ""
@@ -1046,7 +1046,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 						"name": "last_name",
 						"type": {
 							"kind": "string",
-							"charLen": 300
+							"maxLength": 300
 						},
 						"readOptional": true,
 						"description": ""
@@ -1091,7 +1091,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "array",
 							"elementType": {
 								"kind": "string",
-								"charLen": 300
+								"maxLength": 300
 							}
 						},
 						"readOptional": true,

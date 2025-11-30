@@ -107,10 +107,10 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}
 		} else {
-			if l, ok := typ.ByteLen(); ok && len(v) > l {
+			if l, ok := typ.MaxByteLength(); ok && len(v) > l {
 				return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
 			}
-			if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
+			if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
 				return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
 			}
 		}

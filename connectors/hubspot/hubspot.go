@@ -171,7 +171,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 		}
 		if typ.Kind() == types.StringKind {
 			if len(r.Options) == 0 {
-				property.Type.WithCharLen(65536)
+				property.Type.WithMaxLength(65536)
 			} else {
 				var n int
 				for _, option := range r.Options {

@@ -39,8 +39,8 @@ func TestEvents(t *testing.T) {
 			{Name: "firstName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -73,7 +73,7 @@ func TestEvents(t *testing.T) {
 			Filter:   meergotester.DefaultFilterUserFromEvents,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{

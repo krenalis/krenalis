@@ -38,7 +38,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Filter: &meergotester.Filter{
 			Logical: "or",
@@ -61,7 +61,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Filter: &meergotester.Filter{
 			Logical: "or",

@@ -27,16 +27,16 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errByteLenConversion   = errors.New("invalid byte length")
-	errCharLenConversion   = errors.New("invalid char length")
-	errEnumConversion      = errors.New("not a valid enum value")
-	errInvalidConversion   = errors.New("cannot convert")
-	errMaxConversion       = errors.New("too large")
-	errMinConversion       = errors.New("too small")
-	errParseConversion     = errors.New("cannot parse")
-	errRangeConversion     = errors.New("out of range")
-	errRegexpConversion    = errors.New("regexp mismatch")
-	errYearRangeConversion = errors.New("year not in range [1,9999]")
+	errMaxByteLengthConversion = errors.New("invalid max byte length")
+	errMaxLengthConversion     = errors.New("invalid max length")
+	errEnumConversion          = errors.New("not a valid enum value")
+	errInvalidConversion       = errors.New("cannot convert")
+	errMaxConversion           = errors.New("too large")
+	errMinConversion           = errors.New("too small")
+	errParseConversion         = errors.New("cannot parse")
+	errRangeConversion         = errors.New("out of range")
+	errRegexpConversion        = errors.New("regexp mismatch")
+	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
 const (
@@ -70,8 +70,8 @@ var (
 // in the returned value.
 //
 // If the value cannot be converted, it returns v and one of the following:
-//   - errByteLenConversion
-//   - errCharLenConversion
+//   - errMaxByteLengthConversion
+//   - errMaxLengthConversion
 //   - errEnumConversion
 //   - errInvalidConversion
 //   - errMaxConversion
@@ -162,16 +162,16 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errRegexpConversion
 			}
 		} else {
-			if l, ok := dt.ByteLen(); ok && l < len(s) {
-				return v, errByteLenConversion
+			if l, ok := dt.MaxByteLength(); ok && l < len(s) {
+				return v, errMaxByteLengthConversion
 			}
-			if l, ok := dt.CharLen(); ok {
+			if l, ok := dt.MaxLength(); ok {
 				runes := len(s)
 				if sk == types.JSONKind || sk == types.StringKind {
 					runes = utf8.RuneCountInString(s)
 				}
 				if runes > l {
-					return v, errCharLenConversion
+					return v, errMaxLengthConversion
 				}
 			}
 		}

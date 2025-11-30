@@ -6,7 +6,7 @@
                 "name": "email",
                 "type": {
                     "kind": "string",
-                    "charLen": 300
+                    "maxLength": 300
                 },
                 "readOptional": true
             },
@@ -81,7 +81,7 @@
                 "name": "first_name",
                 "type": {
                     "kind": "string",
-                    "charLen": 300
+                    "maxLength": 300
                 },
                 "readOptional": true
             },
@@ -89,7 +89,7 @@
                 "name": "last_name",
                 "type": {
                     "kind": "string",
-                    "charLen": 300
+                    "maxLength": 300
                 },
                 "readOptional": true
             },
@@ -129,7 +129,7 @@
                     "kind": "array",
                     "elementType": {
                         "kind": "string",
-                        "charLen": 300
+                        "maxLength": 300
                     }
                 },
                 "readOptional": true

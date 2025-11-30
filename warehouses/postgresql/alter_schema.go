@@ -209,19 +209,19 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
-		var charLen int
-		if l, ok := t.ByteLen(); ok {
-			charLen = l // we represent N bytes len as N chars len in PostgreSQL.
+		var maxLength int
+		if l, ok := t.MaxByteLength(); ok {
+			maxLength = l // we represent N bytes len as N chars len in PostgreSQL.
 		}
-		if l, ok := t.CharLen(); ok {
-			if charLen == 0 {
-				charLen = l
+		if l, ok := t.MaxLength(); ok {
+			if maxLength == 0 {
+				maxLength = l
 			} else {
-				charLen = min(l, charLen)
+				maxLength = min(l, maxLength)
 			}
 		}
-		if charLen > 0 {
-			return "character varying(" + strconv.Itoa(charLen) + ")"
+		if maxLength > 0 {
+			return "character varying(" + strconv.Itoa(maxLength) + ")"
 		}
 		return "character varying"
 	case types.BooleanKind:

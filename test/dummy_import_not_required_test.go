@@ -32,7 +32,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 			{Name: "favourite_movie", Type: types.String(), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "favorite_movie", Type: types.Object([]types.Property{
 				{Name: "title", Type: types.String(), ReadOptional: true},
 			}), ReadOptional: true},

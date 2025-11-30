@@ -35,7 +35,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Add properties to the profile schema.
 	schema := types.Object([]types.Property{
-		{Name: "email", Type: types.String().WithCharLen(254), ReadOptional: true},
+		{Name: "email", Type: types.String().WithMaxLength(254), ReadOptional: true},
 		{Name: "name", Type: types.String(), ReadOptional: true},
 		{Name: "phone_numbers", Type: types.Array(types.String()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
