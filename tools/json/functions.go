@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"slices"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/tools/json/internal/json"
@@ -117,12 +116,8 @@ func Indent(data []byte, prefix, indent string) ([]byte, error) {
 	if !Valid(data) {
 		return nil, ErrInvalidJSON
 	}
-	if len(strings.Trim(prefix, " \t")) != 0 {
-		panic("prefix must contain only spaces or tabs")
-	}
-	if len(strings.Trim(indent, " \t")) != 0 {
-		panic("indent must contain only spaces or tabs")
-	}
+	_ = jsontext.WithIndentPrefix(prefix)
+	_ = jsontext.WithIndent(indent)
 	var buf bytes.Buffer
 	err := jsonv1.Indent(&buf, TrimSpace(data), prefix, indent)
 	if err != nil {
