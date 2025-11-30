@@ -584,6 +584,7 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "n", Type: types.Map(types.String()), Nullable: true},
 		{Name: "o", Type: types.String().WithValues("foo", "boo", ""), Nullable: true},
 		{Name: "p", Type: types.String().WithValues("foo"), Nullable: true},
+		{Name: "q", Type: types.Array(types.Float(64)), Nullable: true},
 	})
 
 	tests := []struct {
@@ -898,9 +899,10 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "o", Operator: OpIsNotNull},
 					{Property: "o", Operator: OpIsEmpty},
 					{Property: "o", Operator: OpIsNotEmpty},
+					{Property: "q", Operator: OpContains, Values: []string{"1.34"}},
 				},
 			},
-			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o"},
+			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o", "q"},
 		},
 	}
 

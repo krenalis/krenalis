@@ -627,10 +627,11 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 				continue
 			}
 		}
-		var k = kind
-		if kind == types.ArrayKind {
-			k = p.Type.Elem().Kind()
+		t := p.Type
+		if t.Kind() == types.ArrayKind {
+			t = t.Elem()
 		}
+		k := t.Kind()
 		for _, value := range cond.Values {
 			if err := util.ValidateStringField("condition value", value, 60); err != nil {
 				return nil, err
@@ -644,7 +645,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			case types.UintKind:
 				_, valid = parseUint(value)
 			case types.FloatKind:
-				_, valid = parseFloat(value, p.Type.BitSize())
+				_, valid = parseFloat(value, t.BitSize())
 			case types.DecimalKind:
 				_, valid = parseDecimal(value)
 			case types.DateTimeKind:
