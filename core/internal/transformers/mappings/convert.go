@@ -265,67 +265,66 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errMaxConversion
 			}
 			return n, nil
-		} else {
-			var err error
-			var n int
-			switch sk {
-			case types.StringKind:
-				n, err = strconv.Atoi(v.(string))
-				if err != nil {
-					if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-						return v, errRangeConversion
-					}
-				}
-			case types.BooleanKind:
-				if v.(bool) {
-					n = 1
-				}
-				if dt.BitSize() != 8 {
-					err = errInvalidConversion
-				}
-			case types.IntKind:
-				if st.IsUnsigned() {
-					u := v.(uint)
-					if u > math.MaxInt64 {
-						return v, errRangeConversion
-					}
-					n = int(u)
-				} else {
-					n = v.(int)
-				}
-			case types.FloatKind:
-				n, err = floatToInt(v.(float64))
-				if err != nil {
-					return v, err
-				}
-			case types.DecimalKind:
-				n, err = decimalToInt(v.(decimal.Decimal))
-				if err != nil {
-					return v, err
-				}
-			case types.YearKind:
-				n = v.(int)
-			case types.JSONKind:
-				v := v.(json.Value)
-				n, err = v.Int()
-				if err == json.ErrRange {
+		}
+		var err error
+		var n int
+		switch sk {
+		case types.StringKind:
+			n, err = strconv.Atoi(v.(string))
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
 					return v, errRangeConversion
 				}
-			default:
+			}
+		case types.BooleanKind:
+			if v.(bool) {
+				n = 1
+			}
+			if dt.BitSize() != 8 {
 				err = errInvalidConversion
 			}
+		case types.IntKind:
+			if st.IsUnsigned() {
+				u := v.(uint)
+				if u > math.MaxInt64 {
+					return v, errRangeConversion
+				}
+				n = int(u)
+			} else {
+				n = v.(int)
+			}
+		case types.FloatKind:
+			n, err = floatToInt(v.(float64))
 			if err != nil {
-				return v, errInvalidConversion
+				return v, err
 			}
-			min, max := dt.IntRange()
-			if int64(n) < min {
-				return v, errMinConversion
+		case types.DecimalKind:
+			n, err = decimalToInt(v.(decimal.Decimal))
+			if err != nil {
+				return v, err
 			}
-			if int64(n) > max {
-				return v, errMaxConversion
+		case types.YearKind:
+			n = v.(int)
+		case types.JSONKind:
+			v := v.(json.Value)
+			n, err = v.Int()
+			if err == json.ErrRange {
+				return v, errRangeConversion
 			}
-			return n, nil
+		default:
+			err = errInvalidConversion
 		}
+		if err != nil {
+			return v, errInvalidConversion
+		}
+		min, max := dt.IntRange()
+		if int64(n) < min {
+			return v, errMinConversion
+		}
+		if int64(n) > max {
+			return v, errMaxConversion
+		}
+		return n, nil
 	case types.FloatKind:
 		var err error
 		var n float64
