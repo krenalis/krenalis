@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 
@@ -63,9 +63,9 @@ func (s *scanner) Scan(dest ...any) error {
 // normalize normalizes the value v read from Snowflake.
 func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	switch typ.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateText(name, typ, v)
+			return warehouses.ValidateString(name, typ, v)
 		}
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
@@ -127,9 +127,9 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		}
 	case types.JSONKind:
 		return warehouses.ValidateJSON(name, v)
-	case types.InetKind:
+	case types.IPKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateInet(name, v)
+			return warehouses.ValidateIP(name, v)
 		}
 	case types.ArrayKind:
 		if v, ok := v.(string); ok {

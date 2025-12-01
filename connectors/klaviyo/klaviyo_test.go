@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/testconnector"
+	"github.com/meergo/meergo/tools/json"
 )
 
 func TestSendEvents(t *testing.T) {
@@ -60,7 +60,7 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*connectors.Event{
 				{
-					DestinationAction: 927579274,
+					DestinationPipeline: 927579274,
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
 						"connectionId": 347182063,
@@ -157,7 +157,7 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*connectors.Event{
 				{
-					DestinationAction: 2023196674,
+					DestinationPipeline: 2023196674,
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
 						"connectionId": 347182063,

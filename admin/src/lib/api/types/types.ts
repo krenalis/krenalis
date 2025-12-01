@@ -12,8 +12,8 @@ type TypeKind =
 	| 'year'
 	| 'uuid'
 	| 'json'
-	| 'inet'
-	| 'text'
+	| 'ip'
+	| 'string'
 	| 'array'
 	| 'object'
 	| 'map';
@@ -35,7 +35,7 @@ interface Property {
 }
 
 type Type =
-	| TextType
+	| StringType
 	| BooleanType
 	| IntType
 	| UintType
@@ -47,16 +47,16 @@ type Type =
 	| YearType
 	| UUIDType
 	| JSONType
-	| InetType
+	| IPType
 	| ArrayType
 	| ObjectType
 	| MapType;
 
-interface TextType {
-	kind: 'text';
-	byteLen?: number;
-	charLen?: number;
-	regexp?: string;
+interface StringType {
+	kind: 'string';
+	maxByteLength?: number;
+	maxLength?: number;
+	pattern?: string;
 	values?: string[];
 }
 
@@ -118,11 +118,11 @@ interface UUIDType {
 
 interface JSONType {
 	kind: 'json';
-	charLen?: number;
+	maxLength?: number;
 }
 
-interface InetType {
-	kind: 'inet';
+interface IPType {
+	kind: 'ip';
 }
 
 interface ArrayType {
@@ -147,7 +147,7 @@ export default Type;
 export type {
 	Property,
 	ArrayType,
-	TextType,
+	StringType,
 	ObjectType,
 	IntType,
 	UintType,

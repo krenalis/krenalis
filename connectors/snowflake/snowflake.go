@@ -21,8 +21,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -345,14 +345,14 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 		if length < 0 {
 			return types.Type{}, "", errors.New("invalid TEXT length")
 		}
-		if length > types.MaxTextLen {
-			issue := fmt.Sprintf("Column %q is not available because its %d characters exceed the maximum length of %d", t.Name(), length, types.MaxTextLen)
+		if length > types.MaxStringLen {
+			issue := fmt.Sprintf("Column %q is not available because its %d characters exceed the maximum length of %d", t.Name(), length, types.MaxStringLen)
 			return types.Type{}, issue, nil
 		}
-		t := types.Text().WithCharLen(int(length))
+		t := types.String().WithMaxLength(int(length))
 		const maxBytesLen = 16_777_216
 		if length > maxBytesLen/4 {
-			t = t.WithByteLen(min(int(length*4), maxBytesLen))
+			t = t.WithMaxByteLength(min(int(length*4), maxBytesLen))
 		}
 		return t, "", nil
 	case "TIME":

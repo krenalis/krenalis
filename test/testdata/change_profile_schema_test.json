@@ -5,15 +5,15 @@
             {
                 "name": "email",
                 "type": {
-                    "kind": "text",
-                    "charLen": 300
+                    "kind": "string",
+                    "maxLength": 300
                 },
                 "readOptional": true
             },
             {
                 "name": "dummy_id",
                 "type": {
-                    "kind": "text"
+                    "kind": "string"
                 },
                 "readOptional": true
             },
@@ -25,21 +25,21 @@
                         {
                             "name": "id",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         },
                         {
                             "name": "idfa",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         },
                         {
                             "name": "push_token",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         }
@@ -55,21 +55,21 @@
                         {
                             "name": "id",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         },
                         {
                             "name": "idfa",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         },
                         {
                             "name": "push_token",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         }
@@ -80,23 +80,23 @@
             {
                 "name": "first_name",
                 "type": {
-                    "kind": "text",
-                    "charLen": 300
+                    "kind": "string",
+                    "maxLength": 300
                 },
                 "readOptional": true
             },
             {
                 "name": "last_name",
                 "type": {
-                    "kind": "text",
-                    "charLen": 300
+                    "kind": "string",
+                    "maxLength": 300
                 },
                 "readOptional": true
             },
             {
                 "name": "gender",
                 "type": {
-                    "kind": "text"
+                    "kind": "string"
                 },
                 "readOptional": true
             },
@@ -108,14 +108,14 @@
                         {
                             "name": "drink",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         },
                         {
                             "name": "fruit",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         }
@@ -128,8 +128,8 @@
                 "type": {
                     "kind": "array",
                     "elementType": {
-                        "kind": "text",
-                        "charLen": 300
+                        "kind": "string",
+                        "maxLength": 300
                     }
                 },
                 "readOptional": true
@@ -142,7 +142,7 @@
                         {
                             "name": "title",
                             "type": {
-                                "kind": "text"
+                                "kind": "string"
                             },
                             "readOptional": true
                         },
@@ -162,14 +162,14 @@
                                     {
                                         "name": "title",
                                         "type": {
-                                            "kind": "text"
+                                            "kind": "string"
                                         },
                                         "readOptional": true
                                     },
                                     {
                                         "name": "author",
                                         "type": {
-                                            "kind": "text"
+                                            "kind": "string"
                                         },
                                         "readOptional": true
                                     },
@@ -184,7 +184,7 @@
                                     {
                                         "name": "genre",
                                         "type": {
-                                            "kind": "text"
+                                            "kind": "string"
                                         },
                                         "readOptional": true
                                     }

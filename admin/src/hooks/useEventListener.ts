@@ -2,7 +2,7 @@ import { useEffect, useContext, useState, useRef } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
-import { Filter } from '../lib/api/types/action';
+import { Filter } from '../lib/api/types/pipeline';
 
 interface EventListenerEvent {
 	id: number;

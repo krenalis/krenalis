@@ -4,7 +4,7 @@
 
 package stripe
 
-import "github.com/meergo/meergo/core/types"
+import "github.com/meergo/meergo/tools/types"
 
 // https://docs.stripe.com/api/customers/object.
 //
@@ -17,24 +17,24 @@ import "github.com/meergo/meergo/core/types"
 var sourceSchema = types.Object([]types.Property{
 	{
 		Name:        "id",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Description: "Identifier",
 	},
 	{
 		Name:        "name",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Name",
 	},
 	{
 		Name:        "email",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Account email",
 	},
 	{
 		Name:        "description",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Description",
 	},
@@ -52,25 +52,25 @@ var sourceSchema = types.Object([]types.Property{
 	},
 	{
 		Name:        "phone",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Phone",
 	},
 	{
 		Name:        "preferred_locales",
-		Type:        types.Array(types.Text()),
+		Type:        types.Array(types.String()),
 		Nullable:    true,
 		Description: "Locales",
 	},
 	{
 		Name:        "currency",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Currency",
 	},
 	{
 		Name:        "invoice_prefix",
-		Type:        types.Text().WithByteLen(12),
+		Type:        types.String().WithMaxByteLength(12),
 		Nullable:    true,
 		Description: "Invoice prefix",
 	},
@@ -83,13 +83,13 @@ var sourceSchema = types.Object([]types.Property{
 	},
 	{
 		Name:        "tax_exempt",
-		Type:        types.Text().WithValues("none", "exempt", "reverse"),
+		Type:        types.String().WithValues("none", "exempt", "reverse"),
 		Nullable:    true,
 		Description: "Tax status",
 	},
 	{
 		Name:        "metadata",
-		Type:        types.Map(types.Text()),
+		Type:        types.Map(types.String()),
 		Description: "Metadata",
 	},
 	{
@@ -124,37 +124,37 @@ var sourceSchema = types.Object([]types.Property{
 var sourceAddress = types.Object([]types.Property{
 	{
 		Name:        "country",
-		Type:        types.Text(), // don't limit to 2 chars: ISO 3166-1 alpha-2 is recommended but not enforced by Stripe.
+		Type:        types.String(), // don't limit to 2 chars: ISO 3166-1 alpha-2 is recommended but not enforced by Stripe.
 		Nullable:    true,
 		Description: "Country",
 	},
 	{
 		Name:        "line1",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Address line 1",
 	},
 	{
 		Name:        "line2",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Address line 2",
 	},
 	{
 		Name:        "postal_code",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Postal code",
 	},
 	{
 		Name:        "city",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "City",
 	},
 	{
 		Name:        "state",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "State/Province",
 	},
@@ -163,7 +163,7 @@ var sourceAddress = types.Object([]types.Property{
 var sourceShipping = types.Object([]types.Property{
 	{
 		Name:        "name",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Description: "Customer name",
 	},
 	{
@@ -173,7 +173,7 @@ var sourceShipping = types.Object([]types.Property{
 	},
 	{
 		Name:        "phone",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Phone number",
 	},
@@ -182,12 +182,12 @@ var sourceShipping = types.Object([]types.Property{
 var sourceDiscount = types.Object([]types.Property{
 	{
 		Name:        "id",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Description: "Discount ID",
 	},
 	{
 		Name:        "checkout_session",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Checkout session for coupon",
 	},
@@ -204,13 +204,13 @@ var sourceDiscount = types.Object([]types.Property{
 	},
 	{
 		Name:        "invoice",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Applied invoice",
 	},
 	{
 		Name:        "invoice_item",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Invoice item ID",
 	},
@@ -221,13 +221,13 @@ var sourceDiscount = types.Object([]types.Property{
 	},
 	{
 		Name:        "subscription",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Subscription ID",
 	},
 	{
 		Name:        "subscription_item",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Subscription item ID",
 	},
@@ -236,12 +236,12 @@ var sourceDiscount = types.Object([]types.Property{
 var sourceCoupon = types.Object([]types.Property{
 	{
 		Name:        "name",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Description: "Name",
 	},
 	{
 		Name:        "id",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Description: "ID",
 	},
 	{
@@ -257,7 +257,7 @@ var sourceCoupon = types.Object([]types.Property{
 	},
 	{
 		Name:        "duration",
-		Type:        types.Text().WithValues("forever", "once", "repeating"),
+		Type:        types.String().WithValues("forever", "once", "repeating"),
 		Description: "Duration",
 	},
 	{
@@ -284,7 +284,7 @@ var sourceCoupon = types.Object([]types.Property{
 	},
 	{
 		Name:        "currency",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Description: "Currency",
 	},
 	{
@@ -295,7 +295,7 @@ var sourceCoupon = types.Object([]types.Property{
 	},
 	{
 		Name:        "metadata",
-		Type:        types.Map(types.Text()),
+		Type:        types.Map(types.String()),
 		Description: "Metadata",
 	},
 	{
@@ -311,13 +311,13 @@ var sourceInvoiceSettings = types.Object([]types.Property{
 		Type: types.Object([]types.Property{
 			{
 				Name:        "amount_tax_display",
-				Type:        types.Text(),
+				Type:        types.String(),
 				Nullable:    true,
 				Description: "Amount tax display",
 			},
 			{
 				Name:        "template",
-				Type:        types.Text(),
+				Type:        types.String(),
 				Nullable:    true,
 				Description: "Template",
 			},
@@ -327,7 +327,7 @@ var sourceInvoiceSettings = types.Object([]types.Property{
 	},
 	{
 		Name:        "footer",
-		Type:        types.Text(),
+		Type:        types.String(),
 		Nullable:    true,
 		Description: "Footer",
 	},
@@ -336,12 +336,12 @@ var sourceInvoiceSettings = types.Object([]types.Property{
 		Type: types.Array(types.Object([]types.Property{
 			{
 				Name:        "name",
-				Type:        types.Text().WithCharLen(40),
+				Type:        types.String().WithMaxLength(40),
 				Description: "Field name",
 			},
 			{
 				Name:        "value",
-				Type:        types.Text().WithByteLen(140),
+				Type:        types.String().WithMaxByteLength(140),
 				Description: "Field value",
 			},
 		})),

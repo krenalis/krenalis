@@ -65,7 +65,7 @@ const ConnectorSettings = () => {
 
 	useEffect(() => {
 		if (newConnectionID > 0) {
-			redirect(`connections/${newConnectionID}/actions?new=true`);
+			redirect(`connections/${newConnectionID}/pipelines?new=true`);
 		}
 	}, [newConnectionID]);
 
@@ -123,7 +123,7 @@ const ConnectorSettings = () => {
 		fetchData();
 	}, []);
 
-	const onActionClick = async (eventName: string, confirmationButtonIndex?: number) => {
+	const onPipelineClick = async (eventName: string, confirmationButtonIndex?: number) => {
 		let confirmationButton: FeedbackButtonRef | null = null;
 		if (confirmationButtonIndex != null) {
 			confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
@@ -249,7 +249,7 @@ const ConnectorSettings = () => {
 					key={b.event}
 					variant={b.variant}
 					onClick={async () => {
-						await onActionClick(b.event, i);
+						await onPipelineClick(b.event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
@@ -265,7 +265,7 @@ const ConnectorSettings = () => {
 			<SlButton
 				className='connector-settings__save-button'
 				variant='primary'
-				onClick={() => onActionClick('save')}
+				onClick={() => onPipelineClick('save')}
 			>
 				Add
 			</SlButton>

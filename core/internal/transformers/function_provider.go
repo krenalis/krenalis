@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // FunctionNotExistError is returned when a function does not exist.

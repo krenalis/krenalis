@@ -7,11 +7,11 @@ import {
 	Strategy,
 	SendingMode,
 } from '../api/types/connection';
-import { Action, ActionInfo, ActionTarget, ActionType } from '../api/types/action';
+import { Pipeline, PipelineInfo, PipelineTarget, PipelineType } from '../api/types/pipeline';
 import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
 import { ConnectorTarget } from '../api/types/connector';
-import { TransformedEventType } from './action';
+import { TransformedEventType } from './pipeline';
 
 interface ConnectionStatus {
 	text: string;
@@ -23,7 +23,7 @@ class TransformedConnection {
 	name: string;
 	connector: TransformedConnector;
 	role: ConnectionRole;
-	actionsCount: number;
+	pipelinesCount: number;
 	health: Health;
 	storage: number;
 	compression: Compression;
@@ -32,9 +32,9 @@ class TransformedConnection {
 	status: ConnectionStatus;
 	description: string;
 	linkedFiles?: TransformedConnection[];
-	actionTypes?: ActionType[];
-	actions?: Action[];
-	actionsInfo?: ActionInfo[];
+	pipelineTypes?: PipelineType[];
+	pipelines?: Pipeline[];
+	pipelinesInfo?: PipelineInfo[];
 	eventTypes?: TransformedEventType[];
 	linkedConnections?: number[];
 
@@ -43,7 +43,7 @@ class TransformedConnection {
 		name: string,
 		connector: TransformedConnector,
 		role: ConnectionRole,
-		actionsCount: number,
+		pipelinesCount: number,
 		health: Health,
 		storage: number,
 		compression: Compression,
@@ -52,9 +52,9 @@ class TransformedConnection {
 		status: ConnectionStatus,
 		description: string,
 		linkedFiles?: TransformedConnection[],
-		actionTypes?: ActionType[],
-		actions?: Action[],
-		actionsInfo?: ActionInfo[],
+		pipelineTypes?: PipelineType[],
+		pipelines?: Pipeline[],
+		pipelinesInfo?: PipelineInfo[],
 		eventTypes?: TransformedEventType[],
 		linkedConnections?: number[],
 	) {
@@ -62,7 +62,7 @@ class TransformedConnection {
 		this.name = name;
 		this.connector = connector;
 		this.role = role;
-		this.actionsCount = actionsCount;
+		this.pipelinesCount = pipelinesCount;
 		this.health = health;
 		this.storage = storage == null ? 0 : storage;
 		this.compression = compression;
@@ -71,9 +71,9 @@ class TransformedConnection {
 		this.status = status;
 		this.description = description;
 		this.linkedFiles = linkedFiles;
-		this.actionTypes = actionTypes == null ? [] : actionTypes;
-		this.actions = actions == null ? [] : actions;
-		this.actionsInfo = actionsInfo;
+		this.pipelineTypes = pipelineTypes == null ? [] : pipelineTypes;
+		this.pipelines = pipelines == null ? [] : pipelines;
+		this.pipelinesInfo = pipelinesInfo;
 		this.eventTypes = eventTypes == null ? [] : eventTypes;
 		if (linkedConnections) {
 			this.linkedConnections = linkedConnections;
@@ -133,19 +133,19 @@ class TransformedConnection {
 	}
 
 	relations(connections: TransformedConnection[]): ('dwh-user' | 'dwh-event' | number)[] {
-		let hasUsersActions = this.actionsInfo.some((a) => {
+		let hasUsersPipelines = this.pipelinesInfo.some((p) => {
 			if (this.isSDK || this.isWebhook) {
-				return a.target === 'User' && a.enabled;
+				return p.target === 'User' && p.enabled;
 			}
-			return a.target === 'User' && a.enabled && a.schedulePeriod != null;
+			return p.target === 'User' && p.enabled && p.schedulePeriod != null;
 		});
-		let hasEventActions = this.actionsInfo.some((a) => a.target === 'Event' && a.enabled);
+		let hasEventPipelines = this.pipelinesInfo.some((p) => p.target === 'Event' && p.enabled);
 
 		const linkedTo: ('dwh-user' | 'dwh-event' | number)[] = [];
-		if (hasUsersActions) {
+		if (hasUsersPipelines) {
 			linkedTo.push('dwh-user');
 		}
-		if (this.isSource && hasEventActions) {
+		if (this.isSource && hasEventPipelines) {
 			linkedTo.push('dwh-event');
 		}
 		if (this.linkedConnections?.length > 0) {
@@ -154,11 +154,11 @@ class TransformedConnection {
 					...this.linkedConnections.filter((id) =>
 						connections
 							.find((conn) => conn.id === id)
-							?.actionsInfo.some((a) => a.target === 'Event' && a.enabled),
+							?.pipelinesInfo.some((p) => p.target === 'Event' && p.enabled),
 					),
 				);
 			} else {
-				if (this.actionsInfo.some((a) => a.target === 'Event' && a.enabled))
+				if (this.pipelinesInfo.some((p) => p.target === 'Event' && p.enabled))
 					linkedTo.push(...this.linkedConnections);
 			}
 		}
@@ -166,22 +166,22 @@ class TransformedConnection {
 	}
 }
 
-const getActionTypeFromConnection = (
+const getPipelineTypeFromConnection = (
 	connection: TransformedConnection,
-	target: ActionTarget,
+	target: PipelineTarget,
 	eventType: string | null,
-): ActionType | undefined => {
-	let actionType: ActionType | undefined;
+): PipelineType | undefined => {
+	let pipelineType: PipelineType | undefined;
 	if (target === 'Event') {
 		if (eventType == null) {
-			actionType = connection.actionTypes!.find((t) => t.target === 'Event' && t.eventType === null);
+			pipelineType = connection.pipelineTypes!.find((t) => t.target === 'Event' && t.eventType === null);
 		} else {
-			actionType = connection.actionTypes!.find((t) => t.eventType === eventType);
+			pipelineType = connection.pipelineTypes!.find((t) => t.eventType === eventType);
 		}
 	} else {
-		actionType = connection.actionTypes!.find((t) => t.target === target);
+		pipelineType = connection.pipelineTypes!.find((t) => t.target === target);
 	}
-	return actionType;
+	return pipelineType;
 };
 
 const getConnectionDescription = (connection: Connection, connector: TransformedConnector): string => {
@@ -234,7 +234,7 @@ const getFileStorageConnections = (
 
 export default TransformedConnection;
 export {
-	getActionTypeFromConnection,
+	getPipelineTypeFromConnection,
 	getConnectionDescription,
 	getConnectionFullConnector,
 	getConnectionStatus,

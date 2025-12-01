@@ -1,0 +1,109 @@
+# This is the Docker Compose file that runs the latest released image of Meergo.
+#
+# Keep this file synchronized with the other Compose file, "compose.yaml," which
+# builds and runs Meergo from the repository.
+
+services:
+  meergo:
+    image: meergocdp/meergo:v0.12.0
+    command: -init-db-if-empty -init-docker-member
+    restart: on-failure
+    ports:
+      - 2022:2022
+    environment:
+      # Sets the telemetry level in Meergo. You can set this to "none" to
+      # completely disable telemetry. Default is "all". See the environment
+      # variables documentation for more details.
+      MEERGO_TELEMETRY_LEVEL:
+
+      # List of base URLs (comma-separated) from which Meergo retrieves external
+      # assets (as icons) related to connector and data warehouse brands.
+      MEERGO_EXTERNAL_ASSETS_URLS: https://assets.meergo.com/
+
+      # HubSpot.
+      # Set these environment variables to connect to your HubSpot app when
+      # running Meergo with Docker Compose. Otherwise, they can be left blank.
+      MEERGO_OAUTH_HUBSPOT_CLIENT_ID:
+      MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET:
+
+      # Mailchimp.
+      # Set these environment variables to connect to your Mailchimp app when
+      # running Meergo with Docker Compose. Otherwise, they can be left blank.
+      MEERGO_OAUTH_MAILCHIMP_CLIENT_ID:
+      MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET:
+
+      # This Docker Compose file is set up so that Meergo connects to the
+      # PostgreSQL database started via Docker Compose, which has already been
+      # initialized to work with Meergo. However, if you would like to use any
+      # other PostgreSQL instance (pre-initialized with the Meergo database),
+      # you can refer to it here. In case that such instance runs locally, you
+      # can refer to its host with 'host.docker.internal'.
+      #
+      # Note that these settings are not related to the data warehouse, where
+      # user data and events are stored, which is instead configured using the
+      # Meergo Admin console when creating a new workspace.
+      MEERGO_DB_HOST: db
+      MEERGO_DB_PORT: 5432
+      MEERGO_DB_USERNAME: meergo
+      MEERGO_DB_PASSWORD: meergo
+      MEERGO_DB_DATABASE: meergo
+      MEERGO_DB_SCHEMA:
+
+      # These settings configure Meergo to run optimally within Docker, so it is
+      # not recommended that you change them.
+      MEERGO_HTTP_HOST: meergo
+      MEERGO_HTTP_PORT: 2022
+      MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:2022/
+      MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
+      MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
+      MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
+      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/storage
+      # MEERGO_TRANSFORMERS_LOCAL_SUDO_USER: transformeruser # TODO: temporarily disabled until https://github.com/meergo/meergo/issues/2019 is resolved.
+
+      # This configures the File System connector to access the mounted directory
+      # via Docker. If you change these settings, also change the volumes
+      # settings.
+      MEERGO_CONNECTOR_FILESYSTEM_ROOT: /var/meergo/storage
+      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
+
+    # If you change the volumes settings, also change the File System env vars
+    # settings to point to the mount point.
+    volumes:
+      - ./storage:/var/meergo/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      warehouse:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: meergo
+      POSTGRES_PASSWORD: meergo
+      POSTGRES_DB: meergo
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meergo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  warehouse:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+      POSTGRES_DB: warehouse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - warehouse:/var/lib/postgresql/data
+
+volumes:
+  db:
+  warehouse:

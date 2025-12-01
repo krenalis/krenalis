@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/testimages"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/go-cmp/cmp"
@@ -36,7 +36,7 @@ func Test_Merge(t *testing.T) {
 		MeergoType  types.Type
 		MeergoValue any
 	}{
-		{types.Text(), "foo"},
+		{types.String(), "foo"},
 		{types.Boolean(), true},
 		{types.Int(8), 103},
 		{types.Int(16), 8030},
@@ -57,7 +57,7 @@ func Test_Merge(t *testing.T) {
 		{types.Year(), 2014},
 		{types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
 		{types.JSON(), json.Value(`{"foo":"boo"}`)},
-		{types.Inet(), "127.0.0.1"},
+		{types.IP(), "127.0.0.1"},
 		{types.Array(types.Boolean()), []any{true, false}},
 		{types.Array(types.Int(8)), []any{5, -2, 12}},
 		{types.Array(types.Int(16)), []any{32057, -9381, 1623}},
@@ -77,11 +77,11 @@ func Test_Merge(t *testing.T) {
 		{types.Array(types.Year()), []any{1, 1970, 2020, 9999}},
 		{types.Array(types.UUID()), []any{"4d92d698-687d-4447-b34f-6b29d74a9730", "4d92d698-687d-4447-b34f-6b29d74a9730"}},
 		{types.Array(types.JSON()), []any{json.Value(`{"foo":"boo"}`), json.Value(`null`)}},
-		{types.Array(types.Inet()), []any{"127.0.0.1", "2001:db8:85a3::8a2e:370:7334"}},
-		{types.Array(types.Text()), []any{"foo", "boo"}},
+		{types.Array(types.IP()), []any{"127.0.0.1", "2001:db8:85a3::8a2e:370:7334"}},
+		{types.Array(types.String()), []any{"foo", "boo"}},
 		{types.Map(types.Int(32)), map[string]any{"boo": 15, "foo": 33}},
 		{types.Map(types.JSON()), map[string]any{"boo": json.Value(`5`), "foo": json.Value(`{"a":3,"b":5}`)}},
-		{types.Map(types.Text()), map[string]any{"boo": "hello", "foo": "world"}},
+		{types.Map(types.String()), map[string]any{"boo": "hello", "foo": "world"}},
 	}
 
 	table := warehouses.Table{
@@ -305,7 +305,7 @@ func Test_rowEncoder(t *testing.T) {
 		ok       bool
 	}{
 		{
-			columns:  []warehouses.Column{{Name: "c", Type: types.Text()}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.String()}},
 			rows:     [][]any{{"boo"}, {"\x00foo"}},
 			expected: [][]any{{"boo"}, {"foo"}},
 			ok:       true,
@@ -323,7 +323,7 @@ func Test_rowEncoder(t *testing.T) {
 			ok:       true,
 		},
 		{
-			columns:  []warehouses.Column{{Name: "c", Type: types.Array(types.Text())}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.Array(types.String())}},
 			rows:     [][]any{{[]any{"boo", "foo"}}, {[]any{"\x00foo", "boo", "\x00"}}},
 			expected: [][]any{{[]any{"boo", "foo"}}, {[]any{"foo", "boo", ""}}},
 			ok:       true,
@@ -341,7 +341,7 @@ func Test_rowEncoder(t *testing.T) {
 			ok:       true,
 		},
 		{
-			columns:  []warehouses.Column{{Name: "a", Type: types.Text()}, {Name: "b", Type: types.Float(32)}, {Name: "c", Type: types.Map(types.Text())}},
+			columns:  []warehouses.Column{{Name: "a", Type: types.String()}, {Name: "b", Type: types.Float(32)}, {Name: "c", Type: types.Map(types.String())}},
 			rows:     [][]any{{"\x00boo", 1.234, map[string]any{"boo": ""}}, {"\x00", -73.55, map[string]any{"boo": "\x00foo", "hello\x00 world": "\x00"}}},
 			expected: [][]any{{"boo", 1.234, json.Value(`{"boo":""}`)}, {"", -73.55, json.Value(`{"boo":"foo","hello world":""}`)}},
 			ok:       true,
@@ -381,7 +381,7 @@ func Test_newRowEncoder_noColumns(t *testing.T) {
 // Test_rowEncoder_mapZeroBytes tests map encoding and ensures embedded zero
 // bytes are stripped from string values.
 func Test_rowEncoder_mapZeroBytes(t *testing.T) {
-	columns := []warehouses.Column{{Name: "m", Type: types.Map(types.Text())}}
+	columns := []warehouses.Column{{Name: "m", Type: types.Map(types.String())}}
 	enc, ok := newRowEncoder(columns)
 	if !ok {
 		t.Fatal("expected encoder")

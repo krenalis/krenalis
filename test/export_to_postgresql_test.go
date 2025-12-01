@@ -8,8 +8,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestExportToPostgreSQL(t *testing.T) {
@@ -25,19 +25,19 @@ func TestExportToPostgreSQL(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "firstName", Type: types.String(), Nullable: true},
+				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "gender", Type: types.Text(), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -48,7 +48,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID)
+		exec := c.ExecutePipeline(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -69,8 +69,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 	{
 		schema, issues := c.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "full_name", Type: types.Text()},
+			{Name: "email", Type: types.String()},
+			{Name: "full_name", Type: types.String()},
 		})
 		if !types.Equal(expectedSchema, schema) {
 			t.Fatalf("\nexpected:  %#v\ngot:        %#v", expectedSchema.Properties().Slice(), schema.Properties().Slice())
@@ -81,19 +81,19 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportAction := c.CreateAction(pgsql, "User", meergotester.ActionToSet{
+	exportPipeline := c.CreatePipeline(pgsql, "User", meergotester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
 		TableKey:  "email",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
-			{Name: "full_name", Type: types.Text()},
+			{Name: "email", Type: types.String(), CreateRequired: true},
+			{Name: "full_name", Type: types.String()},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -102,7 +102,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(exportAction)
+	exec := c.ExecutePipeline(exportPipeline)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.
@@ -115,18 +115,18 @@ func TestExportToPostgreSQL(t *testing.T) {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
 	}
 
-	// Update the action to export the empty string for full_name.
-	c.UpdateAction(exportAction, meergotester.ActionToSet{
+	// Update the pipeline to export the empty string for full_name.
+	c.UpdatePipeline(exportPipeline, meergotester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
 		TableKey:  "email",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
-			{Name: "full_name", Type: types.Text()},
+			{Name: "email", Type: types.String(), CreateRequired: true},
+			{Name: "full_name", Type: types.String()},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -135,7 +135,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec = c.ExecuteAction(exportAction)
+	exec = c.ExecutePipeline(exportPipeline)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.

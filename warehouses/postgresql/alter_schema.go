@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"
@@ -208,20 +208,20 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 // specified in the file 'core/datastore/README.md',
 func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
-		var charLen int
-		if l, ok := t.ByteLen(); ok {
-			charLen = l // we represent N bytes len as N chars len in PostgreSQL.
+	case types.StringKind:
+		var maxLength int
+		if l, ok := t.MaxByteLength(); ok {
+			maxLength = l // we represent N bytes len as N chars len in PostgreSQL.
 		}
-		if l, ok := t.CharLen(); ok {
-			if charLen == 0 {
-				charLen = l
+		if l, ok := t.MaxLength(); ok {
+			if maxLength == 0 {
+				maxLength = l
 			} else {
-				charLen = min(l, charLen)
+				maxLength = min(l, maxLength)
 			}
 		}
-		if charLen > 0 {
-			return "character varying(" + strconv.Itoa(charLen) + ")"
+		if maxLength > 0 {
+			return "character varying(" + strconv.Itoa(maxLength) + ")"
 		}
 		return "character varying"
 	case types.BooleanKind:
@@ -273,7 +273,7 @@ func typeToPostgresType(t types.Type) string {
 		return "uuid"
 	case types.JSONKind:
 		return "jsonb"
-	case types.InetKind:
+	case types.IPKind:
 		return "inet"
 	case types.ArrayKind:
 		typ := typeToPostgresType(t.Elem())

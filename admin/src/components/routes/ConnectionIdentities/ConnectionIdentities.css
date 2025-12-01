@@ -46,7 +46,7 @@
 	margin-left: 0;
 }
 
-.connection-identities .connection-identities__action {
+.connection-identities .connection-identities__pipeline {
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
 }

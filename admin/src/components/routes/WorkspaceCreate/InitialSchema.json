@@ -5,8 +5,8 @@
 			"name": "customer_id",
 			"readOptional": true,
 			"type": {
-				"charLen": 36,
-				"kind": "text"
+				"maxLength": 36,
+				"kind": "string"
 			},
 			"description": "Customer ID"
 		},
@@ -14,8 +14,8 @@
 			"name": "first_name",
 			"readOptional": true,
 			"type": {
-				"charLen": 100,
-				"kind": "text"
+				"maxLength": 100,
+				"kind": "string"
 			},
 			"description": "First name"
 		},
@@ -23,8 +23,8 @@
 			"name": "last_name",
 			"readOptional": true,
 			"type": {
-				"charLen": 100,
-				"kind": "text"
+				"maxLength": 100,
+				"kind": "string"
 			},
 			"description": "Last name"
 		},
@@ -32,8 +32,8 @@
 			"name": "email",
 			"readOptional": true,
 			"type": {
-				"charLen": 254,
-				"kind": "text"
+				"maxLength": 254,
+				"kind": "string"
 			},
 			"description": "Email"
 		},
@@ -41,8 +41,8 @@
 			"name": "phone_number",
 			"readOptional": true,
 			"type": {
-				"charLen": 20,
-				"kind": "text"
+				"maxLength": 20,
+				"kind": "string"
 			},
 			"description": "Phone number"
 		},
@@ -58,7 +58,7 @@
 			"name": "gender",
 			"readOptional": true,
 			"type": {
-				"kind": "text"
+				"kind": "string"
 			},
 			"description": "Gender"
 		},
@@ -72,8 +72,8 @@
 						"name": "street",
 						"readOptional": true,
 						"type": {
-							"charLen": 255,
-							"kind": "text"
+							"maxLength": 255,
+							"kind": "string"
 						},
 						"description": "Street"
 					},
@@ -81,8 +81,8 @@
 						"name": "city",
 						"readOptional": true,
 						"type": {
-							"charLen": 100,
-							"kind": "text"
+							"maxLength": 100,
+							"kind": "string"
 						},
 						"description": "City"
 					},
@@ -90,8 +90,8 @@
 						"name": "postal_code",
 						"readOptional": true,
 						"type": {
-							"charLen": 20,
-							"kind": "text"
+							"maxLength": 20,
+							"kind": "string"
 						},
 						"description": "Postal code"
 					},
@@ -99,8 +99,8 @@
 						"name": "country",
 						"readOptional": true,
 						"type": {
-							"charLen": 2,
-							"kind": "text"
+							"maxLength": 2,
+							"kind": "string"
 						},
 						"description": "Country"
 					}
@@ -128,7 +128,7 @@
 						"type": {
 							"kind": "array",
 							"elementType": {
-								"kind": "text"
+								"kind": "string"
 							}
 						},
 						"description": "Preferences categories"
@@ -137,8 +137,8 @@
 						"name": "language",
 						"readOptional": true,
 						"type": {
-							"kind": "text",
-							"charLen": 2
+							"kind": "string",
+							"maxLength": 2
 						},
 						"description": "Language"
 					}

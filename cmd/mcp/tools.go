@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	_core "github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/tools/errors"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -185,14 +185,14 @@ var tools = []server.ServerTool{
 					" A connection with role 'source', depending on its type and the external service it's connected to, can import user data and events into the data warehouse, and send events to a destination connection."+
 					" A connection with role 'destination', depending on its type and the external service it's connected to, can export profiles read from the data warehouse, and send events received from a source connection to an app."+
 					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
-					" A connection performs its operations (importing, sending, and exporting data) through 'actions'."+
-					" Each connection can have zero, one, or multiple 'actions'."+
+					" A connection performs its operations (importing, sending, and exporting data) through 'pipelines'."+
+					" Each connection can have zero, one, or multiple 'pipelines'."+
 					" API connections interface with external applications outside Meergo."+
 					" Database connections interface with external databases outside Meergo."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
 					" SDK connections receive data (events and user data) from SDKs, browsers, and server-side applications."+
 					" Webhook connections receive data (events and user data) from applications via a webhook."+
-					" Regardless of the language, use the English terms Connection, Source, Destination and Action without translating them, as they are key concepts in the software.",
+					" Regardless of the language, use the English terms Connection, Source, Destination and Pipeline without translating them, as they are key concepts in the software.",
 			),
 			mcp.WithTitleAnnotation("Information about workspace connections."),
 			mcp.WithReadOnlyHintAnnotation(true),
@@ -207,12 +207,12 @@ var tools = []server.ServerTool{
 			var info []any
 			for _, c := range ws.Connections() {
 				info = append(info, map[string]any{
-					"id":            c.ID,
-					"name":          c.Name,
-					"connector":     c.Connector,
-					"connectorType": c.ConnectorType,
-					"role":          c.Role,
-					"actionsCount":  c.ActionsCount,
+					"id":             c.ID,
+					"name":           c.Name,
+					"connector":      c.Connector,
+					"connectorType":  c.ConnectorType,
+					"role":           c.Role,
+					"pipelinesCount": c.PipelinesCount,
 				})
 			}
 			encoded, err := json.Marshal(info)

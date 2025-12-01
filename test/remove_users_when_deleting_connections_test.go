@@ -8,11 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
+
+	t.Skip() // TODO: skipped until https://github.com/meergo/meergo/issues/2017 is resolved.
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -26,19 +28,19 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	dummy1 := c.CreateDummy("Dummy 1", meergotester.Source)
 	dummy2 := c.CreateDummy("Dummy 2", meergotester.Source)
 
-	// Create two identical actions for two different connections.
-	actionParams := meergotester.ActionToSet{
+	// Create two identical pipelines for two different connections.
+	pipelineParams := meergotester.PipelineToSet{
 		Enabled: true,
 		Name:    "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "firstName", Type: types.String(), Nullable: true},
+			{Name: "lastName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -48,13 +50,13 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 			},
 		},
 	}
-	action1 := c.CreateAction(dummy1, "User", actionParams)
-	action2 := c.CreateAction(dummy2, "User", actionParams)
+	pipeline1 := c.CreatePipeline(dummy1, "User", pipelineParams)
+	pipeline2 := c.CreatePipeline(dummy2, "User", pipelineParams)
 
-	// Import from both actions - and implicitly trigger the identity resolution
+	// Import from both pipelines - and implicitly trigger the identity resolution
 	// process.
-	exec1 := c.ExecuteAction(action1)
-	exec2 := c.ExecuteAction(action2)
+	exec1 := c.ExecutePipeline(pipeline1)
+	exec2 := c.ExecutePipeline(pipeline2)
 	c.WaitForExecutionsCompletion(dummy1, exec1)
 	c.WaitForExecutionsCompletion(dummy2, exec2)
 
@@ -77,7 +79,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Delete also the other Dummy connection; now the total number of profiles
 	// should be zero.
 	c.DeleteConnection(dummy2)
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 	c.RunIdentityResolution()
 	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 0 {

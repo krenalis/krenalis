@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/meergo/analytics-go"
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestDispatchEventsToDummy(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	dummyID := c.CreateDummyWithSettings("Dummy", meergotester.Destination, meergotester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
 	})
-	c.CreateEventAction(dummyID, "send_identity", meergotester.ActionToSet{
+	c.CreateEventPipeline(dummyID, "send_identity", meergotester.PipelineToSet{
 		Name:    "Send events",
 		Enabled: true,
 		Transformation: &meergotester.Transformation{
@@ -55,7 +55,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 			},
 		},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
+			{Name: "email", Type: types.String(), CreateRequired: true},
 		}),
 	})
 

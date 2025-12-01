@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestImportWithTransformation(t *testing.T) {
@@ -27,19 +27,19 @@ func TestImportWithTransformation(t *testing.T) {
 
 	c.UpdateIdentityResolution(false, []string{"email"})
 
-	// Create an action with a transformation function which imports users, then
+	// Create a pipeline with a transformation function which imports users, then
 	// execute it.
-	importUsersID := c.CreateAction(dummyID, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummyID, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "firstName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "gender", Type: types.Text(), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "gender", Type: types.String(), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
@@ -60,7 +60,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummyID, exec)
 
 	c.RunIdentityResolution()

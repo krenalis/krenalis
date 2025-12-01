@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 //go:embed documentation/source/overview.md
@@ -169,9 +169,9 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Nullable:    true,
 			Description: r.Label,
 		}
-		if typ.Kind() == types.TextKind {
+		if typ.Kind() == types.StringKind {
 			if len(r.Options) == 0 {
-				property.Type.WithCharLen(65536)
+				property.Type.WithMaxLength(65536)
 			} else {
 				var n int
 				for _, option := range r.Options {
@@ -471,7 +471,7 @@ func propertyType(t string) types.Type {
 	case "datetime":
 		return types.DateTime()
 	case "enumeration":
-		return types.Text()
+		return types.String()
 	case "number":
 		// HubSpot has no limitations on precision and scale.
 		return types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
@@ -479,7 +479,7 @@ func propertyType(t string) types.Type {
 		// These types are for internal use and are not visible in HubSpot.
 		return types.Type{}
 	case "string", "phone_number":
-		return types.Text()
+		return types.String()
 	}
 	return types.Type{}
 }

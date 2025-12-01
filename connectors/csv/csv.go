@@ -18,9 +18,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 //go:embed documentation/source/overview.md
@@ -130,7 +130,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records conne
 					name := columnNumberToName(i + 1)
 					columns[i].Name = name
 				}
-				columns[i].Type = types.Text()
+				columns[i].Type = types.String()
 			}
 			err = records.Columns(columns)
 			if err != nil {
@@ -280,7 +280,7 @@ func toString(v any, t types.Type) string {
 		return ""
 	}
 	switch k := t.Kind(); k {
-	case types.TextKind, types.UUIDKind, types.InetKind:
+	case types.StringKind, types.UUIDKind, types.IPKind:
 		return v.(string)
 	case types.BooleanKind:
 		return strconv.FormatBool(v.(bool))

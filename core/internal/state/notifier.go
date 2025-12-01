@@ -23,9 +23,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/json"
 )
 
 const maxIDLen = len("@9223372036854775807")

@@ -16,15 +16,15 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/connections/apiwriter"
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // InvalidEventError is returned by the PreviewSendEvent method when an event
@@ -331,11 +331,11 @@ func (api *API) WaitTime(pattern string) (time.Duration, error) {
 }
 
 // Writer returns a Writer for creating and updating users or groups in the API.
-// outSchema is the output schema of the action, exportMode is the export mode,
-// and target is the target of the action. ack is the function that will receive
+// outSchema is the output schema of the pipeline, exportMode is the export mode,
+// and target is the target of the pipeline. ack is the function that will receive
 // the acknowledgments and cannot be nil.
 //
-// If the action's output schema does not align with the API's destination
+// If the pipeline's output schema does not align with the API's destination
 // schema, it returns a *schemas.Error indicating the mismatch.
 func (api *API) Writer(ctx context.Context, outSchema types.Type, exportMode state.ExportMode, target state.Target, ack AckFunc) (Writer, error) {
 	if api.err != nil {

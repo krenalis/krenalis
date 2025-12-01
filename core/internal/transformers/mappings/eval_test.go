@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // TestErrorHelpers checks formatting of conversion error messages.
 func TestErrorHelpers(t *testing.T) {
-	bErr := errBooleanConversion("and", "x", "foo", types.Text())
-	if bErr.Error() != "«x» (type text) does not represent a boolean when passed to the «and» function" {
+	bErr := errBooleanConversion("and", "x", "foo", types.String())
+	if bErr.Error() != "«x» (type string) does not represent a boolean when passed to the «and» function" {
 		t.Fatalf("unexpected boolean error: %v", bErr)
 	}
 	jb := json.Value("true")
@@ -34,9 +34,9 @@ func TestErrorHelpers(t *testing.T) {
 	if iErr.Error() != "«x», of type JSON string, cannot be passed as an int to the «fn» function" {
 		t.Fatalf("unexpected int json error: %v", iErr)
 	}
-	tErr := errTextConversion("up", "x", json.Value("[1]"))
-	if tErr.Error() != "«x» (a JSON array) cannot be converted to a text value to be passed to the «up» function" {
-		t.Fatalf("unexpected text error: %v", tErr)
+	tErr := errStringConversion("up", "x", json.Value("[1]"))
+	if tErr.Error() != "«x» (a JSON array) cannot be converted to a string value to be passed to the «up» function" {
+		t.Fatalf("unexpected string error: %v", tErr)
 	}
 }
 
@@ -49,8 +49,8 @@ func Test_appendAsString(t *testing.T) {
 		out string
 		err error
 	}{
-		{nil, types.Text(), "start", nil},
-		{"foo", types.Text(), "startfoo", nil},
+		{nil, types.String(), "start", nil},
+		{"foo", types.String(), "startfoo", nil},
 		{true, types.Boolean(), "start", errInvalidConversion},
 		{int(3), types.Int(32), "start3", nil},
 		{uint(4), types.Uint(16), "start4", nil},
@@ -140,22 +140,22 @@ func Test_eval(t *testing.T) {
 		expectedType  types.Type
 		err           error
 	}{
-		{[]part{{value: ``, typ: types.Text()}}, "", types.Text(), nil},
-		{[]part{{value: `a`, typ: types.Text()}}, "a", types.Text(), nil},
+		{[]part{{value: ``, typ: types.String()}}, "", types.String(), nil},
+		{[]part{{value: `a`, typ: types.String()}}, "a", types.String(), nil},
 		{[]part{{value: n, typ: dt}}, n, dt, nil},
 		{[]part{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, 165, types.Int(32), nil},
-		{[]part{{path: path{elements: []string{"b", "c"}, decorators: []decorators{0, 0}}, typ: types.Text()}}, "foo", types.Text(), nil},
+		{[]part{{path: path{elements: []string{"b", "c"}, decorators: []decorators{0, 0}}, typ: types.String()}}, "foo", types.String(), nil},
 		{[]part{{path: path{elements: []string{"b", "e"}, decorators: []decorators{0, 0}}, typ: types.Int(32)}}, 1024, types.Int(32), nil},
-		{[]part{{value: `a`, path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, "a165", types.Text(), nil},
+		{[]part{{value: `a`, path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, "a165", types.String(), nil},
 		{[]part{{path: path{elements: []string{"coalesce"}, decorators: []decorators{0}}, args: [][]part{
-			{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
-			{{value: "foo", typ: types.Text()}},
-		}}}, "165 boo", types.Text(), nil},
+			{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}, {value: " boo", typ: types.String()}},
+			{{value: "foo", typ: types.String()}},
+		}}}, "165 boo", types.String(), nil},
 		{[]part{{path: path{elements: []string{"coalesce"}, decorators: []decorators{0}}, args: [][]part{
-			{{path: path{elements: []string{"d"}, decorators: []decorators{0}}, typ: types.Text()}},
-			{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
-		}}}, "165 boo", types.Text(), nil},
-		{[]part{{value: ``, typ: types.Text()}, {path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, "165", types.Text(), nil},
+			{{path: path{elements: []string{"d"}, decorators: []decorators{0}}, typ: types.String()}},
+			{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}, {value: " boo", typ: types.String()}},
+		}}}, "165 boo", types.String(), nil},
+		{[]part{{value: ``, typ: types.String()}, {path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, "165", types.String(), nil},
 		{[]part{{path: path{elements: []string{"x"}, decorators: []decorators{0}}, typ: types.Boolean()}}, nil, types.Type{}, nil},
 		{[]part{{path: path{elements: []string{"b", "x"}, decorators: []decorators{0, 0}}, typ: types.Boolean()}}, nil, types.Boolean(), nil},
 	}
@@ -236,14 +236,14 @@ func Test_valueOf(t *testing.T) {
 	attributes := map[string]any{
 		"a": 5, // int
 		"b": map[string]any{ // object
-			"c": "foo", // text
+			"c": "foo", // string
 			"d": map[string]any{ // map(array(int))
 				"e":  []any{1},
 				".e": []any{2},
 				"e]": []any{3},
 			},
 		},
-		"f": nil, // text
+		"f": nil, // string
 		"g": json.Value("12.53"),
 		"h": json.Value(`{"i":true,"i?":5,"?i?":"boo","[i":"foo","i]":"zoo"}`),
 		"l": json.Value(`{"name":"Bob","email":"bob@axample.com"}`),

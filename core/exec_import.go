@@ -21,23 +21,23 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers"
 )
 
-// importUsers imports the users of the action.
+// importUsers imports the users of the pipeline.
 //
 // Returns an error if execution does not reach its natural completion.
 // If the error is caused by the schema, the connector, or the data warehouse,
-// it returns an *actionError, which is expected to be logged as is.
-func (this *Action) importUsers(ctx context.Context) error {
+// it returns an *pipelineError, which is expected to be logged as is.
+func (this *Pipeline) importUsers(ctx context.Context) error {
 
-	action := this.action
-	connection := action.Connection()
+	pipeline := this.pipeline
+	connection := pipeline.Connection()
 	connector := connection.Connector()
-	execution, _ := action.Execution()
+	execution, _ := pipeline.Execution()
 
 	// purge specifies whether identities should be purged from the
 	// data warehouse after all identities have been written.
 	purge := true
 
-	transformer, err := transformers.New(action, this.core.functionProvider, nil)
+	transformer, err := transformers.New(pipeline, this.core.functionProvider, nil)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	switch connector.Type {
 	case state.API:
 		purge = execution.Cursor.IsZero()
-		records, err = this.api().Users(ctx, action.InSchema, nil, execution.Cursor)
+		records, err = this.api().Users(ctx, pipeline.InSchema, nil, execution.Cursor)
 	case state.Database:
 		database := this.database()
 		defer database.Close()
@@ -57,7 +57,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 				var v string
 				if execution.Incremental {
 					purge = execution.Cursor.IsZero()
-					v, _ = database.LastChangeTimePlaceholder(action)
+					v, _ = database.LastChangeTimePlaceholder(pipeline)
 				} else {
 					v, _ = database.LastChangeTimePlaceholder(nil)
 				}
@@ -67,10 +67,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 			}
 			return "", false
 		}
-		records, err = database.Records(ctx, action, replacer)
+		records, err = database.Records(ctx, pipeline, replacer)
 	case state.FileStorage:
 		var lastChangeTime time.Time
-		if !execution.Cursor.IsZero() && action.LastChangeTimeColumn != "" {
+		if !execution.Cursor.IsZero() && pipeline.LastChangeTimeColumn != "" {
 			lastChangeTime = execution.Cursor
 		}
 		purge = lastChangeTime.IsZero()
@@ -80,27 +80,27 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	if err != nil {
 		if err, ok := err.(*schemas.Error); ok {
-			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
+			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the pipeline before attempting to import the users."
 		}
-		return newActionError(metrics.InputValidationStep, err)
+		return newPipelineError(metrics.InputValidationStep, err)
 	}
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.NewBatchIdentityWriter(action, purge, func(ids []string, err error) {
+	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge, func(ids []string, err error) {
 		if err != nil {
-			this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
+			this.core.metrics.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 			return
 		}
-		this.core.metrics.FinalizePassed(action.ID, len(ids))
+		this.core.metrics.FinalizePassed(pipeline.ID, len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
-			return newActionError(metrics.FinalizeStep, err)
+			return newPipelineError(metrics.FinalizeStep, err)
 		}
 		if err, ok := err.(*schemas.Error); ok {
-			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
-			return newActionError(metrics.OutputValidationStep, err)
+			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the pipeline before attempting to import the users."
+			return newPipelineError(metrics.OutputValidationStep, err)
 		}
 		return err
 	}
@@ -118,24 +118,24 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if user.Err != nil {
 			iw.Keep(user.ID)
 			if err, ok := user.Err.(connections.InputValidationError); ok {
-				this.core.metrics.ReceivePassed(action.ID, 1)
-				this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
+				this.core.metrics.ReceivePassed(pipeline.ID, 1)
+				this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
 			} else {
-				this.core.metrics.ReceiveFailed(action.ID, 1, user.Err.Error())
+				this.core.metrics.ReceiveFailed(pipeline.ID, 1, user.Err.Error())
 			}
 			goto Next
 		}
 
-		this.core.metrics.ReceivePassed(action.ID, 1)
-		this.core.metrics.InputValidationPassed(action.ID, 1)
+		this.core.metrics.ReceivePassed(pipeline.ID, 1)
+		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
 
-		// In case the action has a filter, check if it applies to the user.
+		// In case the pipeline has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
-			if !filters.Applies(action.Filter, user.Attributes) {
-				this.core.metrics.FilterFailed(action.ID, 1)
+			if !filters.Applies(pipeline.Filter, user.Attributes) {
+				this.core.metrics.FilterFailed(pipeline.ID, 1)
 				goto Next
 			}
-			this.core.metrics.FilterPassed(action.ID, 1)
+			this.core.metrics.FilterPassed(pipeline.ID, 1)
 		}
 
 		if user.LastChangeTime.After(cursor) {
@@ -157,7 +157,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if _, ok := err.(transformers.FunctionExecError); ok {
-					err = newActionError(metrics.TransformationStep, err)
+					err = newPipelineError(metrics.TransformationStep, err)
 				}
 				return err
 			}
@@ -168,17 +168,17 @@ func (this *Action) importUsers(ctx context.Context) error {
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(action.ID, 1, err.Error())
+						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
 					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(action.ID, 1)
-						this.core.metrics.OutputValidationFailed(action.ID, 1, err.Error())
+						this.core.metrics.TransformationPassed(pipeline.ID, 1)
+						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
 					iw.Keep(user.ID)
 					continue
 				}
 				user.Attributes = record.Attributes
-				this.core.metrics.TransformationPassed(action.ID, 1)
-				this.core.metrics.OutputValidationPassed(action.ID, 1)
+				this.core.metrics.TransformationPassed(pipeline.ID, 1)
+				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
 				iw.Write(datastore.Identity{
 					ID:             user.ID,
 					Attributes:     user.Attributes,
@@ -200,13 +200,13 @@ func (this *Action) importUsers(ctx context.Context) error {
 	}
 	if err = records.Err(); err != nil {
 		if err, ok := err.(*schemas.Error); ok {
-			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
-			return newActionError(metrics.InputValidationStep, err)
+			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the pipeline before attempting to import the users."
+			return newPipelineError(metrics.InputValidationStep, err)
 		}
 		if err == connectors.ErrSheetNotExist {
-			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
+			err = fmt.Errorf("file does not contain any sheet named %q", pipeline.Sheet)
 		}
-		return newActionError(metrics.ReceiveStep, err)
+		return newPipelineError(metrics.ReceiveStep, err)
 	}
 
 	// TODO(Gianluca): calling Close may return error in case the warehouse mode
@@ -216,9 +216,9 @@ func (this *Action) importUsers(ctx context.Context) error {
 	err = iw.Close(ctx)
 	if err != nil {
 		if err != datastore.ErrPurgeSkipped {
-			return newActionError(metrics.FinalizeStep, err)
+			return newPipelineError(metrics.FinalizeStep, err)
 		}
-		this.core.metrics.FinalizeFailed(action.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
+		this.core.metrics.FinalizeFailed(pipeline.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
 	}
 
 	return nil

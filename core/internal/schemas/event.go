@@ -5,26 +5,26 @@
 package schemas
 
 import (
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Event is the event schema.
 var Event = types.Object([]types.Property{
 	{Name: "mpid", Type: types.UUID(), ReadOptional: true, Description: "User"},
 	{Name: "connectionId", Type: types.Int(32), Description: "Connection Id"},
-	{Name: "anonymousId", Type: types.Text(), Description: "Anonymous Id"},
-	{Name: "channel", Type: types.Text(), ReadOptional: true, Description: "Channel"},
-	{Name: "category", Type: types.Text(), ReadOptional: true, Description: "Category"},
+	{Name: "anonymousId", Type: types.String(), Description: "Anonymous Id"},
+	{Name: "channel", Type: types.String(), ReadOptional: true, Description: "Channel"},
+	{Name: "category", Type: types.String(), ReadOptional: true, Description: "Category"},
 	{
 		Name: "context",
 		Type: types.Object([]types.Property{
 			{
 				Name: "app",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text(), ReadOptional: true, Description: "Name"},
-					{Name: "version", Type: types.Text(), ReadOptional: true, Description: "Version"},
-					{Name: "build", Type: types.Text(), ReadOptional: true, Description: "Build"},
-					{Name: "namespace", Type: types.Text(), ReadOptional: true, Description: "Namespace"},
+					{Name: "name", Type: types.String(), ReadOptional: true, Description: "Name"},
+					{Name: "version", Type: types.String(), ReadOptional: true, Description: "Version"},
+					{Name: "build", Type: types.String(), ReadOptional: true, Description: "Build"},
+					{Name: "namespace", Type: types.String(), ReadOptional: true, Description: "Namespace"},
 				}),
 				ReadOptional: true,
 				Description:  "App",
@@ -32,9 +32,9 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "browser",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"), ReadOptional: true, Description: "Name"},
-					{Name: "other", Type: types.Text(), ReadOptional: true, Description: "Other"},
-					{Name: "version", Type: types.Text(), ReadOptional: true, Description: "Version"},
+					{Name: "name", Type: types.String().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"), ReadOptional: true, Description: "Name"},
+					{Name: "other", Type: types.String(), ReadOptional: true, Description: "Other"},
+					{Name: "version", Type: types.String(), ReadOptional: true, Description: "Version"},
 				}),
 				ReadOptional: true,
 				Description:  "Browser",
@@ -42,11 +42,11 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "campaign",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text(), ReadOptional: true, Description: "Name"},
-					{Name: "source", Type: types.Text(), ReadOptional: true, Description: "Source"},
-					{Name: "medium", Type: types.Text(), ReadOptional: true, Description: "Medium"},
-					{Name: "term", Type: types.Text(), ReadOptional: true, Description: "Term"},
-					{Name: "content", Type: types.Text(), ReadOptional: true, Description: "Content"},
+					{Name: "name", Type: types.String(), ReadOptional: true, Description: "Name"},
+					{Name: "source", Type: types.String(), ReadOptional: true, Description: "Source"},
+					{Name: "medium", Type: types.String(), ReadOptional: true, Description: "Medium"},
+					{Name: "term", Type: types.String(), ReadOptional: true, Description: "Term"},
+					{Name: "content", Type: types.String(), ReadOptional: true, Description: "Content"},
 				}),
 				ReadOptional: true,
 				Description:  "Campaign",
@@ -54,34 +54,34 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "device",
 				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Text(), ReadOptional: true, Description: "Id"},
-					{Name: "advertisingId", Type: types.Text(), ReadOptional: true, Description: "Advertising Id"},
+					{Name: "id", Type: types.String(), ReadOptional: true, Description: "Id"},
+					{Name: "advertisingId", Type: types.String(), ReadOptional: true, Description: "Advertising Id"},
 					{Name: "adTrackingEnabled", Type: types.Boolean(), ReadOptional: true, Description: "Ad tracking enabled"},
-					{Name: "manufacturer", Type: types.Text(), ReadOptional: true, Description: "Manufacturer"},
-					{Name: "model", Type: types.Text(), ReadOptional: true, Description: "Model"},
-					{Name: "name", Type: types.Text(), ReadOptional: true, Description: "Name"},
-					{Name: "type", Type: types.Text(), ReadOptional: true, Description: "Type"},
-					{Name: "token", Type: types.Text(), ReadOptional: true, Description: "Token"},
+					{Name: "manufacturer", Type: types.String(), ReadOptional: true, Description: "Manufacturer"},
+					{Name: "model", Type: types.String(), ReadOptional: true, Description: "Model"},
+					{Name: "name", Type: types.String(), ReadOptional: true, Description: "Name"},
+					{Name: "type", Type: types.String(), ReadOptional: true, Description: "Type"},
+					{Name: "token", Type: types.String(), ReadOptional: true, Description: "Token"},
 				}),
 				ReadOptional: true,
 				Description:  "Device",
 			},
-			{Name: "ip", Type: types.Inet(), ReadOptional: true, Description: "IP"},
+			{Name: "ip", Type: types.IP(), ReadOptional: true, Description: "IP"},
 			{
 				Name: "library",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text(), ReadOptional: true, Description: "Name"},
-					{Name: "version", Type: types.Text(), ReadOptional: true, Description: "Version"},
+					{Name: "name", Type: types.String(), ReadOptional: true, Description: "Name"},
+					{Name: "version", Type: types.String(), ReadOptional: true, Description: "Version"},
 				}),
 				ReadOptional: true,
 				Description:  "Library",
 			},
-			{Name: "locale", Type: types.Text(), ReadOptional: true, Description: "Locale"},
+			{Name: "locale", Type: types.String(), ReadOptional: true, Description: "Locale"},
 			{
 				Name: "location",
 				Type: types.Object([]types.Property{
-					{Name: "city", Type: types.Text(), ReadOptional: true, Description: "City"},
-					{Name: "country", Type: types.Text(), ReadOptional: true, Description: "Country"},
+					{Name: "city", Type: types.String(), ReadOptional: true, Description: "City"},
+					{Name: "country", Type: types.String(), ReadOptional: true, Description: "Country"},
 					{Name: "latitude", Type: types.Float(64), ReadOptional: true, Description: "Latitude"},
 					{Name: "longitude", Type: types.Float(64), ReadOptional: true, Description: "Longitude"},
 					{Name: "speed", Type: types.Float(64), ReadOptional: true, Description: "Speed"},
@@ -93,7 +93,7 @@ var Event = types.Object([]types.Property{
 				Name: "network",
 				Type: types.Object([]types.Property{
 					{Name: "bluetooth", Type: types.Boolean(), ReadOptional: true, Description: "Bluetooth"},
-					{Name: "carrier", Type: types.Text(), ReadOptional: true, Description: "Carrier"},
+					{Name: "carrier", Type: types.String(), ReadOptional: true, Description: "Carrier"},
 					{Name: "cellular", Type: types.Boolean(), ReadOptional: true, Description: "Cellular"},
 					{Name: "wifi", Type: types.Boolean(), ReadOptional: true, Description: "Wi-Fi"},
 				}),
@@ -103,9 +103,9 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "os",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"), ReadOptional: true, Description: "Name"},
-					{Name: "other", Type: types.Text(), ReadOptional: true, Description: "Other"},
-					{Name: "version", Type: types.Text(), ReadOptional: true, Description: "Version"},
+					{Name: "name", Type: types.String().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"), ReadOptional: true, Description: "Name"},
+					{Name: "other", Type: types.String(), ReadOptional: true, Description: "Other"},
+					{Name: "version", Type: types.String(), ReadOptional: true, Description: "Version"},
 				}),
 				ReadOptional: true,
 				Description:  "OS",
@@ -113,11 +113,11 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "page",
 				Type: types.Object([]types.Property{
-					{Name: "path", Type: types.Text(), ReadOptional: true, Description: "Path"},
-					{Name: "referrer", Type: types.Text(), ReadOptional: true, Description: "Referrer"},
-					{Name: "search", Type: types.Text(), ReadOptional: true, Description: "Search"},
-					{Name: "title", Type: types.Text(), ReadOptional: true, Description: "Title"},
-					{Name: "url", Type: types.Text(), ReadOptional: true, Description: "URL"},
+					{Name: "path", Type: types.String(), ReadOptional: true, Description: "Path"},
+					{Name: "referrer", Type: types.String(), ReadOptional: true, Description: "Referrer"},
+					{Name: "search", Type: types.String(), ReadOptional: true, Description: "Search"},
+					{Name: "title", Type: types.String(), ReadOptional: true, Description: "Title"},
+					{Name: "url", Type: types.String(), ReadOptional: true, Description: "URL"},
 				}),
 				ReadOptional: true,
 				Description:  "Page",
@@ -125,8 +125,8 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "referrer",
 				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Text(), ReadOptional: true, Description: "Id"},
-					{Name: "type", Type: types.Text(), ReadOptional: true, Description: "Type"},
+					{Name: "id", Type: types.String(), ReadOptional: true, Description: "Id"},
+					{Name: "type", Type: types.String(), ReadOptional: true, Description: "Type"},
 				}),
 				ReadOptional: true,
 				Description:  "Referrer",
@@ -150,23 +150,23 @@ var Event = types.Object([]types.Property{
 				ReadOptional: true,
 				Description:  "Session",
 			},
-			{Name: "timezone", Type: types.Text(), ReadOptional: true, Description: "Timezone"},
-			{Name: "userAgent", Type: types.Text(), ReadOptional: true, Description: "User agent"},
+			{Name: "timezone", Type: types.String(), ReadOptional: true, Description: "Timezone"},
+			{Name: "userAgent", Type: types.String(), ReadOptional: true, Description: "User agent"},
 		}),
 		ReadOptional: true,
 		Description:  "Context",
 	},
-	{Name: "event", Type: types.Text(), ReadOptional: true, Description: "Event"},
-	{Name: "groupId", Type: types.Text(), ReadOptional: true, Description: "Group Id"},
-	{Name: "messageId", Type: types.Text(), Description: "Message Id"},
-	{Name: "name", Type: types.Text(), ReadOptional: true, Description: "Name"},
+	{Name: "event", Type: types.String(), ReadOptional: true, Description: "Event"},
+	{Name: "groupId", Type: types.String(), ReadOptional: true, Description: "Group Id"},
+	{Name: "messageId", Type: types.String(), Description: "Message Id"},
+	{Name: "name", Type: types.String(), ReadOptional: true, Description: "Name"},
 	{Name: "properties", Type: types.JSON(), ReadOptional: true, Description: "Properties"},
 	{Name: "receivedAt", Type: types.DateTime(), Description: "Received at"},
 	{Name: "sentAt", Type: types.DateTime(), Description: "Sent at"},
 	{Name: "originalTimestamp", Type: types.DateTime(), Description: "Original timestamp"},
 	{Name: "timestamp", Type: types.DateTime(), Description: "Timestamp"},
 	{Name: "traits", Type: types.JSON(), Description: "Traits"},
-	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track"), Description: "Type"},
-	{Name: "previousId", Type: types.Text(), ReadOptional: true, Description: "Previous Id"},
-	{Name: "userId", Type: types.Text(), ReadOptional: true, Description: "User Id"},
+	{Name: "type", Type: types.String().WithValues("alias", "identify", "group", "page", "screen", "track"), Description: "Type"},
+	{Name: "previousId", Type: types.String(), ReadOptional: true, Description: "Previous Id"},
+	{Name: "userId", Type: types.String(), ReadOptional: true, Description: "User Id"},
 })

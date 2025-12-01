@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Purpose represents the purpose of a record transformation.
@@ -224,7 +224,7 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 						to = "a time in ISO 8601 format"
 					case types.UUIDKind:
 						to = "a UUID"
-					case types.InetKind:
+					case types.IPKind:
 						to = "an IP address"
 					}
 					msg = fmt.Sprintf("«%s» is not parsable as %s while mapping to «%s»", code(e.expr.source), to, code(e.path))
@@ -232,13 +232,13 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 					msg = fmt.Sprintf("year of «%s» is not in range [1,9999] while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errEnumConversion:
 					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
-				case errRegexpConversion:
-					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Regexp(), code(e.path))
-				case errByteLenConversion:
-					n, _ := e.dt.ByteLen()
+				case errPatternConversion:
+					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Pattern(), code(e.path))
+				case errMaxByteLengthConversion:
+					n, _ := e.dt.MaxByteLength()
 					msg = fmt.Sprintf("«%s» exceeds the %d-byte limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errCharLenConversion:
-					n, _ := e.dt.CharLen()
+				case errMaxLengthConversion:
+					n, _ := e.dt.MaxLength()
 					msg = fmt.Sprintf("«%s» exceeds the %d-char limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
 				default:
 					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), e.dt.String(), code(e.path))

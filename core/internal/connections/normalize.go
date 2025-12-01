@@ -16,10 +16,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/relvacode/iso8601"
 )
@@ -77,7 +77,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		return nil, nil
 	}
 	switch k := typ.Kind(); k {
-	case types.TextKind:
+	case types.StringKind:
 		var v string
 		switch s := src.(type) {
 		case string:
@@ -102,15 +102,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if !slices.Contains(values, v) {
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}
-		} else if rx := typ.Regexp(); rx != nil {
+		} else if rx := typ.Pattern(); rx != nil {
 			if !rx.MatchString(v) {
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}
 		} else {
-			if l, ok := typ.ByteLen(); ok && len(v) > l {
+			if l, ok := typ.MaxByteLength(); ok && len(v) > l {
 				return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
 			}
-			if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
+			if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
 				return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
 			}
 		}
@@ -647,7 +647,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return nil, inputValidationErrorf(name, "is not valid JSON")
 		}
 		return json.Value(data), nil
-	case types.InetKind:
+	case types.IPKind:
 		var addr netip.Addr
 		switch ip := src.(type) {
 		case string:
@@ -661,7 +661,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var err error
 			addr, err = netip.ParseAddr(ip)
 			if err != nil {
-				return nil, inputValidationErrorf(name, "has a string value that cannot represent a valid inet value")
+				return nil, inputValidationErrorf(name, "has a string value that cannot represent a valid ip value")
 			}
 		case net.IP:
 			if ip == nil && nullable {
@@ -670,7 +670,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var ok bool
 			addr, ok = netip.AddrFromSlice(ip)
 			if !ok {
-				return nil, inputValidationErrorf(name, "has a net.IP value that cannot represent a valid inet value")
+				return nil, inputValidationErrorf(name, "has a net.IP value that cannot represent a valid ip value")
 			}
 			// Unmap an IPv6-mapped IPv4 address as the net.IP.String method does.
 			if addr.Is4In6() {

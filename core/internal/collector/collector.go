@@ -16,7 +16,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
@@ -24,8 +23,9 @@ import (
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/core/json"
-	meergoMetrics "github.com/meergo/meergo/core/metrics"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	meergoMetrics "github.com/meergo/meergo/tools/metrics"
 
 	"github.com/oschwald/maxminddb-golang/v2"
 )
@@ -59,7 +59,7 @@ type Collector struct {
 	maxmindDB        *maxminddb.Reader
 	eventWriters     sync.Map      // a map from workspace identifier to a *datastore.EventWriter value
 	destinations     *destinations // destination connections used to send events
-	identityWriters  sync.Map      // a map from action identifier to a *identityWriter value
+	identityWriters  sync.Map      // a map from pipeline identifier to a *identityWriter value
 	closed           atomic.Bool
 }
 
@@ -80,29 +80,29 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *conne
 		destinations:     newDestinations(st, connections, provider, metrics),
 	}
 	st.Freeze()
-	st.AddListener(c.onCreateAction)
+	st.AddListener(c.onCreatePipeline)
 	st.AddListener(c.onCreateWorkspace)
-	st.AddListener(c.onDeleteAction)
 	st.AddListener(c.onDeleteConnection)
+	st.AddListener(c.onDeletePipeline)
 	st.AddListener(c.onDeleteWorkspace)
-	st.AddListener(c.onSetActionStatus)
-	st.AddListener(c.onUpdateAction)
+	st.AddListener(c.onSetPipelineStatus)
+	st.AddListener(c.onUpdatePipeline)
 	for _, ws := range st.Workspaces() {
 		c.observers.Store(ws.ID, newObserver())
 		store := ds.Store(ws.ID)
 		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
 	}
-	for _, action := range st.Actions() {
-		// Create an identity writer for each active SDK action.
-		if action.Target == state.TargetUser {
-			if !action.Enabled {
+	for _, pipeline := range st.Pipelines() {
+		// Create an identity writer for each active SDK pipeline.
+		if pipeline.Target == state.TargetUser {
+			if !pipeline.Enabled {
 				continue
 			}
-			if t := action.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
+			if t := pipeline.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
 				continue
 			}
-			iw := newIdentityWriter(c.datastore, action, provider, metrics)
-			c.identityWriters.Store(action.ID, iw)
+			iw := newIdentityWriter(c.datastore, pipeline, provider, metrics)
+			c.identityWriters.Store(pipeline.ID, iw)
 		}
 	}
 	st.Unfreeze()
@@ -215,20 +215,20 @@ func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
 	meergoMetrics.Increment("Collector.eventAck.calls", 1)
 	for _, event := range evs {
 		if err != nil {
-			c.metrics.FinalizeFailed(event.Action, 1, err.Error())
+			c.metrics.FinalizeFailed(event.Pipeline, 1, err.Error())
 			return
 		}
-		c.metrics.FinalizePassed(event.Action, 1)
+		c.metrics.FinalizePassed(event.Pipeline, 1)
 	}
 }
 
-// importEventsAction returns the action of the source connection that imports
-// events into the data warehouse, if there is one and if it is enabled;
+// importEventsPipeline returns the pipeline of the source connection that
+// imports events into the data warehouse, if there is one and if it is enabled;
 // otherwise, it returns nil and false.
-func (c *Collector) importEventsAction(connection *state.Connection) (*state.Action, bool) {
-	for _, a := range connection.Actions() {
-		if a.Enabled && a.Target == state.TargetEvent {
-			return a, true
+func (c *Collector) importEventsPipeline(connection *state.Connection) (*state.Pipeline, bool) {
+	for _, p := range connection.Pipelines() {
+		if p.Enabled && p.Target == state.TargetEvent {
+			return p, true
 		}
 	}
 	return nil, false
@@ -422,20 +422,20 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Store the events into the data warehouse.
-		if action, ok := c.importEventsAction(connection); ok {
-			c.metrics.ReceivePassed(action.ID, 1)
-			if !filters.Applies(action.Filter, event) {
-				c.metrics.FilterFailed(action.ID, 1)
+		if pipeline, ok := c.importEventsPipeline(connection); ok {
+			c.metrics.ReceivePassed(pipeline.ID, 1)
+			if !filters.Applies(pipeline.Filter, event) {
+				c.metrics.FilterFailed(pipeline.ID, 1)
 				continue
 			}
-			c.metrics.FilterPassed(action.ID, 1)
+			c.metrics.FilterPassed(pipeline.ID, 1)
 			ew, ok := c.eventWriters.Load(ws.ID)
 			if !ok {
 				continue
 			}
-			err = ew.(*datastore.EventWriter).Write(event, action.ID)
+			err = ew.(*datastore.EventWriter).Write(event, pipeline.ID)
 			if err != nil {
-				c.metrics.FinalizeFailed(action.ID, 1, err.Error())
+				c.metrics.FinalizeFailed(pipeline.ID, 1, err.Error())
 				if eventErr == nil {
 					eventErr = errServiceUnavailable
 				}
@@ -444,21 +444,21 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Import the identities into the data warehouse.
-		for _, action := range connection.Actions() {
-			if action.Target != state.TargetUser || !action.Enabled {
+		for _, pipeline := range connection.Pipelines() {
+			if pipeline.Target != state.TargetUser || !pipeline.Enabled {
 				continue
 			}
-			c.metrics.ReceivePassed(action.ID, 1)
-			if !filters.Applies(action.Filter, event) {
-				c.metrics.FilterFailed(action.ID, 1)
-				meergoMetrics.Increment("Collector.serveEvents.discarded_user_identities", 1)
+			c.metrics.ReceivePassed(pipeline.ID, 1)
+			if !filters.Applies(pipeline.Filter, event) {
+				c.metrics.FilterFailed(pipeline.ID, 1)
+				meergoMetrics.Increment("Collector.serveEvents.discarded_identities", 1)
 				continue
 			}
-			c.metrics.FilterPassed(action.ID, 1)
-			if w, ok := c.identityWriters.Load(action.ID); ok {
+			c.metrics.FilterPassed(pipeline.ID, 1)
+			if w, ok := c.identityWriters.Load(pipeline.ID); ok {
 				err = w.(*identityWriter).Write(event)
 				if err != nil {
-					c.metrics.FinalizeFailed(action.ID, 1, err.Error())
+					c.metrics.FinalizeFailed(pipeline.ID, 1, err.Error())
 					if eventErr == nil {
 						eventErr = errServiceUnavailable
 					}
@@ -487,17 +487,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// onCreateAction is called when an action is created.
-func (c *Collector) onCreateAction(n state.CreateAction) {
-	action, _ := c.state.Action(n.ID)
-	if action.Target != state.TargetUser || !action.Enabled {
+// onCreatePipeline is called when a pipeline is created.
+func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
+	pipeline, _ := c.state.Pipeline(n.ID)
+	if pipeline.Target != state.TargetUser || !pipeline.Enabled {
 		return
 	}
-	if t := action.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
+	if t := pipeline.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
-	iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
-	c.identityWriters.Store(action.ID, iw)
+	iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
+	c.identityWriters.Store(pipeline.ID, iw)
 }
 
 // onCreateWorkspace is called when a workspace is created.
@@ -507,27 +507,17 @@ func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
 	c.eventWriters.Store(n.ID, store.NewEventWriter(c.eventAck))
 }
 
-// onDeleteAction is called when an action is deleted.
-func (c *Collector) onDeleteAction(n state.DeleteAction) {
-	iw, ok := c.identityWriters.LoadAndDelete(n.ID)
-	if !ok {
-		return
-	}
-	_ = iw.(*identityWriter).Close(context.Background())
-	// TODO(marco): should the ongoing transformations be interrupted?
-}
-
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
 	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
-	for _, action := range connection.Actions() {
-		if action.Target != state.TargetUser || !action.Enabled {
+	for _, pipeline := range connection.Pipelines() {
+		if pipeline.Target != state.TargetUser || !pipeline.Enabled {
 			continue
 		}
-		iw, ok := c.identityWriters.LoadAndDelete(action.ID)
+		iw, ok := c.identityWriters.LoadAndDelete(pipeline.ID)
 		if !ok {
 			continue
 		}
@@ -541,52 +531,62 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 	c.eventWriters.Delete(n.ID)
 }
 
-// onSetActionStatus is called when the status of an action is set.
-func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
-	action, _ := c.state.Action(n.ID)
-	if action.Target != state.TargetUser {
+// onDeletePipeline is called when a pipeline is deleted.
+func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
+	iw, ok := c.identityWriters.LoadAndDelete(n.ID)
+	if !ok {
 		return
 	}
-	connection := action.Connection()
-	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
-		return
-	}
-	if action.Enabled {
-		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
-		c.identityWriters.Store(action.ID, iw)
-		return
-	}
-	a, _ := c.identityWriters.LoadAndDelete(n.ID)
-	a.(*identityWriter).Close(context.Background())
+	_ = iw.(*identityWriter).Close(context.Background())
+	// TODO(marco): should the ongoing transformations be interrupted?
 }
 
-// onUpdateAction is called when an action is updated.
-func (c *Collector) onUpdateAction(n state.UpdateAction) {
-	action, _ := c.state.Action(n.ID)
-	if action.Target != state.TargetUser {
+// onSetPipelineStatus is called when the status of a pipeline is set.
+func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
+	pipeline, _ := c.state.Pipeline(n.ID)
+	if pipeline.Target != state.TargetUser {
 		return
 	}
-	connection := action.Connection()
+	connection := pipeline.Connection()
 	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
-	if !action.Enabled {
-		if iw, ok := c.identityWriters.LoadAndDelete(action.ID); ok {
+	if pipeline.Enabled {
+		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
+		c.identityWriters.Store(pipeline.ID, iw)
+		return
+	}
+	p, _ := c.identityWriters.LoadAndDelete(n.ID)
+	p.(*identityWriter).Close(context.Background())
+}
+
+// onUpdatePipeline is called when a pipeline is updated.
+func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
+	pipeline, _ := c.state.Pipeline(n.ID)
+	if pipeline.Target != state.TargetUser {
+		return
+	}
+	connection := pipeline.Connection()
+	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
+		return
+	}
+	if !pipeline.Enabled {
+		if iw, ok := c.identityWriters.LoadAndDelete(pipeline.ID); ok {
 			iw.(*identityWriter).Close(context.Background())
 		}
 		return
 	}
-	w, ok := c.identityWriters.Load(action.ID)
+	w, ok := c.identityWriters.Load(pipeline.ID)
 	if !ok {
-		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
-		c.identityWriters.Store(action.ID, iw)
+		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
+		c.identityWriters.Store(pipeline.ID, iw)
 		return
 	}
 	// The transformation might have changed.
 	var transformer *transformers.Transformer
-	if action.Transformation.Mapping != nil || action.Transformation.Function != nil {
-		transformer, _ = transformers.New(action, c.functionProvider, nil)
+	if pipeline.Transformation.Mapping != nil || pipeline.Transformation.Function != nil {
+		transformer, _ = transformers.New(pipeline, c.functionProvider, nil)
 	}
 	w.(*identityWriter).SetTransformer(transformer)
-	// TODO(marco): il cambio del warehouse mode come influisce sulla source action?
+	// TODO(marco): il cambio del warehouse mode come influisce sulla source pipeline?
 }

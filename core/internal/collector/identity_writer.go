@@ -15,15 +15,15 @@ import (
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/core/metrics"
+	meergoMetrics "github.com/meergo/meergo/tools/metrics"
 )
 
 var maxQueuedIdentities = 1000
 var maxQueuedEventIdentityTime = 200 * time.Millisecond
 
-// identityWriter represents an identity writer for an action.
+// identityWriter represents an identity writer for a pipeline.
 type identityWriter struct {
-	action      int //action identifier
+	pipeline    int // pipeline identifier
 	writer      *datastore.EventIdentityWriter
 	metrics     *metrics.Collector
 	mu          sync.Mutex                // for transformer, identities, and timer
@@ -32,19 +32,19 @@ type identityWriter struct {
 	timer       *time.Timer               // protected by mu
 }
 
-// newIdentityWriter returns a new identityWriter for the provided action.
+// newIdentityWriter returns a new identityWriter for the provided pipeline.
 //
 // It must be called on a frozen state.
-func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
+func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
 	iw := &identityWriter{
-		action:  action.ID,
-		metrics: metrics,
+		pipeline: pipeline.ID,
+		metrics:  metrics,
 	}
-	ws := action.Connection().Workspace()
+	ws := pipeline.Connection().Workspace()
 	store := ds.Store(ws.ID)
-	iw.writer = store.NewEventIdentityWriter(action.ID, iw.ack)
-	if t := action.Transformation; t.Mapping != nil || t.Function != nil {
-		iw.transformer, _ = transformers.New(action, provider, nil)
+	iw.writer = store.NewEventIdentityWriter(pipeline.ID, iw.ack)
+	if t := pipeline.Transformation; t.Mapping != nil || t.Function != nil {
+		iw.transformer, _ = transformers.New(pipeline, provider, nil)
 	}
 	return iw
 }
@@ -77,7 +77,7 @@ func (iw *identityWriter) Write(event events.Event) error {
 
 	iw.mu.Lock()
 
-	// If the action lacks a transformation, write the identity directly to the store.
+	// If the pipeline lacks a transformation, write the identity directly to the store.
 	if iw.transformer == nil {
 		iw.mu.Unlock()
 		return iw.writeDirect(event)
@@ -116,12 +116,12 @@ func (iw *identityWriter) Write(event events.Event) error {
 }
 
 // ack acknowledges when identities are written to the data warehouse.
-func (iw *identityWriter) ack(action int, ids []string, err error) {
+func (iw *identityWriter) ack(pipeline int, ids []string, err error) {
 	if err != nil {
-		iw.metrics.FinalizeFailed(iw.action, len(ids), err.Error())
+		iw.metrics.FinalizeFailed(iw.pipeline, len(ids), err.Error())
 		return
 	}
-	iw.metrics.FinalizePassed(action, len(ids))
+	iw.metrics.FinalizePassed(pipeline, len(ids))
 }
 
 func (iw *identityWriter) transformAndWrite(events []events.Event) {
@@ -142,9 +142,9 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 	err := transformer.Transform(ctx, records)
 	if err != nil {
 		if err2, ok := err.(transformers.FunctionExecError); ok {
-			iw.metrics.TransformationFailed(iw.action, len(records), err2.Error())
+			iw.metrics.TransformationFailed(iw.pipeline, len(records), err2.Error())
 		} else {
-			iw.metrics.TransformationFailed(iw.action, len(records), "an internal error occurred")
+			iw.metrics.TransformationFailed(iw.pipeline, len(records), "an internal error occurred")
 			slog.Error("core/events/collector: unexpected error occurred transforming event", "err", err)
 		}
 		return
@@ -153,15 +153,15 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 		if err = record.Err; err != nil {
 			switch err.(type) {
 			case transformers.RecordTransformationError:
-				iw.metrics.TransformationFailed(iw.action, 1, err.Error())
+				iw.metrics.TransformationFailed(iw.pipeline, 1, err.Error())
 			case transformers.RecordValidationError:
-				iw.metrics.TransformationPassed(iw.action, 1)
-				iw.metrics.OutputValidationFailed(iw.action, 1, err.Error())
+				iw.metrics.TransformationPassed(iw.pipeline, 1)
+				iw.metrics.OutputValidationFailed(iw.pipeline, 1, err.Error())
 			}
 			continue
 		}
-		iw.metrics.TransformationPassed(iw.action, 1)
-		iw.metrics.OutputValidationPassed(iw.action, 1)
+		iw.metrics.TransformationPassed(iw.pipeline, 1)
+		iw.metrics.OutputValidationPassed(iw.pipeline, 1)
 		event := events[i]
 		id, _ := event["userId"].(string)
 		// Write the identity on the data warehouse.

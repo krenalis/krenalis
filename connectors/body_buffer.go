@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/meergo/meergo/core/bufferpool"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/bufferpool"
+	"github.com/meergo/meergo/tools/json"
 )
 
 // ContentEncoding represents supported HTTP body encodings.

@@ -7,7 +7,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_CheckConflictingProperties(t *testing.T) {
@@ -19,75 +19,75 @@ func Test_CheckConflictingProperties(t *testing.T) {
 		{
 			io: "profile",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
+				{Name: "x", Type: types.String()},
 			}),
 		},
 		{
 			io: "profile",
 			schema: types.Object([]types.Property{
-				{Name: "x", Type: types.Text()},
-				{Name: "x_a", Type: types.Text()},
-				{Name: "x_b", Type: types.Text()},
+				{Name: "x", Type: types.String()},
+				{Name: "x_a", Type: types.String()},
+				{Name: "x_b", Type: types.String()},
 			}),
 		},
 		{
 			io: "profile",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.String()},
 				})},
-				{Name: "x_a", Type: types.Text()},
-				{Name: "x_b", Type: types.Text()},
+				{Name: "x_a", Type: types.String()},
+				{Name: "x_b", Type: types.String()},
 			}),
-			err: `two profile action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
+			err: `two profile pipeline schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 		{
 			io: "input",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "y", Type: types.Object([]types.Property{
-						{Name: "a", Type: types.Text()},
+						{Name: "a", Type: types.String()},
 					})},
-					{Name: "y_a", Type: types.Text()},
+					{Name: "y_a", Type: types.String()},
 				})},
-				{Name: "x_a", Type: types.Text()},
-				{Name: "x_b", Type: types.Text()},
+				{Name: "x_a", Type: types.String()},
+				{Name: "x_b", Type: types.String()},
 			}),
-			err: `two input action schema properties would have the same column name "x_y_a" in the data warehouse, case-insensitively`,
+			err: `two input pipeline schema properties would have the same column name "x_y_a" in the data warehouse, case-insensitively`,
 		},
 		{
 			io: "output",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Object([]types.Property{
-						{Name: "a", Type: types.Text()},
+						{Name: "a", Type: types.String()},
 					})},
 				})},
-				{Name: "x_a", Type: types.Text()},
-				{Name: "x_b", Type: types.Text()},
+				{Name: "x_a", Type: types.String()},
+				{Name: "x_b", Type: types.String()},
 			}),
 		},
 		{
 			io: "output",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Text()},
+					{Name: "a", Type: types.String()},
 				})},
-				{Name: "x_a", Type: types.Text()},
-				{Name: "x_b", Type: types.Text()},
+				{Name: "x_a", Type: types.String()},
+				{Name: "x_b", Type: types.String()},
 			}),
-			err: `two output action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
+			err: `two output pipeline schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 		{
 			io: "profile",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "A", Type: types.Text()},
+					{Name: "A", Type: types.String()},
 				})},
-				{Name: "x_a", Type: types.Text()},
-				{Name: "x_b", Type: types.Text()},
+				{Name: "x_a", Type: types.String()},
+				{Name: "x_b", Type: types.String()},
 			}),
-			err: `two profile action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
+			err: `two profile pipeline schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 	}
 	for _, test := range tests {

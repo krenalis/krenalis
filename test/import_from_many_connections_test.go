@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 	"github.com/meergo/analytics-go"
@@ -47,22 +47,22 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 	// Import users from Dummy.
 	t.Log("importing from Dummy...")
-	var dummy, dummyAction int
+	var dummy, dummyPipeline int
 	{
 
 		dummy = c.CreateDummy("Dummy", meergotester.Source)
-		dummyAction = c.CreateAction(dummy, "User", meergotester.ActionToSet{
+		dummyPipeline = c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "firstName", Type: types.String(), Nullable: true},
+				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -72,7 +72,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(dummyAction)
+		exec := c.ExecutePipeline(dummyPipeline)
 		c.WaitForExecutionsCompletion(dummy, exec)
 	}
 
@@ -83,23 +83,23 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Imports users from CSV.
-	var fs, csvAction int
+	var fs, csvPipeline int
 	t.Log("importing from CSV file...")
 	{
 		fs = c.CreateSourceFileSystem()
-		csvAction = c.CreateAction(fs, "User", meergotester.ActionToSet{
+		csvPipeline = c.CreatePipeline(fs, "User", meergotester.PipelineToSet{
 			Name:    "Import users from CSV on File System",
 			Enabled: true,
 			Path:    "users_genders.csv",
 			InSchema: types.Object([]types.Property{
-				{Name: "csv_id", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-				{Name: "gender", Type: types.Text()},
-				{Name: "timestamp", Type: types.Text()},
+				{Name: "csv_id", Type: types.String()},
+				{Name: "email", Type: types.String()},
+				{Name: "gender", Type: types.String()},
+				{Name: "timestamp", Type: types.String()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "gender", Type: types.Text(), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -116,7 +116,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"HasColumnNames": true,
 			}),
 		})
-		exec := c.ExecuteAction(csvAction)
+		exec := c.ExecutePipeline(csvPipeline)
 		c.WaitForExecutionsCompletion(fs, exec)
 	}
 
@@ -127,10 +127,10 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Import users and events from a JavaScript connection.
-	var javaScript, javascriptUsersAction int
+	var javaScript, javascriptUsersPipeline int
 	t.Log("importing users and events...")
 	{
-		// Create a JavaScript connection with two actions (one for importing
+		// Create a JavaScript connection with two pipelines (one for importing
 		// events, one for importing identities) and retrieve its key.
 		var javaScriptKey string
 		{
@@ -140,17 +140,17 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				t.Fatalf("expected one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
-			c.CreateAction(javaScript, "Event", meergotester.ActionToSet{
+			c.CreatePipeline(javaScript, "Event", meergotester.PipelineToSet{
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			javascriptUsersAction = c.CreateAction(javaScript, "User", meergotester.ActionToSet{
+			javascriptUsersPipeline = c.CreatePipeline(javaScript, "User", meergotester.PipelineToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
 				Filter:   meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+					{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
@@ -222,7 +222,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, meergotester.Identity{
 			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Action:         javascriptUsersAction,
+			Pipeline:       javascriptUsersPipeline,
 			ID:             "f4ca124298",
 			AnonymousIds:   []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			LastChangeTime: time.Time{},
@@ -233,7 +233,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		csvIdentity := getIdentityByConnection(t, identities, fs)
 		assertEqualIdentity(csvIdentity, meergotester.Identity{
 			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Action:         csvAction,
+			Pipeline:       csvPipeline,
 			ID:             "1",
 			AnonymousIds:   nil,
 			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
@@ -245,7 +245,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		dummyIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(dummyIdentity, meergotester.Identity{
 			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Action:         dummyAction,
+			Pipeline:       dummyPipeline,
 			ID:             "dummy1",
 			AnonymousIds:   nil,
 			LastChangeTime: time.Time{},

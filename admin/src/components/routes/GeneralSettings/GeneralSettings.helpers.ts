@@ -1,4 +1,4 @@
-import { TransformedMapping } from '../../../lib/core/action';
+import { TransformedMapping } from '../../../lib/core/pipeline';
 
 const checkUIPreferences = (property: string, schema: TransformedMapping): string => {
 	if (schema == null || property === '') {

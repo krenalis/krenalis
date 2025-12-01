@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // ErrEventTypeNotExist is returned by the EventSender.EventTypeSchema method if
@@ -244,7 +244,7 @@ type EventType struct {
 	// Description is the description of the event type to be displayed.
 	Description string
 
-	// Filter is the recommended default filter to use for actions that use this event type.
+	// Filter is the recommended default filter to use for pipelines that use this event type.
 	Filter string
 }
 
@@ -422,8 +422,8 @@ type EventSender interface {
 	// error.
 	//
 	// Authentication data in the returned request is redacted (i.e., replaced
-	// with "[REDACTED]"). If the destination action's identifier would appear
-	// in an event identifier, it is replaced with "[ACTION]".
+	// with "[REDACTED]"). If the destination pipeline's identifier would appear
+	// in an event identifier, it is replaced with "[PIPELINE]".
 	//
 	// This method is safe for concurrent use, on the same instance, by multiple
 	// goroutines.
@@ -448,9 +448,9 @@ type EventSender interface {
 
 // Event represents an event that will be sent to an API.
 type Event struct {
-	DestinationAction int           // Destination action that processes the event.
-	Received          ReceivedEvent // Event as it was received.
-	Type              EventTypeInfo // Event type.
+	DestinationPipeline int           // Destination pipeline that processes the event.
+	Received            ReceivedEvent // Event as it was received.
+	Type                EventTypeInfo // Event type.
 }
 
 // EventTypeInfo represents the event type in the context of a specific event

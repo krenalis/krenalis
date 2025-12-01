@@ -11,291 +11,15 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/relvacode/iso8601"
 )
 
 type workspace struct {
 	*apisServer
-}
-
-// Action returns an action of a connection.
-func (workspace workspace) Action(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	id, ok := parseID(r.PathValue("id")) // ID of the action.
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid action identifier", r.PathValue("id"))
-	}
-	return ws.Action(id)
-}
-
-// ActionErrors returns the action errors of the workspace.
-func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse start.
-	s := r.PathValue("start")
-	start, err := iso8601.ParseString(s)
-	if err != nil {
-		return nil, errors.BadRequest("start is not valid")
-	}
-
-	// Parse end.
-	e := r.PathValue("end")
-	end, err := iso8601.ParseString(e)
-	if err != nil {
-		return nil, errors.BadRequest("end is not valid")
-	}
-
-	q := r.URL.Query()
-
-	// Parse actions.
-	var actions []int
-	if ids, ok := q["actions"]; ok {
-		actions = make([]int, len(ids))
-		for i, id := range ids {
-			actions[i], ok = parseID(id)
-			if !ok {
-				return nil, errors.BadRequest("an action is not valid")
-			}
-		}
-	} else {
-		return nil, errors.BadRequest("at least an action must be provided")
-	}
-
-	// Parse step.
-	var step *core.ActionStep
-	if s, ok := q["step"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'step' parameter is allowed")
-		}
-		st, err := core.ParseActionStep(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'step' parameter is not valid")
-		}
-		step = &st
-	}
-
-	// Parse first and limit.
-	first, limit := 0, 100
-	if s, ok := q["first"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'first' parameter is allowed")
-		}
-		first, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'first' parameter is not valid")
-		}
-	}
-	if s, ok := q["limit"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'limit' parameters is allowed")
-		}
-		limit, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'limit' parameter is not valid")
-		}
-	}
-
-	errs, err := ws.ActionErrors(r.Context(), start, end, actions, step, first, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string][]core.ActionError{"errors": errs}, nil
-}
-
-// ActionMetricsPerDate returns metrics aggregated by day for a time interval
-// between specified start and end dates.
-func (workspace workspace) ActionMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse start.
-	s := r.PathValue("start")
-	start, err := iso8601.ParseString(s)
-	if err != nil {
-		return nil, errors.BadRequest("start is not valid")
-	}
-
-	// Parse end.
-	e := r.PathValue("end")
-	end, err := iso8601.ParseString(e)
-	if err != nil {
-		return nil, errors.BadRequest("end is not valid")
-	}
-
-	q := r.URL.Query()
-
-	// Parse actions.
-	var actions []int
-	if ids, ok := q["actions"]; ok {
-		actions = make([]int, len(ids))
-		for i, id := range ids {
-			actions[i], ok = parseID(id)
-			if !ok {
-				return nil, errors.BadRequest("an action is not valid")
-			}
-		}
-	} else {
-		return nil, errors.BadRequest("at least an action must be provided")
-	}
-
-	metrics, err := ws.ActionMetricsPerDate(r.Context(), start, end, actions)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]any{
-		"start":  metrics.Start,
-		"end":    metrics.End,
-		"passed": metrics.Passed,
-		"failed": metrics.Failed}, nil
-}
-
-// ActionMetricsPerDay returns the action metrics for a specified number of
-// days.
-func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse days.
-	d := r.PathValue("days")
-	days, err := strconv.Atoi(d)
-	if err != nil {
-		return nil, errors.BadRequest("days is not valid")
-	}
-
-	q := r.URL.Query()
-
-	// Parse actions.
-	var actions []int
-	if ids, ok := q["actions"]; ok {
-		actions = make([]int, len(ids))
-		for i, id := range ids {
-			actions[i], ok = parseID(id)
-			if !ok {
-				return nil, errors.BadRequest("an 'action' parameter is not valid")
-			}
-		}
-	} else {
-		return nil, errors.BadRequest("at least an action must be provided")
-	}
-
-	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), days, core.Day, actions)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]any{
-		"start":  metrics.Start,
-		"end":    metrics.End,
-		"passed": metrics.Passed,
-		"failed": metrics.Failed}, nil
-}
-
-// ActionMetricsPerHour returns the action metrics for a specified number of
-// hours.
-func (workspace workspace) ActionMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse hours.
-	h := r.PathValue("hours")
-	hours, err := strconv.Atoi(h)
-	if err != nil {
-		return nil, errors.BadRequest("hours is not valid")
-	}
-
-	q := r.URL.Query()
-
-	// Parse actions.
-	var actions []int
-	if ids, ok := q["actions"]; ok {
-		actions = make([]int, len(ids))
-		for i, id := range ids {
-			actions[i], ok = parseID(id)
-			if !ok {
-				return nil, errors.BadRequest("an action is not valid")
-			}
-		}
-	} else {
-		return nil, errors.BadRequest("at least an action must be provided")
-	}
-
-	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), hours, core.Hour, actions)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]any{
-		"start":  metrics.Start,
-		"end":    metrics.End,
-		"passed": metrics.Passed,
-		"failed": metrics.Failed}, nil
-}
-
-// ActionMetricsPerMinute returns the action metrics for a specified number of
-// minutes.
-func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse minutes.
-	m := r.PathValue("minutes")
-	minutes, err := strconv.Atoi(m)
-	if err != nil {
-		return nil, errors.BadRequest("minutes is not valid")
-	}
-
-	q := r.URL.Query()
-
-	// Parse actions.
-	var actions []int
-	if ids, ok := q["actions"]; ok {
-		actions = make([]int, len(ids))
-		for i, id := range ids {
-			actions[i], ok = parseID(id)
-			if !ok {
-				return nil, errors.BadRequest("an action is not valid")
-			}
-		}
-	} else {
-		return nil, errors.BadRequest("at least an action must be provided")
-	}
-
-	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), minutes, core.Minute, actions)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]any{
-		"start":  metrics.Start,
-		"end":    metrics.End,
-		"passed": metrics.Passed,
-		"failed": metrics.Failed}, nil
 }
 
 // AlterProfileSchema alters the profile schema of a workspace.
@@ -315,6 +39,21 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 	}
 	err = ws.AlterProfileSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
 	return nil, err
+}
+
+// AuthToken returns an authorization token, given an authorization code and
+// the redirection URI used to obtain that code, that can be used to add a new
+// connection to the workspace for the specified connector.
+func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	query := r.URL.Query()
+	connector := query.Get("connector")
+	redirectURI := query.Get("redirectURI")
+	authCode := query.Get("authCode")
+	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
 }
 
 // Connection returns a connection of the current workspace.
@@ -574,22 +313,7 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 	}, nil
 }
 
-// AuthToken returns an authorization token, given an authorization code and
-// the redirection URI used to obtain that code, that can be used to add a new
-// connection to the workspace for the specified connector.
-func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	query := r.URL.Query()
-	connector := query.Get("connector")
-	redirectURI := query.Get("redirectURI")
-	authCode := query.Get("authCode")
-	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
-}
-
-// Execution returns the execution of an action in the current workspace.
+// Execution returns the execution of a pipeline in the current workspace.
 func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -602,7 +326,7 @@ func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (an
 	return ws.Execution(r.Context(), id)
 }
 
-// Executions returns the executions of the actions of the current workspace.
+// Executions returns the executions of the pipelines of the current workspace.
 func (workspace workspace) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -627,6 +351,282 @@ func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
 	}, nil
+}
+
+// Pipeline returns a pipeline of a connection.
+func (workspace workspace) Pipeline(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	id, ok := parseID(r.PathValue("id")) // ID of the pipeline.
+	if !ok {
+		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", r.PathValue("id"))
+	}
+	return ws.Pipeline(id)
+}
+
+// PipelineErrors returns the pipeline errors of the workspace.
+func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse start.
+	s := r.PathValue("start")
+	start, err := iso8601.ParseString(s)
+	if err != nil {
+		return nil, errors.BadRequest("start is not valid")
+	}
+
+	// Parse end.
+	e := r.PathValue("end")
+	end, err := iso8601.ParseString(e)
+	if err != nil {
+		return nil, errors.BadRequest("end is not valid")
+	}
+
+	q := r.URL.Query()
+
+	// Parse pipelines.
+	var pipelines []int
+	if ids, ok := q["pipelines"]; ok {
+		pipelines = make([]int, len(ids))
+		for i, id := range ids {
+			pipelines[i], ok = parseID(id)
+			if !ok {
+				return nil, errors.BadRequest("a pipeline is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least a pipeline must be provided")
+	}
+
+	// Parse step.
+	var step *core.PipelineStep
+	if s, ok := q["step"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'step' parameter is allowed")
+		}
+		st, err := core.ParsePipelineStep(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'step' parameter is not valid")
+		}
+		step = &st
+	}
+
+	// Parse first and limit.
+	first, limit := 0, 100
+	if s, ok := q["first"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'first' parameter is allowed")
+		}
+		first, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'first' parameter is not valid")
+		}
+	}
+	if s, ok := q["limit"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'limit' parameters is allowed")
+		}
+		limit, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'limit' parameter is not valid")
+		}
+	}
+
+	errs, err := ws.PipelineErrors(r.Context(), start, end, pipelines, step, first, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]core.PipelineError{"errors": errs}, nil
+}
+
+// PipelineMetricsPerDate returns metrics aggregated by day for a time interval
+// between specified start and end dates.
+func (workspace workspace) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse start.
+	s := r.PathValue("start")
+	start, err := iso8601.ParseString(s)
+	if err != nil {
+		return nil, errors.BadRequest("start is not valid")
+	}
+
+	// Parse end.
+	e := r.PathValue("end")
+	end, err := iso8601.ParseString(e)
+	if err != nil {
+		return nil, errors.BadRequest("end is not valid")
+	}
+
+	q := r.URL.Query()
+
+	// Parse pipelines.
+	var pipelines []int
+	if ids, ok := q["pipelines"]; ok {
+		pipelines = make([]int, len(ids))
+		for i, id := range ids {
+			pipelines[i], ok = parseID(id)
+			if !ok {
+				return nil, errors.BadRequest("a pipeline is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least a pipeline must be provided")
+	}
+
+	metrics, err := ws.PipelineMetricsPerDate(r.Context(), start, end, pipelines)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
+}
+
+// PipelineMetricsPerDay returns the pipeline metrics for a specified number of
+// days.
+func (workspace workspace) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse days.
+	d := r.PathValue("days")
+	days, err := strconv.Atoi(d)
+	if err != nil {
+		return nil, errors.BadRequest("days is not valid")
+	}
+
+	q := r.URL.Query()
+
+	// Parse pipelines.
+	var pipelines []int
+	if ids, ok := q["pipelines"]; ok {
+		pipelines = make([]int, len(ids))
+		for i, id := range ids {
+			pipelines[i], ok = parseID(id)
+			if !ok {
+				return nil, errors.BadRequest("an 'pipeline' parameter is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least a pipeline must be provided")
+	}
+
+	metrics, err := ws.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, pipelines)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
+}
+
+// PipelineMetricsPerHour returns the pipeline metrics for a specified number of
+// hours.
+func (workspace workspace) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse hours.
+	h := r.PathValue("hours")
+	hours, err := strconv.Atoi(h)
+	if err != nil {
+		return nil, errors.BadRequest("hours is not valid")
+	}
+
+	q := r.URL.Query()
+
+	// Parse pipelines.
+	var pipelines []int
+	if ids, ok := q["pipelines"]; ok {
+		pipelines = make([]int, len(ids))
+		for i, id := range ids {
+			pipelines[i], ok = parseID(id)
+			if !ok {
+				return nil, errors.BadRequest("a pipeline is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least a pipeline must be provided")
+	}
+
+	metrics, err := ws.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, pipelines)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
+}
+
+// PipelineMetricsPerMinute returns the pipeline metrics for a specified number of
+// minutes.
+func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse minutes.
+	m := r.PathValue("minutes")
+	minutes, err := strconv.Atoi(m)
+	if err != nil {
+		return nil, errors.BadRequest("minutes is not valid")
+	}
+
+	q := r.URL.Query()
+
+	// Parse pipelines.
+	var pipelines []int
+	if ids, ok := q["pipelines"]; ok {
+		pipelines = make([]int, len(ids))
+		for i, id := range ids {
+			pipelines[i], ok = parseID(id)
+			if !ok {
+				return nil, errors.BadRequest("a pipeline is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least a pipeline must be provided")
+	}
+
+	metrics, err := ws.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, pipelines)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema

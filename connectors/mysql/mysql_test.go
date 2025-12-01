@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/testimages"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -52,19 +52,19 @@ func Test_Merge_Query(t *testing.T) {
 		{"TIME", []byte("02:03:00"), types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
 		{"YEAR", int64(2024), types.Year(), 2024},
 		{"JSON", []byte(`{"foo": "bar"}`), types.JSON(), json.Value(`{"foo":"bar"}`)},
-		{"VARCHAR(100)", []byte("foo"), types.Text(), "foo"},
-		{"CHAR(10)", []byte("foo"), types.Text(), "foo"},
-		{"TEXT", []byte("foo"), types.Text(), "foo"},
-		{"MEDIUMTEXT", []byte("foo"), types.Text(), "foo"},
-		{"LONGTEXT", []byte("foo"), types.Text(), "foo"},
-		{"VARBINARY(100)", []byte("foo"), types.Text(), "foo"},
-		{"BINARY(10)", []byte("foo\x00\x00\x00\x00\x00\x00\x00"), types.Text(), "foo\x00\x00\x00\x00\x00\x00\x00"},
-		{"BLOB", []byte("foo"), types.Text(), "foo"},
-		{"MEDIUMBLOB", []byte("foo"), types.Text(), "foo"},
-		{"LONGBLOB", []byte("foo"), types.Text(), "foo"},
-		{"ENUM('x-small','small','medium','large','x-large')", []byte("small"), types.Text(), "small"},
+		{"VARCHAR(100)", []byte("foo"), types.String(), "foo"},
+		{"CHAR(10)", []byte("foo"), types.String(), "foo"},
+		{"TEXT", []byte("foo"), types.String(), "foo"},
+		{"MEDIUMTEXT", []byte("foo"), types.String(), "foo"},
+		{"LONGTEXT", []byte("foo"), types.String(), "foo"},
+		{"VARBINARY(100)", []byte("foo"), types.String(), "foo"},
+		{"BINARY(10)", []byte("foo\x00\x00\x00\x00\x00\x00\x00"), types.String(), "foo\x00\x00\x00\x00\x00\x00\x00"},
+		{"BLOB", []byte("foo"), types.String(), "foo"},
+		{"MEDIUMBLOB", []byte("foo"), types.String(), "foo"},
+		{"LONGBLOB", []byte("foo"), types.String(), "foo"},
+		{"ENUM('x-small','small','medium','large','x-large')", []byte("small"), types.String(), "small"},
 		// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
-		//{"SET('one','two','three')", []byte("two,tree"), types.Array(types.Text()), []any{"two", "tree"}},
+		//{"SET('one','two','three')", []byte("two,tree"), types.Array(types.String()), []any{"two", "tree"}},
 	}
 
 	table := connectors.Table{

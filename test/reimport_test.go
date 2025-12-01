@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestReimport(t *testing.T) {
@@ -27,21 +27,21 @@ func TestReimport(t *testing.T) {
 	// First of all, create a Dummy connection.
 	dummy := c.CreateDummy("Dummy", meergotester.Source)
 
-	// Create an action that imports users from Dummy, that imports:
+	// Create a pipeline that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the first name
 	//
-	dummyAction := c.CreateAction(dummy, "User", meergotester.ActionToSet{
+	dummyPipeline := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "firstName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -52,7 +52,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import the users from dummy.
-	exec := c.ExecuteAction(dummyAction)
+	exec := c.ExecutePipeline(dummyPipeline)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Run the Identity Resolution.
@@ -77,21 +77,21 @@ func TestReimport(t *testing.T) {
 	assertEq("second user first name", "Bryon", profiles[1].Attributes["first_name"])
 	assertEq("second user last name", nil, profiles[1].Attributes["last_name"])
 
-	// Update the action that imports users from Dummy, that imports:
+	// Update the pipeline that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the last name (instead of the first name)
 	//
-	c.UpdateAction(dummyAction, meergotester.ActionToSet{
+	c.UpdatePipeline(dummyPipeline, meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "lastName", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -102,7 +102,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from Dummy.
-	exec = c.ExecuteAction(dummyAction)
+	exec = c.ExecutePipeline(dummyPipeline)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Run the Identity Resolution.

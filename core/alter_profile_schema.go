@@ -10,11 +10,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/datastore/diffschemas"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // AlterProfileSchema alters the profile schema and the primary sources of the
@@ -167,12 +167,12 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
 		switch p.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			if p.Type.Values() != nil {
-				return fmt.Errorf("profile schema properties with type text cannot specify values")
+				return fmt.Errorf("profile schema properties with type string cannot specify values")
 			}
-			if p.Type.Regexp() != nil {
-				return fmt.Errorf("profile schema properties with type text cannot specify regexp")
+			if p.Type.Pattern() != nil {
+				return fmt.Errorf("profile schema properties with type string cannot specify pattern")
 			}
 		case types.ArrayKind:
 			k := p.Type.Elem().Kind()

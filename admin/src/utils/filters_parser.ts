@@ -1,5 +1,5 @@
-import { FILTER_OPERATORS } from '../lib/core/action';
-import { FilterLogical, FilterOperator, Filter, FilterCondition } from '../lib/api/types/action';
+import { FILTER_OPERATORS } from '../lib/core/pipeline';
+import { FilterLogical, FilterOperator, Filter, FilterCondition } from '../lib/api/types/pipeline';
 
 const SORTED_OPERATORS = [...FILTER_OPERATORS].sort((a, b) => b.length - a.length);
 

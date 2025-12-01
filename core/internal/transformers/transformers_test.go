@@ -8,17 +8,17 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestSchemaSubset(t *testing.T) {
 	base := types.Object([]types.Property{
 		{Name: "id", Type: types.Int(64)},
 		{Name: "profile", Type: types.Object([]types.Property{
-			{Name: "name", Type: types.Text()},
+			{Name: "name", Type: types.String()},
 			{Name: "address", Type: types.Object([]types.Property{
-				{Name: "city", Type: types.Text()},
-				{Name: "zip", Type: types.Text()},
+				{Name: "city", Type: types.String()},
+				{Name: "zip", Type: types.String()},
 			})},
 		})},
 		{Name: "settings", Type: types.Object([]types.Property{
@@ -26,7 +26,7 @@ func TestSchemaSubset(t *testing.T) {
 				{Name: "newsletter", Type: types.Boolean()},
 				{Name: "alerts", Type: types.Boolean()},
 			})},
-			{Name: "timezone", Type: types.Text()},
+			{Name: "timezone", Type: types.String()},
 		})},
 	})
 
@@ -68,7 +68,7 @@ func TestSchemaSubset(t *testing.T) {
 			want: types.Object([]types.Property{
 				{Name: "profile", Type: types.Object([]types.Property{
 					{Name: "address", Type: types.Object([]types.Property{
-						{Name: "zip", Type: types.Text()},
+						{Name: "zip", Type: types.String()},
 					})},
 				})},
 			}),
@@ -121,5 +121,5 @@ func TestSchemaSubsetPanicsForNonObjectSchema(t *testing.T) {
 			t.Fatalf("expected panic for non-object schema")
 		}
 	}()
-	_ = schemaSubset(types.Text(), []string{"any"})
+	_ = schemaSubset(types.String(), []string{"any"})
 }

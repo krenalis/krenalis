@@ -3,7 +3,7 @@ import './GeneralSettings.css';
 import * as icons from '../../../constants/icons';
 import DangerZone from '../../base/DangerZone/DangerZone';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
-import { CONFIRM_ANIMATION_DURATION } from '../ActionWrapper/Action.constants';
+import { CONFIRM_ANIMATION_DURATION } from '../PipelineWrapper/Pipeline.constants';
 import appContext from '../../../context/AppContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -11,7 +11,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { getUIPreferencesComboboxItems } from '../../helpers/getSchemaComboboxItems';
-import { flattenSchema } from '../../../lib/core/action';
+import { flattenSchema } from '../../../lib/core/pipeline';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { UIPreferences } from '../../../lib/api/types/workspace';
 import { checkUIPreferences } from './GeneralSettings.helpers';
@@ -36,7 +36,12 @@ const GeneralSettings = () => {
 		selectedWorkspace,
 		setSelectedWorkspace,
 		setIsLoadingState,
+		setTitle,
 	} = useContext(appContext);
+
+	useLayoutEffect(() => {
+		setTitle('Settings / General');
+	}, [setTitle]);
 
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);

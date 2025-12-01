@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestParquetTestApacheFiles(t *testing.T) {
@@ -53,8 +53,8 @@ func TestParquetTestApacheFiles(t *testing.T) {
 				{Name: "bigint_col", Type: types.Int(64), Nullable: true},
 				{Name: "float_col", Type: types.Float(32), Nullable: true},
 				{Name: "double_col", Type: types.Float(64), Nullable: true},
-				{Name: "date_string_col", Type: types.Text(), Nullable: true},
-				{Name: "string_col", Type: types.Text(), Nullable: true},
+				{Name: "date_string_col", Type: types.String(), Nullable: true},
+				{Name: "string_col", Type: types.String(), Nullable: true},
 				{Name: "timestamp_col", Type: types.DateTime(), Nullable: true},
 			},
 		},
@@ -64,7 +64,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 		{
 			path:               "binary.parquet",
-			expectedProperties: []types.Property{{Name: "foo", Type: types.Text(), Nullable: true}},
+			expectedProperties: []types.Property{{Name: "foo", Type: types.String(), Nullable: true}},
 		},
 		{
 			path:               "concatenated_gzip_members.parquet",
@@ -72,7 +72,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 		{
 			path:               "delta_length_byte_array.parquet",
-			expectedProperties: []types.Property{{Name: "FRUIT", Type: types.Text(), Nullable: true}},
+			expectedProperties: []types.Property{{Name: "FRUIT", Type: types.String(), Nullable: true}},
 		},
 		{
 			path:               "int32_decimal.parquet",
@@ -80,13 +80,13 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 		{
 			path:               "fixed_length_byte_array.parquet",
-			expectedProperties: []types.Property{{Name: "flba_field", Type: types.Text(), Nullable: false}},
+			expectedProperties: []types.Property{{Name: "flba_field", Type: types.String(), Nullable: false}},
 		},
 		{
 			path: "sort_columns.parquet",
 			expectedProperties: []types.Property{
 				{Name: "a", Type: types.Int(64), Nullable: true},
-				{Name: "b", Type: types.Text(), Nullable: true},
+				{Name: "b", Type: types.String(), Nullable: true},
 			},
 		},
 		{
@@ -98,14 +98,14 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		{
 			path: "data_index_bloom_encoding_stats.parquet",
 			expectedProperties: []types.Property{
-				{Name: "String", Type: types.Text(), Nullable: true},
+				{Name: "String", Type: types.String(), Nullable: true},
 			},
 		},
 		{
 			path: "lz4_raw_compressed.parquet",
 			expectedProperties: []types.Property{
 				{Name: "c0", Type: types.Int(64), Nullable: false},
-				{Name: "c1", Type: types.Text(), Nullable: false},
+				{Name: "c1", Type: types.String(), Nullable: false},
 				{Name: "v11", Type: types.Float(64), Nullable: true},
 			},
 		},

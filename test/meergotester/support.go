@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 	"github.com/meergo/analytics-go"
@@ -75,8 +75,8 @@ func (c *Meergo) AbsolutePath(storage int, path string) string {
 	return response.Path
 }
 
-func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) map[string]any {
-	path := fmt.Sprintf("/api/v1/connections/%d/actions/schemas/%s", conn, target)
+func (c *Meergo) PipelineSchemas(conn int, target core.Target, eventType string) map[string]any {
+	path := fmt.Sprintf("/api/v1/connections/%d/pipelines/schemas/%s", conn, target)
 	if eventType != "" {
 		path += "?type=" + url.QueryEscape(eventType)
 	}
@@ -102,49 +102,49 @@ func (c *Meergo) ConnectionUI(connection int) map[string]any {
 	return ui
 }
 
-func (c *Meergo) CreateAction(conn int, target string, action ActionToSet) int {
+func (c *Meergo) CreatePipeline(conn int, target string, pipeline PipelineToSet) int {
 	switch target {
 	case "Event", "User", "Group":
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
-	actionJSON, err := json.Marshal(action)
+	pipelineJSON, err := json.Marshal(pipeline)
 	if err != nil {
 		panic(err)
 	}
 	var body map[string]any
-	err = json.Unmarshal(actionJSON, &body)
+	err = json.Unmarshal(pipelineJSON, &body)
 	if err != nil {
 		panic(err)
 	}
 	body["connection"] = conn
 	body["target"] = target
 	var id int
-	c.MustCall("POST", "/api/v1/actions", body, &id)
+	c.MustCall("POST", "/api/v1/pipelines", body, &id)
 	return id
 }
 
-// CreateActionErr is like CreateAction but returns an error instead of
+// CreatePipelineErr is like CreatePipeline but returns an error instead of
 // panicking.
-func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (int, error) {
+func (c *Meergo) CreatePipelineErr(conn int, target string, pipeline PipelineToSet) (int, error) {
 	switch target {
 	case "Event", "User", "Group":
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
-	actionJSON, err := json.Marshal(action)
+	pipelineJSON, err := json.Marshal(pipeline)
 	if err != nil {
 		panic(err)
 	}
 	var body map[string]any
-	err = json.Unmarshal(actionJSON, &body)
+	err = json.Unmarshal(pipelineJSON, &body)
 	if err != nil {
 		panic(err)
 	}
 	body["connection"] = conn
 	body["target"] = target
 	var id int
-	err = c.Call("POST", "/api/v1/actions", body, &id)
+	err = c.Call("POST", "/api/v1/pipelines", body, &id)
 	if err != nil {
 		return 0, err
 	}
@@ -152,7 +152,7 @@ func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (i
 }
 
 // DefaultFilterUserFromEvents is the filter that the admin adds by default to
-// the actions that import users from events.
+// the pipelines that import users from events.
 var DefaultFilterUserFromEvents = &Filter{
 	Logical: "or",
 	Conditions: []FilterCondition{
@@ -230,13 +230,13 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 	return c.CreateConnection(conn)
 }
 
-func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSet) int {
-	actionJSON, err := json.Marshal(action)
+func (c *Meergo) CreateEventPipeline(conn int, eventType string, pipeline PipelineToSet) int {
+	pipelineJSON, err := json.Marshal(pipeline)
 	if err != nil {
 		panic(err)
 	}
 	var body map[string]any
-	err = json.Unmarshal(actionJSON, &body)
+	err = json.Unmarshal(pipelineJSON, &body)
 	if err != nil {
 		panic(err)
 	}
@@ -244,7 +244,7 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 	body["target"] = "Event"
 	body["eventType"] = eventType
 	var id int
-	c.MustCall("POST", "/api/v1/actions", body, &id)
+	c.MustCall("POST", "/api/v1/pipelines", body, &id)
 	return id
 }
 
@@ -299,11 +299,11 @@ func (c *Meergo) DeleteConnection(conn int) {
 	c.MustCall("DELETE", path, nil, nil)
 }
 
-func (c *Meergo) ExecuteAction(action int) int {
+func (c *Meergo) ExecutePipeline(pipeline int) int {
 	var response struct {
 		ID int
 	}
-	path := fmt.Sprintf("/api/v1/actions/%d/exec", action)
+	path := fmt.Sprintf("/api/v1/pipelines/%d/exec", pipeline)
 	c.MustCall("POST", path, nil, &response)
 	return response.ID
 }
@@ -331,7 +331,7 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 
 func (c *Meergo) Execution(id int) Execution {
 	var exe Execution
-	path := fmt.Sprintf("/api/v1/actions/executions/%d", id)
+	path := fmt.Sprintf("/api/v1/pipelines/executions/%d", id)
 	c.MustCall("GET", path, nil, &exe)
 	return exe
 }
@@ -340,7 +340,7 @@ func (c *Meergo) Executions() []Execution {
 	var response struct {
 		Executions []Execution
 	}
-	c.MustCall("GET", "/api/v1/actions/executions", nil, &response)
+	c.MustCall("GET", "/api/v1/pipelines/executions", nil, &response)
 	return response.Executions
 }
 
@@ -534,9 +534,9 @@ func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
 	return c.Call("POST", "/api/v1/workspaces/test", body, nil)
 }
 
-func (c *Meergo) UpdateAction(actionID int, action ActionToSet) {
-	path := fmt.Sprintf("/api/v1/actions/%d", actionID)
-	c.MustCall("PUT", path, action, nil)
+func (c *Meergo) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
+	path := fmt.Sprintf("/api/v1/pipelines/%d", pipelineID)
+	c.MustCall("PUT", path, pipeline, nil)
 }
 
 func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
@@ -682,12 +682,12 @@ func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
 		if len(ids) == 1 {
 			exe := c.Execution(ids[0])
 			if exe.EndTime != nil {
-				// If the action execution ended with an error, make the test fail.
+				// If the pipeline execution ended with an error, make the test fail.
 				if exe.Error != "" {
-					c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exe.Action, exe.ID, exe.Error)
+					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", exe.Pipeline, exe.ID, exe.Error)
 				}
 				if !allowFailed && exe.Failed != [6]int{} {
-					c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exe.Action, exe.ID, exe.Failed)
+					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", exe.Pipeline, exe.ID, exe.Failed)
 				}
 				return
 			}
@@ -703,12 +703,12 @@ func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
 				completed = false
 				continue
 			}
-			// If the action execution ended with an error, make the test fail.
+			// If the pipeline execution ended with an error, make the test fail.
 			if exe.Error != "" {
-				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exe.Action, exe.ID, exe.Error)
+				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", exe.Pipeline, exe.ID, exe.Error)
 			}
 			if !allowFailed && exe.Failed != [6]int{} {
-				c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exe.Action, exe.ID, exe.Failed)
+				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", exe.Pipeline, exe.ID, exe.Failed)
 			}
 		}
 		if completed {

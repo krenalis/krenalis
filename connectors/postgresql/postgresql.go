@@ -19,8 +19,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -337,15 +337,15 @@ func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescripti
 	case pgtype.JSONOID, pgtype.JSONBOID:
 		return types.JSON(), "", nil
 	case pgtype.InetOID:
-		return types.Inet(), "", nil
+		return types.IP(), "", nil
 	case pgtype.BPCharOID, pgtype.VarcharOID:
 		length := int(fd.TypeModifier - 4)
-		if 1 <= length && length <= types.MaxTextLen {
-			return types.Text().WithCharLen(length), "", nil
+		if 1 <= length && length <= types.MaxStringLen {
+			return types.String().WithMaxLength(length), "", nil
 		}
-		return types.Text(), "", nil
+		return types.String(), "", nil
 	case pgtype.TextOID, pgtype.ByteaOID:
-		return types.Text(), "", nil
+		return types.String(), "", nil
 	}
 	conn, err := ps.pool.Acquire(ctx)
 	if err != nil {

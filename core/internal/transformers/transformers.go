@@ -13,8 +13,8 @@ import (
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	meergoMetrics "github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Purpose represents the purpose of a record transformation.
@@ -45,7 +45,7 @@ func (err RecordTransformationError) Error() string {
 
 // Transformer represents a transformer.
 type Transformer struct {
-	action    int
+	pipeline  int
 	provider  FunctionProvider
 	inSchema  types.Type
 	outSchema types.Type
@@ -53,49 +53,49 @@ type Transformer struct {
 	function  *state.TransformationFunction
 }
 
-// New returns a new transformer that transforms values for the provided action.
-// provider is the transformer provider used for transformation functions and
-// should be nil for mappings. layouts, if not nil, represents the layouts used
-// to format datetime, date, and time values as strings.
+// New returns a new transformer that transforms values for the provided
+// pipeline. provider is the transformer provider used for transformation
+// functions and should be nil for mappings. layouts, if not nil, represents the
+// layouts used to format datetime, date, and time values as strings.
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
-// action.
+// pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
-func New(action *state.Action, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
 
-	if m := action.Transformation.Mapping; m != nil {
-		inPlace := action.Target != state.TargetEvent
-		mapping, err := mappings.New(m, action.InSchema, action.OutSchema, inPlace, layouts)
+	if m := pipeline.Transformation.Mapping; m != nil {
+		inPlace := pipeline.Target != state.TargetEvent
+		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, inPlace, layouts)
 		if err != nil {
 			return nil, err
 		}
 		t := Transformer{
-			action:    action.ID,
-			inSchema:  action.InSchema,
-			outSchema: action.OutSchema,
+			pipeline:  pipeline.ID,
+			inSchema:  pipeline.InSchema,
+			outSchema: pipeline.OutSchema,
 			mapping:   mapping,
 		}
 		// Set CreateRequired to true for the output schema first level properties of a destination database.
-		if isDestinationDatabase := action.TableName != ""; isDestinationDatabase {
+		if isDestinationDatabase := pipeline.TableName != ""; isDestinationDatabase {
 			t.outSchema = setCreateRequired(t.outSchema)
 		}
 		return &t, nil
 	}
 
-	if f := action.Transformation.Function; f != nil {
+	if f := pipeline.Transformation.Function; f != nil {
 		t := Transformer{
-			action:    action.ID,
+			pipeline:  pipeline.ID,
 			provider:  provider,
-			outSchema: schemaSubset(action.OutSchema, action.Transformation.OutPaths),
+			outSchema: schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
 			function:  f,
 		}
-		if len(action.Transformation.InPaths) > 0 {
-			t.inSchema = schemaSubset(action.InSchema, action.Transformation.InPaths)
+		if len(pipeline.Transformation.InPaths) > 0 {
+			t.inSchema = schemaSubset(pipeline.InSchema, pipeline.Transformation.InPaths)
 		}
 		// Set CreateRequired to true for the output schema first level properties of a destination database.
-		if isDestinationDatabase := action.TableName != ""; isDestinationDatabase {
+		if isDestinationDatabase := pipeline.TableName != ""; isDestinationDatabase {
 			t.outSchema = setCreateRequired(t.outSchema)
 		}
 		return &t, nil

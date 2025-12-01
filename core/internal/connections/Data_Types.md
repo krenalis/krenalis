@@ -5,7 +5,7 @@
 
 | Kind      | Go              | json.Unmarshal               | ClickHouse           | PostgreSQL  | MySQL     | Snowflake   | Parquet      | JSON            | CSV    | Excel  |
 |-----------|-----------------|------------------------------|----------------------|-------------|-----------|-------------|--------------|-----------------|--------|--------|
-| text      | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
+| string    | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
 | boolean   | bool            | bool                         | bool                 | bool        | -         | bool        | bool         | -               | -      | -      |
 | int(8)    | int             | float64, json.Number         | int8                 | -           | int64     | -           |              | -               | -      | -      |
 | int(16)   | int             | float64, json.Number         | int16                | int64       | int64     | -           |              | -               | -      | -      |
@@ -26,7 +26,7 @@
 | year      | int             | float64, json.Number         | -                    | -           | int64     | -           | -            | -               | -      | -      |
 | uuid      | string          | string                       | string               | string      | -         | -           | []byte       | -               | -      | -      |
 | json      | json.Value      | JSON types [^4]              | - [^3]               | string      | []byte    | string [^6] |              | JSON types [^4] | -      | -      |
-| inet      | string          | string                       | net.IP               | string [^8] | -         | -           | -            | -               | -      | -      |
+| ip        | string          | string                       | net.IP               | string [^8] | -         | -           | -            | -               | -      | -      |
 | array(T)  | []any           | []any                        | []T                  | []T [^5]    | -         | string [^7] | -            | -               | -      | -      |
 | object    | map[string]any  | map[string]any               | -                    | -           | -         | -           | -            | -               | -      | -      |
 | map(T)    | map[string]any  | map[string]any               | map[string]T         | -           | -         | string [^7] | -            | -               | -      | -      |

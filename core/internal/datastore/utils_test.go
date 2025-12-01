@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_IsMetaProperty(t *testing.T) {

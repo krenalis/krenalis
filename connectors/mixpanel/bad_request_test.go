@@ -11,7 +11,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // TestBadRequest verifies that the Mixpanel connector correctly deserializes
@@ -54,7 +54,7 @@ func TestBadRequest(t *testing.T) {
 		Type: connectors.EventTypeInfo{
 			ID: "track",
 			Schema: types.Object([]types.Property{
-				{Name: "event", Prefilled: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+				{Name: "event", Prefilled: "event", Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event Name"},
 				{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
 			}),
 			Values: map[string]any{

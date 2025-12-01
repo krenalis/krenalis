@@ -12,16 +12,16 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/metrics"
+	"github.com/meergo/meergo/tools/metrics"
 )
 
 type EventWriter struct {
-	store   *Store
-	ack     EventWriterAckFunc
-	mu      sync.Mutex // for 'rows' and 'actions' fields
-	rows    [][]any
-	actions []int
-	close   struct {
+	store     *Store
+	ack       EventWriterAckFunc
+	mu        sync.Mutex // for 'rows' and 'pipelines' fields
+	rows      [][]any
+	pipelines []int
+	close     struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 	}
@@ -62,7 +62,7 @@ func (ew *EventWriter) Close(ctx context.Context) {
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-func (ew *EventWriter) Write(event events.Event, action int) error {
+func (ew *EventWriter) Write(event events.Event, pipeline int) error {
 
 	row := make([]any, 66)
 
@@ -227,7 +227,7 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 
 	ew.mu.Lock()
 	ew.rows = append(ew.rows, row)
-	ew.actions = append(ew.actions, action)
+	ew.pipelines = append(ew.pipelines, pipeline)
 	ew.mu.Unlock()
 
 	return nil
@@ -238,8 +238,8 @@ func (ew *EventWriter) flush() {
 	metrics.Increment("EventWriter.flush.calls", 1)
 
 	ew.mu.Lock()
-	rows, actions := ew.rows, ew.actions
-	ew.rows, ew.actions = nil, nil
+	rows, pipelines := ew.rows, ew.pipelines
+	ew.rows, ew.pipelines = nil, nil
 	ew.mu.Unlock()
 
 	if rows == nil {
@@ -252,7 +252,7 @@ func (ew *EventWriter) flush() {
 		if ew.ack != nil {
 			events := make([]AckEvent, len(rows))
 			for i := range rows {
-				events[i].Action = actions[i]
+				events[i].Pipeline = pipelines[i]
 			}
 			metrics.Increment("EventWriter.ack_sents", 1)
 			ew.ack(events, err)
@@ -279,7 +279,7 @@ func (ew *EventWriter) flush() {
 		if ew.ack != nil {
 			events := make([]AckEvent, len(rows))
 			for i := range rows {
-				events[i].Action = actions[i]
+				events[i].Pipeline = pipelines[i]
 			}
 			metrics.Increment("EventWriter.ack_sents", 1)
 			ew.ack(events, nil)

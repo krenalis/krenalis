@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/json"
 )
 
 //go:embed documentation/source/overview.md

@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 type api struct {
@@ -158,6 +158,8 @@ type publicMetadata struct {
 //   - externalEventURL: external event URL - https://example.com/api/v1/events
 //   - externalAssetsURLs: external assets URLs.
 //   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
+//   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/meergo.min.js
+//   - memberEmailVerificationRequired: require verification of a new member's email address?
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //

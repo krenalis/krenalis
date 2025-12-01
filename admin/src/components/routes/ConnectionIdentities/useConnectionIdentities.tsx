@@ -62,7 +62,7 @@ const useConnectionIdentities = () => {
 				name: connection.connector.getIdentityIDLabel(),
 			},
 			{
-				name: 'Action',
+				name: 'Pipeline',
 			},
 		];
 		if (connection.hasAnonymousIdentifiers) {
@@ -71,7 +71,7 @@ const useConnectionIdentities = () => {
 
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
-			const actionName = connection.actions.find((a) => a.id === identity.action).name;
+			const pipelineName = connection.pipelines.find((p) => p.id === identity.pipeline).name;
 			const row: GridRow = {
 				cells: [
 					identity.lastChangeTime,
@@ -83,8 +83,10 @@ const useConnectionIdentities = () => {
 							anonymous
 						</span>
 					),
-					<span className='connection-identities__action'>
-						<Link path={`connections/${connection.id}/actions/edit/${identity.action}`}>{actionName}</Link>
+					<span className='connection-identities__pipeline'>
+						<Link path={`connections/${connection.id}/pipelines/edit/${identity.pipeline}`}>
+							{pipelineName}
+						</Link>
 					</span>,
 				],
 				key: identity.id,

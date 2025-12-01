@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestStorage(t *testing.T) {
@@ -75,10 +75,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	expectedSchema := types.Object([]types.Property{
-		{Name: "customer_id", Type: types.Text()},
-		{Name: "email", Type: types.Text()},
-		{Name: "first_name", Type: types.Text()},
-		{Name: "last_name", Type: types.Text()},
+		{Name: "customer_id", Type: types.String()},
+		{Name: "email", Type: types.String()},
+		{Name: "first_name", Type: types.String()},
+		{Name: "last_name", Type: types.String()},
 	})
 	if !types.Equal(expectedSchema, schema) {
 		t.Fatal("schemas do not match")

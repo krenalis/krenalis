@@ -12,8 +12,8 @@ import (
 
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 
@@ -23,19 +23,19 @@ import (
 // written.
 type EventIdentityWriter struct {
 	store      *Store
-	action     int
+	pipeline   int
 	connection int
 	ack        EventIdentityWriterAckFunc
 	columns    []warehouses.Column
 
-	mu      sync.Mutex
-	actions map[int]struct{} // actions of the action's connection. Access using 'mu'. If nil, it means that the action does not exist anymore.
-	aligned bool             // indicates if the action's output schema is aligned with the profile schema. access using 'mu'.
-	flatter *flatter         // access using 'mu'. nil for actions that import identities from events with no transformations.
-	index   map[identityKey]int
-	rows    []map[string]any
-	ackIDs  []string
-	timer   *time.Timer
+	mu        sync.Mutex
+	pipelines map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
+	aligned   bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
+	flatter   *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
+	index     map[identityKey]int
+	rows      []map[string]any
+	ackIDs    []string
+	timer     *time.Timer
 
 	close struct {
 		ctx    context.Context
@@ -46,52 +46,52 @@ type EventIdentityWriter struct {
 }
 
 // newEventIdentityWriter returns an identity writer for writing user
-// identities, relative to the action, on the data warehouse, in case of
+// identities, relative to the pipeline, on the data warehouse, in case of
 // importing identities from events.
 //
 // It must be called on a frozen state.
-func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
+func newEventIdentityWriter(store *Store, pipelineID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
 
 	// Initialize the EventIdentityWriter.
 	iw := &EventIdentityWriter{
-		store:   store,
-		action:  actionID,
-		index:   map[identityKey]int{},
-		ack:     ack,
-		actions: map[int]struct{}{},
+		store:     store,
+		pipeline:  pipelineID,
+		index:     map[identityKey]int{},
+		ack:       ack,
+		pipelines: map[int]struct{}{},
 	}
 
-	action, _ := store.ds.state.Action(actionID)
-	connection := action.Connection()
+	pipeline, _ := store.ds.state.Pipeline(pipelineID)
+	connection := pipeline.Connection()
 	iw.connection = connection.ID
-	if action.OutSchema.Valid() {
+	if pipeline.OutSchema.Valid() {
 		workspace := connection.Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.ProfileSchema, nil)
+		err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			iw.aligned = true
-			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
+			iw.flatter = newFlatter(pipeline.OutSchema, store.identityColumnByProperty())
 		}
 	} else {
-		// The action's out schema is invalid when importing identities from
-		// events without any transformation in the action.
+		// The pipeline's out schema is invalid when importing identities from
+		// events without any transformation in the pipeline.
 		iw.aligned = true
 	}
-	for _, a := range connection.Actions() {
-		iw.actions[a.ID] = struct{}{}
+	for _, p := range connection.Pipelines() {
+		iw.pipelines[p.ID] = struct{}{}
 	}
 	store.mu.Lock()
-	store.eventIdentityWriters[action.ID] = iw
+	store.eventIdentityWriters[pipeline.ID] = iw
 	store.mu.Unlock()
 
 	iw.columns = make([]warehouses.Column, 7)
-	iw.columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
+	iw.columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
 	iw.columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
+	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
 	iw.columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
 	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.profileColumnByProperty())
+	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
@@ -128,7 +128,7 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 	if iw.close.Swap(true) {
 		return nil
 	}
-	delete(iw.store.eventIdentityWriters, iw.action)
+	delete(iw.store.eventIdentityWriters, iw.pipeline)
 	// Cancel the flushes if the context is cancelled.
 	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
 	defer stop()
@@ -150,10 +150,10 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 //   - the ErrInspectionMode error if the data warehouse is in inspection mode.
 //   - the ErrMaintenanceMode error if the data warehouse is in maintenance
 //     mode.
-//   - a *schemas.Error value, if the action output schema is not aligned with
+//   - a *schemas.Error value, if the pipeline output schema is not aligned with
 //     the profile schema.
 //
-// If the action of iw does not exist anymore, returns an error.
+// If the pipeline of iw does not exist anymore, returns an error.
 //
 // It panics if called on a closed writer.
 func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
@@ -163,7 +163,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 
 	metrics.Increment("EventIdentityWriter.Write.calls", 1)
 
-	key := identityKey{action: iw.action}
+	key := identityKey{pipeline: iw.pipeline}
 	if identity.ID == "" {
 		key.isAnonymous = true
 		key.identityID = identity.AnonymousID
@@ -172,32 +172,32 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	}
 
 	iw.mu.Lock()
-	actions := iw.actions
+	pipelines := iw.pipelines
 	aligned := iw.aligned
 	flatter := iw.flatter
 	iw.mu.Unlock()
 
-	if actions == nil {
-		return ErrActionNotExist
+	if pipelines == nil {
+		return ErrPipelineNotExist
 	}
 	if !aligned {
-		return &schemas.Error{Msg: "action output schema is no aligned with the profile schema"}
+		return &schemas.Error{Msg: "pipeline output schema is no aligned with the profile schema"}
 	}
 
 	if !key.isAnonymous {
 		// Delete anonymous identities with the same anonymous ID as the
 		// incoming non-anonymous identity. The identities to be deleted must be
-		// deleted from all actions in the connection, not just from the action
+		// deleted from all pipelines in the connection, not just from the pipeline
 		// from which the identity is being imported.
-		for action := range actions {
+		for pipeline := range pipelines {
 			key := identityKey{
-				action:      action,
+				pipeline:    pipeline,
 				isAnonymous: true,
 				identityID:  identity.AnonymousID,
 			}
 			row := map[string]any{
 				"$purge":               true,
-				"__action__":           key.action,
+				"__pipeline__":         key.pipeline,
 				"__is_anonymous__":     true,
 				"__identity_id__":      key.identityID,
 				"__connection__":       iw.connection,
@@ -214,7 +214,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		row = identity.Attributes
 		flatter.flat(row)
 	}
-	row["__action__"] = key.action
+	row["__pipeline__"] = key.pipeline
 	row["__is_anonymous__"] = key.isAnonymous
 	row["__identity_id__"] = key.identityID
 	row["__connection__"] = iw.connection
@@ -272,47 +272,47 @@ func (iw *EventIdentityWriter) flush() {
 		ctx, done, err := iw.store.mc.StartOperation(iw.close.ctx, normalMode)
 		if err != nil {
 			// Warehouse mode is not normal: discard identities.
-			iw.ack(iw.action, ackIDs, err)
+			iw.ack(iw.pipeline, ackIDs, err)
 			return
 		}
 		defer done()
 		err = iw.store.warehouse().MergeIdentities(ctx, iw.columns, rows)
-		iw.ack(iw.action, ackIDs, err)
+		iw.ack(iw.pipeline, ackIDs, err)
 	})
 }
 
-// onCreateAction is called when an action of the connection of iw's action is
-// created.
+// onCreatePipeline is called when a pipeline of the connection of iw's pipeline
+// is created.
 //
-// The notification is propagated by the Store.onCreateAction method.
-func (iw *EventIdentityWriter) onCreateAction(n state.CreateAction) {
+// The notification is propagated by the Store.onCreatePipeline method.
+func (iw *EventIdentityWriter) onCreatePipeline(n state.CreatePipeline) {
 	iw.mu.Lock()
-	if iw.actions != nil {
-		iw.actions[n.ID] = struct{}{}
+	if iw.pipelines != nil {
+		iw.pipelines[n.ID] = struct{}{}
 	}
 	iw.mu.Unlock()
 }
 
-// onDeleteAction is called when an action of the connection of iw's action is
-// deleted.
-//
-// The notification is propagated by the Store.onDeleteAction method.
-func (iw *EventIdentityWriter) onDeleteAction(n state.DeleteAction) {
-	iw.mu.Lock()
-	if n.ID == iw.action {
-		iw.actions = nil
-	} else {
-		delete(iw.actions, n.ID)
-	}
-	iw.mu.Unlock()
-}
-
-// onDeleteConnection is called the connection of the iw's action is deleted.
+// onDeleteConnection is called the connection of the iw's pipeline is deleted.
 //
 // The notification is propagated by the Store.onDeleteConnection method.
 func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 	iw.mu.Lock()
-	iw.actions = nil
+	iw.pipelines = nil
+	iw.mu.Unlock()
+}
+
+// onDeletePipeline is called when a pipeline of the connection of iw's pipeline
+// is deleted.
+//
+// The notification is propagated by the Store.onDeletePipeline method.
+func (iw *EventIdentityWriter) onDeletePipeline(n state.DeletePipeline) {
+	iw.mu.Lock()
+	if n.ID == iw.pipeline {
+		iw.pipelines = nil
+	} else {
+		delete(iw.pipelines, n.ID)
+	}
 	iw.mu.Unlock()
 }
 
@@ -321,22 +321,22 @@ func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 //
 // This notification is propagated by the Store.onEndAlterProfileSchema method.
 func (iw *EventIdentityWriter) onEndAlterProfileSchema(_ state.EndAlterProfileSchema) {
-	action, ok := iw.store.ds.state.Action(iw.action)
+	pipeline, ok := iw.store.ds.state.Pipeline(iw.pipeline)
 	if !ok {
 		return
 	}
 	var aligned bool
 	var flatter *flatter
-	if action.OutSchema.Valid() {
-		workspace := action.Connection().Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.ProfileSchema, nil)
+	if pipeline.OutSchema.Valid() {
+		workspace := pipeline.Connection().Workspace()
+		err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			aligned = true
-			flatter = newFlatter(action.OutSchema, iw.store.identityColumnByProperty())
+			flatter = newFlatter(pipeline.OutSchema, iw.store.identityColumnByProperty())
 		}
 	} else {
-		// The action's out schema is invalid when importing identities from
-		// events without any transformation in the action.
+		// The pipeline's out schema is invalid when importing identities from
+		// events without any transformation in the pipeline.
 		aligned = true
 	}
 	iw.mu.Lock()
@@ -345,11 +345,11 @@ func (iw *EventIdentityWriter) onEndAlterProfileSchema(_ state.EndAlterProfileSc
 	iw.mu.Unlock()
 }
 
-// onUpdateAction is called when an action of the connection of iw's action is
-// updated.
+// onUpdatePipeline is called when a pipeline of the connection of iw's pipeline
+// is updated.
 //
-// The notification is propagated by the Store.onUpdateAction method.
-func (iw *EventIdentityWriter) onUpdateAction(n state.UpdateAction) {
+// The notification is propagated by the Store.onUpdatePipeline method.
+func (iw *EventIdentityWriter) onUpdatePipeline(n state.UpdatePipeline) {
 	var aligned bool
 	var flatter *flatter
 	if n.OutSchema.Valid() {
@@ -363,8 +363,8 @@ func (iw *EventIdentityWriter) onUpdateAction(n state.UpdateAction) {
 			flatter = newFlatter(n.OutSchema, iw.store.identityColumnByProperty())
 		}
 	} else {
-		// The action's out schema is invalid when importing identities from
-		// events without any transformation in the action.
+		// The pipeline's out schema is invalid when importing identities from
+		// events without any transformation in the pipeline.
 		aligned = true
 	}
 	iw.mu.Lock()

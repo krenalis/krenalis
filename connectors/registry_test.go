@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 type registrySnapshot struct {
@@ -275,7 +275,7 @@ func newTestAPI(*APIEnv) (testAPIConnector, error) {
 type testAPIConnector struct{}
 
 func (testAPIConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
-	return types.Text(), nil
+	return types.String(), nil
 }
 
 func (testAPIConnector) EventTypes(context.Context) ([]*EventType, error) {

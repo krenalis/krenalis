@@ -5,7 +5,7 @@
 package mappings
 
 import (
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // convertMatrix is a matrix which holds information about valid conversions.
@@ -13,7 +13,7 @@ import (
 // NOTE: keep this in sync with the content of the file
 // 'core/internal/transformers/mappings/Conversions.md'.
 var convertMatrix = [...]int32{
-	//                ┌─── text
+	//                ┌─── string
 	//                │ ┌─── boolean
 	//                │ │ ┌────── int
 	//                │ │ │ ┌──── uint
@@ -23,7 +23,7 @@ var convertMatrix = [...]int32{
 	//                │ │ │ │ │  │   │  ┌── json
 	//                │ │ │ │ │  │   │  │  ┌── array
 	//                │ │ │ │ │  │   │  │  │
-	/* text     */ 0b_1_1_1_1_11_111_11_11_000,
+	/* string   */ 0b_1_1_1_1_11_111_11_11_000,
 	/* boolean  */ 0b_1_1_0_0_00_000_00_10_000,
 	/* int      */ 0b_1_0_1_1_11_000_10_10_000,
 	/* uint     */ 0b_1_0_1_1_11_000_10_10_000,
@@ -35,7 +35,7 @@ var convertMatrix = [...]int32{
 	/* year     */ 0b_1_0_1_1_00_000_10_10_000,
 	/* uuid     */ 0b_1_0_0_0_00_000_01_10_000,
 	/* json     */ 0b_1_1_1_1_11_111_11_11_111,
-	/* inet     */ 0b_1_0_0_0_00_000_00_11_000,
+	/* ip       */ 0b_1_0_0_0_00_000_00_11_000,
 	/* array    */ 0b_0_0_0_0_00_000_00_10_100,
 	/* object   */ 0b_0_0_0_0_00_000_00_10_011,
 	/* map      */ 0b_0_0_0_0_00_000_00_10_011,

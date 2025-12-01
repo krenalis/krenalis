@@ -1,4 +1,4 @@
-import { Filter, FilterCondition } from '../lib/api/types/action';
+import { Filter, FilterCondition } from '../lib/api/types/pipeline';
 
 const MIN_INT = BigInt('-9223372036854775808');
 const MAX_INT = BigInt('9223372036854775807');
@@ -7,15 +7,15 @@ const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
 
-// formatText formats a text value as a string.
-const formatText = (text: string): string => {
-	if (!/^[\s"']/.test(text) && !/[\s"']$/.test(text)) {
-		return text;
+// formatText formats a string value as a string.
+const formatString = (str: string): string => {
+	if (!/^[\s"']/.test(str) && !/[\s"']$/.test(str)) {
+		return str;
 	}
-	const quote = text.includes('"') ? "'" : '"';
+	const quote = str.includes('"') ? "'" : '"';
 	let s = quote;
-	for (let i = 0; i < text.length; i++) {
-		const c = text[i];
+	for (let i = 0; i < str.length; i++) {
+		const c = str[i];
 		if (c === '\\' || c === quote) {
 			s += '\\';
 		}
@@ -106,9 +106,9 @@ const IPv4 = /^(?:25[0-5]|2[0-4]\d|1\d{2}|\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1\d{2
 const IPv6 =
 	/^((?:[0-9a-f]{1,4}:){7}(?:[0-9a-f]{1,4}|:)|(?:[0-9a-f]{1,4}:){1,7}:|(?:[0-9a-f]{1,4}:){1,6}(?::[0-9a-f]{1,4}){1,1}|(?:[0-9a-f]{1,4}:){1,5}(?::[0-9a-f]{1,4}){1,2}|(?:[0-9a-f]{1,4}:){1,4}(?::[0-9a-f]{1,4}){1,3}|(?:[0-9a-f]{1,4}:){1,3}(?::[0-9a-f]{1,4}){1,4}|(?:[0-9a-f]{1,4}:){1,2}(?::[0-9a-f]{1,4}){1,5}|[0-9a-f]?(?::(?::[0-9a-f]{1,4}){1,6})|::(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})$/i;
 
-// isInet checks whether the string s represents a valid inet value that can be
-// used as a filter value.
-const isInet = (s: string): boolean => {
+// isIP checks whether the string s represents a valid ip value that can be used
+//  as a filter value.
+const isIP = (s: string): boolean => {
 	return IPv4.test(s) || IPv6.test(s);
 };
 
@@ -320,12 +320,12 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 };
 
 export {
-	formatText,
+	formatString,
 	isDate,
 	isDateTime,
 	isDecimal,
 	isFloat,
-	isInet,
+	isIP,
 	isInt,
 	isTime,
 	isUUID,

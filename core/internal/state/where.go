@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Where represents a where expression.
@@ -215,7 +215,7 @@ func (v JSONConditionValue) MarshalJSON() ([]byte, error) {
 // v is the value to unmarshal, and t is the type of the property.
 func unmarshalConditionValue(v any, t types.Type) (any, error) {
 	switch t.Kind() {
-	case types.TextKind, types.UUIDKind, types.InetKind:
+	case types.StringKind, types.UUIDKind, types.IPKind:
 		return v, nil
 	case types.IntKind:
 		n, err := strconv.ParseInt(string(v.(json.Number)), 10, 64)

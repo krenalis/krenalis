@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // Mixpanel supports NoEncoding and Gzip for request bodies.
@@ -137,7 +137,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 	switch eventType {
 	case "order_completed":
 		schema = types.Object([]types.Property{
-			{Name: "event", Prefilled: `"Order Completed"`, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{Name: "event", Prefilled: `"Order Completed"`, Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event name"},
 			{
 				Name: "properties",
 				Prefilled: `map(` +
@@ -157,7 +157,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 		})
 	case "product_purchased":
 		schema = types.Object([]types.Property{
-			{Name: "event", Prefilled: `"Product Purchased"`, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{Name: "event", Prefilled: `"Product Purchased"`, Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event name"},
 			{
 				Name:           "products",
 				Prefilled:      "properties.products",
@@ -184,7 +184,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 			return types.Type{}, connectors.ErrEventTypeNotExist
 		}
 		schema = types.Object([]types.Property{
-			{Name: "event", Prefilled: event, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{Name: "event", Prefilled: event, Type: types.String().WithMaxLength(255), CreateRequired: true, Description: "Event name"},
 			{
 				Name:        "properties",
 				Type:        types.Map(types.JSON()),
@@ -310,9 +310,9 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		}
 
 		// Build a unique identifier for the event.
-		insertId := "[ACTION]"
+		insertId := "[PIPELINE]"
 		if !preview {
-			insertId = strconv.Itoa(event.DestinationAction)
+			insertId = strconv.Itoa(event.DestinationPipeline)
 		}
 		insertId += "*" + event.Received.MessageId()
 

@@ -19,13 +19,14 @@ const ConnectionWrapper = () => {
 			setTitle('');
 			return;
 		}
+		const roleLabel = connection.role === 'Source' ? 'Sources' : 'Destinations';
 		setTitle(
 			<Flex alignItems='center' gap={10}>
-				<div className='connection-wrapper__name'>{connection.name}</div>
+				<div className='connection-wrapper__name'>{`Connections / ${roleLabel} / ${connection.name}`}</div>
 				<StatusDot status={connection.status} />
 			</Flex>,
 		);
-	}, [isLoading, connection]);
+	}, [isLoading, connection, setTitle]);
 
 	if (isLoading) {
 		return (

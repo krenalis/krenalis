@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // quoteColumn quotes a column name.
@@ -39,7 +39,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 		b.WriteString("NULL")
 	case string:
 		b.WriteByte('"')
-		if t.Kind() == types.TextKind {
+		if t.Kind() == types.StringKind {
 			quoteString(b, v)
 		} else {
 			b.WriteString(v)

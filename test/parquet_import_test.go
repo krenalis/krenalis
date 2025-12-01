@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestParquetImport(t *testing.T) {
@@ -51,16 +51,16 @@ func TestParquetImport(t *testing.T) {
 	})
 	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
-	// Create a File System source connection, with an action that imports from the Parquet file.
+	// Create a File System source connection, with a pipeline that imports from the Parquet file.
 	fs := c.CreateSourceFileSystem()
-	action1 := c.CreateAction(fs, "User", meergotester.ActionToSet{
+	pipeline1 := c.CreatePipeline(fs, "User", meergotester.PipelineToSet{
 		Name:    "Parquet",
 		Enabled: true,
 		Path:    "test.parquet",
 		InSchema: types.Object([]types.Property{
 			{Name: "parquet_id", Type: types.Int(64), Nullable: true},
-			{Name: "first_name", Type: types.Text(), Nullable: true},
-			{Name: "last_name", Type: types.Text(), Nullable: true},
+			{Name: "first_name", Type: types.String(), Nullable: true},
+			{Name: "last_name", Type: types.String(), Nullable: true},
 			{Name: "date_of_birth", Type: types.Date(), Nullable: true},
 			{Name: "updated_at", Type: types.DateTime(), Nullable: true},
 			{Name: "lunch_time", Type: types.Time(), Nullable: true},
@@ -92,7 +92,7 @@ func TestParquetImport(t *testing.T) {
 	})
 
 	// Import and wait.
-	exec1 := c.ExecuteAction(action1)
+	exec1 := c.ExecutePipeline(pipeline1)
 	c.WaitForExecutionsCompletionAllowFailed(fs, exec1)
 
 	// Check that the count of profiles imported from the file is correct.

@@ -7,8 +7,8 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestWarehouse(t *testing.T) {
@@ -27,7 +27,7 @@ func TestWarehouse(t *testing.T) {
 	// error that the data warehouse cannot be initialized (because it already
 	// contains database objects).
 	profileSchema := types.Object([]types.Property{
-		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+		{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 	})
 	err := c.TestWorkspaceCreation("PostgreSQL", profileSchema, meergotester.UIPreferences{},
 		"PostgreSQL", settings, meergotester.Normal)

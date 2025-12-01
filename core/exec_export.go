@@ -19,75 +19,75 @@ import (
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 )
 
-// exportProfiles exports the profiles for the action.
+// exportProfiles exports the profiles for the pipeline.
 //
 // Returns an error if execution does not reach its natural completion.
 // If the error is caused by the schema, the connector, or the data warehouse,
-// it returns an *actionError, which is expected to be logged as is.
-func (this *Action) exportProfiles(ctx context.Context) error {
+// it returns an *pipelineError, which is expected to be logged as is.
+func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
-	action := this.action
+	pipeline := this.pipeline
 	store := this.connection.store
-	connector := action.Connection().Connector()
-	meergoMetrics.Increment("Action.exportUsers.calls", 1)
+	connector := pipeline.Connection().Connector()
+	meergoMetrics.Increment("Pipeline.exportUsers.calls", 1)
 
 	// Synchronize destinations users with the API's users.
 	if connector.Type == state.API {
 		err := this.syncDestinationProfiles(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
-				err.Msg = "in the destination matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
+				err.Msg = "in the destination matching property, " + err.Msg + ". Please review and update the pipeline before attempting to export the users."
 			}
-			return newActionError(metrics.OutputValidationStep, err)
+			return newPipelineError(metrics.OutputValidationStep, err)
 		}
 	}
 
 	// Get the matching properties.
 	var matchingIn, matchingOut types.Property
 	if connector.Type == state.API {
-		matchingIn, _ = action.InSchema.Properties().ByPath(action.Matching.In)
-		matchingOut, _ = action.OutSchema.Properties().ByPath(action.Matching.Out)
+		matchingIn, _ = pipeline.InSchema.Properties().ByPath(pipeline.Matching.In)
+		matchingOut, _ = pipeline.OutSchema.Properties().ByPath(pipeline.Matching.Out)
 	}
 
 	// Build the transformer.
 	var transformer *transformers.Transformer
-	if t := this.action.Transformation; t.Mapping != nil || t.Function != nil {
+	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(action, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline, this.core.functionProvider, &connector.TimeLayouts)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Read the users.
-	query := datastore.Query{Where: action.Filter}
+	query := datastore.Query{Where: pipeline.Filter}
 	if connector.Type == state.FileStorage {
-		query.OrderBy = action.OrderBy
+		query.OrderBy = pipeline.OrderBy
 	}
 	var matching *datastore.Matching
 	if connector.Type == state.API {
 		matching = &datastore.Matching{
-			Action:             action.ID,
-			InProperty:         action.Matching.In,
-			ExportMode:         this.action.ExportMode,
-			UpdateOnDuplicates: action.UpdateOnDuplicates,
+			Pipeline:           pipeline.ID,
+			InProperty:         pipeline.Matching.In,
+			ExportMode:         this.pipeline.ExportMode,
+			UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.ProfileRecords(ctx, query, action.InSchema, matching)
+	records, err := store.ProfileRecords(ctx, query, pipeline.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return newActionError(metrics.ReceiveStep, err)
+			return newPipelineError(metrics.ReceiveStep, err)
 		}
 		switch err := err.(type) {
 		case *datastore.UnavailableError:
 			return err
 		case *schemas.Error:
-			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the profiles.", err.Msg)
-			return newActionError(metrics.InputValidationStep, err)
+			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the pipeline before attempting to export the profiles.", err.Msg)
+			return newPipelineError(metrics.InputValidationStep, err)
 		}
 		return err
 	}
@@ -98,12 +98,12 @@ func (this *Action) exportProfiles(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			meergoMetrics.Increment("Action.exportProfiles.ack.calls", 1)
+			meergoMetrics.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
-				this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
+				this.core.metrics.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
 			}
-			this.core.metrics.FinalizePassed(action.ID, len(ids))
+			this.core.metrics.FinalizePassed(pipeline.ID, len(ids))
 		}
 	}
 
@@ -121,15 +121,15 @@ func (this *Action) exportProfiles(ctx context.Context) error {
 		// with the same value. In this case, alignment with the API schema does not need to be validated.
 		// Therefore, the property must be removed from the schema passed to API.Writer
 		// so that the alignment check is skipped.
-		outSchema := action.OutSchema
-		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
+		outSchema := pipeline.OutSchema
+		if pipeline.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
 			outSchema = types.Prune(outSchema, func(path string) bool {
-				return path != action.Matching.Out
+				return path != pipeline.Matching.Out
 			})
 		}
-		writer, err = this.api().Writer(ctx, outSchema, action.ExportMode, action.Target, ack)
+		writer, err = this.api().Writer(ctx, outSchema, pipeline.ExportMode, pipeline.Target, ack)
 	case state.Database:
-		writer, err = this.database().Writer(ctx, action, ack)
+		writer, err = this.database().Writer(ctx, pipeline, ack)
 		alreadyExportedKeys = make(map[any]struct{})
 	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
@@ -143,9 +143,9 @@ func (this *Action) exportProfiles(ctx context.Context) error {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
 		if err, ok := err.(*schemas.Error); ok {
-			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to export the users."
+			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the pipeline before attempting to export the users."
 		}
-		return newActionError(metrics.OutputValidationStep, err)
+		return newPipelineError(metrics.OutputValidationStep, err)
 	}
 	defer writer.Close(ctx)
 
@@ -164,7 +164,7 @@ func (this *Action) exportProfiles(ctx context.Context) error {
 	if connector.Type == state.FileStorage {
 		defer func() {
 			if readCount > 0 {
-				this.core.metrics.FinalizeFailed(action.ID, readCount, err.Error())
+				this.core.metrics.FinalizeFailed(pipeline.ID, readCount, err.Error())
 			}
 		}()
 	}
@@ -172,18 +172,18 @@ func (this *Action) exportProfiles(ctx context.Context) error {
 Records:
 	for record := range records.All(ctx) {
 
-		meergoMetrics.Increment("Action.exportProfiles.iterations_over_records_All", 1)
+		meergoMetrics.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
-			this.core.metrics.ReceiveFailed(action.ID, 1, record.Err.Error())
+			this.core.metrics.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
-				return newActionError(metrics.ReceiveStep, record.Err)
+				return newPipelineError(metrics.ReceiveStep, record.Err)
 			}
 			goto Next
 		}
 
 		readCount++
-		this.core.metrics.ReceivePassed(action.ID, 1)
+		this.core.metrics.ReceivePassed(pipeline.ID, 1)
 
 		switch connector.Type {
 		default:
@@ -196,17 +196,17 @@ Records:
 			}
 			// Create or when the outgoing matching property must be updated: compute and preserve the matching value.
 			if isCreate := record.ExternalID == ""; isCreate || matchingOut.UpdateRequired {
-				value, _ := getAttribute(record.Attributes, action.Matching.In)
-				profile.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, action.Matching.In, action.Matching.Out)
+				value, _ := getAttribute(record.Attributes, pipeline.Matching.In)
+				profile.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, pipeline.Matching.In, pipeline.Matching.Out)
 				if err != nil {
-					this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
+					this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
 					goto Next
 				}
 			}
 			profiles = append(profiles, profile)
 		}
 
-		this.core.metrics.InputValidationPassed(action.ID, 1)
+		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
 
 	Next:
 
@@ -238,7 +238,7 @@ Records:
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if _, ok := err.(transformers.FunctionExecError); ok {
-					err = newActionError(metrics.TransformationStep, err)
+					err = newPipelineError(metrics.TransformationStep, err)
 				}
 				return err
 			}
@@ -247,30 +247,30 @@ Records:
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(action.ID, 1, err.Error())
+						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
 					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(action.ID, 1)
-						this.core.metrics.OutputValidationFailed(action.ID, 1, err.Error())
+						this.core.metrics.TransformationPassed(pipeline.ID, 1)
+						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
 					continue
 				}
-				this.core.metrics.TransformationPassed(action.ID, 1)
-				this.core.metrics.OutputValidationPassed(action.ID, 1)
+				this.core.metrics.TransformationPassed(pipeline.ID, 1)
+				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
 				if user.MatchingValue != nil {
-					setAttribute(record.Attributes, action.Matching.Out, user.MatchingValue)
+					setAttribute(record.Attributes, pipeline.Matching.Out, user.MatchingValue)
 				}
 				if connector.Type == state.API && len(record.Attributes) == 0 {
-					this.core.metrics.FinalizePassed(action.ID, 1)
+					this.core.metrics.FinalizePassed(pipeline.ID, 1)
 					continue
 				}
 				// In the case of exporting to the database, make sure that
 				// profiles with the same value for the table key have not already
 				// been exported.
 				if connector.Type == state.Database {
-					key := record.Attributes[action.TableKey]
+					key := record.Attributes[pipeline.TableKey]
 					if _, ok := alreadyExportedKeys[key]; ok {
-						this.core.metrics.FinalizeFailed(action.ID, 1,
-							fmt.Sprintf("cannot export multiple profiles having the same value for %q, which is used as export table key", action.TableKey))
+						this.core.metrics.FinalizeFailed(pipeline.ID, 1,
+							fmt.Sprintf("cannot export multiple profiles having the same value for %q, which is used as export table key", pipeline.TableKey))
 						continue
 					}
 					alreadyExportedKeys[key] = struct{}{}
@@ -286,7 +286,7 @@ Records:
 
 	}
 	if err = records.Err(); err != nil {
-		return newActionError(metrics.ReceiveStep, err)
+		return newPipelineError(metrics.ReceiveStep, err)
 	}
 
 	profiles = nil
@@ -296,30 +296,30 @@ Records:
 		if ctx.Err() != nil {
 			return err
 		}
-		return newActionError(metrics.FinalizeStep, err)
+		return newPipelineError(metrics.FinalizeStep, err)
 	}
 
 	if connector.Type == state.FileStorage {
-		this.core.metrics.FinalizePassed(action.ID, readCount)
+		this.core.metrics.FinalizePassed(pipeline.ID, readCount)
 		readCount = 0 // prevents them from being flagged as failed in the metrics
 	}
 
 	return nil
 }
 
-// syncDestinationProfiles syncs the destination profiles of the action.
-func (this *Action) syncDestinationProfiles(ctx context.Context) error {
+// syncDestinationProfiles syncs the destination profiles of the pipeline.
+func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 
 	store := this.connection.store
 
 	// Delete the outdated destination profiles.
-	err := store.DeleteDestinationProfiles(ctx, this.action.ID)
+	err := store.DeleteDestinationProfiles(ctx, this.pipeline.ID)
 	if err != nil {
 		return err
 	}
 
 	// Build a schema containing only the hierarchy that leads to the matching output property.
-	schema, _ := types.PruneAtPath(this.action.OutSchema, this.action.Matching.Out)
+	schema, _ := types.PruneAtPath(this.pipeline.OutSchema, this.pipeline.Matching.Out)
 
 	records, err := this.api().Users(ctx, schema, nil, time.Time{})
 	if err != nil {
@@ -337,9 +337,9 @@ func (this *Action) syncDestinationProfiles(ctx context.Context) error {
 		}
 
 		// Store the profile only if the output matching property is not nil.
-		v, ok := getAttribute(profile.Attributes, this.action.Matching.Out)
+		v, ok := getAttribute(profile.Attributes, this.pipeline.Matching.Out)
 		if !ok {
-			panic(fmt.Sprintf("out matching property value of action %d is missing", this.action.ID))
+			panic(fmt.Sprintf("out matching property value of pipeline %d is missing", this.pipeline.ID))
 		}
 		if v != nil {
 			profiles = append(profiles, datastore.DestinationProfile{
@@ -350,7 +350,7 @@ func (this *Action) syncDestinationProfiles(ctx context.Context) error {
 
 		if len(profiles) > 0 && (len(profiles) == 10000 || records.Last()) {
 			// Merge destination profiles.
-			err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, profiles, nil)
+			err = this.connection.store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil)
 			if err != nil {
 				return err
 			}
@@ -397,10 +397,10 @@ func errMatchingPropertyConversion(in, ex string) error {
 // are the types of the internal and external properties, respectively.
 //
 // Supported conversions are:
-//   - int to int, uint, and text
-//   - uint to int, uint, and text
-//   - text to int, uint, uuid, and text
-//   - uuid to uuid and text
+//   - int to int, uint, and string
+//   - uint to int, uint, and string
+//   - string to int, uint, uuid, and string
+//   - uuid to uuid and string
 //
 // It panics if v is nil or the types in and ex are not conforming to these
 // supported conversions. It returns an error if the converted value does not
@@ -410,7 +410,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
 	}
 	switch ex.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		var s string
 		switch v := v.(type) {
 		case int:
@@ -422,16 +422,16 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		if byteLen, ok := ex.ByteLen(); ok && len(s) > byteLen {
+		if n, ok := ex.MaxByteLength(); ok && len(s) > n {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
-		if charLen, ok := ex.CharLen(); ok && utf8.RuneCountInString(s) > charLen {
+		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
-		if re := ex.Regexp(); re != nil && !re.MatchString(s) {
+		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return s, nil
@@ -485,7 +485,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		return uint(i), nil
 	case types.UUIDKind:
 		switch in.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			u, ok := types.ParseUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inPath, outPath)
@@ -542,7 +542,7 @@ func setAttribute(attributes map[string]any, path string, value any) {
 // matching property. v cannot be nil.
 func stringifyMatchingValue(v any) string {
 	switch v := v.(type) {
-	case string: // text and uuid
+	case string: // string and uuid
 		return v
 	case int: // int(n)
 		return strconv.Itoa(v)

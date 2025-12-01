@@ -18,7 +18,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
@@ -53,8 +53,8 @@ type State struct {
 	metadata         metadata
 	sendStats        bool
 
-	mu               *sync.Mutex                 // for the 'actions', ..., and 'workspaces' fields
-	actions          map[int]*Action             // protected by mu
+	mu               *sync.Mutex                 // for the 'pipelines', ..., and 'workspaces' fields
+	pipelines        map[int]*Pipeline           // protected by mu
 	connections      map[int]*Connection         // protected by mu
 	connectionsByKey map[string]*Connection      // protected by mu
 	accessKeyByToken map[string]*AccessKey       // protected by mu
@@ -101,7 +101,7 @@ func New(db *db.DB, credentials map[string]*OAuthCredentials, sendStats bool) (*
 		workspaces:       map[int]*Workspace{},
 		connections:      map[int]*Connection{},
 		connectionsByKey: map[string]*Connection{},
-		actions:          map[int]*Action{},
+		pipelines:        map[int]*Pipeline{},
 		sendStats:        sendStats,
 	}
 
@@ -148,31 +148,6 @@ func (state *State) Account(id int) (*Account, bool) {
 		}
 	}
 	return nil, false
-}
-
-// Action returns the action with identifier id.
-// The boolean return value reports whether the action exists.
-func (state *State) Action(id int) (*Action, bool) {
-	state.mu.Lock()
-	a, ok := state.actions[id]
-	state.mu.Unlock()
-	return a, ok
-}
-
-// Actions returns all the actions from every connection.
-func (state *State) Actions() []*Action {
-	state.mu.Lock()
-	actions := make([]*Action, len(state.actions))
-	i := 0
-	for _, action := range state.actions {
-		actions[i] = action
-		i++
-	}
-	state.mu.Unlock()
-	sort.Slice(actions, func(i, j int) bool {
-		return actions[i].ID < actions[j].ID
-	})
-	return actions
 }
 
 // Close closes the state. When it is called, no calls to the State methods
@@ -293,6 +268,31 @@ func (state *State) Organizations() []*Organization {
 		return bytes.Compare(organizations[i].ID[:], organizations[j].ID[:]) < 0
 	})
 	return organizations
+}
+
+// Pipeline returns the pipeline with identifier id.
+// The boolean return value reports whether the pipeline exists.
+func (state *State) Pipeline(id int) (*Pipeline, bool) {
+	state.mu.Lock()
+	p, ok := state.pipelines[id]
+	state.mu.Unlock()
+	return p, ok
+}
+
+// Pipelines returns all the pipelines from every connection.
+func (state *State) Pipelines() []*Pipeline {
+	state.mu.Lock()
+	pipelines := make([]*Pipeline, len(state.pipelines))
+	i := 0
+	for _, pipeline := range state.pipelines {
+		pipelines[i] = pipeline
+		i++
+	}
+	state.mu.Unlock()
+	sort.Slice(pipelines, func(i, j int) bool {
+		return pipelines[i].ID < pipelines[j].ID
+	})
+	return pipelines
 }
 
 // Transaction executes f in a transaction.
@@ -564,7 +564,7 @@ type Workspace struct {
 		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).
 	}
 	connections                    map[int]*Connection
-	executions                     map[int]*ActionExecution // running action executions.
+	executions                     map[int]*PipelineExecution // running pipeline executions.
 	ID                             int
 	organization                   *Organization
 	Name                           string
@@ -588,7 +588,7 @@ type Workspace struct {
 		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
 		Operations     []warehouses.AlterOperation
 	}
-	actionsToPurge []int // never nil
+	pipelinesToPurge []int // never nil
 }
 
 // Account returns the account with identifier id. The boolean return value
@@ -615,16 +615,6 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 	return a, a != nil
 }
 
-// ActionsToPurge returns the identifiers of actions that require purging,
-// specifically those that have been deleted but still have user identifiers or
-// destination users to be purged from the data warehouse. It never returns nil.
-func (workspace *Workspace) ActionsToPurge() []int {
-	workspace.mu.Lock()
-	actions := workspace.actionsToPurge
-	workspace.mu.Unlock()
-	return slices.Clone(actions)
-}
-
 // Connection returns the connection of the workspace with identifier id.
 // The boolean return value reports whether the connection exists.
 func (workspace *Workspace) Connection(id int) (*Connection, bool) {
@@ -647,19 +637,20 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// Execution returns the action execution of the workspace with the given id.
+// Execution returns the pipeline execution of the workspace with the given id.
 // The boolean return value reports whether the execution exists.
-func (workspace *Workspace) Execution(id int) (*ActionExecution, bool) {
+func (workspace *Workspace) Execution(id int) (*PipelineExecution, bool) {
 	workspace.mu.Lock()
 	exe, ok := workspace.executions[id]
 	workspace.mu.Unlock()
 	return exe, ok
 }
 
-// NumActionsToPurge returns the number of actions to purge for the workspace.
-func (workspace *Workspace) NumActionsToPurge() int {
+// NumPipelinesToPurge returns the number of pipelines to purge for the
+// workspace.
+func (workspace *Workspace) NumPipelinesToPurge() int {
 	workspace.mu.Lock()
-	n := len(workspace.actionsToPurge)
+	n := len(workspace.pipelinesToPurge)
 	workspace.mu.Unlock()
 	return n
 }
@@ -670,6 +661,16 @@ func (workspace *Workspace) Organization() *Organization {
 	organization := workspace.organization
 	workspace.mu.Unlock()
 	return organization
+}
+
+// PipelinesToPurge returns the identifiers of pipelines that require purging,
+// specifically those that have been deleted but still have user identifiers or
+// destination users to be purged from the data warehouse. It never returns nil.
+func (workspace *Workspace) PipelinesToPurge() []int {
+	workspace.mu.Lock()
+	pipelines := workspace.pipelinesToPurge
+	workspace.mu.Unlock()
+	return slices.Clone(pipelines)
 }
 
 // UIPreferences represents the UI preferences of a workspace.
@@ -933,33 +934,17 @@ type Connection struct {
 	Keys              []string
 	Settings          []byte
 	UsersQuery        string
-	actions           map[int]*Action
+	pipelines         map[int]*Pipeline
 	Health            Health
 }
 
-// Action returns the action of the connection with identifier id.
-// The boolean return value reports whether the action exists.
-func (connection *Connection) Action(id int) (*Action, bool) {
+// Account returns the account of the connection. The boolean return value
+// reports whether the connection has an account.
+func (connection *Connection) Account() (*Account, bool) {
 	connection.mu.Lock()
-	a, ok := connection.actions[id]
+	a := connection.account
 	connection.mu.Unlock()
-	return a, ok
-}
-
-// Actions returns the actions of the connection.
-func (connection *Connection) Actions() []*Action {
-	connection.mu.Lock()
-	actions := make([]*Action, len(connection.actions))
-	i := 0
-	for _, a := range connection.actions {
-		actions[i] = a
-		i++
-	}
-	connection.mu.Unlock()
-	sort.Slice(actions, func(i, j int) bool {
-		return actions[i].ID < actions[j].ID
-	})
-	return actions
+	return a, a != nil
 }
 
 // Connector returns the connector of the connection.
@@ -978,13 +963,29 @@ func (connection *Connection) Organization() *Organization {
 	return o
 }
 
-// Account returns the account of the connection. The boolean return value
-// reports whether the connection has an account.
-func (connection *Connection) Account() (*Account, bool) {
+// Pipeline returns the pipeline of the connection with identifier id.
+// The boolean return value reports whether the pipeline exists.
+func (connection *Connection) Pipeline(id int) (*Pipeline, bool) {
 	connection.mu.Lock()
-	a := connection.account
+	p, ok := connection.pipelines[id]
 	connection.mu.Unlock()
-	return a, a != nil
+	return p, ok
+}
+
+// Pipelines returns the pipelines of the connection.
+func (connection *Connection) Pipelines() []*Pipeline {
+	connection.mu.Lock()
+	pipelines := make([]*Pipeline, len(connection.pipelines))
+	i := 0
+	for _, p := range connection.pipelines {
+		pipelines[i] = p
+		i++
+	}
+	connection.mu.Unlock()
+	sort.Slice(pipelines, func(i, j int) bool {
+		return pipelines[i].ID < pipelines[j].ID
+	})
+	return pipelines
 }
 
 // Workspace returns the workspace of the connection.
@@ -995,7 +996,7 @@ func (connection *Connection) Workspace() *Workspace {
 	return w
 }
 
-// Health is an indicator of the current state of an action or a connection.
+// Health is an indicator of the current state of a pipeline or a connection.
 type Health int
 
 const (
@@ -1218,13 +1219,13 @@ func (target Target) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Target: %d", target)
 }
 
-type Action struct {
+type Pipeline struct {
 	mu                   *sync.Mutex
 	ID                   int
 	connection           *Connection
 	format               *Connector
-	execution            *ActionExecution
-	propertiesToUnset    []string // is not nil only for source actions on users.
+	execution            *PipelineExecution
+	propertiesToUnset    []string // is not nil only for source pipelines on users.
 	Target               Target
 	Name                 string
 	Enabled              bool
@@ -1252,6 +1253,72 @@ type Action struct {
 	Reload               bool
 	Incremental          bool
 	Health               Health
+}
+
+// Connection returns the connection of the pipeline.
+func (pipeline *Pipeline) Connection() *Connection {
+	pipeline.mu.Lock()
+	c := pipeline.connection
+	pipeline.mu.Unlock()
+	return c
+}
+
+// Execution returns the execution of the pipeline.
+// The boolean return value reports whether the pipeline is running.
+func (pipeline *Pipeline) Execution() (*PipelineExecution, bool) {
+	pipeline.mu.Lock()
+	ex := pipeline.execution
+	pipeline.mu.Unlock()
+	return ex, ex != nil
+}
+
+// PropertiesToUnset returns the identity properties of the pipeline that should
+// be unset. It is non-nil for source pipelines on users.
+func (pipeline *Pipeline) PropertiesToUnset() []string {
+	pipeline.mu.Lock()
+	c := pipeline.propertiesToUnset
+	pipeline.mu.Unlock()
+	return c
+}
+
+// Format returns the format connector of the pipeline.
+func (pipeline *Pipeline) Format() *Connector {
+	pipeline.mu.Lock()
+	c := pipeline.format
+	pipeline.mu.Unlock()
+	return c
+}
+
+// PipelineExecution represents a pipeline execution.
+type PipelineExecution struct {
+	mu          *sync.Mutex
+	ID          int
+	node        *uuid.UUID
+	pipeline    *Pipeline
+	Incremental bool
+	Cursor      time.Time
+	StartTime   time.Time
+}
+
+// Pipeline returns the pipeline of the execution.
+func (ex *PipelineExecution) Pipeline() *Pipeline {
+	ex.mu.Lock()
+	p := ex.pipeline
+	ex.mu.Unlock()
+	return p
+}
+
+// Node returns the node on which the execution is currently running.
+// The boolean return value indicates whether the execution is taking place on a
+// node.
+func (ex *PipelineExecution) Node() (uuid.UUID, bool) {
+	ex.mu.Lock()
+	node := ex.node
+	ex.mu.Unlock()
+	if node == nil {
+		return uuid.UUID{}, false
+	}
+	return *node, true
 }
 
 type Matching struct {
@@ -1337,69 +1404,3 @@ const (
 	UpdateOnly     ExportMode = "UpdateOnly"
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
-
-// ActionExecution represents an action execution.
-type ActionExecution struct {
-	mu          *sync.Mutex
-	ID          int
-	node        *uuid.UUID
-	action      *Action
-	Incremental bool
-	Cursor      time.Time
-	StartTime   time.Time
-}
-
-// Action returns the action of the execution.
-func (ex *ActionExecution) Action() *Action {
-	ex.mu.Lock()
-	a := ex.action
-	ex.mu.Unlock()
-	return a
-}
-
-// Node returns the node on which the execution is currently running.
-// The boolean return value indicates whether the execution is taking place on a
-// node.
-func (ex *ActionExecution) Node() (uuid.UUID, bool) {
-	ex.mu.Lock()
-	node := ex.node
-	ex.mu.Unlock()
-	if node == nil {
-		return uuid.UUID{}, false
-	}
-	return *node, true
-}
-
-// Connection returns the connection of the action.
-func (action *Action) Connection() *Connection {
-	action.mu.Lock()
-	c := action.connection
-	action.mu.Unlock()
-	return c
-}
-
-// Execution returns the execution of the action.
-// The boolean return value reports whether the action is running.
-func (action *Action) Execution() (*ActionExecution, bool) {
-	action.mu.Lock()
-	ex := action.execution
-	action.mu.Unlock()
-	return ex, ex != nil
-}
-
-// PropertiesToUnset returns the identity properties of the action that should
-// be unset. It is non-nil for source actions on users.
-func (action *Action) PropertiesToUnset() []string {
-	action.mu.Lock()
-	c := action.propertiesToUnset
-	action.mu.Unlock()
-	return c
-}
-
-// Format returns the format connector of the action.
-func (action *Action) Format() *Connector {
-	action.mu.Lock()
-	c := action.format
-	action.mu.Unlock()
-	return c
-}

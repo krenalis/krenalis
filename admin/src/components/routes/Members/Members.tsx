@@ -139,7 +139,7 @@ const Members = () => {
 										/>
 									}
 									action={
-										<div className='members__member-actions'>
+										<div className='members__member-pipelines'>
 											{member.email === loggedMember.email && (
 												<SlButton
 													className='members__member-logout'

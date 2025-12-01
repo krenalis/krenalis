@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // quoteIdent quotes the identifier name.
@@ -73,7 +73,7 @@ func quoteString(b *strings.Builder, s string) {
 // a string value.
 func quoteValue(b *strings.Builder, v any, t types.Type) {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		quoteString(b, v.(string))
 	case types.DateTimeKind:
 		b.WriteByte('\'')

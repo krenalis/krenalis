@@ -7,8 +7,8 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestImportFromDatabase(t *testing.T) {
@@ -23,15 +23,15 @@ func TestImportFromDatabase(t *testing.T) {
 
 	pgSQL := c.CreateSourcePostgreSQL()
 
-	importUsers := c.CreateAction(pgSQL, "User", meergotester.ActionToSet{
+	importUsers := c.CreatePipeline(pgSQL, "User", meergotester.PipelineToSet{
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
 			{Name: "id", Type: types.Int(32), Nullable: true},
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -44,7 +44,7 @@ func TestImportFromDatabase(t *testing.T) {
 		LastChangeTimeFormat: "",
 	})
 
-	exec := c.ExecuteAction(importUsers)
+	exec := c.ExecutePipeline(importUsers)
 
 	c.WaitForExecutionsCompletion(pgSQL, exec)
 
@@ -56,8 +56,8 @@ func TestImportFromDatabase(t *testing.T) {
 	}
 
 	for _, identity := range identities {
-		if identity.Action != importUsers {
-			t.Fatalf("expected identity action %d, got %d", importUsers, identity.Action)
+		if identity.Pipeline != importUsers {
+			t.Fatalf("expected identity pipeline %d, got %d", importUsers, identity.Pipeline)
 		}
 	}
 }

@@ -7,7 +7,7 @@ package connectors
 import (
 	"reflect"
 
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // DatabaseSpec represents a database connector specification.

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 
@@ -208,20 +208,20 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 // specified in the file 'core/datastore/README.md',
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
-		var charLen int
-		if l, ok := t.ByteLen(); ok {
-			charLen = l
+	case types.StringKind:
+		var maxLength int
+		if l, ok := t.MaxByteLength(); ok {
+			maxLength = l
 		}
-		if l, ok := t.CharLen(); ok {
-			if charLen == 0 {
-				charLen = l
+		if l, ok := t.MaxLength(); ok {
+			if maxLength == 0 {
+				maxLength = l
 			} else {
-				charLen = min(l, charLen)
+				maxLength = min(l, maxLength)
 			}
 		}
-		if charLen > 0 {
-			return "VARCHAR(" + strconv.Itoa(charLen) + ")"
+		if maxLength > 0 {
+			return "VARCHAR(" + strconv.Itoa(maxLength) + ")"
 		}
 		return "VARCHAR"
 	case types.BooleanKind:
@@ -273,7 +273,7 @@ func typeToSnowflakeType(t types.Type) string {
 		return "VARCHAR"
 	case types.JSONKind:
 		return "VARIANT"
-	case types.InetKind:
+	case types.IPKind:
 		return "VARCHAR"
 	case types.ArrayKind:
 		return "ARRAY"

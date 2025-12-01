@@ -21,7 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/json"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"

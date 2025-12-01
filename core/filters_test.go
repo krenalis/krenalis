@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -35,11 +35,11 @@ func Test_convertFilterToWhere(t *testing.T) {
 		{Name: "j", Type: types.Year()},
 		{Name: "k", Type: types.UUID()},
 		{Name: "l", Type: types.JSON()},
-		{Name: "m", Type: types.Inet()},
-		{Name: "n", Type: types.Text(), Nullable: true},
-		{Name: "o", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.Text()}}), Nullable: true},
-		{Name: "q", Type: types.Map(types.Text()), Nullable: true},
+		{Name: "m", Type: types.IP()},
+		{Name: "n", Type: types.String(), Nullable: true},
+		{Name: "o", Type: types.Array(types.String()), Nullable: true},
+		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.String()}}), Nullable: true},
+		{Name: "q", Type: types.Map(types.String()), Nullable: true},
 	})
 
 	d := decimal.MustParse("56.19")
@@ -151,11 +151,11 @@ func Test_convertWhereToFilter(t *testing.T) {
 		{Name: "j", Type: types.Year()},
 		{Name: "k", Type: types.UUID()},
 		{Name: "l", Type: types.JSON()},
-		{Name: "m", Type: types.Inet()},
-		{Name: "n", Type: types.Text(), Nullable: true},
-		{Name: "o", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.Text()}}), Nullable: true},
-		{Name: "q", Type: types.Map(types.Text()), Nullable: true},
+		{Name: "m", Type: types.IP()},
+		{Name: "n", Type: types.String(), Nullable: true},
+		{Name: "o", Type: types.Array(types.String()), Nullable: true},
+		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.String()}}), Nullable: true},
+		{Name: "q", Type: types.Map(types.String()), Nullable: true},
 	})
 
 	d := decimal.MustParse("56.19")
@@ -514,7 +514,7 @@ func Test_resolveFilterProperty(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
-		{Name: "b", Type: types.Text(), Nullable: true},
+		{Name: "b", Type: types.String(), Nullable: true},
 		{Name: "c", Type: types.JSON()},
 		{Name: "d", Type: types.Object([]types.Property{{Name: "x", Type: types.JSON()}})},
 	})
@@ -526,7 +526,7 @@ func Test_resolveFilterProperty(t *testing.T) {
 		err              error
 	}{
 		{"a", types.Property{Name: "a", Type: types.Boolean()}, "a", nil},
-		{"b", types.Property{Name: "b", Type: types.Text(), Nullable: true}, "b", nil},
+		{"b", types.Property{Name: "b", Type: types.String(), Nullable: true}, "b", nil},
 		{"c", types.Property{Name: "c", Type: types.JSON()}, "c", nil},
 		{"c.x", types.Property{Name: "c", Type: types.JSON()}, "c", nil},
 		{"c.x.y", types.Property{Name: "c", Type: types.JSON()}, "c", nil},
@@ -569,7 +569,7 @@ func Test_validateFilter(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
-		{Name: "b", Type: types.Text(), Nullable: true},
+		{Name: "b", Type: types.String(), Nullable: true},
 		{Name: "c", Type: types.Int(8)},
 		{Name: "d", Type: types.JSON()},
 		{Name: "e", Type: types.DateTime()},
@@ -577,13 +577,14 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "g", Type: types.Time()},
 		{Name: "h", Type: types.UUID(), ReadOptional: true},
 		{Name: "i", Type: types.Year()},
-		{Name: "j", Type: types.Inet()},
-		{Name: "k", Type: types.Array(types.Text()), Nullable: true},
-		{Name: "l", Type: types.Array(types.Map(types.Text()))},
-		{Name: "m", Type: types.Object([]types.Property{{Name: "x", Type: types.Text()}}), Nullable: true},
-		{Name: "n", Type: types.Map(types.Text()), Nullable: true},
-		{Name: "o", Type: types.Text().WithValues("foo", "boo", ""), Nullable: true},
-		{Name: "p", Type: types.Text().WithValues("foo"), Nullable: true},
+		{Name: "j", Type: types.IP()},
+		{Name: "k", Type: types.Array(types.String()), Nullable: true},
+		{Name: "l", Type: types.Array(types.Map(types.String()))},
+		{Name: "m", Type: types.Object([]types.Property{{Name: "x", Type: types.String()}}), Nullable: true},
+		{Name: "n", Type: types.Map(types.String()), Nullable: true},
+		{Name: "o", Type: types.String().WithValues("foo", "boo", ""), Nullable: true},
+		{Name: "p", Type: types.String().WithValues("foo"), Nullable: true},
+		{Name: "q", Type: types.Array(types.Float(64)), Nullable: true},
 	})
 
 	tests := []struct {
@@ -678,7 +679,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "b", Operator: OpIsTrue},
 				},
 			},
-			err: errors.New(`operator "is true" cannot be used with text properties`),
+			err: errors.New(`operator "is true" cannot be used with string properties`),
 		},
 		{
 			filter: Filter{
@@ -768,7 +769,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "o", Operator: OpIsLessThan, Values: []string{"none"}},
 				},
 			},
-			err: fmt.Errorf(`operator "is less than" cannot be used with text type that has values`),
+			err: fmt.Errorf(`operator "is less than" cannot be used with string type that has values`),
 		},
 		{
 			filter: Filter{
@@ -786,7 +787,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "p", Operator: OpIsEmpty},
 				},
 			},
-			err: fmt.Errorf(`operator "is empty" cannot be used on text properties that exclude the empty string from allowed values`),
+			err: fmt.Errorf(`operator "is empty" cannot be used on string properties that exclude the empty string from allowed values`),
 		},
 		{
 			filter: Filter{
@@ -795,7 +796,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "p", Operator: OpIsNotEmpty},
 				},
 			},
-			err: fmt.Errorf(`operator "is not empty" cannot be used on text properties that exclude the empty string from allowed values`),
+			err: fmt.Errorf(`operator "is not empty" cannot be used on string properties that exclude the empty string from allowed values`),
 		},
 		{
 			filter: Filter{
@@ -804,7 +805,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "g", Operator: OpIsEmpty},
 				},
 			},
-			err: fmt.Errorf(`operator "is empty" can only be used with json, text, object, array, and map properties`),
+			err: fmt.Errorf(`operator "is empty" can only be used with json, string, object, array, and map properties`),
 		},
 		{
 			filter: Filter{
@@ -813,7 +814,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "g", Operator: OpIsEmpty},
 				},
 			},
-			err: fmt.Errorf(`operator "is empty" can only be used with json, text, object, array, and map properties`),
+			err: fmt.Errorf(`operator "is empty" can only be used with json, string, object, array, and map properties`),
 		},
 		{
 			filter: Filter{
@@ -824,7 +825,7 @@ func Test_validateFilter(t *testing.T) {
 			},
 			target: state.TargetUser,
 			role:   state.Destination,
-			err:    fmt.Errorf(`operator "is empty" cannot be used on object properties for destination actions on users`),
+			err:    fmt.Errorf(`operator "is empty" cannot be used on object properties for destination pipelines on users`),
 		},
 		{
 			filter: Filter{
@@ -835,7 +836,7 @@ func Test_validateFilter(t *testing.T) {
 			},
 			target: state.TargetEvent,
 			role:   state.Source,
-			err:    fmt.Errorf(`operator "is not empty" cannot be used on object properties for actions on events`),
+			err:    fmt.Errorf(`operator "is not empty" cannot be used on object properties for pipelines on events`),
 		},
 		{
 			filter: Filter{
@@ -898,9 +899,10 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "o", Operator: OpIsNotNull},
 					{Property: "o", Operator: OpIsEmpty},
 					{Property: "o", Operator: OpIsNotEmpty},
+					{Property: "q", Operator: OpContains, Values: []string{"1.34"}},
 				},
 			},
-			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o"},
+			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o", "q"},
 		},
 	}
 

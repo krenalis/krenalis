@@ -19,8 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"
@@ -229,7 +229,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 // immutableMergeIdentitiesColumns are columns in the merge of identities that
 // are immutable.
 var immutableMergeIdentitiesColumns = []string{
-	"__action__",
+	"__pipeline__",
 	"__identity_id__",
 	"__is_anonymous__",
 	"__connection__",
@@ -271,7 +271,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	b.Reset()
 	b.WriteString("MERGE INTO \"meergo_identities\" AS \"d\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString(`" AS "s"` + "\n" + `ON "d"."__action__" = "s"."__action__" AND "d"."__identity_id__" = "s"."__identity_id__" AND "d"."__is_anonymous__" = "s"."__is_anonymous__"`)
+	b.WriteString(`" AS "s"` + "\n" + `ON "d"."__pipeline__" = "s"."__pipeline__" AND "d"."__identity_id__" = "s"."__identity_id__" AND "d"."__is_anonymous__" = "s"."__is_anonymous__"`)
 	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
@@ -363,8 +363,8 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 }
 
 // UnsetIdentityColumns unsets values for the specified identity columns for the
-// given action.
-func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
+// given pipeline.
+func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
 	var b strings.Builder
 	b.WriteString("UPDATE \"meergo_identities\" SET ")
 	for i, column := range columns {
@@ -374,8 +374,8 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, action in
 		b.WriteString(quoteIdent(column.Name))
 		b.WriteString(" = NULL")
 	}
-	b.WriteString(" WHERE \"__action__\" = ")
-	b.WriteString(strconv.Itoa(action))
+	b.WriteString(" WHERE \"__pipeline__\" = ")
+	b.WriteString(strconv.Itoa(pipeline))
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err

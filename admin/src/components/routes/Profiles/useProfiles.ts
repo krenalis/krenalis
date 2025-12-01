@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ProfileProperty } from './Profiles.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { FindProfilesResponse, ResponseProfile } from '../../../lib/api/types/responses';
-import { flattenSchema } from '../../../lib/core/action';
+import { flattenSchema } from '../../../lib/core/pipeline';
 import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
 
 const DEFAULT_PROFILE_LIMIT = 1000;

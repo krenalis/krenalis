@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/json"
 )
 
 // Connector represents a connector.

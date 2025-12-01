@@ -17,7 +17,7 @@ import (
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 
@@ -42,7 +42,7 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
 // AckEvent represents an ack event.
 type AckEvent struct {
-	Action int
+	Pipeline int
 }
 
 // EventWriterAckFunc is the function called when events have been written to
@@ -51,7 +51,7 @@ type EventWriterAckFunc func(events []AckEvent, err error)
 
 // EventIdentityWriterAckFunc is the function called when a batch of user
 // identities from events have been written to the data warehouse.
-type EventIdentityWriterAckFunc func(action int, ids []string, err error)
+type EventIdentityWriterAckFunc func(pipeline int, ids []string, err error)
 
 // IdentityWriterAckFunc is the function called when a batch of identities has
 // been written to the data warehouse.
@@ -61,11 +61,11 @@ type IdentityWriterAckFunc func(ids []string, err error)
 var destinationsProfilesTable = warehouses.Table{
 	Name: "meergo_destination_profiles",
 	Columns: []warehouses.Column{
-		{Name: "__action__", Type: types.Int(32)},
-		{Name: "__external_id__", Type: types.Text()},
-		{Name: "__out_matching_value__", Type: types.Text()},
+		{Name: "__pipeline__", Type: types.Int(32)},
+		{Name: "__external_id__", Type: types.String()},
+		{Name: "__out_matching_value__", Type: types.String()},
 	},
-	Keys: []string{"__action__", "__external_id__"},
+	Keys: []string{"__pipeline__", "__external_id__"},
 }
 
 type Store struct {
@@ -79,7 +79,7 @@ type Store struct {
 	}
 	closed               atomic.Bool
 	mu                   sync.Mutex                   // for the 'eventIdentityWriters' field
-	eventIdentityWriters map[int]*EventIdentityWriter // action -> *EventIdentityWriter
+	eventIdentityWriters map[int]*EventIdentityWriter // pipeline -> *EventIdentityWriter
 	mc                   *modeCoordinator
 }
 
@@ -151,13 +151,13 @@ func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 }
 
 // DeleteDestinationProfiles deletes the destination profiles of the provided
-// action.
+// pipeline.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) DeleteDestinationProfiles(ctx context.Context, action int) error {
+func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline int) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -165,7 +165,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, action int) e
 	}
 	defer done()
 	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, action)
+		warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, pipeline)
 	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
 }
 
@@ -250,7 +250,7 @@ type DestinationProfile struct {
 	OutMatchingValue string // The value for the out matching property in the API.
 }
 
-// MergeDestinationUsers merges the destination users for an action. users
+// MergeDestinationUsers merges the destination users for a pipeline. users
 // contains the users to update or create. idsToDelete contains the identifiers
 // of the users to delete.
 //
@@ -258,7 +258,7 @@ type DestinationProfile struct {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) MergeDestinationUsers(ctx context.Context, action int, profiles []DestinationProfile, idsToDelete []string) error {
+func (store *Store) MergeDestinationUsers(ctx context.Context, pipeline int, profiles []DestinationProfile, idsToDelete []string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -271,7 +271,7 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, profi
 		values := make([]any, 3*len(profiles))
 		for i, profile := range profiles {
 			j := i * 3
-			values[j+0] = action
+			values[j+0] = pipeline
 			values[j+1] = profile.ExternalID
 			values[j+2] = profile.OutMatchingValue
 			rows[i] = values[j : j+3]
@@ -282,7 +282,7 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, profi
 		deleted = make([]any, len(idsToDelete)*2)
 		for i, id := range idsToDelete {
 			j := i * 2
-			deleted[j] = action
+			deleted[j] = pipeline
 			deleted[j+1] = id
 		}
 	}
@@ -295,28 +295,28 @@ func (store *Store) Mode() state.WarehouseMode {
 }
 
 // NewBatchIdentityWriter returns an identity writer for writing identities in
-// batch, relative to the given action (which must be in execution) on the data
-// warehouse. purge reports whether identities should be purged from the data
-// warehouse after all identities have been written. The ack parameter is the
-// acknowledgment function.
+// batch, relative to the given pipeline (which must be in execution) on the
+// data warehouse. purge reports whether identities should be purged from the
+// data warehouse after all identities have been written. The ack parameter is
+// the acknowledgment function.
 //
-// If the action's output schema does not align with the profile schema, it
+// If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
 //
 // It panics if the ack function is nil.
-func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
-	return newBatchIdentityWriter(store, action, purge, ack)
+	return newBatchIdentityWriter(store, pipeline, purge, ack)
 }
 
-// NewEventIdentityWriter returns an identity writer for writing user
-// identities, relative to the action, on the data warehouse, in case of
-// importing identities from events.
+// NewEventIdentityWriter returns an identity writer for writing identities,
+// relative to the pipeline, on the data warehouse, in case of importing
+// identities from events.
 //
 // It must be called on a frozen state.
-func (store *Store) NewEventIdentityWriter(actionID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
+func (store *Store) NewEventIdentityWriter(pipelineID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
 	store.mustBeOpen()
-	return newEventIdentityWriter(store, actionID, ack)
+	return newEventIdentityWriter(store, pipelineID, ack)
 }
 
 // NewEventWriter returns a new writer to write events.
@@ -352,25 +352,25 @@ func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.
 	return store.warehouse().PreviewAlterProfileSchema(ctx, profileColumns, operations)
 }
 
-// PurgeActions purges the provided actions from the data warehouse, deleting
-// their associated identities and destination users.
+// PurgePipelines purges the provided pipelines from the data warehouse,
+// deleting their associated identities and destination users.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
+func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err
 	}
 	defer done()
-	values := make([]any, len(actions))
-	for i, action := range actions {
-		values[i] = action
+	values := make([]any, len(pipelines))
+	for i, pipeline := range pipelines {
+		values[i] = pipeline
 	}
-	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
+	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
 	err = store.warehouse().Delete(ctx, "meergo_identities", where)
 	if err != nil {
 		return err
@@ -531,9 +531,9 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 }
 
 // UnsetIdentityProperties unsets values for the specified identity properties
-// for the given action. properties contains the property paths and must not be
-// empty. If the provided action does not exist, it does nothing.
-func (store *Store) UnsetIdentityProperties(ctx context.Context, action int, properties []string) error {
+// for the given pipeline. properties contains the property paths and must not be
+// empty. If the provided pipeline does not exist, it does nothing.
+func (store *Store) UnsetIdentityProperties(ctx context.Context, pipeline int, properties []string) error {
 	store.mustBeOpen()
 	if len(properties) == 0 {
 		return errors.New("core/datastore: invalid empty properties")
@@ -544,7 +544,7 @@ func (store *Store) UnsetIdentityProperties(ctx context.Context, action int, pro
 	}
 	defer done()
 	columns := appendColumnsFromProperties(nil, properties, store.profileColumnByProperty())
-	return store.warehouse().UnsetIdentityColumns(ctx, action, columns)
+	return store.warehouse().UnsetIdentityColumns(ctx, pipeline, columns)
 }
 
 // ProfileRecords returns an iterator over the profiles, according to the
@@ -634,28 +634,15 @@ func (store *Store) mustBeOpen() {
 	}
 }
 
-// onCreateAction is called when an action of the store's workspace is created.
+// onCreatePipeline is called when a pipeline of the store's workspace is
+// created.
 //
-// The notification is propagated by the Datastore.onCreateAction method.
-func (store *Store) onCreateAction(n state.CreateAction) {
+// The notification is propagated by the Datastore.onCreatePipeline method.
+func (store *Store) onCreatePipeline(n state.CreatePipeline) {
 	store.mu.Lock()
 	for _, iw := range store.eventIdentityWriters {
 		if iw.connection == n.Connection {
-			iw.onCreateAction(n)
-		}
-	}
-	store.mu.Unlock()
-}
-
-// onDeleteAction is called when an action of the store's workspace is deleted.
-//
-// The notification is propagated by the Datastore.onDeleteAction method.
-func (store *Store) onDeleteAction(n state.DeleteAction) {
-	connection := n.Action().Connection().ID
-	store.mu.Lock()
-	for _, iw := range store.eventIdentityWriters {
-		if iw.connection == connection {
-			iw.onDeleteAction(n)
+			iw.onCreatePipeline(n)
 		}
 	}
 	store.mu.Unlock()
@@ -671,6 +658,21 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 	for _, iw := range store.eventIdentityWriters {
 		if iw.connection == connection.ID {
 			iw.onDeleteConnection(n)
+		}
+	}
+	store.mu.Unlock()
+}
+
+// onDeletePipeline is called when a pipeline of the store's workspace is
+// deleted.
+//
+// The notification is propagated by the Datastore.onDeletePipeline method.
+func (store *Store) onDeletePipeline(n state.DeletePipeline) {
+	connection := n.Pipeline().Connection().ID
+	store.mu.Lock()
+	for _, iw := range store.eventIdentityWriters {
+		if iw.connection == connection {
+			iw.onDeletePipeline(n)
 		}
 	}
 	store.mu.Unlock()
@@ -700,17 +702,18 @@ func (store *Store) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 
 }
 
-// onUpdateAction is called when an action of the store's workspace is updated.
+// onUpdatePipeline is called when a pipeline of the store's workspace is
+// updated.
 //
-// The notification is propagated by the Datastore.onUpdateAction method.
-func (store *Store) onUpdateAction(n state.UpdateAction) {
+// The notification is propagated by the Datastore.onUpdatePipeline method.
+func (store *Store) onUpdatePipeline(n state.UpdatePipeline) {
 	store.mu.Lock()
 	iw, ok := store.eventIdentityWriters[n.ID]
 	store.mu.Unlock()
 	if !ok {
 		return
 	}
-	iw.onUpdateAction(n)
+	iw.onUpdatePipeline(n)
 }
 
 // profileColumnByProperty returns the map from properties to columns for the

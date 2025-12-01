@@ -12,8 +12,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestChangeProfileSchema(t *testing.T) {
@@ -74,7 +74,7 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Add a single property.
 	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
-		Name: "new_prop", Type: types.Text(), ReadOptional: true,
+		Name: "new_prop", Type: types.String(), ReadOptional: true,
 	}))
 	queries = c.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
@@ -213,16 +213,16 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Create a schema with two properties that would conflict each other.
 	schema = types.Object(append(file.Schema.Properties().Slice(),
-		types.Property{Name: "a_b", Type: types.Text(), ReadOptional: true},
+		types.Property{Name: "a_b", Type: types.String(), ReadOptional: true},
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text(), ReadOptional: true},
+			{Name: "b", Type: types.String(), ReadOptional: true},
 		}), ReadOptional: true},
 	))
 	_, err = c.PreviewAlterProfileSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile action schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
+	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -237,7 +237,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	// Create a schema with a null property.
 	schema = types.Object(append(file.Schema.Properties().Slice(),
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text(), ReadOptional: true, Nullable: true},
+			{Name: "b", Type: types.String(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
 	))
 	_, err = c.PreviewAlterProfileSchemaErr(schema, nil)

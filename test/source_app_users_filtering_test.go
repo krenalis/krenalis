@@ -7,8 +7,8 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestSourceAppUsersFiltering(t *testing.T) {
@@ -23,7 +23,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 
 	// Import users from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		Filter: &meergotester.Filter{
@@ -37,10 +37,10 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -48,7 +48,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletionAllowFailed(dummySrc, exec)
 
 	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)

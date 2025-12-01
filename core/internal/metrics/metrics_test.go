@@ -36,7 +36,7 @@ func Test_CollectorPassedFailed(t *testing.T) {
 
 	m, ok := c.metrics[1]
 	if !ok {
-		t.Fatalf("metrics for action 1 not found")
+		t.Fatalf("metrics for pipeline 1 not found")
 	}
 	if got := m.passed[ReceiveStep]; got != 3 {
 		t.Fatalf("expected 3 passed, got %d", got)

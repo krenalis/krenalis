@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/fraugster/parquet-go/parquet"
 )
@@ -47,7 +47,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		// {Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
 		{Name: "rank_int32", Type: types.Int(32), ReadOptional: true},
 		{Name: "rank_int64", Type: types.Int(64), ReadOptional: true},
-		{Name: "first_name", Type: types.Text(), ReadOptional: true},
+		{Name: "first_name", Type: types.String(), ReadOptional: true},
 		{Name: "rank_uint8", Type: types.Uint(8), ReadOptional: true},
 		{Name: "rank_uint16", Type: types.Uint(16), ReadOptional: true},
 		// This cannot be tested as Parquet does not support 24-bit integers,
@@ -55,7 +55,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		// {Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
 		{Name: "rank_uint32", Type: types.Uint(32), ReadOptional: true},
 		{Name: "rank_uint64", Type: types.Uint(64), ReadOptional: true},
-		{Name: "last_name", Type: types.Text(), ReadOptional: true},
+		{Name: "last_name", Type: types.String(), ReadOptional: true},
 		{Name: "score32", Type: types.Float(32), ReadOptional: true},
 		{Name: "score64", Type: types.Float(64), ReadOptional: true},
 		{Name: "decimal_1_0", Type: types.Decimal(1, 0), ReadOptional: true},
@@ -292,9 +292,9 @@ func TestExport(t *testing.T) {
 		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
 		{Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
 		{Name: "p_year", Type: types.Year(), ReadOptional: true},
-		{Name: "p_inet", Type: types.Inet(), ReadOptional: true},
+		{Name: "p_inet", Type: types.IP(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
-			{Name: "street", Type: types.Text(), ReadOptional: true},
+			{Name: "street", Type: types.String(), ReadOptional: true},
 			{Name: "zip_code", Type: types.Int(32), ReadOptional: true},
 		})},
 	}
@@ -393,7 +393,7 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 		}
 		column := writer.columnByName(name)
 		switch column.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			record[name] = string(value.([]byte))
 		case types.IntKind:
 			if column.Type.BitSize() <= 32 {

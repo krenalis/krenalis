@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestDummyImportNotRequired(t *testing.T) {
@@ -24,17 +24,17 @@ func TestDummyImportNotRequired(t *testing.T) {
 
 	// Import users from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
+			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "favourite_movie", Type: types.String(), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "favorite_movie", Type: types.Object([]types.Property{
-				{Name: "title", Type: types.Text(), ReadOptional: true},
+				{Name: "title", Type: types.String(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
@@ -44,7 +44,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
 	// Test that the "favorite_movie.title" property, which has been imported

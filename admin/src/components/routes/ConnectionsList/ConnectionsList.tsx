@@ -20,7 +20,6 @@ const ConnectionsList = () => {
 	const { redirect, connections, setTitle } = useContext(AppContext);
 
 	useEffect(() => {
-		setTitle(`${role}s`);
 		const roleConnections: TransformedConnection[] = [];
 		for (const c of connections) {
 			if (c.role === role) {
@@ -44,7 +43,7 @@ const ConnectionsList = () => {
 			},
 */
 			{
-				name: 'Actions',
+				name: 'Pipelines',
 				alignment: 'center',
 			},
 		];
@@ -88,7 +87,7 @@ const ConnectionsList = () => {
 					<div>{c.status.text}</div>
 				</div>,
 */
-				c.actionsCount,
+				c.pipelinesCount,
 			];
 			if (hasEventConnections) {
 				if (c.linkedConnections != null) {
@@ -120,13 +119,20 @@ const ConnectionsList = () => {
 				cells: cells,
 				id: String(c.id),
 				onClick: () => {
-					redirect(`connections/${c.id}/actions`);
+					redirect(`connections/${c.id}/pipelines`);
 				},
 			});
 		}
 		setConnectionsRows(rows);
 		setConnectionColumns(columns);
 	}, [connections, role]);
+
+	useEffect(() => {
+		if (role) {
+			const section = role === 'Source' ? 'Sources' : 'Destinations';
+			setTitle(`Connections / ${section}`);
+		}
+	}, [role, setTitle]);
 
 	const path = window.location.pathname;
 	const splitted = path.split('/');

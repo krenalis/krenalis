@@ -14,11 +14,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
@@ -27,16 +27,16 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errByteLenConversion   = errors.New("invalid byte length")
-	errCharLenConversion   = errors.New("invalid char length")
-	errEnumConversion      = errors.New("not a valid enum value")
-	errInvalidConversion   = errors.New("cannot convert")
-	errMaxConversion       = errors.New("too large")
-	errMinConversion       = errors.New("too small")
-	errParseConversion     = errors.New("cannot parse")
-	errRangeConversion     = errors.New("out of range")
-	errRegexpConversion    = errors.New("regexp mismatch")
-	errYearRangeConversion = errors.New("year not in range [1,9999]")
+	errMaxByteLengthConversion = errors.New("invalid max byte length")
+	errMaxLengthConversion     = errors.New("invalid max length")
+	errEnumConversion          = errors.New("not a valid enum value")
+	errInvalidConversion       = errors.New("cannot convert")
+	errMaxConversion           = errors.New("too large")
+	errMinConversion           = errors.New("too small")
+	errParseConversion         = errors.New("cannot parse")
+	errRangeConversion         = errors.New("out of range")
+	errPatternConversion       = errors.New("pattern mismatch")
+	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
 const (
@@ -70,15 +70,15 @@ var (
 // in the returned value.
 //
 // If the value cannot be converted, it returns v and one of the following:
-//   - errByteLenConversion
-//   - errCharLenConversion
+//   - errMaxByteLengthConversion
+//   - errMaxLengthConversion
 //   - errEnumConversion
 //   - errInvalidConversion
 //   - errMaxConversion
 //   - errMinConversion
 //   - errParseConversion
 //   - errRangeConversion
-//   - errRegexpConversion
+//   - errPatternConversion
 //   - errYearRangeConversion
 func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
 	sk := st.Kind()
@@ -92,7 +92,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return nil, nil
 			}
 		case v == "":
-			if dk != types.TextKind && dk != types.JSONKind {
+			if dk != types.StringKind && dk != types.JSONKind {
 				return nil, nil
 			}
 		}
@@ -108,10 +108,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	}
 	// Convert the unparsed cases, v is not nil.
 	switch dk {
-	case types.TextKind:
+	case types.StringKind:
 		var s string
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			s = v.(string)
 		case types.BooleanKind:
 			s = "false"
@@ -134,7 +134,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			s = v.(time.Time).Format("15:04:05.999999999")
 		case types.YearKind:
 			s = strconv.Itoa(v.(int))
-		case types.UUIDKind, types.InetKind:
+		case types.UUIDKind, types.IPKind:
 			s = v.(string)
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -154,31 +154,31 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return s, nil
 			}
 			return v, errEnumConversion
-		} else if re := dt.Regexp(); re != nil {
+		} else if re := dt.Pattern(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
 					return nil, nil
 				}
-				return v, errRegexpConversion
+				return v, errPatternConversion
 			}
 		} else {
-			if l, ok := dt.ByteLen(); ok && l < len(s) {
-				return v, errByteLenConversion
+			if l, ok := dt.MaxByteLength(); ok && l < len(s) {
+				return v, errMaxByteLengthConversion
 			}
-			if l, ok := dt.CharLen(); ok {
+			if l, ok := dt.MaxLength(); ok {
 				runes := len(s)
-				if sk == types.JSONKind || sk == types.TextKind {
+				if sk == types.JSONKind || sk == types.StringKind {
 					runes = utf8.RuneCountInString(s)
 				}
 				if runes > l {
-					return v, errCharLenConversion
+					return v, errMaxLengthConversion
 				}
 			}
 		}
 		return s, nil
 	case types.BooleanKind:
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			switch v.(string) {
 			case "false", "False", "FALSE", "no", "No", "NO":
 				return false, nil
@@ -205,7 +205,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n int
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			n, err = strconv.Atoi(v.(string))
 			if err != nil {
 				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
@@ -263,7 +263,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n uint
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			var u uint64
 			u, err = strconv.ParseUint(v.(string), 10, 64)
 			if err != nil {
@@ -323,7 +323,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n float64
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
 			if err != nil {
 				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
@@ -371,7 +371,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n decimal.Decimal
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
@@ -418,7 +418,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var t time.Time
 		var err error
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			t, err = time.Parse(time.RFC3339Nano, v.(string))
 			if err != nil {
 				return v, errParseConversion
@@ -468,8 +468,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var t time.Time
 		var err error
 		switch sk {
-		case types.TextKind:
-			t, err = convertTextToDate(v.(string))
+		case types.StringKind:
+			t, err = convertStringToDate(v.(string))
 			if err != nil {
 				return v, err
 			}
@@ -505,7 +505,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.TimeKind:
 		var t time.Time
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			var ok bool
 			t, ok = util.ParseTime(v.(string))
 			if !ok {
@@ -539,7 +539,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		var err error
 		var n int
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			s := v.(string)
 			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
 				return v, errParseConversion
@@ -579,7 +579,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return n, nil
 	case types.UUIDKind:
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			u, err := uuid.Parse(v.(string))
 			if err != nil {
 				return v, errParseConversion
@@ -617,15 +617,15 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v, errInvalidConversion
 		}
 		return value, nil
-	case types.InetKind:
+	case types.IPKind:
 		switch sk {
-		case types.TextKind:
+		case types.StringKind:
 			ip, err := netip.ParseAddr(v.(string))
 			if err != nil {
 				return v, errParseConversion
 			}
 			return ip.String(), nil
-		case types.InetKind:
+		case types.IPKind:
 			return v.(string), nil
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -877,7 +877,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	return v, errInvalidConversion
 }
 
-func convertTextToDate(s string) (time.Time, error) {
+func convertStringToDate(s string) (time.Time, error) {
 	month, day, year := -1, -1, -1
 	if len(s) == 10 {
 		if s[4] == '-' && s[7] == '-' {

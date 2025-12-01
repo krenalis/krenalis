@@ -15,9 +15,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 )
@@ -186,7 +186,7 @@ type Warehouse interface {
 	// ones. columns are the columns whose values are present in the rows and
 	// contain at least the columns:
 	//
-	//   __action__
+	//   __pipeline__
 	//   __is_anonymous__
 	//   __identity_id__
 	//   __connection__
@@ -274,9 +274,9 @@ type Warehouse interface {
 	Truncate(ctx context.Context, table string) error
 
 	// UnsetIdentityColumns unsets values for the specified identity columns for the
-	// given action. columns must not be empty. If the provided action does not
+	// given pipeline. columns must not be empty. If the provided pipeline does not
 	// exist, it does nothing.
-	UnsetIdentityColumns(ctx context.Context, action int, columns []Column) error
+	UnsetIdentityColumns(ctx context.Context, pipeline int, columns []Column) error
 }
 
 // Table represents a database table.
@@ -527,17 +527,17 @@ func ValidateJSON(name string, v any) (any, error) {
 	return json.Value(data), nil
 }
 
-// ValidateInet validates an inet value.
-func ValidateInet(name string, s string) (any, error) {
+// ValidateIP validates an ip value.
+func ValidateIP(name string, s string) (any, error) {
 	ip, err := netip.ParseAddr(s)
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an inet type", name)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an ip type", name)
 	}
 	return ip.String(), nil
 }
 
-// ValidateText validates a text value.
-func ValidateText(name string, t types.Type, s string) (any, error) {
+// ValidateString validates a string value.
+func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
 	}
@@ -547,16 +547,16 @@ func ValidateText(name string, t types.Type, s string) (any, error) {
 		}
 		return s, nil
 	}
-	if rx := t.Regexp(); rx != nil {
+	if rx := t.Pattern(); rx != nil {
 		if !rx.MatchString(s) {
 			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not valid", name)
 		}
 		return s, nil
 	}
-	if max, ok := t.ByteLen(); ok && len(s) > max {
+	if max, ok := t.MaxByteLength(); ok && len(s) > max {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d bytes", name, max)
 	}
-	if max, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > max {
+	if max, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > max {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d characters", name, max)
 	}
 	return s, nil

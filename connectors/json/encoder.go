@@ -15,9 +15,9 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 // An encoder writes JSON values to a slice of bytes.
@@ -45,7 +45,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		return append(b, "null"...)
 	}
 	switch k := t.Kind(); k {
-	case types.TextKind:
+	case types.StringKind:
 		return enc.appendString(b, v.(string))
 	case types.BooleanKind:
 		return strconv.AppendBool(b, v.(bool))
@@ -87,7 +87,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		b = append(b, '"')
 		b = v.(time.Time).AppendFormat(b, "15:04:05.999999999Z")
 		return append(b, '"')
-	case types.UUIDKind, types.InetKind:
+	case types.UUIDKind, types.IPKind:
 		b = append(b, '"')
 		b = append(b, v.(string)...)
 		return append(b, '"')

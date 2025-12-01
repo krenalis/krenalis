@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 const settingsEnvKey = "MEERGO_TEST_PATH_SNOWFLAKE"
@@ -64,8 +64,8 @@ func Test_Columns(t *testing.T) {
 		{Name: "e", Type: types.Date(), Writable: true},
 		{Name: "f", Type: types.Time(), Nullable: true, Writable: true},
 		{Name: "g", Type: types.JSON(), Nullable: true, Writable: true},
-		{Name: "h", Type: types.Text().WithByteLen(16_777_216).WithCharLen(16_777_216), Writable: true},
-		{Name: "i", Type: types.Text().WithCharLen(50), Nullable: true, Writable: true},
+		{Name: "h", Type: types.String().WithMaxByteLength(16_777_216).WithMaxLength(16_777_216), Writable: true},
+		{Name: "i", Type: types.String().WithMaxLength(50), Nullable: true, Writable: true},
 		{Name: "j", Type: types.Array(types.JSON()), Writable: true},
 	}
 
@@ -122,7 +122,7 @@ func Test_Merge_Query(t *testing.T) {
 		{"DATE", time.Date(2024, 11, 7, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2024, 11, 7, 0, 0, 0, 0, time.UTC)},
 		{"TIME", time.Date(1, 1, 1, 17, 29, 46, 320176551, time.UTC), types.Time(), time.Date(1970, 1, 1, 17, 29, 46, 320176551, time.UTC)},
 		{"VARIANT", "{\n  \"foo\": \"boo\"\n}", types.JSON(), json.Value(`{"foo":"boo"}`)},
-		{"VARCHAR", "foo", types.Text().WithByteLen(16_777_216).WithCharLen(16_777_216), "foo"},
+		{"VARCHAR", "foo", types.String().WithMaxByteLength(16_777_216).WithMaxLength(16_777_216), "foo"},
 		{"ARRAY", "[\n  {\n    \"foo\": \"boo\"\n  },\n  [\n    1,\n    2,\n    3\n  ]\n]", types.Array(types.JSON()), []any{json.Value(`{"foo":"boo"}`), json.Value(`[1, 2, 3]`)}},
 	}
 

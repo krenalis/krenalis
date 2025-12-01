@@ -46,7 +46,7 @@ func TestAdmin(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	// Create and instantiate the PostgreSQL database referenced in actions.
+	// Create and instantiate the PostgreSQL database referenced in pipelines.
 	const (
 		dbUsername = "db_test_user"
 		dbPassword = "tXALDfgwZP3"
@@ -88,7 +88,7 @@ func TestAdmin(t *testing.T) {
 		dbPort = postgresPort.Int()
 	}
 
-	// Initialize the PostgreSQL database referenced in actions.
+	// Initialize the PostgreSQL database referenced in pipelines.
 	{
 		pool, err := meergotester.ConnectionPool(t.Context(), &meergotester.DBSettings{
 			Host:     dbHost,

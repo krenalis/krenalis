@@ -16,8 +16,8 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/klauspost/compress/snappy"
 )
@@ -41,19 +41,19 @@ func TestExportUsersToFile(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "firstName", Type: types.String(), Nullable: true},
+				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "gender", Type: types.Text(), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -64,7 +64,7 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID)
+		exec := c.ExecutePipeline(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -81,16 +81,16 @@ func TestExportUsersToFile(t *testing.T) {
 	exportedFilename := "exported-profiles.tmp.csv"
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-	// Create an action for the CSV for exporting the users.
-	exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
+	// Create a pipeline for the CSV for exporting the users.
+	exportUsersPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
 		Name:    "Export users to the CSV on File System",
 		Enabled: true,
 		Path:    exportedFilename,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-			{Name: "gender", Type: types.Text(), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "gender", Type: types.String(), ReadOptional: true},
 		}),
 		Format: "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
@@ -120,15 +120,15 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/api/v1/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
+		c.MustCall("PUT", "/api/v1/pipelines/"+strconv.Itoa(exportUsersPipelineID), meergotester.PipelineToSet{
 			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "gender", Type: types.Text(), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Format: "csv",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
@@ -138,8 +138,8 @@ func TestExportUsersToFile(t *testing.T) {
 			OrderBy:     "email",
 		}, nil)
 
-		// Execute the action that export users.
-		exec := c.ExecuteAction(exportUsersActionID)
+		// Execute the pipeline that export users.
+		exec := c.ExecutePipeline(exportUsersPipelineID)
 
 		// Wait for the export to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)

@@ -9,15 +9,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 )
 
 // These data types are copy-paste of the types defined within the APIs.
 
-type ActionToSet struct {
+type PipelineToSet struct {
 	Name                 string          `json:"name"`
 	Enabled              bool            `json:"enabled"`
 	Filter               *Filter         `json:"filter"`
@@ -69,7 +69,7 @@ type DummySettings struct {
 
 type Execution struct {
 	ID        int        `json:"id"`
-	Action    int        `json:"action"`
+	Pipeline  int        `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
 	Passed    [6]int     `json:"passed"`
@@ -147,7 +147,7 @@ type Profile struct {
 
 type Identity struct {
 	Connection     int       // do not use in tests. Currently, this serves just for the UI.
-	Action         int       `json:"action"`
+	Pipeline       int       `json:"pipeline"`
 	ID             string    `json:"id"`
 	AnonymousIds   []string  `json:"anonymousIds"`
 	LastChangeTime time.Time `json:"lastChangeTime"`

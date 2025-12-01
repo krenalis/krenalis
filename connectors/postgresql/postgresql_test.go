@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/testimages"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -49,18 +49,18 @@ func Test_Merge_Query(t *testing.T) {
 		{"numeric(10,3)", "1.123", types.Decimal(10, 3), decimal.MustParse("1.123")},
 		{"real", float64(float32(1.123)), types.Float(32), float64(float32(1.123))},
 		{"double precision", 1.123, types.Float(64), 1.123},
-		{"char(3)", "foo", types.Text().WithCharLen(3), "foo"},
-		{"character varying", "foo", types.Text(), "foo"},
-		{"character varying(3)", "foo", types.Text().WithCharLen(3), "foo"},
-		{"text", "FOO", types.Text(), "FOO"},
-		//{"bytea", []byte("FOO"), types.Text(), "FOO"},
+		{"char(3)", "foo", types.String().WithMaxLength(3), "foo"},
+		{"character varying", "foo", types.String(), "foo"},
+		{"character varying(3)", "foo", types.String().WithMaxLength(3), "foo"},
+		{"text", "FOO", types.String(), "FOO"},
+		//{"bytea", []byte("FOO"), types.String(), "FOO"},
 		{"timestamp without time zone", time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{"timestamp with time zone", time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{"date", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{"time", "02:03:00.000000", types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
 		//{"time with time zone", time.Date(1970, 1, 1, 2, 3, 0, 0, time.Local).Format("15:04:05Z07"), types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
 		{"boolean", true, types.Boolean(), true},
-		{"inet", "127.0.0.1/32", types.Inet(), "127.0.0.1/32"},
+		{"inet", "127.0.0.1/32", types.IP(), "127.0.0.1/32"},
 		{"uuid", "4d92d698-687d-4447-b34f-6b29d74a9730", types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
 		{"json", `{"foo":"boo"}`, types.JSON(), json.Value(`{"foo":"boo"}`)},
 		{"jsonb", `{"foo": "boo"}`, types.JSON(), json.Value(`{"foo":"boo"}`)},

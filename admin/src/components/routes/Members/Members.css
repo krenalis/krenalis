@@ -52,7 +52,7 @@
 	margin-bottom: 0;
 }
 
-.members__member-actions {
+.members__member-pipelines {
 	display: flex;
 	gap: 15px;
 }

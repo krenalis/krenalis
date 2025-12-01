@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/dotenv"
+	"github.com/meergo/meergo/tools/dotenv"
 )
 
 func TestEnvLoading(t *testing.T) {

@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/testimages"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
@@ -53,15 +53,15 @@ func Test_Merge_Query(t *testing.T) {
 		{"Date", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{"Date32", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{"UUID", "4d92d698-687d-4447-b34f-6b29d74a9730", types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
-		{"IPv4", net.ParseIP("127.0.0.1").To4(), types.Inet(), "127.0.0.1"},
-		{"IPv6", net.ParseIP("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), types.Inet(), "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
-		{"String", "foo", types.Text(), "foo"},
-		{"LowCardinality(String)", "foo", types.Text(), "foo"},
-		{"FixedString(3)", "boo", types.Text().WithByteLen(3), "boo"},
-		{"Enum8('hello' = 1, 'world' = 2)", "hello", types.Text().WithValues("hello", "world"), "hello"},
-		{"Enum16('hello' = 1, 'world' = 2, 'clickhouse' = 3)", "clickhouse", types.Text().WithValues("hello", "world", "clickhouse"), "clickhouse"},
-		{"Enum16('hello' = 1, 'world' = 2, 'clickhouse' = 3)", "clickhouse", types.Text().WithValues("hello", "world", "clickhouse"), "clickhouse"},
-		{"Array(String)", []string{"boo", "foo"}, types.Array(types.Text()), []any{"boo", "foo"}},
+		{"IPv4", net.ParseIP("127.0.0.1").To4(), types.IP(), "127.0.0.1"},
+		{"IPv6", net.ParseIP("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), types.IP(), "2001:0db8:85a3:0000:0000:8a2e:0370:7334"},
+		{"String", "foo", types.String(), "foo"},
+		{"LowCardinality(String)", "foo", types.String(), "foo"},
+		{"FixedString(3)", "boo", types.String().WithMaxByteLength(3), "boo"},
+		{"Enum8('hello' = 1, 'world' = 2)", "hello", types.String().WithValues("hello", "world"), "hello"},
+		{"Enum16('hello' = 1, 'world' = 2, 'clickhouse' = 3)", "clickhouse", types.String().WithValues("hello", "world", "clickhouse"), "clickhouse"},
+		{"Enum16('hello' = 1, 'world' = 2, 'clickhouse' = 3)", "clickhouse", types.String().WithValues("hello", "world", "clickhouse"), "clickhouse"},
+		{"Array(String)", []string{"boo", "foo"}, types.Array(types.String()), []any{"boo", "foo"}},
 		{"Map(String,Int32)", map[string]int32{"a": 1, "b": 2}, types.Map(types.Int(32)), map[string]any{"a": 1, "b": 2}},
 		{"Nullable(Float32)", float32(1.2), types.Float(32), float64(float32(1.2))},
 	}

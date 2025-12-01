@@ -1,0 +1,265 @@
+.connection-pipelines {
+	margin-top: 30px;
+}
+
+.connection-pipelines__instructions {
+	margin-bottom: 50px;
+}
+
+.connection-pipelines__instructions-text a {
+	color: var(--sl-color-primary-600);
+	display: block;
+	font-weight: 600;
+	margin-top: 10px;
+	width: max-content;
+}
+
+.connection-pipelines__pipeline-type {
+	margin: auto;
+	border-bottom: 0 !important;
+	border-radius: 0 !important;
+}
+
+.connection-pipelines__pipeline-type:first-child {
+	border-top-left-radius: var(--radius) !important;
+	border-top-right-radius: var(--radius) !important;
+}
+
+.connection-pipelines__pipeline-type:last-child {
+	margin-bottom: 0 !important;
+	border-bottom: 1px solid var(--sl-color-neutral-200) !important;
+	border-bottom-left-radius: var(--radius) !important;
+	border-bottom-right-radius: var(--radius) !important;
+}
+
+.connection-pipelines .section {
+	max-width: 1600px;
+}
+
+.connection-pipelines__grid {
+	margin-top: 10px;
+}
+
+.connection-pipelines__add::part(base) {
+	min-height: unset;
+}
+
+.connection-pipelines__add::part(label) {
+	line-height: 1;
+	padding-left: 0;
+}
+
+.connection-pipelines__pipeline-name {
+	display: flex;
+	gap: 8px;
+}
+
+.connection-pipelines__pipeline-logo svg {
+	height: 20px;
+}
+
+.connection-pipelines__pipeline-name-description {
+	font-size: 14px;
+	color: #777;
+	overflow-wrap: anywhere;
+}
+
+.connection-pipelines__pipeline-filter {
+	font-size: 12px;
+	opacity: 0.7;
+	font-family: var(--monospace-fonts);
+	word-break: break-word;
+	margin-top: 0;
+	white-space: pre;
+}
+
+.connection-pipelines__buttons {
+	display: flex;
+	gap: 10px;
+	justify-content: end;
+}
+
+.connection-pipelines__execution-info-title {
+	font-weight: 500;
+	font-size: 13px;
+}
+
+.connection-pipelines__execution-info ul {
+	padding-left: 17px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.connection-pipelines__buttons .feedback-button__tooltip-content {
+	min-width: 300px;
+}
+
+.connection-pipelines__buttons .feedback-button__tooltip-content--info {
+	padding-top: 27px;
+}
+
+.connection-pipelines__scheduler-button::part(base) {
+	min-width: 132px;
+	justify-content: left;
+}
+
+.connection-pipelines__scheduler-button::part(suffix) {
+	margin-left: auto;
+}
+
+.connection-pipelines__scheduler-button::part(label) {
+	padding-right: 6px;
+}
+
+.connection-pipelines__scheduler-dot {
+	font-size: 8px;
+	color: var(--sl-color-neutral-400);
+	transition: color 0.3s;
+}
+
+.connection-pipelines__scheduler-dot--success {
+	color: var(--sl-color-success-600);
+}
+
+.connection-pipelines__scheduler-options {
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+.connection-pipelines__run-button::part(label) {
+	padding-left: 6px !important;
+}
+
+.connection-pipelines__run-button > sl-icon[name='play'] {
+	font-size: 16px;
+}
+
+.connection-pipelines__dialog::part(body) {
+	padding-bottom: 30px;
+}
+
+.connection-pipelines__dialog .list-tile {
+	margin-bottom: 15px;
+}
+
+.connection-pipelines__dialog .list-tile:last-child {
+	margin-bottom: 0;
+}
+
+.connection-pipelines__dialog-event-pipeline-types-title {
+	font-weight: 600;
+	margin-top: 25px;
+	margin-bottom: 10px;
+}
+
+.connection-pipelines__link-to-metrics {
+	margin-top: 10px;
+}
+
+.connection-pipelines__link {
+	color: var(--sl-color-primary-500);
+	text-decoration: underline;
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.connection-pipelines__linked-destinations {
+	margin-top: 50px;
+}
+
+.connection-pipelines__linked-sources {
+	margin-bottom: 50px;
+}
+
+.connection-pipelines__linked-destinations .linked-connection-selector__head-title {
+	font-weight: 600;
+}
+
+.connection-pipelines__linked-sources .linked-connection-selector__head-title {
+	font-weight: 600;
+}
+
+.connection-pipelines__pipeline-type--users:has(+ .connection-pipelines__pipeline-type--events) {
+	margin-bottom: 10px;
+	border-bottom: 1px solid var(--sl-color-neutral-200) !important;
+	border-bottom-left-radius: var(--radius) !important;
+	border-bottom-right-radius: var(--radius) !important;
+}
+
+.connection-pipelines__pipeline-type--users + .connection-pipelines__pipeline-type--events {
+	border-top-left-radius: var(--radius) !important;
+	border-top-right-radius: var(--radius) !important;
+}
+
+.connection-pipelines__menu .connection-pipelines__run-button::part(base) {
+	border: 0;
+	background-color: transparent;
+}
+
+.connection-pipelines__delete::part(base):hover {
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+	background-color: var(--sl-color-danger-600);
+	color: var(--text-onaccent);
+}
+
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(base) {
+	padding: 0;
+	border-radius: 0;
+	font-size: 16px;
+	font-weight: 400;
+}
+
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(base):hover {
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+	background-color: var(--sl-color-primary-500);
+	color: var(--text-onaccent);
+}
+
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip,
+.connection-pipelines__buttons-dropdown .connection-pipelines__manage-button {
+	display: none;
+}
+
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip::part(base__arrow) {
+	background-color: var(--bg-gray);
+	border: 1px solid var(--sl-color-neutral-300);
+	z-index: 10;
+	border-bottom: 0;
+	border-left: 0;
+}
+
+.connection-pipelines__grid-alert-pipeline-name {
+	font-family: var(--monospace-fonts);
+	background-color: var(--sl-color-neutral-100);
+	display: inline-block;
+	padding: 0px 5px;
+	border-radius: 3px;
+}
+
+.connection-pipelines__grid-alert-identities {
+	text-decoration: underline;
+}
+
+@media screen and (max-width: 1440px) {
+	.connection-pipelines__buttons > .connection-pipelines__manage-button {
+		display: none;
+	}
+
+	.connection-pipelines__buttons-dropdown .connection-pipelines__manage-button {
+		display: block;
+	}
+}
+
+@media screen and (max-width: 1320px) {
+	.connection-pipelines__buttons > .connection-pipelines__run-button-tooltip {
+		display: none;
+	}
+
+	.connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip {
+		display: block;
+	}
+}

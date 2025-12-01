@@ -15,7 +15,7 @@ import (
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 )
 
 type databaseConnection interface {
@@ -47,10 +47,10 @@ type databaseConnection interface {
 	// value is nil.
 	//
 	// value is the time value to quote, and typ specifies its type, which can be
-	// datetime, date, text, or json:
+	// datetime, date, string, or json:
 	//
 	//   - For datetime and date types, value is a time.Time.
-	//   - For text and json types, value is a string.
+	//   - For string and json types, value is a string.
 	QuoteTime(value any, typ types.Type) string
 }
 
@@ -106,28 +106,28 @@ func (database *Database) Connector() string {
 }
 
 // LastChangeTimePlaceholder returns the value used for the last_change_time
-// placeholder for the provided action.
-func (database *Database) LastChangeTimePlaceholder(action *state.Action) (string, error) {
+// placeholder for the provided pipeline.
+func (database *Database) LastChangeTimePlaceholder(pipeline *state.Pipeline) (string, error) {
 	if database.err != nil {
 		return "", database.err
 	}
-	if action == nil {
+	if pipeline == nil {
 		return database.inner.QuoteTime(nil, types.Type{}), nil
 	}
-	execution, ok := action.Execution()
+	execution, ok := pipeline.Execution()
 	if !ok {
-		return "", errors.New("action is not currently executing")
+		return "", errors.New("pipeline is not currently executing")
 	}
 	cursor := execution.Cursor
-	property := action.LastChangeTimeColumn
+	property := pipeline.LastChangeTimeColumn
 	if property == "" || cursor.IsZero() {
 		return database.inner.QuoteTime(nil, types.Type{}), nil
 	}
-	p, _ := action.InSchema.Properties().ByName(property)
+	p, _ := pipeline.InSchema.Properties().ByName(property)
 	var value any
 	switch p.Type.Kind() {
-	case types.TextKind, types.JSONKind:
-		value = formatLastChangeTimeColumn(action.LastChangeTimeFormat, cursor)
+	case types.StringKind, types.JSONKind:
+		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
 	case types.DateTimeKind:
 		value = execution.Cursor
 	case types.DateKind:
@@ -216,26 +216,26 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	return newRows(rows, columns, database.timeLayouts), schema, issues, nil
 }
 
-// Records executes the action's query and returns an iterator to iterate over
+// Records executes the pipeline's query and returns an iterator to iterate over
 // the database's records. Each returned record will contain, in the Attributes
-// field, the properties of the action's input schema, with the same types.
+// field, the properties of the pipeline's input schema, with the same types.
 //
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a *PlaceholderError error may be returned in case of
 // an error with placeholders.
 //
-// If the action's input schema does not align with the query's results schema,
-// or if the identity or timestamp columns defined in the action are not
+// If the pipeline's input schema does not align with the query's results schema,
+// or if the identity or timestamp columns defined in the pipeline are not
 // returned by the query, it returns a *schemas.Error error. If the connector
 // returns an error, it returns an *UnavailableError error.
-func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
+func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
-	if !action.InSchema.Valid() {
-		return nil, fmt.Errorf("action's input schema is not valid")
+	if !pipeline.InSchema.Valid() {
+		return nil, fmt.Errorf("pipeline's input schema is not valid")
 	}
-	query := action.Query
+	query := pipeline.Query
 	// Replace the placeholders in query, if necessary.
 	if queryReplacer != nil {
 		var err error
@@ -255,7 +255,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	properties := action.InSchema.Properties()
+	properties := pipeline.InSchema.Properties()
 	var identityColumn, lastChangeTimeColumn types.Property
 	for i, c := range columns {
 		if !c.Type.Valid() {
@@ -270,45 +270,45 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			columns[i] = connectors.Column{}
 			continue
 		}
-		if c.Name == action.IdentityColumn {
+		if c.Name == pipeline.IdentityColumn {
 			identityColumn = p
 		}
-		if c.Name == action.LastChangeTimeColumn {
+		if c.Name == pipeline.LastChangeTimeColumn {
 			lastChangeTimeColumn = p
 		}
 	}
 	if identityColumn.Name == "" {
-		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
+		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no identity column %q", pipeline.IdentityColumn)}
 	}
-	if action.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
-		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no last change time column %q", action.LastChangeTimeColumn)}
+	if pipeline.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
+		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no last change time column %q", pipeline.LastChangeTimeColumn)}
 	}
 	// Check that schema is aligned with the query's schema.
 	schema, err := types.ObjectOf(columnsProperties(columns, state.Source))
 	if err != nil {
 		return nil, connectorError(rewriteColumnErrors(err))
 	}
-	err = schemas.CheckAlignment(action.InSchema, schema, nil)
+	err = schemas.CheckAlignment(pipeline.InSchema, schema, nil)
 	if err != nil {
 		return nil, err
 	}
 	// Return the records.
-	records = newDatabaseRecords(rows, columns, action, database.timeLayouts)
+	records = newDatabaseRecords(rows, columns, pipeline, database.timeLayouts)
 	return records, nil
 }
 
 // Writer returns a Writer to create and update users.
 //
-// If the action's output schema does not align with the table's schema, it
+// If the pipeline's output schema does not align with the table's schema, it
 // returns a *schemas.Error error.
-func (database *Database) Writer(ctx context.Context, action *state.Action, ack AckFunc) (Writer, error) {
+func (database *Database) Writer(ctx context.Context, pipeline *state.Pipeline, ack AckFunc) (Writer, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	columns, err := database.inner.Columns(ctx, action.TableName)
+	columns, err := database.inner.Columns(ctx, pipeline.TableName)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -321,7 +321,7 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 		// temporary workaround, until we can ensure that all connector
 		// implementations correctly handle the Nullable attribute for each property
 		// (see issue #374).
-		if p.Name == action.TableKey {
+		if p.Name == pipeline.TableKey {
 			properties[i].Nullable = false
 		}
 	}
@@ -329,18 +329,18 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	if err != nil {
 		return nil, err
 	}
-	err = schemas.CheckAlignment(action.OutSchema, tableSchema, nil)
+	err = schemas.CheckAlignment(pipeline.OutSchema, tableSchema, nil)
 	if err != nil {
 		return nil, err
 	}
 	w := databaseWriter{
 		ack: ack,
 		table: connectors.Table{
-			Name:    action.TableName,
-			Columns: columnsOfType(action.OutSchema),
-			Keys:    []string{action.TableKey},
+			Name:    pipeline.TableName,
+			Columns: columnsOfType(pipeline.OutSchema),
+			Keys:    []string{pipeline.TableKey},
 		},
-		schema: action.OutSchema,
+		schema: pipeline.OutSchema,
 		inner:  database.inner,
 	}
 	return &w, nil
@@ -534,19 +534,19 @@ func (rs *Rows) Scan() (map[string]any, error) {
 type databaseRecords struct {
 	rows        connectors.Rows
 	columns     []connectors.Column
-	action      *state.Action
+	pipeline    *state.Pipeline
 	timeLayouts *state.TimeLayouts
 	last        bool
 	err         error
 	closed      bool
 }
 
-func newDatabaseRecords(rows connectors.Rows, columns []connectors.Column, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
+func newDatabaseRecords(rows connectors.Rows, columns []connectors.Column, pipeline *state.Pipeline, layouts *state.TimeLayouts) *databaseRecords {
 	// Unused columns are represented by the zero value of connectors.Column in columns.
 	records := databaseRecords{
 		rows:        rows,
 		columns:     columns,
-		action:      action,
+		pipeline:    pipeline,
 		timeLayouts: layouts,
 	}
 	return &records
@@ -558,7 +558,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 		defer r.Close()
-		execution, _ := r.action.Execution()
+		execution, _ := r.pipeline.Execution()
 		n := 0 // number of properties per record
 		var identityIndex = -1
 		var lastChangeTimeIndex = -1
@@ -566,7 +566,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			values: make([]any, len(r.columns)),
 		}
 		dest := make([]any, len(r.columns))
-		inSchemaProperties := r.action.InSchema.Properties()
+		inSchemaProperties := r.pipeline.InSchema.Properties()
 		properties := make([]types.Property, len(r.columns))
 		for i, c := range r.columns {
 			dest[i] = &scanner
@@ -575,10 +575,10 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 			p, _ := inSchemaProperties.ByName(c.Name)
 			properties[i] = p
-			if p.Name == r.action.IdentityColumn {
+			if p.Name == r.pipeline.IdentityColumn {
 				identityIndex = i
 			}
-			if p.Name == r.action.LastChangeTimeColumn {
+			if p.Name == r.pipeline.LastChangeTimeColumn {
 				lastChangeTimeIndex = i
 			}
 			n++
@@ -628,7 +628,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				p := properties[lastChangeTimeIndex]
 				var err error
-				record.LastChangeTime, err = parseLastChangeTimeColumn(p.Name, p.Type, r.action.LastChangeTimeFormat, v, p.Nullable, r.timeLayouts)
+				record.LastChangeTime, err = parseLastChangeTimeColumn(p.Name, p.Type, r.pipeline.LastChangeTimeFormat, v, p.Nullable, r.timeLayouts)
 				if err != nil {
 					record.Err = err
 					continue Rows

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 
@@ -155,7 +155,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(qname)
 		var s string
 		switch c.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			s = " = ''"
 		// See issue https://github.com/meergo/meergo/issues/1804.
 		// case types.JSONKind:
@@ -179,7 +179,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(qname)
 		var s string
 		switch c.Type.Kind() {
-		case types.TextKind:
+		case types.StringKind:
 			s = " <> ''"
 		// See issue https://github.com/meergo/meergo/issues/1804.
 		// case types.JSONKind:

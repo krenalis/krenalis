@@ -43,7 +43,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			showHead = true;
 		}
 
-		const isConnected = c.actionsCount > 0 || c.linkedConnections?.length > 0;
+		const isConnected = c.pipelinesCount > 0 || c.linkedConnections?.length > 0;
 		const hasRelations = c.relations(connections).length > 0;
 
 		const isHovered =
@@ -60,8 +60,8 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			(isSomethingHovered &&
 				!(isHovered && isConnected) &&
 				!c.linkedConnections?.includes(hoveredConnection) &&
-				!(isUserDbHovered && c.actionsInfo.findIndex((a) => a.target === 'User') != -1) &&
-				!(isEventDbHovered && c.isSource && c.actionsInfo.findIndex((a) => a.target === 'Event') != -1));
+				!(isUserDbHovered && c.pipelinesInfo.findIndex((p) => p.target === 'User') != -1) &&
+				!(isEventDbHovered && c.isSource && c.pipelinesInfo.findIndex((p) => p.target === 'Event') != -1));
 
 		const arrow = (
 			<Arrow
@@ -97,7 +97,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 
 	return (
 		<>
-			<Link path={`connections/${c.id}/actions`}>
+			<Link path={`connections/${c.id}/pipelines`}>
 				<div
 					className={`connection-block${isNew ? ' connection-block--new' : ''}`}
 					id={`${c.id}`}

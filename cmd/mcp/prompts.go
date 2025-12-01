@@ -29,13 +29,13 @@ var prompts = []server.ServerPrompt{
 		"workspace-connections",
 		"Retrieve information about workspace connections",
 		"List the connections currently present in the workspace."+
-			" For each, display a brief description summarizing the connection type and the number of actions currently present."+
-			" Also indicate which of them are currently configured and which are not, depending on the number of actions.",
+			" For each, display a brief description summarizing the connection type and the number of pipelines currently present."+
+			" Also indicate which of them are currently configured and which are not, depending on the number of pipelines.",
 	),
 	simplePrompt(
-		"how-actions-connections-identity-resolutions-work",
-		"Explain how connections, actions and Identity Resolution work",
-		"Explain to me how actions, connections, and identity resolution work. Provide concrete examples using data from my workspace, if possible.",
+		"how-pipelines-connections-identity-resolutions-work",
+		"Explain how connections, pipelines and Identity Resolution work",
+		"Explain to me how pipelines, connections, and identity resolution work. Provide concrete examples using data from my workspace, if possible.",
 	),
 	simplePrompt(
 		"i-am-new-to-meergo",

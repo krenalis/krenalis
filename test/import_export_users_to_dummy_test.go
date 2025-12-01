@@ -7,8 +7,8 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestImportExportUsersToDummy(t *testing.T) {
@@ -26,16 +26,16 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "firstName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -44,22 +44,22 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID)
+		exec := c.ExecutePipeline(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
 	// Export the profiles to Dummy.
 	{
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportProfilesActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
+		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", meergotester.PipelineToSet{
 			Name:    "Export users to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -73,7 +73,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		exec := c.ExecuteAction(exportProfilesActionID)
+		exec := c.ExecutePipeline(exportProfilesPipelineID)
 		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}
 
@@ -81,18 +81,18 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// successfully.
 	{
 		dummySrc := c.CreateDummy("Dummy (source 2)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text(), Nullable: true},
-				{Name: "firstName", Type: types.Text(), Nullable: true},
-				{Name: "lastName", Type: types.Text(), Nullable: true},
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "firstName", Type: types.String(), Nullable: true},
+				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
-				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
@@ -102,7 +102,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID)
+		exec := c.ExecutePipeline(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 		profiles, _, _ := c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(profiles) == 0 {

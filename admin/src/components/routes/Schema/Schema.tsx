@@ -13,7 +13,7 @@ const Schema = () => {
 	const location = useLocation();
 
 	useLayoutEffect(() => {
-		setTitle('Profile Schema');
+		setTitle('Profile Unification / Schema');
 	}, [location]);
 
 	return (

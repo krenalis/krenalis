@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_checkSchemaAlignment(t *testing.T) {
@@ -26,11 +26,11 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		mode   *state.ExportMode
 		err    string
 	}{
-		{p1: types.Property{Type: types.Text()}, p2: types.Property{Type: types.Text()}, mode: &createOnlyMode},
-		{p1: types.Property{Type: types.Text().WithCharLen(100)}, p2: types.Property{Type: types.Text().WithCharLen(100)}},
-		{p1: types.Property{Type: types.Text().WithByteLen(50)}, p2: types.Property{Type: types.Text().WithByteLen(50)}},
-		{p1: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`))}, p2: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`))}, mode: &createOnlyMode},
-		{p1: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`)).WithByteLen(10)}, p2: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`)).WithByteLen(10)}},
+		{p1: types.Property{Type: types.String()}, p2: types.Property{Type: types.String()}, mode: &createOnlyMode},
+		{p1: types.Property{Type: types.String().WithMaxLength(100)}, p2: types.Property{Type: types.String().WithMaxLength(100)}},
+		{p1: types.Property{Type: types.String().WithMaxByteLength(50)}, p2: types.Property{Type: types.String().WithMaxByteLength(50)}},
+		{p1: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`))}, p2: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`))}, mode: &createOnlyMode},
+		{p1: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`)).WithMaxByteLength(10)}, p2: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`)).WithMaxByteLength(10)}},
 		{p1: types.Property{Type: types.Boolean()}, p2: types.Property{Type: types.Boolean()}},
 		{p1: types.Property{Type: types.Int(32)}, p2: types.Property{Type: types.Int(32)}, mode: &createOnlyMode},
 		{p1: types.Property{Type: types.Int(32).WithIntRange(-10, 100)}, p2: types.Property{Type: types.Int(32).WithIntRange(-10, 100)}},
@@ -45,7 +45,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.Year()}, p2: types.Property{Type: types.Year()}},
 		{p1: types.Property{Type: types.UUID()}, p2: types.Property{Type: types.UUID()}, mode: &createOnlyMode},
 		{p1: types.Property{Type: types.JSON()}, p2: types.Property{Type: types.JSON()}},
-		{p1: types.Property{Type: types.Inet()}, p2: types.Property{Type: types.Inet()}},
+		{p1: types.Property{Type: types.IP()}, p2: types.Property{Type: types.IP()}},
 		{p1: types.Property{Type: types.Array(types.Int(8))}, p2: types.Property{Type: types.Array(types.Int(8))}},
 		{
 			p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Boolean(), Nullable: true, Description: "a property"}})},
@@ -65,23 +65,23 @@ func Test_checkSchemaAlignment(t *testing.T) {
 			p2:   types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Int(32), CreateRequired: true, UpdateRequired: true}, {Name: "b", Type: types.Int(32), ReadOptional: true}})},
 			mode: &createOrUpdate,
 		},
-		{p1: types.Property{Type: types.Map(types.Text().WithCharLen(60))}, p2: types.Property{Type: types.Map(types.Text().WithCharLen(60))}},
-		{p1: types.Property{Type: types.Text()}, p2: types.Property{Type: types.Text().WithCharLen(100)}, err: `character length of the "foo" property's type has changed from unbounded to 100`},
-		{p1: types.Property{Type: types.Text().WithCharLen(5)}, p2: types.Property{Type: types.Text()}, err: `character length of the "foo" property's type has changed from 5 to unbounded`},
-		{p1: types.Property{Type: types.Text().WithCharLen(50)}, p2: types.Property{Type: types.Text().WithCharLen(60)}, err: `character length of the "foo" property's type has changed from 50 to 60`},
-		{p1: types.Property{Type: types.Text()}, p2: types.Property{Type: types.Text().WithByteLen(500)}, err: `byte length of the "foo" property's type has changed from unbounded to 500`},
-		{p1: types.Property{Type: types.Text().WithByteLen(8)}, p2: types.Property{Type: types.Text()}, err: `byte length of the "foo" property's type has changed from 8 to unbounded`},
-		{p1: types.Property{Type: types.Text().WithByteLen(1200)}, p2: types.Property{Type: types.Text().WithByteLen(1250)}, err: `byte length of the "foo" property's type has changed from 1200 to 1250`},
-		{p1: types.Property{Type: types.Text()}, p2: types.Property{Type: types.Text().WithValues("b", "a")}, err: `"foo" property was previously unrestricted but is now limited to specific values`},
-		{p1: types.Property{Type: types.Text().WithValues("x", "y", "z")}, p2: types.Property{Type: types.Text()}, err: `"foo" property was previously limited to specific values but is now unrestricted`},
-		{p1: types.Property{Type: types.Text().WithValues("x", "y", "z")}, p2: types.Property{Type: types.Text().WithValues("z", "y")}, err: `"foo" property allowed value "x" but it is no longer allowed`},
-		{p1: types.Property{Type: types.Text().WithValues("x", "y", "z")}, p2: types.Property{Type: types.Text().WithValues("y", "x")}, err: `"foo" property allowed value "z" but it is no longer allowed`},
-		{p1: types.Property{Type: types.Text().WithValues("x", "y")}, p2: types.Property{Type: types.Text().WithValues("y", "z", "x")}, err: `"foo" property previously disallowed value "z" but it now allows it`},
-		{p1: types.Property{Type: types.Text()}, p2: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\w+`))}, err: `regular expression of the "foo" property's type has changed from none to "^\w+"`},
-		{p1: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`))}, p2: types.Property{Type: types.Text()}, err: `regular expression of the "foo" property's type has changed from "^\d+" to none`},
+		{p1: types.Property{Type: types.Map(types.String().WithMaxLength(60))}, p2: types.Property{Type: types.Map(types.String().WithMaxLength(60))}},
+		{p1: types.Property{Type: types.String()}, p2: types.Property{Type: types.String().WithMaxLength(100)}, err: `character length of the "foo" property's type has changed from unbounded to 100`},
+		{p1: types.Property{Type: types.String().WithMaxLength(5)}, p2: types.Property{Type: types.String()}, err: `character length of the "foo" property's type has changed from 5 to unbounded`},
+		{p1: types.Property{Type: types.String().WithMaxLength(50)}, p2: types.Property{Type: types.String().WithMaxLength(60)}, err: `character length of the "foo" property's type has changed from 50 to 60`},
+		{p1: types.Property{Type: types.String()}, p2: types.Property{Type: types.String().WithMaxByteLength(500)}, err: `byte length of the "foo" property's type has changed from unbounded to 500`},
+		{p1: types.Property{Type: types.String().WithMaxByteLength(8)}, p2: types.Property{Type: types.String()}, err: `byte length of the "foo" property's type has changed from 8 to unbounded`},
+		{p1: types.Property{Type: types.String().WithMaxByteLength(1200)}, p2: types.Property{Type: types.String().WithMaxByteLength(1250)}, err: `byte length of the "foo" property's type has changed from 1200 to 1250`},
+		{p1: types.Property{Type: types.String()}, p2: types.Property{Type: types.String().WithValues("b", "a")}, err: `"foo" property was previously unrestricted but is now limited to specific values`},
+		{p1: types.Property{Type: types.String().WithValues("x", "y", "z")}, p2: types.Property{Type: types.String()}, err: `"foo" property was previously limited to specific values but is now unrestricted`},
+		{p1: types.Property{Type: types.String().WithValues("x", "y", "z")}, p2: types.Property{Type: types.String().WithValues("z", "y")}, err: `"foo" property allowed value "x" but it is no longer allowed`},
+		{p1: types.Property{Type: types.String().WithValues("x", "y", "z")}, p2: types.Property{Type: types.String().WithValues("y", "x")}, err: `"foo" property allowed value "z" but it is no longer allowed`},
+		{p1: types.Property{Type: types.String().WithValues("x", "y")}, p2: types.Property{Type: types.String().WithValues("y", "z", "x")}, err: `"foo" property previously disallowed value "z" but it now allows it`},
+		{p1: types.Property{Type: types.String()}, p2: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\w+`))}, err: `regular expression of the "foo" property's type has changed from none to "^\w+"`},
+		{p1: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`))}, p2: types.Property{Type: types.String()}, err: `regular expression of the "foo" property's type has changed from "^\d+" to none`},
 		{
-			p1:  types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`))},
-			p2:  types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\w+`))},
+			p1:  types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`))},
+			p2:  types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\w+`))},
 			err: `regular expression of the "foo" property's type has changed from "^\d+" to "^\w+"`,
 		},
 		{p1: types.Property{Type: types.Boolean()}, p2: types.Property{Type: types.Int(32)}, err: `"foo" property's type has changed from boolean to int(32)`},
@@ -100,12 +100,12 @@ func Test_checkSchemaAlignment(t *testing.T) {
 			p2:  types.Property{Type: types.Decimal(10, 3).WithDecimalRange(decimal.MustParse("5.5"), decimal.MustInt(39))},
 			err: `range of "foo" property's type has changed from [5,49.99] to [5.5,39]`,
 		},
-		{p1: types.Property{Type: types.Array(types.Text())}, p2: types.Property{Type: types.Array(types.Int(32))}, err: `"foo[]" property's type has changed from text to int(32)`},
-		{p1: types.Property{Type: types.Array(types.Array(types.UUID()))}, p2: types.Property{Type: types.Array(types.Array(types.Text()))}, err: `"foo[][]" property's type has changed from uuid to text`},
+		{p1: types.Property{Type: types.Array(types.String())}, p2: types.Property{Type: types.Array(types.Int(32))}, err: `"foo[]" property's type has changed from string to int(32)`},
+		{p1: types.Property{Type: types.Array(types.Array(types.UUID()))}, p2: types.Property{Type: types.Array(types.Array(types.String()))}, err: `"foo[][]" property's type has changed from uuid to string`},
 		{p1: types.Property{Type: types.Array(types.Boolean()).WithMinElements(1)}, p2: types.Property{Type: types.Array(types.Boolean())}, err: `minimum number of "foo" property elements has been changed from 1 to 0`},
 		{p1: types.Property{Type: types.Array(types.Boolean()).WithMinElements(10)}, p2: types.Property{Type: types.Array(types.Boolean()).WithMinElements(12)}, err: `minimum number of "foo" property elements has been changed from 10 to 12`},
 		{p1: types.Property{Type: types.Array(types.UUID()).WithUnique()}, p2: types.Property{Type: types.Array(types.UUID())}, err: `"foo" property elements were initially required to be unique, but it is no longer required`},
-		{p1: types.Property{Type: types.Array(types.Inet())}, p2: types.Property{Type: types.Array(types.Inet()).WithUnique()}, err: `"foo" property elements were not required to be unique, but now it is required`},
+		{p1: types.Property{Type: types.Array(types.IP())}, p2: types.Property{Type: types.Array(types.IP()).WithUnique()}, err: `"foo" property elements were not required to be unique, but now it is required`},
 		{p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Float(32)}})}, p2: types.Property{Type: types.JSON()}, err: `"foo" property's type has changed from object to json`},
 		{p1: types.Property{Type: types.JSON()}, p2: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Float(32)}})}, err: `"foo" property's type has changed from json to object`},
 		{
@@ -149,25 +149,25 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		},
 		{
 			p1:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}})},
-			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.Text(), CreateRequired: true}})},
+			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.String(), CreateRequired: true}})},
 			mode: &createOnlyMode,
 			err:  `"foo.d" property is required for creation but is not present in the schema`,
 		},
 		{
 			p1:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}})},
-			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.Text(), UpdateRequired: true}})},
+			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.String(), UpdateRequired: true}})},
 			mode: &updateOnlyMode,
 			err:  `"foo.d" property is required for update but is not present in the schema`,
 		},
 		{
 			p1:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}})},
-			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.Text(), CreateRequired: true}})},
+			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.String(), CreateRequired: true}})},
 			mode: &createOrUpdate,
 			err:  `"foo.d" property is required for creation but is not present in the schema`,
 		},
 		{
 			p1:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}})},
-			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.Text(), UpdateRequired: true}})},
+			p2:   types.Property{Type: types.Object([]types.Property{{Name: "c", Type: types.Boolean()}, {Name: "d", Type: types.String(), UpdateRequired: true}})},
 			mode: &createOrUpdate,
 			err:  `"foo.d" property is required for update but is not present in the schema`,
 		},
@@ -191,8 +191,8 @@ func Test_checkSchemaAlignment(t *testing.T) {
 			p2:  types.Property{Type: types.Object([]types.Property{{Name: "d", Type: types.Boolean(), Nullable: true}})},
 			err: `"foo.d" property was previously non-nullable but is now nullable`,
 		},
-		{p1: types.Property{Type: types.Map(types.Text())}, p2: types.Property{Type: types.Map(types.Int(32))}, err: `"foo[]" property's type has changed from text to int(32)`},
-		{p1: types.Property{Type: types.Map(types.Map(types.Text()))}, p2: types.Property{Type: types.Map(types.Map(types.Date()))}, err: `"foo[][]" property's type has changed from text to date`},
+		{p1: types.Property{Type: types.Map(types.String())}, p2: types.Property{Type: types.Map(types.Int(32))}, err: `"foo[]" property's type has changed from string to int(32)`},
+		{p1: types.Property{Type: types.Map(types.Map(types.String()))}, p2: types.Property{Type: types.Map(types.Map(types.Date()))}, err: `"foo[][]" property's type has changed from string to date`},
 	}
 
 	// Test when either t1 or t2 is invalid.

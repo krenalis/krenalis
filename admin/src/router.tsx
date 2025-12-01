@@ -15,8 +15,8 @@ import OAuth from './components/routes/OAuth/OAuth';
 import NotFound from './components/routes/NotFound/NotFound';
 import ConnectionMetrics from './components/routes/ConnectionMetrics/ConnectionMetrics';
 import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEvents';
-import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
-import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
+import ConnectionPipelines from './components/routes/ConnectionPipelines/ConnectionPipelines';
+import PipelineWrapper from './components/routes/PipelineWrapper/PipelineWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
 import { ConnectionIdentities } from './components/routes/ConnectionIdentities/ConnectionIdentities';
 import IdentityResolutionSettings from './components/routes/IdentityResolutionSettings/IdentityResolutionSettings';
@@ -28,6 +28,7 @@ import Members from './components/routes/Members/Members';
 import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
 import Workspaces from './components/routes/Workspaces/Workspaces';
+import { ProfileUnification } from './components/routes/ProfileUnification/ProfileUnification';
 import SignUp from './components/routes/SignUp/SignUp';
 import { FileConnector } from './components/routes/FileConnector/FileConnector';
 import { Schema } from './components/routes/Schema/Schema';
@@ -78,13 +79,13 @@ const router = createBrowserRouter([
 						element: <ConnectionWrapper />,
 						children: [
 							{
-								path: 'actions',
-								element: <ConnectionActions />,
+								path: 'pipelines',
+								element: <ConnectionPipelines />,
 								children: [
-									{ path: 'edit/:action', element: <ActionWrapper /> },
-									{ path: 'add/event/:eventType', element: <ActionWrapper /> },
-									{ path: 'add/event', element: <ActionWrapper /> },
-									{ path: 'add/:actionTarget', element: <ActionWrapper /> },
+									{ path: 'edit/:pipeline', element: <PipelineWrapper /> },
+									{ path: 'add/event/:eventType', element: <PipelineWrapper /> },
+									{ path: 'add/event', element: <PipelineWrapper /> },
+									{ path: 'add/:pipelineTarget', element: <PipelineWrapper /> },
 								],
 							},
 							{ path: 'metrics', element: <ConnectionMetrics /> },
@@ -95,23 +96,6 @@ const router = createBrowserRouter([
 					},
 					{ path: 'connections', element: <ConnectionsMap /> },
 					{ path: 'oauth/authorize', element: <OAuth /> },
-					{ path: 'profiles', element: <Profiles /> },
-					{
-						path: 'schema',
-						element: <Schema />,
-						children: [
-							{
-								path: '',
-								element: <SchemaGrid />,
-								children: [
-									{
-										path: 'edit',
-										element: <SchemaEditWrapper />,
-									},
-								],
-							},
-						],
-					},
 					{
 						path: 'settings',
 						element: <Settings />,
@@ -121,12 +105,38 @@ const router = createBrowserRouter([
 								element: <GeneralSettings />,
 							},
 							{
-								path: 'identity-resolution',
-								element: <IdentityResolutionSettings />,
-							},
-							{
 								path: 'data-warehouse',
 								element: <DataWarehouse />,
+							},
+						],
+					},
+					{
+						path: 'profile-unification',
+						element: <ProfileUnification />,
+						children: [
+							{
+								path: 'profiles',
+								element: <Profiles />,
+							},
+							{
+								path: 'schema',
+								element: <Schema />,
+								children: [
+									{
+										path: '',
+										element: <SchemaGrid />,
+										children: [
+											{
+												path: 'edit',
+												element: <SchemaEditWrapper />,
+											},
+										],
+									},
+								],
+							},
+							{
+								path: 'rules',
+								element: <IdentityResolutionSettings />,
 							},
 						],
 					},

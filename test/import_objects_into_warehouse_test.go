@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestImportObjectsIntoWarehouse(t *testing.T) {
@@ -23,17 +23,17 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	defer c.Stop()
 
 	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummy, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "email", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "ios", Type: types.Object([]types.Property{
-				{Name: "id", Type: types.Text(), ReadOptional: true},
-				{Name: "idfa", Type: types.Text(), ReadOptional: true},
+				{Name: "id", Type: types.String(), ReadOptional: true},
+				{Name: "idfa", Type: types.String(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
@@ -54,7 +54,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check if the profiles have been imported - and then returned - correctly.

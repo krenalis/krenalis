@@ -23,7 +23,7 @@ import (
 
 	"github.com/meergo/meergo/cmd/mcp"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/metrics"
+	"github.com/meergo/meergo/tools/metrics"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -95,7 +95,10 @@ type LocalConfig struct {
 // Run runs the server.
 // Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
 // return any error.
-func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
+// initDBIfEmpty controls whether the PostgreSQL database should be initialized
+// in case it is empty; if initDockerMember is true in addition to
+// initDBIfEmpty, a member specific for Docker scenarios is initialized.
+func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
 	config := core.Config{
 		DB:                   settings.DB,
@@ -114,7 +117,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
-	core, err := core.New(&config)
+	core, err := core.New(&config, initDBIfEmpty, initDockerMember)
 	if err != nil {
 		return err
 	}

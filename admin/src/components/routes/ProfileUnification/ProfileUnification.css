@@ -1,0 +1,19 @@
+.profile-unification {
+	min-height: calc(100% - 70px);
+	background-color: var(--bg-gray);
+}
+
+.profile-unification__content {
+	max-width: 900px;
+	margin: 0px auto;
+	padding: 30px;
+	animation: fade-in-entrance 0.5s;
+}
+
+.profile-unification__item:first-of-type {
+	margin-top: 15px;
+}
+
+.profile-unification__item {
+	margin-bottom: 15px;
+}

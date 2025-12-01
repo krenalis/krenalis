@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_Identities(t *testing.T) {
@@ -35,16 +35,16 @@ func Test_Identities(t *testing.T) {
 	fs1 := c.CreateSourceFileSystem()
 	fs2 := c.CreateSourceFileSystem()
 
-	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
+	pipeline1 := c.CreatePipeline(fs1, "User", meergotester.PipelineToSet{
 		Name:    "CSV 1",
 		Enabled: true,
 		Path:    "users1.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "identity", Type: types.String()},
+			{Name: "email", Type: types.String()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -59,16 +59,16 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	action2 := c.CreateAction(fs2, "User", meergotester.ActionToSet{
+	pipeline2 := c.CreatePipeline(fs2, "User", meergotester.PipelineToSet{
 		Name:    "CSV 2",
 		Enabled: true,
 		Path:    "users2.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "identity", Type: types.String()},
+			{Name: "email", Type: types.String()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -83,8 +83,8 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecuteAction(action1)
-	exec2 := c.ExecuteAction(action2)
+	exec1 := c.ExecutePipeline(pipeline1)
+	exec2 := c.ExecutePipeline(pipeline2)
 
 	c.WaitForExecutionsCompletion(fs1, exec1)
 	c.WaitForExecutionsCompletion(fs2, exec2)
@@ -115,17 +115,17 @@ func Test_Identities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for profile with MPID %s that has"+
-					" action = %d, identity ID = %v and last change time = %q",
-				profile.MPID, identity.Action, identity.ID, identity.LastChangeTime)
+					" pipeline = %d, identity ID = %v and last change time = %q",
+				profile.MPID, identity.Pipeline, identity.ID, identity.LastChangeTime)
 
 			var idPrefix string
-			switch identity.Action {
-			case action1:
+			switch identity.Pipeline {
+			case pipeline1:
 				idPrefix = "profiles1_"
-			case action2:
+			case pipeline2:
 				idPrefix = "profiles2_"
 			default:
-				t.Fatalf("unexpected action %d", identity.Action)
+				t.Fatalf("unexpected pipeline %d", identity.Pipeline)
 			}
 
 			// Check the identity ID label.

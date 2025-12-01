@@ -113,7 +113,7 @@ func launchMeergo(ctx context.Context, env []string) error {
 		return err
 	}
 	meergoDir := filepath.Join(repo, "test", "meergo-executable-for-tests")
-	cmd := exec.CommandContext(ctx, "./"+meergoExecFilename())
+	cmd := exec.CommandContext(ctx, "./"+meergoExecFilename(), "-init-db-if-empty")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.Dir = meergoDir

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 )
 
 //go:embed test_data/expected_false_args.json
@@ -51,8 +51,8 @@ func TestEncoder(t *testing.T) {
 		{Name: "year", Type: types.Year()},
 		{Name: "uuid", Type: types.UUID()},
 		{Name: "json", Type: types.JSON()},
-		{Name: "inet", Type: types.Inet()},
-		{Name: "text", Type: types.Text()},
+		{Name: "ip", Type: types.IP()},
+		{Name: "string", Type: types.String()},
 		{Name: "array_int", Type: types.Array(types.Int(32))},
 		{Name: "array_map", Type: types.Array(types.Map(types.Int(32)))},
 		{Name: "object", Type: types.Object([]types.Property{
@@ -91,8 +91,8 @@ func TestEncoder(t *testing.T) {
 		"year":          2023,
 		"uuid":          "123e4567-e89b-12d3-a456-426614174000",
 		"json":          json.Value(`{"foo":"boo","values":[1,2,3]}`),
-		"inet":          "2001:db8:85a3::8a2e:370:7334",
-		"text":          "abc \x00 \b\t\n\v\f\r \x18 \"&'<>\\ é 日 🌍 \u2028 \u2029",
+		"ip":            "2001:db8:85a3::8a2e:370:7334",
+		"string":        "abc \x00 \b\t\n\v\f\r \x18 \"&'<>\\ é 日 🌍 \u2028 \u2029",
 		"array_int":     []any{846, 106728, -23719},
 		"array_map":     []any{map[string]any{"a": 1, "b": 2}},
 		"object": map[string]any{

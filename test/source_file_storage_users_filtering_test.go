@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func TestSourceFileStorageUsersFiltering(t *testing.T) {
@@ -31,7 +31,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
 	fs1 := c.CreateSourceFileSystem()
 
-	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
+	pipeline1 := c.CreatePipeline(fs1, "User", meergotester.PipelineToSet{
 		Name:    "CSV",
 		Enabled: true,
 		Path:    "users.csv",
@@ -46,11 +46,11 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 			},
 		},
 		InSchema: types.Object([]types.Property{
-			{Name: "CSV_id", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "CSV_id", Type: types.String()},
+			{Name: "email", Type: types.String()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -65,7 +65,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecuteAction(action1)
+	exec1 := c.ExecutePipeline(pipeline1)
 
 	c.WaitForExecutionsCompletionAllowFailed(fs1, exec1)
 

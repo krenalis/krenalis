@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
 
@@ -69,9 +69,9 @@ func TestConvertWhereMultiple(t *testing.T) {
 func TestConvertWhereExistsOperators(t *testing.T) {
 	colA := warehouses.Column{Name: "a", Type: types.Int(32)}
 	colBC := warehouses.Column{Name: "b_c", Type: types.Int(32)}
-	colBD := warehouses.Column{Name: "b_d", Type: types.Text()}
+	colBD := warehouses.Column{Name: "b_d", Type: types.String()}
 	colEF := warehouses.Column{Name: "e_f", Type: types.Boolean()}
-	colEG := warehouses.Column{Name: "e_g", Type: types.Text()}
+	colEG := warehouses.Column{Name: "e_g", Type: types.String()}
 	columns := map[string]warehouses.Column{
 		"a":   colA,
 		"b.c": colBC,

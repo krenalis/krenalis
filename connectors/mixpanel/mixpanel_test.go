@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/testconnector"
+	"github.com/meergo/meergo/tools/json"
 
 	"github.com/google/uuid"
 )
@@ -109,8 +109,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationAction: 242809157,
-			Received:          testconnector.ReceivedEvent(received),
+			DestinationPipeline: 242809157,
+			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "order_completed",
 				Schema: schema,
@@ -209,8 +209,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationAction: 148606728,
-			Received:          testconnector.ReceivedEvent(received),
+			DestinationPipeline: 148606728,
+			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "product_purchased",
 				Schema: schema,
@@ -311,8 +311,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationAction: 140861001,
-			Received:          testconnector.ReceivedEvent(received),
+			DestinationPipeline: 140861001,
+			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "track",
 				Schema: schema,
@@ -404,8 +404,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationAction: 2094515358,
-			Received:          testconnector.ReceivedEvent(received),
+			DestinationPipeline: 2094515358,
+			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "page",
 				Schema: schema,
@@ -502,8 +502,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationAction: 2023196674,
-			Received:          testconnector.ReceivedEvent(received),
+			DestinationPipeline: 2023196674,
+			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "screen",
 				Schema: schema,

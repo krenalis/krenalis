@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/meergo/analytics-go"
 )
@@ -27,17 +27,17 @@ func TestIdentitiesFromEvents(t *testing.T) {
 
 	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	javaScriptKey := c.EventWriteKeys(javaScriptID)[0]
-	c.CreateAction(javaScriptID, "Event", meergotester.ActionToSet{
+	c.CreatePipeline(javaScriptID, "Event", meergotester.PipelineToSet{
 		Name:    "JavaScript events",
 		Enabled: true,
 	})
-	importUsersAction := c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
+	importUsersPipeline := c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		Filter:   meergotester.DefaultFilterUserFromEvents,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -81,13 +81,13 @@ func TestIdentitiesFromEvents(t *testing.T) {
 		t.Fatalf("profile with email %q not found", eventProfileEmail)
 	}
 
-	// Update the action to import identities through a constant mapping.
-	c.UpdateAction(importUsersAction, meergotester.ActionToSet{
+	// Update the pipeline to import identities through a constant mapping.
+	c.UpdatePipeline(importUsersPipeline, meergotester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
@@ -114,13 +114,13 @@ func TestIdentitiesFromEvents(t *testing.T) {
 		t.Fatalf("expected 2 profiles, got %d", total)
 	}
 
-	// Update the action to import identities through a transformation function.
-	c.UpdateAction(importUsersAction, meergotester.ActionToSet{
+	// Update the pipeline to import identities through a transformation function.
+	c.UpdatePipeline(importUsersPipeline, meergotester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{

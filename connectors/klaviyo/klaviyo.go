@@ -26,9 +26,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
-	"github.com/meergo/meergo/core/validation"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
+	"github.com/meergo/meergo/tools/validation"
 )
 
 //go:embed documentation/source/overview.md
@@ -112,10 +112,10 @@ type innerSettings struct {
 func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	if eventType == "create_event" {
 		return types.Object([]types.Property{
-			{Name: "metric_name", Type: types.Text().WithCharLen(200), CreateRequired: true, Description: "Metric name"},
-			{Name: "email", Type: types.Text().WithByteLen(100), CreateRequired: true, Description: "Email"},
+			{Name: "metric_name", Type: types.String().WithMaxLength(200), CreateRequired: true, Description: "Metric name"},
+			{Name: "email", Type: types.String().WithMaxByteLength(100), CreateRequired: true, Description: "Email"},
 			{Name: "value", Type: types.Float(64).AsReal(), Description: "Value"},
-			{Name: "value_currency", Type: types.Text().WithByteLen(3), Description: "Currency (ISO code)"},
+			{Name: "value_currency", Type: types.String().WithMaxByteLength(3), Description: "Currency (ISO code)"},
 			{Name: "properties", Type: types.Map(types.JSON()), Description: "Properties"},
 		}), nil
 	}
@@ -251,60 +251,60 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target connectors.Targets, 
 	schema := types.Object([]types.Property{
 		{
 			Name:        "id",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Description: "Unique ID",
 		},
 		{
 			Name:        "email",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Email",
 		},
 		{
 			Name:        "phone_number",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Phone",
 		},
 		{
 			Name:        "external_id",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "External Id",
 		},
 		{
 			Name:        "anonymous_id",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Anonymous Id",
 		},
 		{
 			Name:        "first_name",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "First name",
 		},
 		{
 			Name:        "last_name",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Last name",
 		},
 		{
 			Name:        "organization",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Organization",
 		},
 		{
 			Name:        "title",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Title",
 		},
 		{
 			Name:        "image",
-			Type:        types.Text(),
+			Type:        types.String(),
 			Nullable:    true,
 			Description: "Image",
 		},
@@ -331,25 +331,25 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Type: types.Object([]types.Property{
 				{
 					Name:        "address1",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "Street",
 				},
 				{
 					Name:        "address2",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "Street (second line)",
 				},
 				{
 					Name:        "city",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "City",
 				},
 				{
 					Name:        "country",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "Country",
 				},
@@ -367,25 +367,25 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target connectors.Targets, 
 				},
 				{
 					Name:        "region",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "Region",
 				},
 				{
 					Name:        "zip",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "ZIP code",
 				},
 				{
 					Name:        "timezone",
-					Type:        types.Text(),
+					Type:        types.String(),
 					Nullable:    true,
 					Description: "Timezone",
 				},
 				{
 					Name:        "ip",
-					Type:        types.Inet(),
+					Type:        types.IP(),
 					Nullable:    true,
 					Description: "IP address",
 				},
@@ -636,9 +636,9 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events connectors.Events, pre
 		}
 
 		// Build a unique identifier for the event.
-		uniqueId := "[ACTION]"
+		uniqueId := "[PIPELINE]"
 		if !preview {
-			uniqueId = strconv.Itoa(event.DestinationAction)
+			uniqueId = strconv.Itoa(event.DestinationPipeline)
 		}
 		uniqueId += "/" + event.Received.MessageId()
 

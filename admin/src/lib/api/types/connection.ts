@@ -1,4 +1,4 @@
-import { Action, ActionInfo, ActionType } from './action';
+import { Pipeline, PipelineInfo, PipelineType } from './pipeline';
 import { ConnectorSettings } from './responses';
 
 type ConnectorType = 'API' | 'Database' | 'File' | 'FileStorage' | 'MessageBroker' | 'SDK' | 'Webhook';
@@ -25,11 +25,11 @@ interface Connection {
 	strategy?: Strategy | null;
 	sendingMode: SendingMode | null;
 	hasSettings: boolean;
-	actionsCount: number;
+	pipelinesCount: number;
 	health: Health;
-	actionTypes?: ActionType[];
-	actions?: Action[]; // Only returned by 'api/connections/{id}'
-	actionsInfo?: ActionInfo[]; // Only returned by 'api/connections'
+	pipelineTypes?: PipelineType[];
+	pipelines?: Pipeline[]; // Only returned by 'api/connections/{id}'
+	pipelinesInfo?: PipelineInfo[]; // Only returned by 'api/connections'
 	eventTypes?: EventType[]; // Only returned by 'api/connections/{id}'
 	linkedConnections?: number[];
 }

@@ -22,7 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/snowflakedb/gosnowflake"
@@ -176,7 +176,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 // immutableMergeIdentitiesColumns are columns in the merge of identities that
 // are immutable.
 var immutableMergeIdentitiesColumns = []string{
-	"__action__",
+	"__pipeline__",
 	"__identity_id__",
 	"__is_anonymous__",
 	"__connection__",
@@ -210,7 +210,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	b.Reset()
 	b.WriteString("MERGE INTO \"_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString(`" AS "S"` + "\n" + `ON "D"."__ACTION__" = "S"."__ACTION__" AND "D"."__IDENTITY_ID__" = "S"."__IDENTITY_ID__" AND "D"."__IS_ANONYMOUS__" = "S"."__IS_ANONYMOUS__"`)
+	b.WriteString(`" AS "S"` + "\n" + `ON "D"."__PIPELINE__" = "S"."__PIPELINE__" AND "D"."__IDENTITY_ID__" = "S"."__IDENTITY_ID__" AND "D"."__IS_ANONYMOUS__" = "S"."__IS_ANONYMOUS__"`)
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
@@ -322,8 +322,8 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 }
 
 // UnsetIdentityColumns unsets values for the specified identity columns for the
-// given action.
-func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
+// given pipeline.
+func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
 	var b strings.Builder
 	b.WriteString("UPDATE \"_IDENTITIES\" SET ")
 	for i, column := range columns {
@@ -333,8 +333,8 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int
 		b.WriteString(quoteIdent(column.Name))
 		b.WriteString(" = NULL")
 	}
-	b.WriteString(" WHERE \"__ACTION__\" = ")
-	b.WriteString(strconv.Itoa(action))
+	b.WriteString(" WHERE \"__PIPELINE__\" = ")
+	b.WriteString(strconv.Itoa(pipeline))
 	db := warehouse.openDB()
 	_, err := db.ExecContext(ctx, b.String())
 	if err != nil {

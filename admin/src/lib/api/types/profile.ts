@@ -124,7 +124,7 @@ interface ProfileEvent {
 type ProfileAttributes = Record<string, any>;
 
 interface Identity {
-	action: number;
+	pipeline: number;
 	connection: number;
 	id: string;
 	anonymousIds: string[] | null;

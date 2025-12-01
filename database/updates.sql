@@ -1,17 +1,91 @@
 -- TODO(Gianluca): fill this file with update queries.
 
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_id TO alter_profile_schema_id;
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_schema TO alter_profile_schema_schema;
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_primary_sources TO alter_profile_schema_primary_sources;
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_operations TO alter_profile_schema_operations;
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_start_time TO alter_profile_schema_start_time;
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_end_time TO alter_profile_schema_end_time;
-ALTER TABLE workspaces RENAME COLUMN alter_user_schema_error TO alter_profile_schema_error;
-ALTER TABLE workspaces RENAME COLUMN user_schema TO profile_schema;
-ALTER TABLE workspaces RENAME COLUMN ui_user_profile_image TO ui_profile_image;
-ALTER TABLE workspaces RENAME COLUMN ui_user_profile_first_name TO ui_profile_first_name;
-ALTER TABLE workspaces RENAME COLUMN ui_user_profile_last_name TO ui_profile_last_name;
-ALTER TABLE workspaces RENAME COLUMN ui_user_profile_extra TO ui_profile_extra;
+-- rename text to string
 
-ALTER TYPE notification_name RENAME VALUE 'StartAlterUserSchema' TO 'StartAlterProfileSchema';
-ALTER TYPE notification_name RENAME VALUE 'EndAlterUserSchema' TO 'EndAlterProfileSchema';
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"kind": "text"', '"kind": "string"')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"kind": "text"%';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"kind": "text"', '"kind": "string"')::jsonb
+WHERE profile_schema::text LIKE '%"kind": "text"%';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"kind": "text"', '"kind": "string"')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "text"%';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"kind": "text"', '"kind": "string"')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "text"%';
+
+-- rename charLen to maxLength
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"charLen": ', '"maxLength": ')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"charLen": %';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"charLen": ', '"maxLength": ')::jsonb
+WHERE profile_schema::text LIKE '%"charLen": %';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"charLen": ', '"maxLength": ')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"charLen": %';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"charLen": ', '"maxLength": ')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"charLen": %';
+
+-- rename byteLen to maxByteLength
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"byteLen": %';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+WHERE profile_schema::text LIKE '%"byteLen": %';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"byteLen": %';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"byteLen": %';
+
+-- rename regexp to pattern
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"regexp": %';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE profile_schema::text LIKE '%"byteLen": %';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"regexp": %';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"regexp": ', '"pattern": ')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"regexp": %';
+
+-- rename inet to ip
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"kind": "inet"%';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE profile_schema::text LIKE '%"kind": "inet"%';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "inet"%';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "inet"%';

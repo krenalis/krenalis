@@ -17,7 +17,7 @@ const TypeIcon = ({ kind, slot }: TypeIconProps) => {
 		icon = <SlIcon slot={s} name='calendar-date' />;
 	} else if (kind === 'time') {
 		icon = <SlIcon slot={s} name='clock' />;
-	} else if (kind === 'uuid' || kind === 'inet' || kind === 'text') {
+	} else if (kind === 'uuid' || kind === 'ip' || kind === 'string') {
 		icon = <SlIcon slot={s} name='fonts' />;
 	} else if (kind === 'json') {
 		icon = <SlIcon slot={s} name='filetype-json' />;

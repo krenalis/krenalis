@@ -38,7 +38,7 @@ const AlertDialog = ({ isOpen, onClose, title, actions, children, className, var
 			<div className='alert-dialog__icon'>{icon}</div>
 			<div className='alert-dialog__title'>{title}</div>
 			<div className='alert-dialog__content'>{children}</div>
-			<div className='alert-dialog__actions'>{actions}</div>
+			<div className='alert-dialog__pipelines'>{actions}</div>
 		</SlDialog>
 	);
 };

@@ -18,10 +18,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
 )
@@ -140,8 +140,8 @@ var pythonDecoderOptions = decoderOptions{
 //   - uuid: a String representing a UUID
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
-//   - inet: a String representing an IP number
-//   - text: a String
+//   - ip: a String representing an IP number
+//   - string: a String
 //   - array: an array
 //   - object: an object
 //   - map: an object
@@ -159,10 +159,10 @@ var pythonDecoderOptions = decoderOptions{
 //   - time: a String representing a time formatted as "15:04:05.999999"
 //   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
-//   - inet: a String representing an IP number
+//   - ip: a String representing an IP number
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
-//   - text: a String
+//   - string: a String
 //   - array: an array
 //   - object: an object
 //   - map: an object
@@ -451,6 +451,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					}
 					if !p.Nullable {
 						if p.Type.Kind() != types.JSONKind || preserveJSON {
+							if purpose == Import {
+								continue
+							}
 							return nil, newRecordValidationError(p.Name, fmt.Sprintf("cannot be «%s», but it is set to «%s»", d.opts.terms.Null, d.opts.terms.Null))
 						}
 						value = json.Value("null")
@@ -537,7 +540,7 @@ func (d decoder) skipOut() error {
 // value returns the unmarshalled value of v according to t.
 func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
 			if values := t.Values(); values != nil {
@@ -545,16 +548,16 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 					return nil, newRecordValidationError("", "is not one of the allowed values")
 				}
 				return s, nil
-			} else if re := t.Regexp(); re != nil {
+			} else if re := t.Pattern(); re != nil {
 				if !re.MatchString(s) {
 					return nil, newRecordValidationError("", fmt.Sprintf("does not match «/%s/»", quoteRegExpr(re)))
 				}
 				return s, nil
 			} else {
-				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
-				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxByteLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil
@@ -705,7 +708,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			}
 			return json.Value(data), nil
 		}
-	case types.InetKind:
+	case types.IPKind:
 		if v.Kind() == '"' {
 			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
 				return ip.String(), nil
@@ -729,7 +732,7 @@ func quoteRegExpr(re *regexp.Regexp) string {
 // t, to be used in error messages to represent the type in JavaScript.
 func toJavascriptType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		return "string"
 	case types.BooleanKind:
 		return "boolean"
@@ -746,7 +749,7 @@ func toJavascriptType(t types.Type) string {
 		return "Date"
 	case types.YearKind:
 		return "number"
-	case types.UUIDKind, types.JSONKind, types.InetKind:
+	case types.UUIDKind, types.JSONKind, types.IPKind:
 		return "string"
 	case types.ArrayKind:
 		et := toJavascriptType(t.Elem())
@@ -765,7 +768,7 @@ func toJavascriptType(t types.Type) string {
 // used in error messages to represent the type in Python.
 func toPythonType(t types.Type) string {
 	switch t.Kind() {
-	case types.TextKind:
+	case types.StringKind:
 		return "str"
 	case types.BooleanKind:
 		return "bool"
@@ -785,7 +788,7 @@ func toPythonType(t types.Type) string {
 		return "int"
 	case types.UUIDKind:
 		return "uuid.UUID"
-	case types.JSONKind, types.InetKind:
+	case types.JSONKind, types.IPKind:
 		return "str"
 	case types.ArrayKind:
 		et := toPythonType(t.Elem())

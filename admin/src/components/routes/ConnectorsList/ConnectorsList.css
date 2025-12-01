@@ -223,7 +223,7 @@
 	flex-flow: row-reverse;
 }
 
-.connectors-list__documentation-drawer::part(header-actions) {
+.connectors-list__documentation-drawer::part(header-pipelines) {
 	padding-right: 10px;
 }
 

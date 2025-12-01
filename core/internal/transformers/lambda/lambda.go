@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/embed"
-	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
