@@ -17,6 +17,7 @@ The following is a set of guidelines for contributing to Meergo and its reposito
   - [Pull Requests](#pull-requests)
     - [Before opening a pull request](#before-opening-a-pull-request)
     - [After opening a pull request](#after-opening-a-pull-request)
+  - [Running Meergo from repository using Docker Compose](#running-meergo-from-repository-using-docker-compose)
 
 ## Code of Conduct
 
@@ -106,3 +107,13 @@ To build and test Meergo locally see the [contributing guidelines](https://www.m
 
 * A reviewer will usually start reviewing your pull request within two business days.
 * Once all requested changes have been addressed, the reviewer will merge your pull request.
+
+### Running Meergo from repository using Docker Compose
+
+If you just want to run Meergo with Docker, see [Install using Docker Compose](https://www.meergo.com/docs/installation/using-docker-compose).
+
+Otherwise, if you are developing Meergo and want to test it with Docker, you can run it with Docker Compose by running, inside the repository:
+
+```
+docker compose up --build
+```
