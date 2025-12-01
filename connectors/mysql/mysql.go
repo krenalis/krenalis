@@ -361,7 +361,7 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 		if !ok {
 			return types.String(), "", nil
 		}
-		return types.String().WithMaxByteLength(int(length)), "", nil
+		return types.String().WithMaxBytes(int(length)), "", nil
 	case "TEXT":
 		return types.String(), "", nil
 	case "TIME":

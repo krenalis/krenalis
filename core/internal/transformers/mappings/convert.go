@@ -27,16 +27,16 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errMaxByteLengthConversion = errors.New("invalid max byte length")
-	errMaxLengthConversion     = errors.New("invalid max length")
-	errEnumConversion          = errors.New("not a valid enum value")
-	errInvalidConversion       = errors.New("cannot convert")
-	errMaxConversion           = errors.New("too large")
-	errMinConversion           = errors.New("too small")
-	errParseConversion         = errors.New("cannot parse")
-	errRangeConversion         = errors.New("out of range")
-	errPatternConversion       = errors.New("pattern mismatch")
-	errYearRangeConversion     = errors.New("year not in range [1,9999]")
+	errMaxBytesConversion  = errors.New("invalid max bytes")
+	errMaxLengthConversion = errors.New("invalid max length")
+	errEnumConversion      = errors.New("not a valid enum value")
+	errInvalidConversion   = errors.New("cannot convert")
+	errMaxConversion       = errors.New("too large")
+	errMinConversion       = errors.New("too small")
+	errParseConversion     = errors.New("cannot parse")
+	errRangeConversion     = errors.New("out of range")
+	errPatternConversion   = errors.New("pattern mismatch")
+	errYearRangeConversion = errors.New("year not in range [1,9999]")
 )
 
 const (
@@ -70,7 +70,7 @@ var (
 // in the returned value.
 //
 // If the value cannot be converted, it returns v and one of the following:
-//   - errMaxByteLengthConversion
+//   - errMaxBytesConversion
 //   - errMaxLengthConversion
 //   - errEnumConversion
 //   - errInvalidConversion
@@ -162,8 +162,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errPatternConversion
 			}
 		} else {
-			if l, ok := dt.MaxByteLength(); ok && l < len(s) {
-				return v, errMaxByteLengthConversion
+			if l, ok := dt.MaxBytes(); ok && l < len(s) {
+				return v, errMaxBytesConversion
 			}
 			if l, ok := dt.MaxLength(); ok {
 				runes := len(s)

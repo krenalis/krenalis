@@ -34,16 +34,16 @@ func Test_convertToExternal(t *testing.T) {
 		{v: "6eb95d08-f97d-4753-82a3-b0aa3ce21001", in: types.UUID(), ex: types.String(), expected: "6eb95d08-f97d-4753-82a3-b0aa3ce21001"},
 		{v: "boo", in: types.String(), ex: types.String().WithValues("foo", "boo"), expected: "boo"},
 		{v: "boo", in: types.String(), ex: types.String().WithMaxLength(3), expected: "boo"},
-		{v: "bòò", in: types.String(), ex: types.String().WithMaxByteLength(5), expected: "bòò"},
+		{v: "bòò", in: types.String(), ex: types.String().WithMaxBytes(5), expected: "bòò"},
 		{v: "boo", in: types.String(), ex: types.String().WithPattern(regexp.MustCompile(`^b..$`)), expected: "boo"},
 		{v: 331, in: types.Int(16), ex: types.Int(8), err: errMatchingPropertyConversion("in", "ex")},
 		{v: -57, in: types.Int(8), ex: types.Uint(32), err: errMatchingPropertyConversion("in", "ex")},
 		{v: "bob", in: types.String(), ex: types.String().WithMaxLength(2), err: errMatchingPropertyConversion("in", "ex")},
-		{v: "bòb", in: types.String(), ex: types.String().WithMaxByteLength(3), err: errMatchingPropertyConversion("in", "ex")},
+		{v: "bòb", in: types.String(), ex: types.String().WithMaxBytes(3), err: errMatchingPropertyConversion("in", "ex")},
 		{v: "boo", in: types.String(), ex: types.String().WithPattern(regexp.MustCompile(`^f..$`)), err: errMatchingPropertyConversion("in", "ex")},
 		{v: "bob", in: types.String(), ex: types.String().WithValues("foo", "boo"), err: errMatchingPropertyConversion("in", "ex")},
 		{v: "ABCDEF", in: types.String(), ex: types.UUID(), err: errMatchingPropertyConversion("in", "ex")},
-		{v: "034e3414-6daa-40a9-a1ca-28c7d26f8014", in: types.UUID(), ex: types.String().WithMaxByteLength(10), err: errMatchingPropertyConversion("in", "ex")},
+		{v: "034e3414-6daa-40a9-a1ca-28c7d26f8014", in: types.UUID(), ex: types.String().WithMaxBytes(10), err: errMatchingPropertyConversion("in", "ex")},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {

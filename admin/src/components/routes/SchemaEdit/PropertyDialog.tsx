@@ -72,7 +72,7 @@ const PropertyDialog = ({
 	const [primarySource, setPrimarySource] = useState<number | null>(null);
 	const [nameError, setNameError] = useState<string>('');
 	const [typeError, setTypeError] = useState<string>('');
-	const [isMaxByteLengthEnabled, setIsMaxByteLengthEnabled] = useState<boolean>(false);
+	const [isMaxBytesEnabled, setIsMaxBytesEnabled] = useState<boolean>(false);
 	const [isMaxLengthEnabled, setIsMaxLengthEnabled] = useState<boolean>(false);
 
 	const { connections } = useContext(AppContext);
@@ -81,7 +81,7 @@ const PropertyDialog = ({
 	const bitSizeSelectRef = useRef<any>();
 	const precisionInputRef = useRef<any>();
 	const elementTypeSelectRef = useRef<any>();
-	const maxByteLengthInputRef = useRef<any>();
+	const maxBytesInputRef = useRef<any>();
 	const maxLengthInputRef = useRef<any>();
 
 	const isEditing = useMemo(() => {
@@ -156,7 +156,7 @@ const PropertyDialog = ({
 		if (typeError !== '') {
 			setTypeError('');
 		}
-		setIsMaxByteLengthEnabled(false);
+		setIsMaxBytesEnabled(false);
 		setIsMaxLengthEnabled(false);
 	};
 
@@ -282,12 +282,12 @@ const PropertyDialog = ({
 		}
 	};
 
-	const onToggleMaxByteLength = () => {
-		setIsMaxByteLengthEnabled(!isMaxByteLengthEnabled);
-		if (isMaxByteLengthEnabled) {
-			updateMaxByteLength(null);
+	const onToggleMaxBytes = () => {
+		setIsMaxBytesEnabled(!isMaxBytesEnabled);
+		if (isMaxBytesEnabled) {
+			updateMaxBytes(null);
 		} else {
-			setTimeout(() => maxByteLengthInputRef.current?.focus(), 50);
+			setTimeout(() => maxBytesInputRef.current?.focus(), 50);
 		}
 	};
 
@@ -300,19 +300,19 @@ const PropertyDialog = ({
 		}
 	};
 
-	const onInputByteLength = (e) => {
-		updateMaxByteLength(Number(e.target.value));
+	const onInputMaxBytes = (e) => {
+		updateMaxBytes(Number(e.target.value));
 	};
 
-	const updateMaxByteLength = (length: number | null) => {
+	const updateMaxBytes = (length: number | null) => {
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete elementTyp.maxByteLength;
+				delete elementTyp.maxBytes;
 			} else {
-				elementTyp.maxByteLength = length;
+				elementTyp.maxBytes = length;
 			}
 			typ.elementType = elementTyp;
 			p.type = typ;
@@ -320,18 +320,18 @@ const PropertyDialog = ({
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete valueTyp.maxByteLength;
+				delete valueTyp.maxBytes;
 			} else {
-				valueTyp.maxByteLength = length;
+				valueTyp.maxBytes = length;
 			}
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as StringType;
 			if (length == null) {
-				delete typ.maxByteLength;
+				delete typ.maxBytes;
 			} else {
-				typ.maxByteLength = length;
+				typ.maxBytes = length;
 			}
 			p.type = typ;
 		}
@@ -575,24 +575,24 @@ const PropertyDialog = ({
 				: isMap
 					? (property.type as MapType).elementType
 					: property.type;
-			const maxByteLengthSection = (
+			const maxBytesSection = (
 				<>
 					<SlCheckbox
-						className='property-dialog__max-byte-length-check'
-						checked={isMaxByteLengthEnabled}
-						onSlChange={onToggleMaxByteLength}
+						className='property-dialog__max-bytes-check'
+						checked={isMaxBytesEnabled}
+						onSlChange={onToggleMaxBytes}
 						size='small'
 					>
 						Max bytes:
 					</SlCheckbox>
 					<SlInput
-						className='property-dialog__max-byte-length'
-						ref={maxByteLengthInputRef}
+						className='property-dialog__max-bytes'
+						ref={maxBytesInputRef}
 						size='small'
-						value={String(typ.maxByteLength)}
+						value={String(typ.maxBytes)}
 						type='number'
-						onSlInput={onInputByteLength}
-						disabled={!isMaxByteLengthEnabled}
+						onSlInput={onInputMaxBytes}
+						disabled={!isMaxBytesEnabled}
 					/>
 				</>
 			);
@@ -619,7 +619,7 @@ const PropertyDialog = ({
 			);
 			lengthSection = (
 				<div className='property-dialog__length-section'>
-					{maxByteLengthSection}
+					{maxBytesSection}
 					{maxLengthSection}
 				</div>
 			);

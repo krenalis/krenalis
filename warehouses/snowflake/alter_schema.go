@@ -210,7 +210,7 @@ func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
 		var maxLength int
-		if l, ok := t.MaxByteLength(); ok {
+		if l, ok := t.MaxBytes(); ok {
 			maxLength = l
 		}
 		if l, ok := t.MaxLength(); ok {

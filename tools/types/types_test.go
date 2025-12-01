@@ -162,19 +162,19 @@ func Test_Len(t *testing.T) {
 		Expected Expected
 	}{
 		{String(), Expected{false, 0}},
-		{String().WithMaxByteLength(1).WithMaxLength(1), Expected{true, 1}},
-		{String().WithMaxByteLength(math.MaxInt32).WithMaxLength(math.MaxInt32), Expected{true, math.MaxInt32}},
-		{String().WithMaxByteLength(MaxStringLen).WithMaxLength(MaxStringLen), Expected{true, MaxStringLen}},
+		{String().WithMaxBytes(1).WithMaxLength(1), Expected{true, 1}},
+		{String().WithMaxBytes(math.MaxInt32).WithMaxLength(math.MaxInt32), Expected{true, math.MaxInt32}},
+		{String().WithMaxBytes(MaxStringLen).WithMaxLength(MaxStringLen), Expected{true, MaxStringLen}},
 	}
 
 	for _, test := range tests {
-		got, ok := test.Type.MaxByteLength()
+		got, ok := test.Type.MaxBytes()
 		if ok == test.Expected.OK {
 			if got != test.Expected.Len {
-				t.Errorf("MaxByteLength(%d): expected %d, got %d", test.Expected.Len, test.Expected.Len, got)
+				t.Errorf("MaxBytes(%d): expected %d, got %d", test.Expected.Len, test.Expected.Len, got)
 			}
 		} else {
-			t.Errorf("MaxByteLength(%d): expected %t, got %t", test.Expected.Len, test.Expected.OK, ok)
+			t.Errorf("MaxBytes(%d): expected %t, got %t", test.Expected.Len, test.Expected.OK, ok)
 		}
 		got, ok = test.Type.MaxLength()
 		if ok == test.Expected.OK {

@@ -75,7 +75,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 	switch t.kind {
 	case StringKind:
 		if t.p > 0 {
-			b.WriteString(`,"maxByteLength":`)
+			b.WriteString(`,"maxBytes":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
 		}
 		if t.s > 0 {
@@ -301,7 +301,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var bitSize int
 	var minimum, maximum json.Number
 	var real bool
-	var precision, scale, maxByteLength, maxLength int
+	var precision, scale, maxBytes, maxLength int
 	var pattern *regexp.Regexp
 	var values []string
 	var elementType Type
@@ -453,16 +453,16 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid scale")
 			}
 			hasScale = true
-		case "maxByteLength":
-			if maxByteLength > 0 {
-				return Type{}, errors.New("repeated 'maxByteLength' key")
+		case "maxBytes":
+			if maxBytes > 0 {
+				return Type{}, errors.New("repeated 'maxBytes' key")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
 				return Type{}, errors.New("invalid length in bytes")
 			}
-			maxByteLength, _ = strconv.Atoi(string(n))
-			if maxByteLength <= 0 || maxByteLength > MaxStringLen {
+			maxBytes, _ = strconv.Atoi(string(n))
+			if maxBytes <= 0 || maxBytes > MaxStringLen {
 				return Type{}, errors.New("invalid length in bytes")
 			}
 		case "maxLength":
@@ -577,11 +577,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.vl = values
 	}
-	if maxByteLength > 0 {
+	if maxBytes > 0 {
 		if t.kind != StringKind {
 			return Type{}, errors.New("unexpected length in bytes for non-string type")
 		}
-		t.p = int32(maxByteLength)
+		t.p = int32(maxBytes)
 	}
 	if maxLength > 0 {
 		if t.kind != StringKind {

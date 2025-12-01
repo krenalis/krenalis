@@ -223,11 +223,11 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"string","maxLength":10}`,
 			Type: String().WithMaxLength(10),
 		}, {
-			Data: `{"kind":"string","maxByteLength":24}`,
-			Type: String().WithMaxByteLength(24),
+			Data: `{"kind":"string","maxBytes":24}`,
+			Type: String().WithMaxBytes(24),
 		}, {
-			Data: `{"kind":"string","maxByteLength":80,"maxLength":100}`,
-			Type: String().WithMaxByteLength(80).WithMaxLength(100),
+			Data: `{"kind":"string","maxBytes":80,"maxLength":100}`,
+			Type: String().WithMaxBytes(80).WithMaxLength(100),
 		}, {
 			Data: `{"kind":"string","values":["a","b"]}`,
 			Type: String().WithValues("a", "b"),

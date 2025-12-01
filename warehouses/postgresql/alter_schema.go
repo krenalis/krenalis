@@ -210,7 +210,7 @@ func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
 		var maxLength int
-		if l, ok := t.MaxByteLength(); ok {
+		if l, ok := t.MaxBytes(); ok {
 			maxLength = l // we represent N bytes len as N chars len in PostgreSQL.
 		}
 		if l, ok := t.MaxLength(); ok {

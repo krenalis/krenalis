@@ -3597,8 +3597,8 @@ function typeDescription(type: Type): ReactNode[] {
 		if (type.pattern != null) {
 			elements.push(<div>Regular expression: {type.pattern}</div>);
 		}
-		if (type.maxByteLength != null) {
-			elements.push(<div>Max bytes: {type.maxByteLength}</div>);
+		if (type.maxBytes != null) {
+			elements.push(<div>Max bytes: {type.maxBytes}</div>);
 		}
 		if (type.maxLength != null) {
 			elements.push(<div>Max characters: {type.maxLength}</div>);

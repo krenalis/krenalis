@@ -54,7 +54,7 @@ type Type =
 
 interface StringType {
 	kind: 'string';
-	maxByteLength?: number;
+	maxBytes?: number;
 	maxLength?: number;
 	pattern?: string;
 	values?: string[];

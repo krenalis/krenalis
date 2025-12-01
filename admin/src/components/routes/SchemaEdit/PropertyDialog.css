@@ -82,14 +82,14 @@
 	margin-top: 15px;
 }
 
-.property-dialog__max-byte-length-check,
+.property-dialog__max-bytes-check,
 .property-dialog__max-length-check {
 	position: relative;
 	bottom: 5px;
 	margin-right: 15px;
 }
 
-.property-dialog__max-byte-length,
+.property-dialog__max-bytes,
 .property-dialog__max-length {
 	max-width: 80px;
 }

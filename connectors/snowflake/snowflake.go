@@ -352,7 +352,7 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 		t := types.String().WithMaxLength(int(length))
 		const maxBytesLen = 16_777_216
 		if length > maxBytesLen/4 {
-			t = t.WithMaxByteLength(min(int(length*4), maxBytesLen))
+			t = t.WithMaxBytes(min(int(length*4), maxBytesLen))
 		}
 		return t, "", nil
 	case "TIME":

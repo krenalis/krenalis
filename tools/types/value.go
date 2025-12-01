@@ -332,7 +332,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
 				}
-				if n, ok := t.MaxByteLength(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
 				}
 				return s, nil

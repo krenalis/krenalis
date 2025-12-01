@@ -715,34 +715,34 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// MaxByteLength returns the maximum length in bytes of a string type and true.
-// If t has no maximum length in bytes, it returns 0 and false.
-// Panics if t is not a string type.
-func (t Type) MaxByteLength() (int, bool) {
+// MaxBytes returns the maximum number of bytes allowed for the string type t,
+// along with true. If t has no maximum length, it returns 0 and false.
+// It panics if t is not a string type.
+func (t Type) MaxBytes() (int, bool) {
 	if t.kind != StringKind {
-		panic("cannot get byte length of a non-string type")
+		panic("cannot get max bytes of a non-string type")
 	}
 	return int(uint32(t.p)), t.p != 0
 }
 
-// WithMaxByteLength returns t with a maximum length of l of a string type.
-// l must be in range [1, MaxStringLen].
-// Panics if t is not a string type, or if l is not in range, or if t has
-// already a byte length, or if t already has values.
-func (t Type) WithMaxByteLength(l int) Type {
+// WithMaxBytes returns t configured with a maximum of n bytes. n must be in the
+// range [1, MaxStringLen].
+// It panics if t is not a string type, if t already specifies a maximum number
+// of bytes, if t already has values, or if n is out of range.
+func (t Type) WithMaxBytes(n int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max byte length of a non-string type")
 	}
 	if t.p > 0 {
-		panic("repeated length in bytes")
+		panic("max bytes already specified")
 	}
-	if l < 1 || MaxStringLen < l {
-		panic("invalid string length")
+	if n < 1 || MaxStringLen < n {
+		panic("invalid max bytes")
 	}
 	if _, ok := t.vl.([]string); ok {
 		panic("t already has values")
 	}
-	t.p = int32(uint32(l))
+	t.p = int32(uint32(n))
 	return t
 }
 

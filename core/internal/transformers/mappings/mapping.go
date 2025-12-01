@@ -234,8 +234,8 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errPatternConversion:
 					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Pattern(), code(e.path))
-				case errMaxByteLengthConversion:
-					n, _ := e.dt.MaxByteLength()
+				case errMaxBytesConversion:
+					n, _ := e.dt.MaxBytes()
 					msg = fmt.Sprintf("«%s» exceeds the %d-byte limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
 				case errMaxLengthConversion:
 					n, _ := e.dt.MaxLength()

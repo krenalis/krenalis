@@ -422,7 +422,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		if n, ok := ex.MaxByteLength(); ok && len(s) > n {
+		if n, ok := ex.MaxBytes(); ok && len(s) > n {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {

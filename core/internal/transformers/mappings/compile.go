@@ -550,8 +550,8 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
 			case errPatternConversion:
 				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
-			case errMaxByteLengthConversion:
-				n, _ := dt.MaxByteLength()
+			case errMaxBytesConversion:
+				n, _ := dt.MaxBytes()
 				msg = fmt.Sprintf("%q exceeds the %d-byte limit", p.value, n)
 			case errMaxLengthConversion:
 				n, _ := dt.MaxLength()

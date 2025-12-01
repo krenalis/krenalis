@@ -57,7 +57,7 @@ var destinationSchema = types.Object([]types.Property{
 	},
 	{
 		Name:        "invoice_prefix",
-		Type:        types.String().WithMaxByteLength(12),
+		Type:        types.String().WithMaxBytes(12),
 		Description: "Invoice prefix",
 	},
 	{
@@ -266,7 +266,7 @@ var destinationInvoiceSettings = types.Object([]types.Property{
 			},
 			{
 				Name:           "value",
-				Type:           types.String().WithMaxByteLength(140),
+				Type:           types.String().WithMaxBytes(140),
 				Nullable:       true,
 				CreateRequired: true,
 				UpdateRequired: true,

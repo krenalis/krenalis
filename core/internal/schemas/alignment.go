@@ -150,8 +150,8 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			}
 			return &Error{Msg: fmt.Sprintf("character length of the %q property's type has changed from %v to %v", name, v1, v2)}
 		}
-		b1, ok1 := t1.MaxByteLength()
-		b2, ok2 := t2.MaxByteLength()
+		b1, ok1 := t1.MaxBytes()
+		b2, ok2 := t2.MaxBytes()
 		if b1 != b2 || ok1 != ok2 {
 			var v1, v2 any = "unbounded", "unbounded"
 			if ok1 {

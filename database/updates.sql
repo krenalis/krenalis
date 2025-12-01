@@ -89,3 +89,13 @@ WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "inet"%';
 UPDATE pipelines
 SET out_schema = REPLACE(out_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "inet"%';
+
+-- rename maxByteLength to maxBytes
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"maxByteLength": ', '"maxBytes": ')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"maxByteLength": %';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"maxByteLength": ', '"maxBytes": ')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"maxByteLength": %';
