@@ -110,11 +110,12 @@
 
 .property-dialog__control-error {
 	color: var(--sl-color-danger-600);
-	font-size: 13px;
+	font-size: 12px;
 	padding-top: 5px;
 	display: flex;
 	align-items: center;
-	gap: 5px;
+	gap: 7px;
+	line-height: 1.2;
 }
 
 .property-dialog__control-error sl-icon {

@@ -88,6 +88,10 @@ const useSchemaEdit = (
 	}, [schema]);
 
 	const onAddProperty = (property: PropertyToEdit, primarySource: number | null) => {
+		if (isMetaProperty(property.name)) {
+			throw new Error(`Profile schema property names cannot start with an underscore`);
+		}
+
 		let key = property.name;
 		if (property.parentKey !== '') {
 			key = `${property.parentKey}.${property.name}`;
