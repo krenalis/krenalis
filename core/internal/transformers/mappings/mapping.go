@@ -191,9 +191,11 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 					var n any
 					switch e.dt.Kind() {
 					case types.IntKind:
-						n, _ = e.dt.IntRange()
-					case types.UintKind:
-						n, _ = e.dt.UintRange()
+						if e.dt.IsUnsigned() {
+							n, _ = e.dt.UnsignedRange()
+						} else {
+							n, _ = e.dt.IntRange()
+						}
 					case types.FloatKind:
 						n, _ = e.dt.FloatRange()
 					case types.DecimalKind:
@@ -204,9 +206,11 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 					var n any
 					switch e.dt.Kind() {
 					case types.IntKind:
-						_, n = e.dt.IntRange()
-					case types.UintKind:
-						_, n = e.dt.UintRange()
+						if e.dt.IsUnsigned() {
+							_, n = e.dt.UnsignedRange()
+						} else {
+							_, n = e.dt.IntRange()
+						}
 					case types.FloatKind:
 						_, n = e.dt.FloatRange()
 					case types.DecimalKind:

@@ -132,6 +132,73 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return nil, invalidType(name, src, typ)
 		}
 	case types.IntKind:
+		if typ.IsUnsigned() {
+			var v uint64
+			var err error
+			switch src := src.(type) {
+			case int:
+				if src < 0 {
+					return nil, inputValidationErrorf(name, "has a negative int value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
+				v = uint64(src)
+			case int8:
+				v = uint64(src)
+			case int16:
+				v = uint64(src)
+			case int32:
+				v = uint64(src)
+			case int64:
+				if src < 0 {
+					return nil, inputValidationErrorf(name, "has a negative int64 value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
+				v = uint64(src)
+			case uint:
+				v = uint64(src)
+			case uint8:
+				v = uint64(src)
+			case uint16:
+				v = uint64(src)
+			case uint32:
+				v = uint64(src)
+			case uint64:
+				v = src
+			case float32:
+				f := float64(src)
+				if src < 0 || math.IsInf(f, 1) || f != math.Trunc(f) {
+					return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
+				v = uint64(src)
+			case float64:
+				if src < 0 || math.IsInf(src, 1) || src != math.Trunc(src) {
+					return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
+				v = uint64(src)
+			case decimal.Decimal:
+				v, err = src.Uint64()
+				if err != nil {
+					return nil, inputValidationErrorf(name, "has a decimal.decimal value that cannot represent an unsigned int value")
+				}
+			case string:
+				v, err = strconv.ParseUint(src, 10, 64)
+				if err != nil {
+					return nil, inputValidationErrorf(name, "has a string value that cannot represent an unsigned int value")
+				}
+			case []byte:
+				if src == nil && nullable {
+					return nil, nil
+				}
+				v, err = strconv.ParseUint(string(src), 10, 64)
+				if err != nil {
+					return nil, inputValidationErrorf(name, "has a []byte value that cannot represent an unsigned int value")
+				}
+			default:
+				return nil, invalidType(name, src, typ)
+			}
+			if min, max := typ.UnsignedRange(); v < min || v > max {
+				return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", min, max)
+			}
+			return uint(v), nil
+		}
 		var v int64
 		var err error
 		// Keep in sync with the case 'types.YearKind'.
@@ -200,72 +267,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", min, max)
 		}
 		return int(v), nil
-	case types.UintKind:
-		var v uint64
-		var err error
-		switch src := src.(type) {
-		case int:
-			if src < 0 {
-				return nil, inputValidationErrorf(name, "has a negative int value that cannot represent an uint(%d) value", typ.BitSize())
-			}
-			v = uint64(src)
-		case int8:
-			v = uint64(src)
-		case int16:
-			v = uint64(src)
-		case int32:
-			v = uint64(src)
-		case int64:
-			if src < 0 {
-				return nil, inputValidationErrorf(name, "has a negative int64 value that cannot represent an uint(%d) value", typ.BitSize())
-			}
-			v = uint64(src)
-		case uint:
-			v = uint64(src)
-		case uint8:
-			v = uint64(src)
-		case uint16:
-			v = uint64(src)
-		case uint32:
-			v = uint64(src)
-		case uint64:
-			v = src
-		case float32:
-			f := float64(src)
-			if src < 0 || math.IsInf(f, 1) || f != math.Trunc(f) {
-				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an uint(%d) value", typ.BitSize())
-			}
-			v = uint64(src)
-		case float64:
-			if src < 0 || math.IsInf(src, 1) || src != math.Trunc(src) {
-				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an uint(%d) value", typ.BitSize())
-			}
-			v = uint64(src)
-		case decimal.Decimal:
-			v, err = src.Uint64()
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a decimal.decimal value that cannot represent an uint value")
-			}
-		case string:
-			v, err = strconv.ParseUint(src, 10, 64)
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a string value that cannot represent an uint value")
-			}
-		case []byte:
-			if src == nil && nullable {
-				return nil, nil
-			}
-			v, err = strconv.ParseUint(string(src), 10, 64)
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a []byte value that cannot represent an uint value")
-			}
-		default:
-			return nil, invalidType(name, src, typ)
-		}
-		if min, max := typ.UintRange(); v < min || v > max {
-			return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", min, max)
-		}
-		return uint(v), nil
 	case types.FloatKind:
 		var v float64
 		var err error

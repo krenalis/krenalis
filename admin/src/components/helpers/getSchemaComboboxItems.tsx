@@ -46,7 +46,7 @@ const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	const filteredSchema: TransformedMapping = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const typ = flatSchema[k].type;
-		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'decimal' || typ === 'string') {
+		if (typ === 'int' || typ === 'uuid' || typ === 'decimal' || typ === 'string') {
 			filteredSchema[k] = v;
 		}
 	}
@@ -94,7 +94,7 @@ const getIdentityColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 			continue;
 		}
 		const typ = flatSchema[k].type;
-		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'json' || typ === 'string') {
+		if (typ === 'int' || typ === 'uuid' || typ === 'json' || typ === 'string') {
 			filteredSchema[k] = v;
 		}
 	}
@@ -131,7 +131,7 @@ const filterOrderingPropertySchema = (schema: ObjectType): TransformedMapping | 
 			}
 			continue;
 		}
-		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'ip' || typ === 'string') {
+		if (typ === 'int' || typ === 'uuid' || typ === 'ip' || typ === 'string') {
 			filteredSchema[k] = v;
 		}
 	}
@@ -154,7 +154,7 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	const filteredSchema: TransformedMapping = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const typ = flatSchema[k].type;
-		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'string') {
+		if (typ === 'int' || typ === 'uuid' || typ === 'string') {
 			filteredSchema[k] = v;
 		}
 	}

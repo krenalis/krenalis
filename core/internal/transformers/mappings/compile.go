@@ -524,9 +524,11 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				var n any
 				switch dt.Kind() {
 				case types.IntKind:
-					n, _ = dt.IntRange()
-				case types.UintKind:
-					n, _ = dt.UintRange()
+					if dt.IsUnsigned() {
+						n, _ = dt.UnsignedRange()
+					} else {
+						n, _ = dt.IntRange()
+					}
 				case types.FloatKind:
 					n, _ = dt.FloatRange()
 				case types.DecimalKind:
@@ -537,9 +539,11 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				var n any
 				switch dt.Kind() {
 				case types.IntKind:
-					_, n = dt.IntRange()
-				case types.UintKind:
-					_, n = dt.UintRange()
+					if dt.IsUnsigned() {
+						_, n = dt.UnsignedRange()
+					} else {
+						_, n = dt.IntRange()
+					}
 				case types.FloatKind:
 					_, n = dt.FloatRange()
 				case types.DecimalKind:

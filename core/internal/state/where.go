@@ -218,17 +218,18 @@ func unmarshalConditionValue(v any, t types.Type) (any, error) {
 	case types.StringKind, types.UUIDKind, types.IPKind:
 		return v, nil
 	case types.IntKind:
+		if t.IsUnsigned() {
+			n, err := strconv.ParseUint(string(v.(json.Number)), 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			return uint(n), nil
+		}
 		n, err := strconv.ParseInt(string(v.(json.Number)), 10, 64)
 		if err != nil {
 			return nil, err
 		}
 		return int(n), nil
-	case types.UintKind:
-		n, err := strconv.ParseUint(string(v.(json.Number)), 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		return uint(n), nil
 	case types.FloatKind:
 		return strconv.ParseFloat(string(v.(json.Number)), t.BitSize())
 	case types.DecimalKind:

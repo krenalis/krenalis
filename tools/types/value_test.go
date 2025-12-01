@@ -70,23 +70,23 @@ func Test_Decode(t *testing.T) {
 		},
 		{
 			Name: "Uint8",
-			Type: Uint(8),
+			Type: Int(8).Unsigned(),
 		},
 		{
 			Name: "Uint16",
-			Type: Uint(16),
+			Type: Int(16).Unsigned(),
 		},
 		{
 			Name: "Uint24",
-			Type: Uint(24),
+			Type: Int(24).Unsigned(),
 		},
 		{
 			Name: "Uint32",
-			Type: Uint(32),
+			Type: Int(32).Unsigned(),
 		},
 		{
 			Name: "Uint64",
-			Type: Uint(64),
+			Type: Int(64).Unsigned(),
 		},
 		{
 			Name: "Float32",
@@ -150,7 +150,7 @@ func Test_Decode(t *testing.T) {
 				},
 				{
 					Name:         "c",
-					Type:         Uint(8),
+					Type:         Int(8).Unsigned(),
 					ReadOptional: true,
 				},
 			}),
@@ -530,23 +530,23 @@ var schema = Object([]Property{
 	},
 	{
 		Name: "Uint8",
-		Type: Uint(8),
+		Type: Int(8).Unsigned(),
 	},
 	{
 		Name: "Uint16",
-		Type: Uint(16),
+		Type: Int(16).Unsigned(),
 	},
 	{
 		Name: "Uint24",
-		Type: Uint(24),
+		Type: Int(24).Unsigned(),
 	},
 	{
 		Name: "Uint32",
-		Type: Uint(32),
+		Type: Int(32).Unsigned(),
 	},
 	{
 		Name: "Uint64",
-		Type: Uint(64),
+		Type: Int(64).Unsigned(),
 	},
 	{
 		Name: "Float32",

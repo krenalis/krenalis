@@ -41,13 +41,13 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 		var t types.Type
 		switch s[:i] {
 		case "UInt8":
-			t = types.Uint(8)
+			t = types.Int(8).Unsigned()
 		case "UInt16":
-			t = types.Uint(16)
+			t = types.Int(16).Unsigned()
 		case "UInt32":
-			t = types.Uint(32)
+			t = types.Int(32).Unsigned()
 		case "UInt64":
-			t = types.Uint(64)
+			t = types.Int(64).Unsigned()
 		case "Int8":
 			t = types.Int(8)
 		case "Int16":

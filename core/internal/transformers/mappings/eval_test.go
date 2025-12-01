@@ -53,7 +53,7 @@ func Test_appendAsString(t *testing.T) {
 		{"foo", types.String(), "startfoo", nil},
 		{true, types.Boolean(), "start", errInvalidConversion},
 		{int(3), types.Int(32), "start3", nil},
-		{uint(4), types.Uint(16), "start4", nil},
+		{uint(4), types.Int(16).Unsigned(), "start4", nil},
 		{1.5, types.Float(64), "start1.5", nil},
 		{decimal.MustParse("2.7"), types.Decimal(2, 1), "start2.7", nil},
 		{t0, types.DateTime(), "start2023-01-02T03:04:05Z", nil},

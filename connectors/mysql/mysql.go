@@ -333,21 +333,21 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	case "FLOAT":
 		return types.Float(32), "", nil
 	case "UNSIGNED MEDIUMINT":
-		return types.Uint(24), "", nil
+		return types.Int(24).Unsigned(), "", nil
 	case "MEDIUMINT":
 		return types.Int(24), "", nil
 	case "JSON":
 		return types.JSON(), "", nil
 	case "UNSIGNED INT":
-		return types.Uint(32), "", nil
+		return types.Int(32).Unsigned(), "", nil
 	case "INT":
 		return types.Int(32), "", nil
 	case "UNSIGNED BIGINT":
-		return types.Uint(64), "", nil
+		return types.Int(64).Unsigned(), "", nil
 	case "BIGINT":
 		return types.Int(64), "", nil
 	case "UNSIGNED SMALLINT":
-		return types.Uint(16), "", nil
+		return types.Int(16).Unsigned(), "", nil
 	case "SMALLINT":
 		return types.Int(16), "", nil
 	case "VARCHAR", "CHAR":
@@ -369,7 +369,7 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	case "TIMESTAMP":
 		return types.DateTime(), "", nil
 	case "UNSIGNED TINYINT":
-		return types.Uint(8), "", nil
+		return types.Int(8).Unsigned(), "", nil
 	case "TINYINT":
 		return types.Int(8), "", nil
 	case "YEAR":

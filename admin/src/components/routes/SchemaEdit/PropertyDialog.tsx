@@ -13,7 +13,6 @@ import {
 	MapType,
 	StringType,
 	TypeKind,
-	UintType,
 } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -33,7 +32,6 @@ const TYPE_KINDS: TypeKind[] = [
 	'string',
 	'boolean',
 	'int',
-	'uint',
 	'float',
 	'decimal',
 	'datetime',
@@ -128,8 +126,9 @@ const PropertyDialog = ({
 		const p = { ...property };
 		const kind = e.target.value as TypeKind;
 		const type: any = { kind: kind };
-		if (kind === 'int' || kind === 'uint') {
+		if (kind === 'int') {
 			type.bitSize = 32;
+			type.unsigned = false;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (kind === 'float') {
@@ -164,18 +163,18 @@ const PropertyDialog = ({
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
-			const elementTyp = typ.elementType as IntType | UintType | FloatType;
+			const elementTyp = typ.elementType as IntType | FloatType;
 			elementTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			typ.elementType = elementTyp;
 			p.type = typ;
 		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.elementType as IntType | UintType | FloatType;
+			const valueTyp = typ.elementType as IntType | FloatType;
 			valueTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
-			const typ = p.type as IntType | UintType | FloatType;
+			const typ = p.type as IntType | FloatType;
 			typ.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			p.type = typ;
 		}
@@ -254,12 +253,35 @@ const PropertyDialog = ({
 		setProperty(p);
 	};
 
+	const onUnsignedChange = () => {
+		const p = { ...property };
+		if (p.type.kind === 'array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as IntType;
+			elementTyp.unsigned = !elementTyp.unsigned;
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else if (p.type.kind === 'map') {
+			const typ = p.type as MapType;
+			const valueTyp = typ.elementType as IntType;
+			valueTyp.unsigned = !valueTyp.unsigned;
+			typ.elementType = valueTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as IntType;
+			typ.unsigned = !typ.unsigned;
+			p.type = typ;
+		}
+		setProperty(p);
+	};
+
 	const onChangeAssociatedType = (e) => {
 		const p = { ...property };
 		const kind = e.target.value as TypeKind;
 		const type: any = { kind: kind };
-		if (kind === 'int' || kind === 'uint') {
+		if (kind === 'int') {
 			type.bitSize = 32;
+			type.unsigned = false;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (kind === 'float') {
@@ -475,7 +497,7 @@ const PropertyDialog = ({
 					value={String(type.bitSize)}
 					onSlChange={onChangeBitSize}
 				>
-					{type.kind === 'int' || type.kind === 'uint'
+					{type.kind === 'int'
 						? INT_BITSIZES.map((s) => (
 								<SlOption key={s} value={s}>
 									{s}
@@ -558,6 +580,33 @@ const PropertyDialog = ({
 					onSlChange={onRealChange}
 				>
 					Allow infinite and NaN values
+				</SlCheckbox>
+			);
+		}
+	}
+
+	let unsignedSection = null;
+	if (property != null && property.type != null) {
+		const isArray = property.type.kind === 'array';
+		const isMap = property.type.kind === 'map';
+		const hasInt =
+			property.type.kind === 'int' ||
+			(isArray && (property.type as ArrayType).elementType.kind === 'int') ||
+			(isMap && (property.type as MapType).elementType.kind === 'int');
+		if (hasInt) {
+			const typ: any = isArray
+				? (property.type as ArrayType).elementType
+				: isMap
+					? (property.type as MapType).elementType
+					: property.type;
+			unsignedSection = (
+				<SlCheckbox
+					className='property-dialog__unsigned'
+					size='small'
+					checked={typ.unsigned === true}
+					onSlChange={onUnsignedChange}
+				>
+					Unsigned
 				</SlCheckbox>
 			);
 		}
@@ -730,6 +779,7 @@ const PropertyDialog = ({
 									</span>
 								)}
 								{bitSizeSection}
+								{unsignedSection}
 								{precisionSection}
 								{scaleSection}
 								{realSection}
@@ -812,7 +862,7 @@ const PropertyDialog = ({
 };
 
 const hasBitSizeConstraint = (kind: string) => {
-	return kind === 'int' || kind === 'uint' || kind === 'float';
+	return kind === 'int' || kind === 'float';
 };
 
 const checkDecimalType = (type: DecimalType) => {

@@ -68,7 +68,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 		{
 			path:               "concatenated_gzip_members.parquet",
-			expectedProperties: []types.Property{{Name: "long_col", Type: types.Uint(64), Nullable: true}},
+			expectedProperties: []types.Property{{Name: "long_col", Type: types.Int(64).Unsigned(), Nullable: true}},
 		},
 		{
 			path:               "delta_length_byte_array.parquet",

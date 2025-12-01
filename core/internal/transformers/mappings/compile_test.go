@@ -28,7 +28,7 @@ func Test_Compile(t *testing.T) {
 		{Name: "model", Type: types.String()},
 		{Name: "engine", Type: types.Object([]types.Property{
 			{Name: "name", Type: types.String()},
-			{Name: "power", Type: types.Uint(32)},
+			{Name: "power", Type: types.Int(32).Unsigned()},
 			{Name: "afterburner", Type: types.String(), Nullable: true},
 		})},
 		{Name: "cx", Type: types.Decimal(4, 3)},
@@ -141,7 +141,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "engine.name?", dt: types.String(), compileErr: errors.New("invalid engine.name?: operator '?' can be used only with json")},
 		{expr: "engine['a name']", dt: types.String(), compileErr: errors.New(`invalid engine["a name"]: "a name" is not a valid property name`)},
 		{expr: "engine.power * 1.36", dt: types.String(), compileErr: errors.New("unexpected character '*'")},
-		{expr: "foo('hello')", dt: types.Uint(32), compileErr: errors.New(`function "foo" does not exist`)},
+		{expr: "foo('hello')", dt: types.Int(32).Unsigned(), compileErr: errors.New(`function "foo" does not exist`)},
 		{expr: "not true", dt: types.Boolean(), compileErr: errors.New(`property "not" does not exist`)},
 		{expr: "passenger", dt: types.String(), compileErr: errors.New(`property "passenger" does not exist`)},
 		{expr: "true && false", dt: types.Boolean(), compileErr: errors.New(`unexpected character '&'`)},

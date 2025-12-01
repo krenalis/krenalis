@@ -11,7 +11,7 @@ const TypeIcon = ({ kind, slot }: TypeIconProps) => {
 	let s = slot !== undefined ? slot : null;
 	if (kind === 'boolean') {
 		icon = <SlIcon slot={s} name='type-bold' />;
-	} else if (kind === 'int' || kind === 'uint' || kind === 'float' || kind === 'decimal' || kind === 'year') {
+	} else if (kind === 'int' || kind === 'float' || kind === 'decimal' || kind === 'year') {
 		icon = <SlIcon slot={s} name='123' />;
 	} else if (kind === 'datetime' || kind === 'date') {
 		icon = <SlIcon slot={s} name='calendar-date' />;

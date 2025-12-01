@@ -284,10 +284,11 @@ func toString(v any, t types.Type) string {
 		return v.(string)
 	case types.BooleanKind:
 		return strconv.FormatBool(v.(bool))
-	case types.IntKind, types.YearKind:
+	case types.IntKind:
+		if t.IsUnsigned() {
+			return strconv.FormatUint(uint64(v.(uint)), 10)
+		}
 		return strconv.Itoa(v.(int))
-	case types.UintKind:
-		return strconv.FormatUint(uint64(v.(uint)), 10)
 	case types.FloatKind:
 		return strconv.FormatFloat(v.(float64), 'g', -1, t.BitSize())
 	case types.DecimalKind:
@@ -298,6 +299,8 @@ func toString(v any, t types.Type) string {
 		return v.(time.Time).Format(time.DateOnly)
 	case types.TimeKind:
 		return v.(time.Time).Format("15:04:05.999999999Z07:00")
+	case types.YearKind:
+		return strconv.Itoa(v.(int))
 	case types.JSONKind:
 		return string(v.(json.Value))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:

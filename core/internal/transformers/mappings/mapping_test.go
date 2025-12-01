@@ -23,12 +23,12 @@ func Test_InOutPaths(t *testing.T) {
 		{Name: "a", Type: types.String()},
 		{Name: "b", Type: types.Map(types.Object([]types.Property{
 			{Name: "x", Type: types.String()},
-			{Name: "y", Type: types.Uint(32)},
+			{Name: "y", Type: types.Int(32).Unsigned()},
 			{Name: "z", Type: types.String(), Nullable: true},
 		}))},
 		{Name: "c", Type: types.Object([]types.Property{
 			{Name: "x", Type: types.String()},
-			{Name: "y", Type: types.Uint(32)},
+			{Name: "y", Type: types.Int(32).Unsigned()},
 			{Name: "z", Type: types.String(), Nullable: true},
 		})},
 		{Name: "d", Type: types.JSON()},
@@ -36,7 +36,7 @@ func Test_InOutPaths(t *testing.T) {
 
 	outSchema := types.Object([]types.Property{
 		{Name: "foo", Type: types.String()},
-		{Name: "boo", Type: types.Uint(32)},
+		{Name: "boo", Type: types.Int(32).Unsigned()},
 	})
 
 	tests := []struct {
@@ -102,12 +102,12 @@ func Test_Transform(t *testing.T) {
 		{Name: "a", Type: types.String()},
 		{Name: "b", Type: types.Map(types.Object([]types.Property{
 			{Name: "x", Type: types.String()},
-			{Name: "y", Type: types.Uint(32)},
+			{Name: "y", Type: types.Int(32).Unsigned()},
 			{Name: "z", Type: types.String(), Nullable: true},
 		}))},
 		{Name: "c", Type: types.Object([]types.Property{
 			{Name: "x", Type: types.String()},
-			{Name: "y", Type: types.Uint(32)},
+			{Name: "y", Type: types.Int(32).Unsigned()},
 			{Name: "z", Type: types.String(), Nullable: true},
 		})},
 		{Name: "d", Type: types.JSON()},
