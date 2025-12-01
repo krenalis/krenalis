@@ -190,14 +190,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.BooleanKind:
 			return v.(bool), nil
 		case types.IntKind:
-			if st.IsUnsigned() {
-				if st.BitSize() == 8 {
+			if st.BitSize() == 8 {
+				if st.IsUnsigned() {
 					return v.(uint) > 0, nil
 				}
-			} else {
-				if st.BitSize() == 8 {
-					return v.(int) != 0, nil
-				}
+				return v.(int) != 0, nil
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
