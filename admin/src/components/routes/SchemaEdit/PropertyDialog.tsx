@@ -517,6 +517,7 @@ const PropertyDialog = ({
 					max={MAX_DECIMAL_PRECISION}
 					maxlength={2}
 					onSlInput={onInputPrecision}
+					noSpinButtons
 				/>
 			);
 			scaleSection = (
@@ -529,6 +530,7 @@ const PropertyDialog = ({
 					max={MAX_DECIMAL_SCALE}
 					maxlength={2}
 					onSlInput={onInputScale}
+					noSpinButtons
 				/>
 			);
 		}
@@ -593,6 +595,7 @@ const PropertyDialog = ({
 						type='number'
 						onSlInput={onInputMaxBytes}
 						disabled={!isMaxBytesEnabled}
+						noSpinButtons
 					/>
 				</>
 			);
@@ -614,6 +617,7 @@ const PropertyDialog = ({
 						type='number'
 						onSlInput={onInputMaxLength}
 						disabled={!isMaxLengthEnabled}
+						noSpinButtons
 					/>
 				</>
 			);

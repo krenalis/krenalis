@@ -55,6 +55,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				maxlength={5}
 				onSlInput={onSettingInput}
 				value={settings?.port || ''}
+				noSpinButtons
 			/>
 			<SlInput
 				name='username'
