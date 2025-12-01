@@ -332,13 +332,13 @@ func sameType(t1, t2 Type) error {
 	}
 	// Minimum and maximum.
 	switch {
-	case t1.kind == IntKind && !t1.unsigned && t1.size < 4: // 8, 16, 24, and 32 bits
-		if t1.p != t2.p || t1.s != t2.s {
-			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", t1.p, t1.s, t2.p, t2.s)
-		}
 	case t1.kind == IntKind && t1.unsigned && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", uint32(t1.p), uint32(t1.s), uint32(t2.p), uint32(t2.s))
+		}
+	case t1.kind == IntKind && !t1.unsigned && t1.size < 4: // 8, 16, 24, and 32 bits
+		if t1.p != t2.p || t1.s != t2.s {
+			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", t1.p, t1.s, t2.p, t2.s)
 		}
 	case t1.kind == IntKind || t1.kind == FloatKind:
 		if t1.vl != t2.vl {
