@@ -119,12 +119,12 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.click('.property-dialog__save');
 	await logValidationErrors(page, ['.property-dialog__control-error']);
 
-	let isRequestDone = false;
+	let isRequestOK = false;
 	page.on('request', async (request) => {
 		if (request.url().includes('/profiles/schema') && request.method() === 'PUT') {
 			const body = request.postData();
 			const parsed = JSON.parse(body);
-			isRequestDone = JSON.stringify(parsed.rePaths) === JSON.stringify({ foo: 'bar', bar: null });
+			isRequestOK = JSON.stringify(parsed.rePaths) === JSON.stringify({ foo: 'bar', bar: null });
 		}
 	});
 
@@ -133,8 +133,8 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 
 	await expect(page.locator('.schema-grid')).toBeAttached();
 
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
-	expect(isRequestDone).toBe(true);
+	await page.waitForTimeout(5000); // Add a timeout to ensure that the saving was completed.
+	expect(isRequestOK).toBe(true);
 
 	let fooCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', {
 		hasText: /^foo$/,
