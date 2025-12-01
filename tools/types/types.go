@@ -465,8 +465,8 @@ func (t Type) BitSize() int {
 	return bitSize[t.size]
 }
 
-// Unsigned returns t as an unsigned int with the maximum range of values based
-// in its bit size. It must be an int type and should not be already unsigned
+// Unsigned returns t as an unsigned int with the maximum value range allowed by
+// its bit size. t must be an int type and must not already be unsigned,
 // otherwise it panics.
 func (t Type) Unsigned() Type {
 	if t.kind != IntKind {
