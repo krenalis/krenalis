@@ -62,7 +62,7 @@ WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::t
 
 UPDATE workspaces
 SET profile_schema = REPLACE(profile_schema::text, '"regexp": ', '"pattern": ')::jsonb
-WHERE profile_schema::text LIKE '%"byteLen": %';
+WHERE profile_schema::text LIKE '%"regexp": %';
 
 UPDATE pipelines
 SET in_schema = REPLACE(in_schema::text, '"regexp": ', '"pattern": ')::jsonb
