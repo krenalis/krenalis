@@ -241,6 +241,9 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {
+			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":20,"maximum":30}`,
+			Type: Int(32).Unsigned().WithUnsignedRange(20, 30),
+		}, {
 			Data: `{"kind":"float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
 			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
 		}, {

@@ -3568,7 +3568,7 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 
 function typeDescription(type: Type): ReactNode[] {
 	let elements: ReactNode[] = [];
-	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
+	if (type.kind === 'int' || type.kind === 'float') {
 		if (type.minimum != null) {
 			elements.push(<div>Minimum: {type.minimum}</div>);
 		}

@@ -2,7 +2,7 @@ import { Filter, FilterCondition } from '../lib/api/types/pipeline';
 
 const MIN_INT = BigInt('-9223372036854775808');
 const MAX_INT = BigInt('9223372036854775807');
-const MAX_UINT = BigInt('18446744073709551615');
+const MAX_UNSIGNED = BigInt('18446744073709551615');
 const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
@@ -119,7 +119,7 @@ const isInt = (s: string): boolean => {
 	if ((s.length > 0 && s[0] === '-') || s[0] === '+') {
 		t = s.slice(1);
 	}
-	if (!isUint(t)) {
+	if (!isUnsigned(t)) {
 		return false;
 	}
 	const n = BigInt(s);
@@ -172,9 +172,9 @@ const isUUID = (s: string): boolean => {
 	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-9][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 };
 
-// isUint checks whether the string s represents a valid uint value that can be
-// used as a filter value.
-const isUint = (s: string): boolean => {
+// isUnsigned checks whether the string s represents a valid unsigned int value
+// that can be used as a filter value.
+const isUnsigned = (s: string): boolean => {
 	if (s.length === 0) {
 		return false;
 	}
@@ -188,7 +188,7 @@ const isUint = (s: string): boolean => {
 		}
 	}
 	const n = BigInt(s);
-	return n <= MAX_UINT;
+	return n <= MAX_UNSIGNED;
 };
 
 // isValidPropertyPath checks whether s is a valid property path.
@@ -329,7 +329,7 @@ export {
 	isInt,
 	isTime,
 	isUUID,
-	isUint,
+	isUnsigned,
 	isValidPropertyPath,
 	isYear,
 	parseText,

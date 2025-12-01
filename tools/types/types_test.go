@@ -18,8 +18,8 @@ func Test_BitSize(t *testing.T) {
 		if got := Int(s).BitSize(); s != got {
 			t.Errorf("Int(%d).BitSize(): expected %d, got %d", s, s, got)
 		}
-		if got := Uint(s).BitSize(); s != got {
-			t.Errorf("Uint(%d).BitSize(): expected %d, got %d", s, s, got)
+		if got := Int(s).Unsigned().BitSize(); s != got {
+			t.Errorf("Int(%d).Unsigned().BitSize(): expected %d, got %d", s, s, got)
 		}
 	}
 
@@ -130,8 +130,8 @@ func Test_Ranges(t *testing.T) {
 		if min, max := Int(s).IntRange(); min != -1<<(s-1) || max != 1<<(s-1)-1 {
 			t.Errorf("Int(%d).IntRange(): expected (%d, %d), got (%d, %d)", s, -1<<(s-1), 1<<(s-1)-1, min, max)
 		}
-		if min, max := Uint(s).UintRange(); min != 0 || max != 1<<s-1 {
-			t.Errorf("Int(%d).IntRange(): expected (%d, %d), got (%d, %d)", s, 0, 1<<s-1, min, max)
+		if min, max := Int(s).Unsigned().UnsignedRange(); min != 0 || max != 1<<s-1 {
+			t.Errorf("Int(%d).Unsigned().UnsignedRange(): expected (%d, %d), got (%d, %d)", s, 0, 1<<s-1, min, max)
 		}
 	}
 
@@ -260,17 +260,17 @@ func Test_Unique(t *testing.T) {
 	})
 }
 
-func Test_WithUintRange(t *testing.T) {
+func Test_WithUnsignedRange(t *testing.T) {
 	t.Run("uint8 range", func(t *testing.T) {
-		u := Uint(8).WithUintRange(10, 20)
-		min, max := u.UintRange()
+		u := Int(8).Unsigned().WithUnsignedRange(10, 20)
+		min, max := u.UnsignedRange()
 		if min != 10 || max != 20 {
 			t.Fatalf("expected [10,20], got [%d,%d]", min, max)
 		}
 	})
 	t.Run("uint64 same range", func(t *testing.T) {
-		u := Uint(64)
-		u2 := u.WithUintRange(0, math.MaxUint64)
+		u := Int(64).Unsigned()
+		u2 := u.WithUnsignedRange(0, math.MaxUint64)
 		if !Equal(u, u2) {
 			t.Fatalf("expected unchanged type")
 		}
@@ -281,7 +281,7 @@ func Test_WithUintRange(t *testing.T) {
 				t.Fatal("expected panic")
 			}
 		}()
-		Uint(8).WithUintRange(300, 301)
+		Int(8).Unsigned().WithUnsignedRange(300, 301)
 	})
 	t.Run("max less than min", func(t *testing.T) {
 		defer func() {
@@ -289,7 +289,7 @@ func Test_WithUintRange(t *testing.T) {
 				t.Fatal("expected panic")
 			}
 		}()
-		Uint(8).WithUintRange(5, 4)
+		Int(8).Unsigned().WithUnsignedRange(5, 4)
 	})
 	t.Run("max greater than max", func(t *testing.T) {
 		defer func() {
@@ -297,7 +297,7 @@ func Test_WithUintRange(t *testing.T) {
 				t.Fatal("expected panic")
 			}
 		}()
-		Uint(8).WithUintRange(0, math.MaxUint16)
+		Int(8).Unsigned().WithUnsignedRange(0, math.MaxUint16)
 	})
 	t.Run("wrong kind", func(t *testing.T) {
 		defer func() {
@@ -305,7 +305,7 @@ func Test_WithUintRange(t *testing.T) {
 				t.Fatal("expected panic")
 			}
 		}()
-		Int(8).WithUintRange(0, 1)
+		Int(8).WithUnsignedRange(0, 1)
 	})
 }
 
@@ -315,6 +315,7 @@ func sameType(t1, t2 Type) error {
 	if t1.kind == t2.kind &&
 		t1.size == t2.size &&
 		t1.generic == t2.generic &&
+		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
 		t1.p == t2.p &&
@@ -331,15 +332,15 @@ func sameType(t1, t2 Type) error {
 	}
 	// Minimum and maximum.
 	switch {
-	case t1.kind == IntKind && t1.size < 4: // 8, 16, 24, and 32 bits
+	case t1.kind == IntKind && !t1.unsigned && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", t1.p, t1.s, t2.p, t2.s)
 		}
-	case t1.kind == UintKind && t1.size < 4: // 8, 16, 24, and 32 bits
+	case t1.kind == IntKind && t1.unsigned && t1.size < 4: // 8, 16, 24, and 32 bits
 		if t1.p != t2.p || t1.s != t2.s {
 			return fmt.Errorf("expected range [%d,%d], got [%d,%d]", uint32(t1.p), uint32(t1.s), uint32(t2.p), uint32(t2.s))
 		}
-	case t1.kind == IntKind || t1.kind == UintKind || t1.kind == FloatKind:
+	case t1.kind == IntKind || t1.kind == FloatKind:
 		if t1.vl != t2.vl {
 			if t1.vl == nil {
 				return fmt.Errorf("expected no range, got %v", t2.vl)

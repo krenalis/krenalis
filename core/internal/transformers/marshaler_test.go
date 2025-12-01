@@ -54,27 +54,27 @@ var schema = types.Object([]types.Property{
 	},
 	{
 		Name:         "Uint8",
-		Type:         types.Uint(8),
+		Type:         types.Int(8).Unsigned(),
 		ReadOptional: true,
 	},
 	{
 		Name:         "Uint16",
-		Type:         types.Uint(16),
+		Type:         types.Int(16).Unsigned(),
 		ReadOptional: true,
 	},
 	{
 		Name:         "Uint24",
-		Type:         types.Uint(24),
+		Type:         types.Int(24).Unsigned(),
 		ReadOptional: true,
 	},
 	{
 		Name:         "Uint32",
-		Type:         types.Uint(32),
+		Type:         types.Int(32).Unsigned(),
 		ReadOptional: true,
 	},
 	{
 		Name:         "Uint64",
-		Type:         types.Uint(64),
+		Type:         types.Int(64).Unsigned(),
 		ReadOptional: true,
 	},
 	{

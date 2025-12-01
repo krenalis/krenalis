@@ -357,31 +357,20 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 			}
 		}
 		if s != "" {
-			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-				if min, max := t.IntRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+			if t.unsigned {
+				if n, err := strconv.ParseUint(s, 10, 64); err == nil {
+					if min, max := t.UnsignedRange(); n < min || n > max {
+						return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+					}
+					return uint(n), nil
 				}
-				return int(n), nil
-			}
-		}
-	case UintKind:
-		var s string
-		switch v.Kind() {
-		case '0':
-			if t.BitSize() != 64 {
-				s = string(v)
-			}
-		case '"':
-			if t.BitSize() == 64 {
-				s = string(d.unquoteString(v))
-			}
-		}
-		if s != "" {
-			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
-				if min, max := t.UintRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+			} else {
+				if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+					if min, max := t.IntRange(); n < min || n > max {
+						return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+					}
+					return int(n), nil
 				}
-				return uint(n), nil
 			}
 		}
 	case FloatKind:

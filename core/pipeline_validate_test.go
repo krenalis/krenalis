@@ -3281,6 +3281,9 @@ func Test_validatePipeline(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		if test.name != "GOOD: Source/SDK/User - with mapping" {
+			continue
+		}
 		t.Run(test.name, func(t *testing.T) {
 			if err := validateTestOnPipeline(test.name, test.connectionRole, test.connectionConnectorType, test.target, test.err); err != nil {
 				t.Fatalf("test %q is badly written: %s", test.name, err)

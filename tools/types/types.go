@@ -81,7 +81,6 @@ const (
 	StringKind
 	BooleanKind
 	IntKind
-	UintKind
 	FloatKind
 	DecimalKind
 	DateTimeKind
@@ -100,7 +99,6 @@ var kindName = []string{
 	"string",
 	"boolean",
 	"int",
-	"uint",
 	"float",
 	"decimal",
 	"datetime",
@@ -162,9 +160,10 @@ type Type struct {
 
 	size int8 // size for int, uint and float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
-	generic bool // generic reports whether it is a generic type.
-	unique  bool // unique reports whether the elements of an array must be unique.
-	real    bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
+	generic  bool // generic reports whether it is a generic type.
+	unsigned bool // unsigned reports whether it as an unsigned int.
+	unique   bool // unique reports whether the elements of an array must be unique.
+	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
 	// p represents
 	//   - minimum value for int with 8, 16, 24, and 32 bits
@@ -186,7 +185,7 @@ type Type struct {
 	//   - []string with the values for string
 	//   - *regexp.Regexp value for string
 	//   - intRange value for int with 64 bits
-	//   - uintRange value for uint with 64 bits
+	//   - unsignedRange value for uint with 64 bits
 	//   - floatRange value for float
 	//   - decimalRange value for decimal
 	//   - Properties{properties, names} for object
@@ -244,31 +243,6 @@ func Int(size int) Type {
 		t.size = 3
 		t.p = MinInt32
 		t.s = MaxInt32
-	case 64:
-		t.size = 4
-	default:
-		panic("bit size is not valid")
-	}
-	return t
-}
-
-// Uint returns the uint type with the provided bit size. It panics if size is
-// not 8, 16, 24, 32 or 64.
-func Uint(size int) Type {
-	t := Type{kind: UintKind}
-	switch size {
-	case 8:
-		t.s = int32(MaxUint8)
-	case 16:
-		t.size = 1
-		t.s = int32(MaxUint16)
-	case 24:
-		t.size = 2
-		t.s = int32(MaxUint24)
-	case 32:
-		t.size = 3
-		s := MaxUint32
-		t.s = int32(s)
 	case 64:
 		t.size = 4
 	default:
@@ -465,7 +439,7 @@ func (t Type) KindName() string {
 func (t Type) String() string {
 	s := t.kind.String()
 	switch t.kind {
-	case IntKind, UintKind, FloatKind:
+	case IntKind, FloatKind:
 		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
 	case DecimalKind:
 		if t.p > 0 {
@@ -485,13 +459,50 @@ func (t Type) Kind() Kind {
 	return t.kind
 }
 
-// BitSize returns the bit size of t as 8, 16, 24, 32 or 64. t must be an int,
-// uint or float type, otherwise it panics.
+// BitSize returns the bit size of t as 8, 16, 24, 32 or 64. t must be an int or
+// float type, otherwise it panics.
 func (t Type) BitSize() int {
-	if t.kind != IntKind && t.kind != UintKind && t.kind != FloatKind {
-		panic("type is not an int, uint or float type")
+	if t.kind != IntKind && t.kind != FloatKind {
+		panic("type is not an int or float type")
 	}
 	return bitSize[t.size]
+}
+
+// Unsigned returns t as an unsigned int with the maximum range of values based
+// in its bit size. It must be an int type and should not be already unsigned
+// otherwise it panics.
+func (t Type) Unsigned() Type {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	if t.unsigned {
+		panic("type is already unsigned")
+	}
+	t.p = 0
+	switch bitSize[t.size] {
+	case 8:
+		t.s = int32(MaxUint8)
+	case 16:
+		t.s = int32(MaxUint16)
+	case 24:
+		t.s = int32(MaxUint24)
+	case 32:
+		s := MaxUint32
+		t.s = int32(s)
+	case 64:
+		t.s = 0
+	}
+	t.vl = nil
+	t.unsigned = true
+	return t
+}
+
+// IsUnsigned reports whether t is unsigned. Panics if t is not an int type.
+func (t Type) IsUnsigned() bool {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	return t.unsigned
 }
 
 type intRange struct{ min, max int64 }
@@ -501,6 +512,9 @@ type intRange struct{ min, max int64 }
 func (t Type) IntRange() (min, max int64) {
 	if t.kind != IntKind {
 		panic("type is not an int type")
+	}
+	if t.unsigned {
+		panic("cannot get int range for an unsigned int")
 	}
 	if t.size < 4 {
 		// 8, 16, 24, and 32 bits.
@@ -519,6 +533,9 @@ func (t Type) IntRange() (min, max int64) {
 func (t Type) WithIntRange(min, max int64) Type {
 	if t.kind != IntKind {
 		panic("type is not an int type")
+	}
+	if t.unsigned {
+		panic("cannot set int range for an unsigned int")
 	}
 	Min, Max := minInt[t.size], maxInt[t.size]
 	if min == Min && max == Max {
@@ -543,31 +560,35 @@ func (t Type) WithIntRange(min, max int64) Type {
 	return t
 }
 
-type uintRange struct{ min, max uint64 }
-
-// UintRange returns the minimum and maximum value for t. t must be an uint
-// type, otherwise it panics.
-func (t Type) UintRange() (min, max uint64) {
-	if t.kind != UintKind {
-		panic("type is not an uint type")
+// UnsignedRange returns the minimum and maximum value for t. t must be an
+// unsigned int type, otherwise it panics.
+func (t Type) UnsignedRange() (min, max uint64) {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	if !t.unsigned {
+		panic("type is not an unsigned int type")
 	}
 	if t.size < 4 {
 		// 8, 16, 24, and 32 bits.
 		return uint64(uint32(t.p)), uint64(uint32(t.s))
 	}
 	// 64 bits.
-	if i, ok := t.vl.(uintRange); ok {
-		return i.min, i.max
+	if i, ok := t.vl.(intRange); ok {
+		return uint64(i.min), uint64(i.max)
 	}
 	return 0, MaxUint64
 }
 
-// WithUintRange returns t but with values in [min,max]. t must be an uint type.
+// WithUnsignedRange returns t but with values in [min,max]. t must be an uint type.
 // min cannot be greater than max. min and max must be within the range of
 // values of t. It panics it previous restrictions are not met.
-func (t Type) WithUintRange(min, max uint64) Type {
-	if t.kind != UintKind {
-		panic("type is not an uint type")
+func (t Type) WithUnsignedRange(min, max uint64) Type {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	if !t.unsigned {
+		panic("type is not an unsigned int type")
 	}
 	Max := maxUint[t.size]
 	if min == 0 && max == Max {
@@ -587,7 +608,7 @@ func (t Type) WithUintRange(min, max uint64) Type {
 		t.p, t.s = int32(min), int32(max)
 	} else {
 		// 64 bits.
-		t.vl = uintRange{min, max}
+		t.vl = intRange{int64(min), int64(max)}
 	}
 	return t
 }

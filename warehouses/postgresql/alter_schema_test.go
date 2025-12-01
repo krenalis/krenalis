@@ -303,13 +303,13 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Int(64).WithIntRange(0, 10), "bigint"},
 
 		// uint.
-		{types.Uint(8), "smallint"},
-		{types.Uint(16), "integer"},
-		{types.Uint(16).WithUintRange(0, 10), "integer"},
-		{types.Uint(24), "integer"},
-		{types.Uint(32), "bigint"},
-		{types.Uint(64), "numeric(20, 0)"},
-		{types.Uint(64).WithUintRange(1, 200), "numeric(20, 0)"},
+		{types.Int(8).Unsigned(), "smallint"},
+		{types.Int(16).Unsigned(), "integer"},
+		{types.Int(16).Unsigned().WithUnsignedRange(0, 10), "integer"},
+		{types.Int(24).Unsigned(), "integer"},
+		{types.Int(32).Unsigned(), "bigint"},
+		{types.Int(64).Unsigned(), "numeric(20, 0)"},
+		{types.Int(64).Unsigned().WithUnsignedRange(1, 200), "numeric(20, 0)"},
 
 		// float.
 		{types.Float(32), "real"},
@@ -355,7 +355,7 @@ func Test_typeToPostgresType(t *testing.T) {
 		// array.
 		{types.Array(types.String()), "character varying[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
-		{types.Array(types.Uint(32)), "bigint[]"},
+		{types.Array(types.Int(32).Unsigned()), "bigint[]"},
 
 		// map.
 		{types.Map(types.String()), "jsonb"},

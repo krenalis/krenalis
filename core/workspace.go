@@ -2066,7 +2066,6 @@ func suitableAsIdentifier(t types.Type) bool {
 	switch t.Kind() {
 	case types.StringKind,
 		types.IntKind,
-		types.UintKind,
 		types.UUIDKind,
 		types.IPKind:
 		return true

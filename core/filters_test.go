@@ -25,7 +25,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
 		{Name: "b", Type: types.Int(32)},
-		{Name: "c", Type: types.Uint(8)},
+		{Name: "c", Type: types.Int(8).Unsigned()},
 		{Name: "d", Type: types.Float(32)},
 		{Name: "e", Type: types.Float(64)},
 		{Name: "f", Type: types.Decimal(10, 3)},
@@ -141,7 +141,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
 		{Name: "b", Type: types.Int(32)},
-		{Name: "c", Type: types.Uint(8)},
+		{Name: "c", Type: types.Int(8).Unsigned()},
 		{Name: "d", Type: types.Float(32)},
 		{Name: "e", Type: types.Float(64)},
 		{Name: "f", Type: types.Decimal(10, 3)},
@@ -454,7 +454,7 @@ func Test_parseUint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.n, func(t *testing.T) {
-			got, valid := parseUint(test.n)
+			got, valid := parseUnsigned(test.n)
 			if !valid {
 				if test.valid {
 					t.Fatalf("expected valid, got invalid")

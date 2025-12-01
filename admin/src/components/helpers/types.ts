@@ -3,7 +3,10 @@ import Type, { StringType } from '../../lib/api/types/types';
 function toMeergoStringType(type: Type, nullable?: boolean) {
 	let t: string;
 
-	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
+	if (type.kind === 'int') {
+		const label = type.unsigned ? 'unsigned int' : 'int';
+		t = `${label}(${type.bitSize})`;
+	} else if (type.kind === 'float') {
 		t = `${type.kind}(${type.bitSize})`;
 	} else if (type.kind === 'decimal') {
 		t = `decimal(${type.precision}, ${type.scale || 0})`;
@@ -32,7 +35,6 @@ function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean)
 			t = 'boolean';
 			break;
 		case 'int':
-		case 'uint':
 			if (type.bitSize === 64) {
 				t = 'bigint';
 			} else {
@@ -100,7 +102,6 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 			t = 'bool';
 			break;
 		case 'int':
-		case 'uint':
 			t = 'int';
 			break;
 		case 'float':

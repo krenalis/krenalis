@@ -48,13 +48,13 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "rank_int32", Type: types.Int(32), ReadOptional: true},
 		{Name: "rank_int64", Type: types.Int(64), ReadOptional: true},
 		{Name: "first_name", Type: types.String(), ReadOptional: true},
-		{Name: "rank_uint8", Type: types.Uint(8), ReadOptional: true},
-		{Name: "rank_uint16", Type: types.Uint(16), ReadOptional: true},
+		{Name: "rank_uint8", Type: types.Int(8).Unsigned(), ReadOptional: true},
+		{Name: "rank_uint16", Type: types.Int(16).Unsigned(), ReadOptional: true},
 		// This cannot be tested as Parquet does not support 24-bit integers,
 		// which are therefore exported as 32-bit ints.
-		// {Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
-		{Name: "rank_uint32", Type: types.Uint(32), ReadOptional: true},
-		{Name: "rank_uint64", Type: types.Uint(64), ReadOptional: true},
+		// {Name: "rank_uint24", Type: types.Int(24).Unsigned(), ReadOptional: true},
+		{Name: "rank_uint32", Type: types.Int(32).Unsigned(), ReadOptional: true},
+		{Name: "rank_uint64", Type: types.Int(64).Unsigned(), ReadOptional: true},
 		{Name: "last_name", Type: types.String(), ReadOptional: true},
 		{Name: "score32", Type: types.Float(32), ReadOptional: true},
 		{Name: "score64", Type: types.Float(64), ReadOptional: true},
@@ -290,7 +290,7 @@ func TestExport(t *testing.T) {
 
 	exportedColumns := []types.Property{
 		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
-		{Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
+		{Name: "rank_uint24", Type: types.Int(24).Unsigned(), ReadOptional: true},
 		{Name: "p_year", Type: types.Year(), ReadOptional: true},
 		{Name: "p_inet", Type: types.IP(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
@@ -392,23 +392,25 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 			continue
 		}
 		column := writer.columnByName(name)
-		switch column.Type.Kind() {
+		switch t := column.Type; t.Kind() {
 		case types.StringKind:
 			record[name] = string(value.([]byte))
 		case types.IntKind:
-			if column.Type.BitSize() <= 32 {
-				record[name] = int(value.(int32))
+			if t.IsUnsigned() {
+				if t.BitSize() <= 32 {
+					record[name] = uint(value.(int32))
+				} else {
+					record[name] = uint(value.(int64))
+				}
 			} else {
-				record[name] = int(value.(int64))
-			}
-		case types.UintKind:
-			if column.Type.BitSize() <= 32 {
-				record[name] = uint(value.(int32))
-			} else {
-				record[name] = uint(value.(int64))
+				if t.BitSize() <= 32 {
+					record[name] = int(value.(int32))
+				} else {
+					record[name] = int(value.(int64))
+				}
 			}
 		case types.FloatKind:
-			if column.Type.BitSize() == 32 {
+			if t.BitSize() == 32 {
 				record[name] = float64(value.(float32))
 			}
 		case types.DecimalKind:

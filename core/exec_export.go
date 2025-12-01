@@ -109,7 +109,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 	// alreadyExportedKeys keeps track of the keys of users exported to the
 	// database during this export, indexed by their table key value (which can
-	// have Go type int, uint o string).
+	// have Go type int, uint or string).
 	var alreadyExportedKeys map[any]struct{}
 
 	// Get the writer.
@@ -397,9 +397,8 @@ func errMatchingPropertyConversion(in, ex string) error {
 // are the types of the internal and external properties, respectively.
 //
 // Supported conversions are:
-//   - int to int, uint, and string
-//   - uint to int, uint, and string
-//   - string to int, uint, uuid, and string
+//   - int to int and string
+//   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
 // It panics if v is nil or the types in and ex are not conforming to these
@@ -436,6 +435,31 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		}
 		return s, nil
 	case types.IntKind:
+		if ex.IsUnsigned() {
+			var i uint64
+			switch v := v.(type) {
+			case int:
+				if v < 0 {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+				i = uint64(v)
+			case uint:
+				i = uint64(v)
+			case string:
+				var err error
+				i, err = strconv.ParseUint(v, 10, 64)
+				if err != nil {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+			default:
+				panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
+			}
+			min, max := ex.UnsignedRange()
+			if i < min || i > max {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			return uint(i), nil
+		}
 		var i int64
 		switch v := v.(type) {
 		case int:
@@ -459,30 +483,6 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return int(i), nil
-	case types.UintKind:
-		var i uint64
-		switch v := v.(type) {
-		case int:
-			if v < 0 {
-				return nil, errMatchingPropertyConversion(inPath, outPath)
-			}
-			i = uint64(v)
-		case uint:
-			i = uint64(v)
-		case string:
-			var err error
-			i, err = strconv.ParseUint(v, 10, 64)
-			if err != nil {
-				return nil, errMatchingPropertyConversion(inPath, outPath)
-			}
-		default:
-			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
-		}
-		min, max := ex.UintRange()
-		if i < min || i > max {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		return uint(i), nil
 	case types.UUIDKind:
 		switch in.Kind() {
 		case types.StringKind:
@@ -546,7 +546,7 @@ func stringifyMatchingValue(v any) string {
 		return v
 	case int: // int(n)
 		return strconv.Itoa(v)
-	case uint: // uint(n)
+	case uint: // unsigned int(n)
 		return strconv.FormatUint(uint64(v), 10)
 	default:
 		panic(fmt.Sprintf("unexpected matching property value with type %T", v))

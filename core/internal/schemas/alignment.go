@@ -193,19 +193,24 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		}
 		return &Error{Msg: fmt.Sprintf("regular expression of the %q property's type has changed from %s to %s", name, v1, v2)}
 	case types.IntKind:
+		if t1.IsUnsigned() != t2.IsUnsigned() {
+			if t1.IsUnsigned() {
+				return &Error{Msg: fmt.Sprintf("%q property's type has changed from unsigned %s to %s", name, t1, t2)}
+			}
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to unsigned %s", name, t1, t2)}
+		}
 		if t1.BitSize() != t2.BitSize() {
 			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
 		}
-		min1, max1 := t1.IntRange()
-		min2, max2 := t2.IntRange()
-		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
-	case types.UintKind:
-		if t1.BitSize() != t2.BitSize() {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
+		if t1.IsUnsigned() {
+			min1, max1 := t1.UnsignedRange()
+			min2, max2 := t2.UnsignedRange()
+			return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
+		} else {
+			min1, max1 := t1.IntRange()
+			min2, max2 := t2.IntRange()
+			return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
 		}
-		min1, max1 := t1.UintRange()
-		min2, max2 := t2.UintRange()
-		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
 	case types.FloatKind:
 		if t1.BitSize() != t2.BitSize() {
 			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}

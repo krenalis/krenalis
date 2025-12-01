@@ -70,7 +70,13 @@ func DecodeUUID(s []byte) (string, bool) {
 
 // Equal reports whether two types are equal.
 func Equal(t1, t2 Type) bool {
-	almostEqual := t1.kind == t2.kind && t1.size == t2.size && t1.generic == t2.generic && t1.unique == t2.unique && t1.real == t2.real && t1.p == t2.p && t1.s == t2.s
+	almostEqual := t1.kind == t2.kind &&
+		t1.size == t2.size &&
+		t1.generic == t2.generic &&
+		t1.unique == t2.unique &&
+		t1.unsigned == t2.unsigned &&
+		t1.real == t2.real &&
+		t1.p == t2.p && t1.s == t2.s
 	if !almostEqual {
 		return false
 	}
@@ -83,7 +89,7 @@ func Equal(t1, t2 Type) bool {
 	switch vl1 := t1.vl.(type) {
 	case Type:
 		return Equal(vl1, t2.vl.(Type))
-	case intRange, uintRange, floatRange, string:
+	case intRange, floatRange, string:
 		return vl1 == t2.vl
 	case decimalRange:
 		vl2 := t2.vl.(decimalRange)

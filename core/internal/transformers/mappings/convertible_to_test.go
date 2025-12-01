@@ -39,7 +39,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Int(32), types.Boolean(), false},
 		{types.Int(32), types.Int(32), true},
 		{types.Int(32), types.Int(8), true},
-		{types.Int(32), types.Uint(64), true},
+		{types.Int(32), types.Int(64).Unsigned(), true},
 		{types.Int(32), types.Float(64), true},
 		{types.Int(32), types.JSON(), true},
 		{types.Int(32), types.Year(), true},
@@ -49,14 +49,14 @@ func TestConvertibleTo(t *testing.T) {
 		// int(64).
 		{types.Int(64), types.Int(64), true},
 		// uint(16).
-		{types.Uint(16), types.Uint(16), true},
+		{types.Int(16).Unsigned(), types.Int(16).Unsigned(), true},
 		// uint(24).
-		{types.Uint(24), types.Uint(24), true},
+		{types.Int(24).Unsigned(), types.Int(24).Unsigned(), true},
 		// uint(32).
-		{types.Uint(32), types.Uint(32), true},
+		{types.Int(32).Unsigned(), types.Int(32).Unsigned(), true},
 		// uint(64).
-		{types.Uint(64), types.Uint(64), true},
-		{types.Uint(64), types.Year(), true},
+		{types.Int(64).Unsigned(), types.Int(64).Unsigned(), true},
+		{types.Int(64).Unsigned(), types.Year(), true},
 		// float(32).
 		{types.Float(32), types.Float(32), true},
 		// float(64).
@@ -79,7 +79,7 @@ func TestConvertibleTo(t *testing.T) {
 		// json.
 		{types.JSON(), types.Boolean(), true},
 		{types.JSON(), types.Int(64), true},
-		{types.JSON(), types.Uint(32), true},
+		{types.JSON(), types.Int(32).Unsigned(), true},
 		{types.JSON(), types.Float(32), true},
 		{types.JSON(), types.Decimal(10, 3), true},
 		{types.JSON(), types.DateTime(), true},
@@ -95,7 +95,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.IP(), types.IP(), true},
 		// array.
 		{types.Array(types.String()), types.Int(32), false},
-		{types.Array(types.String()), types.Uint(32), false},
+		{types.Array(types.String()), types.Int(32).Unsigned(), false},
 		{types.Array(types.Int(32)), types.JSON(), true},
 		{types.Array(types.Float(64)), types.Array(types.Float(64)), true},
 		{types.Array(types.Int(32)), types.Array(types.Float(64)), true},
@@ -121,7 +121,7 @@ func TestConvertibleTo(t *testing.T) {
 		// map.
 		{types.Map(types.String()), types.JSON(), true},
 		{types.Map(types.String()), types.Int(32), false},
-		{types.Map(types.String()), types.Uint(32), false},
+		{types.Map(types.String()), types.Int(32).Unsigned(), false},
 		{types.Map(types.String()), types.JSON(), true},
 		{types.Map(types.String()), types.Array(types.String()), false},
 		{types.Map(types.String()), types.Object([]types.Property{{Name: "s", Type: types.String()}}), true},

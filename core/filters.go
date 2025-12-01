@@ -138,10 +138,11 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 		if cond.Values != nil {
 			values = make([]any, len(cond.Values))
 		}
-		kind := p.Type.Kind()
-		if kind == types.ArrayKind {
-			kind = p.Type.Elem().Kind()
+		t := p.Type
+		if t.Kind() == types.ArrayKind {
+			t = t.Elem()
 		}
+		kind := t.Kind()
 		for i, value := range cond.Values {
 			var v any
 			switch kind {
@@ -150,9 +151,11 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.BooleanKind:
 				v = value == "true"
 			case types.IntKind:
-				v, _ = parseInt(value)
-			case types.UintKind:
-				v, _ = parseUint(value)
+				if t.IsUnsigned() {
+					v, _ = parseUnsigned(value)
+				} else {
+					v, _ = parseInt(value)
+				}
 			case types.FloatKind:
 				v, _ = parseFloat(value, p.Type.BitSize())
 			case types.DecimalKind:
@@ -340,7 +343,7 @@ func parseInt(s string) (int, bool) {
 	case '+':
 		s = s[1:]
 	}
-	un, valid := parseUint(s)
+	un, valid := parseUnsigned(s)
 	if !valid {
 		return 0, false
 	}
@@ -351,6 +354,30 @@ func parseInt(s string) (int, bool) {
 		return 0, false
 	}
 	return sign * int(un), true
+}
+
+// parseUnsigned parses an unsigned int(64) from s and returns the unsigned
+// int(64) value and true. If s is not a valid uint(64), it returns 0 and false.
+func parseUnsigned(s string) (uint, bool) {
+	if len(s) == 0 {
+		return 0, false
+	}
+	if s == "0" {
+		return 0, true
+	}
+	var n uint
+	for i := range len(s) {
+		c := s[i]
+		if c < '0' || c > '9' || i == 0 && c == '0' {
+			return 0, false
+		}
+		n2 := n*10 + uint(c-'0')
+		if n2 < n {
+			return 0, false
+		}
+		n = n2
+	}
+	return n, true
 }
 
 // parseYear parses a year from s and returns the year and true.
@@ -374,30 +401,6 @@ func parseYear(s string) (int, bool) {
 		return 0, false
 	}
 	return year, true
-}
-
-// parseUint parses an uint(64) from s and returns the uint(64) value and true.
-// If s is not a valid uint(64), it returns 0 and false.
-func parseUint(s string) (uint, bool) {
-	if len(s) == 0 {
-		return 0, false
-	}
-	if s == "0" {
-		return 0, true
-	}
-	var n uint
-	for i := range len(s) {
-		c := s[i]
-		if c < '0' || c > '9' || i == 0 && c == '0' {
-			return 0, false
-		}
-		n2 := n*10 + uint(c-'0')
-		if n2 < n {
-			return 0, false
-		}
-		n = n2
-	}
-	return n, true
 }
 
 // retrieveFilterProperty retrieves a property in properties, located at a
@@ -525,7 +528,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 				if p.Type.Values() != nil {
 					return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
 				}
-			case types.IntKind, types.UintKind, types.FloatKind, types.DecimalKind:
+			case types.IntKind, types.FloatKind, types.DecimalKind:
 			case types.JSONKind:
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
@@ -641,9 +644,11 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			case types.StringKind, types.JSONKind:
 				valid = utf8.ValidString(value)
 			case types.IntKind:
-				_, valid = parseInt(value)
-			case types.UintKind:
-				_, valid = parseUint(value)
+				if t.IsUnsigned() {
+					_, valid = parseUnsigned(value)
+				} else {
+					_, valid = parseInt(value)
+				}
 			case types.FloatKind:
 				_, valid = parseFloat(value, t.BitSize())
 			case types.DecimalKind:

@@ -314,12 +314,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		// Check that the input property can be converted to the output property.
 		switch in.Type.Kind() {
-		case types.IntKind, types.UintKind:
+		case types.IntKind:
 			if k := out.Type.Kind(); k == types.UUIDKind {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		case types.UUIDKind:
-			if k := out.Type.Kind(); k == types.IntKind || k == types.UintKind {
+			if k := out.Type.Kind(); k == types.IntKind {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		}
@@ -490,9 +490,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("identity column %q not found within input schema", pipeline.IdentityColumn)
 		}
 		switch k := identityColumn.Type.Kind(); k {
-		case types.StringKind, types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind:
+		case types.StringKind, types.IntKind, types.UUIDKind, types.JSONKind:
 		default:
-			return errors.BadRequest("identity column %q has kind %s instead of int, uint uuid, json, or string", pipeline.IdentityColumn, k)
+			return errors.BadRequest("identity column %q has kind %s instead of int, uuid, json, or string", pipeline.IdentityColumn, k)
 		}
 		if identityColumn.ReadOptional {
 			return errors.BadRequest("identity column cannot be optional")
@@ -558,7 +558,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		// We can use the same criteria as for the allowed types of workspace identifiers,
 		// to simplify the specifications for warehouse drivers.
 		switch p.Type.Kind() {
-		case types.StringKind, types.IntKind, types.UintKind, types.UUIDKind, types.IPKind:
+		case types.StringKind, types.IntKind, types.UUIDKind, types.IPKind:
 			// Ok.
 		case types.DecimalKind:
 			if p.Type.Precision() != 0 {
@@ -724,14 +724,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 // matching property when exporting users to an API.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only int, uint, uuid, and string types are allowed.
-	return k == types.StringKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
+	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
 	// Only int, uint, uuid, and string types are allowed.
-	return k == types.StringKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
+	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
 // unusedPropertyPath returns the path of an unused property in the schema and

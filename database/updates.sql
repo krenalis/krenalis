@@ -36,22 +36,22 @@ UPDATE pipelines
 SET out_schema = REPLACE(out_schema::text, '"charLen": ', '"maxLength": ')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"charLen": %';
 
--- rename byteLen to maxByteLength
+-- rename byteLen to maxBytes
 
 UPDATE workspaces
-SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"byteLen": ', '"maxBytes": ')::jsonb
 WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"byteLen": %';
 
 UPDATE workspaces
-SET profile_schema = REPLACE(profile_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+SET profile_schema = REPLACE(profile_schema::text, '"byteLen": ', '"maxBytes": ')::jsonb
 WHERE profile_schema::text LIKE '%"byteLen": %';
 
 UPDATE pipelines
-SET in_schema = REPLACE(in_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+SET in_schema = REPLACE(in_schema::text, '"byteLen": ', '"maxBytes": ')::jsonb
 WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"byteLen": %';
 
 UPDATE pipelines
-SET out_schema = REPLACE(out_schema::text, '"byteLen": ', '"maxByteLength": ')::jsonb
+SET out_schema = REPLACE(out_schema::text, '"byteLen": ', '"maxBytes": ')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"byteLen": %';
 
 -- rename regexp to pattern

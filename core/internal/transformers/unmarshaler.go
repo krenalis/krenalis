@@ -570,51 +570,53 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			return true, nil
 		}
 	case types.IntKind:
-		var s string
-		switch v.Kind() {
-		case '0':
-			if t.BitSize() != 64 || !d.opts.int64AsString {
-				s = string(v)
-			}
-		case '"':
-			if t.BitSize() == 64 && d.opts.int64AsString {
-				s = d.unquoteString(v)
-			}
-		}
-		if s != "" {
-			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-				min, max := t.IntRange()
-				if n < min {
-					return nil, newRecordValidationError("", fmt.Sprintf("is less than %d", min))
+		if t.IsUnsigned() {
+			var s string
+			switch v.Kind() {
+			case '0':
+				if t.BitSize() != 64 || !d.opts.int64AsString {
+					s = string(v)
 				}
-				if n > max {
-					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %d", max))
+			case '"':
+				if t.BitSize() == 64 && d.opts.int64AsString {
+					s = d.unquoteString(v)
 				}
-				return int(n), nil
 			}
-		}
-	case types.UintKind:
-		var s string
-		switch v.Kind() {
-		case '0':
-			if t.BitSize() != 64 || !d.opts.int64AsString {
-				s = string(v)
-			}
-		case '"':
-			if t.BitSize() == 64 && d.opts.int64AsString {
-				s = d.unquoteString(v)
-			}
-		}
-		if s != "" {
-			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
-				min, max := t.UintRange()
-				if n < min {
-					return nil, newRecordValidationError("", fmt.Sprintf("is less than %d", min))
+			if s != "" {
+				if n, err := strconv.ParseUint(s, 10, 64); err == nil {
+					min, max := t.UnsignedRange()
+					if n < min {
+						return nil, newRecordValidationError("", fmt.Sprintf("is less than %d", min))
+					}
+					if n > max {
+						return nil, newRecordValidationError("", fmt.Sprintf("is greater than %d", max))
+					}
+					return uint(n), nil
 				}
-				if n > max {
-					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %d", max))
+			}
+		} else {
+			var s string
+			switch v.Kind() {
+			case '0':
+				if t.BitSize() != 64 || !d.opts.int64AsString {
+					s = string(v)
 				}
-				return uint(n), nil
+			case '"':
+				if t.BitSize() == 64 && d.opts.int64AsString {
+					s = d.unquoteString(v)
+				}
+			}
+			if s != "" {
+				if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+					min, max := t.IntRange()
+					if n < min {
+						return nil, newRecordValidationError("", fmt.Sprintf("is less than %d", min))
+					}
+					if n > max {
+						return nil, newRecordValidationError("", fmt.Sprintf("is greater than %d", max))
+					}
+					return int(n), nil
+				}
 			}
 		}
 	case types.FloatKind:
@@ -736,7 +738,7 @@ func toJavascriptType(t types.Type) string {
 		return "string"
 	case types.BooleanKind:
 		return "boolean"
-	case types.IntKind, types.UintKind:
+	case types.IntKind:
 		if t.BitSize() == 64 {
 			return "bigint"
 		}
@@ -772,7 +774,7 @@ func toPythonType(t types.Type) string {
 		return "str"
 	case types.BooleanKind:
 		return "bool"
-	case types.IntKind, types.UintKind:
+	case types.IntKind:
 		return "int"
 	case types.FloatKind:
 		return "float"

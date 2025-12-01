@@ -68,6 +68,10 @@
 	width: 100%;
 }
 
+.property-dialog__unsigned {
+	width: 100%;
+}
+
 .property-dialog__length-section {
 	width: 100%;
 	padding-left: 10px;

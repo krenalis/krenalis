@@ -72,29 +72,31 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return v, nil
 		}
 	case types.IntKind:
-		switch v := v.(type) {
-		case int:
-			return warehouses.ValidateInt(name, typ, v)
-		case int64:
-			return warehouses.ValidateInt(name, typ, int(v))
-		case string:
-			if v, err := strconv.ParseInt(v, 10, 64); err == nil {
+		if typ.IsUnsigned() {
+			switch v := v.(type) {
+			case int:
+				if v >= 0 {
+					return warehouses.ValidateUnsigned(name, typ, uint(v))
+				}
+			case int64:
+				if v >= 0 {
+					return warehouses.ValidateUnsigned(name, typ, uint(v))
+				}
+			case string:
+				if v, err := strconv.ParseUint(v, 10, 64); err == nil {
+					return warehouses.ValidateUnsigned(name, typ, uint(v))
+				}
+			}
+		} else {
+			switch v := v.(type) {
+			case int:
+				return warehouses.ValidateInt(name, typ, v)
+			case int64:
 				return warehouses.ValidateInt(name, typ, int(v))
-			}
-		}
-	case types.UintKind:
-		switch v := v.(type) {
-		case int:
-			if v >= 0 {
-				return warehouses.ValidateUint(name, typ, uint(v))
-			}
-		case int64:
-			if v >= 0 {
-				return warehouses.ValidateUint(name, typ, uint(v))
-			}
-		case string:
-			if v, err := strconv.ParseUint(v, 10, 64); err == nil {
-				return warehouses.ValidateUint(name, typ, uint(v))
+			case string:
+				if v, err := strconv.ParseInt(v, 10, 64); err == nil {
+					return warehouses.ValidateInt(name, typ, int(v))
+				}
 			}
 		}
 	case types.FloatKind:
