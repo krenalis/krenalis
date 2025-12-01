@@ -21,11 +21,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/initdb"
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/core/internal/initdb"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
