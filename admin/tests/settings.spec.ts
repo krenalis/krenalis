@@ -99,16 +99,16 @@ test(`Change the identifiers`, async ({ page }) => {
 	expect(await page.locator('.identifiers__identifier').count()).toBe(3);
 
 	// Fill the identifiers.
-	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
-	await identInputs.nth(0).evaluate((el: any, value) => {
+	const identifiers = page.locator('.identifiers__identifier sl-input');
+	await identifiers.nth(0).evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'email');
-	await identInputs.nth(1).evaluate((el: any, value) => {
+	await identifiers.nth(1).evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'first_name');
-	await identInputs.nth(2).evaluate((el: any, value) => {
+	await identifiers.nth(2).evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'last_name');
@@ -118,6 +118,8 @@ test(`Change the identifiers`, async ({ page }) => {
 	await page.click('.identifiers__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
+
+	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
 	await expect(identInputs.nth(0)).toHaveValue('email');
 	await expect(identInputs.nth(1)).toHaveValue('first_name');
 	await expect(identInputs.nth(2)).toHaveValue('last_name');
