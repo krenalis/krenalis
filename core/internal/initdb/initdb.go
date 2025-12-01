@@ -22,7 +22,7 @@ func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
 	WHERE
 		"n"."nspname" = current_schema()
-		AND "n"."nspname" NOT LIKE 'pg_\toast%'`
+		AND "n"."nspname" NOT LIKE 'pg\_toast%'`
 	var count int
 	err := db.QueryRow(ctx, query).Scan(&count)
 	if err != nil {
