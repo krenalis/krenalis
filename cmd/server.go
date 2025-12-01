@@ -202,8 +202,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		return fmt.Errorf("unexpected error calling CrossOriginProtection.AddTrustedOrigin with %q", origin)
 	}
 
+	addr := net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port))
+
 	httpServer := http.Server{
-		Addr:              net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port)),
+		Addr:              addr,
 		Handler:           c.Handler(handler),
 		ErrorLog:          log.New(&httpLogger{}, "", 0),
 		ReadHeaderTimeout: settings.HTTP.ReadHeaderTimeout,
@@ -221,8 +223,21 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		}
 	}()
 
-	// Print a message with the external URL.
-	_, _ = fmt.Fprintf(os.Stderr, "The Meergo Admin console is now available at: %s\n", settings.HTTP.ExternalURL+"admin")
+	// Log a human-readable overview of all externally exposed server endpoints.
+	msg := fmt.Sprintf(
+		"The Meergo server has been started at %s\n"+
+			"├─ Metrics:  %s\n"+
+			"├─ REST API: %s\n"+
+			"└─ Event ingestion endpoint: %s\n"+
+			"\n"+
+			"> Admin console: %s",
+		addr,
+		settings.HTTP.ExternalURL+"metrics",
+		settings.HTTP.ExternalURL+"api/v1/",
+		settings.HTTP.ExternalEventURL,
+		settings.HTTP.ExternalURL+"admin",
+	)
+	slog.Info(msg)
 
 	select {
 	case <-ctx.Done():
