@@ -108,6 +108,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		OAuthCredentials:     maps.Clone(settings.OAuthCredentials),
 		SentryTelemetryLevel: settings.SentryTelemetryLevel,
 	}
+	config.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
+	config.DatabaseInitialization.InitDockerMember = initDockerMember
 
 	// Choose the transformation function provider setting.
 	if settings.Transformers.Lambda.NodeJS.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "" {
@@ -117,7 +119,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
-	core, err := core.New(&config, initDBIfEmpty, initDockerMember)
+	core, err := core.New(&config)
 	if err != nil {
 		return err
 	}
