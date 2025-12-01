@@ -4,7 +4,7 @@
 
 .little-logo > img,
 .little-logo sl-icon {
-	height: 25px;
-	width: auto;
+	width: 25px;
+	height: auto;
 	max-width: unset;
 }
