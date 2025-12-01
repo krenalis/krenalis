@@ -161,7 +161,7 @@ type Type struct {
 	size int8 // size for int and float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
 	generic  bool // generic reports whether it is a generic type.
-	unsigned bool // unsigned reports whether it as an unsigned int.
+	unsigned bool // unsigned reports whether the integer type is unsigned.
 	unique   bool // unique reports whether the elements of an array must be unique.
 	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
