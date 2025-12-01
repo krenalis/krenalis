@@ -109,7 +109,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 	// alreadyExportedKeys keeps track of the keys of users exported to the
 	// database during this export, indexed by their table key value (which can
-	// have Go type int, or string).
+	// have Go type int or string).
 	var alreadyExportedKeys map[any]struct{}
 
 	// Get the writer.
