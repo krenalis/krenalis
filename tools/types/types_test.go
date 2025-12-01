@@ -141,10 +141,10 @@ func Test_Ranges(t *testing.T) {
 		}
 	}
 
-	if min, max := Float(32).AsReal().FloatRange(); min != -math.MaxFloat32 || max != math.MaxFloat32 {
+	if min, max := Float(32).Real().FloatRange(); min != -math.MaxFloat32 || max != math.MaxFloat32 {
 		t.Errorf("Float(32).FloatRange(): expected (%f, %f), got (%f, %f)", -math.MaxFloat32, math.MaxFloat32, min, max)
 	}
-	if min, max := Float(64).AsReal().FloatRange(); min != -math.MaxFloat64 || max != math.MaxFloat64 {
+	if min, max := Float(64).Real().FloatRange(); min != -math.MaxFloat64 || max != math.MaxFloat64 {
 		t.Errorf("Float(64).FloatRange(): expected (%f, %f), got (%f, %f)", -math.MaxFloat64, math.MaxFloat64, min, max)
 	}
 

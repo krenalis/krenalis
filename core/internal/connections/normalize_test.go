@@ -245,7 +245,7 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "floatStringParseError", typ: types.Float(64), value: "abc", wantContains: "has a string value that cannot represent a float(64) value"},
 		{name: "floatRange", typ: types.Float(32).WithFloatRange(0, 1), value: 2.0, wantContains: "has a value 2.000000 that is not in the range [0.000000, 1.000000]"},
 		{name: "floatInvalidType", typ: types.Float(32), value: true, wantContains: "has type bool that is not allowed for type float(32)"},
-		{name: "floatRealNaN", typ: types.Float(64).AsReal(), value: math.NaN(), wantContains: "has a value of NaN, which is not allowed"},
+		{name: "floatRealNaN", typ: types.Float(64).Real(), value: math.NaN(), wantContains: "has a value of NaN, which is not allowed"},
 		{name: "decimalOutOfRange", typ: types.Decimal(3, 2), value: "100", wantContains: "cannot represent a decimal(3,2) value"},
 		{name: "decimalInvalidType", typ: types.Decimal(3, 2), value: true, wantContains: "has type bool that is not allowed for type decimal(3,2)"},
 		{name: "decimalIntTooLarge", typ: types.Decimal(3, 2), value: 123, wantContains: "cannot represent a decimal(3,2) value"},

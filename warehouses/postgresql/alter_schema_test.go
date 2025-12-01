@@ -313,10 +313,10 @@ func Test_typeToPostgresType(t *testing.T) {
 
 		// float.
 		{types.Float(32), "real"},
-		{types.Float(32).AsReal(), "real"},
+		{types.Float(32).Real(), "real"},
 		{types.Float(32).WithFloatRange(0, 100), "real"},
 		{types.Float(64), "double precision"},
-		{types.Float(64).AsReal(), "double precision"},
+		{types.Float(64).Real(), "double precision"},
 		{types.Float(64).WithFloatRange(0, 100), "double precision"},
 
 		// decimal.

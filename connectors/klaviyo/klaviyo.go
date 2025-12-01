@@ -114,7 +114,7 @@ func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types
 		return types.Object([]types.Property{
 			{Name: "metric_name", Type: types.String().WithMaxLength(200), CreateRequired: true, Description: "Metric name"},
 			{Name: "email", Type: types.String().WithMaxBytes(100), CreateRequired: true, Description: "Email"},
-			{Name: "value", Type: types.Float(64).AsReal(), Description: "Value"},
+			{Name: "value", Type: types.Float(64).Real(), Description: "Value"},
 			{Name: "value_currency", Type: types.String().WithMaxBytes(3), Description: "Currency (ISO code)"},
 			{Name: "properties", Type: types.Map(types.JSON()), Description: "Properties"},
 		}), nil

@@ -251,7 +251,7 @@ func TestTypeSerialization(t *testing.T) {
 			Type: Float(32).WithFloatRange(3.99, 5.31),
 		}, {
 			Data: `{"kind":"float","bitSize":64,"real":true}`,
-			Type: Float(64).AsReal(),
+			Type: Float(64).Real(),
 		}, {
 			Data: `{"kind":"decimal","precision":1}`,
 			Type: Decimal(1, 0),

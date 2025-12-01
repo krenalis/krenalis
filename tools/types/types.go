@@ -385,10 +385,10 @@ func ObjectOf(properties []Property) (Type, error) {
 	return Type{kind: ObjectKind, generic: generic, vl: pn}, nil
 }
 
-// AsReal returns t but as a real number. As a real number, t does not allow
-// NaN, +Inf and -Inf values. t must be a float type. t cannot be already real
-// and cannot have a range. It panics if previous restrictions are not met.
-func (t Type) AsReal() Type {
+// Real returns t but as a real number. As a real number, t does not allow NaN,
+// +Inf and -Inf values. t must be a float type. t cannot be already real and
+// cannot have a range. It panics if previous restrictions are not met.
+func (t Type) Real() Type {
 	if t.kind != FloatKind {
 		panic("type is not a float type")
 	}
