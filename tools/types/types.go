@@ -173,7 +173,7 @@ type Type struct {
 	p int32
 
 	// s represents
-	//   - maximum value for int with 8, 16, 24, and 32 bits; as uint32(s) for unsigned int
+	//   - maximum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
 	//   - scale for decimal
 	//   - length in characters, as uint32(s), for string
 	//   - maximum length for array
