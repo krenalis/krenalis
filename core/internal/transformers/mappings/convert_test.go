@@ -108,7 +108,7 @@ func TestConvert(t *testing.T) {
 		{types.Boolean(), types.Int(8), false, 0, true, nil, nil},
 		{types.Boolean(), types.Int(8), true, 1, true, nil, nil},
 
-		// uint.
+		// unsigned int.
 		{types.Int(32), types.Int(32).Unsigned(), 831, uint(831), true, nil, nil},
 		{types.Int(32), types.Int(8).Unsigned(), 218, uint(218), true, nil, nil},
 		{types.Int(32), types.Int(16).Unsigned(), 2571, uint(2571), true, nil, nil},

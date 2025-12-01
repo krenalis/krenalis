@@ -130,8 +130,6 @@ var pythonDecoderOptions = decoderOptions{
 //   - boolean: true or false
 //   - int(8, 16, 24, and 32 bits): a Number representing an integer
 //   - int(64 bits): a String representing an integer
-//   - uint (8, 16, 24, and 32 bits): a Number representing an integer
-//   - uint (64 bits): a String representing an integer
 //   - float: a Number or one of "NaN", "Infinity", and "-Infinity"
 //   - decimal: a String representing a number
 //   - datetime, date, and time: a String representing a time formatted as
@@ -150,7 +148,6 @@ var pythonDecoderOptions = decoderOptions{
 // schema type:
 //   - boolean: true or false
 //   - int a Number representing an integer
-//   - uint: a Number representing an integer
 //   - float: a Number or one of "NaN", "Infinity", and "-Infinity"
 //   - decimal: a String representing a number
 //   - datetime: a String representing a time formatted as "2006-01-02

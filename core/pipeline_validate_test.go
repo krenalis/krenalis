@@ -1321,7 +1321,7 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Database,
-			err:                     "identity column \"id\" has kind array instead of int, uint uuid, json, or string",
+			err:                     "identity column \"id\" has kind array instead of int, uuid, json, or string",
 		},
 		{
 			name: "BAD: Source/API/User - cannot specify an identity column",

@@ -107,7 +107,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 					b.WriteString(`,"minimum":`)
 					b.WriteString(strconv.FormatUint(min, 10))
 				}
-				if max := uint64(t.s); max < maxUint[t.size] {
+				if max := uint64(t.s); max < maxUnsigned[t.size] {
 					b.WriteString(`,"maximum":`)
 					b.WriteString(strconv.FormatUint(max, 10))
 				}
@@ -671,7 +671,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				if err != nil {
 					return Type{}, errors.New("invalid value for minimum")
 				}
-				Max := maxUint[t.size]
+				Max := maxUnsigned[t.size]
 				if min > Max {
 					return Type{}, errors.New("invalid value for minimum")
 				}
@@ -744,7 +744,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if t.kind == IntKind && t.size < 4 {
 			// 8, 16, 24, and 32 bits.
 			if t.unsigned {
-				t.s = int32(maxUint[t.size])
+				t.s = int32(maxUnsigned[t.size])
 			} else {
 				t.s = int32(maxInt[t.size])
 			}
@@ -757,7 +757,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				if err != nil {
 					return Type{}, errors.New("invalid value for maximum")
 				}
-				Max := maxUint[t.size]
+				Max := maxUnsigned[t.size]
 				if max > Max {
 					return Type{}, errors.New("invalid value for maximum")
 				}

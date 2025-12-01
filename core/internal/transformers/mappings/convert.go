@@ -45,7 +45,7 @@ const (
 	minFloatConvertibleToInt64 = -9223372036854776000.0 // converted to -9223372036854775808
 	maxFloatConvertibleToInt64 = 9223372036854775000.0  // converted to 9223372036854774784
 
-	// Range of float values convertible to uint(64): [0, 18446744073709550000].
+	// Range of float values convertible to unsigned int(64): [0, 18446744073709550000].
 	maxFloatConvertibleToUint64 = 18446744073709550000.0 // converted to 18446744073709549568
 )
 

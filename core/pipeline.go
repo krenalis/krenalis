@@ -98,9 +98,8 @@ type Pipeline struct {
 // properties.
 //
 // Supported conversions:
-//   - int to int, uint, string
-//   - uint to int, uint, string
-//   - string to int uint, uuid, string
+//   - int to int, string
+//   - string to int, uuid, string
 //   - uuid to uuid, string
 type Matching struct {
 	In  string `json:"in"`  // path of the property in the input schema

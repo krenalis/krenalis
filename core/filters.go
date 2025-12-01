@@ -357,7 +357,8 @@ func parseInt(s string) (int, bool) {
 }
 
 // parseUnsigned parses an unsigned int(64) from s and returns the unsigned
-// int(64) value and true. If s is not a valid uint(64), it returns 0 and false.
+// int(64) value and true.
+// If s is not a valid unsigned int(64), it returns 0 and false.
 func parseUnsigned(s string) (uint, bool) {
 	if len(s) == 0 {
 		return 0, false
@@ -469,18 +470,18 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 
 		// Validate the operator and its kind.
 		//
-		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, ip, string
-		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, ip, string
-		// is less than                : int, uint, float, decimal, json, string [^1]
-		// is less than or equal to    : int, uint, float, decimal, json, string [^1]
-		// is greater than             : int, uint, float, decimal, json, string [^1]
-		// is greater than or equal to : int, uint, float, decimal, json, string [^1]
-		// is between                  : int, uint, float, decimal, year, datetime, date, time, json, string [^1]
-		// is not between              : int, uint, float, decimal, year, datetime, date, time, json, string [^1]
+		// is                          : int, float, decimal, datetime, date, time, year, uuid, json, ip, string
+		// is not                      : int, float, decimal, datetime, date, time, year, uuid, json, ip, string
+		// is less than                : int, float, decimal, json, string [^1]
+		// is less than or equal to    : int, float, decimal, json, string [^1]
+		// is greater than             : int, float, decimal, json, string [^1]
+		// is greater than or equal to : int, float, decimal, json, string [^1]
+		// is between                  : int, float, decimal, year, datetime, date, time, json, string [^1]
+		// is not between              : int, float, decimal, year, datetime, date, time, json, string [^1]
 		// contains                    : json, string, array [^2]
 		// does not contain            : json, string, array [^2]
-		// is one of                   : int, uint, float, decimal, year, datetime, date, time, json, string
-		// is not one of               : int, uint, float, decimal, year, datetime, date, time, json, string
+		// is one of                   : int, float, decimal, year, datetime, date, time, json, string
+		// is not one of               : int, float, decimal, year, datetime, date, time, json, string
 		// starts with                 : json, string [^1]
 		// ends with                   : json, string [^1]
 		// is before                   : datetime, date, time, year

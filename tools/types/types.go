@@ -43,10 +43,10 @@ func (err RepeatedPropertyNameError) Error() string {
 }
 
 var (
-	bitSize = [...]int{8, 16, 24, 32, 64}
-	minInt  = [...]int64{MinInt8, MinInt16, MinInt24, MinInt32, MinInt64}
-	maxInt  = [...]int64{MaxInt8, MaxInt16, MaxInt24, MaxInt32, MaxInt64}
-	maxUint = [...]uint64{MaxUint8, MaxUint16, MaxUint24, MaxUint32, MaxUint64}
+	bitSize     = [...]int{8, 16, 24, 32, 64}
+	minInt      = [...]int64{MinInt8, MinInt16, MinInt24, MinInt32, MinInt64}
+	maxInt      = [...]int64{MaxInt8, MaxInt16, MaxInt24, MaxInt32, MaxInt64}
+	maxUnsigned = [...]uint64{MaxUint8, MaxUint16, MaxUint24, MaxUint32, MaxUint64}
 )
 
 const (
@@ -158,7 +158,7 @@ var _ interface {
 type Type struct {
 	kind Kind
 
-	size int8 // size for int, uint and float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
+	size int8 // size for int and float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
 	generic  bool // generic reports whether it is a generic type.
 	unsigned bool // unsigned reports whether it as an unsigned int.
@@ -166,16 +166,14 @@ type Type struct {
 	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
 	// p represents
-	//   - minimum value for int with 8, 16, 24, and 32 bits
-	//   - minimum value, as uint32(p), for uint with 8, 16, 24, and 32 bits
+	//   - minimum value for int with 8, 16, 24, and 32 bits; as uint32(p) for unsigned int
 	//   - precision for decimal
 	//   - length in bytes, as uint32(p), for string
 	//   - minimum length for array
 	p int32
 
 	// s represents
-	//   - maximum value for int with 8, 16, 24, and 32 bits
-	//   - maximum value, as uint32(s), for uint with 8, 16, 24, and 32 bits
+	//   - maximum value for int with 8, 16, 24, and 32 bits; as uint32(s) for unsigned int
 	//   - scale for decimal
 	//   - length in characters, as uint32(s), for string
 	//   - maximum length for array
@@ -185,7 +183,6 @@ type Type struct {
 	//   - []string with the values for string
 	//   - *regexp.Regexp value for string
 	//   - intRange value for int with 64 bits
-	//   - unsignedRange value for uint with 64 bits
 	//   - floatRange value for float
 	//   - decimalRange value for decimal
 	//   - Properties{properties, names} for object
@@ -580,9 +577,9 @@ func (t Type) UnsignedRange() (min, max uint64) {
 	return 0, MaxUint64
 }
 
-// WithUnsignedRange returns t but with values in [min,max]. t must be an uint type.
-// min cannot be greater than max. min and max must be within the range of
-// values of t. It panics it previous restrictions are not met.
+// WithUnsignedRange returns t but with values in [min,max]. t must be an
+// unsigned int type. min cannot be greater than max. min and max must be within
+// the range of values of t. It panics it previous restrictions are not met.
 func (t Type) WithUnsignedRange(min, max uint64) Type {
 	if t.kind != IntKind {
 		panic("type is not an int type")
@@ -590,7 +587,7 @@ func (t Type) WithUnsignedRange(min, max uint64) Type {
 	if !t.unsigned {
 		panic("type is not an unsigned int type")
 	}
-	Max := maxUint[t.size]
+	Max := maxUnsigned[t.size]
 	if min == 0 && max == Max {
 		return t
 	}

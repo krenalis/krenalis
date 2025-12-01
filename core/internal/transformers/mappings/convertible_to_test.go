@@ -48,13 +48,13 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Int(32), types.Map(types.Int(8)), false},
 		// int(64).
 		{types.Int(64), types.Int(64), true},
-		// uint(16).
+		// unsigned int(16).
 		{types.Int(16).Unsigned(), types.Int(16).Unsigned(), true},
-		// uint(24).
+		// unsigned int(24).
 		{types.Int(24).Unsigned(), types.Int(24).Unsigned(), true},
-		// uint(32).
+		// unsigned int(32).
 		{types.Int(32).Unsigned(), types.Int(32).Unsigned(), true},
-		// uint(64).
+		// unsigned int(64).
 		{types.Int(64).Unsigned(), types.Int(64).Unsigned(), true},
 		{types.Int(64).Unsigned(), types.Year(), true},
 		// float(32).

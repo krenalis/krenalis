@@ -39,8 +39,6 @@ import (
 //   - boolean: true or false
 //   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
 //   - int (64 bits): a JSON String representing an integer
-//   - uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - uint (64 bits): a JSON String representing an integer
 //   - float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
 //   - decimal: a JSON String representing a JSON Number
 //   - datetime: a JSON String representing a time in the ISO8601 format
