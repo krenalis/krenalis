@@ -119,6 +119,8 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.click('.property-dialog__save');
 	await logValidationErrors(page, ['.property-dialog__control-error']);
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that editable schema in the React state is synced with the newly added property.
+
 	let isRequestOK = false;
 	page.on('request', async (request) => {
 		if (request.url().includes('/profiles/schema') && request.method() === 'PUT') {
