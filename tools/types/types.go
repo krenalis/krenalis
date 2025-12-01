@@ -166,7 +166,7 @@ type Type struct {
 	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
 	// p represents
-	//   - minimum value for int with 8, 16, 24, and 32 bits; as uint32(p) for unsigned int
+	//   - minimum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
 	//   - precision for decimal
 	//   - length in bytes, as uint32(p), for string
 	//   - minimum length for array
