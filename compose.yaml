@@ -2,7 +2,8 @@
 # repository.
 #
 # Keep this file synchronized with the other Compose file,
-# "compose-release.yaml," which refers to the latest Meergo release.
+# "tools/docker-compose/compose-release.yaml," which refers to the latest Meergo
+# release.
 
 services:
   meergo:

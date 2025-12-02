@@ -80,7 +80,7 @@ func main() {
 
 	// Validate the Docker Compose files.
 	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
-	NewCmd("docker", "compose", "-f", "compose-release.yaml", "config", "--quiet").InDir(repo).Run()
+	NewCmd("docker", "compose", "-f", "tools/docker-compose/compose-release.yaml", "config", "--quiet").InDir(repo).Run()
 
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {
