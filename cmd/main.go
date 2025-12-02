@@ -49,10 +49,10 @@ func Main(assets fs.FS) {
 	}
 
 	if assets != nil {
-		var err error
-		assets, err = fs.Sub(assets, "meergo-assets")
+		assets, _ = fs.Sub(assets, "meergo-assets")
+		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
-			fatal(1, `directory "meergo-assets" not found in assets (did you forget to generate and embed them?)`)
+			fatal(1, `file "meergo-assets/index.html.br" not found in assets (did you forget to generate and embed them?)`)
 		}
 	}
 
