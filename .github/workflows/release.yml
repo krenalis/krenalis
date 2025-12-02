@@ -1,4 +1,4 @@
-name: Publish Docker image
+name: Release Meergo
 
 on:
   workflow_dispatch:
@@ -9,7 +9,31 @@ on:
 permissions: {}
 
 jobs:
-  push_to_registry:
+  create_release_assets:
+    name: Attach the necessary files to the GitHub release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compose.yaml
+          path: tools/docker-compose/compose-release.yaml
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: main.go
+          path: cmd/meergo/main.go
+          if-no-files-found: error
+
+  push_to_docker_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     permissions:
