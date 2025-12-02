@@ -21,6 +21,8 @@ import (
 	esbuild "github.com/evanw/esbuild/pkg/api"
 )
 
+const devMode = true
+
 // moduleRoot is the root directory of the Go module.
 var moduleRoot string
 
