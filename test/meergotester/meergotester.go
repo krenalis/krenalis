@@ -363,7 +363,7 @@ func (c *Meergo) Start() {
 			defer func() {
 				close(c.meergoRunning)
 			}()
-			assets := os.DirFS(filepath.Join(c.repo, "cmd", "meergo", "meergo-assets"))
+			assets := os.DirFS(filepath.Join(c.repo, "admin", "assets"))
 			{
 				// A random file, 'index.js.br', is opened just to verify if the
 				// filesystem has been created correctly.

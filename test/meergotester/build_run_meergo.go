@@ -28,7 +28,7 @@ func buildMeergo(t *testing.T, repo, meergoDir string) {
 
 	// Copy the 'main.go' file, which is the entry point for Meergo.
 	err = copyFile(
-		filepath.Join(repo, "cmd", "meergo", "main.go"),
+		filepath.Join(repo, "main.go"),
 		filepath.Join(tmpdir, "main.go"),
 	)
 	if err != nil {
@@ -99,7 +99,7 @@ func generateAssets(ctx context.Context, repo string) error {
 	cmd := exec.CommandContext(ctx, "go", "generate")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Dir = filepath.Join(repo, "cmd", "meergo")
+	cmd.Dir = repo
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("command 'go generate' executed in directory '%s' failed: %s", cmd.Dir, err)

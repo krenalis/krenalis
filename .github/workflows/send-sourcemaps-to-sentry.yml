@@ -46,11 +46,10 @@ jobs:
 
       - name: Build assets running 'go generate'
         run: go generate
-        working-directory: ./cmd/meergo
 
       - name: Decompress .br assets using Brotli
         run: find -name "*.br" -not -path "./shoelace/*" | xargs brotli -dvf
-        working-directory: ./cmd/meergo/meergo-assets
+        working-directory: ./admin/assets
 
       - name: Upload the source maps to Sentry
         run: sentry-cli sourcemaps upload .
@@ -60,4 +59,4 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        working-directory: ./cmd/meergo/meergo-assets
+        working-directory: ./admin/assets

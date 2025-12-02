@@ -3,6 +3,10 @@
 # should be left as they are.
 vendor/**/.gitattributes
 
+# Ignore the binaries produced by `go build`.
+meergo
+meergo.exe
+
 # Since '.env' files are used for Meergo configuration and may contain critical
 # information, it's convenient to add this repository-wide exclusion rule here,
 # just as an extra precaution to prevent '.env' files containing sensitive data

@@ -63,7 +63,7 @@ import (
 	"github.com/meergo/meergo/cmd"
 )
 
-//go:embed meergo-assets/*
+//go:embed admin/assets/*
 var assets embed.FS
 
 func main() {
