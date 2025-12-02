@@ -97,7 +97,7 @@ func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.
 		workspace = *body.Workspace
 	}
 	if body.Type == nil {
-		return nil, errors.BadRequest("access key type is required")
+		return nil, errors.BadRequest("type is required and cannot be null")
 	}
 	id, token, err := org.CreateAccessKey(r.Context(), body.Name, workspace, *body.Type)
 	if err != nil {

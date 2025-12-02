@@ -163,14 +163,13 @@ func (at Target) String() string {
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (at *Target) UnmarshalJSON(data []byte) error {
-	var v any
-	err := json.Unmarshal(data, &v)
-	if err != nil {
-		return err
+	if bytes.Equal(data, null) {
+		return errors.BadRequest("target cannot be null")
 	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.Target value", v)
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return errors.BadRequest(`target must be "Event", "User", or "Group"`)
 	}
 	switch s {
 	case "Event":
@@ -180,7 +179,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	case "Group":
 		*at = TargetGroup
 	default:
-		return fmt.Errorf("json: invalid core.Target: %s", s)
+		return errors.BadRequest(`target must be "Event", "User", or "Group"`)
 	}
 	return nil
 }
@@ -1302,14 +1301,10 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, null) {
 		return nil
 	}
-	var v any
-	err := json.Unmarshal(data, &v)
+	var s string
+	err := json.Unmarshal(data, &s)
 	if err != nil {
-		return err
-	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an core.SchedulePeriod value", v)
+		return errors.BadRequest(`schedule period can be "5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", or "24h"`)
 	}
 	var p SchedulePeriod
 	switch s {
@@ -1334,7 +1329,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	case "24h":
 		p = 1440
 	default:
-		return fmt.Errorf("json: invalid core.SchedulePeriod: %s", s)
+		return errors.BadRequest(`schedule period can be "5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", or "24h"`)
 	}
 	*period = p
 	return nil

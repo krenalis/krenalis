@@ -2034,7 +2034,7 @@ func (mode WarehouseMode) String() string {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, null) {
-		return nil
+		return errors.BadRequest("mode cannot be null")
 	}
 	var v any
 	err := json.Unmarshal(data, &v)
