@@ -13,7 +13,6 @@ import {
 	MapType,
 	StringType,
 	TypeKind,
-	UintType,
 } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -33,7 +32,6 @@ const TYPE_KINDS: TypeKind[] = [
 	'string',
 	'boolean',
 	'int',
-	'uint',
 	'float',
 	'decimal',
 	'datetime',
@@ -72,7 +70,7 @@ const PropertyDialog = ({
 	const [primarySource, setPrimarySource] = useState<number | null>(null);
 	const [nameError, setNameError] = useState<string>('');
 	const [typeError, setTypeError] = useState<string>('');
-	const [isMaxByteLengthEnabled, setIsMaxByteLengthEnabled] = useState<boolean>(false);
+	const [isMaxBytesEnabled, setIsMaxBytesEnabled] = useState<boolean>(false);
 	const [isMaxLengthEnabled, setIsMaxLengthEnabled] = useState<boolean>(false);
 
 	const { connections } = useContext(AppContext);
@@ -81,7 +79,7 @@ const PropertyDialog = ({
 	const bitSizeSelectRef = useRef<any>();
 	const precisionInputRef = useRef<any>();
 	const elementTypeSelectRef = useRef<any>();
-	const maxByteLengthInputRef = useRef<any>();
+	const maxBytesInputRef = useRef<any>();
 	const maxLengthInputRef = useRef<any>();
 
 	const isEditing = useMemo(() => {
@@ -128,8 +126,9 @@ const PropertyDialog = ({
 		const p = { ...property };
 		const kind = e.target.value as TypeKind;
 		const type: any = { kind: kind };
-		if (kind === 'int' || kind === 'uint') {
+		if (kind === 'int') {
 			type.bitSize = 32;
+			type.unsigned = false;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (kind === 'float') {
@@ -156,7 +155,7 @@ const PropertyDialog = ({
 		if (typeError !== '') {
 			setTypeError('');
 		}
-		setIsMaxByteLengthEnabled(false);
+		setIsMaxBytesEnabled(false);
 		setIsMaxLengthEnabled(false);
 	};
 
@@ -164,18 +163,18 @@ const PropertyDialog = ({
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
-			const elementTyp = typ.elementType as IntType | UintType | FloatType;
+			const elementTyp = typ.elementType as IntType | FloatType;
 			elementTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			typ.elementType = elementTyp;
 			p.type = typ;
 		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.elementType as IntType | UintType | FloatType;
+			const valueTyp = typ.elementType as IntType | FloatType;
 			valueTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
-			const typ = p.type as IntType | UintType | FloatType;
+			const typ = p.type as IntType | FloatType;
 			typ.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			p.type = typ;
 		}
@@ -254,12 +253,35 @@ const PropertyDialog = ({
 		setProperty(p);
 	};
 
+	const onUnsignedChange = () => {
+		const p = { ...property };
+		if (p.type.kind === 'array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as IntType;
+			elementTyp.unsigned = !elementTyp.unsigned;
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else if (p.type.kind === 'map') {
+			const typ = p.type as MapType;
+			const valueTyp = typ.elementType as IntType;
+			valueTyp.unsigned = !valueTyp.unsigned;
+			typ.elementType = valueTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as IntType;
+			typ.unsigned = !typ.unsigned;
+			p.type = typ;
+		}
+		setProperty(p);
+	};
+
 	const onChangeAssociatedType = (e) => {
 		const p = { ...property };
 		const kind = e.target.value as TypeKind;
 		const type: any = { kind: kind };
-		if (kind === 'int' || kind === 'uint') {
+		if (kind === 'int') {
 			type.bitSize = 32;
+			type.unsigned = false;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (kind === 'float') {
@@ -282,12 +304,12 @@ const PropertyDialog = ({
 		}
 	};
 
-	const onToggleMaxByteLength = () => {
-		setIsMaxByteLengthEnabled(!isMaxByteLengthEnabled);
-		if (isMaxByteLengthEnabled) {
-			updateMaxByteLength(null);
+	const onToggleMaxBytes = () => {
+		setIsMaxBytesEnabled(!isMaxBytesEnabled);
+		if (isMaxBytesEnabled) {
+			updateMaxBytes(null);
 		} else {
-			setTimeout(() => maxByteLengthInputRef.current?.focus(), 50);
+			setTimeout(() => maxBytesInputRef.current?.focus(), 50);
 		}
 	};
 
@@ -300,19 +322,19 @@ const PropertyDialog = ({
 		}
 	};
 
-	const onInputByteLength = (e) => {
-		updateMaxByteLength(Number(e.target.value));
+	const onInputMaxBytes = (e) => {
+		updateMaxBytes(Number(e.target.value));
 	};
 
-	const updateMaxByteLength = (length: number | null) => {
+	const updateMaxBytes = (length: number | null) => {
 		const p = { ...property };
 		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete elementTyp.maxByteLength;
+				delete elementTyp.maxBytes;
 			} else {
-				elementTyp.maxByteLength = length;
+				elementTyp.maxBytes = length;
 			}
 			typ.elementType = elementTyp;
 			p.type = typ;
@@ -320,18 +342,18 @@ const PropertyDialog = ({
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as StringType;
 			if (length == null) {
-				delete valueTyp.maxByteLength;
+				delete valueTyp.maxBytes;
 			} else {
-				valueTyp.maxByteLength = length;
+				valueTyp.maxBytes = length;
 			}
 			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as StringType;
 			if (length == null) {
-				delete typ.maxByteLength;
+				delete typ.maxBytes;
 			} else {
-				typ.maxByteLength = length;
+				typ.maxBytes = length;
 			}
 			p.type = typ;
 		}
@@ -475,7 +497,7 @@ const PropertyDialog = ({
 					value={String(type.bitSize)}
 					onSlChange={onChangeBitSize}
 				>
-					{type.kind === 'int' || type.kind === 'uint'
+					{type.kind === 'int'
 						? INT_BITSIZES.map((s) => (
 								<SlOption key={s} value={s}>
 									{s}
@@ -517,6 +539,7 @@ const PropertyDialog = ({
 					max={MAX_DECIMAL_PRECISION}
 					maxlength={2}
 					onSlInput={onInputPrecision}
+					noSpinButtons
 				/>
 			);
 			scaleSection = (
@@ -529,6 +552,7 @@ const PropertyDialog = ({
 					max={MAX_DECIMAL_SCALE}
 					maxlength={2}
 					onSlInput={onInputScale}
+					noSpinButtons
 				/>
 			);
 		}
@@ -561,6 +585,33 @@ const PropertyDialog = ({
 		}
 	}
 
+	let unsignedSection = null;
+	if (property != null && property.type != null) {
+		const isArray = property.type.kind === 'array';
+		const isMap = property.type.kind === 'map';
+		const hasInt =
+			property.type.kind === 'int' ||
+			(isArray && (property.type as ArrayType).elementType.kind === 'int') ||
+			(isMap && (property.type as MapType).elementType.kind === 'int');
+		if (hasInt) {
+			const typ: any = isArray
+				? (property.type as ArrayType).elementType
+				: isMap
+					? (property.type as MapType).elementType
+					: property.type;
+			unsignedSection = (
+				<SlCheckbox
+					className='property-dialog__unsigned'
+					size='small'
+					checked={typ.unsigned === true}
+					onSlChange={onUnsignedChange}
+				>
+					Unsigned
+				</SlCheckbox>
+			);
+		}
+	}
+
 	let lengthSection = null;
 	if (property != null && property.type != null) {
 		const isArray = property.type.kind === 'array';
@@ -575,24 +626,25 @@ const PropertyDialog = ({
 				: isMap
 					? (property.type as MapType).elementType
 					: property.type;
-			const maxByteLengthSection = (
+			const maxBytesSection = (
 				<>
 					<SlCheckbox
-						className='property-dialog__max-byte-length-check'
-						checked={isMaxByteLengthEnabled}
-						onSlChange={onToggleMaxByteLength}
+						className='property-dialog__max-bytes-check'
+						checked={isMaxBytesEnabled}
+						onSlChange={onToggleMaxBytes}
 						size='small'
 					>
 						Max bytes:
 					</SlCheckbox>
 					<SlInput
-						className='property-dialog__max-byte-length'
-						ref={maxByteLengthInputRef}
+						className='property-dialog__max-bytes'
+						ref={maxBytesInputRef}
 						size='small'
-						value={String(typ.maxByteLength)}
+						value={String(typ.maxBytes)}
 						type='number'
-						onSlInput={onInputByteLength}
-						disabled={!isMaxByteLengthEnabled}
+						onSlInput={onInputMaxBytes}
+						disabled={!isMaxBytesEnabled}
+						noSpinButtons
 					/>
 				</>
 			);
@@ -614,12 +666,13 @@ const PropertyDialog = ({
 						type='number'
 						onSlInput={onInputMaxLength}
 						disabled={!isMaxLengthEnabled}
+						noSpinButtons
 					/>
 				</>
 			);
 			lengthSection = (
 				<div className='property-dialog__length-section'>
-					{maxByteLengthSection}
+					{maxBytesSection}
 					{maxLengthSection}
 				</div>
 			);
@@ -726,6 +779,7 @@ const PropertyDialog = ({
 									</span>
 								)}
 								{bitSizeSection}
+								{unsignedSection}
 								{precisionSection}
 								{scaleSection}
 								{realSection}
@@ -808,7 +862,7 @@ const PropertyDialog = ({
 };
 
 const hasBitSizeConstraint = (kind: string) => {
-	return kind === 'int' || kind === 'uint' || kind === 'float';
+	return kind === 'int' || kind === 'float';
 };
 
 const checkDecimalType = (type: DecimalType) => {

@@ -210,7 +210,7 @@ func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
 		var maxLength int
-		if l, ok := t.MaxByteLength(); ok {
+		if l, ok := t.MaxBytes(); ok {
 			maxLength = l
 		}
 		if l, ok := t.MaxLength(); ok {
@@ -227,30 +227,32 @@ func typeToSnowflakeType(t types.Type) string {
 	case types.BooleanKind:
 		return "BOOLEAN"
 	case types.IntKind:
-		switch t.BitSize() {
-		case 8:
-			return "TINYINT" // Alias for "NUMBER(38, 0)".
-		case 16:
-			return "SMALLINT" // Alias for "NUMBER(38, 0)".
-		case 24:
-			return "NUMBER(7,0)"
-		case 32:
-			return "INT" // Alias for "NUMBER(38, 0)".
-		case 64:
-			return "BIGINT" // Alias for "NUMBER(38, 0)".
-		}
-	case types.UintKind:
-		switch t.BitSize() {
-		case 8:
-			return "SMALLINT" // Alias for "NUMBER(38, 0)".
-		case 16:
-			return "INT" // Alias for "NUMBER(38, 0)".
-		case 24:
-			return "NUMBER(8,0)"
-		case 32:
-			return "BIGINT" // Alias for "NUMBER(38, 0)".
-		case 64:
-			return "NUMBER(20,0)"
+		if t.IsUnsigned() {
+			switch t.BitSize() {
+			case 8:
+				return "SMALLINT" // Alias for "NUMBER(38, 0)".
+			case 16:
+				return "INT" // Alias for "NUMBER(38, 0)".
+			case 24:
+				return "NUMBER(8,0)"
+			case 32:
+				return "BIGINT" // Alias for "NUMBER(38, 0)".
+			case 64:
+				return "NUMBER(20,0)"
+			}
+		} else {
+			switch t.BitSize() {
+			case 8:
+				return "TINYINT" // Alias for "NUMBER(38, 0)".
+			case 16:
+				return "SMALLINT" // Alias for "NUMBER(38, 0)".
+			case 24:
+				return "NUMBER(7,0)"
+			case 32:
+				return "INT" // Alias for "NUMBER(38, 0)".
+			case 64:
+				return "BIGINT" // Alias for "NUMBER(38, 0)".
+			}
 		}
 	case types.FloatKind:
 		switch t.BitSize() {

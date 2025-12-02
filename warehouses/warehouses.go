@@ -402,15 +402,6 @@ func ValidateInt(name string, t types.Type, n int) (any, error) {
 	return n, nil
 }
 
-// ValidateUint validates an uint value.
-func ValidateUint(name string, t types.Type, n uint) (any, error) {
-	min, max := t.UintRange()
-	if uint64(n) < min || uint64(n) > max {
-		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not within the expected range of [%d, %d]", n, name, min, max)
-	}
-	return n, nil
-}
-
 // ValidateFloat validates a float value.
 func ValidateFloat(name string, t types.Type, n float64) (any, error) {
 	if t.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
@@ -473,6 +464,15 @@ func ValidateTimeString(name string, format string, s string) (any, error) {
 	}
 	t = t.UTC()
 	return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
+}
+
+// ValidateUnsigned validates an unsigned int value.
+func ValidateUnsigned(name string, t types.Type, n uint) (any, error) {
+	min, max := t.UnsignedRange()
+	if uint64(n) < min || uint64(n) > max {
+		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not within the expected range of [%d, %d]", n, name, min, max)
+	}
+	return n, nil
 }
 
 // ValidateYear validates a year value.
@@ -553,7 +553,7 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 		}
 		return s, nil
 	}
-	if max, ok := t.MaxByteLength(); ok && len(s) > max {
+	if max, ok := t.MaxBytes(); ok && len(s) > max {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d bytes", name, max)
 	}
 	if max, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > max {

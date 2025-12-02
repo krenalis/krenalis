@@ -407,33 +407,35 @@ func convertInt96(v any) (time.Time, error) {
 func convertToParquetData(schema types.Type, record map[string]any) (map[string]any, error) {
 	converted := make(map[string]any, len(record))
 	for _, p := range schema.Properties().All() {
-		switch p.Type.Kind() {
+		switch t := p.Type; t.Kind() {
 		case types.IntKind:
-			if p.Type.BitSize() <= 32 {
-				if i64, ok := record[p.Name].(int); ok {
-					converted[p.Name] = int32(i64)
-					continue
+			if t.IsUnsigned() {
+				if t.BitSize() <= 32 {
+					if u64, ok := record[p.Name].(uint); ok {
+						converted[p.Name] = int32(u64)
+						continue
+					}
+				} else {
+					if u64, ok := record[p.Name].(uint); ok {
+						converted[p.Name] = int64(u64)
+						continue
+					}
 				}
 			} else {
-				if i64, ok := record[p.Name].(int); ok {
-					converted[p.Name] = int64(i64)
-					continue
-				}
-			}
-		case types.UintKind:
-			if p.Type.BitSize() <= 32 {
-				if u64, ok := record[p.Name].(uint); ok {
-					converted[p.Name] = int32(u64)
-					continue
-				}
-			} else {
-				if u64, ok := record[p.Name].(uint); ok {
-					converted[p.Name] = int64(u64)
-					continue
+				if t.BitSize() <= 32 {
+					if i64, ok := record[p.Name].(int); ok {
+						converted[p.Name] = int32(i64)
+						continue
+					}
+				} else {
+					if i64, ok := record[p.Name].(int); ok {
+						converted[p.Name] = int64(i64)
+						continue
+					}
 				}
 			}
 		case types.FloatKind:
-			if p.Type.BitSize() == 32 {
+			if t.BitSize() == 32 {
 				if f64, ok := record[p.Name].(float64); ok {
 					converted[p.Name] = float32(f64)
 					continue
@@ -444,21 +446,21 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 			if !ok {
 				continue
 			}
-			switch prec := p.Type.Precision(); {
+			switch prec := t.Precision(); {
 			case prec <= 9:
-				i64, ok := decimalToInt64(dec, p.Type.Scale())
+				i64, ok := decimalToInt64(dec, t.Scale())
 				if !ok {
 					// This never happens except for out of scale values read
 					// from the data warehouse, because the type chosen for
 					// export to Parquet is chosen based on the decimal
 					// precision and scale to represent all decimal values
-					// allowed for p.Type. We return error here to avoid strange
+					// allowed for t. We return error here to avoid strange
 					// errors in the Parquet library.
 					return nil, fmt.Errorf("decimal value read from Meergo cannot be represented with Parquet's INT32")
 				}
 				converted[p.Name] = int32(i64)
 			case 10 <= prec && prec <= 18:
-				i64, ok := decimalToInt64(dec, p.Type.Scale())
+				i64, ok := decimalToInt64(dec, t.Scale())
 				if !ok {
 					// This should never happen, see the comment above for more
 					// details.
@@ -466,7 +468,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 				}
 				converted[p.Name] = i64
 			default:
-				bytes, err := dec.Binary(p.Type.Scale())
+				bytes, err := dec.Binary(t.Scale())
 				if err != nil {
 					return nil, fmt.Errorf("cannot convert decimal value read from Meergo to Parquet binary representation: %s", err)
 				}
@@ -635,7 +637,7 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 		}
 
 		// Set the column type.
-		switch property.Type.Kind() {
+		switch t := property.Type; t.Kind() {
 		case types.StringKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
@@ -643,61 +645,63 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 		case types.BooleanKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BOOLEAN)
 		case types.IntKind:
-			switch property.Type.BitSize() {
-			case 8:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 8
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = true
-			case 16:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 16
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = true
-			case 24:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-			case 32:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-			case 64:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
-			}
-		case types.UintKind:
-			switch property.Type.BitSize() {
-			case 8:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 8
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
-			case 16:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 16
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
-			case 24:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
-			case 32:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
-			case 64:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
-				col.SchemaElement.LogicalType = parquet.NewLogicalType()
-				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
-				col.SchemaElement.LogicalType.INTEGER.BitWidth = 64
-				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+			if t.IsUnsigned() {
+				switch t.BitSize() {
+				case 8:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 8
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+				case 16:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 16
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+				case 24:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+				case 32:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+				case 64:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 64
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+				}
+			} else {
+				switch t.BitSize() {
+				case 8:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 8
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = true
+				case 16:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+					col.SchemaElement.LogicalType = parquet.NewLogicalType()
+					col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+					col.SchemaElement.LogicalType.INTEGER.BitWidth = 16
+					col.SchemaElement.LogicalType.INTEGER.IsSigned = true
+				case 24:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				case 32:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				case 64:
+					col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+				}
 			}
 		case types.FloatKind:
-			switch property.Type.BitSize() {
+			switch t.BitSize() {
 			case 32:
 				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_FLOAT)
 			case 64:
@@ -706,9 +710,9 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 		case types.DecimalKind:
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.DECIMAL = parquet.NewDecimalType()
-			col.SchemaElement.LogicalType.DECIMAL.Precision = int32(property.Type.Precision())
-			col.SchemaElement.LogicalType.DECIMAL.Scale = int32(property.Type.Scale())
-			switch p := property.Type.Precision(); {
+			col.SchemaElement.LogicalType.DECIMAL.Precision = int32(t.Precision())
+			col.SchemaElement.LogicalType.DECIMAL.Scale = int32(t.Scale())
+			switch p := t.Precision(); {
 			case p <= 9:
 				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
 			case 10 <= p && p <= 18:
@@ -828,13 +832,13 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			}
 			switch lt.INTEGER.BitWidth {
 			case 8:
-				return types.Uint(8), nil
+				return types.Int(8).Unsigned(), nil
 			case 16:
-				return types.Uint(16), nil
+				return types.Int(16).Unsigned(), nil
 			case 32:
-				return types.Uint(32), nil
+				return types.Int(32).Unsigned(), nil
 			case 64:
-				return types.Uint(64), nil
+				return types.Int(64).Unsigned(), nil
 			}
 			return types.Type{}, nil
 		}
@@ -864,13 +868,13 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_INT_64:
 			return types.Int(64), nil
 		case parquet.ConvertedType_UINT_8:
-			return types.Uint(8), nil
+			return types.Int(8).Unsigned(), nil
 		case parquet.ConvertedType_UINT_16:
-			return types.Uint(16), nil
+			return types.Int(16).Unsigned(), nil
 		case parquet.ConvertedType_UINT_32:
-			return types.Uint(32), nil
+			return types.Int(32).Unsigned(), nil
 		case parquet.ConvertedType_UINT_64:
-			return types.Uint(64), nil
+			return types.Int(64).Unsigned(), nil
 		case parquet.ConvertedType_JSON:
 			return types.JSON(), nil
 		case parquet.ConvertedType_BSON:

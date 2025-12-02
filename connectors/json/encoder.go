@@ -49,10 +49,11 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		return enc.appendString(b, v.(string))
 	case types.BooleanKind:
 		return strconv.AppendBool(b, v.(bool))
-	case types.IntKind, types.YearKind:
+	case types.IntKind:
+		if t.IsUnsigned() {
+			return strconv.AppendUint(b, uint64(v.(uint)), 10)
+		}
 		return strconv.AppendInt(b, int64(v.(int)), 10)
-	case types.UintKind:
-		return strconv.AppendUint(b, uint64(v.(uint)), 10)
 	case types.FloatKind:
 		v := v.(float64)
 		switch {
@@ -87,6 +88,8 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		b = append(b, '"')
 		b = v.(time.Time).AppendFormat(b, "15:04:05.999999999Z")
 		return append(b, '"')
+	case types.YearKind:
+		return strconv.AppendInt(b, int64(v.(int)), 10)
 	case types.UUIDKind, types.IPKind:
 		b = append(b, '"')
 		b = append(b, v.(string)...)

@@ -43,10 +43,10 @@ func (err RepeatedPropertyNameError) Error() string {
 }
 
 var (
-	bitSize = [...]int{8, 16, 24, 32, 64}
-	minInt  = [...]int64{MinInt8, MinInt16, MinInt24, MinInt32, MinInt64}
-	maxInt  = [...]int64{MaxInt8, MaxInt16, MaxInt24, MaxInt32, MaxInt64}
-	maxUint = [...]uint64{MaxUint8, MaxUint16, MaxUint24, MaxUint32, MaxUint64}
+	bitSize     = [...]int{8, 16, 24, 32, 64}
+	minInt      = [...]int64{MinInt8, MinInt16, MinInt24, MinInt32, MinInt64}
+	maxInt      = [...]int64{MaxInt8, MaxInt16, MaxInt24, MaxInt32, MaxInt64}
+	maxUnsigned = [...]uint64{MaxUint8, MaxUint16, MaxUint24, MaxUint32, MaxUint64}
 )
 
 const (
@@ -81,7 +81,6 @@ const (
 	StringKind
 	BooleanKind
 	IntKind
-	UintKind
 	FloatKind
 	DecimalKind
 	DateTimeKind
@@ -100,7 +99,6 @@ var kindName = []string{
 	"string",
 	"boolean",
 	"int",
-	"uint",
 	"float",
 	"decimal",
 	"datetime",
@@ -160,23 +158,22 @@ var _ interface {
 type Type struct {
 	kind Kind
 
-	size int8 // size for int, uint and float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
+	size int8 // size for int and float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
-	generic bool // generic reports whether it is a generic type.
-	unique  bool // unique reports whether the elements of an array must be unique.
-	real    bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
+	generic  bool // generic reports whether it is a generic type.
+	unsigned bool // unsigned reports whether the integer type is unsigned.
+	unique   bool // unique reports whether the elements of an array must be unique.
+	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
 	// p represents
-	//   - minimum value for int with 8, 16, 24, and 32 bits
-	//   - minimum value, as uint32(p), for uint with 8, 16, 24, and 32 bits
+	//   - minimum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
 	//   - precision for decimal
 	//   - length in bytes, as uint32(p), for string
 	//   - minimum length for array
 	p int32
 
 	// s represents
-	//   - maximum value for int with 8, 16, 24, and 32 bits
-	//   - maximum value, as uint32(s), for uint with 8, 16, 24, and 32 bits
+	//   - maximum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
 	//   - scale for decimal
 	//   - length in characters, as uint32(s), for string
 	//   - maximum length for array
@@ -186,7 +183,6 @@ type Type struct {
 	//   - []string with the values for string
 	//   - *regexp.Regexp value for string
 	//   - intRange value for int with 64 bits
-	//   - uintRange value for uint with 64 bits
 	//   - floatRange value for float
 	//   - decimalRange value for decimal
 	//   - Properties{properties, names} for object
@@ -244,31 +240,6 @@ func Int(size int) Type {
 		t.size = 3
 		t.p = MinInt32
 		t.s = MaxInt32
-	case 64:
-		t.size = 4
-	default:
-		panic("bit size is not valid")
-	}
-	return t
-}
-
-// Uint returns the uint type with the provided bit size. It panics if size is
-// not 8, 16, 24, 32 or 64.
-func Uint(size int) Type {
-	t := Type{kind: UintKind}
-	switch size {
-	case 8:
-		t.s = int32(MaxUint8)
-	case 16:
-		t.size = 1
-		t.s = int32(MaxUint16)
-	case 24:
-		t.size = 2
-		t.s = int32(MaxUint24)
-	case 32:
-		t.size = 3
-		s := MaxUint32
-		t.s = int32(s)
 	case 64:
 		t.size = 4
 	default:
@@ -414,10 +385,10 @@ func ObjectOf(properties []Property) (Type, error) {
 	return Type{kind: ObjectKind, generic: generic, vl: pn}, nil
 }
 
-// AsReal returns t but as a real number. As a real number, t does not allow
-// NaN, +Inf and -Inf values. t must be a float type. t cannot be already real
-// and cannot have a range. It panics if previous restrictions are not met.
-func (t Type) AsReal() Type {
+// Real returns t but as a real number. As a real number, t does not allow NaN,
+// +Inf and -Inf values. t must be a float type. t cannot be already real and
+// cannot have a range. It panics if previous restrictions are not met.
+func (t Type) Real() Type {
 	if t.kind != FloatKind {
 		panic("type is not a float type")
 	}
@@ -465,7 +436,7 @@ func (t Type) KindName() string {
 func (t Type) String() string {
 	s := t.kind.String()
 	switch t.kind {
-	case IntKind, UintKind, FloatKind:
+	case IntKind, FloatKind:
 		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
 	case DecimalKind:
 		if t.p > 0 {
@@ -485,13 +456,50 @@ func (t Type) Kind() Kind {
 	return t.kind
 }
 
-// BitSize returns the bit size of t as 8, 16, 24, 32 or 64. t must be an int,
-// uint or float type, otherwise it panics.
+// BitSize returns the bit size of t as 8, 16, 24, 32 or 64. t must be an int or
+// float type, otherwise it panics.
 func (t Type) BitSize() int {
-	if t.kind != IntKind && t.kind != UintKind && t.kind != FloatKind {
-		panic("type is not an int, uint or float type")
+	if t.kind != IntKind && t.kind != FloatKind {
+		panic("type is not an int or float type")
 	}
 	return bitSize[t.size]
+}
+
+// Unsigned returns t as an unsigned int with the maximum value range allowed by
+// its bit size. t must be an int type and must not already be unsigned,
+// otherwise it panics.
+func (t Type) Unsigned() Type {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	if t.unsigned {
+		panic("type is already unsigned")
+	}
+	t.p = 0
+	switch bitSize[t.size] {
+	case 8:
+		t.s = int32(MaxUint8)
+	case 16:
+		t.s = int32(MaxUint16)
+	case 24:
+		t.s = int32(MaxUint24)
+	case 32:
+		s := MaxUint32
+		t.s = int32(s)
+	case 64:
+		t.s = 0
+	}
+	t.vl = nil
+	t.unsigned = true
+	return t
+}
+
+// IsUnsigned reports whether t is unsigned. Panics if t is not an int type.
+func (t Type) IsUnsigned() bool {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	return t.unsigned
 }
 
 type intRange struct{ min, max int64 }
@@ -501,6 +509,9 @@ type intRange struct{ min, max int64 }
 func (t Type) IntRange() (min, max int64) {
 	if t.kind != IntKind {
 		panic("type is not an int type")
+	}
+	if t.unsigned {
+		panic("cannot get int range for an unsigned int")
 	}
 	if t.size < 4 {
 		// 8, 16, 24, and 32 bits.
@@ -519,6 +530,9 @@ func (t Type) IntRange() (min, max int64) {
 func (t Type) WithIntRange(min, max int64) Type {
 	if t.kind != IntKind {
 		panic("type is not an int type")
+	}
+	if t.unsigned {
+		panic("cannot set int range for an unsigned int")
 	}
 	Min, Max := minInt[t.size], maxInt[t.size]
 	if min == Min && max == Max {
@@ -543,33 +557,37 @@ func (t Type) WithIntRange(min, max int64) Type {
 	return t
 }
 
-type uintRange struct{ min, max uint64 }
-
-// UintRange returns the minimum and maximum value for t. t must be an uint
-// type, otherwise it panics.
-func (t Type) UintRange() (min, max uint64) {
-	if t.kind != UintKind {
-		panic("type is not an uint type")
+// UnsignedRange returns the minimum and maximum value for t. t must be an
+// unsigned int type, otherwise it panics.
+func (t Type) UnsignedRange() (min, max uint64) {
+	if t.kind != IntKind {
+		panic("type is not an int type")
+	}
+	if !t.unsigned {
+		panic("type is not an unsigned int type")
 	}
 	if t.size < 4 {
 		// 8, 16, 24, and 32 bits.
 		return uint64(uint32(t.p)), uint64(uint32(t.s))
 	}
 	// 64 bits.
-	if i, ok := t.vl.(uintRange); ok {
-		return i.min, i.max
+	if i, ok := t.vl.(intRange); ok {
+		return uint64(i.min), uint64(i.max)
 	}
 	return 0, MaxUint64
 }
 
-// WithUintRange returns t but with values in [min,max]. t must be an uint type.
-// min cannot be greater than max. min and max must be within the range of
-// values of t. It panics it previous restrictions are not met.
-func (t Type) WithUintRange(min, max uint64) Type {
-	if t.kind != UintKind {
-		panic("type is not an uint type")
+// WithUnsignedRange returns t but with values in [min,max]. t must be an
+// unsigned int type. min cannot be greater than max. min and max must be within
+// the range of values of t. It panics it previous restrictions are not met.
+func (t Type) WithUnsignedRange(min, max uint64) Type {
+	if t.kind != IntKind {
+		panic("type is not an int type")
 	}
-	Max := maxUint[t.size]
+	if !t.unsigned {
+		panic("type is not an unsigned int type")
+	}
+	Max := maxUnsigned[t.size]
 	if min == 0 && max == Max {
 		return t
 	}
@@ -587,7 +605,7 @@ func (t Type) WithUintRange(min, max uint64) Type {
 		t.p, t.s = int32(min), int32(max)
 	} else {
 		// 64 bits.
-		t.vl = uintRange{min, max}
+		t.vl = intRange{int64(min), int64(max)}
 	}
 	return t
 }
@@ -715,34 +733,34 @@ func (t Type) Scale() int {
 	return int(t.s)
 }
 
-// MaxByteLength returns the maximum length in bytes of a string type and true.
-// If t has no maximum length in bytes, it returns 0 and false.
-// Panics if t is not a string type.
-func (t Type) MaxByteLength() (int, bool) {
+// MaxBytes returns the maximum number of bytes allowed for the string type t,
+// along with true. If t has no maximum length, it returns 0 and false.
+// It panics if t is not a string type.
+func (t Type) MaxBytes() (int, bool) {
 	if t.kind != StringKind {
-		panic("cannot get byte length of a non-string type")
+		panic("cannot get max bytes of a non-string type")
 	}
 	return int(uint32(t.p)), t.p != 0
 }
 
-// WithMaxByteLength returns t with a maximum length of l of a string type.
-// l must be in range [1, MaxStringLen].
-// Panics if t is not a string type, or if l is not in range, or if t has
-// already a byte length, or if t already has values.
-func (t Type) WithMaxByteLength(l int) Type {
+// WithMaxBytes returns t configured with a maximum of n bytes. n must be in the
+// range [1, MaxStringLen].
+// It panics if t is not a string type, if t already specifies a maximum number
+// of bytes, if t already has values, or if n is out of range.
+func (t Type) WithMaxBytes(n int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max byte length of a non-string type")
 	}
 	if t.p > 0 {
-		panic("repeated length in bytes")
+		panic("max bytes already specified")
 	}
-	if l < 1 || MaxStringLen < l {
-		panic("invalid string length")
+	if n < 1 || MaxStringLen < n {
+		panic("invalid max bytes")
 	}
 	if _, ok := t.vl.([]string); ok {
 		panic("t already has values")
 	}
-	t.p = int32(uint32(l))
+	t.p = int32(uint32(n))
 	return t
 }
 

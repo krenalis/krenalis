@@ -303,20 +303,20 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Int(64).WithIntRange(0, 10), "bigint"},
 
 		// uint.
-		{types.Uint(8), "smallint"},
-		{types.Uint(16), "integer"},
-		{types.Uint(16).WithUintRange(0, 10), "integer"},
-		{types.Uint(24), "integer"},
-		{types.Uint(32), "bigint"},
-		{types.Uint(64), "numeric(20, 0)"},
-		{types.Uint(64).WithUintRange(1, 200), "numeric(20, 0)"},
+		{types.Int(8).Unsigned(), "smallint"},
+		{types.Int(16).Unsigned(), "integer"},
+		{types.Int(16).Unsigned().WithUnsignedRange(0, 10), "integer"},
+		{types.Int(24).Unsigned(), "integer"},
+		{types.Int(32).Unsigned(), "bigint"},
+		{types.Int(64).Unsigned(), "numeric(20, 0)"},
+		{types.Int(64).Unsigned().WithUnsignedRange(1, 200), "numeric(20, 0)"},
 
 		// float.
 		{types.Float(32), "real"},
-		{types.Float(32).AsReal(), "real"},
+		{types.Float(32).Real(), "real"},
 		{types.Float(32).WithFloatRange(0, 100), "real"},
 		{types.Float(64), "double precision"},
-		{types.Float(64).AsReal(), "double precision"},
+		{types.Float(64).Real(), "double precision"},
 		{types.Float(64).WithFloatRange(0, 100), "double precision"},
 
 		// decimal.
@@ -346,16 +346,16 @@ func Test_typeToPostgresType(t *testing.T) {
 
 		// string.
 		{types.String(), "character varying"},
-		{types.String().WithMaxByteLength(256), "character varying(256)"},
+		{types.String().WithMaxBytes(256), "character varying(256)"},
 		{types.String().WithMaxLength(300), "character varying(300)"},
-		{types.String().WithMaxByteLength(10).WithMaxLength(10), "character varying(10)"},
-		{types.String().WithMaxByteLength(5).WithMaxLength(10), "character varying(5)"},
-		{types.String().WithMaxByteLength(500).WithMaxLength(10), "character varying(10)"},
+		{types.String().WithMaxBytes(10).WithMaxLength(10), "character varying(10)"},
+		{types.String().WithMaxBytes(5).WithMaxLength(10), "character varying(5)"},
+		{types.String().WithMaxBytes(500).WithMaxLength(10), "character varying(10)"},
 
 		// array.
 		{types.Array(types.String()), "character varying[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
-		{types.Array(types.Uint(32)), "bigint[]"},
+		{types.Array(types.Int(32).Unsigned()), "bigint[]"},
 
 		// map.
 		{types.Map(types.String()), "jsonb"},

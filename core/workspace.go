@@ -1615,8 +1615,8 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 //
 // identifiers specify the identity resolution identifiers in the specified
 // order. An identifier must be a property in the profile schema with a type of
-// int, uint, uuid, ip, string, or decimal with zero scale. Identifiers cannot
-// be repeated.
+// int, uuid, ip, string, or decimal with zero scale. Identifiers cannot be
+// repeated.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -2066,7 +2066,6 @@ func suitableAsIdentifier(t types.Type) bool {
 	switch t.Kind() {
 	case types.StringKind,
 		types.IntKind,
-		types.UintKind,
 		types.UUIDKind,
 		types.IPKind:
 		return true

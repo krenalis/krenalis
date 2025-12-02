@@ -3568,7 +3568,7 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 
 function typeDescription(type: Type): ReactNode[] {
 	let elements: ReactNode[] = [];
-	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
+	if (type.kind === 'int' || type.kind === 'float') {
 		if (type.minimum != null) {
 			elements.push(<div>Minimum: {type.minimum}</div>);
 		}
@@ -3597,8 +3597,8 @@ function typeDescription(type: Type): ReactNode[] {
 		if (type.pattern != null) {
 			elements.push(<div>Regular expression: {type.pattern}</div>);
 		}
-		if (type.maxByteLength != null) {
-			elements.push(<div>Max bytes: {type.maxByteLength}</div>);
+		if (type.maxBytes != null) {
+			elements.push(<div>Max bytes: {type.maxBytes}</div>);
 		}
 		if (type.maxLength != null) {
 			elements.push(<div>Max characters: {type.maxLength}</div>);

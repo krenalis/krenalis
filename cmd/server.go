@@ -108,6 +108,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		OAuthCredentials:     maps.Clone(settings.OAuthCredentials),
 		SentryTelemetryLevel: settings.SentryTelemetryLevel,
 	}
+	config.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
+	config.DatabaseInitialization.InitDockerMember = initDockerMember
 
 	// Choose the transformation function provider setting.
 	if settings.Transformers.Lambda.NodeJS.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "" {
@@ -117,7 +119,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
-	core, err := core.New(&config, initDBIfEmpty, initDockerMember)
+	core, err := core.New(&config)
 	if err != nil {
 		return err
 	}
@@ -200,8 +202,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		return fmt.Errorf("unexpected error calling CrossOriginProtection.AddTrustedOrigin with %q", origin)
 	}
 
+	addr := net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port))
+
 	httpServer := http.Server{
-		Addr:              net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port)),
+		Addr:              addr,
 		Handler:           c.Handler(handler),
 		ErrorLog:          log.New(&httpLogger{}, "", 0),
 		ReadHeaderTimeout: settings.HTTP.ReadHeaderTimeout,
@@ -219,8 +223,21 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		}
 	}()
 
-	// Print a message with the external URL.
-	_, _ = fmt.Fprintf(os.Stderr, "The Meergo Admin console is now available at: %s\n", settings.HTTP.ExternalURL+"admin")
+	// Log a human-readable overview of all externally exposed server endpoints.
+	msg := fmt.Sprintf(
+		"The Meergo server has been started at %s\n"+
+			"├─ Metrics:  %s\n"+
+			"├─ REST API: %s\n"+
+			"└─ Event ingestion endpoint: %s\n"+
+			"\n"+
+			"> Admin console: %s",
+		addr,
+		settings.HTTP.ExternalURL+"metrics",
+		settings.HTTP.ExternalURL+"api/v1/",
+		settings.HTTP.ExternalEventURL,
+		settings.HTTP.ExternalURL+"admin",
+	)
+	slog.Info(msg)
 
 	select {
 	case <-ctx.Done():

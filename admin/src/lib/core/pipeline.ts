@@ -24,7 +24,6 @@ import Type, {
 	Property,
 	Role,
 	StringType,
-	UintType,
 } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
@@ -37,7 +36,7 @@ import {
 	isFloat,
 	isIP,
 	isInt,
-	isUint,
+	isUnsigned,
 	isUUID,
 	isValidPropertyPath,
 	isYear,
@@ -87,18 +86,18 @@ const UNARY_OPERATORS = new Set<FilterOperator>([
 ]);
 
 const typesByFilterOperator: string[][] = [
-	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is
-	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is not
-	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is less than
-	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is less than or equal to
-	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is greater than
-	['int', 'uint', 'float', 'decimal', 'json', 'string'], // is greater than or equal to
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is between
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not between
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is not
+	['int', 'float', 'decimal', 'json', 'string'], // is less than
+	['int', 'float', 'decimal', 'json', 'string'], // is less than or equal to
+	['int', 'float', 'decimal', 'json', 'string'], // is greater than
+	['int', 'float', 'decimal', 'json', 'string'], // is greater than or equal to
+	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is between
+	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not between
 	['json', 'string', 'array'], // contains
 	['json', 'string', 'array'], // does not contain
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is one of
-	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
+	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is one of
+	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
 	['json', 'string'], // starts with
 	['json', 'string'], // ends with
 	['datetime', 'date', 'time', 'year'], // is before
@@ -112,7 +111,6 @@ const typesByFilterOperator: string[][] = [
 	[
 		'boolean',
 		'int',
-		'uint',
 		'float',
 		'decimal',
 		'datetime',
@@ -130,7 +128,6 @@ const typesByFilterOperator: string[][] = [
 	[
 		'boolean',
 		'int',
-		'uint',
 		'float',
 		'decimal',
 		'datetime',
@@ -148,7 +145,6 @@ const typesByFilterOperator: string[][] = [
 	[
 		'boolean',
 		'int',
-		'uint',
 		'float',
 		'decimal',
 		'datetime',
@@ -166,7 +162,6 @@ const typesByFilterOperator: string[][] = [
 	[
 		'boolean',
 		'int',
-		'uint',
 		'float',
 		'decimal',
 		'datetime',
@@ -482,8 +477,8 @@ const flattenSchema = (typ: ObjectType | ArrayType | MapType, insertPrefilled?: 
 			size: null,
 			full: { ...property },
 		};
-		if (flat.type === 'int' || flat.type === 'uint' || flat.type === 'float') {
-			const prop = property.type as IntType | UintType | FloatType;
+		if (flat.type === 'int' || flat.type === 'float') {
+			const prop = property.type as IntType | FloatType;
 			flat.size = prop.bitSize;
 		}
 		return flat;
@@ -1583,9 +1578,11 @@ const validateAndNormalizeFilterCondition = (
 };
 
 const validateFilterConditionValues = (type: Type, values: string[] | null, propertyName: string) => {
-	const throwIfInvalid = (isValid: boolean, typeKind: string) => {
+	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
-			throw new Error(`The filter value on the property "${propertyName}" is not a valid ${typeKind}`);
+			throw new Error(
+				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? 'unsigned ' : ''} ${typeKind}`,
+			);
 		}
 	};
 
@@ -1595,9 +1592,11 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 
 	for (const v of values) {
 		if (type.kind === 'int') {
-			throwIfInvalid(isInt(v), type.kind);
-		} else if (type.kind === 'uint') {
-			throwIfInvalid(isUint(v), type.kind);
+			if (type.unsigned) {
+				throwIfInvalid(isUnsigned(v), type.kind, true);
+			} else {
+				throwIfInvalid(isInt(v), type.kind);
+			}
 		} else if (type.kind === 'float') {
 			throwIfInvalid(isFloat(v, type.bitSize), type.kind);
 		} else if (type.kind === 'decimal') {
@@ -1622,7 +1621,7 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 
 const validateMatching = (inMatching: Property, outMatching: Property) => {
 	const inTyp = inMatching.type.kind;
-	if (inTyp !== 'int' && inTyp !== 'uint' && inTyp !== 'string' && inTyp !== 'uuid') {
+	if (inTyp !== 'int' && inTyp !== 'string' && inTyp !== 'uuid') {
 		throw new Error(`Matching property cannot be of type "${inTyp}"`);
 	}
 
@@ -1632,15 +1631,11 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 	const conversionError = new Error(`Matching property of type "${inTyp}" cannot be converted to type "${exTyp}"`);
 
 	if (inTyp === 'int') {
-		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'string') {
-			throw conversionError;
-		}
-	} else if (inTyp === 'uint') {
-		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'string') {
+		if (exTyp !== 'int' && exTyp !== 'string') {
 			throw conversionError;
 		}
 	} else if (inTyp === 'string') {
-		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'uuid' && exTyp !== 'string') {
+		if (exTyp !== 'int' && exTyp !== 'uuid' && exTyp !== 'string') {
 			throw conversionError;
 		}
 	} else if (inTyp === 'uuid') {
@@ -1655,13 +1650,13 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 		return false;
 	}
 
-	if (aType.kind === 'int' || aType.kind === 'uint') {
-		const t = bType as IntType | UintType;
+	if (aType.kind === 'int') {
+		const t = bType as IntType;
 		return aType.bitSize === t.bitSize && aType.minimum === t.minimum && aType.maximum === t.maximum;
 	} else if (aType.kind === 'string') {
 		const t = bType as StringType;
 		return (
-			aType.maxByteLength === t.maxByteLength &&
+			aType.maxBytes === t.maxBytes &&
 			aType.maxLength === t.maxLength &&
 			aType.pattern === t.pattern &&
 			JSON.stringify(aType.values) === JSON.stringify(t.values)

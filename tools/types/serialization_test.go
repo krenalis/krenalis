@@ -223,11 +223,11 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"string","maxLength":10}`,
 			Type: String().WithMaxLength(10),
 		}, {
-			Data: `{"kind":"string","maxByteLength":24}`,
-			Type: String().WithMaxByteLength(24),
+			Data: `{"kind":"string","maxBytes":24}`,
+			Type: String().WithMaxBytes(24),
 		}, {
-			Data: `{"kind":"string","maxByteLength":80,"maxLength":100}`,
-			Type: String().WithMaxByteLength(80).WithMaxLength(100),
+			Data: `{"kind":"string","maxBytes":80,"maxLength":100}`,
+			Type: String().WithMaxBytes(80).WithMaxLength(100),
 		}, {
 			Data: `{"kind":"string","values":["a","b"]}`,
 			Type: String().WithValues("a", "b"),
@@ -241,6 +241,9 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {
+			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":20,"maximum":30}`,
+			Type: Int(32).Unsigned().WithUnsignedRange(20, 30),
+		}, {
 			Data: `{"kind":"float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
 			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
 		}, {
@@ -248,7 +251,7 @@ func TestTypeSerialization(t *testing.T) {
 			Type: Float(32).WithFloatRange(3.99, 5.31),
 		}, {
 			Data: `{"kind":"float","bitSize":64,"real":true}`,
-			Type: Float(64).AsReal(),
+			Type: Float(64).Real(),
 		}, {
 			Data: `{"kind":"decimal","precision":1}`,
 			Type: Decimal(1, 0),

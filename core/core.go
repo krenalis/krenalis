@@ -21,11 +21,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/initdb"
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/core/internal/initdb"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
@@ -77,13 +77,21 @@ type Core struct {
 var hasBeenCalled bool
 
 type Config struct {
-	DB                   DBConfig
-	FunctionProvider     any // must be a LambdaConfig or LocalConfig value
-	MaxMindDBPath        string
-	MemberEmailFrom      string
-	SMTP                 SMTPConfig
-	OAuthCredentials     map[string]*OAuthCredentials
-	SentryTelemetryLevel TelemetryLevel
+	DB                     DBConfig
+	FunctionProvider       any // must be a LambdaConfig or LocalConfig value
+	MaxMindDBPath          string
+	MemberEmailFrom        string
+	SMTP                   SMTPConfig
+	OAuthCredentials       map[string]*OAuthCredentials
+	SentryTelemetryLevel   TelemetryLevel
+	DatabaseInitialization struct {
+		// InitIfEmpty controls whether the PostgreSQL database should be
+		// initialized in case it is empty.
+		InitIfEmpty bool
+		// InitDockerMember controls whether a member specific for Docker
+		// scenarios is initialized. Requires InitIfEmpty to be true.
+		InitDockerMember bool
+	}
 }
 
 type DBConfig struct {
@@ -147,10 +155,7 @@ type ExpressionToBeExtracted struct {
 }
 
 // New returns a *Core instance. It can only be called once.
-// initDBIfEmpty controls whether the PostgreSQL database should be initialized
-// in case it is empty; if initDockerMember is true in addition to
-// initDBIfEmpty, a member specific for Docker scenarios is initialized.
-func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
+func New(conf *Config) (*Core, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -183,7 +188,7 @@ func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
 	// Initializes the PostgreSQL database if it is empty and the option to
 	// initialize it is provided.
 	dbInitCtx := context.Background()
-	if initDBIfEmpty {
+	if conf.DatabaseInitialization.InitIfEmpty {
 		isEmpty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
 		if err != nil {
 			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
@@ -196,7 +201,7 @@ func New(conf *Config, initDBIfEmpty, initDockerMember bool) (*Core, error) {
 			}
 			slog.Info("PostgreSQL database initialized correctly")
 			// Also initialize the Docker member, if requested.
-			if initDockerMember {
+			if conf.DatabaseInitialization.InitDockerMember {
 				slog.Info("initializing Docker member...")
 				err := initdb.InitializeDockerMember(dbInitCtx, db)
 				if err != nil {

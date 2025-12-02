@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	_ "embed"
 	"html"
 	"net/http"
 	"strings"
@@ -14,6 +15,9 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
+
+//go:embed api-index.html
+var apiIndexHTML []byte
 
 type api struct {
 	*apisServer
@@ -108,6 +112,21 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 		return nil, errors.BadRequest("%s", err)
 	}
 	return api.core.ExpressionsProperties(body.Expressions, body.Schema)
+}
+
+// Index returns the index.
+func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
+	accept := strings.ToLower(r.Header.Get("Accept"))
+	wantsHTML := accept == "" || strings.Contains(accept, "text/html") || strings.Contains(accept, "*/*") && !strings.Contains(accept, "application/json")
+	if wantsHTML {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(apiIndexHTML)
+		return nil, nil
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"api":"Meergo API","version":"v1","documentation":"https://www.meergo.com/docs/api"}`))
+	return nil, nil
 }
 
 // Member returns the current member.

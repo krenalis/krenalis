@@ -3,7 +3,6 @@ type Role = 'Both' | 'Source' | 'Destination';
 type TypeKind =
 	| 'boolean'
 	| 'int'
-	| 'uint'
 	| 'float'
 	| 'decimal'
 	| 'datetime'
@@ -38,7 +37,6 @@ type Type =
 	| StringType
 	| BooleanType
 	| IntType
-	| UintType
 	| FloatType
 	| DecimalType
 	| DateTimeType
@@ -54,7 +52,7 @@ type Type =
 
 interface StringType {
 	kind: 'string';
-	maxByteLength?: number;
+	maxBytes?: number;
 	maxLength?: number;
 	pattern?: string;
 	values?: string[];
@@ -67,13 +65,7 @@ interface BooleanType {
 interface IntType {
 	kind: 'int';
 	bitSize: IntBitSize;
-	minimum?: number;
-	maximum?: number;
-}
-
-interface UintType {
-	kind: 'uint';
-	bitSize: IntBitSize;
+	unsigned: boolean;
 	minimum?: number;
 	maximum?: number;
 }
@@ -150,7 +142,6 @@ export type {
 	StringType,
 	ObjectType,
 	IntType,
-	UintType,
 	DecimalType,
 	FloatType,
 	Role,

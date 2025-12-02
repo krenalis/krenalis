@@ -27,16 +27,16 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errMaxByteLengthConversion = errors.New("invalid max byte length")
-	errMaxLengthConversion     = errors.New("invalid max length")
-	errEnumConversion          = errors.New("not a valid enum value")
-	errInvalidConversion       = errors.New("cannot convert")
-	errMaxConversion           = errors.New("too large")
-	errMinConversion           = errors.New("too small")
-	errParseConversion         = errors.New("cannot parse")
-	errRangeConversion         = errors.New("out of range")
-	errPatternConversion       = errors.New("pattern mismatch")
-	errYearRangeConversion     = errors.New("year not in range [1,9999]")
+	errMaxBytesConversion  = errors.New("invalid max bytes")
+	errMaxLengthConversion = errors.New("invalid max length")
+	errEnumConversion      = errors.New("not a valid enum value")
+	errInvalidConversion   = errors.New("cannot convert")
+	errMaxConversion       = errors.New("too large")
+	errMinConversion       = errors.New("too small")
+	errParseConversion     = errors.New("cannot parse")
+	errRangeConversion     = errors.New("out of range")
+	errPatternConversion   = errors.New("pattern mismatch")
+	errYearRangeConversion = errors.New("year not in range [1,9999]")
 )
 
 const (
@@ -45,7 +45,7 @@ const (
 	minFloatConvertibleToInt64 = -9223372036854776000.0 // converted to -9223372036854775808
 	maxFloatConvertibleToInt64 = 9223372036854775000.0  // converted to 9223372036854774784
 
-	// Range of float values convertible to uint(64): [0, 18446744073709550000].
+	// Range of float values convertible to unsigned int(64): [0, 18446744073709550000].
 	maxFloatConvertibleToUint64 = 18446744073709550000.0 // converted to 18446744073709549568
 )
 
@@ -70,7 +70,7 @@ var (
 // in the returned value.
 //
 // If the value cannot be converted, it returns v and one of the following:
-//   - errMaxByteLengthConversion
+//   - errMaxBytesConversion
 //   - errMaxLengthConversion
 //   - errEnumConversion
 //   - errInvalidConversion
@@ -119,9 +119,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				s = "true"
 			}
 		case types.IntKind:
-			s = strconv.FormatInt(int64(v.(int)), 10)
-		case types.UintKind:
-			s = strconv.FormatUint(uint64(v.(uint)), 10)
+			if st.IsUnsigned() {
+				s = strconv.FormatUint(uint64(v.(uint)), 10)
+			} else {
+				s = strconv.FormatInt(int64(v.(int)), 10)
+			}
 		case types.FloatKind:
 			s = strconv.FormatFloat(v.(float64), 'g', -1, st.BitSize())
 		case types.DecimalKind:
@@ -162,8 +164,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errPatternConversion
 			}
 		} else {
-			if l, ok := dt.MaxByteLength(); ok && l < len(s) {
-				return v, errMaxByteLengthConversion
+			if l, ok := dt.MaxBytes(); ok && l < len(s) {
+				return v, errMaxBytesConversion
 			}
 			if l, ok := dt.MaxLength(); ok {
 				runes := len(s)
@@ -189,11 +191,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v.(bool), nil
 		case types.IntKind:
 			if st.BitSize() == 8 {
+				if st.IsUnsigned() {
+					return v.(uint) > 0, nil
+				}
 				return v.(int) != 0, nil
-			}
-		case types.UintKind:
-			if st.BitSize() == 8 {
-				return v.(uint) > 0, nil
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -202,6 +203,69 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 		}
 	case types.IntKind:
+		if dt.IsUnsigned() {
+			var err error
+			var n uint
+			switch sk {
+			case types.StringKind:
+				var u uint64
+				u, err = strconv.ParseUint(v.(string), 10, 64)
+				if err != nil {
+					if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+						return v, errRangeConversion
+					}
+				}
+				n = uint(u)
+			case types.BooleanKind:
+				if v.(bool) {
+					n = 1
+				}
+				if dt.BitSize() != 8 {
+					err = errInvalidConversion
+				}
+			case types.IntKind:
+				if st.IsUnsigned() {
+					n = v.(uint)
+				} else {
+					i := v.(int)
+					if i < 0 {
+						return v, errRangeConversion
+					}
+					n = uint(i)
+				}
+			case types.FloatKind:
+				n, err = floatToUint(v.(float64))
+				if err != nil {
+					return v, err
+				}
+			case types.DecimalKind:
+				n, err = decimalToUint(v.(decimal.Decimal))
+				if err != nil {
+					return v, err
+				}
+			case types.YearKind:
+				n = uint(v.(int))
+			case types.JSONKind:
+				v := v.(json.Value)
+				n, err = v.Uint()
+				if err == json.ErrRange {
+					return v, errRangeConversion
+				}
+			default:
+				return v, errInvalidConversion
+			}
+			if err != nil {
+				return v, errInvalidConversion
+			}
+			min, max := dt.UnsignedRange()
+			if uint64(n) < min {
+				return v, errMinConversion
+			}
+			if uint64(n) > max {
+				return v, errMaxConversion
+			}
+			return n, nil
+		}
 		var err error
 		var n int
 		switch sk {
@@ -220,13 +284,15 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				err = errInvalidConversion
 			}
 		case types.IntKind:
-			n = v.(int)
-		case types.UintKind:
-			u := v.(uint)
-			if u > math.MaxInt64 {
-				return v, errRangeConversion
+			if st.IsUnsigned() {
+				u := v.(uint)
+				if u > math.MaxInt64 {
+					return v, errRangeConversion
+				}
+				n = int(u)
+			} else {
+				n = v.(int)
 			}
-			n = int(u)
 		case types.FloatKind:
 			n, err = floatToInt(v.(float64))
 			if err != nil {
@@ -259,66 +325,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v, errMaxConversion
 		}
 		return n, nil
-	case types.UintKind:
-		var err error
-		var n uint
-		switch sk {
-		case types.StringKind:
-			var u uint64
-			u, err = strconv.ParseUint(v.(string), 10, 64)
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errRangeConversion
-				}
-			}
-			n = uint(u)
-		case types.BooleanKind:
-			if v.(bool) {
-				n = 1
-			}
-			if dt.BitSize() != 8 {
-				err = errInvalidConversion
-			}
-		case types.IntKind:
-			i := v.(int)
-			if i < 0 {
-				return v, errRangeConversion
-			}
-			n = uint(i)
-		case types.UintKind:
-			n = v.(uint)
-		case types.FloatKind:
-			n, err = floatToUint(v.(float64))
-			if err != nil {
-				return v, err
-			}
-		case types.DecimalKind:
-			n, err = decimalToUint(v.(decimal.Decimal))
-			if err != nil {
-				return v, err
-			}
-		case types.YearKind:
-			n = uint(v.(int))
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Uint()
-			if err == json.ErrRange {
-				return v, errRangeConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if err != nil {
-			return v, errInvalidConversion
-		}
-		min, max := dt.UintRange()
-		if uint64(n) < min {
-			return v, errMinConversion
-		}
-		if uint64(n) > max {
-			return v, errMaxConversion
-		}
-		return n, nil
 	case types.FloatKind:
 		var err error
 		var n float64
@@ -339,9 +345,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				n = float64(float32(n))
 			}
 		case types.IntKind:
-			n = float64(v.(int))
-		case types.UintKind:
-			n = float64(v.(uint))
+			if st.IsUnsigned() {
+				n = float64(v.(uint))
+			} else {
+				n = float64(v.(int))
+			}
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal).Float64()
 			if dt.BitSize() == 32 {
@@ -376,12 +384,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
 		case types.IntKind:
-			n, err = decimal.Int(v.(int), dt.Precision(), dt.Scale())
-			if err == decimal.ErrRange {
-				return v, errRangeConversion
+			if st.IsUnsigned() {
+				n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
+			} else {
+				n, err = decimal.Int(v.(int), dt.Precision(), dt.Scale())
 			}
-		case types.UintKind:
-			n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
 			if err == decimal.ErrRange {
 				return v, errRangeConversion
 			}
@@ -554,13 +561,15 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.YearKind:
 			return v.(int), nil
 		case types.IntKind:
-			n = v.(int)
-		case types.UintKind:
-			u := v.(uint)
-			if u > math.MaxInt64 {
-				return v, errYearRangeConversion
+			if st.IsUnsigned() {
+				u := v.(uint)
+				if u > math.MaxInt64 {
+					return v, errYearRangeConversion
+				}
+				n = int(u)
+			} else {
+				n = v.(int)
 			}
-			n = int(u)
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Int()

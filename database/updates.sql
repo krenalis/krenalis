@@ -62,7 +62,7 @@ WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::t
 
 UPDATE workspaces
 SET profile_schema = REPLACE(profile_schema::text, '"regexp": ', '"pattern": ')::jsonb
-WHERE profile_schema::text LIKE '%"byteLen": %';
+WHERE profile_schema::text LIKE '%"regexp": %';
 
 UPDATE pipelines
 SET in_schema = REPLACE(in_schema::text, '"regexp": ', '"pattern": ')::jsonb
@@ -89,3 +89,31 @@ WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "inet"%';
 UPDATE pipelines
 SET out_schema = REPLACE(out_schema::text, '"kind": "inet"', '"kind": "ip"')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "inet"%';
+
+-- rename maxByteLength to maxBytes
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"maxByteLength": ', '"maxBytes": ')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"maxByteLength": %';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"maxByteLength": ', '"maxBytes": ')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"maxByteLength": %';
+
+-- replace uint with unsigned int
+
+UPDATE workspaces
+SET alter_profile_schema_schema = REPLACE(alter_profile_schema_schema::text, '"kind": "uint"', '"kind": "int", "unsigned": true')::jsonb
+WHERE alter_profile_schema_schema IS NOT NULL AND alter_profile_schema_schema::text LIKE '%"kind": "uint"%';
+
+UPDATE workspaces
+SET profile_schema = REPLACE(profile_schema::text, '"kind": "uint"', '"kind": "int", "unsigned": true')::jsonb
+WHERE profile_schema::text LIKE '%"kind": "uint"%';
+
+UPDATE pipelines
+SET in_schema = REPLACE(in_schema::text, '"kind": "uint"', '"kind": "int", "unsigned": true')::jsonb
+WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "uint"%';
+
+UPDATE pipelines
+SET out_schema = REPLACE(out_schema::text, '"kind": "uint"', '"kind": "int", "unsigned": true')::jsonb
+WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "uint"%';

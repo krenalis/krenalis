@@ -39,8 +39,6 @@ import (
 //   - boolean: true or false
 //   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
 //   - int (64 bits): a JSON String representing an integer
-//   - uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - uint (64 bits): a JSON String representing an integer
 //   - float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
 //   - decimal: a JSON String representing a JSON Number
 //   - datetime: a JSON String representing a time in the ISO8601 format
@@ -332,7 +330,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
 				}
-				if n, ok := t.MaxByteLength(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
 				}
 				return s, nil
@@ -357,31 +355,20 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 			}
 		}
 		if s != "" {
-			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-				if min, max := t.IntRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+			if t.unsigned {
+				if n, err := strconv.ParseUint(s, 10, 64); err == nil {
+					if min, max := t.UnsignedRange(); n < min || n > max {
+						return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+					}
+					return uint(n), nil
 				}
-				return int(n), nil
-			}
-		}
-	case UintKind:
-		var s string
-		switch v.Kind() {
-		case '0':
-			if t.BitSize() != 64 {
-				s = string(v)
-			}
-		case '"':
-			if t.BitSize() == 64 {
-				s = string(d.unquoteString(v))
-			}
-		}
-		if s != "" {
-			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
-				if min, max := t.UintRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+			} else {
+				if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+					if min, max := t.IntRange(); n < min || n > max {
+						return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "")
+					}
+					return int(n), nil
 				}
-				return uint(n), nil
 			}
 		}
 	case FloatKind:

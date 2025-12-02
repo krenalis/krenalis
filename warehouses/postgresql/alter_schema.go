@@ -213,7 +213,7 @@ func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
 		var maxLength int
-		if l, ok := t.MaxByteLength(); ok {
+		if l, ok := t.MaxBytes(); ok {
 			maxLength = l // we represent N bytes len as N chars len in PostgreSQL.
 		}
 		if l, ok := t.MaxLength(); ok {
@@ -230,30 +230,32 @@ func typeToPostgresType(t types.Type) string {
 	case types.BooleanKind:
 		return "boolean"
 	case types.IntKind:
-		switch t.BitSize() {
-		case 8:
-			return "smallint"
-		case 16:
-			return "smallint"
-		case 24:
-			return "integer"
-		case 32:
-			return "integer"
-		case 64:
-			return "bigint"
-		}
-	case types.UintKind:
-		switch t.BitSize() {
-		case 8:
-			return "smallint"
-		case 16:
-			return "integer"
-		case 24:
-			return "integer"
-		case 32:
-			return "bigint"
-		case 64:
-			return "numeric(20, 0)"
+		if t.IsUnsigned() {
+			switch t.BitSize() {
+			case 8:
+				return "smallint"
+			case 16:
+				return "integer"
+			case 24:
+				return "integer"
+			case 32:
+				return "bigint"
+			case 64:
+				return "numeric(20, 0)"
+			}
+		} else {
+			switch t.BitSize() {
+			case 8:
+				return "smallint"
+			case 16:
+				return "smallint"
+			case 24:
+				return "integer"
+			case 32:
+				return "integer"
+			case 64:
+				return "bigint"
+			}
 		}
 	case types.FloatKind:
 		switch t.BitSize() {

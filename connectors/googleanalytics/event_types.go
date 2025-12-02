@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	currencyType = types.String().WithMaxByteLength(3)
+	currencyType = types.String().WithMaxBytes(3)
 	monetaryType = types.Decimal(20, 2)
 	intType      = types.Int(32)
 	// genericNumberType should be used to represent the types of those values for

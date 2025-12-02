@@ -524,9 +524,11 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				var n any
 				switch dt.Kind() {
 				case types.IntKind:
-					n, _ = dt.IntRange()
-				case types.UintKind:
-					n, _ = dt.UintRange()
+					if dt.IsUnsigned() {
+						n, _ = dt.UnsignedRange()
+					} else {
+						n, _ = dt.IntRange()
+					}
 				case types.FloatKind:
 					n, _ = dt.FloatRange()
 				case types.DecimalKind:
@@ -537,9 +539,11 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				var n any
 				switch dt.Kind() {
 				case types.IntKind:
-					_, n = dt.IntRange()
-				case types.UintKind:
-					_, n = dt.UintRange()
+					if dt.IsUnsigned() {
+						_, n = dt.UnsignedRange()
+					} else {
+						_, n = dt.IntRange()
+					}
 				case types.FloatKind:
 					_, n = dt.FloatRange()
 				case types.DecimalKind:
@@ -550,8 +554,8 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
 			case errPatternConversion:
 				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
-			case errMaxByteLengthConversion:
-				n, _ := dt.MaxByteLength()
+			case errMaxBytesConversion:
+				n, _ := dt.MaxBytes()
 				msg = fmt.Sprintf("%q exceeds the %d-byte limit", p.value, n)
 			case errMaxLengthConversion:
 				n, _ := dt.MaxLength()

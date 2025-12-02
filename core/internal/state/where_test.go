@@ -23,7 +23,7 @@ func Test_unmarshalWhere(t *testing.T) {
 		{Name: "d", Type: types.Float(64)},
 		{Name: "e", Type: types.String()},
 		{Name: "f", Type: types.Boolean()},
-		{Name: "g", Type: types.Uint(32)},
+		{Name: "g", Type: types.Int(32).Unsigned()},
 		{Name: "h", Type: types.JSON()},
 		{Name: "i", Type: types.JSON()},
 		{Name: "j", Type: types.DateTime()},

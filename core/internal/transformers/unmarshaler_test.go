@@ -68,23 +68,23 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			Name: "Uint8",
-			Type: types.Uint(8),
+			Type: types.Int(8).Unsigned(),
 		},
 		{
 			Name: "Uint16",
-			Type: types.Uint(16),
+			Type: types.Int(16).Unsigned(),
 		},
 		{
 			Name: "Uint24",
-			Type: types.Uint(24),
+			Type: types.Int(24).Unsigned(),
 		},
 		{
 			Name: "Uint32",
-			Type: types.Uint(32),
+			Type: types.Int(32).Unsigned(),
 		},
 		{
 			Name: "Uint64",
-			Type: types.Uint(64),
+			Type: types.Int(64).Unsigned(),
 		},
 		{
 			Name: "Float32",

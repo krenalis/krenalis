@@ -75,7 +75,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 	switch t.kind {
 	case StringKind:
 		if t.p > 0 {
-			b.WriteString(`,"maxByteLength":`)
+			b.WriteString(`,"maxBytes":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
 		}
 		if t.s > 0 {
@@ -99,52 +99,53 @@ func marshalType(b *bytes.Buffer, t Type) {
 	case IntKind:
 		b.WriteString(`,"bitSize":`)
 		b.WriteString(strconv.Itoa(t.BitSize()))
-		if t.size < 4 {
-			// 8, 16, 24, and 32 bits.
-			if min := int64(t.p); min > minInt[t.size] {
-				b.WriteString(`,"minimum":`)
-				b.WriteString(strconv.FormatInt(min, 10))
-			}
-			if max := int64(t.s); max < maxInt[t.size] {
-				b.WriteString(`,"maximum":`)
-				b.WriteString(strconv.FormatInt(max, 10))
+		if t.unsigned {
+			b.WriteString(`,"unsigned":true`)
+			if t.size < 4 {
+				// 8, 16, 24, and 32 bits.
+				if min := uint64(t.p); min > 0 {
+					b.WriteString(`,"minimum":`)
+					b.WriteString(strconv.FormatUint(min, 10))
+				}
+				if max := uint64(t.s); max < maxUnsigned[t.size] {
+					b.WriteString(`,"maximum":`)
+					b.WriteString(strconv.FormatUint(max, 10))
+				}
+			} else {
+				// 64 bits.
+				if i, ok := t.vl.(intRange); ok {
+					if min := uint64(i.min); min > 0 {
+						b.WriteString(`,"minimum":`)
+						b.WriteString(strconv.FormatUint(min, 10))
+					}
+					if max := uint64(i.max); max < MaxUint64 {
+						b.WriteString(`,"maximum":`)
+						b.WriteString(strconv.FormatUint(max, 10))
+					}
+				}
 			}
 		} else {
-			// 64 bits.
-			if i, ok := t.vl.(intRange); ok {
-				if i.min > MinInt64 {
+			if t.size < 4 {
+				// 8, 16, 24, and 32 bits.
+				if min := int64(t.p); min > minInt[t.size] {
 					b.WriteString(`,"minimum":`)
-					b.WriteString(strconv.FormatInt(i.min, 10))
+					b.WriteString(strconv.FormatInt(min, 10))
 				}
-				if i.max < MaxInt64 {
+				if max := int64(t.s); max < maxInt[t.size] {
 					b.WriteString(`,"maximum":`)
-					b.WriteString(strconv.FormatInt(i.max, 10))
+					b.WriteString(strconv.FormatInt(max, 10))
 				}
-			}
-		}
-	case UintKind:
-		b.WriteString(`,"bitSize":`)
-		b.WriteString(strconv.Itoa(t.BitSize()))
-		if t.size < 4 {
-			// 8, 16, 24, and 32 bits.
-			if min := uint64(t.p); min > 0 {
-				b.WriteString(`,"minimum":`)
-				b.WriteString(strconv.FormatUint(min, 10))
-			}
-			if max := uint64(t.s); max < maxUint[t.size] {
-				b.WriteString(`,"maximum":`)
-				b.WriteString(strconv.FormatUint(max, 10))
-			}
-		} else {
-			// 64 bits.
-			if i, ok := t.vl.(uintRange); ok {
-				if i.min > 0 {
-					b.WriteString(`,"minimum":`)
-					b.WriteString(strconv.FormatUint(i.min, 10))
-				}
-				if i.max < MaxUint64 {
-					b.WriteString(`,"maximum":`)
-					b.WriteString(strconv.FormatUint(i.max, 10))
+			} else {
+				// 64 bits.
+				if i, ok := t.vl.(intRange); ok {
+					if i.min > MinInt64 {
+						b.WriteString(`,"minimum":`)
+						b.WriteString(strconv.FormatInt(i.min, 10))
+					}
+					if i.max < MaxInt64 {
+						b.WriteString(`,"maximum":`)
+						b.WriteString(strconv.FormatInt(i.max, 10))
+					}
 				}
 			}
 		}
@@ -295,13 +296,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
+	var hasUnsigned, hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
 
 	var kind string
 	var bitSize int
+	var unsigned bool
 	var minimum, maximum json.Number
 	var real bool
-	var precision, scale, maxByteLength, maxLength int
+	var precision, scale, maxBytes, maxLength int
 	var pattern *regexp.Regexp
 	var values []string
 	var elementType Type
@@ -362,6 +364,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			default:
 				return Type{}, errors.New("invalid bit size")
 			}
+		case "unsigned":
+			if hasUnsigned {
+				return Type{}, errors.New("repeated 'unsigned' key")
+			}
+			unsigned, ok = tok.(bool)
+			if !ok {
+				return Type{}, errors.New("invalid unsigned")
+			}
+			hasUnsigned = true
 		case "minimum":
 			if minimum != "" {
 				return Type{}, errors.New("repeated 'minimum' key")
@@ -453,16 +464,16 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid scale")
 			}
 			hasScale = true
-		case "maxByteLength":
-			if maxByteLength > 0 {
-				return Type{}, errors.New("repeated 'maxByteLength' key")
+		case "maxBytes":
+			if maxBytes > 0 {
+				return Type{}, errors.New("repeated 'maxBytes' key")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
 				return Type{}, errors.New("invalid length in bytes")
 			}
-			maxByteLength, _ = strconv.Atoi(string(n))
-			if maxByteLength <= 0 || maxByteLength > MaxStringLen {
+			maxBytes, _ = strconv.Atoi(string(n))
+			if maxBytes <= 0 || maxBytes > MaxStringLen {
 				return Type{}, errors.New("invalid length in bytes")
 			}
 		case "maxLength":
@@ -577,11 +588,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.vl = values
 	}
-	if maxByteLength > 0 {
+	if maxBytes > 0 {
 		if t.kind != StringKind {
 			return Type{}, errors.New("unexpected length in bytes for non-string type")
 		}
-		t.p = int32(maxByteLength)
+		t.p = int32(maxBytes)
 	}
 	if maxLength > 0 {
 		if t.kind != StringKind {
@@ -590,12 +601,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.s = int32(maxLength)
 	}
 	if bitSize == 0 {
-		if t.kind == IntKind || t.kind == UintKind || t.kind == FloatKind {
+		if t.kind == IntKind || t.kind == FloatKind {
 			return Type{}, errors.New("missing 'bitSize' key")
 		}
 	} else {
 		switch t.kind {
-		case IntKind, UintKind:
+		case IntKind:
 		case FloatKind:
 			if bitSize != 32 && bitSize != 64 {
 				return Type{}, errors.New("invalid bit size")
@@ -615,6 +626,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		case 64:
 			t.size = 4
 		}
+	}
+	if hasUnsigned {
+		if t.kind != IntKind {
+			return Type{}, errors.New("unexpected unsigned for non-int type")
+		}
+		t.unsigned = unsigned
 	}
 	if precision == 0 {
 		if t.kind == DecimalKind {
@@ -643,41 +660,43 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.vl = decimalRange{min, max}
 	}
 	if minimum == "" {
-		if t.kind == IntKind && t.size < 4 { // 8, 16, 24, and 32 bits
+		if t.kind == IntKind && !t.unsigned && t.size < 4 { // 8, 16, 24, and 32 bits
 			t.p = int32(minInt[t.size])
 		}
 	} else {
 		switch t.kind {
 		case IntKind:
-			min, err := minimum.Int64()
-			if err != nil {
-				return Type{}, errors.New("invalid value for minimum")
-			}
-			Min, Max := minInt[t.size], maxInt[t.size]
-			if min < Min || min > Max {
-				return Type{}, errors.New("invalid value for minimum")
-			}
-			if min > Min {
-				if t.size < 4 {
-					t.p = int32(min) // 8, 16, 24, and 32 bits
-				} else {
-					t.vl = intRange{min, Max} // 64 bits
+			if t.unsigned {
+				min, err := strconv.ParseUint(string(minimum), 10, 64)
+				if err != nil {
+					return Type{}, errors.New("invalid value for minimum")
 				}
-			}
-		case UintKind:
-			min, err := strconv.ParseUint(string(minimum), 10, 64)
-			if err != nil {
-				return Type{}, errors.New("invalid value for minimum")
-			}
-			Max := maxUint[t.size]
-			if min > Max {
-				return Type{}, errors.New("invalid value for minimum")
-			}
-			if min > 0 {
-				if t.size < 4 {
-					t.p = int32(min) // 8, 16, 24, and 32 bits
-				} else {
-					t.vl = uintRange{min, Max} // 64 bits
+				Max := maxUnsigned[t.size]
+				if min > Max {
+					return Type{}, errors.New("invalid value for minimum")
+				}
+				if min > 0 {
+					if t.size < 4 {
+						t.p = int32(min) // 8, 16, 24, and 32 bits
+					} else {
+						t.vl = intRange{int64(min), int64(Max)} // 64 bits
+					}
+				}
+			} else {
+				min, err := minimum.Int64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for minimum")
+				}
+				Min, Max := minInt[t.size], maxInt[t.size]
+				if min < Min || min > Max {
+					return Type{}, errors.New("invalid value for minimum")
+				}
+				if min > Min {
+					if t.size < 4 {
+						t.p = int32(min) // 8, 16, 24, and 32 bits
+					} else {
+						t.vl = intRange{min, Max} // 64 bits
+					}
 				}
 			}
 		case FloatKind:
@@ -722,71 +741,72 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	}
 	if maximum == "" {
-		if t.size < 4 {
+		if t.kind == IntKind && t.size < 4 {
 			// 8, 16, 24, and 32 bits.
-			switch t.kind {
-			case IntKind:
+			if t.unsigned {
+				t.s = int32(maxUnsigned[t.size])
+			} else {
 				t.s = int32(maxInt[t.size])
-			case UintKind:
-				t.s = int32(maxUint[t.size])
 			}
 		}
 	} else {
 		switch t.kind {
 		case IntKind:
-			max, err := maximum.Int64()
-			if err != nil {
-				return Type{}, errors.New("invalid value for maximum")
-			}
-			Min, Max := minInt[t.size], maxInt[t.size]
-			if max < Min || max > Max {
-				return Type{}, errors.New("invalid value for maximum")
-			}
-			if max < Max {
-				if t.size == 4 {
-					// 64 bits.
-					if i, ok := t.vl.(intRange); ok {
-						if max < i.min {
-							return Type{}, errors.New("maximum cannot be less than minimum")
-						}
-						i.max = max
-						t.vl = i
-					} else {
-						t.vl = intRange{Min, max}
-					}
-				} else {
-					if min := int64(t.p); max < min {
-						return Type{}, errors.New("maximum cannot be less than minimum")
-					}
-					t.s = int32(max)
+			if t.unsigned {
+				max, err := strconv.ParseUint(string(maximum), 10, 64)
+				if err != nil {
+					return Type{}, errors.New("invalid value for maximum")
 				}
-			}
-		case UintKind:
-			max, err := strconv.ParseUint(string(maximum), 10, 64)
-			if err != nil {
-				return Type{}, errors.New("invalid value for maximum")
-			}
-			Max := maxUint[t.size]
-			if max > Max {
-				return Type{}, errors.New("invalid value for maximum")
-			}
-			if max < Max {
-				if t.size == 4 {
-					// 64 bits.
-					if f, ok := t.vl.(uintRange); ok {
-						if max < f.min {
+				Max := maxUnsigned[t.size]
+				if max > Max {
+					return Type{}, errors.New("invalid value for maximum")
+				}
+				if max < Max {
+					if t.size == 4 {
+						// 64 bits.
+						if r, ok := t.vl.(intRange); ok {
+							if max < uint64(r.min) {
+								return Type{}, errors.New("maximum cannot be less than minimum")
+							}
+							r.max = int64(max)
+							t.vl = r
+						} else {
+							t.vl = intRange{0, int64(max)}
+						}
+					} else {
+						if min := uint64(t.p); max < min {
 							return Type{}, errors.New("maximum cannot be less than minimum")
 						}
-						f.max = max
-						t.vl = f
+						t.s = int32(max)
+					}
+				}
+			} else {
+				max, err := maximum.Int64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for maximum")
+				}
+				Min, Max := minInt[t.size], maxInt[t.size]
+				if max < Min || max > Max {
+					return Type{}, errors.New("invalid value for maximum")
+				}
+				if max < Max {
+					if t.size == 4 {
+						// 64 bits.
+						if i, ok := t.vl.(intRange); ok {
+							if max < i.min {
+								return Type{}, errors.New("maximum cannot be less than minimum")
+							}
+							i.max = max
+							t.vl = i
+						} else {
+							t.vl = intRange{Min, max}
+						}
 					} else {
-						t.vl = uintRange{0, max}
+						if min := int64(t.p); max < min {
+							return Type{}, errors.New("maximum cannot be less than minimum")
+						}
+						t.s = int32(max)
 					}
-				} else {
-					if min := uint64(t.p); max < min {
-						return Type{}, errors.New("maximum cannot be less than minimum")
-					}
-					t.s = int32(max)
 				}
 			}
 		case FloatKind:

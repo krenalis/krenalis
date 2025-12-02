@@ -55,10 +55,11 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	switch t.Kind() {
 	case types.BooleanKind:
 		strconv.AppendBool(b, v.(bool))
-	case types.IntKind, types.YearKind:
+	case types.IntKind:
+		if t.IsUnsigned() {
+			return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
+		}
 		return strconv.AppendInt(b, int64(v.(int)), 10), nil
-	case types.UintKind:
-		return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
 	case types.FloatKind:
 		return strconv.AppendFloat(b, v.(float64), 'g', -1, t.BitSize()), nil
 	case types.DecimalKind:
@@ -69,6 +70,8 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 		return v.(time.Time).AppendFormat(b, time.DateOnly), nil
 	case types.TimeKind:
 		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
+	case types.YearKind:
+		return strconv.AppendInt(b, int64(v.(int)), 10), nil
 	case types.JSONKind:
 		v := v.(json.Value)
 		switch v.Kind() {
@@ -664,7 +667,7 @@ func errBooleanConversion(fn string, code string, v any, t types.Type) error {
 // fn function. code is the source code of the passed expression.
 func errInt32Conversion(fn string, code string, v any, t types.Type) error {
 	switch t.Kind() {
-	case types.IntKind, types.UintKind, types.FloatKind, types.DecimalKind:
+	case types.IntKind, types.FloatKind, types.DecimalKind:
 		return fmt.Errorf("«%s», with a value of %s, cannot be passed as a 32-bit int to the «%s» function", code, v, fn)
 	case types.JSONKind:
 		k := v.(json.Value).Kind()
