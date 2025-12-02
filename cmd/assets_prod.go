@@ -17,6 +17,8 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
+const devMode = false
+
 // assetsHandler implements an http.Handler to serve the Admin assets. It serves
 // bundle files that are embedded in the executable, compressed with Brotli if
 // the client supports it.

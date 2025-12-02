@@ -48,7 +48,7 @@ func Main(assets fs.FS) {
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
 
-	if assets != nil {
+	if !devMode && assets != nil {
 		assets, _ = fs.Sub(assets, "meergo-assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
