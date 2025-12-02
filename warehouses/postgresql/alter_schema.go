@@ -7,7 +7,6 @@ package postgresql
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -57,14 +56,12 @@ func (warehouse *PostgreSQL) alterProfileSchema(ctx context.Context, columns []w
 	// Determine the alter schema queries.
 	queries := alterProfileSchemaQueries("meergo_profiles_"+strconv.Itoa(profilesVersion), columns, operations)
 
-	log.Printf("[DEBUG] [warehouses/postgresql/alter_schema.go] queries: %v\n", queries) // TODO: remove.
-
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		for _, query := range queries {
 			_, err := tx.Exec(ctx, query)
 			if err != nil {
-				return fmt.Errorf("fallita la query %q: %s", query, err)
+				return err
 			}
 		}
 		return nil
