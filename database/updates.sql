@@ -1,5 +1,3 @@
--- TODO(Gianluca): fill this file with update queries.
-
 -- rename text to string
 
 UPDATE workspaces
