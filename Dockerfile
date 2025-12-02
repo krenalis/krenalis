@@ -18,10 +18,8 @@ RUN go mod download -x
 # including unversioned files, so a reproducible build can be achieved by
 # checking out a new, freshly downloaded repository of Meergo.
 COPY ./ ./
-WORKDIR ./cmd/meergo
 RUN go generate
-WORKDIR ../../
-RUN go build -tags osusergo,netgo -trimpath ./cmd/meergo
+RUN go build -tags osusergo,netgo -trimpath
 
 # Stage 1: Meergo Execution Stage.
 
