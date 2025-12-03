@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -20,6 +21,9 @@ import (
 
 	"github.com/getsentry/sentry-go"
 )
+
+//go:embed static
+var static embed.FS
 
 // Main is the function that executes Meergo. It is designed to be used in
 // executable packages that run Meergo's code, and should be utilized in the

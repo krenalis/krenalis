@@ -7,6 +7,7 @@ package cmd
 import (
 	_ "embed"
 	"html"
+	"io"
 	"net/http"
 	"strings"
 
@@ -15,9 +16,6 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
-
-//go:embed api-index.html
-var apiIndexHTML []byte
 
 type api struct {
 	*apisServer
@@ -121,7 +119,12 @@ func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 	wantsHTML := accept == "" || strings.Contains(accept, "text/html") || strings.Contains(accept, "*/*") && !strings.Contains(accept, "application/json")
 	if wantsHTML {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(apiIndexHTML)
+		fi, err := static.Open("static/api_index.html")
+		if err != nil {
+			return nil, errors.New("embedded file 'static/api_index.html' not found in executable")
+		}
+		_, _ = io.Copy(w, fi)
+		_ = fi.Close()
 		return nil, nil
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -216,7 +219,11 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 		return nil, errors.New("there are no organizations")
 	}
 	org := organizations[0]
-	emailTemplate := strings.ReplaceAll(resetPasswordEmail, "${externalURL}", html.EscapeString(api.externalURL))
+	resetPasswordEmail, err := static.ReadFile("static/reset_password_email.html")
+	if err != nil {
+		return nil, errors.New("embedded file 'static/reset_password_email.html' not found in executable")
+	}
+	emailTemplate := strings.ReplaceAll(string(resetPasswordEmail), "${externalURL}", html.EscapeString(api.externalURL))
 	err = org.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
 	return nil, err
 }

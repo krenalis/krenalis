@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"bufio"
-	_ "embed"
 	"io"
 	"log/slog"
 	"math"
@@ -34,12 +33,6 @@ var (
 	// errInvalidSessionCookie is returned when a session cookie has expired or is no lo longer valid.
 	errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
 )
-
-//go:embed invite-member-email.html
-var inviteMemberEmail string
-
-//go:embed reset-password-email.html
-var resetPasswordEmail string
 
 // sessionMaxAge contains the max age property for the session cookie (6 hours).
 const sessionMaxAge = 6 * 60 * 60

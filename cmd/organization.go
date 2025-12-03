@@ -191,7 +191,11 @@ func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	emailTemplate := strings.ReplaceAll(inviteMemberEmail, "${invitationFrom}", html.EscapeString(member.Email))
+	inviteMemberEmail, err := static.ReadFile("static/invite_member_email.html")
+	if err != nil {
+		return nil, errors.New("embedded file 'static/invite_member_email.html' not found in executable")
+	}
+	emailTemplate := strings.ReplaceAll(string(inviteMemberEmail), "${invitationFrom}", html.EscapeString(member.Email))
 	emailTemplate = strings.ReplaceAll(emailTemplate, "${organization}", html.EscapeString(org.Name))
 	emailTemplate = strings.ReplaceAll(emailTemplate, "${externalURL}", html.EscapeString(organization.externalURL))
 	err = org.InviteMember(r.Context(), body.Email, emailTemplate)
