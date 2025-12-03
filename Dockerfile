@@ -27,7 +27,7 @@ RUN go build -tags osusergo,netgo -trimpath
 # not, a multi-stage build is used here to have, as the resulting image, an
 # image that contains only the Meergo executable and the Python and JavaScript
 # (node) interpreters, for the transformation functions.
-FROM alpine:latest # TODO: mettere una fissa
+FROM alpine:latest
 
 # Install Python and Node.js.
 RUN apk add --no-cache python3
@@ -36,6 +36,8 @@ RUN apk add --no-cache nodejs
 # Copy the Meergo executable from stage 0 to stage 1.
 COPY --from=0 /meergo/meergo /bin/meergo
 
+# Install two packages:
+#
 #    doas    ->   provides the 'doas' command
 #    shadow  ->   provides the 'useradd' command
 RUN apk add doas shadow
@@ -47,7 +49,6 @@ RUN useradd meergouser -m
 # Create an user 'transformeruser' which will be used to run transformation
 # functions executables.
 RUN useradd transformeruser
-
 RUN echo 'permit nopass meergouser as transformeruser' > /etc/doas.conf
 
 USER meergouser
