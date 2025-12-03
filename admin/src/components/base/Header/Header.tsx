@@ -114,7 +114,7 @@ const Header = ({ title, member }: HeaderProps) => {
 								onClick={closeMenu}
 							>
 								<SlIcon className='header__account-menu-item-icon' name='people' />
-								Members
+								Team members
 							</Link>
 							<Link
 								className='header__account-menu-item header__account-menu-item--indented'

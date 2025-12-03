@@ -194,7 +194,7 @@ const useApp = (
 				member = await api.member();
 			} catch (err) {
 				if (err instanceof NotFoundError) {
-					handleError('The current logged in member does not exist anymore');
+					handleError('The current logged in team member does not exist anymore');
 					setTimeout(() => {
 						logout();
 						setIsLoadingState(false);
@@ -371,7 +371,7 @@ const useApp = (
 				m = await api.member();
 			} catch (err) {
 				if (err instanceof NotFoundError) {
-					handleError('The current logged in member does not exist anymore');
+					handleError('The current logged in team member does not exist anymore');
 					setIsLoadingMember(false);
 					logout();
 					return;

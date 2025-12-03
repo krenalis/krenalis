@@ -25,8 +25,8 @@ const Organization = () => {
 					<ListTile
 						className='organization__entry'
 						icon={<SlIcon name='people' />}
-						name={'Members'}
-						description='View and modify your organization members'
+						name={'Team members'}
+						description='View and modify your organization team members'
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
