@@ -45,7 +45,7 @@ func makeVendor() error {
 	nodeModulesDir := filepath.Join(root, "admin", "node_modules") + string(os.PathSeparator)
 
 	// Create the out directory used by esbuild.
-	outDir, err := os.MkdirTemp("", "meergo-admin-make-vendor-*")
+	outDir, err := os.MkdirTemp("", "meergo-admin-makevendor-*")
 	if err != nil {
 		panic(err)
 	}

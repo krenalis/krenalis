@@ -76,7 +76,7 @@ func main() {
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "makevendor").InDir(repo, "admin").Run()
 
 	// Validate the Docker Compose files.
 	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
