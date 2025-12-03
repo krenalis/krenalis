@@ -282,6 +282,11 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, fmt.Errorf("invalid configuration: cannot set both Lambda and local transformers")
 	}
 	settings.Transformers.Local.SudoUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER")
+	settings.Transformers.Local.DoasUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_DOAS_USER")
+	if settings.Transformers.Local.SudoUser != "" && settings.Transformers.Local.DoasUser != "" {
+		return nil, fmt.Errorf("cannot specify a value for both MEERGO_TRANSFORMERS_LOCAL_SUDO_USER" +
+			" and MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: you must specify one of the two, or neither")
+	}
 
 	if id := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); id != "" {
 		secret := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET")

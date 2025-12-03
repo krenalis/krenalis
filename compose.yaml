@@ -61,7 +61,7 @@ services:
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/storage
-      MEERGO_TRANSFORMERS_LOCAL_SUDO_USER: transformeruser
+      MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
 
       # This configures the File System connector to access the mounted directory
       # via Docker. If you change these settings, also change the volumes

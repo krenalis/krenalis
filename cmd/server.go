@@ -90,6 +90,7 @@ type LocalConfig struct {
 	PythonExecutable string
 	FunctionsDir     string
 	SudoUser         string
+	DoasUser         string
 }
 
 // Run runs the server.

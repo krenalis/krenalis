@@ -130,6 +130,7 @@ type LocalConfig struct {
 	PythonExecutable string
 	FunctionsDir     string
 	SudoUser         string
+	DoasUser         string
 }
 
 type SMTPConfig struct {
