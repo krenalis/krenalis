@@ -108,16 +108,12 @@ const Header = ({ title, member }: HeaderProps) => {
 								<SlIcon className='header__account-menu-item-icon' name='building' />
 								Your organization
 							</Link>
-							<Link
-								className='header__account-menu-item header__account-menu-item--indented'
-								path='organization/members'
-								onClick={closeMenu}
-							>
+							<Link className='header__account-menu-item' path='organization/members' onClick={closeMenu}>
 								<SlIcon className='header__account-menu-item-icon' name='people' />
 								Team members
 							</Link>
 							<Link
-								className='header__account-menu-item header__account-menu-item--indented'
+								className='header__account-menu-item'
 								path='organization/access-keys'
 								onClick={closeMenu}
 							>

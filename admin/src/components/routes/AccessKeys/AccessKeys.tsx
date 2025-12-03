@@ -14,7 +14,6 @@ import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { NotFoundError } from '../../../lib/api/errors';
-import { Link } from '../../base/Link/Link';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { AccessKeyType } from '../../../lib/api/types/organization';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
@@ -195,12 +194,6 @@ const AccessKeys = () => {
 	return (
 		<div className='access-keys'>
 			<div className='access-keys__content'>
-				<Link path='organization'>
-					<SlButton className='access-keys__back-button' variant='text'>
-						<SlIcon slot='prefix' name='arrow-left' />
-						Organization
-					</SlButton>
-				</Link>
 				<div className='access-keys__title'>
 					<p className='access-keys__title-text'>API keys</p>
 					<SlButton size='small' variant='primary' onClick={() => setIsCreatingAPIKey(true)}>

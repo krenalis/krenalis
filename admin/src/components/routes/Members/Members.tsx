@@ -93,12 +93,6 @@ const Members = () => {
 		return (
 			<div className='members'>
 				<div className='members__content'>
-					<Link path='organization'>
-						<SlButton className='members__back-button' variant='text'>
-							<SlIcon slot='prefix' name='arrow-left' />
-							Organization
-						</SlButton>
-					</Link>
 					<div className='members__title'>
 						<p className='members__title-text'>Team members</p>
 						{publicMetadata.memberEmailVerificationRequired ? (
@@ -186,7 +180,7 @@ const Members = () => {
 						</>
 					}
 				>
-					If you delete the team member they will no longer have access to your organization.
+					If you delete the team member they will no longer have access to this account.
 				</AlertDialog>
 				<InviteMemberDialog
 					isOpen={isInviteMemberDialogOpen}

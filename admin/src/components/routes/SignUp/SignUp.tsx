@@ -46,9 +46,7 @@ const SignUp = () => {
 				}
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'InvitationTokenExpired') {
-						handleError(
-							'This invitation is expired, contact the organization administrator to ask for a new one',
-						);
+						handleError('This invitation is expired, contact another team member to ask for a new one');
 						redirect('');
 						return;
 					}
@@ -96,9 +94,7 @@ const SignUp = () => {
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'InvitationTokenExpired') {
-					handleError(
-						'This invitation is expired, contact the organization administrator to ask for a new one',
-					);
+					handleError('This invitation is expired, contact another team member to ask for a new one');
 					redirect('');
 					return;
 				}

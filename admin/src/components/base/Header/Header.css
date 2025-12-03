@@ -185,10 +185,6 @@
 	line-height: 1.7;
 }
 
-.header__account-menu-item--indented {
-	margin-left: 20px;
-}
-
 .header__account-menu-item:hover {
 	background-color: var(--sl-color-primary-50);
 }
