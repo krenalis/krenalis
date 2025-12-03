@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -95,9 +96,12 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		"-",            // read source code of transformation function from stdin. This is the same for both Node.js and Python.
 		string(payload),
 	}
+	log.Printf("[DEBUG] [core/internal/transformers/local/local.go] fn.settings.SudoUser: %v\n", fn.settings.SudoUser) // TODO: remove.
 	if fn.settings.SudoUser != "" {
-		args = append([]string{"sudo", "-u", fn.settings.SudoUser}, args...)
+		log.Print("[DEBUG] core/internal/transformers/local/local.go: DEBUG POINT 3d4482") // TODO: remove.
+		args = append([]string{"doas", "-u", fn.settings.SudoUser}, args...)
 	}
+	log.Printf("[DEBUG] [core/internal/transformers/local/local.go] args: %v\n", args) // TODO: remove.
 
 	// Limit the execution time to 10 seconds. This is more than enough time to
 	// run transformations locally; if a transformation takes longer than that,
