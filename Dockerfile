@@ -36,9 +36,11 @@ RUN apk add --no-cache nodejs
 # Copy the Meergo executable from stage 0 to stage 1.
 COPY --from=0 /meergo/meergo /bin/meergo
 
-# Installs the packages needed to provide executables for (1) creating users and
-# (2) providing the "sudo" command, used in local transformation functions.
-RUN apk add sudo shadow
+# Install two packages:
+#
+#    doas    ->   provides the 'doas' command
+#    shadow  ->   provides the 'useradd' command
+RUN apk add doas shadow
 
 # Create the user 'meergouser' (and its home directory): this will be used to
 # run Meergo.
@@ -47,7 +49,7 @@ RUN useradd meergouser -m
 # Create an user 'transformeruser' which will be used to run transformation
 # functions executables.
 RUN useradd transformeruser
-RUN echo 'transformeruser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/transformeruser
+RUN echo 'permit nopass meergouser as transformeruser' > /etc/doas.conf
 
 USER meergouser
 WORKDIR /home/meergouser
