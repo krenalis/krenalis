@@ -27,7 +27,7 @@ RUN go build -tags osusergo,netgo -trimpath
 # not, a multi-stage build is used here to have, as the resulting image, an
 # image that contains only the Meergo executable and the Python and JavaScript
 # (node) interpreters, for the transformation functions.
-FROM alpine:latest
+FROM alpine:3.23
 
 # Install Python and Node.js.
 RUN apk add --no-cache python3
