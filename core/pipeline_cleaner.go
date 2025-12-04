@@ -346,10 +346,13 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 
 			return nil
 		})
-		if err == nil {
-			break
+		if err != nil {
+			slog.Error(err.Error(), "workspace", ws.ID)
+		} else {
+			// Try one last time to check whether any pipelines were added in the meantime and still need purging.
+			// Note that we pass 1ns to SetNextWaitTime because it does not accept 0ns.
+			bo.SetNextWaitTime(1)
 		}
-		slog.Error(err.Error(), "workspace", ws.ID)
 
 	}
 
