@@ -188,7 +188,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterProfileSchema(schema, nil, rePaths)
+	c.AlterProfileSchema(schema, nil, nil)
 
 	ws = c.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
