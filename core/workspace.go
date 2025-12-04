@@ -487,16 +487,14 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		LinkedConnections: slices.Clone(c.LinkedConnections),
-		PipelinesCount:    len(c.Pipelines()),
 		Health:            Health(c.Health),
 	}
 
 	// Set the pipelines.
 	pipelines := c.Pipelines()
-	p := make([]Pipeline, len(pipelines))
-	connection.Pipelines = &p
+	connection.Pipelines = make([]Pipeline, len(pipelines))
 	for i, pipeline := range pipelines {
-		(*connection.Pipelines)[i].fromState(this.core, this.store, pipeline)
+		connection.Pipelines[i].fromState(this.core, this.store, pipeline)
 	}
 
 	// Set the event types.
@@ -540,29 +538,14 @@ func (this *Workspace) Connections() []*Connection {
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			LinkedConnections: slices.Clone(c.LinkedConnections),
-			PipelinesCount:    len(c.Pipelines()),
 			Health:            Health(c.Health),
 		}
 
-		// Set the pipelines info.
+		// Set the pipelines.
 		pipelines := c.Pipelines()
-		p := make([]PipelineInfo, len(pipelines))
-		connection.PipelinesInfo = &p
+		connection.Pipelines = make([]Pipeline, len(pipelines))
 		for i, pipeline := range pipelines {
-			info := PipelineInfo{
-				ID:      pipeline.ID,
-				Target:  Target(pipeline.Target),
-				Enabled: pipeline.Enabled,
-			}
-			if pipeline.Target == state.TargetUser || pipeline.Target == state.TargetGroup {
-				if pipeline.SchedulePeriod != 0 {
-					start := int(pipeline.ScheduleStart)
-					period := SchedulePeriod(pipeline.SchedulePeriod)
-					info.ScheduleStart = &start
-					info.SchedulePeriod = &period
-				}
-			}
-			p[i] = info
+			connection.Pipelines[i].fromState(this.core, this.store, pipeline)
 		}
 
 		infos[i] = &connection
