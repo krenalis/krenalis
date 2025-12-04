@@ -39,13 +39,13 @@ var initSQLQueries string
 //
 // This function must be called on an empty database. Otherwise, the behavior is
 // undefined.
-func Initialize(ctx context.Context, db *db.DB) error {
+func Initialize(ctx context.Context, tx *db.Tx) error {
 	for query := range strings.SplitSeq(initSQLQueries, ";\n") {
 		query = strings.TrimSpace(query)
 		if query == "" {
 			continue
 		}
-		_, err := db.Exec(ctx, query)
+		_, err := tx.Exec(ctx, query)
 		if err != nil {
 			return err
 		}
@@ -66,15 +66,15 @@ func Initialize(ctx context.Context, db *db.DB) error {
 //
 //  2. Creates a new member whose email is "docker@meergo.com" and whose
 //     password is "meergo-password".
-func InitializeDockerMember(ctx context.Context, db *db.DB) error {
-	_, err := db.Exec(ctx, "TRUNCATE members")
+func InitializeDockerMember(ctx context.Context, tx *db.Tx) error {
+	_, err := tx.Exec(ctx, "TRUNCATE members")
 	if err != nil {
 		return err
 	}
 	const query = `INSERT INTO members (organization, name, avatar, email, password, created_at)
 		SELECT id, 'User', NULL, 'docker@meergo.com', '$2a$10$dGlVroo3N23Vn99edSPe..xo1hhKzGLYafIjFQjazu3faeFizvW7m', now() at time zone 'utc'
 		FROM organizations`
-	_, err = db.Exec(ctx, query)
+	_, err = tx.Exec(ctx, query)
 	if err != nil {
 		return err
 	}
