@@ -308,7 +308,7 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 			store := c.core.datastore.Store(id)
 			err := store.PurgePipelines(c.close.ctx, pipelines)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot purge pipelines: %s", err)
 			}
 
 			n := state.PurgePipeline{
@@ -340,12 +340,16 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 				}
 				return n, nil
 			})
+			if err != nil {
+				return fmt.Errorf("cannot set pipelines as purged: %s", err)
+			}
 
-			return err
+			return nil
 		})
 		if err == nil {
 			break
 		}
+		slog.Error(err.Error(), "workspace", ws.ID)
 
 	}
 
