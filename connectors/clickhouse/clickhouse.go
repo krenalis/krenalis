@@ -144,11 +144,11 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.V
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
-			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "localhost", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5, HelpText: "Native ClickHouse protocol port (9000 default; 9440 with TLS)"},
+			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "default", Type: "text", MinLength: 1, MaxLength: 64},
+			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 100},
+			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "default", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
