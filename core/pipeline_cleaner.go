@@ -311,7 +311,7 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 				return fmt.Errorf("cannot purge pipelines: %s", err)
 			}
 
-			n := state.PurgePipeline{
+			n := state.PurgePipelines{
 				Workspace: id,
 			}
 

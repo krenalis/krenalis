@@ -990,15 +990,15 @@ func (state *State) linkConnection(n notification) uuid.UUID {
 	return c.organization.ID
 }
 
-// PurgePipeline is the event sent when pipeline of a workspace are purged.
-type PurgePipeline struct {
+// PurgePipelines is the event sent when pipelines of a workspace are purged.
+type PurgePipelines struct {
 	Workspace        int
 	PipelinesToPurge []int // remaining pipelines to purge. Never nil.
 }
 
 // purgePipelines purges pipelines of a workspace.
 func (state *State) purgePipelines(n notification) uuid.UUID {
-	e := PurgePipeline{}
+	e := PurgePipelines{}
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
