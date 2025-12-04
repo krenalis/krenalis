@@ -770,24 +770,6 @@ func TestDiff(t *testing.T) {
 			rePaths:     map[string]any{"x2": "x", "x2.a2": "x.a"},
 			expectedErr: "it is not possible to rename an object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
 		},
-		// {
-		// 	name: "Property renamed and added again with the same name and same type, but the rePaths are invalid",
-		// 	fromSchema: types.Object([]types.Property{
-		// 		{Name: "bar", Type: types.Int(64), Nullable: true},
-		// 	}),
-		// 	toSchema: types.Object([]types.Property{
-		// 		{Name: "foo", Type: types.Int(64), Nullable: true},
-		// 		{Name: "bar", Type: types.Int(64), Nullable: true},
-		// 	}),
-		// 	rePaths: map[string]any{
-		// 		"foo": "bar",
-		// 		// "a":  nil, -> commented on purpose: the test must verify that an error is returned when it is missing.
-		// 	},
-		// 	expectedOps: []warehouses.AlterOperation{
-		// 		{Operation: warehouses.OperationRenameColumn, Column: "bar", NewColumn: "foo"},
-		// 		{Operation: warehouses.OperationAddColumn, Column: "bar", Type: types.Int(64)},
-		// 	},
-		// },
 		{
 			name: "One property added at first level (type string), but rePaths are invalid",
 			fromSchema: types.Object([]types.Property{
@@ -817,6 +799,21 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths:     map[string]any{"x.c": nil},
 			expectedErr: "rePaths cannot contain \"x.c\", as this property no longer exists in the new schema",
+		},
+		{
+			name: "Property renamed and added again with the same name and same type, but the rePaths are invalid",
+			fromSchema: types.Object([]types.Property{
+				{Name: "bar", Type: types.Int(64), Nullable: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Int(64), Nullable: true},
+				{Name: "bar", Type: types.Int(64), Nullable: true},
+			}),
+			rePaths: map[string]any{
+				"foo": "bar",
+				// "a":  nil, -> commented on purpose: the test must verify that an error is returned when it is missing.
+			},
+			expectedErr: "property \"bar\" has been renamed and still appears in the new schema, so it means that it must be declared in rePaths (as a renamed property, or as a new property)",
 		},
 	}
 

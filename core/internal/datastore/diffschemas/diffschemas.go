@@ -220,6 +220,20 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 		}
 
+		// If a property "bar" was renamed to "foo" (that is, if the rePaths
+		// contain {..., "foo": "bar", ...}) and "bar" was retained in the new
+		// schema, the possibilities are:
+		//
+		// 1) "bar" comes from a property that was renamed
+		// 2) "bar" is a new property
+		//
+		// In both cases, "bar" must appear in the rePaths, otherwise there is
+		// some kind of inconsistency.
+		if _, ok := rePaths[keptPath]; !ok && renamed {
+			return nil, fmt.Errorf("property %q has been renamed and still appears in the new schema,"+
+				" so it means that it must be declared in rePaths (as a renamed property, or as a new property)", keptPath)
+		}
+
 		if v, ok := rePaths[keptPath]; ok && v == nil {
 			if renamed {
 				// New properties with the same name of a renamed property. They
@@ -289,10 +303,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				})
 			}
 			continue
-		}
-
-		if renamed {
-
 		}
 
 		// Unchanged properties, that are properties that have not been
