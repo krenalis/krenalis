@@ -24,7 +24,7 @@ import (
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/db"
+	_db "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -46,7 +46,7 @@ import (
 )
 
 type Core struct {
-	db                *db.DB
+	db                *_db.DB
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
@@ -165,7 +165,7 @@ func New(conf *Config) (*Core, error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
-	db, err := db.Open(&db.Options{
+	db, err := _db.Open(&_db.Options{
 		Host:           ps.Host,
 		Port:           ps.Port,
 		Username:       ps.Username,
@@ -196,19 +196,27 @@ func New(conf *Config) (*Core, error) {
 		}
 		if isEmpty {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
-			err := initdb.Initialize(dbInitCtx, db)
-			if err != nil {
-				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
-			}
-			slog.Info("PostgreSQL database initialized correctly")
-			// Also initialize the Docker member, if requested.
-			if conf.DatabaseInitialization.InitDockerMember {
-				slog.Info("initializing Docker member...")
-				err := initdb.InitializeDockerMember(dbInitCtx, db)
+			// Initialize the PostgreSQL database in a transaction, so if it is
+			// fails, there is no need to manually empty the database.
+			err := db.Transaction(dbInitCtx, func(tx *_db.Tx) error {
+				err := initdb.Initialize(dbInitCtx, tx)
 				if err != nil {
-					return nil, fmt.Errorf("cannot initialize the Docker member: %s", err)
+					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 				}
-				slog.Info("Docker member initialized")
+				slog.Info("PostgreSQL database initialized correctly")
+				// Also initialize the Docker member, if requested.
+				if conf.DatabaseInitialization.InitDockerMember {
+					slog.Info("initializing Docker member...")
+					err := initdb.InitializeDockerMember(dbInitCtx, tx)
+					if err != nil {
+						return fmt.Errorf("cannot initialize the Docker member: %s", err)
+					}
+					slog.Info("Docker member initialized")
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
 			}
 		} else {
 			slog.Info("the PostgreSQL database is not empty, so it won't be initialized")
@@ -345,7 +353,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
@@ -422,7 +430,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
@@ -1280,7 +1288,7 @@ Identifiers:
 		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
 	}
 	for {
-		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1376,7 +1384,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo = backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
 			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1572,7 +1580,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -1629,7 +1637,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
