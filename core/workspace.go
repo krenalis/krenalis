@@ -1854,8 +1854,8 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// Warehouse returns platform, settings and MCP settings of the data
-// warehouse for the workspace.
+// Warehouse returns platform, settings and MCP settings of the data warehouse
+// for the workspace.
 func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
