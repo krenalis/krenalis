@@ -46,7 +46,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new PostgreSQL data warehouse driver instance.
+// New returns a new PostgreSQL data warehouse instance.
 // It returns a *warehouses.SettingsError if the settings are not valid.
 func New(conf *warehouses.Config) (*PostgreSQL, error) {
 	var s psSettings

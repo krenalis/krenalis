@@ -4,8 +4,8 @@
 
 package postgresql
 
-// Keep this file in sync between the warehouse driver and the connector,
-// except for the "warehouses" and "connectors" import lines.
+// Keep this file in sync between the warehouse and the connector, except for
+// the "warehouses" and "connectors" import lines.
 
 import (
 	"context"

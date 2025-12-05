@@ -79,8 +79,8 @@ func quoteJSON(b *strings.Builder, s []byte) {
 // https://www.postgresql.org/docs/17/datatype-character.html (for the character
 // with code 0).
 //
-// NOTE: keep this function in sync with the one within the data warehouse
-// driver of PostgreSQL.
+// NOTE: keep this function in sync with the one within the data warehouse of
+// PostgreSQL.
 func quoteString(b *strings.Builder, s string) {
 	b.WriteByte('\'')
 	for len(s) > 0 {
