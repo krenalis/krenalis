@@ -2,9 +2,6 @@
 -- Use of this source code is governed by the MIT license
 -- that can be found in the LICENSE file.
 
--- TODO: fare il revert dei rinomini qui dentro, poi aggiungere in fondo le
--- query per il rinomino corretto.
-
 ALTER TABLE _destinations_users RENAME TO _destinations_profiles;
 ALTER TABLE _user_identities RENAME TO _identities;
 ALTER TABLE _identities RENAME COLUMN __muid__ TO __mpid__;
