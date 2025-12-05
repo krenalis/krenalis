@@ -556,7 +556,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		// Check the allowed types.
 		// We can use the same criteria as for the allowed types of workspace identifiers,
-		// to simplify the specifications for warehouse drivers.
+		// to simplify the specifications for warehouse platform.
 		switch p.Type.Kind() {
 		case types.StringKind, types.IntKind, types.UUIDKind, types.IPKind:
 			// Ok.

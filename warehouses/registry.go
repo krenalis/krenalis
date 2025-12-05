@@ -12,46 +12,46 @@ import (
 
 var registry = struct {
 	sync.RWMutex
-	warehouses map[string]Driver
+	platforms map[string]Platform
 }{
-	warehouses: make(map[string]Driver),
+	platforms: make(map[string]Platform),
 }
 
-// Drivers returns the warehouse drivers.
-func Drivers() []Driver {
+// Platforms returns the warehouse platforms.
+func Platforms() []Platform {
 	registry.Lock()
-	drivers := make([]Driver, 0, len(registry.warehouses))
-	for _, t := range registry.warehouses {
-		drivers = append(drivers, t)
+	platforms := make([]Platform, 0, len(registry.platforms))
+	for _, t := range registry.platforms {
+		platforms = append(platforms, t)
 	}
 	registry.Unlock()
-	return drivers
+	return platforms
 }
 
-// Register makes a warehouse driver available by the provided name. If Register
-// is called twice with the same name or if new is nil, it panics.
-func Register[T Warehouse](typ Driver, new NewFunc[T]) {
+// Register makes a warehouse platform available by the provided name.
+// If Register is called twice with the same name or if new is nil, it panics.
+func Register[T Warehouse](platform Platform, new NewFunc[T]) {
 	if new == nil {
-		panic("meergo/warehouses: new function is nil for warehouse driver " + typ.Name)
+		panic("meergo/warehouses: new function is nil for warehouse platform " + platform.Name)
 	}
-	typ.newFunc = reflect.ValueOf(new)
-	typ.ct = reflect.TypeOf((*T)(nil)).Elem()
+	platform.newFunc = reflect.ValueOf(new)
+	platform.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registry.Lock()
 	defer registry.Unlock()
-	if _, dup := registry.warehouses[typ.Name]; dup {
-		panic("meergo/warehouses: Register called twice for type " + typ.Name)
+	if _, dup := registry.platforms[platform.Name]; dup {
+		panic("meergo/warehouses: Register called twice for type " + platform.Name)
 	}
-	registry.warehouses[typ.Name] = typ
+	registry.platforms[platform.Name] = platform
 }
 
-// Registered returns the warehouse driver registered with the given name.
-// If a warehouse driver with this name is not registered, it panics.
-func Registered(name string) Driver {
+// Registered returns the warehouse platform registered with the given name.
+// If a warehouse platform with this name is not registered, it panics.
+func Registered(name string) Platform {
 	registry.Lock()
-	warehouse, ok := registry.warehouses[name]
+	warehouse, ok := registry.platforms[name]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo/warehouses: unknown warehouse driver %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo/warehouses: unknown warehouse platform %q (forgotten import?)", name))
 	}
 	return warehouse
 }

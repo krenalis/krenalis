@@ -81,7 +81,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /public/metadata":                             api.PublicMetadata,
 		"GET    /system/transformations/languages":            api.TransformationLanguages,
 		"GET    /warehouse":                                   workspace.Warehouse,
-		"GET    /warehouse/drivers":                           api.WarehouseDrivers,
+		"GET    /warehouse/platforms":                         api.WarehousePlatforms,
 		"GET    /workspaces":                                  organization.Workspaces,
 		"GET    /workspaces/current":                          organization.Workspace,
 		"POST   /connections":                                 workspace.CreateConnection,

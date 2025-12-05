@@ -2,7 +2,6 @@
 
 [Meergo](https://www.meergo.com) is a Customer Data Platform (CDP) that helps data analysts and the marketing team collect, enrich, unify, and activate user and customer data — including product events, marketing signals, and sales interactions — and syncs it to the tools your teams use every day.
 
-
 Meergo is open and free to use. It's a lightweight, developer-friendly alternative to Customer Data Platforms such as Segment, RudderStack, and mParticle.  
 
 It is built in Go with a modern TypeScript/React frontend and a comprehensive REST API, and ships as a **single executable** that includes:
@@ -97,5 +96,5 @@ For this reason, please open an issue or discussion before submitting a pull req
 
 ## License
 
-Meergo is licensed under the **MIT License** (for connectors and warehouse drivers) and the **Elastic 2.0 License** (for the core and admin). Both licenses are documented in the [LICENSE](https://github.com/meergo/meergo/blob/main/LICENSE) file.
+Meergo is licensed under the **MIT License** (for connectors and warehouse integrations) and the **Elastic 2.0 License** (for the core and admin). Both licenses are documented in the [LICENSE](https://github.com/meergo/meergo/blob/main/LICENSE) file.
 You are free to use, modify, and integrate the project according to the terms described there.

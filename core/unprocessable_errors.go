@@ -50,7 +50,7 @@ const (
 	TransformationFailed          errors.Code = "TransformationFailed"
 	TypeNotAllowed                errors.Code = "TypeNotAllowed"
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
-	WarehouseDriverNotExist       errors.Code = "WarehouseDriverNotExist"
+	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
 	WarehouseNonInitializable     errors.Code = "WarehouseNonInitializable"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
 )

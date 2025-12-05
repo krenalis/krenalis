@@ -19,7 +19,7 @@ import (
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
-	// Import PostgreSQL warehouse driver for Test_Records.
+	// Import PostgreSQL warehouse platform for Test_Records.
 	_ "github.com/meergo/meergo/warehouses/postgresql"
 
 	"github.com/testcontainers/testcontainers-go"

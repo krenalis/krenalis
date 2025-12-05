@@ -26,8 +26,8 @@ import (
 // The Diff function assumes that both the oldSchema and newSchema comply with
 // the requirements of data warehouse schemas and that they do not contain
 // unsupported types or properties; however, they may contain properties and
-// types that are invalid for specific data warehouses; related errors will then
-// be returned by the drivers.
+// types that are invalid for specific warehouse platforms; related errors will
+// then be returned by the platforms.
 //
 // In case the difference between old schema and new schema cannot be computed,
 // an error is returned.
