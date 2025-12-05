@@ -41,7 +41,7 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 func init() {
-	warehouses.Register(warehouses.Driver{
+	warehouses.Register(warehouses.Platform{
 		Name: "PostgreSQL",
 	}, New)
 }

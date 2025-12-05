@@ -301,7 +301,7 @@ func New(conf *Config) (*Core, error) {
 	for _, ws := range core.state.Workspaces() {
 		var wh warehouses.Warehouse
 		if ws.Warehouse.MCPSettings != nil {
-			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
+			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
 		}
 		core.mcp[ws.ID] = wh
 	}
@@ -1005,22 +1005,22 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 	return "", nil
 }
 
-// WarehouseDriver represents a warehouse driver.
-type WarehouseDriver struct {
+// WarehousePlatform represents a warehouse platform.
+type WarehousePlatform struct {
 	Name string `json:"name"`
 }
 
-// WarehouseDrivers returns the warehouse drivers.
-func (core *Core) WarehouseDrivers() []WarehouseDriver {
+// WarehousePlatforms returns the warehouse platforms.
+func (core *Core) WarehousePlatforms() []WarehousePlatform {
 	core.mustBeOpen()
-	types := core.state.WarehouseDrivers()
-	warehouseDrivers := make([]WarehouseDriver, len(types))
-	for i, t := range types {
-		warehouseDrivers[i] = WarehouseDriver{
-			Name: t.Name,
+	platforms := core.state.WarehousePlatforms()
+	warehousePlatforms := make([]WarehousePlatform, len(platforms))
+	for i, p := range platforms {
+		warehousePlatforms[i] = WarehousePlatform{
+			Name: p.Name,
 		}
 	}
-	return warehouseDrivers
+	return warehousePlatforms
 }
 
 // mustBeOpen panics if core has been closed.
@@ -1416,7 +1416,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var wh warehouses.Warehouse
 	if ws.Warehouse.MCPSettings != nil {
-		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
+		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = wh
@@ -1509,7 +1509,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 
 	// The MCP settings were unset (nil) and have now been set.
 	if prevWarehouse == nil && n.MCPSettings != nil {
-		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
+		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
 		core.mcpMu.Lock()
 		core.mcp[n.Workspace] = nextWarehouse
 		core.mcpMu.Unlock()
@@ -1517,7 +1517,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	}
 
 	// The MCP settings were set and have been set again with the same value.
-	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
+	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
 	if bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		return
 	}
@@ -1687,10 +1687,10 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 
 // getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
 // to implement features for the MCP server.
-// name is the name of the warehouse driver and settings are the settings for
+// platform is the warehouse platform and settings are the settings for
 // connecting to it.
-func getMCPWarehouseInstance(name string, settings []byte) (warehouses.Warehouse, error) {
-	wh, err := warehouses.Registered(name).New(&warehouses.Config{Settings: settings})
+func getMCPWarehouseInstance(platform string, settings []byte) (warehouses.Warehouse, error) {
+	wh, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return nil, err
 	}

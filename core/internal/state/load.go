@@ -187,12 +187,12 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		state.connectors[code] = &c
 	}
 
-	// Read all warehouse drivers.
-	drivers := warehouses.Drivers()
-	state.warehouseDrivers = make(map[string]WarehouseDriver, len(drivers))
-	for _, driver := range drivers {
-		state.warehouseDrivers[driver.Name] = WarehouseDriver{
-			Name: driver.Name,
+	// Read all warehouse platforms.
+	platforms := warehouses.Platforms()
+	state.warehousePlatforms = make(map[string]WarehousePlatform, len(platforms))
+	for _, platform := range platforms {
+		state.warehousePlatforms[platform.Name] = WarehousePlatform{
+			Name: platform.Name,
 		}
 	}
 
@@ -270,7 +270,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID uuid.UUID
-			var warehouseName string
+			var warehousePlatform string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterProfileSchemaSchema []byte
@@ -282,7 +282,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					executions:  map[int]*PipelineExecution{},
 					accounts:    map[int]*Account{},
 				}
-				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
+				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
 					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterProfileSchema.ID,
 					&alterProfileSchemaSchema, &ws.AlterProfileSchema.PrimarySources,
 					&ws.AlterProfileSchema.Operations, &ws.AlterProfileSchema.StartTime,
@@ -294,10 +294,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
-				if _, ok := state.warehouseDrivers[warehouseName]; !ok {
-					return fmt.Errorf("warehouse driver for %q is required but not registered. (Possibly forgotten import?)", warehouseName)
+				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
+					return fmt.Errorf("warehouse platform for %q is required but not registered. (Possibly forgotten import?)", warehousePlatform)
 				}
-				ws.Warehouse.Name = warehouseName
+				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
 				if _json.Value(warehouseMCPSettings).IsNull() {

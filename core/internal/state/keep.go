@@ -509,7 +509,7 @@ type CreateWorkspace struct {
 	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Name        string
+		Platform    string
 		Mode        WarehouseMode
 		Settings    json.RawMessage
 		MCPSettings json.RawMessage
