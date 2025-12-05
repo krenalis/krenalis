@@ -42,7 +42,7 @@ var (
 var _ warehouses.Warehouse = &Snowflake{}
 
 func init() {
-	warehouses.Register(warehouses.Driver{
+	warehouses.Register(warehouses.Platform{
 		Name: "Snowflake",
 	}, New)
 }

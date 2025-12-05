@@ -47,11 +47,11 @@ type State struct {
 	id uuid.UUID
 	db *db.DB
 
-	changing         *sync.RWMutex
-	connectors       map[string]*Connector
-	warehouseDrivers map[string]WarehouseDriver
-	metadata         metadata
-	sendStats        bool
+	changing           *sync.RWMutex
+	connectors         map[string]*Connector
+	warehousePlatforms map[string]WarehousePlatform
+	metadata           metadata
+	sendStats          bool
 
 	mu               *sync.Mutex                 // for the 'pipelines', ..., and 'workspaces' fields
 	pipelines        map[int]*Pipeline           // protected by mu
@@ -352,29 +352,29 @@ func (state *State) Unfreeze() {
 	state.changing.RUnlock()
 }
 
-// WarehouseDriver returns the warehouse driver with the provided name.
-// The boolean return value reports whether the warehouse driver exists.
-func (state *State) WarehouseDriver(name string) (WarehouseDriver, bool) {
+// WarehousePlatform returns the warehouse platform with the provided name.
+// The boolean return value reports whether the warehouse platform exists.
+func (state *State) WarehousePlatform(name string) (WarehousePlatform, bool) {
 	state.mu.Lock()
-	driver, ok := state.warehouseDrivers[name]
+	platform, ok := state.warehousePlatforms[name]
 	state.mu.Unlock()
-	return driver, ok
+	return platform, ok
 }
 
-// WarehouseDrivers returns all warehouse drivers.
-func (state *State) WarehouseDrivers() []WarehouseDriver {
+// WarehousePlatforms returns all warehouse platforms.
+func (state *State) WarehousePlatforms() []WarehousePlatform {
 	state.mu.Lock()
-	drivers := make([]WarehouseDriver, len(state.warehouseDrivers))
+	platforms := make([]WarehousePlatform, len(state.warehousePlatforms))
 	i := 0
-	for _, t := range state.warehouseDrivers {
-		drivers[i] = t
+	for _, p := range state.warehousePlatforms {
+		platforms[i] = p
 		i++
 	}
 	state.mu.Unlock()
-	sort.Slice(drivers, func(i, j int) bool {
-		return drivers[i].Name < drivers[j].Name
+	sort.Slice(platforms, func(i, j int) bool {
+		return platforms[i].Name < platforms[j].Name
 	})
-	return drivers
+	return platforms
 }
 
 // Workspace returns the workspace with identifier id.
@@ -495,8 +495,8 @@ func (organization *Organization) Workspaces() []*Workspace {
 	return workspaces
 }
 
-// WarehouseDriver represents a warehouse driver.
-type WarehouseDriver struct {
+// WarehousePlatform represents a warehouse platform.
+type WarehousePlatform struct {
 	Name string
 }
 
@@ -558,7 +558,7 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 type Workspace struct {
 	mu        *sync.Mutex
 	Warehouse struct {
-		Name        string
+		Platform    string
 		Mode        WarehouseMode
 		Settings    json.RawMessage
 		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).

@@ -92,7 +92,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		eventIdentityWriters: map[int]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	wh, err := getWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.Settings)
+	wh, err := getWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.Settings)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
@@ -502,7 +502,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 		return err
 	}
 	// Count the users on the warehouse that will be connected.
-	dw, err := getWarehouseInstance(ws.Warehouse.Name, toSettings)
+	dw, err := getWarehouseInstance(ws.Warehouse.Platform, toSettings)
 	if err != nil {
 		return err
 	}

@@ -22,22 +22,23 @@ import (
 	"github.com/google/uuid"
 )
 
-// Driver represents a warehouse driver.
-type Driver struct {
+// Platform represents a warehouse platform.
+type Platform struct {
 	Name string
 
 	newFunc reflect.Value
 	ct      reflect.Type
 }
 
-// ReflectType returns the type of the value implementing the warehouse driver.
-func (driver Driver) ReflectType() reflect.Type {
-	return driver.ct
+// ReflectType returns the type of the value implementing the warehouse
+// platform.
+func (platform Platform) ReflectType() reflect.Type {
+	return platform.ct
 }
 
 // New returns a new data warehouse instance.
-func (driver Driver) New(conf *Config) (Warehouse, error) {
-	out := driver.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (platform Platform) New(conf *Config) (Warehouse, error) {
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	err, _ := reflect.TypeAssert[error](out[1])
 	return d, err
@@ -48,7 +49,7 @@ type Config struct {
 	Settings []byte
 }
 
-// NewFunc represents functions that create new warehouse driver instance.
+// NewFunc represents functions that create new warehouse platform instance.
 type NewFunc[T Warehouse] func(*Config) (T, error)
 
 // AlterOperation represents an operation that alters the columns of the profile

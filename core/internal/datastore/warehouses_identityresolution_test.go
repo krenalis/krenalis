@@ -21,7 +21,7 @@ import (
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
-	// Import warehouse drivers for TestWarehousesIdentityResolution.
+	// Import warehouse platforms for TestWarehousesIdentityResolution.
 	_ "github.com/meergo/meergo/warehouses/postgresql"
 	_ "github.com/meergo/meergo/warehouses/snowflake"
 
@@ -469,15 +469,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Run the tests on PostgreSQL and Snowflake warehouse driver.
-	warehouseDrivers := warehouses.Drivers()
-	if len(warehouseDrivers) == 0 {
-		t.Fatal("there are no warehouse drivers. Missing warehouse drivers import in test file?")
+	// Run the tests on PostgreSQL and Snowflake warehouse platforms.
+	platforms := warehouses.Platforms()
+	if len(platforms) == 0 {
+		t.Fatal("there are no warehouse platform. Missing warehouse platforms import in test file?")
 	}
-	for _, warehouseDriver := range warehouseDrivers {
-		t.Run(warehouseDriver.Name, func(t *testing.T) {
+	for _, platform := range platforms {
+		t.Run(platform.Name, func(t *testing.T) {
 			var settings []byte
-			switch warehouseDriver.Name {
+			switch platform.Name {
 			case "PostgreSQL":
 				const (
 					database = "test_meergo"
@@ -526,7 +526,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseDriver.Name))
+				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(platform.Name))
 				settingsFile, ok := os.LookupEnv(settingsEnvKey)
 				if !ok {
 					t.Skipf("the %s environment variable is not present", settingsEnvKey)
@@ -538,11 +538,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 				}
 			default:
-				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseDriver.Name))
+				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}
 
 			// Open the warehouse.
-			wh, err := warehouseDriver.New(&warehouses.Config{
+			wh, err := platform.New(&warehouses.Config{
 				Settings: settings,
 			})
 			if err != nil {
@@ -569,7 +569,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 					// Truncate the existing identities.
 					//
-					// TODO(Gianluca): how should the drivers expose the table names? We
+					// TODO(Gianluca): how should the platforms expose the table names? We
 					// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
 					err = wh.Truncate(ctx, "meergo_identities")
 					if err != nil {
