@@ -77,23 +77,23 @@ func (warehouse *Snowflake) Repair(ctx context.Context, profileColumns []warehou
 func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 	var b strings.Builder
 	b.WriteString(`CREATE TABLE IF NOT EXISTS "_IDENTITIES" (
-		"__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
-		"__PIPELINE__" INT NOT NULL,
-		"__IS_ANONYMOUS__" BOOLEAN NOT NULL DEFAULT FALSE,
-		"__IDENTITY_ID__" VARCHAR NOT NULL,
-		"__CONNECTION__" INT NOT NULL,
-		"__ANONYMOUS_IDS__" ARRAY,
-		"__LAST_CHANGE_TIME__" TIMESTAMP_NTZ NOT NULL,
-		"__EXECUTION__" INT,
-		"__mpid__" VARCHAR(36),
-		"__CLUSTER__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
+		"_pk" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
+		"_pipeline" INT NOT NULL,
+		"_is_anonymous" BOOLEAN NOT NULL DEFAULT FALSE,
+		"_identity_id" VARCHAR NOT NULL,
+		"_connection" INT NOT NULL,
+		"_anonymous_ids" ARRAY,
+		"_last_change_time" TIMESTAMP_NTZ NOT NULL,
+		"_execution" INT,
+		"_mpid" VARCHAR(36),
+		"_cluster" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")
 		b.WriteString(quoteIdent(c.Name))
 		b.WriteByte(' ')
 		b.WriteString(typeToSnowflakeType(c.Type))
 	}
-	b.WriteString(",\n" + `PRIMARY KEY ("__PK__"))`)
+	b.WriteString(",\n" + `PRIMARY KEY ("_pk"))`)
 	return b.String()
 }
 
@@ -129,9 +129,9 @@ func profilesSQLSchema(name string, profileColumns []warehouses.Column) string {
 	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
 	b.WriteString(quoteIdent(name))
 	b.WriteString(` (
-		"__MPID__" VARCHAR(36),
-		"__IDENTITIES__" ARRAY,
-		"__LAST_CHANGE_TIME__" TIMESTAMP NOT NULL`)
+		"_mpid" VARCHAR(36),
+		"_identities" ARRAY,
+		"_last_change_time" TIMESTAMP NOT NULL`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")
 		b.WriteString(quoteIdent(c.Name))
@@ -149,8 +149,8 @@ func profilesViewSQLSchema(profileColumns []warehouses.Column, fromProfilesTable
 	var b strings.Builder
 	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS
 		SELECT
-			"__MPID__",
-			"__LAST_CHANGE_TIME__"`)
+			"_mpid",
+			"_last_change_time"`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")
 		b.WriteString(quoteIdent(c.Name))

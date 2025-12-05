@@ -20,17 +20,17 @@ AS $$
     INSERT INTO
         "meergo_graph_edges"
     SELECT
-        "i1"."__pk__",
-        "i2"."__pk__"
+        "i1"."_pk",
+        "i2"."_pk"
     FROM
         "meergo_identities" "i1"
             CROSS JOIN
         "meergo_identities" "i2"
     WHERE
-        "i1"."__pk__" < "i2"."__pk__" AND (
-            ("i1"."__connection__" = "i2"."__connection__"
-                AND "i1"."__identity_id__" = "i2"."__identity_id__"
-                AND "i1"."__is_anonymous__" = "i2"."__is_anonymous__"
+        "i1"."_pk" < "i2"."_pk" AND (
+            ("i1"."_connection" = "i2"."_connection"
+                AND "i1"."_identity_id" = "i2"."_identity_id"
+                AND "i1"."_is_anonymous" = "i2"."_is_anonymous"
             )
             OR {{ same_profile }} -- This placeholder will be replaced by Meergo.
         );
@@ -42,15 +42,15 @@ AS $$
     -- parameters of the current execution of identity resolution.
     WITH "numbered_profiles" AS (
         SELECT 
-            "__pk__",
-            ROW_NUMBER() OVER (ORDER BY "__pk__") AS "cluster_value"
+            "_pk",
+            ROW_NUMBER() OVER (ORDER BY "_pk") AS "cluster_value"
         FROM 
             "meergo_identities"
     )
     UPDATE "meergo_identities"
-    SET "__cluster__" = "numbered_profiles"."cluster_value"
+    SET "_cluster" = "numbered_profiles"."cluster_value"
     FROM "numbered_profiles"
-    WHERE "meergo_identities"."__pk__" = "numbered_profiles"."__pk__";
+    WHERE "meergo_identities"."_pk" = "numbered_profiles"."_pk";
 
     -- Do the clustering.
     DO $clustering$
@@ -67,14 +67,14 @@ AS $$
             INSERT INTO
                 "meergo_graph_merge_clusters"
             SELECT
-                "i1"."__cluster__" "c1",
-                "i2"."__cluster__" "c2"
+                "i1"."_cluster" "c1",
+                "i2"."_cluster" "c2"
             FROM
                 "meergo_graph_edges"
-                JOIN "meergo_identities" "i1" ON "meergo_graph_edges"."i1" = "i1"."__pk__"
-                JOIN "meergo_identities" "i2" ON "meergo_graph_edges"."i2" = "i2"."__pk__"
+                JOIN "meergo_identities" "i1" ON "meergo_graph_edges"."i1" = "i1"."_pk"
+                JOIN "meergo_identities" "i2" ON "meergo_graph_edges"."i2" = "i2"."_pk"
             WHERE
-                "i1"."__cluster__" <> "i2"."__cluster__";
+                "i1"."_cluster" <> "i2"."_cluster";
 
             -- Stop iterating when there are no more clusters to merge.
             SELECT count(*) > 0 INTO has_clusters_to_merge FROM "meergo_graph_merge_clusters";
@@ -90,7 +90,7 @@ AS $$
             UPDATE
                 "meergo_identities" "identities_a"
             SET
-                "__cluster__" = least("identities_a"."__cluster__", "target")
+                "_cluster" = least("identities_a"."_cluster", "target")
             FROM
                 "meergo_identities" "identities_b"
                 JOIN (
@@ -101,9 +101,9 @@ AS $$
                         "meergo_graph_merge_clusters"
                     GROUP BY
                         "source"
-                ) "new_clusters" ON "new_clusters"."source" = "identities_b"."__cluster__"
+                ) "new_clusters" ON "new_clusters"."source" = "identities_b"."_cluster"
             WHERE
-                "identities_a"."__pk__" = "identities_b"."__pk__";
+                "identities_a"."_pk" = "identities_b"."_pk";
 
         END LOOP;
 
@@ -115,21 +115,21 @@ AS $$
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
     UPDATE "meergo_identities" AS "i"
-    SET "__mpid__" = "u"."__mpid__"
+    SET "_mpid" = "u"."_mpid"
     FROM {{ new_profiles_name }} AS "u"
-    WHERE "i"."__pk__" = ANY ("u"."__identities__");
+    WHERE "i"."_pk" = ANY ("u"."_identities");
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.
     UPDATE "meergo_events" SET "mpid" = null;
-    UPDATE "meergo_events" SET "mpid" = "meergo_identities"."__mpid__"
+    UPDATE "meergo_events" SET "mpid" = "meergo_identities"."_mpid"
     FROM "meergo_identities" WHERE
-        "meergo_events"."connection_id" = "meergo_identities"."__connection__"
+        "meergo_events"."connection_id" = "meergo_identities"."_connection"
             AND
         (
-            ("meergo_events"."user_id" <> '' AND "meergo_events"."user_id" = "meergo_identities"."__identity_id__")
+            ("meergo_events"."user_id" <> '' AND "meergo_events"."user_id" = "meergo_identities"."_identity_id")
                 OR
-            ("meergo_events"."user_id" = '' AND "meergo_events"."anonymous_id" = ANY ("meergo_identities"."__anonymous_ids__"))
+            ("meergo_events"."user_id" = '' AND "meergo_events"."anonymous_id" = ANY ("meergo_identities"."_anonymous_ids"))
         );
 
 $$;

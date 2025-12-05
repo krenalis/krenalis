@@ -128,7 +128,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"__identities__", "__mpid__", "__last_change_time__"`)
+	mergeProfiles.WriteString(`"_identities", "_mpid", "_last_change_time"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -138,20 +138,20 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 			if s, ok := primarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "__connection__" = ` + strconv.Itoa(s) + `) || `)
+				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_last_change_time" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "_connection" = ` + strconv.Itoa(s) + `) || `)
 			}
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
+			mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_last_change_time" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
 			mergeProfiles.WriteString(`)[1]`)
 		}
 		mergeProfiles.WriteString(" AS ")
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "__identities__" column.
-	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
-	// Write the "__mpid__" column.
+	// Write the "_identities" column.
+	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_pk"), `)
+	// Write the "_mpid" column.
 	// If all MPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's MPID; otherwise,
 	// if we are in a situation where a previously split profile is now merged,
@@ -159,15 +159,15 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	// also in this case, create a new random MPID.
 	mergeProfiles.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(DISTINCT "__mpid__") FILTER ( WHERE "__mpid__" IS NOT NULL ) = 1
-				THEN MAX("__mpid__"::text)::uuid
+			WHEN COUNT(DISTINCT "_mpid") FILTER ( WHERE "_mpid" IS NOT NULL ) = 1
+				THEN MAX("_mpid"::text)::uuid
 			ELSE gen_random_uuid()
 		END,
 		gen_random_uuid()
 	),`)
-	// Write the "__last_change_time__" column.
-	mergeProfiles.WriteString(`MAX("__last_change_time__")`)
-	mergeProfiles.WriteString(` FROM "meergo_identities" GROUP BY "__cluster__";` + "\n")
+	// Write the "_last_change_time" column.
+	mergeProfiles.WriteString(`MAX("_last_change_time")`)
+	mergeProfiles.WriteString(` FROM "meergo_identities" GROUP BY "_cluster";` + "\n")
 
 	// If two profiles who were previously one are split, they will end up
 	// having the same MPID, which is incorrect. So this query, in that
@@ -176,15 +176,15 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	mergeProfiles.WriteString(quoteIdent(newProfilesName))
 	mergeProfiles.WriteString(` "u"
 		SET
-			"__mpid__" = gen_random_uuid()
+			"_mpid" = gen_random_uuid()
 		WHERE
-			"u"."__mpid__" IN (
+			"u"."_mpid" IN (
 				SELECT
-					"u2"."__mpid__"
+					"u2"."_mpid"
 				FROM
 					` + quoteIdent(newProfilesName) + ` "u2"
 				GROUP BY
-					"u2"."__mpid__"
+					"u2"."_mpid"
 				HAVING
 					COUNT(*) > 1
 	)`)

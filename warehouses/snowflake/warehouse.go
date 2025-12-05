@@ -176,10 +176,10 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 // immutableMergeIdentitiesColumns are columns in the merge of identities that
 // are immutable.
 var immutableMergeIdentitiesColumns = []string{
-	"__pipeline__",
-	"__identity_id__",
-	"__is_anonymous__",
-	"__connection__",
+	"_pipeline",
+	"_identity_id",
+	"_is_anonymous",
+	"_connection",
 }
 
 // MergeIdentities merges existing identities, deletes them, and inserts new
@@ -210,7 +210,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	b.Reset()
 	b.WriteString("MERGE INTO \"_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString(`" AS "S"` + "\n" + `ON "D"."__PIPELINE__" = "S"."__PIPELINE__" AND "D"."__IDENTITY_ID__" = "S"."__IDENTITY_ID__" AND "D"."__IS_ANONYMOUS__" = "S"."__IS_ANONYMOUS__"`)
+	b.WriteString(`" AS "S"` + "\n" + `ON "D"."_pipeline" = "S"."_pipeline" AND "D"."_identity_id" = "S"."_identity_id" AND "D"."_is_anonymous" = "S"."_is_anonymous"`)
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
@@ -223,8 +223,8 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 		b.WriteString("\n")
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteString(` = `)
-		if c.Name == "__anonymous_ids__" {
-			b.WriteString(`CASE WHEN "S"."__ANONYMOUS_IDS__" IS NULL OR ARRAY_CONTAINS("D"."__ANONYMOUS_IDS__", "S"."__ANONYMOUS_IDS__"[0]) THEN "D"."__ANONYMOUS_IDS__" ELSE ARRAY_CAT("D"."__ANONYMOUS_IDS__", ARRAY_CONSTRUCT("S"."__ANONYMOUS_IDS__"[0])) END`)
+		if c.Name == "_anonymous_ids" {
+			b.WriteString(`CASE WHEN "S"."_anonymous_ids" IS NULL OR ARRAY_CONTAINS("D"."_anonymous_ids", "S"."_anonymous_ids"[0]) THEN "D"."_anonymous_ids" ELSE ARRAY_CAT("D"."_anonymous_ids", ARRAY_CONSTRUCT("S"."_anonymous_ids"[0])) END`)
 		} else {
 			b.WriteString(`"S".`)
 			b.WriteString(quotedColumn[c.Name])
@@ -249,7 +249,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 		b.WriteString(`"S".`)
 		b.WriteString(quotedColumn[c.Name])
 	}
-	b.WriteString(")\nWHEN MATCHED AND \"S\".\"$PURGE\" = FALSE THEN\n  UPDATE SET \"__EXECUTION__\" = \"S\".\"__EXECUTION__\"")
+	b.WriteString(")\nWHEN MATCHED AND \"S\".\"$PURGE\" = FALSE THEN\n  UPDATE SET \"_execution\" = \"S\".\"_execution\"")
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 
@@ -333,7 +333,7 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline i
 		b.WriteString(quoteIdent(column.Name))
 		b.WriteString(" = NULL")
 	}
-	b.WriteString(" WHERE \"__PIPELINE__\" = ")
+	b.WriteString(" WHERE \"_pipeline\" = ")
 	b.WriteString(strconv.Itoa(pipeline))
 	db := warehouse.openDB()
 	_, err := db.ExecContext(ctx, b.String())

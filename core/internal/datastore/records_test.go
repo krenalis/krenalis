@@ -88,24 +88,24 @@ func Test_Records(t *testing.T) {
 	profilesTable := warehouses.Table{
 		Name: "meergo_profiles_0",
 		Columns: []warehouses.Column{
-			{Name: "__mpid__", Type: types.UUID()},
-			{Name: "__last_change_time__", Type: types.DateTime()},
+			{Name: "_mpid", Type: types.UUID()},
+			{Name: "_last_change_time", Type: types.DateTime()},
 			{Name: "id", Type: types.String()},
 			{Name: "other_id", Type: types.String()},
 			{Name: "name", Type: types.String()},
 			{Name: "age", Type: types.Int(8)},
 		},
-		Keys: []string{"__mpid__"},
+		Keys: []string{"_mpid"},
 	}
 
 	destinationsUsersTable := warehouses.Table{
 		Name: "meergo_destination_profiles",
 		Columns: []warehouses.Column{
-			{Name: "__pipeline__", Type: types.Int(32)},
-			{Name: "__external_id__", Type: types.String()},
-			{Name: "__out_matching_value__", Type: types.String()},
+			{Name: "_pipeline", Type: types.Int(32)},
+			{Name: "_external_id", Type: types.String()},
+			{Name: "_out_matching_value", Type: types.String()},
 		},
-		Keys: []string{"__pipeline__", "__external_id__"},
+		Keys: []string{"_pipeline", "_external_id"},
 	}
 
 	err = wh.Initialize(ctx, profilesTable.Columns[2:])
@@ -222,7 +222,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	profileColumnByProperty := map[string]warehouses.Column{
-		"__mpid__": {Name: "__mpid__", Type: types.UUID()},
+		"_mpid":    {Name: "_mpid", Type: types.UUID()},
 		"id":       {Name: "id", Type: types.String()},
 		"other.id": {Name: "other_id", Type: types.String()},
 		"name":     {Name: "name", Type: types.String()},
@@ -248,7 +248,7 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, wh, query, "__mpid__", profileColumnByProperty, true, matching)
+				r, err := records(ctx, wh, query, "_mpid", profileColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}
