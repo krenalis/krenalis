@@ -811,7 +811,7 @@ func TestDiff(t *testing.T) {
 			}),
 			rePaths: map[string]any{
 				"foo": "bar",
-				// "a":  nil, -> commented on purpose: the test must verify that an error is returned when it is missing.
+				// "a":  nil, -> commented on purpose: the test must verify that an error is returned when this is missing.
 			},
 			expectedErr: "property \"bar\" has been renamed and still appears in the new schema, so it means that it must be declared in rePaths (as a renamed property, or as a new property)",
 		},
