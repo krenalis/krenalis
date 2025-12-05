@@ -64,3 +64,13 @@
 .workspace-create__create-button {
 	min-width: 200px;
 }
+
+.workspace-create__data-warehouse {
+	font-size: 20px;
+	font-weight: 500;
+}
+
+.workspace-create__data-warehouse-description {
+	padding-top: 10px;
+	padding-bottom: 18px;
+}
