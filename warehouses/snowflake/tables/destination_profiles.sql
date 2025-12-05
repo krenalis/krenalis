@@ -3,8 +3,8 @@
 -- that can be found in the LICENSE file.
 
 CREATE TABLE IF NOT EXISTS "MEERGO_DESTINATION_PROFILES" (
-    "_pipeline" INT NOT NULL,
-    "_external_id" VARCHAR NOT NULL DEFAULT '',
-    "_out_matching_value" VARCHAR NOT NULL,
-    PRIMARY KEY ("_pipeline", "_external_id")
+    "__PIPELINE__" INT NOT NULL,
+    "__EXTERNAL_ID__" VARCHAR NOT NULL DEFAULT '',
+    "__OUT_MATCHING_VALUE__" VARCHAR NOT NULL,
+    PRIMARY KEY ("__PIPELINE__", "__EXTERNAL_ID__")
 );

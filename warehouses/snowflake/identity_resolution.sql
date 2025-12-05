@@ -22,17 +22,17 @@ BEGIN
     EXECUTE IMMEDIATE 'INSERT INTO
         "MEERGO_GRAPH_EDGES"
     SELECT
-        "I1"."_pk",
-        "I2"."_pk"
+        "I1"."__PK__",
+        "I2"."__PK__"
     FROM
         "_IDENTITIES" "I1"
             CROSS JOIN
         "_IDENTITIES" "I2"
     WHERE
-        "I1"."_pk" < "I2"."_pk" AND (
-            ("I1"."_connection" = "I2"."_connection"
-                AND "I1"."_identity_id" = "I2"."_identity_id"
-                AND "I1"."_is_anonymous" = "I2"."_is_anonymous"
+        "I1"."__PK__" < "I2"."__PK__" AND (
+            ("I1"."__CONNECTION__" = "I2"."__CONNECTION__"
+                AND "I1"."__IDENTITY_ID__" = "I2"."__IDENTITY_ID__"
+                AND "I1"."__IS_ANONYMOUS__" = "I2"."__IS_ANONYMOUS__"
             )
             OR {{ same_profile }} -- This placeholder will be replaced by Meergo.
         )';
@@ -45,14 +45,14 @@ BEGIN
     DROP TABLE IF EXISTS "NUMBERED_PROFILES";
     CREATE TEMPORARY TABLE "NUMBERED_PROFILES" AS
         SELECT 
-            "_pk",
-            ROW_NUMBER() OVER (ORDER BY "_pk") AS "CLUSTER_VALUE"
+            "__PK__",
+            ROW_NUMBER() OVER (ORDER BY "__PK__") AS "CLUSTER_VALUE"
         FROM 
             "_IDENTITIES";
     UPDATE "_IDENTITIES"
-    SET "_cluster" = "NUMBERED_PROFILES"."CLUSTER_VALUE"
+    SET "__CLUSTER__" = "NUMBERED_PROFILES"."CLUSTER_VALUE"
     FROM "NUMBERED_PROFILES"
-    WHERE "_IDENTITIES"."_pk" = "NUMBERED_PROFILES"."_pk";
+    WHERE "_IDENTITIES"."__PK__" = "NUMBERED_PROFILES"."__PK__";
     DROP TABLE IF EXISTS "NUMBERED_PROFILES";
 
     -- Do the clustering.
@@ -69,14 +69,14 @@ BEGIN
         INSERT INTO
             "MEERGO_GRAPH_MERGE_CLUSTERS"
         SELECT
-            "I1"."_cluster" "C1",
-            "I2"."_cluster" "C2"
+            "I1"."__CLUSTER__" "C1",
+            "I2"."__CLUSTER__" "C2"
         FROM
             "MEERGO_GRAPH_EDGES"
-            JOIN "_IDENTITIES" "I1" ON "MEERGO_GRAPH_EDGES"."I1" = "I1"."_pk"
-            JOIN "_IDENTITIES" "I2" ON "MEERGO_GRAPH_EDGES"."I2" = "I2"."_pk"
+            JOIN "_IDENTITIES" "I1" ON "MEERGO_GRAPH_EDGES"."I1" = "I1"."__PK__"
+            JOIN "_IDENTITIES" "I2" ON "MEERGO_GRAPH_EDGES"."I2" = "I2"."__PK__"
         WHERE
-            "I1"."_cluster" <> "I2"."_cluster";
+            "I1"."__CLUSTER__" <> "I2"."__CLUSTER__";
 
         -- Stop iterating when there are no more clusters to merge.
         SELECT count(*) > 0 INTO :has_clusters_to_merge FROM "MEERGO_GRAPH_MERGE_CLUSTERS";
@@ -94,7 +94,7 @@ BEGIN
         UPDATE
             "_IDENTITIES" "IDENTITIES_A"
         SET
-            "_cluster" = least("IDENTITIES_A"."_cluster", "TARGET")
+            "__CLUSTER__" = least("IDENTITIES_A"."__CLUSTER__", "TARGET")
         FROM
             "_IDENTITIES" "IDENTITIES_B"
             JOIN (
@@ -105,9 +105,9 @@ BEGIN
                     "MEERGO_GRAPH_MERGE_CLUSTERS"
                 GROUP BY
                     "SOURCE"
-            ) "NEW_CLUSTERS" ON "NEW_CLUSTERS"."SOURCE" = "IDENTITIES_B"."_cluster"
+            ) "NEW_CLUSTERS" ON "NEW_CLUSTERS"."SOURCE" = "IDENTITIES_B"."__CLUSTER__"
         WHERE
-            "IDENTITIES_A"."_pk" = "IDENTITIES_B"."_pk";
+            "IDENTITIES_A"."__PK__" = "IDENTITIES_B"."__PK__";
 
     END LOOP;
     END;
@@ -118,21 +118,21 @@ BEGIN
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
     UPDATE "_IDENTITIES" AS "I"
-    SET "_mpid" = "U"."_mpid"
+    SET "__mpid__" = "U"."__MPID__"
     FROM {{ new_profiles_name }} AS "U"
-    WHERE ARRAY_CONTAINS("I"."_pk", "U"."_identities");
+    WHERE ARRAY_CONTAINS("I"."__PK__", "U"."__IDENTITIES__");
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.
     UPDATE "MEERGO_EVENTS" SET "MPID" = null;
-    UPDATE "MEERGO_EVENTS" SET "MPID" = "_IDENTITIES"."_mpid"
+    UPDATE "MEERGO_EVENTS" SET "MPID" = "_IDENTITIES"."__mpid__"
     FROM "_IDENTITIES" WHERE
-       "MEERGO_EVENTS"."CONNECTION_ID" = "_IDENTITIES"."_connection"
+       "MEERGO_EVENTS"."CONNECTION_ID" = "_IDENTITIES"."__CONNECTION__"
            AND
        (
-           ("MEERGO_EVENTS"."USER_ID" <> '' AND "MEERGO_EVENTS"."USER_ID" = "_IDENTITIES"."_identity_id")
+           ("MEERGO_EVENTS"."USER_ID" <> '' AND "MEERGO_EVENTS"."USER_ID" = "_IDENTITIES"."__IDENTITY_ID__")
                OR
-           ("MEERGO_EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("MEERGO_EVENTS"."ANONYMOUS_ID"::variant, "_IDENTITIES"."_anonymous_ids"))
+           ("MEERGO_EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("MEERGO_EVENTS"."ANONYMOUS_ID"::variant, "_IDENTITIES"."__ANONYMOUS_IDS__"))
        );
 
     RETURN true;
