@@ -198,8 +198,8 @@ type Warehouse interface {
 	//
 	// rows contains the rows to update or add if not already present. If a row
 	// contains the $purge column with a value of true, the matching row is purged.
-	// If the value is false, only the _execution column is updated to indicate
-	// that the row should not be purged.
+	// If the value is false, only the _execution column is updated to indicate that
+	// the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
 	// PreviewAlterProfileSchema provides a preview of an alter profile schema
