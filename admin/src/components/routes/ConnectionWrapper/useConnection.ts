@@ -45,7 +45,6 @@ const useConnection = () => {
 			// fetched data.
 			const connection = Object.assign(providedConnection);
 			connection.pipelineTypes = pipelineTypes;
-			connection.pipelines = fetchedConnection.pipelines;
 			if (fetchedConnection.eventTypes != null) {
 				let eventTypes: TransformedEventType[] = [];
 				for (const t of fetchedConnection.eventTypes) {

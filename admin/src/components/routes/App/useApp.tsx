@@ -241,7 +241,6 @@ const useApp = (
 					c.name,
 					connector,
 					c.role,
-					c.pipelinesCount,
 					c.health,
 					c.storage,
 					c.compression,
@@ -253,7 +252,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
-				transformedConnection.pipelinesInfo = c.pipelinesInfo;
+				transformedConnection.pipelines = c.pipelines;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -313,7 +312,6 @@ const useApp = (
 					c.name,
 					connector,
 					c.role,
-					c.pipelinesCount,
 					c.health,
 					c.storage,
 					c.compression,
@@ -325,7 +323,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
-				transformedConnection.pipelinesInfo = c.pipelinesInfo;
+				transformedConnection.pipelines = c.pipelines;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
