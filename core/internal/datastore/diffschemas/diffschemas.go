@@ -20,8 +20,8 @@ import (
 // the new property path and its value is the old property path. In case of new
 // properties created with the same name of already existent properties, the
 // value must be the untyped nil. rePaths cannot contain keys with the same path
-// as their value. Any property path which does not refer to changed properties
-// is ignored.
+// as their value. Any property paths referenced in rePaths that do not refer to
+// properties in schemas are ignored.
 //
 // The Diff function assumes that both the oldSchema and newSchema comply with
 // the requirements of data warehouse schemas and that they do not contain
@@ -100,10 +100,17 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	// Iterate over AddedNames.
 	for _, addedName := range addedNames {
 
+		newPath := appendPath(path, addedName)
+
+		// Since newPath is an added name, the rePaths cannot indicate that it
+		// has been created with the same name of an already existent property.
+		if v, ok := rePaths[newPath]; ok && v == nil {
+			return nil, fmt.Errorf("rePaths cannot contain {..., %q: null, ...}, as there are no properties named %q in the old schema", newPath, newPath)
+		}
+
 		// Renamed properties, whose new name did not already exist in the
 		// schema. They appear in "rePaths" (the key is the new name, the
 		// value is the old name).
-		newPath := appendPath(path, addedName)
 		if oldPath, ok := rePaths[newPath].(string); ok {
 			oldName := propPathToName(oldPath)
 			oldProp, _ := oldProperties.ByName(oldName)
@@ -157,12 +164,19 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	// Iterate over DroppedNames.
 	for _, droppedName := range droppedNames {
 
+		droppedPath := appendPath(path, droppedName)
+
+		// Since the path no longer exists in the new schema, in any case
+		// rePaths can contain it.
+		if _, ok := rePaths[droppedPath]; ok {
+			return nil, fmt.Errorf("rePaths cannot contain %q, as this property no longer exists in the new schema", droppedPath)
+		}
+
 		// Renamed properties, whose old name has not been reused by any
 		// property. They appear in "rePaths" (the key is the new name, the
 		// value is the old name).
 		// They have been already handled by the code above.
 		alreadyHandled := false
-		droppedPath := appendPath(path, droppedName)
 		for _, v := range rePaths {
 			if v == droppedPath {
 				alreadyHandled = true
@@ -198,14 +212,29 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		newProp, _ := newProperties.ByName(keptName)
 		keptPath := appendPath(path, keptName)
 
-		if v, ok := rePaths[keptPath]; ok && v == nil {
-			var renamed bool
-			for _, v := range rePaths {
-				if v == keptPath {
-					renamed = true
-					break
-				}
+		var renamed bool
+		for _, v := range rePaths {
+			if v == keptPath {
+				renamed = true
+				break
 			}
+		}
+
+		// If a property "bar" was renamed to "foo" (that is, if the rePaths
+		// contain {..., "foo": "bar", ...}) and "bar" was retained in the new
+		// schema, the possibilities are:
+		//
+		// 1) "bar" comes from a property that was renamed
+		// 2) "bar" is a new property
+		//
+		// In both cases, "bar" must appear in the rePaths, otherwise there is
+		// some kind of inconsistency.
+		if _, ok := rePaths[keptPath]; !ok && renamed {
+			return nil, fmt.Errorf("property %q has been renamed and still appears in the new schema,"+
+				" so it means that it must be declared in rePaths (as a renamed property, or as a new property)", keptPath)
+		}
+
+		if v, ok := rePaths[keptPath]; ok && v == nil {
 			if renamed {
 				// New properties with the same name of a renamed property. They
 				// appear in "rePaths" (the key is the name of the created
