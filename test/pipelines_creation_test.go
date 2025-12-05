@@ -361,11 +361,11 @@ func TestPipelinesCreation(t *testing.T) {
 			conn: postgreSQLConnection,
 			pipeline: meergotester.PipelineToSet{
 				Name:  "Import users from PostgreSQL",
-				Query: `SELECT "id", "email", "my_updated_at" FROM "my_table"`,
+				Query: `SELECT "id", "email", "my_last_change_time" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "email", Type: types.String()},
-					{Name: "my_updated_at", Type: types.DateTime()},
+					{Name: "my_last_change_time", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
@@ -376,7 +376,7 @@ func TestPipelinesCreation(t *testing.T) {
 					},
 				},
 				IdentityColumn:       "id",
-				LastChangeTimeColumn: "my_updated_at",
+				LastChangeTimeColumn: "my_last_change_time",
 			},
 		},
 		{
