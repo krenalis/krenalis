@@ -57,14 +57,8 @@ type Connection struct {
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
-	PipelinesCount    int           `json:"pipelinesCount"`
 	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
-
-	// Pipelines is populated only by the (*Workspace).Connection method.
-	Pipelines *[]Pipeline `json:"pipelines,omitzero"`
-
-	// PipelinesInfo is populated only by the (*Workspace).Connections method.
-	PipelinesInfo *[]PipelineInfo `json:"pipelinesInfo,omitzero"`
+	Pipelines         []Pipeline    `json:"pipelines"`
 
 	// EventTypes is populated only by the (*Workspace).Connection method.
 	EventTypes *[]EventType `json:"eventTypes,omitzero"`

@@ -109,14 +109,6 @@ interface Pipeline {
 	format: string;
 }
 
-interface PipelineInfo {
-	id: number;
-	target: PipelineTarget;
-	enabled: boolean;
-	scheduleStart: number | null;
-	schedulePeriod: SchedulePeriod | null;
-}
-
 interface PipelineType {
 	name: string;
 	description: string;
@@ -176,7 +168,6 @@ export type {
 	FilterLogical,
 	FilterCondition,
 	Pipeline,
-	PipelineInfo,
 	PipelineType,
 	PipelineToSet,
 	ExpressionToBeExtracted,

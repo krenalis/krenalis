@@ -7,7 +7,7 @@ import {
 	Strategy,
 	SendingMode,
 } from '../api/types/connection';
-import { Pipeline, PipelineInfo, PipelineTarget, PipelineType } from '../api/types/pipeline';
+import { Pipeline, PipelineTarget, PipelineType } from '../api/types/pipeline';
 import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
 import { ConnectorTarget } from '../api/types/connector';
@@ -23,7 +23,6 @@ class TransformedConnection {
 	name: string;
 	connector: TransformedConnector;
 	role: ConnectionRole;
-	pipelinesCount: number;
 	health: Health;
 	storage: number;
 	compression: Compression;
@@ -33,8 +32,7 @@ class TransformedConnection {
 	description: string;
 	linkedFiles?: TransformedConnection[];
 	pipelineTypes?: PipelineType[];
-	pipelines?: Pipeline[];
-	pipelinesInfo?: PipelineInfo[];
+	pipelines: Pipeline[];
 	eventTypes?: TransformedEventType[];
 	linkedConnections?: number[];
 
@@ -43,7 +41,6 @@ class TransformedConnection {
 		name: string,
 		connector: TransformedConnector,
 		role: ConnectionRole,
-		pipelinesCount: number,
 		health: Health,
 		storage: number,
 		compression: Compression,
@@ -54,7 +51,6 @@ class TransformedConnection {
 		linkedFiles?: TransformedConnection[],
 		pipelineTypes?: PipelineType[],
 		pipelines?: Pipeline[],
-		pipelinesInfo?: PipelineInfo[],
 		eventTypes?: TransformedEventType[],
 		linkedConnections?: number[],
 	) {
@@ -62,7 +58,6 @@ class TransformedConnection {
 		this.name = name;
 		this.connector = connector;
 		this.role = role;
-		this.pipelinesCount = pipelinesCount;
 		this.health = health;
 		this.storage = storage == null ? 0 : storage;
 		this.compression = compression;
@@ -73,7 +68,6 @@ class TransformedConnection {
 		this.linkedFiles = linkedFiles;
 		this.pipelineTypes = pipelineTypes == null ? [] : pipelineTypes;
 		this.pipelines = pipelines == null ? [] : pipelines;
-		this.pipelinesInfo = pipelinesInfo;
 		this.eventTypes = eventTypes == null ? [] : eventTypes;
 		if (linkedConnections) {
 			this.linkedConnections = linkedConnections;
@@ -133,13 +127,13 @@ class TransformedConnection {
 	}
 
 	relations(connections: TransformedConnection[]): ('dwh-user' | 'dwh-event' | number)[] {
-		let hasUsersPipelines = this.pipelinesInfo.some((p) => {
+		let hasUsersPipelines = this.pipelines.some((p) => {
 			if (this.isSDK || this.isWebhook) {
 				return p.target === 'User' && p.enabled;
 			}
 			return p.target === 'User' && p.enabled && p.schedulePeriod != null;
 		});
-		let hasEventPipelines = this.pipelinesInfo.some((p) => p.target === 'Event' && p.enabled);
+		let hasEventPipelines = this.pipelines.some((p) => p.target === 'Event' && p.enabled);
 
 		const linkedTo: ('dwh-user' | 'dwh-event' | number)[] = [];
 		if (hasUsersPipelines) {
@@ -154,11 +148,11 @@ class TransformedConnection {
 					...this.linkedConnections.filter((id) =>
 						connections
 							.find((conn) => conn.id === id)
-							?.pipelinesInfo.some((p) => p.target === 'Event' && p.enabled),
+							?.pipelines.some((p) => p.target === 'Event' && p.enabled),
 					),
 				);
 			} else {
-				if (this.pipelinesInfo.some((p) => p.target === 'Event' && p.enabled))
+				if (this.pipelines.some((p) => p.target === 'Event' && p.enabled))
 					linkedTo.push(...this.linkedConnections);
 			}
 		}

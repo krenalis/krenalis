@@ -212,7 +212,7 @@ var tools = []server.ServerTool{
 					"connector":      c.Connector,
 					"connectorType":  c.ConnectorType,
 					"role":           c.Role,
-					"pipelinesCount": c.PipelinesCount,
+					"pipelinesCount": len(c.Pipelines),
 				})
 			}
 			encoded, err := json.Marshal(info)
