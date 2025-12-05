@@ -807,14 +807,14 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.String()},
-					{Name: "__id__", Type: types.Int(32)},
+					{Name: "_id", Type: types.Int(32)},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String(), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
-						"email_out": "email_in __id__",
+						"email_out": "email_in _id",
 					},
 				},
 			},
@@ -1775,19 +1775,19 @@ func Test_validatePipeline(t *testing.T) {
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String(), ReadOptional: true},
-					{Name: "__id__", Type: types.Int(32), ReadOptional: true},
+					{Name: "_id", Type: types.Int(32), ReadOptional: true},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
 						"email_out": "email_in",
-						"__id__":    "email_in",
+						"_id":       "email_in",
 					},
 				},
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.API,
-			err:                     `output pipeline schema property "__id__" is a meta property`,
+			err:                     `output pipeline schema property "_id" is a meta property`,
 		},
 		{
 			name: "BAD: Destination/API/User - input schema cannot contain meta properties",
@@ -1795,7 +1795,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.String(), ReadOptional: true},
-					{Name: "__id__", Type: types.Int(32), ReadOptional: true},
+					{Name: "_id", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String()},
@@ -1803,7 +1803,7 @@ func Test_validatePipeline(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
-						"email_out": "email_in __id__",
+						"email_out": "email_in _id",
 					},
 				},
 				ExportMode: CreateOrUpdate,
@@ -1816,7 +1816,7 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.API,
-			err:                     `input pipeline schema property "__id__" is a meta property`,
+			err:                     `input pipeline schema property "_id" is a meta property`,
 		},
 		{
 			name: "BAD: Destination/API/User - incremental is not supported",
@@ -2460,7 +2460,7 @@ func Test_validatePipeline(t *testing.T) {
 					Logical: OpAnd,
 					Conditions: []FilterCondition{
 						{
-							Property: "__id__",
+							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
@@ -2488,7 +2488,7 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.API,
-			err:                     "filter is not valid: property path \"__id__\" does not exist",
+			err:                     "filter is not valid: property path \"_id\" does not exist",
 		},
 		{
 			name: "BAD: Destination/API/User - filter refers to a meta property in input schema",
@@ -2498,14 +2498,14 @@ func Test_validatePipeline(t *testing.T) {
 					Logical: OpAnd,
 					Conditions: []FilterCondition{
 						{
-							Property: "__id__",
+							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
 					},
 				},
 				InSchema: types.Object([]types.Property{
-					{Name: "__id__", Type: types.String(), ReadOptional: true},
+					{Name: "_id", Type: types.String(), ReadOptional: true},
 					{Name: "email_in", Type: types.String(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
@@ -2527,7 +2527,7 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.API,
-			err:                     `input pipeline schema property "__id__" is a meta property`,
+			err:                     `input pipeline schema property "_id" is a meta property`,
 		},
 		{
 			name: "BAD: Destination/FileStorage/User - no input schema",

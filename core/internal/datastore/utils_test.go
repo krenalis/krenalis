@@ -27,6 +27,9 @@ func Test_IsMetaProperty(t *testing.T) {
 		{types.Property{Name: "__hello__", Type: types.Int(32)}, true},
 		{types.Property{Name: "__h__", Type: types.Int(32)}, true},
 		{types.Property{Name: "__hey_test__", Type: types.Int(32)}, true},
+		{types.Property{Name: "_hello", Type: types.Int(32)}, true},
+		{types.Property{Name: "_h", Type: types.Int(32)}, true},
+		{types.Property{Name: "_hey_test", Type: types.Int(32)}, true},
 	}
 	for _, test := range tests {
 		got := IsMetaProperty(test.p.Name)
@@ -39,7 +42,7 @@ func Test_IsMetaProperty(t *testing.T) {
 var typ = types.Int(32)
 
 var schema = types.Object([]types.Property{
-	{Name: "__id__", Type: typ},
+	{Name: "_id", Type: typ},
 	{Name: "a", Type: typ},
 	{Name: "b", Type: typ},
 	{Name: "c", Type: types.Object([]types.Property{
@@ -84,7 +87,7 @@ var schema = types.Object([]types.Property{
 func Test_propertiesToColumns(t *testing.T) {
 
 	columns := []types.Property{
-		{Name: "__id__", Type: typ},
+		{Name: "_id", Type: typ},
 		{Name: "a", Type: typ},
 		{Name: "b", Type: typ},
 		{Name: "c_a", Type: typ},

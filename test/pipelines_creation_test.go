@@ -92,16 +92,16 @@ func TestPipelinesCreation(t *testing.T) {
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "identity", Type: types.String()},
-					{Name: "__email__", Type: types.String()},
+					{Name: "_email", Type: types.String()},
 					{Name: "timestamp", Type: types.String()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "__email__", Type: types.String()},
+					{Name: "_email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
-						"__email__": "__email__",
+						"_email":    "_email",
 						"timestamp": "timestamp",
 					},
 				},
@@ -114,7 +114,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"HasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output pipeline schema property \"__email__\" is a meta property"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output pipeline schema property \"_email\" is a meta property"}}`,
 		},
 		{
 			conn: dstFsID,
