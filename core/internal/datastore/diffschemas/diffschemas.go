@@ -20,8 +20,8 @@ import (
 // the new property path and its value is the old property path. In case of new
 // properties created with the same name of already existent properties, the
 // value must be the untyped nil. rePaths cannot contain keys with the same path
-// as their value. Any property path which does not refer to changed properties
-// is ignored.
+// as their value. Any property paths referenced in rePaths that do not refer to
+// properties in schemas are ignored.
 //
 // The Diff function assumes that both the oldSchema and newSchema comply with
 // the requirements of data warehouse schemas and that they do not contain
