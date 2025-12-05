@@ -28,8 +28,8 @@ func Platforms() []Platform {
 	return platforms
 }
 
-// Register makes a warehouse platform available by the provided name.
-// If Register is called twice with the same name or if new is nil, it panics.
+// Register makes a warehouse available with the provided platform name. If
+// Register is called twice with the same platform or if new is nil, it panics.
 func Register[T Warehouse](platform Platform, new NewFunc[T]) {
 	if new == nil {
 		panic("meergo/warehouses: new function is nil for warehouse platform " + platform.Name)
@@ -44,14 +44,14 @@ func Register[T Warehouse](platform Platform, new NewFunc[T]) {
 	registry.platforms[platform.Name] = platform
 }
 
-// Registered returns the warehouse platform registered with the given name.
-// If a warehouse platform with this name is not registered, it panics.
-func Registered(name string) Platform {
+// Registered returns the registered warehouse for the given platform.
+// It panics if the platform is not registered.
+func Registered(platform string) Platform {
 	registry.Lock()
-	warehouse, ok := registry.platforms[name]
+	warehouse, ok := registry.platforms[platform]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo/warehouses: unknown warehouse platform %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo/warehouses: unknown warehouse platform %q (forgotten import?)", platform))
 	}
 	return warehouse
 }

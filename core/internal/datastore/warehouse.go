@@ -38,12 +38,12 @@ func unavailableError(err error) error {
 }
 
 // getWarehouseInstance returns a warehouse instance for the given platform,
-// initialized with the provided settings, and wrapped in a warehouse platform.
+// initialized with the provided settings, and wrapped in a warehouse type.
 //
-// It panics if a warehouse platform with the given name does not exist.
+// It panics if the given warehouse platform does not exist.
 // It returns a *warehouses.SettingsError if the settings are invalid.
-func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
-	inner, err := warehouses.Registered(name).New(&warehouses.Config{Settings: settings})
+func getWarehouseInstance(platform string, settings []byte) (warehouse, error) {
+	inner, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return warehouse{}, err
 	}

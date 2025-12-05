@@ -270,7 +270,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID uuid.UUID
-			var warehouseName string
+			var warehousePlatform string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterProfileSchemaSchema []byte
@@ -282,7 +282,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					executions:  map[int]*PipelineExecution{},
 					accounts:    map[int]*Account{},
 				}
-				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
+				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
 					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterProfileSchema.ID,
 					&alterProfileSchemaSchema, &ws.AlterProfileSchema.PrimarySources,
 					&ws.AlterProfileSchema.Operations, &ws.AlterProfileSchema.StartTime,
@@ -294,10 +294,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
-				if _, ok := state.warehousePlatforms[warehouseName]; !ok {
-					return fmt.Errorf("warehouse platform for %q is required but not registered. (Possibly forgotten import?)", warehouseName)
+				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
+					return fmt.Errorf("warehouse platform for %q is required but not registered. (Possibly forgotten import?)", warehousePlatform)
 				}
-				ws.Warehouse.Platform = warehouseName
+				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
 				if _json.Value(warehouseMCPSettings).IsNull() {
