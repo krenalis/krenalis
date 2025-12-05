@@ -185,7 +185,7 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 		b.WriteString(`OR REPLACE `)
 	}
 	b.WriteString(`VIEW "PROFILES" AS SELECT` + "\n")
-	metaProps := []string{"_MPID", "_LAST_CHANGE_TIME"}
+	metaProps := []string{"_MPID", "_UPDATED_AT"}
 	for i, p := range metaProps {
 		if i > 0 {
 			b.WriteString(",\n")

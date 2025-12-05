@@ -112,7 +112,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_IDENTITIES", "_MPID", "_LAST_CHANGE_TIME"`)
+	mergeProfiles.WriteString(`"_IDENTITIES", "_MPID", "_UPDATED_AT"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -123,14 +123,14 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 			if s, ok := profilePrimarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "_CONNECTION" = %d THEN %s END) WITHIN GROUP (ORDER BY "_LAST_CHANGE_TIME" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
+				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "_CONNECTION" = %d THEN %s END) WITHIN GROUP (ORDER BY "_UPDATED_AT" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
 			} else {
 				mergeProfiles.WriteString("ARRAY_CONSTRUCT()")
 			}
 			mergeProfiles.WriteString(", ")
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "_LAST_CHANGE_TIME" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
+			mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "_UPDATED_AT" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
 			mergeProfiles.WriteString(`))[0]`)
 		}
 		mergeProfiles.WriteString(" AS ")
@@ -153,8 +153,8 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		END,
 		UUID_STRING()
 	),`)
-	// Write the "_last_change_time" column.
-	mergeProfiles.WriteString(`MAX("_LAST_CHANGE_TIME")`)
+	// Write the "_updated_at" column.
+	mergeProfiles.WriteString(`MAX("_UPDATED_AT")`)
 	mergeProfiles.WriteString(` FROM "_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
 
 	// If two profiles who were previously one are split, they will end up having

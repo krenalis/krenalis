@@ -89,7 +89,7 @@ func newEventIdentityWriter(store *Store, pipelineID int, ack EventIdentityWrite
 	iw.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
 	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
 	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
-	iw.columns[5] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
+	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "_execution", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
@@ -196,12 +196,12 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 				identityID:  identity.AnonymousID,
 			}
 			row := map[string]any{
-				"$purge":            true,
-				"_pipeline":         key.pipeline,
-				"_is_anonymous":     true,
-				"_identity_id":      key.identityID,
-				"_connection":       iw.connection,
-				"_last_change_time": identity.LastChangeTime,
+				"$purge":        true,
+				"_pipeline":     key.pipeline,
+				"_is_anonymous": true,
+				"_identity_id":  key.identityID,
+				"_connection":   iw.connection,
+				"_updated_at":   identity.LastChangeTime,
 			}
 			iw.appendRow(key, row, "")
 		}
@@ -221,7 +221,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	if !key.isAnonymous {
 		row["_anonymous_ids"] = []any{identity.AnonymousID}
 	}
-	row["_last_change_time"] = identity.LastChangeTime
+	row["_updated_at"] = identity.LastChangeTime
 
 	iw.appendRow(key, row, ackID)
 

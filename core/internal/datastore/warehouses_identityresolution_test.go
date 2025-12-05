@@ -591,13 +591,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						// making the test fail.
 						time.Sleep(1 * time.Millisecond)
 						row := map[string]any{
-							"_pipeline":         profile.pipeline,
-							"_is_anonymous":     profile.isAnonymous,
-							"_identity_id":      profile.id,
-							"_connection":       profile.connection,
-							"_anonymous_ids":    toSliceAny(profile.anonymousIds),
-							"_last_change_time": time.Now().UTC(),
-							"_execution":        1,
+							"_pipeline":      profile.pipeline,
+							"_is_anonymous":  profile.isAnonymous,
+							"_identity_id":   profile.id,
+							"_connection":    profile.connection,
+							"_anonymous_ids": toSliceAny(profile.anonymousIds),
+							"_updated_at":    time.Now().UTC(),
+							"_execution":     1,
 						}
 						for k, v := range profile.attributes {
 							row[k] = v
@@ -699,7 +699,7 @@ func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses
 	columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
 	columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
 	columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
-	columns[5] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
+	columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	columns[6] = warehouses.Column{Name: "_execution", Type: types.Int(32), Nullable: true}
 	i := 7
 	for _, column := range iwColumns {

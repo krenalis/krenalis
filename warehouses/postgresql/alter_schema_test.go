@@ -22,7 +22,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		columns         []warehouses.Column // without "_mpid" and "_last_change_time", which are added by the test
+		columns         []warehouses.Column // without "_mpid" and "_updated_at", which are added by the test
 		ops             []warehouses.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
@@ -266,7 +266,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 			}
 			columns = append([]warehouses.Column{
 				{Name: "_mpid", Type: types.Int(32)},
-				{Name: "_last_change_time", Type: types.DateTime()},
+				{Name: "_updated_at", Type: types.DateTime()},
 			}, columns...)
 			got := alterProfileSchemaQueries("meergo_profiles_0", columns, test.ops)
 			// Exclude from the test the queries that drop or create views.

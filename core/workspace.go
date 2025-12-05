@@ -1308,7 +1308,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		order = "_last_change_time"
+		order = "_updated_at"
 	}
 
 	// Validate first and limit.
@@ -1321,7 +1321,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: append([]string{"_mpid", "_last_change_time"}, properties...),
+		Properties: append([]string{"_mpid", "_updated_at"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1349,9 +1349,9 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	for i, row := range rows {
 		profiles[i].MPID = row["_mpid"].(string)
 		profiles[i].Attributes = row
-		profiles[i].LastChangeTime = row["_last_change_time"].(time.Time)
+		profiles[i].LastChangeTime = row["_updated_at"].(time.Time)
 		delete(row, "_mpid")
-		delete(row, "_last_change_time")
+		delete(row, "_updated_at")
 	}
 
 	return profiles, schema, total, nil
@@ -1875,10 +1875,10 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 			"_identity_id",
 			"_connection",
 			"_anonymous_ids",
-			"_last_change_time",
+			"_updated_at",
 		},
 		Where:     where,
-		OrderBy:   "_last_change_time",
+		OrderBy:   "_updated_at",
 		OrderDesc: true,
 		First:     first,
 		Limit:     limit,
@@ -1932,7 +1932,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		}
 
 		// Determine the last change time.
-		lastChangeTime := record["_last_change_time"].(time.Time)
+		lastChangeTime := record["_updated_at"].(time.Time)
 
 		identities = append(identities, Identity{
 			Connection:     connID,

@@ -128,7 +128,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_identities", "_mpid", "_last_change_time"`)
+	mergeProfiles.WriteString(`"_identities", "_mpid", "_updated_at"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -138,11 +138,11 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 			if s, ok := primarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_last_change_time" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "_connection" = ` + strconv.Itoa(s) + `) || `)
+				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_updated_at" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "_connection" = ` + strconv.Itoa(s) + `) || `)
 			}
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_last_change_time" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
+			mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_updated_at" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
 			mergeProfiles.WriteString(`)[1]`)
 		}
 		mergeProfiles.WriteString(" AS ")
@@ -165,8 +165,8 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		END,
 		gen_random_uuid()
 	),`)
-	// Write the "_last_change_time" column.
-	mergeProfiles.WriteString(`MAX("_last_change_time")`)
+	// Write the "_updated_at" column.
+	mergeProfiles.WriteString(`MAX("_updated_at")`)
 	mergeProfiles.WriteString(` FROM "meergo_identities" GROUP BY "_cluster";` + "\n")
 
 	// If two profiles who were previously one are split, they will end up
