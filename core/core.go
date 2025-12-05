@@ -24,7 +24,7 @@ import (
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
-	_db "github.com/meergo/meergo/core/internal/db"
+	dbpkg "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -46,7 +46,7 @@ import (
 )
 
 type Core struct {
-	db                *_db.DB
+	db                *dbpkg.DB
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
@@ -165,7 +165,7 @@ func New(conf *Config) (*Core, error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
-	db, err := _db.Open(&_db.Options{
+	db, err := dbpkg.Open(&dbpkg.Options{
 		Host:           ps.Host,
 		Port:           ps.Port,
 		Username:       ps.Username,
@@ -198,7 +198,7 @@ func New(conf *Config) (*Core, error) {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			// Initialize the PostgreSQL database in a transaction, so if it is
 			// fails, there is no need to manually empty the database.
-			err := db.Transaction(dbInitCtx, func(tx *_db.Tx) error {
+			err := db.Transaction(dbInitCtx, func(tx *dbpkg.Tx) error {
 				err := initdb.Initialize(dbInitCtx, tx)
 				if err != nil {
 					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
@@ -353,7 +353,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
@@ -430,7 +430,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
@@ -1288,7 +1288,7 @@ Identifiers:
 		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
 	}
 	for {
-		err := core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1384,7 +1384,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo = backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1580,7 +1580,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -1637,7 +1637,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
