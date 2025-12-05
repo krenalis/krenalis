@@ -308,10 +308,10 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 			store := c.core.datastore.Store(id)
 			err := store.PurgePipelines(c.close.ctx, pipelines)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot purge pipelines: %s", err)
 			}
 
-			n := state.PurgePipeline{
+			n := state.PurgePipelines{
 				Workspace: id,
 			}
 
@@ -340,11 +340,18 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 				}
 				return n, nil
 			})
+			if err != nil {
+				return fmt.Errorf("cannot set pipelines as purged: %s", err)
+			}
 
-			return err
+			return nil
 		})
-		if err == nil {
-			break
+		if err != nil {
+			slog.Error(err.Error(), "workspace", ws.ID)
+		} else {
+			// Try one last time to check whether any pipelines were added in the meantime and still need purging.
+			// Note that we pass 1ns to SetNextWaitTime because it does not accept 0ns.
+			bo.SetNextWaitTime(1)
 		}
 
 	}

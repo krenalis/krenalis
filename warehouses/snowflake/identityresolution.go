@@ -112,7 +112,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"__IDENTITIES__", "__MPID__", "__LAST_CHANGE_TIME__"`)
+	mergeProfiles.WriteString(`"_IDENTITIES", "_MPID", "_LAST_CHANGE_TIME"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -123,23 +123,23 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 			if s, ok := profilePrimarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "__CONNECTION__" = %d THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
+				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "_CONNECTION" = %d THEN %s END) WITHIN GROUP (ORDER BY "_LAST_CHANGE_TIME" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
 			} else {
 				mergeProfiles.WriteString("ARRAY_CONSTRUCT()")
 			}
 			mergeProfiles.WriteString(", ")
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
+			mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "_LAST_CHANGE_TIME" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
 			mergeProfiles.WriteString(`))[0]`)
 		}
 		mergeProfiles.WriteString(" AS ")
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "__identities__" column.
-	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
-	// Write the "__mpid__" column.
+	// Write the "_identities" column.
+	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
+	// Write the "_mpid" column.
 	// If all MPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's MPID; otherwise,
 	// if we are in a situation where a previously split profile is now merged,
@@ -147,15 +147,15 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	// also in this case, create a new random MPID.
 	mergeProfiles.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "__mpid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("__mpid__"::text)::varchar
+			WHEN COUNT(CASE WHEN "_mpid" IS NOT NULL THEN 1 ELSE 0 END) > 0
+				THEN MAX("_mpid"::text)::varchar
 			ELSE UUID_STRING()
 		END,
 		UUID_STRING()
 	),`)
-	// Write the "__last_change_time__" column.
-	mergeProfiles.WriteString(`MAX("__LAST_CHANGE_TIME__")`)
-	mergeProfiles.WriteString(` FROM "_IDENTITIES" GROUP BY "__CLUSTER__"';` + "\n")
+	// Write the "_last_change_time" column.
+	mergeProfiles.WriteString(`MAX("_LAST_CHANGE_TIME")`)
+	mergeProfiles.WriteString(` FROM "_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
 
 	// If two profiles who were previously one are split, they will end up having
 	// the same MPID, which is incorrect. So this query, in that situation,
@@ -164,15 +164,15 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	mergeProfiles.WriteString(quoteIdent(newProfilesName))
 	mergeProfiles.WriteString(` "U"
 		SET
-			"__MPID__" = UUID_STRING()
+			"_MPID" = UUID_STRING()
 		WHERE
-			"U"."__MPID__" IN (
+			"U"."_MPID" IN (
 				SELECT
-					"U2"."__MPID__"
+					"U2"."_MPID"
 				FROM
 					` + quoteIdent(newProfilesName) + ` "U2"
 				GROUP BY
-					"U2"."__MPID__"
+					"U2"."_MPID"
 				HAVING
 					COUNT(*) > 1
 	)`)

@@ -41,7 +41,7 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 func init() {
-	warehouses.Register(warehouses.Driver{
+	warehouses.Register(warehouses.Platform{
 		Name: "PostgreSQL",
 	}, New)
 }
@@ -229,10 +229,10 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 // immutableMergeIdentitiesColumns are columns in the merge of identities that
 // are immutable.
 var immutableMergeIdentitiesColumns = []string{
-	"__pipeline__",
-	"__identity_id__",
-	"__is_anonymous__",
-	"__connection__",
+	"_pipeline",
+	"_identity_id",
+	"_is_anonymous",
+	"_connection",
 }
 
 // MergeIdentities merges existing identities, deletes them, and inserts new
@@ -271,7 +271,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	b.Reset()
 	b.WriteString("MERGE INTO \"meergo_identities\" AS \"d\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString(`" AS "s"` + "\n" + `ON "d"."__pipeline__" = "s"."__pipeline__" AND "d"."__identity_id__" = "s"."__identity_id__" AND "d"."__is_anonymous__" = "s"."__is_anonymous__"`)
+	b.WriteString(`" AS "s"` + "\n" + `ON "d"."_pipeline" = "s"."_pipeline" AND "d"."_identity_id" = "s"."_identity_id" AND "d"."_is_anonymous" = "s"."_is_anonymous"`)
 	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
@@ -284,8 +284,8 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString("\n")
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteString(` = `)
-		if c.Name == "__anonymous_ids__" {
-			b.WriteString(`CASE WHEN "s"."__anonymous_ids__" IS NULL OR "s"."__anonymous_ids__"[1] = ANY("d"."__anonymous_ids__") THEN "d"."__anonymous_ids__" ELSE "d"."__anonymous_ids__" || "s"."__anonymous_ids__"[1] END`)
+		if c.Name == "_anonymous_ids" {
+			b.WriteString(`CASE WHEN "s"."_anonymous_ids" IS NULL OR "s"."_anonymous_ids"[1] = ANY("d"."_anonymous_ids") THEN "d"."_anonymous_ids" ELSE "d"."_anonymous_ids" || "s"."_anonymous_ids"[1] END`)
 		} else {
 			b.WriteString(`"s".`)
 			b.WriteString(quotedColumn[c.Name])
@@ -310,7 +310,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(`"s".`)
 		b.WriteString(quotedColumn[c.Name])
 	}
-	b.WriteString(")\nWHEN MATCHED AND \"s\".\"$purge\" = FALSE THEN\n  UPDATE SET \"__execution__\" = \"s\".\"__execution__\"")
+	b.WriteString(")\nWHEN MATCHED AND \"s\".\"$purge\" = FALSE THEN\n  UPDATE SET \"_execution\" = \"s\".\"_execution\"")
 	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 
@@ -374,7 +374,7 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline 
 		b.WriteString(quoteIdent(column.Name))
 		b.WriteString(" = NULL")
 	}
-	b.WriteString(" WHERE \"__pipeline__\" = ")
+	b.WriteString(" WHERE \"_pipeline\" = ")
 	b.WriteString(strconv.Itoa(pipeline))
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {

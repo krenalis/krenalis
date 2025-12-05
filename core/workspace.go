@@ -252,7 +252,7 @@ func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value,
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__mpid__"},
+		Property: []string{"_mpid"},
 		Operator: state.OpIs,
 		Values:   []any{mpid},
 	}}}
@@ -1125,7 +1125,7 @@ func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__mpid__"},
+		Property: []string{"_mpid"},
 		Operator: state.OpIs,
 		Values:   []any{mpid},
 	}}}
@@ -1308,7 +1308,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		order = "__last_change_time__"
+		order = "_last_change_time"
 	}
 
 	// Validate first and limit.
@@ -1321,7 +1321,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: append([]string{"__mpid__", "__last_change_time__"}, properties...),
+		Properties: append([]string{"_mpid", "_last_change_time"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1347,11 +1347,11 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
-		profiles[i].MPID = row["__mpid__"].(string)
+		profiles[i].MPID = row["_mpid"].(string)
 		profiles[i].Attributes = row
-		profiles[i].LastChangeTime = row["__last_change_time__"].(time.Time)
-		delete(row, "__mpid__")
-		delete(row, "__last_change_time__")
+		profiles[i].LastChangeTime = row["_last_change_time"].(time.Time)
+		delete(row, "_mpid")
+		delete(row, "_last_change_time")
 	}
 
 	return profiles, schema, total, nil
@@ -1512,7 +1512,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1521,10 +1521,10 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	}
 	if mcpSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if this.workspace.Warehouse.Name == "Snowflake" {
+		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1534,7 +1534,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Name, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1708,7 +1708,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1718,11 +1718,11 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	if mcpSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if this.workspace.Warehouse.Name == "Snowflake" {
+		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
 		var err error
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1732,7 +1732,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Name, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1837,8 +1837,8 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// Warehouse returns driver name, settings and MCP settings of the data
-// warehouse for the workspace.
+// Warehouse returns platform, settings and MCP settings of the data warehouse
+// for the workspace.
 func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
@@ -1849,7 +1849,7 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	} else {
 		mcpSettings = json.Value("null")
 	}
-	return ws.Warehouse.Name, settings, mcpSettings
+	return ws.Warehouse.Platform, settings, mcpSettings
 }
 
 // identities returns the identities matching the provided where condition and
@@ -1870,15 +1870,15 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	// Retrieve the identities from the data warehouse.
 	records, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
-			"__pipeline__",
-			"__is_anonymous__",
-			"__identity_id__",
-			"__connection__",
-			"__anonymous_ids__",
-			"__last_change_time__",
+			"_pipeline",
+			"_is_anonymous",
+			"_identity_id",
+			"_connection",
+			"_anonymous_ids",
+			"_last_change_time",
 		},
 		Where:     where,
-		OrderBy:   "__last_change_time__",
+		OrderBy:   "_last_change_time",
 		OrderDesc: true,
 		First:     first,
 		Limit:     limit,
@@ -1896,7 +1896,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	for _, record := range records {
 
 		// Retrieve the connection.
-		connID := record["__connection__"].(int)
+		connID := record["_connection"].(int)
 		conn, ok := this.workspace.Connection(connID)
 		if !ok {
 			// The connection for this identity no longer exists, so skip this identity.
@@ -1904,7 +1904,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		}
 
 		// Retrieve the pipeline.
-		pipelineID := record["__pipeline__"].(int)
+		pipelineID := record["_pipeline"].(int)
 		_, ok = conn.Pipeline(pipelineID)
 		if !ok {
 			// The pipeline for this identity no longer exists, so skip this identity.
@@ -1912,11 +1912,11 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		}
 
 		// Determine the value for the identity ID.
-		identityID := record["__identity_id__"].(string)
+		identityID := record["_identity_id"].(string)
 
 		// Determine the anonymous IDs.
 		var anonIDs []string
-		if ids, ok := record["__anonymous_ids__"].([]any); ok {
+		if ids, ok := record["_anonymous_ids"].([]any); ok {
 			anonIDs = make([]string, len(ids))
 			for i := range ids {
 				anonIDs[i] = ids[i].(string)
@@ -1926,13 +1926,13 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		// In the case of anonymous identities, the anonymous ID is inside the
 		// identity ID, so there is the need to populate the anonymous IDs by
 		// taking that value, then reset the identity ID.
-		if record["__is_anonymous__"].(bool) {
+		if record["_is_anonymous"].(bool) {
 			anonIDs = append(anonIDs, identityID)
 			identityID = ""
 		}
 
 		// Determine the last change time.
-		lastChangeTime := record["__last_change_time__"].(time.Time)
+		lastChangeTime := record["_last_change_time"].(time.Time)
 
 		identities = append(identities, Identity{
 			Connection:     connID,

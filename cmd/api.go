@@ -286,12 +286,12 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	return api.core.ValidateExpression(body.Expression, body.Properties, body.Type)
 }
 
-// WarehouseDrivers returns the supported data warehouse drivers.
-func (api api) WarehouseDrivers(_ http.ResponseWriter, r *http.Request) (any, error) {
+// WarehousePlatforms returns the supported data warehouse platforms.
+func (api api) WarehousePlatforms(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
-	return map[string]any{"drivers": api.core.WarehouseDrivers()}, nil
+	return map[string]any{"platforms": api.core.WarehousePlatforms()}, nil
 }
 
 func (api api) code(r *http.Request) string {

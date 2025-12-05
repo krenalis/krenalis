@@ -14,7 +14,7 @@ Directories containing third-party software, such as 'vendor/' and
 directories retains its original license terms as distributed by their
 respective authors.
 
-Meergo's connectors and data warehouse drivers, located in the 'connectors/'
+Meergo's connectors and data warehouse integrations, located in the 'connectors/'
 and 'warehouses/' directories, are released as Open Source under the MIT
 License.
 

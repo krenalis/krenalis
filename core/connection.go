@@ -1008,7 +1008,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 		workspace: this.connection.Workspace(),
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__connection__"},
+		Property: []string{"_connection"},
 		Operator: state.OpIs,
 		Values:   []any{strconv.Itoa(this.connection.ID)},
 	}}}

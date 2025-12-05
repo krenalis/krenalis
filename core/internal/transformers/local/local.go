@@ -25,7 +25,7 @@ import (
 	"github.com/meergo/meergo/tools/types"
 )
 
-const functionsDir = "meergo-functions"
+const functionsDir = ".meergo-functions"
 
 type function struct {
 	settings Settings

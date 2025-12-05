@@ -26,3 +26,25 @@ CREATE VIEW events AS SELECT * FROM meergo_events;
 
 ALTER TABLE meergo_destination_profiles RENAME COLUMN __action__ TO __pipeline__;
 ALTER TABLE meergo_identities RENAME COLUMN __action__ TO __pipeline__;
+
+ALTER TABLE meergo_destination_profiles RENAME __external_id__        TO _external_id;
+ALTER TABLE meergo_destination_profiles RENAME __out_matching_value__ TO _out_matching_value;
+ALTER TABLE meergo_destination_profiles RENAME __pipeline__           TO _pipeline;
+ALTER TABLE meergo_identities           RENAME __anonymous_ids__      TO _anonymous_ids;
+ALTER TABLE meergo_identities           RENAME __cluster__            TO _cluster;
+ALTER TABLE meergo_identities           RENAME __connection__         TO _connection;
+ALTER TABLE meergo_identities           RENAME __execution__          TO _execution;
+ALTER TABLE meergo_identities           RENAME __identity_id__        TO _identity_id;
+ALTER TABLE meergo_identities           RENAME __is_anonymous__       TO _is_anonymous;
+ALTER TABLE meergo_identities           RENAME __last_change_time__   TO _last_change_time;
+ALTER TABLE meergo_identities           RENAME __mpid__               TO _mpid;
+ALTER TABLE meergo_identities           RENAME __pipeline__           TO _pipeline;
+ALTER TABLE meergo_identities           RENAME __pk__                 TO _pk;
+ALTER TABLE profiles                    RENAME __last_change_time__   TO _last_change_time;
+ALTER TABLE profiles                    RENAME __mpid__               TO _mpid;
+
+-- NOTE: replace 'meergo_profiles_0' with the correct name of the table you
+-- currently have in your data warehouse.
+ALTER TABLE meergo_profiles_0 RENAME __identities__       TO _identities;
+ALTER TABLE meergo_profiles_0 RENAME __last_change_time__ TO _last_change_time;
+ALTER TABLE meergo_profiles_0 RENAME __mpid__             TO _mpid;

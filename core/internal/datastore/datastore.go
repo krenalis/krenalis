@@ -19,10 +19,10 @@ import (
 	"github.com/meergo/meergo/tools/types"
 )
 
-// ErrWarehouseDriverNotExist is returned by the
+// ErrWarehousePlatformNotExist is returned by the
 // Datastore.NormalizeWarehouseSettings method when the provided warehouse
-// driver does not exist.
-var ErrWarehouseDriverNotExist = errors.New("warehouse driver does not exist")
+// platform does not exist.
+var ErrWarehousePlatformNotExist = errors.New("warehouse platform does not exist")
 
 // ConnectionFailed is the error returned when a connection to a data warehouse
 // cannot be established.
@@ -150,15 +150,15 @@ func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byt
 // NormalizeWarehouseSettings returns data warehouse settings in a canonical
 // form.
 //
-// It returns the ErrWarehouseDriverNotExist error if a warehouse driver with the
-// provided name does not exist, and it returns a SettingsError error if the
-// settings are not valid.
-func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
+// It returns the ErrWarehousePlatformNotExist error if the given warehouse
+// platform does not exist, and it returns a SettingsError error if the settings
+// are not valid.
+func (ds *Datastore) NormalizeWarehouseSettings(platform string, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
-	if _, ok := ds.state.WarehouseDriver(name); !ok {
-		return nil, ErrWarehouseDriverNotExist
+	if _, ok := ds.state.WarehousePlatform(platform); !ok {
+		return nil, ErrWarehousePlatformNotExist
 	}
-	dw, err := getWarehouseInstance(name, settings)
+	dw, err := getWarehouseInstance(platform, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	// Update the warehouse if the settings have changed.
 	prevWarehouse := store.warehouse()
 	ws, _ := ds.state.Workspace(n.Workspace)
-	nextWarehouse, _ := getWarehouseInstance(ws.Warehouse.Name, n.Settings)
+	nextWarehouse, _ := getWarehouseInstance(ws.Warehouse.Platform, n.Settings)
 	if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.

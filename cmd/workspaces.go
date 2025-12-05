@@ -958,16 +958,16 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	return nil, nil
 }
 
-// Warehouse returns the type, settings and MCP settings of the data warehouse
-// for a workspace.
+// Warehouse returns the platform, settings and MCP settings of the data
+// warehouse for a workspace.
 func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	name, settings, mcpSettings := ws.Warehouse()
+	platform, settings, mcpSettings := ws.Warehouse()
 	return map[string]any{
-		"name":        name,
+		"platform":    platform,
 		"settings":    settings,
 		"mcpSettings": mcpSettings,
 	}, nil

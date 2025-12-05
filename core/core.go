@@ -24,7 +24,7 @@ import (
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
-	_db "github.com/meergo/meergo/core/internal/db"
+	dbpkg "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -46,7 +46,7 @@ import (
 )
 
 type Core struct {
-	db                *_db.DB
+	db                *dbpkg.DB
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
@@ -165,7 +165,7 @@ func New(conf *Config) (*Core, error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
-	db, err := _db.Open(&_db.Options{
+	db, err := dbpkg.Open(&dbpkg.Options{
 		Host:           ps.Host,
 		Port:           ps.Port,
 		Username:       ps.Username,
@@ -198,7 +198,7 @@ func New(conf *Config) (*Core, error) {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			// Initialize the PostgreSQL database in a transaction, so if it is
 			// fails, there is no need to manually empty the database.
-			err := db.Transaction(dbInitCtx, func(tx *_db.Tx) error {
+			err := db.Transaction(dbInitCtx, func(tx *dbpkg.Tx) error {
 				err := initdb.Initialize(dbInitCtx, tx)
 				if err != nil {
 					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
@@ -301,7 +301,7 @@ func New(conf *Config) (*Core, error) {
 	for _, ws := range core.state.Workspaces() {
 		var wh warehouses.Warehouse
 		if ws.Warehouse.MCPSettings != nil {
-			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
+			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
 		}
 		core.mcp[ws.ID] = wh
 	}
@@ -353,7 +353,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
@@ -430,7 +430,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
@@ -1005,22 +1005,22 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 	return "", nil
 }
 
-// WarehouseDriver represents a warehouse driver.
-type WarehouseDriver struct {
+// WarehousePlatform represents a warehouse platform.
+type WarehousePlatform struct {
 	Name string `json:"name"`
 }
 
-// WarehouseDrivers returns the warehouse drivers.
-func (core *Core) WarehouseDrivers() []WarehouseDriver {
+// WarehousePlatforms returns the warehouse platforms.
+func (core *Core) WarehousePlatforms() []WarehousePlatform {
 	core.mustBeOpen()
-	types := core.state.WarehouseDrivers()
-	warehouseDrivers := make([]WarehouseDriver, len(types))
-	for i, t := range types {
-		warehouseDrivers[i] = WarehouseDriver{
-			Name: t.Name,
+	platforms := core.state.WarehousePlatforms()
+	warehousePlatforms := make([]WarehousePlatform, len(platforms))
+	for i, p := range platforms {
+		warehousePlatforms[i] = WarehousePlatform{
+			Name: p.Name,
 		}
 	}
-	return warehouseDrivers
+	return warehousePlatforms
 }
 
 // mustBeOpen panics if core has been closed.
@@ -1288,7 +1288,7 @@ Identifiers:
 		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
 	}
 	for {
-		err := core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1384,7 +1384,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo = backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1416,7 +1416,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var wh warehouses.Warehouse
 	if ws.Warehouse.MCPSettings != nil {
-		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
+		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = wh
@@ -1509,7 +1509,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 
 	// The MCP settings were unset (nil) and have now been set.
 	if prevWarehouse == nil && n.MCPSettings != nil {
-		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
+		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
 		core.mcpMu.Lock()
 		core.mcp[n.Workspace] = nextWarehouse
 		core.mcpMu.Unlock()
@@ -1517,7 +1517,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	}
 
 	// The MCP settings were set and have been set again with the same value.
-	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
+	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
 	if bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		return
 	}
@@ -1580,7 +1580,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -1637,7 +1637,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *_db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
@@ -1687,10 +1687,10 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 
 // getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
 // to implement features for the MCP server.
-// name is the name of the warehouse driver and settings are the settings for
+// platform is the warehouse platform and settings are the settings for
 // connecting to it.
-func getMCPWarehouseInstance(name string, settings []byte) (warehouses.Warehouse, error) {
-	wh, err := warehouses.Registered(name).New(&warehouses.Config{Settings: settings})
+func getMCPWarehouseInstance(platform string, settings []byte) (warehouses.Warehouse, error) {
+	wh, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return nil, err
 	}
