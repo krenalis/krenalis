@@ -187,20 +187,20 @@ type Warehouse interface {
 	// ones. columns are the columns whose values are present in the rows and
 	// contain at least the columns:
 	//
-	//   __pipeline__
-	//   __is_anonymous__
-	//   __identity_id__
-	//   __connection__
-	//   __last_change_time__
+	//   _pipeline
+	//   _is_anonymous
+	//   _identity_id
+	//   _connection
+	//   _last_change_time
 	//
-	// If there is the __anonymous_ids__ column, its values can contain at most one
+	// If there is the _anonymous_ids column, its values can contain at most one
 	// non-NULL element, which is appended in the identity table if it does not
 	// already exist.
 	//
 	// rows contains the rows to update or add if not already present. If a row
 	// contains the $purge column with a value of true, the matching row is purged.
-	// If the value is false, only the __execution__ column is updated to indicate
-	// that the row should not be purged.
+	// If the value is false, only the _execution column is updated to indicate that
+	// the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
 	// PreviewAlterProfileSchema provides a preview of an alter profile schema

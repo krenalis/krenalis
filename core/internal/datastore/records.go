@@ -80,8 +80,8 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 
 	} else {
 
-		// Also select the __external_id__ column.
-		externalIDColumn := warehouses.Column{Name: "__external_id__", Type: types.String(), Nullable: true}
+		// Also select the _external_id column.
+		externalIDColumn := warehouses.Column{Name: "_external_id", Type: types.String(), Nullable: true}
 		columns = append(columns, externalIDColumn)
 		// Update the WHERE condition and join the meergo_destination_profiles table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
@@ -98,8 +98,8 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			{
 				Table: "meergo_destination_profiles",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, matching.Pipeline),
-					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "__out_matching_value__", Type: types.String()}),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, matching.Pipeline),
+					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "_out_matching_value", Type: types.String()}),
 				}),
 			},
 		}
@@ -109,7 +109,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			joins[0].Type = warehouses.InnerJoin
 		case state.CreateOnly:
 			// Include only users without a corresponding match.
-			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIsNull))
+			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIsNull))
 			fallthrough
 		case state.CreateOrUpdate:
 			// Perform a LEFT JOIN to also return users without a matching destination user.

@@ -252,7 +252,7 @@ func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value,
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__mpid__"},
+		Property: []string{"_mpid"},
 		Operator: state.OpIs,
 		Values:   []any{mpid},
 	}}}
@@ -1142,7 +1142,7 @@ func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__mpid__"},
+		Property: []string{"_mpid"},
 		Operator: state.OpIs,
 		Values:   []any{mpid},
 	}}}
@@ -1325,7 +1325,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		order = "__last_change_time__"
+		order = "_last_change_time"
 	}
 
 	// Validate first and limit.
@@ -1338,7 +1338,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: append([]string{"__mpid__", "__last_change_time__"}, properties...),
+		Properties: append([]string{"_mpid", "_last_change_time"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1364,11 +1364,11 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
-		profiles[i].MPID = row["__mpid__"].(string)
+		profiles[i].MPID = row["_mpid"].(string)
 		profiles[i].Attributes = row
-		profiles[i].LastChangeTime = row["__last_change_time__"].(time.Time)
-		delete(row, "__mpid__")
-		delete(row, "__last_change_time__")
+		profiles[i].LastChangeTime = row["_last_change_time"].(time.Time)
+		delete(row, "_mpid")
+		delete(row, "_last_change_time")
 	}
 
 	return profiles, schema, total, nil
@@ -1887,15 +1887,15 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	// Retrieve the identities from the data warehouse.
 	records, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
-			"__pipeline__",
-			"__is_anonymous__",
-			"__identity_id__",
-			"__connection__",
-			"__anonymous_ids__",
-			"__last_change_time__",
+			"_pipeline",
+			"_is_anonymous",
+			"_identity_id",
+			"_connection",
+			"_anonymous_ids",
+			"_last_change_time",
 		},
 		Where:     where,
-		OrderBy:   "__last_change_time__",
+		OrderBy:   "_last_change_time",
 		OrderDesc: true,
 		First:     first,
 		Limit:     limit,
@@ -1913,7 +1913,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	for _, record := range records {
 
 		// Retrieve the connection.
-		connID := record["__connection__"].(int)
+		connID := record["_connection"].(int)
 		conn, ok := this.workspace.Connection(connID)
 		if !ok {
 			// The connection for this identity no longer exists, so skip this identity.
@@ -1921,7 +1921,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		}
 
 		// Retrieve the pipeline.
-		pipelineID := record["__pipeline__"].(int)
+		pipelineID := record["_pipeline"].(int)
 		_, ok = conn.Pipeline(pipelineID)
 		if !ok {
 			// The pipeline for this identity no longer exists, so skip this identity.
@@ -1929,11 +1929,11 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		}
 
 		// Determine the value for the identity ID.
-		identityID := record["__identity_id__"].(string)
+		identityID := record["_identity_id"].(string)
 
 		// Determine the anonymous IDs.
 		var anonIDs []string
-		if ids, ok := record["__anonymous_ids__"].([]any); ok {
+		if ids, ok := record["_anonymous_ids"].([]any); ok {
 			anonIDs = make([]string, len(ids))
 			for i := range ids {
 				anonIDs[i] = ids[i].(string)
@@ -1943,13 +1943,13 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		// In the case of anonymous identities, the anonymous ID is inside the
 		// identity ID, so there is the need to populate the anonymous IDs by
 		// taking that value, then reset the identity ID.
-		if record["__is_anonymous__"].(bool) {
+		if record["_is_anonymous"].(bool) {
 			anonIDs = append(anonIDs, identityID)
 			identityID = ""
 		}
 
 		// Determine the last change time.
-		lastChangeTime := record["__last_change_time__"].(time.Time)
+		lastChangeTime := record["_last_change_time"].(time.Time)
 
 		identities = append(identities, Identity{
 			Connection:     connID,

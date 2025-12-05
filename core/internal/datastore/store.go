@@ -61,11 +61,11 @@ type IdentityWriterAckFunc func(ids []string, err error)
 var destinationsProfilesTable = warehouses.Table{
 	Name: "meergo_destination_profiles",
 	Columns: []warehouses.Column{
-		{Name: "__pipeline__", Type: types.Int(32)},
-		{Name: "__external_id__", Type: types.String()},
-		{Name: "__out_matching_value__", Type: types.String()},
+		{Name: "_pipeline", Type: types.Int(32)},
+		{Name: "_external_id", Type: types.String()},
+		{Name: "_out_matching_value", Type: types.String()},
 	},
-	Keys: []string{"__pipeline__", "__external_id__"},
+	Keys: []string{"_pipeline", "_external_id"},
 }
 
 type Store struct {
@@ -98,8 +98,8 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	store.wh.Store(wh)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
-	store.columnByProperty.user["__mpid__"] = warehouses.Column{Name: "__mpid__", Type: types.UUID()}
-	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
+	store.columnByProperty.user["_last_change_time"] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
 }
@@ -165,7 +165,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline int)
 	}
 	defer done()
 	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, pipeline)
+		warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, pipeline)
 	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
 }
 
@@ -370,7 +370,7 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
 	for i, pipeline := range pipelines {
 		values[i] = pipeline
 	}
-	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
+	where := warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
 	err = store.warehouse().Delete(ctx, "meergo_identities", where)
 	if err != nil {
 		return err
@@ -488,7 +488,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	}
 	// Count the users on the current warehouse.
 	query := warehouses.RowQuery{
-		Columns: []warehouses.Column{{Name: "__mpid__", Type: types.UUID()}},
+		Columns: []warehouses.Column{{Name: "_mpid", Type: types.UUID()}},
 		Table:   "profiles",
 		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
@@ -584,7 +584,7 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "__mpid__", store.profileColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, "_mpid", store.profileColumnByProperty(), true, matching)
 }
 
 // Profiles returns the profiles according to the provided query.
@@ -688,8 +688,8 @@ func (store *Store) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	// Update the profile and the identity columns.
 	store.columnByProperty.mu.Lock()
 	store.columnByProperty.user = profileColumnByProperty(n.Schema)
-	store.columnByProperty.user["__mpid__"] = warehouses.Column{Name: "__mpid__", Type: types.UUID()}
-	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
+	store.columnByProperty.user["_last_change_time"] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()
 

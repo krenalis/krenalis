@@ -591,13 +591,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						// making the test fail.
 						time.Sleep(1 * time.Millisecond)
 						row := map[string]any{
-							"__pipeline__":         profile.pipeline,
-							"__is_anonymous__":     profile.isAnonymous,
-							"__identity_id__":      profile.id,
-							"__connection__":       profile.connection,
-							"__anonymous_ids__":    toSliceAny(profile.anonymousIds),
-							"__last_change_time__": time.Now().UTC(),
-							"__execution__":        1,
+							"_pipeline":         profile.pipeline,
+							"_is_anonymous":     profile.isAnonymous,
+							"_identity_id":      profile.id,
+							"_connection":       profile.connection,
+							"_anonymous_ids":    toSliceAny(profile.anonymousIds),
+							"_last_change_time": time.Now().UTC(),
+							"_execution":        1,
 						}
 						for k, v := range profile.attributes {
 							row[k] = v
@@ -694,13 +694,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 // merge operation, both when importing in batch.
 func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
 	columns := make([]warehouses.Column, 7+len(iwColumns))
-	columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
-	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
-	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
-	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
+	columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
+	columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
+	columns[5] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
+	columns[6] = warehouses.Column{Name: "_execution", Type: types.Int(32), Nullable: true}
 	i := 7
 	for _, column := range iwColumns {
 		columns[i] = column
