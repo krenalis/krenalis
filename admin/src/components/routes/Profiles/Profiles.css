@@ -515,7 +515,7 @@
 	padding-left: calc(var(--logo-width) + var(--logo-gap));
 }
 
-.profile-drawer__identity-id,
+.profile-drawer__user-id,
 .profile-drawer__identity-anonymous-ids {
 	font-size: 13px;
 	margin-bottom: 2px;

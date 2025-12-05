@@ -290,10 +290,10 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 											</div>
 										</div>
 										<div className='profile-drawer__identity-info'>
-											{identity.id && (
-												<div className='profile-drawer__identity-id'>
+											{identity.userId && (
+												<div className='profile-drawer__user-id'>
 													{connection.connector.getIdentityIDLabel()}:{' '}
-													<code>{identity.id}</code>
+													<code>{identity.userId}</code>
 												</div>
 											)}
 											{identity.anonymousIds !== null && (

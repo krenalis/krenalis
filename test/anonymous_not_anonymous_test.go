@@ -111,8 +111,8 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	var pipeline1Found, pipeline2Found bool
 	for _, identity := range identities {
-		if identity.ID != "" {
-			t.Fatalf("expected no identity ID, got %v", identity.ID)
+		if identity.UserId != "" {
+			t.Fatalf("expected no user ID, got %v", identity.UserId)
 		}
 		switch identity.Pipeline {
 		case pipeline1:
@@ -145,7 +145,7 @@ waitLoop:
 	for {
 		identities, _ := c.ConnectionIdentities(javaScriptID, 0, 100)
 		for _, identity := range identities {
-			if identity.ID != "" {
+			if identity.UserId != "" {
 				break waitLoop
 			}
 		}

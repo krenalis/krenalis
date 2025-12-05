@@ -1935,11 +1935,11 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		lastChangeTime := record["_updated_at"].(time.Time)
 
 		identities = append(identities, Identity{
-			Connection:     connID,
-			Pipeline:       pipelineID,
-			ID:             identityID,
+			UserId:         identityID,
 			AnonymousIds:   anonIDs,
 			LastChangeTime: lastChangeTime,
+			Connection:     connID,
+			Pipeline:       pipelineID,
 		})
 
 	}
@@ -2061,16 +2061,11 @@ func suitableAsIdentifier(t types.Type) bool {
 
 // Identity represents an identity.
 type Identity struct {
-	// TODO(Gianluca): the Connection field is kept here redundantly (the pipeline
-	// is already there) because the Admin console does not currently have the
-	// Pipeline => Connection mapping available, and it would be very inconvenient
-	// to retrieve this information where it is needed. When it will have it in
-	// the future, we will remove this field.
-	Connection     int       `json:"connection"`
-	Pipeline       int       `json:"pipeline"`
-	ID             string    `json:"id"`                           // empty string for identities imported from anonymous events.
+	UserId         string    `json:"userId"`                       // empty string for identities imported from anonymous events.
 	AnonymousIds   []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
+	Connection     int       `json:"connection"`
+	Pipeline       int       `json:"pipeline"`
 }
 
 // filterWorkspacePipelines returns from pipelines, only the pipelines of the

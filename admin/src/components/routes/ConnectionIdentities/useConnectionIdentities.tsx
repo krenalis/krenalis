@@ -75,8 +75,8 @@ const useConnectionIdentities = () => {
 			const row: GridRow = {
 				cells: [
 					identity.lastChangeTime,
-					identity.id ? (
-						identity.id
+					identity.userId ? (
+						identity.userId
 					) : (
 						<span className='connection-identities__anonymous-identity'>
 							<SlIcon name='incognito' />
@@ -89,7 +89,7 @@ const useConnectionIdentities = () => {
 						</Link>
 					</span>,
 				],
-				key: identity.id,
+				key: identity.userId,
 			};
 			if (connection.hasAnonymousIdentifiers) {
 				const anonymousIds: ReactNode[] = [];

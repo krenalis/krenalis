@@ -146,11 +146,11 @@ type Profile struct {
 }
 
 type Identity struct {
-	Connection     int       // do not use in tests. Currently, this serves just for the UI.
-	Pipeline       int       `json:"pipeline"`
-	ID             string    `json:"id"`
+	UserId         string    `json:"userId"`
 	AnonymousIds   []string  `json:"anonymousIds"`
 	LastChangeTime time.Time `json:"lastChangeTime"`
+	Connection     int       `json:"connection"`
+	Pipeline       int       `json:"pipeline"`
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

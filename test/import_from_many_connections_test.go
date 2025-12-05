@@ -221,22 +221,22 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		eventIdentity := getIdentityByConnection(t, identities, javaScript)
 		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, meergotester.Identity{
-			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Pipeline:       javascriptUsersPipeline,
-			ID:             "f4ca124298",
+			UserId:         "f4ca124298",
 			AnonymousIds:   []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			LastChangeTime: time.Time{},
+			Connection:     javaScript,
+			Pipeline:       javascriptUsersPipeline,
 		})
 	}
 	t.Log("identity imported from JavaScript is ok")
 	{
 		csvIdentity := getIdentityByConnection(t, identities, fs)
 		assertEqualIdentity(csvIdentity, meergotester.Identity{
-			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Pipeline:       csvPipeline,
-			ID:             "1",
+			UserId:         "1",
 			AnonymousIds:   nil,
 			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+			Connection:     fs,
+			Pipeline:       csvPipeline,
 		})
 	}
 	t.Log("identity imported from CSV is ok")
@@ -244,11 +244,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		dummyIdentity := getIdentityByConnection(t, identities, dummy)
 		dummyIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(dummyIdentity, meergotester.Identity{
-			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Pipeline:       dummyPipeline,
-			ID:             "dummy1",
+			UserId:         "dummy1",
 			AnonymousIds:   nil,
 			LastChangeTime: time.Time{},
+			Connection:     dummy,
+			Pipeline:       dummyPipeline,
 		})
 	}
 	t.Log("identity imported from Dummy is ok")

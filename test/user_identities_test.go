@@ -115,8 +115,8 @@ func Test_Identities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for profile with MPID %s that has"+
-					" pipeline = %d, identity ID = %v and last change time = %q",
-				profile.MPID, identity.Pipeline, identity.ID, identity.LastChangeTime)
+					" pipeline = %d, user ID = %v and last change time = %q",
+				profile.MPID, identity.Pipeline, identity.UserId, identity.LastChangeTime)
 
 			var idPrefix string
 			switch identity.Pipeline {
@@ -129,8 +129,8 @@ func Test_Identities(t *testing.T) {
 			}
 
 			// Check the identity ID label.
-			if !strings.HasPrefix(identity.ID, idPrefix) {
-				t.Fatalf("unexpected identity ID %q, it should have prefix %q", identity.ID, idPrefix)
+			if !strings.HasPrefix(identity.UserId, idPrefix) {
+				t.Fatalf("unexpected user ID %q, it should have prefix %q", identity.UserId, idPrefix)
 			}
 
 			totalIdentities++
