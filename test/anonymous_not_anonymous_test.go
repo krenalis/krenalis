@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/analytics-go"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/tools/types"
+
+	"github.com/meergo/analytics-go"
 )
 
 func TestAnonymousNotAnonymous(t *testing.T) {
