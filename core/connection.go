@@ -56,7 +56,7 @@ type Connection struct {
 	Role              Role          `json:"role"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
-	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
+	LinkedConnections []int         `json:"linkedConnections,omitempty"`
 	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
 	Pipelines         []Pipeline    `json:"pipelines"`
 

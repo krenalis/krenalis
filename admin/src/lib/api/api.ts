@@ -233,6 +233,11 @@ class Connections {
 
 	find = async (): Promise<Connection[]> => {
 		const res = await call(`${this.apiURL}/connections`, http.GET, this.workspaceID);
+		for (let c of res.connections) {
+			if (!('linkedConnections' in c)) {
+				c.linkedConnections = null;
+			}
+		}
 		return res.connections as Connection[];
 	};
 
@@ -242,6 +247,9 @@ class Connections {
 			http.GET,
 			this.workspaceID,
 		);
+		if (!('linkedConnections' in c)) {
+			c.linkedConnections = null;
+		}
 		// Transform the 'pipelines.transformation' field to match the expected format used throughout the rest of the codebase.
 		for (let pipeline of c.pipelines) {
 			if (pipeline.transformation == null) {
