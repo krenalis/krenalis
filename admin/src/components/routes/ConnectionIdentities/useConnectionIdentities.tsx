@@ -59,7 +59,7 @@ const useConnectionIdentities = () => {
 				explanation: 'The last update time on the source.',
 			},
 			{
-				name: connection.connector.getIdentityIDLabel(),
+				name: connection.connector.terms.userId,
 			},
 			{
 				name: 'Pipeline',

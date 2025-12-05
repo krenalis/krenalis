@@ -55,10 +55,10 @@ func init() {
 			},
 		},
 		Terms: connectors.APITerms{
-			User:  "contact",
-			Users: "contacts",
+			User:   "contact",
+			Users:  "contacts",
+			UserId: "HubSpot ID",
 		},
-		IdentityIDLabel: "HubSpot ID",
 		OAuth: connectors.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",

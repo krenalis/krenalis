@@ -27,7 +27,13 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	conns := connectors.Connectors()
 	state.connectors = make(map[string]*Connector, len(conns))
 	for code, connector := range conns {
-		c := Connector{}
+		c := Connector{
+			Terms: ConnectorTerms{
+				User:   "user",
+				Users:  "users",
+				UserId: "User ID",
+			},
+		}
 		switch connector := connector.(type) {
 		case connectors.APISpec:
 			c.Code = connector.Code
@@ -46,7 +52,15 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.Documentation.Destination.Summary = asDest.Documentation.Summary
 				c.Documentation.Destination.Overview = asDest.Documentation.Overview
 			}
-			c.Terms = ConnectorTerms(connector.Terms)
+			if connector.Terms.User != "" {
+				c.Terms.User = connector.Terms.User
+			}
+			if connector.Terms.Users != "" {
+				c.Terms.Users = connector.Terms.Users
+			}
+			if connector.Terms.UserId != "" {
+				c.Terms.UserId = connector.Terms.UserId
+			}
 			switch connector.AsDestination.SendingMode {
 			case connectors.Client:
 				mode := Client
@@ -58,7 +72,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				mode := ClientAndServer
 				c.SendingMode = &mode
 			}
-			c.IdentityIDLabel = connector.IdentityIDLabel
 			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
 				c.OAuth = &OAuth{
@@ -160,12 +173,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Label = connector.Label
 			c.Type = SDK
 			c.Categories = connector.Categories
-			c.Terms = ConnectorTerms{
-				User:  "user",
-				Users: "users",
-				// Group:  "group", TODO(marco): Implement groups
-				// Groups: "groups",
-			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Strategies = connector.Strategies
 			c.FallbackToRequestIP = connector.FallbackToRequestIP
@@ -175,12 +182,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Label = connector.Label
 			c.Type = Webhook
 			c.Categories = connector.Categories
-			c.Terms = ConnectorTerms{
-				User:  "user",
-				Users: "users",
-				// Group:  "group", TODO(marco): Implement groups
-				// Groups: "groups",
-			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Documentation = connector.Documentation
 		}

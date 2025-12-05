@@ -178,7 +178,6 @@ const useApp = (
 						c.categories,
 						c.asSource,
 						c.asDestination,
-						c.identityIDLabel,
 						c.hasSheets,
 						c.fileExtension,
 						c.oauth,

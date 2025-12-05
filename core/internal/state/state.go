@@ -704,7 +704,6 @@ type Connector struct {
 	HasSheets              bool
 	HasSourceSettings      bool
 	HasDestinationSettings bool
-	IdentityIDLabel        string
 	TimeLayouts            TimeLayouts
 	FileExtension          string
 	SampleQuery            string
@@ -741,8 +740,9 @@ func (t ConnectorTargets) Contains(target Target) bool {
 // ConnectorTerms represents the terms that a connector uses to refer to various
 // entities, such as users or groups.
 type ConnectorTerms struct {
-	User  string
-	Users string
+	User   string
+	Users  string
+	UserId string
 	// Group  string  TODO(Marco): implement groups
 	// Groups string
 }

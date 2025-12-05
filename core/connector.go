@@ -16,20 +16,19 @@ import (
 
 // Connector represents a connector.
 type Connector struct {
-	core            *Core
-	connector       *state.Connector
-	Code            string                `json:"code"`
-	Label           string                `json:"label"`
-	Type            ConnectorType         `json:"type"`
-	Categories      []string              `json:"categories"`
-	AsSource        *SourceConnector      `json:"asSource"`
-	AsDestination   *DestinationConnector `json:"asDestination"`
-	IdentityIDLabel string                `json:"identityIDLabel"`
-	HasSheets       bool                  `json:"hasSheets"`
-	FileExtension   string                `json:"fileExtension"`
-	OAuth           *ConnectorOAuth       `json:"oauth"`
-	Terms           ConnectorTerms        `json:"terms"`
-	Strategies      bool                  `json:"strategies"`
+	core          *Core
+	connector     *state.Connector
+	Code          string                `json:"code"`
+	Label         string                `json:"label"`
+	Type          ConnectorType         `json:"type"`
+	Categories    []string              `json:"categories"`
+	AsSource      *SourceConnector      `json:"asSource"`
+	AsDestination *DestinationConnector `json:"asDestination"`
+	HasSheets     bool                  `json:"hasSheets"`
+	FileExtension string                `json:"fileExtension"`
+	OAuth         *ConnectorOAuth       `json:"oauth"`
+	Terms         ConnectorTerms        `json:"terms"`
+	Strategies    bool                  `json:"strategies"`
 }
 
 type ConnectorOAuth struct {
@@ -39,8 +38,9 @@ type ConnectorOAuth struct {
 }
 
 type ConnectorTerms struct {
-	User  string `json:"user"`
-	Users string `json:"users"`
+	User   string `json:"user"`
+	Users  string `json:"users"`
+	UserId string `json:"userId"`
 	// Group  string `json:"group"`  TODO(marco): Implement groups
 	// Groups string `json:"groups"`
 }

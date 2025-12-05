@@ -15,7 +15,6 @@ class TransformedConnector {
 	categories: Array<string>;
 	asSource: SourceConnector | null;
 	asDestination: DestinationConnector | null;
-	identityIDLabel: string;
 	hasSheets: boolean;
 	fileExtension: string;
 	oauth: ConnectorOAuth;
@@ -29,7 +28,6 @@ class TransformedConnector {
 		categories: Array<string>,
 		asSource: SourceConnector | null,
 		asDestination: DestinationConnector | null,
-		identityIDLabel: string,
 		hasSheets: boolean,
 		fileExtension: string,
 		oauth: ConnectorOAuth,
@@ -42,7 +40,6 @@ class TransformedConnector {
 		this.categories = categories;
 		this.asSource = asSource;
 		this.asDestination = asDestination;
-		this.identityIDLabel = identityIDLabel;
 		this.hasSheets = hasSheets;
 		this.fileExtension = fileExtension;
 		this.oauth = oauth;
@@ -94,21 +91,6 @@ class TransformedConnector {
 			default:
 				return [this.asDestination.sendingMode];
 		}
-	}
-
-	getIdentityIDLabel(): string {
-		let identityIDLabel: string = '';
-		if (this.isAPI) {
-			identityIDLabel = this.identityIDLabel;
-			if (identityIDLabel === '') {
-				identityIDLabel = 'ID';
-			}
-		} else if (this.isDatabase || this.isFileStorage) {
-			identityIDLabel = 'ID';
-		} else if (this.isSDK || this.isWebhook) {
-			identityIDLabel = 'User ID';
-		}
-		return identityIDLabel;
 	}
 
 	hasSettings(role: Role): boolean {

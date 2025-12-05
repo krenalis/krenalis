@@ -42,16 +42,15 @@ const (
 
 // APISpec represents an API connector specification.
 type APISpec struct {
-	Code            string
-	Label           string
-	Categories      Categories // bitmask of connector's categories.
-	AsSource        *AsAPISource
-	AsDestination   *AsAPIDestination
-	Terms           APITerms
-	IdentityIDLabel string
-	OAuth           OAuth           // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
-	EndpointGroups  []EndpointGroup // rate limiting and retry policies per endpoint group.
-	TimeLayouts     TimeLayouts     // layouts for time values. If left empty, it is ISO 8601.
+	Code           string
+	Label          string
+	Categories     Categories // bitmask of connector's categories.
+	AsSource       *AsAPISource
+	AsDestination  *AsAPIDestination
+	Terms          APITerms
+	OAuth          OAuth           // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
+	EndpointGroups []EndpointGroup // rate limiting and retry policies per endpoint group.
+	TimeLayouts    TimeLayouts     // layouts for time values. If left empty, it is ISO 8601.
 
 	newFunc reflect.Value
 	ct      reflect.Type
@@ -59,8 +58,9 @@ type APISpec struct {
 
 // APITerms represents the terms that an API connector uses to refer to users.
 type APITerms struct {
-	User  string
-	Users string
+	User   string
+	Users  string
+	UserId string
 	// Group  string TODO(marco) Implement groups
 	// Groups string
 }

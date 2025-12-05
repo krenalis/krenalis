@@ -497,17 +497,16 @@ func (core *Core) Connector(code string) (*Connector, error) {
 		return nil, errors.NotFound("connector %q does not exist", code)
 	}
 	connector := Connector{
-		core:            core,
-		connector:       c,
-		Code:            c.Code,
-		Label:           c.Label,
-		Type:            ConnectorType(c.Type),
-		Categories:      categoryBitmaskToCategoryNames(c.Categories),
-		IdentityIDLabel: c.IdentityIDLabel,
-		HasSheets:       c.HasSheets,
-		FileExtension:   c.FileExtension,
-		Terms:           ConnectorTerms(c.Terms),
-		Strategies:      c.Strategies,
+		core:          core,
+		connector:     c,
+		Code:          c.Code,
+		Label:         c.Label,
+		Type:          ConnectorType(c.Type),
+		Categories:    categoryBitmaskToCategoryNames(c.Categories),
+		HasSheets:     c.HasSheets,
+		FileExtension: c.FileExtension,
+		Terms:         ConnectorTerms(c.Terms),
+		Strategies:    c.Strategies,
 	}
 	if c.SourceTargets != 0 {
 		connector.AsSource = &SourceConnector{
@@ -533,18 +532,6 @@ func (core *Core) Connector(code string) (*Connector, error) {
 			DisallowLocalhost: c.OAuth.DisallowLocalhost,
 		}
 	}
-	if connector.Terms.User == "" {
-		connector.Terms.User = "user"
-	}
-	if connector.Terms.Users == "" {
-		connector.Terms.Users = "users"
-	}
-	//if connector.Terms.Group == "" { TODO(marco): Implement groups
-	//	connector.Terms.Group = "group"
-	//}
-	//if connector.Terms.Groups == "" {
-	//	connector.Terms.Groups = "groups"
-	//}
 	return &connector, nil
 }
 
@@ -585,17 +572,16 @@ func (core *Core) Connectors() []*Connector {
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
-			core:            core,
-			connector:       c,
-			Code:            c.Code,
-			Label:           c.Label,
-			Type:            ConnectorType(c.Type),
-			Categories:      categoryBitmaskToCategoryNames(c.Categories),
-			IdentityIDLabel: c.IdentityIDLabel,
-			HasSheets:       c.HasSheets,
-			FileExtension:   c.FileExtension,
-			Terms:           ConnectorTerms(c.Terms),
-			Strategies:      c.Strategies,
+			core:          core,
+			connector:     c,
+			Code:          c.Code,
+			Label:         c.Label,
+			Type:          ConnectorType(c.Type),
+			Categories:    categoryBitmaskToCategoryNames(c.Categories),
+			HasSheets:     c.HasSheets,
+			FileExtension: c.FileExtension,
+			Terms:         ConnectorTerms(c.Terms),
+			Strategies:    c.Strategies,
 		}
 		if c.SourceTargets != 0 {
 			connector.AsSource = &SourceConnector{
@@ -623,18 +609,6 @@ func (core *Core) Connectors() []*Connector {
 				}
 			}
 		}
-		if connector.Terms.User == "" {
-			connector.Terms.User = "user"
-		}
-		if connector.Terms.Users == "" {
-			connector.Terms.Users = "users"
-		}
-		//if connector.Terms.Group == "" { TODO(marco): Implement groups
-		//	connector.Terms.Group = "group"
-		//}
-		//if connector.Terms.Groups == "" {
-		//	connector.Terms.Groups = "groups"
-		//}
 		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {
