@@ -110,14 +110,14 @@ Path:
 // substituting meta properties with the meta properties of identity.
 func identityColumnByProperty(profileColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
 	columns := map[string]warehouses.Column{
-		"_pk":               {Name: "_pk", Type: types.Int(32)},
-		"_pipeline":         {Name: "_pipeline", Type: types.Int(32)},
-		"_is_anonymous":     {Name: "_is_anonymous", Type: types.Boolean()},
-		"_identity_id":      {Name: "_identity_id", Type: types.String()},
-		"_connection":       {Name: "_connection", Type: types.Int(32)},
-		"_anonymous_ids":    {Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true},
-		"_last_change_time": {Name: "_last_change_time", Type: types.DateTime()},
-		"_mpid":             {Name: "_mpid", Type: types.UUID(), Nullable: true},
+		"_pk":            {Name: "_pk", Type: types.Int(32)},
+		"_pipeline":      {Name: "_pipeline", Type: types.Int(32)},
+		"_is_anonymous":  {Name: "_is_anonymous", Type: types.Boolean()},
+		"_identity_id":   {Name: "_identity_id", Type: types.String()},
+		"_connection":    {Name: "_connection", Type: types.Int(32)},
+		"_anonymous_ids": {Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true},
+		"_updated_at":    {Name: "_updated_at", Type: types.DateTime()},
+		"_mpid":          {Name: "_mpid", Type: types.UUID(), Nullable: true},
 	}
 	for property, column := range profileColumnByProperty {
 		if !IsMetaProperty(property) {

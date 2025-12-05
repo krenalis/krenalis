@@ -89,7 +89,7 @@ func Test_Records(t *testing.T) {
 		Name: "meergo_profiles_0",
 		Columns: []warehouses.Column{
 			{Name: "_mpid", Type: types.UUID()},
-			{Name: "_last_change_time", Type: types.DateTime()},
+			{Name: "_updated_at", Type: types.DateTime()},
 			{Name: "id", Type: types.String()},
 			{Name: "other_id", Type: types.String()},
 			{Name: "name", Type: types.String()},

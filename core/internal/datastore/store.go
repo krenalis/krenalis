@@ -99,7 +99,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store.wh.Store(wh)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
 	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
-	store.columnByProperty.user["_last_change_time"] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
+	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
 }
@@ -689,7 +689,7 @@ func (store *Store) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	store.columnByProperty.mu.Lock()
 	store.columnByProperty.user = profileColumnByProperty(n.Schema)
 	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
-	store.columnByProperty.user["_last_change_time"] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
+	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()
 

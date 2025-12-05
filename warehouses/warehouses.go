@@ -191,7 +191,7 @@ type Warehouse interface {
 	//   _is_anonymous
 	//   _identity_id
 	//   _connection
-	//   _last_change_time
+	//   _updated_at
 	//
 	// If there is the _anonymous_ids column, its values can contain at most one
 	// non-NULL element, which is appended in the identity table if it does not

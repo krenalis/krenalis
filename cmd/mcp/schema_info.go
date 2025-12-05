@@ -34,7 +34,7 @@ func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescripti
 			},
 		})
 	}
-	// Add information about the "_mpid" and "_last_change_time".
+	// Add information about the "_mpid" and "_updated_at".
 	info = append(info, map[string]any{
 		"profileViewColumn": map[string]any{
 			"name":        "_mpid",
@@ -45,7 +45,7 @@ func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescripti
 	})
 	info = append(info, map[string]any{
 		"profileViewColumn": map[string]any{
-			"name":        "_last_change_time",
+			"name":        "_updated_at",
 			"type":        "timestamp without time zone",
 			"nullable":    true,
 			"description": "Timestamp of the profile's last update. It doesn't have a corresponding property in the profile schema.",

@@ -118,7 +118,7 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, 
 	iw.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
 	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
 	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
-	iw.columns[5] = warehouses.Column{Name: "_last_change_time", Type: types.DateTime()}
+	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "_execution", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
@@ -254,7 +254,7 @@ func (iw *BatchIdentityWriter) Write(identity Identity) {
 	row["_is_anonymous"] = false
 	row["_identity_id"] = key.identityID
 	row["_connection"] = iw.connection
-	row["_last_change_time"] = identity.LastChangeTime
+	row["_updated_at"] = identity.LastChangeTime
 	row["_execution"] = iw.execution
 	iw.appendRow(key, row, "")
 }
