@@ -50,7 +50,7 @@ func init() {
 // accountFormat is the format of the account identifier in the settings.
 var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
-// New returns a new Snowflake data warehouse driver instance.
+// New returns a new Snowflake data warehouse instance.
 // It returns a *warehouses.SettingsError if the settings are not valid.
 func New(conf *warehouses.Config) (*Snowflake, error) {
 	var s sfSettings

@@ -114,7 +114,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Warehouse is the interface implemented by warehouse drivers.
+// Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
 	// AlterProfileSchema alters the profile schema.
@@ -356,7 +356,7 @@ type Join struct {
 }
 
 // NormalizeFunc is a function type representing the normalization function
-// exposed by data warehouse drivers to normalize values returned by them.
+// exposed by data warehouse to normalize values returned by them.
 type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
 
 // IsValidIdentifier reports whether name is a valid identifier.
