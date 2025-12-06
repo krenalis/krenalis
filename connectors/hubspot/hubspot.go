@@ -55,8 +55,8 @@ func init() {
 			},
 		},
 		Terms: connectors.APITerms{
-			User:   "contact",
-			Users:  "contacts",
+			User:   "Contact",
+			Users:  "Contacts",
 			UserId: "HubSpot ID",
 		},
 		OAuth: connectors.OAuth{

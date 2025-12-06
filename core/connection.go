@@ -1270,18 +1270,18 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 			var name, description string
 			if c.Role == state.Source {
 				// Source/API/User.
-				name = "Import " + connector.Label + " " + connector.Terms.Users
-				description = "Import " + connector.Terms.Users
-				if connector.Terms.Users != "users" {
+				name = "Import " + connector.Label + " " + strings.ToLower(connector.Terms.Users)
+				description = "Import " + strings.ToLower(connector.Terms.Users)
+				if connector.Terms.Users != "Users" {
 					description += " as users"
 				}
 				description += " into the data warehouse"
 			} else {
 				// Destination/API/User.
-				name = "Export " + connector.Terms.Users
+				name = "Export " + strings.ToLower(connector.Terms.Users)
 				description = "Export users from the data warehouse"
-				if connector.Terms.Users != "users" {
-					description += " as " + connector.Terms.Users
+				if connector.Terms.Users != "Users" {
+					description += " as " + strings.ToLower(connector.Terms.Users)
 				}
 				description += " to " + connector.Label
 			}

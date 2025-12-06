@@ -60,8 +60,8 @@ func init() {
 			},
 		},
 		Terms: connectors.APITerms{
-			User:  "profile",
-			Users: "profiles",
+			User:  "Profile",
+			Users: "Profiles",
 		},
 		EndpointGroups: []connectors.EndpointGroup{
 			{

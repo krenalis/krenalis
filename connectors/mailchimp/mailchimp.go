@@ -62,8 +62,8 @@ func init() {
 			},
 		},
 		Terms: connectors.APITerms{
-			User:  "contact",
-			Users: "contacts",
+			User:  "Contact",
+			Users: "Contacts",
 		},
 		OAuth: connectors.OAuth{
 			AuthURL:           "https://login.mailchimp.com/oauth2/authorize?response_type=code",

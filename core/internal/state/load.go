@@ -29,8 +29,8 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	for code, connector := range conns {
 		c := Connector{
 			Terms: ConnectorTerms{
-				User:   "user",
-				Users:  "users",
+				User:   "User",
+				Users:  "Users",
 				UserId: "User ID",
 			},
 		}

@@ -55,8 +55,8 @@ func init() {
 			},
 		},
 		Terms: connectors.APITerms{
-			User:   "customer",
-			Users:  "customers",
+			User:   "Customer",
+			Users:  "Customers",
 			UserId: "Dummy Unique ID",
 		},
 		EndpointGroups: []connectors.EndpointGroup{

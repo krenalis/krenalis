@@ -2089,7 +2089,7 @@ const FullscreenTransformation = ({
 							<h3>No samples found</h3>
 							<div>
 								{connection.isSource
-									? `No ${connection.connector.terms.users} in ${connection.name} match your filter.`
+									? `No ${connection.connector.terms.users.toLowerCase()} in ${connection.name} match your filter.`
 									: 'No users in the warehouse match your filter.'}
 							</div>
 						</div>

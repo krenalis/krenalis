@@ -57,8 +57,8 @@ func init() {
 			},
 		},
 		Terms: connectors.APITerms{
-			User:  "customer",
-			Users: "customers",
+			User:  "Customer",
+			Users: "Customers",
 		},
 		EndpointGroups: []connectors.EndpointGroup{{
 			// https://docs.stripe.com/rate-limits
