@@ -1010,7 +1010,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: []string{"_connection"},
 		Operator: state.OpIs,
-		Values:   []any{strconv.Itoa(this.connection.ID)},
+		Values:   []any{this.connection.ID},
 	}}}
 	identities, total, err := coreWs.identities(ctx, where, first, limit)
 	if err != nil {
