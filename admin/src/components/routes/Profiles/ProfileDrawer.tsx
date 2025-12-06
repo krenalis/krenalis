@@ -169,7 +169,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 						)}
 					<span className='profile-drawer__mpid'>
 						<SlTooltip
-							content='Meergo profile ID'
+							content='Meergo Profile ID'
 							onSlHide={(e) => {
 								// Prevent the event from bubbling up and
 								// causing the drawer to close.
