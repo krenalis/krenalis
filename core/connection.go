@@ -1002,7 +1002,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	coreWs := &Workspace{
+	ws := &Workspace{
 		core:      this.core,
 		store:     this.store,
 		workspace: this.connection.Workspace(),
@@ -1012,7 +1012,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 		Operator: state.OpIs,
 		Values:   []any{this.connection.ID},
 	}}}
-	identities, total, err := coreWs.identities(ctx, where, first, limit)
+	identities, total, err := ws.identities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}

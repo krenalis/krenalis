@@ -1868,7 +1868,7 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 func (this *Workspace) identities(ctx context.Context, where *state.Where, first, limit int) ([]Identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	records, total, err := this.store.Identities(ctx, datastore.Query{
+	rows, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
 			"_pipeline",
 			"_is_anonymous",
@@ -1890,53 +1890,53 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		return nil, 0, err
 	}
 
-	// Create the identities from the records returned by the datastore.
-	var identities []Identity
+	// Build the identities from the rows returned by the datastore.
+	identities := make([]Identity, 0, len(rows))
 
-	for _, record := range records {
+	for _, row := range rows {
 
-		// Retrieve the connection.
-		connID := record["_connection"].(int)
+		// Get the connection.
+		connID := row["_connection"].(int)
 		conn, ok := this.workspace.Connection(connID)
 		if !ok {
 			// The connection for this identity no longer exists, so skip this identity.
 			continue
 		}
 
-		// Retrieve the pipeline.
-		pipelineID := record["_pipeline"].(int)
+		// Get the pipeline.
+		pipelineID := row["_pipeline"].(int)
 		_, ok = conn.Pipeline(pipelineID)
 		if !ok {
 			// The pipeline for this identity no longer exists, so skip this identity.
 			continue
 		}
 
-		// Determine the value for the identity ID.
-		identityID := record["_identity_id"].(string)
+		// Get the value for the identity ID.
+		identityID := row["_identity_id"].(string)
 
-		// Determine the anonymous IDs.
-		var anonIDs []string
-		if ids, ok := record["_anonymous_ids"].([]any); ok {
-			anonIDs = make([]string, len(ids))
+		// Get the anonymous IDs.
+		var anonymousIds []string
+		if ids, ok := row["_anonymous_ids"].([]any); ok {
+			anonymousIds = make([]string, len(ids))
 			for i := range ids {
-				anonIDs[i] = ids[i].(string)
+				anonymousIds[i] = ids[i].(string)
 			}
 		}
 
 		// In the case of anonymous identities, the anonymous ID is inside the
 		// identity ID, so there is the need to populate the anonymous IDs by
 		// taking that value, then reset the identity ID.
-		if record["_is_anonymous"].(bool) {
-			anonIDs = append(anonIDs, identityID)
+		if row["_is_anonymous"].(bool) {
+			anonymousIds = append(anonymousIds, identityID)
 			identityID = ""
 		}
 
 		// Get the updated-at time.
-		updatedAt := record["_updated_at"].(time.Time)
+		updatedAt := row["_updated_at"].(time.Time)
 
 		identities = append(identities, Identity{
 			UserId:       identityID,
-			AnonymousIds: anonIDs,
+			AnonymousIds: anonymousIds,
 			UpdatedAt:    updatedAt,
 			Connection:   connID,
 			Pipeline:     pipelineID,
