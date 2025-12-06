@@ -2061,8 +2061,8 @@ func suitableAsIdentifier(t types.Type) bool {
 
 // Identity represents an identity.
 type Identity struct {
-	UserId       string    `json:"userId"`                       // empty string for identities imported from anonymous events.
-	AnonymousIds []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
+	UserId       string    `json:"userId,omitempty"`       // is omitted if anonymous
+	AnonymousIds []string  `json:"anonymousIds,omitempty"` // is omitted for identities not ingested from events
 	Connection   int       `json:"connection"`
 	Pipeline     int       `json:"pipeline"`
 	UpdatedAt    time.Time `json:"updatedAt"`

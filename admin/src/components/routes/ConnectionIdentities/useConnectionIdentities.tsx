@@ -75,7 +75,7 @@ const useConnectionIdentities = () => {
 			const row: GridRow = {
 				cells: [
 					identity.updatedAt,
-					identity.userId ? (
+					'userId' in identity ? (
 						identity.userId
 					) : (
 						<span className='connection-identities__anonymous-identity'>
@@ -93,7 +93,7 @@ const useConnectionIdentities = () => {
 			};
 			if (connection.hasAnonymousIdentifiers) {
 				const anonymousIds: ReactNode[] = [];
-				if (identity.anonymousIds != null) {
+				if ('anonymousIds' in identity) {
 					for (const id of identity.anonymousIds) {
 						anonymousIds.push(<code>{id}</code>);
 					}
