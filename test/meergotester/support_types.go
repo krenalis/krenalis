@@ -140,17 +140,17 @@ type KV struct {
 }
 
 type Profile struct {
-	MPID              uuid.UUID      `json:"mpid"`
-	SourcesLastUpdate time.Time      `json:"sourcesLastUpdate"`
-	Attributes        map[string]any `json:"attributes"`
+	MPID       uuid.UUID      `json:"mpid"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	Attributes map[string]any `json:"attributes"`
 }
 
 type Identity struct {
-	UserId         string    `json:"userId"`
-	AnonymousIds   []string  `json:"anonymousIds"`
-	LastChangeTime time.Time `json:"lastChangeTime"`
-	Connection     int       `json:"connection"`
-	Pipeline       int       `json:"pipeline"`
+	UserId       string    `json:"userId"`
+	AnonymousIds []string  `json:"anonymousIds"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+	Connection   int       `json:"connection"`
+	Pipeline     int       `json:"pipeline"`
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

@@ -1106,8 +1106,8 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 // It returns the identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
-// Identities are sorted by last change time, in descending order, so the most
-// recently changed identities are returned first.
+// Identities are sorted by updated-at time in descending order, so the most
+// recently updated identities come first.
 //
 // If the MPID does not exist, still return an empty slice instead of an error.
 //
@@ -1231,9 +1231,9 @@ func (this *Workspace) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 
 // Profile represents a profile.
 type Profile struct {
-	MPID           string         `json:"mpid"`
-	Attributes     map[string]any `json:"attributes"`
-	LastChangeTime time.Time      `json:"lastChangeTime"`
+	MPID       string         `json:"mpid"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	Attributes map[string]any `json:"attributes"`
 }
 
 // Profiles returns the profiles, the profile schema, and an estimate of their
@@ -1348,8 +1348,8 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
 		profiles[i].MPID = row["_mpid"].(string)
+		profiles[i].UpdatedAt = row["_updated_at"].(time.Time)
 		profiles[i].Attributes = row
-		profiles[i].LastChangeTime = row["_updated_at"].(time.Time)
 		delete(row, "_mpid")
 		delete(row, "_updated_at")
 	}
@@ -1858,8 +1858,8 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 // It returns the identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
-// Identities are sorted by last change time, in descending order, so the most
-// recently changed identities are returned first.
+// Identities are sorted by updated-at time in descending order, so the most
+// recently updated identities come first.
 //
 // If there are no identities, a nil slice is returned.
 //
@@ -1931,15 +1931,15 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 			identityID = ""
 		}
 
-		// Determine the last change time.
-		lastChangeTime := record["_updated_at"].(time.Time)
+		// Get the updated-at time.
+		updatedAt := record["_updated_at"].(time.Time)
 
 		identities = append(identities, Identity{
-			UserId:         identityID,
-			AnonymousIds:   anonIDs,
-			LastChangeTime: lastChangeTime,
-			Connection:     connID,
-			Pipeline:       pipelineID,
+			UserId:       identityID,
+			AnonymousIds: anonIDs,
+			UpdatedAt:    updatedAt,
+			Connection:   connID,
+			Pipeline:     pipelineID,
 		})
 
 	}
@@ -2061,11 +2061,11 @@ func suitableAsIdentifier(t types.Type) bool {
 
 // Identity represents an identity.
 type Identity struct {
-	UserId         string    `json:"userId"`                       // empty string for identities imported from anonymous events.
-	AnonymousIds   []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
-	LastChangeTime time.Time `json:"lastChangeTime"`
-	Connection     int       `json:"connection"`
-	Pipeline       int       `json:"pipeline"`
+	UserId       string    `json:"userId"`                       // empty string for identities imported from anonymous events.
+	AnonymousIds []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
+	Connection   int       `json:"connection"`
+	Pipeline     int       `json:"pipeline"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 // filterWorkspacePipelines returns from pipelines, only the pipelines of the

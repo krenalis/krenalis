@@ -219,36 +219,36 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 	{
 		eventIdentity := getIdentityByConnection(t, identities, javaScript)
-		eventIdentity.LastChangeTime = time.Time{}
+		eventIdentity.UpdatedAt = time.Time{}
 		assertEqualIdentity(eventIdentity, meergotester.Identity{
-			UserId:         "f4ca124298",
-			AnonymousIds:   []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
-			LastChangeTime: time.Time{},
-			Connection:     javaScript,
-			Pipeline:       javascriptUsersPipeline,
+			UserId:       "f4ca124298",
+			AnonymousIds: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
+			UpdatedAt:    time.Time{},
+			Connection:   javaScript,
+			Pipeline:     javascriptUsersPipeline,
 		})
 	}
 	t.Log("identity imported from JavaScript is ok")
 	{
 		csvIdentity := getIdentityByConnection(t, identities, fs)
 		assertEqualIdentity(csvIdentity, meergotester.Identity{
-			UserId:         "1",
-			AnonymousIds:   nil,
-			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
-			Connection:     fs,
-			Pipeline:       csvPipeline,
+			UserId:       "1",
+			AnonymousIds: nil,
+			UpdatedAt:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+			Connection:   fs,
+			Pipeline:     csvPipeline,
 		})
 	}
 	t.Log("identity imported from CSV is ok")
 	{
 		dummyIdentity := getIdentityByConnection(t, identities, dummy)
-		dummyIdentity.LastChangeTime = time.Time{}
+		dummyIdentity.UpdatedAt = time.Time{}
 		assertEqualIdentity(dummyIdentity, meergotester.Identity{
-			UserId:         "dummy1",
-			AnonymousIds:   nil,
-			LastChangeTime: time.Time{},
-			Connection:     dummy,
-			Pipeline:       dummyPipeline,
+			UserId:       "dummy1",
+			AnonymousIds: nil,
+			UpdatedAt:    time.Time{},
+			Connection:   dummy,
+			Pipeline:     dummyPipeline,
 		})
 	}
 	t.Log("identity imported from Dummy is ok")

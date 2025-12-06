@@ -178,8 +178,8 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}
 	profile := profiles[0]
-	if profile.SourcesLastUpdate.IsZero() {
-		t.Fatalf("expected a valid value for 'sourcesLastUpdate', got zero instead")
+	if profile.UpdatedAt.IsZero() {
+		t.Fatalf("expected a valid value for 'updatedAt', got zero instead")
 	}
 	expected := map[string]any{
 		"email":         "a@b",
@@ -210,8 +210,8 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}
 	profile = profiles[0]
-	if profile.SourcesLastUpdate.IsZero() {
-		t.Fatalf("expected a valid value for 'sourcesLastUpdate', got zero instead")
+	if profile.UpdatedAt.IsZero() {
+		t.Fatalf("expected a valid value for 'updatedAt', got zero instead")
 	}
 	expected = map[string]any{
 		"email":         "a@b",

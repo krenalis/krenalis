@@ -126,7 +126,7 @@ type ProfileAttributes = Record<string, any>;
 interface Identity {
 	userId: string;
 	anonymousIds: string[] | null;
-	lastChangeTime: string;
+	updatedAt: string;
 	pipeline: number;
 	connection: number;
 }

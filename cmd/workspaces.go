@@ -938,9 +938,9 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		}
 		b.writeString(`{"mpid":"`)
 		b.writeString(profile.MPID)
-		b.writeString(`","sourcesLastUpdate":"`)
+		b.writeString(`","updatedAt":"`)
 		buf := b.availableBuffer()
-		b.write(profile.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
+		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","attributes":`)
 		s, _ := types.Marshal(profile.Attributes, schema)
 		b.write(s)

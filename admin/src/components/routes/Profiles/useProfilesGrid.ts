@@ -41,7 +41,7 @@ const useProfilesGrid = (
 
 			const row: GridRow = {
 				onClick: () => onProfileClick(profile.mpid),
-				cells: [profileCopy.sourcesLastUpdate, ...cells],
+				cells: [profileCopy.updatedAt, ...cells],
 				selected: isSelected,
 			};
 			rows.push(row);
@@ -53,9 +53,9 @@ const useProfilesGrid = (
 		// compute the columns for the grid component.
 		const profileColumns: GridColumn[] = [];
 		profileColumns.push({
-			name: 'Sources last update',
+			name: 'Last updated',
 			type: 'datetime',
-			explanation: 'The last update time on the sources from which the profile has been imported.',
+			explanation: 'Last time the profile was updated in its source.',
 		});
 		for (const p of profilesProperties) {
 			if (p.isUsed) {

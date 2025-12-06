@@ -86,7 +86,7 @@ interface TransformDataResponse {
 
 interface ResponseProfile {
 	mpid: string;
-	sourcesLastUpdate: string;
+	updatedAt: string;
 	attributes: Record<string, any>;
 }
 

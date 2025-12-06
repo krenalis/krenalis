@@ -115,8 +115,8 @@ func Test_Identities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for profile with MPID %s that has"+
-					" pipeline = %d, user ID = %v and last change time = %q",
-				profile.MPID, identity.Pipeline, identity.UserId, identity.LastChangeTime)
+					" pipeline = %d, user ID = %v and updated at = %q",
+				profile.MPID, identity.Pipeline, identity.UserId, identity.UpdatedAt)
 
 			var idPrefix string
 			switch identity.Pipeline {

@@ -260,7 +260,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									<LittleLogo code={connection?.connector.code} path={CONNECTORS_ASSETS_PATH} />
 								);
 								return (
-									<div className='profile-drawer__identity' key={identity.lastChangeTime}>
+									<div className='profile-drawer__identity' key={identity.updatedAt}>
 										<div className='profile-drawer__identity-head'>
 											<SlTooltip className='profile-drawer__action' placement='left' hoist>
 												<div slot='content'>
@@ -285,8 +285,8 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 													</div>
 												</Link>
 											</SlTooltip>
-											<div className='profile-drawer__identity-date'>
-												{toJSDate(identity.lastChangeTime).toLocaleString()}
+											<div className='profile-drawer__identity-updated-at'>
+												{toJSDate(identity.updatedAt).toLocaleString()}
 											</div>
 										</div>
 										<div className='profile-drawer__identity-info'>

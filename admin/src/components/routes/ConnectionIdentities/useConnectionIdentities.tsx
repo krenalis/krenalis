@@ -54,9 +54,9 @@ const useConnectionIdentities = () => {
 
 		const columns: GridColumn[] = [
 			{
-				name: 'Last update',
+				name: 'Last updated',
 				type: 'datetime',
-				explanation: 'The last update time on the source.',
+				explanation: 'Last time the identity was updated in its source.',
 			},
 			{
 				name: connection.connector.terms.userId,
@@ -74,7 +74,7 @@ const useConnectionIdentities = () => {
 			const pipelineName = connection.pipelines.find((p) => p.id === identity.pipeline).name;
 			const row: GridRow = {
 				cells: [
-					identity.lastChangeTime,
+					identity.updatedAt,
 					identity.userId ? (
 						identity.userId
 					) : (
