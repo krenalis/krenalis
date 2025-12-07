@@ -1245,8 +1245,10 @@ type Profile struct {
 // Profiles returns the profiles, the profile schema, and an estimate of their
 // total number without applying first and limit. It returns the profiles that
 // satisfies the filter, if not nil, and in range [first,first+limit] with
-// first >= 0 and 0 < limit <= 1000 and only the given properties. properties
-// cannot be empty.
+// first >= 0 and 0 < limit <= 1000 and only the given properties.
+//
+// If properties is nil, all properties are returned; otherwise, properties
+// must contain at least one element.
 //
 // order is the name of the property by which to sort the returned profiles and
 // cannot have type json, array, object, or map; when not provided, the profiles
@@ -1271,18 +1273,22 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	profileProperties := ws.ProfileSchema.Properties()
 
 	// Validate the properties.
-	if len(properties) == 0 {
-		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
-	}
-	for _, name := range properties {
-		if _, ok := profileProperties.ByName(name); !ok {
-			if name == "" {
-				return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
+	if properties == nil {
+		properties = profileProperties.Names()
+	} else {
+		if len(properties) == 0 {
+			return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
+		}
+		for _, name := range properties {
+			if _, ok := profileProperties.ByName(name); !ok {
+				if name == "" {
+					return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
+				}
+				if !types.IsValidPropertyName(name) {
+					return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
+				}
+				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 			}
-			if !types.IsValidPropertyName(name) {
-				return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
-			}
-			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
 
