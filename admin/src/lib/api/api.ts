@@ -58,7 +58,7 @@ import {
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
-const API_BASE_PATH = '/api/v1';
+const API_BASE_PATH = '/v1';
 
 class API {
 	apiURL: string;

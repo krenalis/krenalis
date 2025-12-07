@@ -34,7 +34,7 @@ func (c *Meergo) AlterProfileSchema(schema types.Type, primarySources map[string
 		"rePaths":        rePaths,
 	}
 	ts := time.Now().UTC()
-	c.MustCall("PUT", "/api/v1/profiles/schema", req, nil)
+	c.MustCall("PUT", "/v1/profiles/schema", req, nil)
 	// Waits for the alter schema that was started following the call to this
 	// method to finish.
 	for {
@@ -60,14 +60,14 @@ func (c *Meergo) AlterProfileSchemaErr(schema types.Type, primarySources map[str
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	return c.Call("PUT", "/api/v1/profiles/schema", req, nil)
+	return c.Call("PUT", "/v1/profiles/schema", req, nil)
 }
 
 func (c *Meergo) AbsolutePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
-	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/absolute", storage)
+	endpointPath := fmt.Sprintf("/v1/connections/%d/files/absolute", storage)
 	if path != "" {
 		endpointPath += "?path=" + url.QueryEscape(path)
 	}
@@ -76,7 +76,7 @@ func (c *Meergo) AbsolutePath(storage int, path string) string {
 }
 
 func (c *Meergo) PipelineSchemas(conn int, target core.Target, eventType string) map[string]any {
-	path := fmt.Sprintf("/api/v1/connections/%d/pipelines/schemas/%s", conn, target)
+	path := fmt.Sprintf("/v1/connections/%d/pipelines/schemas/%s", conn, target)
 	if eventType != "" {
 		path += "?type=" + url.QueryEscape(eventType)
 	}
@@ -90,13 +90,13 @@ func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]Identity, int) 
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
 	}
-	path := fmt.Sprintf("/api/v1/connections/%d/identities?first=%d&limit=%d", conn, first, limit)
+	path := fmt.Sprintf("/v1/connections/%d/identities?first=%d&limit=%d", conn, first, limit)
 	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
 }
 
 func (c *Meergo) ConnectionUI(connection int) map[string]any {
-	path := fmt.Sprintf("/api/v1/connections/%d/ui", connection)
+	path := fmt.Sprintf("/v1/connections/%d/ui", connection)
 	var ui map[string]any
 	c.MustCall("GET", path, nil, &ui)
 	return ui
@@ -120,7 +120,7 @@ func (c *Meergo) CreatePipeline(conn int, target string, pipeline PipelineToSet)
 	body["connection"] = conn
 	body["target"] = target
 	var id int
-	c.MustCall("POST", "/api/v1/pipelines", body, &id)
+	c.MustCall("POST", "/v1/pipelines", body, &id)
 	return id
 }
 
@@ -144,7 +144,7 @@ func (c *Meergo) CreatePipelineErr(conn int, target string, pipeline PipelineToS
 	body["connection"] = conn
 	body["target"] = target
 	var id int
-	err = c.Call("POST", "/api/v1/pipelines", body, &id)
+	err = c.Call("POST", "/v1/pipelines", body, &id)
 	if err != nil {
 		return 0, err
 	}
@@ -171,7 +171,7 @@ var DefaultFilterUserFromEvents = &Filter{
 
 func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 	var id int
-	c.MustCall("POST", "/api/v1/connections", connection, &id)
+	c.MustCall("POST", "/v1/connections", connection, &id)
 	return id
 }
 
@@ -244,7 +244,7 @@ func (c *Meergo) CreateEventPipeline(conn int, eventType string, pipeline Pipeli
 	body["target"] = "Event"
 	body["eventType"] = eventType
 	var id int
-	c.MustCall("POST", "/api/v1/pipelines", body, &id)
+	c.MustCall("POST", "/v1/pipelines", body, &id)
 	return id
 }
 
@@ -295,7 +295,7 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 }
 
 func (c *Meergo) DeleteConnection(conn int) {
-	path := fmt.Sprintf("/api/v1/connections/%d", conn)
+	path := fmt.Sprintf("/v1/connections/%d", conn)
 	c.MustCall("DELETE", path, nil, nil)
 }
 
@@ -303,14 +303,14 @@ func (c *Meergo) ExecutePipeline(pipeline int) int {
 	var response struct {
 		ID int
 	}
-	path := fmt.Sprintf("/api/v1/pipelines/%d/exec", pipeline)
+	path := fmt.Sprintf("/v1/pipelines/%d/exec", pipeline)
 	c.MustCall("POST", path, nil, &response)
 	return response.ID
 }
 
 func (c *Meergo) ExternalEventURL() string {
 	var metadata map[string]any
-	c.MustCall("GET", "/api/v1/public/metadata", nil, &metadata)
+	c.MustCall("GET", "/v1/public/metadata", nil, &metadata)
 	return metadata["externalEventURL"].(string)
 }
 
@@ -325,13 +325,13 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	c.MustCall("GET", "/api/v1/events"+"?"+queryString.Encode(), nil, &response)
+	c.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, &response)
 	return response.Events
 }
 
 func (c *Meergo) Execution(id int) Execution {
 	var exe Execution
-	path := fmt.Sprintf("/api/v1/pipelines/executions/%d", id)
+	path := fmt.Sprintf("/v1/pipelines/executions/%d", id)
 	c.MustCall("GET", path, nil, &exe)
 	return exe
 }
@@ -340,7 +340,7 @@ func (c *Meergo) Executions() []Execution {
 	var response struct {
 		Executions []Execution
 	}
-	c.MustCall("GET", "/api/v1/pipelines/executions", nil, &response)
+	c.MustCall("GET", "/v1/pipelines/executions", nil, &response)
 	return response.Executions
 }
 
@@ -357,14 +357,14 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files", storage)
+	endpointPath := fmt.Sprintf("/v1/connections/%d/files", storage)
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Records, response.Schema
 }
 
 func (c *Meergo) JavaScriptSDKURL() string {
 	var metadata map[string]any
-	c.MustCall("GET", "/api/v1/public/metadata", nil, &metadata)
+	c.MustCall("GET", "/v1/public/metadata", nil, &metadata)
 	return metadata["javascriptSDKURL"].(string)
 }
 
@@ -374,7 +374,7 @@ func (c *Meergo) LatestAlterProfileSchema() (startTime, endTime *time.Time, alte
 		EndTime   *time.Time `json:"endTime"`
 		Error     *string    `json:"error"`
 	}
-	c.MustCall("GET", "/api/v1/profiles/schema/latest-alter", nil, &response)
+	c.MustCall("GET", "/v1/profiles/schema/latest-alter", nil, &response)
 	return response.StartTime, response.EndTime, response.Error
 }
 
@@ -383,7 +383,7 @@ func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 	}
-	c.MustCall("GET", "/api/v1/identity-resolution/latest", nil, &response)
+	c.MustCall("GET", "/v1/identity-resolution/latest", nil, &response)
 	return response.StartTime, response.EndTime
 }
 
@@ -395,7 +395,7 @@ func (c *Meergo) PreviewAlterProfileSchema(schema types.Type, rePaths map[string
 	var response struct {
 		Queries []string
 	}
-	c.MustCall("PUT", "/api/v1/profiles/schema/preview", req, &response)
+	c.MustCall("PUT", "/v1/profiles/schema/preview", req, &response)
 	return response.Queries
 }
 
@@ -409,7 +409,7 @@ func (c *Meergo) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[str
 	var response struct {
 		Queries []string
 	}
-	err := c.Call("PUT", "/api/v1/profiles/schema/preview", req, &response)
+	err := c.Call("PUT", "/v1/profiles/schema/preview", req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -417,14 +417,14 @@ func (c *Meergo) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[str
 }
 
 func (c *Meergo) RepairWarehouse() {
-	c.MustCall("POST", "/api/v1/warehouse/repair", nil, nil)
+	c.MustCall("POST", "/v1/warehouse/repair", nil, nil)
 }
 
 // RunIdentityResolution starts the identity resolution and waits for it to
 // complete.
 func (c *Meergo) RunIdentityResolution() {
 	ts := time.Now().UTC()
-	c.MustCall("POST", "/api/v1/identity-resolution/start", nil, nil)
+	c.MustCall("POST", "/v1/identity-resolution/start", nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
 	// this method to finish.
 	for {
@@ -440,7 +440,7 @@ func (c *Meergo) RunIdentityResolution() {
 }
 
 func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
-	endpoint := "http://" + c.Addr() + "/api/v1/events"
+	endpoint := "http://" + c.Addr() + "/v1/events"
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -494,7 +494,7 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
-	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/sheets", storage)
+	endpointPath := fmt.Sprintf("/v1/connections/%d/files/sheets", storage)
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Sheets
 }
@@ -504,7 +504,7 @@ func (c *Meergo) TableSchema(conn int, table string) (types.Type, []string) {
 		Schema types.Type `json:"schema"`
 		Issues []string   `json:"issues"`
 	}
-	path := fmt.Sprintf("/api/v1/connections/%d/tables", conn)
+	path := fmt.Sprintf("/v1/connections/%d/tables", conn)
 	if table != "" {
 		path += "?name=" + url.QueryEscape(table)
 	}
@@ -516,7 +516,7 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	body := map[string]any{
 		"settings": json.RawMessage(settings),
 	}
-	c.MustCall("PUT", "/api/v1/warehouse/test", body, nil)
+	c.MustCall("PUT", "/v1/warehouse/test", body, nil)
 }
 
 func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
@@ -531,11 +531,11 @@ func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
 		},
 		"uiPreferences": uiPreferences,
 	}
-	return c.Call("POST", "/api/v1/workspaces/test", body, nil)
+	return c.Call("POST", "/v1/workspaces/test", body, nil)
 }
 
 func (c *Meergo) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
-	path := fmt.Sprintf("/api/v1/pipelines/%d", pipelineID)
+	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
 	c.MustCall("PUT", path, pipeline, nil)
 }
 
@@ -544,14 +544,14 @@ func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []s
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
 	}
-	c.MustCall("PUT", "/api/v1/identity-resolution/settings", body, nil)
+	c.MustCall("PUT", "/v1/identity-resolution/settings", body, nil)
 }
 
 func (c *Meergo) UpdateIdentityResolutionErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
-	return c.Call("PUT", "/api/v1/identity-resolution/settings", body, nil)
+	return c.Call("PUT", "/v1/identity-resolution/settings", body, nil)
 }
 
 func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
@@ -559,7 +559,7 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 		"mode":     mode,
 		"settings": json.RawMessage(settings),
 	}
-	c.MustCall("PUT", "/api/v1/warehouse", body, nil)
+	c.MustCall("PUT", "/v1/warehouse", body, nil)
 }
 
 func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string]any {
@@ -586,7 +586,7 @@ func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	c.MustCall("GET", "/api/v1/events"+"?"+queryString.Encode(), nil, &response)
+	c.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, &response)
 	return response.Events
 }
 
@@ -595,14 +595,14 @@ func (c *Meergo) Identities(mpid uuid.UUID, first, limit int) ([]Identity, int) 
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
 	}
-	path := fmt.Sprintf("/api/v1/profiles/%s/identities?first=%d&limit=%d", mpid, first, limit)
+	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", mpid, first, limit)
 	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
 }
 
 func (c *Meergo) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	var schema types.Type
-	c.MustCall("GET", "/api/v1/profiles/schema/suitable-as-identifiers", nil, &schema)
+	c.MustCall("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, &schema)
 	return schema
 }
 
@@ -619,7 +619,7 @@ func (c *Meergo) Profiles(properties []string, order string, orderDesc bool, fir
 		Schema   types.Type `json:"schema"`
 		Total    int        `json:"total"`
 	}
-	c.MustCall("GET", "/api/v1/profiles?"+queryString.Encode(), nil, &response)
+	c.MustCall("GET", "/v1/profiles?"+queryString.Encode(), nil, &response)
 	return response.Profiles, response.Schema, response.Total
 }
 
@@ -665,14 +665,14 @@ func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...
 
 func (c *Meergo) EventWriteKeys(conn int) []string {
 	var keys []string
-	path := fmt.Sprintf("/api/v1/connections/%d/event-write-keys", conn)
+	path := fmt.Sprintf("/v1/connections/%d/event-write-keys", conn)
 	c.MustCall("GET", path, nil, &keys)
 	return keys
 }
 
 func (c *Meergo) Workspace() Workspace {
 	var ws Workspace
-	c.MustCall("GET", "/api/v1/workspaces/current", nil, &ws)
+	c.MustCall("GET", "/v1/workspaces/current", nil, &ws)
 	return ws
 }
 

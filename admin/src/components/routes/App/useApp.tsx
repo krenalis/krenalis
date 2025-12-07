@@ -98,7 +98,7 @@ const useApp = (
 				// Initialize the Sentry SDK.
 				Sentry.init({
 					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
-					tunnel: '/api/v1/sentry/errors',
+					tunnel: '/v1/sentry/errors',
 					// Setting this option to true will send default PII
 					// data to Sentry. For example, automatic IP address
 					// collection on events.

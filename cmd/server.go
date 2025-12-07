@@ -173,7 +173,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		}
 
 		switch {
-		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
+		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			apisServer.ServeHTTP(w, r)
 			return
 		//case strings.HasPrefix(r.URL.Path, "/webhook/"): TODO(marco): implement webhooks
@@ -196,7 +196,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	})
 
 	c := http.NewCrossOriginProtection()
-	c.AddInsecureBypassPattern("POST /api/v1/events")
+	c.AddInsecureBypassPattern("POST /v1/events")
 	origin := strings.TrimSuffix(settings.HTTP.ExternalURL, "/")
 	err = c.AddTrustedOrigin(origin)
 	if err != nil {
@@ -234,7 +234,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			"> Admin console: %s",
 		addr,
 		settings.HTTP.ExternalURL+"metrics",
-		settings.HTTP.ExternalURL+"api/v1/",
+		settings.HTTP.ExternalURL+"v1/",
 		settings.HTTP.ExternalEventURL,
 		settings.HTTP.ExternalURL+"admin",
 	)

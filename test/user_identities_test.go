@@ -150,7 +150,7 @@ func Test_Identities(t *testing.T) {
 			Identities []any `json:"identities"`
 			Total      int   `json:"total"`
 		}
-		err := c.Call("GET", "/api/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
+		err := c.Call("GET", "/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
 		if err != nil {
 			t.Fatalf("expected no identities, got error: %q", err)
 		}

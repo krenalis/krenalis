@@ -341,7 +341,7 @@ func (c *Meergo) Start() {
 		setts.HTTP.Host = testsSettings.HTTP.Host
 		setts.HTTP.Port = testsSettings.HTTP.Port
 		setts.HTTP.ExternalURL = fmt.Sprintf("http://%s:%d/", setts.HTTP.Host, setts.HTTP.Port)
-		setts.HTTP.ExternalEventURL = setts.HTTP.ExternalURL + "api/v1/events"
+		setts.HTTP.ExternalEventURL = setts.HTTP.ExternalURL + "v1/events"
 		setts.DB.Host = testsSettings.Database.Host
 		setts.DB.Port = testsSettings.Database.Port
 		setts.DB.Username = testsSettings.Database.Username
@@ -514,7 +514,7 @@ func (c *Meergo) createWorkspace(name string, profileSchema types.Type, uiPrefer
 	var response struct {
 		ID int `json:"id"`
 	}
-	err := c.call("POST", "/api/v1/workspaces", req, &response)
+	err := c.call("POST", "/v1/workspaces", req, &response)
 	if err != nil {
 		return 0, err
 	}
@@ -526,7 +526,7 @@ func (c *Meergo) login() error {
 		"email":    "acme@meergo.com",
 		"password": "meergo-password",
 	}
-	return c.call("POST", "/api/v1/members/login", body, nil)
+	return c.call("POST", "/v1/members/login", body, nil)
 }
 
 // ExecQueryTestDatabase executes a query on the test database.

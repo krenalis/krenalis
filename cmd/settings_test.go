@@ -134,8 +134,8 @@ func TestParseSettings(t *testing.T) {
 		if s.HTTP.ExternalURL != "http://127.0.0.1:2022/" {
 			t.Errorf("expected ExternalURL \"http://127.0.0.1:2022/\", got %q", s.HTTP.ExternalURL)
 		}
-		if s.HTTP.ExternalEventURL != "http://127.0.0.1:2022/api/v1/events" {
-			t.Errorf("expected ExternalEventURL \"http://127.0.0.1:2022/api/v1/events\", got %q", s.HTTP.ExternalURL)
+		if s.HTTP.ExternalEventURL != "http://127.0.0.1:2022/v1/events" {
+			t.Errorf("expected ExternalEventURL \"http://127.0.0.1:2022/v1/events\", got %q", s.HTTP.ExternalURL)
 		}
 		if s.HTTP.ReadHeaderTimeout != 2*time.Second {
 			t.Errorf("expected default ReadHeaderTimeout 2s, got %s", s.HTTP.ReadHeaderTimeout)

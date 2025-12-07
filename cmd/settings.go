@@ -157,7 +157,7 @@ func parseEnvSettings() (*Settings, error) {
 	if eventURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", noQuery); err != nil {
 		return nil, err
 	} else if eventURL == "" {
-		settings.HTTP.ExternalEventURL = settings.HTTP.ExternalURL + "api/v1/events"
+		settings.HTTP.ExternalEventURL = settings.HTTP.ExternalURL + "v1/events"
 	} else {
 		settings.HTTP.ExternalEventURL = eventURL
 	}
