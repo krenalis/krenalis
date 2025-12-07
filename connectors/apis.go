@@ -60,7 +60,7 @@ type APISpec struct {
 type APITerms struct {
 	User   string
 	Users  string
-	UserId string
+	UserID string
 	// Group  string TODO(marco) Implement groups
 	// Groups string
 }
@@ -564,7 +564,7 @@ type ReceivedEvent interface {
 	Timestamp() time.Time
 	Type() string
 	PreviousId() (string, bool)
-	UserId() (string, bool)
+	UserID() (string, bool)
 }
 
 type ReceivedEventContext interface {

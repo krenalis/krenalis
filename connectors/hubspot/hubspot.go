@@ -57,7 +57,7 @@ func init() {
 		Terms: connectors.APITerms{
 			User:   "Contact",
 			Users:  "Contacts",
-			UserId: "HubSpot ID",
+			UserID: "HubSpot ID",
 		},
 		OAuth: connectors.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",

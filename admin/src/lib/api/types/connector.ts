@@ -54,7 +54,7 @@ interface ConnectorDocumentation {
 interface ConnectorTerms {
 	user: string;
 	users: string;
-	userId: string;
+	userID: string;
 	// group: string;  // TODO(marco): Implement groups
 	// groups: string;
 }

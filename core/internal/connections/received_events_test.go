@@ -110,40 +110,40 @@ func Test_ReceivedEvent(t *testing.T) {
 	r := ReceivedEvent(event)
 
 	if r.AnonymousId() != "anon1" {
-		t.Fatalf("unexpected AnonymousId %q", r.AnonymousId())
+		t.Fatalf("unexpected anonymousId %q", r.AnonymousId())
 	}
 	if channel, _ := r.Channel(); channel != "web" {
-		t.Fatalf("unexpected Channel %q", channel)
+		t.Fatalf("unexpected channel %q", channel)
 	}
 	if category, _ := r.Category(); category != "marketing" {
-		t.Fatalf("unexpected Category %q", category)
+		t.Fatalf("unexpected category %q", category)
 	}
 	if event, _ := r.Event(); event != "Login" {
-		t.Fatalf("unexpected Event %q", event)
+		t.Fatalf("unexpected event %q", event)
 	}
 	if groupId, _ := r.GroupId(); groupId != "group1" {
-		t.Fatalf("unexpected GroupId %q", groupId)
+		t.Fatalf("unexpected groupId %q", groupId)
 	}
 	if r.MessageId() != "ca333bd6-38d8-4de5-8d7f-f49f14752e8f" {
-		t.Fatalf("unexpected MessageId %q", r.MessageId())
+		t.Fatalf("unexpected messageId %q", r.MessageId())
 	}
 	if name, _ := r.Name(); name != "LoginName" {
-		t.Fatalf("unexpected Name %q", name)
+		t.Fatalf("unexpected name %q", name)
 	}
 	if r.ReceivedAt() != now.Add(time.Second) {
-		t.Fatalf("unexpected ReceivedAt %v", r.ReceivedAt())
+		t.Fatalf("unexpected receivedAt %v", r.ReceivedAt())
 	}
 	if r.SentAt() != now {
-		t.Fatalf("unexpected SentAt %v", r.SentAt())
+		t.Fatalf("unexpected sentAt %v", r.SentAt())
 	}
 	if r.Timestamp() != now {
-		t.Fatalf("unexpected Timestamp %v", r.Timestamp())
+		t.Fatalf("unexpected timestamp %v", r.Timestamp())
 	}
 	if r.Type() != "track" {
-		t.Fatalf("unexpected Type %q", r.Type())
+		t.Fatalf("unexpected type %q", r.Type())
 	}
-	if userId, _ := r.UserId(); userId != "user1" {
-		t.Fatalf("unexpected UserId %q", userId)
+	if userId, _ := r.UserID(); userId != "user1" {
+		t.Fatalf("unexpected userId %q", userId)
 	}
 
 	ctx, ok := r.Context()
@@ -291,10 +291,10 @@ func Test_ReceivedEvent(t *testing.T) {
 		t.Fatalf("unexpected OS context")
 	}
 	if name, _ := os.Name(); name != "Linux" {
-		t.Fatalf("unexpected OS context")
+		t.Fatalf("unexpected os context")
 	}
 	if version, _ := os.Version(); version != "5.0" {
-		t.Fatalf("unexpected OS context")
+		t.Fatalf("unexpected os context")
 	}
 
 	page, ok := ctx.Page()
@@ -394,7 +394,7 @@ func Test_ReceivedEventMissingFields(t *testing.T) {
 		t.Fatalf("expected no name")
 	}
 
-	if _, ok := r.UserId(); ok {
+	if _, ok := r.UserID(); ok {
 		t.Fatal("expected no userId")
 	}
 

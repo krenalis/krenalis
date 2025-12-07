@@ -102,8 +102,8 @@ func TestImportUsersFromFile(t *testing.T) {
 		if identity.Pipeline != importUsersPipelineID {
 			t.Fatalf("expected pipeline %d, got %d", importUsersPipelineID, identity.Pipeline)
 		}
-		if len(identity.AnonymousIds) != 0 {
-			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIds)
+		if len(identity.AnonymousIDs) != 0 {
+			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIDs)
 		}
 	}
 

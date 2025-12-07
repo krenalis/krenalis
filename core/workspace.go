@@ -1915,11 +1915,11 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		identityID := row["_identity_id"].(string)
 
 		// Get the anonymous IDs.
-		var anonymousIds []string
+		var anonymousIDs []string
 		if ids, ok := row["_anonymous_ids"].([]any); ok {
-			anonymousIds = make([]string, len(ids))
+			anonymousIDs = make([]string, len(ids))
 			for i := range ids {
-				anonymousIds[i] = ids[i].(string)
+				anonymousIDs[i] = ids[i].(string)
 			}
 		}
 
@@ -1927,7 +1927,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		// identity ID, so there is the need to populate the anonymous IDs by
 		// taking that value, then reset the identity ID.
 		if row["_is_anonymous"].(bool) {
-			anonymousIds = append(anonymousIds, identityID)
+			anonymousIDs = append(anonymousIDs, identityID)
 			identityID = ""
 		}
 
@@ -1935,8 +1935,8 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		updatedAt := row["_updated_at"].(time.Time)
 
 		identities = append(identities, Identity{
-			UserId:       identityID,
-			AnonymousIds: anonymousIds,
+			UserID:       identityID,
+			AnonymousIDs: anonymousIDs,
 			UpdatedAt:    updatedAt,
 			Connection:   connID,
 			Pipeline:     pipelineID,
@@ -2061,8 +2061,8 @@ func suitableAsIdentifier(t types.Type) bool {
 
 // Identity represents an identity.
 type Identity struct {
-	UserId       string    `json:"userId,omitempty"`       // is omitted if anonymous
-	AnonymousIds []string  `json:"anonymousIds,omitempty"` // is omitted for identities not ingested from events
+	UserID       string    `json:"userId,omitempty"`       // is omitted if anonymous
+	AnonymousIDs []string  `json:"anonymousIds,omitempty"` // is omitted for identities not ingested from events
 	Connection   int       `json:"connection"`
 	Pipeline     int       `json:"pipeline"`
 	UpdatedAt    time.Time `json:"updatedAt"`

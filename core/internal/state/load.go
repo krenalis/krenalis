@@ -31,7 +31,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			Terms: ConnectorTerms{
 				User:   "User",
 				Users:  "Users",
-				UserId: "User ID",
+				UserID: "User ID",
 			},
 		}
 		switch connector := connector.(type) {
@@ -58,8 +58,8 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			if connector.Terms.Users != "" {
 				c.Terms.Users = connector.Terms.Users
 			}
-			if connector.Terms.UserId != "" {
-				c.Terms.UserId = connector.Terms.UserId
+			if connector.Terms.UserID != "" {
+				c.Terms.UserID = connector.Terms.UserID
 			}
 			switch connector.AsDestination.SendingMode {
 			case connectors.Client:

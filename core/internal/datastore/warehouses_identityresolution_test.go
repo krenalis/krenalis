@@ -62,7 +62,7 @@ type identity struct {
 	pipeline     int // can be 1, 2 ... 9
 	id           string
 	isAnonymous  bool
-	anonymousIds []string
+	anonymousIDs []string
 	attributes   map[string]any
 }
 
@@ -595,7 +595,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							"_is_anonymous":  profile.isAnonymous,
 							"_identity_id":   profile.id,
 							"_connection":    profile.connection,
-							"_anonymous_ids": toSliceAny(profile.anonymousIds),
+							"_anonymous_ids": toSliceAny(profile.anonymousIDs),
 							"_updated_at":    time.Now().UTC(),
 							"_execution":     1,
 						}

@@ -175,13 +175,13 @@ func Test_Sender(t *testing.T) {
 			ctx := context.Background()
 
 			// Generate random users.
-			anonymousIds := make([]string, test.users)
+			anonymousIDs := make([]string, test.users)
 			for i := 0; i < test.users; i++ {
 				// Create a pseudo-random UUID v5.
 				n := src.Uint64()
 				data := make([]byte, 8)
 				binary.BigEndian.PutUint64(data, n)
-				anonymousIds[i] = uuid.NewSHA1(uuidDeterministicNS, data).String()
+				anonymousIDs[i] = uuid.NewSHA1(uuidDeterministicNS, data).String()
 			}
 
 			userByEvent := map[string]string{}
@@ -193,7 +193,7 @@ func Test_Sender(t *testing.T) {
 			var evs []*Event
 			for range test.num {
 				// Choose an Anonymous ID deterministically.
-				anonymousId := anonymousIds[rng.IntN(test.users)]
+				anonymousId := anonymousIDs[rng.IntN(test.users)]
 				// Generate a deterministic UUIDv5 from src.
 				n := src.Uint64()
 				data := make([]byte, 8)

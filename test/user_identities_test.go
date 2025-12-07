@@ -109,14 +109,14 @@ func Test_Identities(t *testing.T) {
 
 		for _, identity := range identities {
 
-			if anonIds := identity.AnonymousIds; anonIds != nil {
-				t.Fatalf("identity should have a nil 'AnonymousIds', got %v", anonIds)
+			if anonIds := identity.AnonymousIDs; anonIds != nil {
+				t.Fatalf("identity should have a nil 'AnonymousIDs', got %v", anonIds)
 			}
 
 			t.Logf(
 				"the APIs returned an identity for profile with MPID %s that has"+
 					" pipeline = %d, user ID = %v and updated at = %q",
-				profile.MPID, identity.Pipeline, identity.UserId, identity.UpdatedAt)
+				profile.MPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
 
 			var idPrefix string
 			switch identity.Pipeline {
@@ -129,8 +129,8 @@ func Test_Identities(t *testing.T) {
 			}
 
 			// Check the identity ID label.
-			if !strings.HasPrefix(identity.UserId, idPrefix) {
-				t.Fatalf("unexpected user ID %q, it should have prefix %q", identity.UserId, idPrefix)
+			if !strings.HasPrefix(identity.UserID, idPrefix) {
+				t.Fatalf("unexpected user ID %q, it should have prefix %q", identity.UserID, idPrefix)
 			}
 
 			totalIdentities++

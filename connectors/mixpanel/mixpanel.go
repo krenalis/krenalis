@@ -325,13 +325,13 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		if sendBadRequest {
 			delete(properties, "time")
 		}
-		if userId, ok := event.Received.UserId(); ok {
-			properties["$user_id"] = userId
+		if userID, ok := event.Received.UserID(); ok {
+			properties["$user_id"] = userID
 		}
 
 		// Set distinct_id. This has no effect if the project uses the simplified ID Merge API.
-		if userId, ok := event.Received.UserId(); ok {
-			properties["distinct_id"] = userId
+		if userID, ok := event.Received.UserID(); ok {
+			properties["distinct_id"] = userID
 		} else {
 			properties["distinct_id"] = event.Received.AnonymousId()
 		}

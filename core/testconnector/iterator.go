@@ -134,7 +134,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 				break
 			}
 			if it.sameUser.on && it.first {
-				u, _ := e.Received.UserId()
+				u, _ := e.Received.UserID()
 				it.sameUser.user = &u
 			}
 			if !yield(e) {

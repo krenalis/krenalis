@@ -742,7 +742,7 @@ func (t ConnectorTargets) Contains(target Target) bool {
 type ConnectorTerms struct {
 	User   string
 	Users  string
-	UserId string
+	UserID string
 	// Group  string  TODO(Marco): implement groups
 	// Groups string
 }

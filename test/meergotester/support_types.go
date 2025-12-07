@@ -146,8 +146,8 @@ type Profile struct {
 }
 
 type Identity struct {
-	UserId       string    `json:"userId"`
-	AnonymousIds []string  `json:"anonymousIds"`
+	UserID       string    `json:"userId"`
+	AnonymousIDs []string  `json:"anonymousIds"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 	Connection   int       `json:"connection"`
 	Pipeline     int       `json:"pipeline"`

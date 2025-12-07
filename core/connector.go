@@ -40,7 +40,7 @@ type ConnectorOAuth struct {
 type ConnectorTerms struct {
 	User   string `json:"user"`
 	Users  string `json:"users"`
-	UserId string `json:"userId"`
+	UserID string `json:"userID"`
 	// Group  string `json:"group"`  TODO(marco): Implement groups
 	// Groups string `json:"groups"`
 }

@@ -197,7 +197,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 			// Note that 'userID' may also be empty after this assignment, which
 			// means that only events with empty 'userID' will be sent in this
 			// batch.
-			userID, _ = event.Received.UserId()
+			userID, _ = event.Received.UserID()
 			bb.WriteByte('{')
 			bb.EncodeKeyValue("client_id", event.Received.AnonymousId())
 			if userID != "" {
@@ -205,7 +205,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 			}
 			bb.WriteString(`,"events":[`)
 		} else {
-			if uId, _ := event.Received.UserId(); uId != userID {
+			if uId, _ := event.Received.UserID(); uId != userID {
 				events.Postpone()
 				continue
 			}

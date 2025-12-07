@@ -59,7 +59,7 @@ const useConnectionIdentities = () => {
 				explanation: 'Last time the identity was updated in its source.',
 			},
 			{
-				name: connection.connector.terms.userId,
+				name: connection.connector.terms.userID,
 			},
 			{
 				name: 'Pipeline',
@@ -92,13 +92,13 @@ const useConnectionIdentities = () => {
 				key: identity.userId,
 			};
 			if (connection.hasAnonymousIdentifiers) {
-				const anonymousIds: ReactNode[] = [];
+				const anonymousIDs: ReactNode[] = [];
 				if ('anonymousIds' in identity) {
 					for (const id of identity.anonymousIds) {
-						anonymousIds.push(<code>{id}</code>);
+						anonymousIDs.push(<code>{id}</code>);
 					}
 				}
-				row.cells.splice(2, 0, anonymousIds);
+				row.cells.splice(2, 0, anonymousIDs);
 			}
 			rows.push(row);
 		}
