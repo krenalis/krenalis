@@ -14,7 +14,7 @@ func TestSplitQueryParameters(t *testing.T) {
 		name      string
 		in        []string
 		want      []string
-		sameSlice bool // whether we expect the input slice to be returned unchanged
+		sameSlice bool
 	}{
 		{
 			name: "nil slice",
@@ -24,7 +24,7 @@ func TestSplitQueryParameters(t *testing.T) {
 		{
 			name: "empty slice",
 			in:   []string{},
-			want: []string{},
+			want: nil,
 		},
 		{
 			name:      "single value without comma",
@@ -65,8 +65,8 @@ func TestSplitQueryParameters(t *testing.T) {
 		},
 		{
 			name: "only empty or whitespace segments",
-			in:   []string{", , ,"},
-			want: []string{},
+			in:   []string{", , ,", "\t", "\n", " ", ","},
+			want: nil,
 		},
 	}
 	for _, test := range tests {

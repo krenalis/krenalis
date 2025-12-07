@@ -855,9 +855,6 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 	// Parse the properties.
 	properties := splitQueryParameters(q["properties"])
-	if len(properties) == 0 {
-		return nil, errors.BadRequest("no properties were provided to return")
-	}
 
 	filter := &core.Filter{
 		Logical: core.OpAnd,

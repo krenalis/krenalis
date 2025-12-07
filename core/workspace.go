@@ -925,8 +925,10 @@ func (this *Workspace) DeleteEventListener(listener string) {
 
 // Events returns events that match the provided filter, if not nil, and are
 // within the range [first,first+limit], where first >= 0, 0 < limit <= 1000,
-// and only includes the specified properties from the event schema. properties
-// must contain at least one property.
+// and only includes the specified properties from the event schema.
+//
+// If properties is nil, all properties are returned; otherwise, properties
+// must contain at least one element.
 //
 // order specifies the property by which to sort the events. It cannot be of
 // type json or object. If not provided, the events are sorted by messageId.
@@ -943,18 +945,22 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	eventProperties := schemas.Event.Properties()
 
 	// Validate the properties.
-	if len(properties) == 0 {
-		return nil, errors.BadRequest("properties is empty")
-	}
-	for _, name := range properties {
-		if _, ok := eventProperties.ByName(name); !ok {
-			if name == "" {
-				return nil, errors.BadRequest("a property name is empty")
+	if properties == nil {
+		properties = eventPropertyNames
+	} else {
+		if len(properties) == 0 {
+			return nil, errors.BadRequest("properties is empty")
+		}
+		for _, name := range properties {
+			if _, ok := eventProperties.ByName(name); !ok {
+				if name == "" {
+					return nil, errors.BadRequest("a property name is empty")
+				}
+				if !types.IsValidPropertyName(name) {
+					return nil, errors.BadRequest("property name %q is not valid", name)
+				}
+				return nil, errors.BadRequest("property %q does not exist", name)
 			}
-			if !types.IsValidPropertyName(name) {
-				return nil, errors.BadRequest("property name %q is not valid", name)
-			}
-			return nil, errors.BadRequest("property %q does not exist", name)
 		}
 	}
 

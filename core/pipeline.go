@@ -35,9 +35,17 @@ import (
 // It excludes the mpid property.
 var eventPipelineSchema types.Type
 
+// eventPropertyNames lists all event property names.
+// The first name is always "mpid".
+var eventPropertyNames []string
+
 func init() {
 	properties := schemas.Event.Properties().Slice()
 	eventPipelineSchema = types.Object(properties[1:])
+	eventPropertyNames = make([]string, len(properties))
+	for i, p := range properties {
+		eventPropertyNames[i] = p.Name
+	}
 }
 
 // Pipeline represents a pipeline of a connection.
