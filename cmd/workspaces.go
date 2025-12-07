@@ -159,7 +159,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
-	properties := q["properties"]
+	properties := splitQueryParameters(q["properties"])
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)
@@ -392,9 +392,10 @@ func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -473,9 +474,10 @@ func (workspace workspace) PipelineMetricsPerDate(_ http.ResponseWriter, r *http
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -517,9 +519,10 @@ func (workspace workspace) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("an 'pipeline' parameter is not valid")
@@ -561,9 +564,10 @@ func (workspace workspace) PipelineMetricsPerHour(_ http.ResponseWriter, r *http
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -605,9 +609,10 @@ func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *ht
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -849,8 +854,8 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse the properties.
-	properties, ok := q["properties"]
-	if !ok {
+	properties := splitQueryParameters(q["properties"])
+	if len(properties) == 0 {
 		return nil, errors.BadRequest("no properties were provided to return")
 	}
 
@@ -895,7 +900,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
-	properties := q["properties"]
+	properties := splitQueryParameters(q["properties"])
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)

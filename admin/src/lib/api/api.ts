@@ -649,9 +649,7 @@ class Profiles {
 		limit: number,
 	): Promise<FindProfilesResponse> => {
 		let params = [];
-		properties.forEach(function (property) {
-			params.push(['properties', property]);
-		});
+		params.push(['properties', properties.join(',')]);
 		if (filter != null) {
 			params.push(['filter', JSON.stringify(filter)]);
 		}
@@ -682,9 +680,7 @@ class Profiles {
 			'type',
 			'userId',
 		];
-		properties.forEach(function (property) {
-			params.push(['properties', property]);
-		});
+		params.push(['properties', properties.join(',')]);
 		let filter = {
 			logical: 'and',
 			conditions: [
@@ -895,15 +891,14 @@ class Workspaces {
 		limit: number,
 		step?: PipelineStep,
 	): Promise<PipelineErrorsResponse> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r: PipelineErrorsResponse = await call(
-			`${this.apiURL}/pipelines/errors/${encodeURIComponent(start.toISOString())}/${encodeURIComponent(end.toISOString())}?${pipelinesQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
+			`${this.apiURL}/pipelines/errors/` +
+				`${encodeURIComponent(start.toISOString())}/` +
+				`${encodeURIComponent(end.toISOString())}` +
+				`?pipelines=${pipelines.join(',')}` +
+				`&first=${first}` +
+				`&limit=${limit}` +
+				(step ? `&step=${step}` : ''),
 			http.GET,
 			this.workspaceID,
 		);
@@ -914,17 +909,13 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/dates/${encodeURIComponent(sd)}/${encodeURIComponent(ed)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/dates/` +
+				`${encodeURIComponent(sd)}/` +
+				`${encodeURIComponent(ed)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -934,15 +925,10 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerDay = async (days: number, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/days/${encodeURIComponent(days)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/days/` +
+				`${encodeURIComponent(days)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -952,15 +938,10 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerHour = async (hours: number, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/hours/${encodeURIComponent(hours)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/hours/` +
+				`${encodeURIComponent(hours)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -970,15 +951,10 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerMinute = async (minutes: number, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/minutes/${encodeURIComponent(minutes)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/minutes/` +
+				`${encodeURIComponent(minutes)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);

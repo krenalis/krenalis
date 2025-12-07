@@ -297,3 +297,45 @@ func (api api) WarehousePlatforms(_ http.ResponseWriter, r *http.Request) (any, 
 func (api api) code(r *http.Request) string {
 	return r.PathValue("code")
 }
+
+// splitQueryParameters expands comma-separated query parameter values.
+// It takes a slice of raw parameter values, where each element may contain
+// one or more comma-delimited entries, and returns a slice in which all
+// entries are split, trimmed, and listed individually. Empty strings are
+// discarded, so the result never contains blank values.
+//
+// For example, []string{"1,2,3"} becomes []string{"1", "2", "3"}.
+//
+// If no element contains commas, the input slice is returned unchanged.
+func splitQueryParameters(values []string) []string {
+
+	if len(values) == 0 {
+		return values
+	}
+
+	// Check if no element contains commas.
+	noCommas := true
+	for _, v := range values {
+		if strings.Contains(v, ",") {
+			noCommas = false
+			break
+		}
+	}
+	if noCommas {
+		return values
+	}
+
+	parameters := make([]string, 0, len(values))
+	for _, v := range values {
+		parts := strings.Split(v, ",")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			parameters = append(parameters, p)
+		}
+	}
+
+	return parameters
+}
