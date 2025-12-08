@@ -931,9 +931,8 @@ func (this *Workspace) DeleteEventListener(listener string) {
 // must contain at least one element.
 //
 // order specifies the property by which to sort the events. It cannot be of
-// type json or object. If not provided, the events are sorted by messageId.
-// orderDesc controls whether the events should be sorted in descending order,
-// when true, or ascending order.
+// type json or object. orderDesc, when true, orders the returned events in
+// descending order instead of ascending order.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore. It returns an errors.UnprocessableError error with code
@@ -978,20 +977,19 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	}
 
 	// Validate the order.
-	if order != "" {
-		orderProperty, ok := eventProperties.ByName(order)
-		if !ok {
-			if !types.IsValidPropertyName(order) {
-				return nil, errors.BadRequest("order %q is not a valid property name", order)
-			}
-			return nil, errors.BadRequest("order property %q does not exist", order)
+	if order == "" {
+		return nil, errors.BadRequest("order is missing")
+	}
+	orderProperty, ok := eventProperties.ByName(order)
+	if !ok {
+		if !types.IsValidPropertyName(order) {
+			return nil, errors.BadRequest("order %q is not a valid property name", order)
 		}
-		switch orderProperty.Type.Kind() {
-		case types.JSONKind, types.ObjectKind:
-			return nil, errors.BadRequest("cannot sort by %s: property has type %s", order, orderProperty.Type)
-		}
-	} else {
-		order = "messageId"
+		return nil, errors.BadRequest("order property %q does not exist", order)
+	}
+	switch orderProperty.Type.Kind() {
+	case types.JSONKind, types.ObjectKind:
+		return nil, errors.BadRequest("cannot sort by %s: property has type %s", order, orderProperty.Type)
 	}
 
 	// Validate first and limit.
