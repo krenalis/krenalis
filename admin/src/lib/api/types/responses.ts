@@ -4,8 +4,12 @@ import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { ProfileEvent, Identity, ProfileAttributes } from './profile';
 
-interface authCodeURLResponse {
-	url: string;
+interface authURLResponse {
+	authUrl: string;
+}
+
+interface authTokenResponse {
+	authToken: string;
 }
 
 type ConnectorSettings = Record<string, any>;
@@ -181,7 +185,8 @@ interface PublicMetadata {
 }
 
 export type {
-	authCodeURLResponse,
+	authURLResponse,
+	authTokenResponse,
 	profileAttributesResponse,
 	PipelineError,
 	PipelineErrorsResponse,

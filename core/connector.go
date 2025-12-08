@@ -31,6 +31,33 @@ type Connector struct {
 	Strategies    bool                  `json:"strategies"`
 }
 
+// AuthURL returns a URL that directs to the consent page of an OAuth 2.0
+// provider. This page requests explicit permissions for the scopes required by
+// the provided role, either Source or Destination.
+//
+// After granting permissions, the provider redirects the user to the URL
+// specified by redirectURI.
+//
+// If the connector is not configured for OAuth (i.e., ClientID or ClientSecret
+// is empty), it returns an errors.UnavailableError error.
+func (this *Connector) AuthURL(role Role, redirectURI string) (string, error) {
+	this.core.mustBeOpen()
+	if this.connector.OAuth == nil {
+		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Code)
+	}
+	if role != Source && role != Destination {
+		return "", errors.BadRequest("role %q is not valid", role)
+	}
+	authURL, err := this.core.connections.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
+	if err != nil {
+		if err, ok := err.(*connections.UnavailableError); ok {
+			return "", errors.Unavailable("%s", err)
+		}
+		return "", err
+	}
+	return authURL, nil
+}
+
 type ConnectorOAuth struct {
 	Configured        bool `json:"configured"`
 	Disallow127_0_0_1 bool `json:"disallow127_0_0_1"`
@@ -154,31 +181,4 @@ func isValidSendingMode(sm SendingMode) bool {
 		return true
 	}
 	return false
-}
-
-// AuthCodeURL returns a URL that directs to the consent page of an OAuth 2.0
-// provider. This page requests explicit permissions for the scopes required by
-// the provided role, either Source or Destination.
-//
-// After granting permissions, the provider redirects the user to the URL
-// specified by redirectURI.
-//
-// If the connector is not configured for OAuth (i.e., ClientID or ClientSecret
-// is empty), it returns an errors.UnavailableError error.
-func (this *Connector) AuthCodeURL(role Role, redirectURI string) (string, error) {
-	this.core.mustBeOpen()
-	if this.connector.OAuth == nil {
-		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Code)
-	}
-	if role != Source && role != Destination {
-		return "", errors.BadRequest("role %q is not valid", role)
-	}
-	authCodeURL, err := this.core.connections.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
-	if err != nil {
-		if err, ok := err.(*connections.UnavailableError); ok {
-			return "", errors.Unavailable("%s", err)
-		}
-		return "", err
-	}
-	return authCodeURL, nil
 }

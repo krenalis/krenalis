@@ -53,7 +53,11 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 	connector := query.Get("connector")
 	redirectURI := query.Get("redirectURI")
 	authCode := query.Get("authCode")
-	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
+	authToken, err := ws.AuthToken(r.Context(), connector, redirectURI, authCode)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"authToken": authToken}, nil
 }
 
 // Connection returns a connection of the current workspace.

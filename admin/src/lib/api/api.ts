@@ -52,7 +52,8 @@ import {
 	TransformationLanguagesResponse,
 	ProfileEventsResponse,
 	IdentitiesResponse,
-	authCodeURLResponse,
+	authURLResponse,
+	authTokenResponse,
 	profileAttributesResponse,
 	PublicMetadata,
 } from './types/responses';
@@ -809,11 +810,12 @@ class Workspaces {
 	};
 
 	authToken = async (connector: string, authCode: string, redirectURI: string): Promise<string> => {
-		return await call(
+		const res: authTokenResponse = await call(
 			`${this.apiURL}/connections/auth-token?connector=${connector}&redirectURI=${encodeURIComponent(redirectURI)}&authCode=${encodeURIComponent(authCode)}`,
 			http.GET,
 			this.workspaceID,
 		);
+		return res.authToken;
 	};
 
 	updateIdentityResolution = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {
@@ -981,7 +983,7 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authCodeURL = async (connector: string, role: Role, redirectURI: string): Promise<authCodeURLResponse> => {
+	authURL = async (connector: string, role: Role, redirectURI: string): Promise<authURLResponse> => {
 		return await call(
 			`${this.apiURL}/connections/auth-url?connector=${connector}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,

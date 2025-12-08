@@ -34,7 +34,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /":                                            api.Index,
 		"GET    /connections":                                 workspace.Connections,
 		"GET    /connections/auth-token":                      workspace.AuthToken,
-		"GET    /connections/auth-url":                        connector.AuthCodeURL,
+		"GET    /connections/auth-url":                        connector.AuthURL,
 		"GET    /connections/{id}":                            workspace.Connection,
 		"GET    /connections/{id}/event-write-keys":           connection.EventWriteKeys,
 		"GET    /connections/{id}/files":                      connection.File,
