@@ -176,14 +176,14 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 	}
 	order := q.Get("order")
 	orderDesc := q.Get("orderDesc") == "true"
-	var first int
+	first := 0
+	limit := 100
 	if f := q.Get("first"); f != "" {
 		first, err = strconv.Atoi(f)
 		if err != nil {
 			return nil, errors.BadRequest("invalid first")
 		}
 	}
-	var limit int
 	if l := q.Get("limit"); l != "" {
 		limit, err = strconv.Atoi(l)
 		if err != nil {
