@@ -565,8 +565,6 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
-		"order":      []string{"timestamp"},
-		"orderDesc":  []string{"true"},
 		"first":      []string{"0"},
 		"limit":      []string{"10"},
 	}
