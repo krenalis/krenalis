@@ -295,10 +295,10 @@ func (store *Store) Mode() state.WarehouseMode {
 }
 
 // NewBatchIdentityWriter returns an identity writer for writing identities in
-// batch, relative to the given pipeline (which must be in execution) on the
-// data warehouse. purge reports whether identities should be purged from the
-// data warehouse after all identities have been written. The ack parameter is
-// the acknowledgment function.
+// batch, relative to the given pipeline (which must be running) on the data
+// warehouse. purge reports whether identities should be purged from the data
+// warehouse after all identities have been written. The ack parameter is the
+// acknowledgment function.
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
@@ -422,7 +422,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	store.mustBeOpen()
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
-	// actual IR execution. See issue
+	// actual IR run. See issue
 	// https://github.com/meergo/meergo/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {

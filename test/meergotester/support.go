@@ -299,11 +299,11 @@ func (c *Meergo) DeleteConnection(conn int) {
 	c.MustCall("DELETE", path, nil, nil)
 }
 
-func (c *Meergo) ExecutePipeline(pipeline int) int {
+func (c *Meergo) RunPipeline(pipeline int) int {
 	var response struct {
 		ID int
 	}
-	path := fmt.Sprintf("/v1/pipelines/%d/exec", pipeline)
+	path := fmt.Sprintf("/v1/pipelines/%d/runs", pipeline)
 	c.MustCall("POST", path, nil, &response)
 	return response.ID
 }
@@ -327,19 +327,19 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-func (c *Meergo) Execution(id int) Execution {
-	var exe Execution
-	path := fmt.Sprintf("/v1/pipelines/executions/%d", id)
-	c.MustCall("GET", path, nil, &exe)
-	return exe
+func (c *Meergo) Run(id int) Run {
+	var run Run
+	path := fmt.Sprintf("/v1/pipelines/runs/%d", id)
+	c.MustCall("GET", path, nil, &run)
+	return run
 }
 
-func (c *Meergo) Executions() []Execution {
+func (c *Meergo) Runs() []Run {
 	var response struct {
-		Executions []Execution
+		Runs []Run
 	}
-	c.MustCall("GET", "/v1/pipelines/executions", nil, &response)
-	return response.Executions
+	c.MustCall("GET", "/v1/pipelines/runs", nil, &response)
+	return response.Runs
 }
 
 func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
@@ -636,27 +636,25 @@ func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int
 	}
 }
 
-// WaitForExecutionsCompletion waits for the executions with the specified IDs,
-// belonging to the connection, to be completed. In the event that an execution
-// ends with an error, or there is at least one "Failed", this method will
-// result in an error.
+// WaitRunsCompletion waits for the runs with the specified IDs, belonging to
+// the connection, to be completed. In the event that a run ends with an error,
+// or there is at least one "Failed", this method will result in an error.
 //
 // If you intend to proceed even in the case of one or more "Failed" (but not an
-// error for the entire execution), see the method
-// WaitForExecutionsCompletionAllowFailed.
-func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
-	c.waitForExecutionsCompletion(false, executions...)
+// error for the entire run), see the method WaitForRunsCompletionAllowFailed.
+func (c *Meergo) WaitRunsCompletion(conn int, runs ...int) {
+	c.waitForRunsCompletion(false, runs...)
 }
 
-// WaitForExecutionsCompletionAllowFailed waits for the executions with the
-// specified IDs, belonging to the connection, to be completed. In the event
-// that an execution ends with an error, this method will result in an error. If
-// there is one or more Failed, they are ignored.
+// WaitForRunsCompletionAllowFailed waits for the runs with the specified IDs,
+// belonging to the connection, to be completed. In the event that a run ends
+// with an error, this method will result in an error. If there is one or more
+// Failed, they are ignored.
 //
 // If you want the method to result in an error even in the case of one or more
-// "Failed", see the method WaitForExecutionsCompletion.
-func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...int) {
-	c.waitForExecutionsCompletion(true, executions...)
+// "Failed", see the method WaitForRunsCompletion.
+func (c *Meergo) WaitForRunsCompletionAllowFailed(conn int, runs ...int) {
+	c.waitForRunsCompletion(true, runs...)
 }
 
 func (c *Meergo) EventWriteKeys(conn int) []string {
@@ -672,18 +670,18 @@ func (c *Meergo) Workspace() Workspace {
 	return ws
 }
 
-func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
+func (c *Meergo) waitForRunsCompletion(allowFailed bool, ids ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		if len(ids) == 1 {
-			exe := c.Execution(ids[0])
-			if exe.EndTime != nil {
-				// If the pipeline execution ended with an error, make the test fail.
-				if exe.Error != "" {
-					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", exe.Pipeline, exe.ID, exe.Error)
+			run := c.Run(ids[0])
+			if run.EndTime != nil {
+				// If the pipeline run ended with an error, make the test fail.
+				if run.Error != "" {
+					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", run.Pipeline, run.ID, run.Error)
 				}
-				if !allowFailed && exe.Failed != [6]int{} {
-					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", exe.Pipeline, exe.ID, exe.Failed)
+				if !allowFailed && run.Failed != [6]int{} {
+					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
 			}
@@ -691,20 +689,20 @@ func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
 			continue
 		}
 		completed := true
-		for _, exe := range c.Executions() {
-			if !slices.Contains(ids, exe.ID) {
+		for _, run := range c.Runs() {
+			if !slices.Contains(ids, run.ID) {
 				continue
 			}
-			if exe.EndTime == nil {
+			if run.EndTime == nil {
 				completed = false
 				continue
 			}
-			// If the pipeline execution ended with an error, make the test fail.
-			if exe.Error != "" {
-				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", exe.Pipeline, exe.ID, exe.Error)
+			// If the pipeline run ended with an error, make the test fail.
+			if run.Error != "" {
+				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", run.Pipeline, run.ID, run.Error)
 			}
-			if !allowFailed && exe.Failed != [6]int{} {
-				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", exe.Pipeline, exe.ID, exe.Failed)
+			if !allowFailed && run.Failed != [6]int{} {
+				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}
 		if completed {

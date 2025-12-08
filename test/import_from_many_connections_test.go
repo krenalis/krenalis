@@ -72,8 +72,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecutePipeline(dummyPipeline)
-		c.WaitForExecutionsCompletion(dummy, exec)
+		exec := c.RunPipeline(dummyPipeline)
+		c.WaitRunsCompletion(dummy, exec)
 	}
 
 	// Ensure that there are 10 profiles.
@@ -116,8 +116,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"HasColumnNames": true,
 			}),
 		})
-		exec := c.ExecutePipeline(csvPipeline)
-		c.WaitForExecutionsCompletion(fs, exec)
+		exec := c.RunPipeline(csvPipeline)
+		c.WaitRunsCompletion(fs, exec)
 	}
 
 	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).

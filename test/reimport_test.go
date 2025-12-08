@@ -52,8 +52,8 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import the users from dummy.
-	exec := c.ExecutePipeline(dummyPipeline)
-	c.WaitForExecutionsCompletion(dummy, exec)
+	exec := c.RunPipeline(dummyPipeline)
+	c.WaitRunsCompletion(dummy, exec)
 
 	// Run the Identity Resolution.
 	c.RunIdentityResolution()
@@ -102,8 +102,8 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from Dummy.
-	exec = c.ExecutePipeline(dummyPipeline)
-	c.WaitForExecutionsCompletion(dummy, exec)
+	exec = c.RunPipeline(dummyPipeline)
+	c.WaitRunsCompletion(dummy, exec)
 
 	// Run the Identity Resolution.
 	c.RunIdentityResolution()

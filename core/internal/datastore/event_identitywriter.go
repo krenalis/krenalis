@@ -90,7 +90,7 @@ func newEventIdentityWriter(store *Store, pipelineID int, ack EventIdentityWrite
 	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
 	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
 	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	iw.columns[6] = warehouses.Column{Name: "_execution", Type: types.Int(32), Nullable: true}
+	iw.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())

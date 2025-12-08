@@ -21,7 +21,7 @@ interface ConnectorUIResponse {
 	settings: ConnectorSettings;
 }
 
-interface Execution {
+interface PipelineRun {
 	id: number;
 	pipeline: number;
 	startTime: string;
@@ -200,7 +200,7 @@ export type {
 	Event,
 	EventListenerEventsResponse,
 	ExecQueryResponse,
-	Execution,
+	PipelineRun,
 	FindProfilesResponse,
 	Member,
 	MemberAvatar,

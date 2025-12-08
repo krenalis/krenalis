@@ -37,7 +37,7 @@ import {
 	Event,
 	EventListenerEventsResponse,
 	ExecQueryResponse,
-	Execution,
+	PipelineRun,
 	FindProfilesResponse,
 	Member,
 	MemberInvitationResponse,
@@ -280,12 +280,12 @@ class Connections {
 		);
 	};
 
-	execution = async (id: number): Promise<Execution> => {
-		return await call(`${this.apiURL}/pipelines/executions/${id}`, http.GET, this.workspaceID);
+	run = async (id: number): Promise<PipelineRun> => {
+		return await call(`${this.apiURL}/pipelines/runs/${id}`, http.GET, this.workspaceID);
 	};
 
-	executions = async (): Promise<Execution[]> => {
-		return await call(`${this.apiURL}/pipelines/executions`, http.GET, this.workspaceID);
+	runs = async (): Promise<PipelineRun[]> => {
+		return await call(`${this.apiURL}/pipelines/runs`, http.GET, this.workspaceID);
 	};
 
 	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
@@ -492,9 +492,9 @@ class Connections {
 		);
 	};
 
-	executePipeline = async (pipeline: number): Promise<number> => {
+	runPipeline = async (pipeline: number): Promise<number> => {
 		const res = await call(
-			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/exec`,
+			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/runs`,
 			http.POST,
 			this.workspaceID,
 			{

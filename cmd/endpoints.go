@@ -64,12 +64,12 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* only Admin */
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
-		"GET    /pipelines/executions":                        workspace.Executions,
-		"GET    /pipelines/executions/{id}":                   workspace.Execution,
 		"GET    /pipelines/metrics/dates/{start}/{end}":       workspace.PipelineMetricsPerDate,
 		"GET    /pipelines/metrics/days/{days}":               workspace.PipelineMetricsPerDay,
 		"GET    /pipelines/metrics/hours/{hours}":             workspace.PipelineMetricsPerHour,
 		"GET    /pipelines/metrics/minutes/{minutes}":         workspace.PipelineMetricsPerMinute,
+		"GET    /pipelines/runs":                              workspace.PipelineRuns,
+		"GET    /pipelines/runs/{id}":                         workspace.PipelineRun,
 		"GET    /pipelines/{id}":                              workspace.Pipeline,
 		"GET    /profiles":                                    workspace.Profiles,
 		"GET    /profiles/schema":                             workspace.ProfileSchema,
@@ -101,7 +101,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/login":                               s.login,                      /* only Admin */
 		"POST   /members/logout":                              s.logout,                     /* only Admin */
 		"POST   /pipelines":                                   connection.CreatePipeline,
-		"POST   /pipelines/{id}/exec":                         pipeline.Execute,
+		"POST   /pipelines/{id}/runs":                         pipeline.Run,
 		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* only Admin */
 		"POST   /sentry/errors":                               s.forwardSentryError,   /* only Admin */
 		"POST   /transformations":                             api.TransformData,      /* only Admin */

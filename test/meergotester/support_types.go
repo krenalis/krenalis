@@ -67,7 +67,7 @@ type DummySettings struct {
 	URLForDispatchingEvents string
 }
 
-type Execution struct {
+type Run struct {
 	ID        int        `json:"id"`
 	Pipeline  int        `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`

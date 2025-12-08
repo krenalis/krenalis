@@ -54,8 +54,8 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecutePipeline(importUsersID)
-	c.WaitForExecutionsCompletion(dummy, exec)
+	exec := c.RunPipeline(importUsersID)
+	c.WaitRunsCompletion(dummy, exec)
 
 	// Check if the profiles have been imported - and then returned - correctly.
 

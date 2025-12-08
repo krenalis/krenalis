@@ -64,8 +64,8 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecutePipeline(importUsersID)
-		c.WaitForExecutionsCompletion(dummySrc, exec)
+		exec := c.RunPipeline(importUsersID)
+		c.WaitRunsCompletion(dummySrc, exec)
 	}
 
 	// Create the File System connection.
@@ -138,11 +138,11 @@ func TestExportUsersToFile(t *testing.T) {
 			OrderBy:     "email",
 		}, nil)
 
-		// Execute the pipeline that export users.
-		exec := c.ExecutePipeline(exportUsersPipelineID)
+		// Run the pipeline that export users.
+		exec := c.RunPipeline(exportUsersPipelineID)
 
 		// Wait for the export to finish.
-		c.WaitForExecutionsCompletion(fsID, exec)
+		c.WaitRunsCompletion(fsID, exec)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

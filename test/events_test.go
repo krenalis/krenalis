@@ -49,8 +49,8 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecutePipeline(importUsersID)
-	c.WaitForExecutionsCompletion(dummySrc, exec)
+	exec := c.RunPipeline(importUsersID)
+	c.WaitRunsCompletion(dummySrc, exec)
 
 	// Create a JavaScript connection with 2 pipelines (one for importing events,
 	// one for importing identities) and retrieve its key.

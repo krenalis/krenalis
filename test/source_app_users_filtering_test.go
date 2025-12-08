@@ -48,8 +48,8 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecutePipeline(importUsersID)
-	c.WaitForExecutionsCompletionAllowFailed(dummySrc, exec)
+	exec := c.RunPipeline(importUsersID)
+	c.WaitForRunsCompletionAllowFailed(dummySrc, exec)
 
 	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 

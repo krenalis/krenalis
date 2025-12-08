@@ -114,11 +114,11 @@ func (database *Database) LastChangeTimePlaceholder(pipeline *state.Pipeline) (s
 	if pipeline == nil {
 		return database.inner.QuoteTime(nil, types.Type{}), nil
 	}
-	execution, ok := pipeline.Execution()
+	run, ok := pipeline.Run()
 	if !ok {
-		return "", errors.New("pipeline is not currently executing")
+		return "", errors.New("pipeline is not currently running")
 	}
-	cursor := execution.Cursor
+	cursor := run.Cursor
 	property := pipeline.LastChangeTimeColumn
 	if property == "" || cursor.IsZero() {
 		return database.inner.QuoteTime(nil, types.Type{}), nil
@@ -129,7 +129,7 @@ func (database *Database) LastChangeTimePlaceholder(pipeline *state.Pipeline) (s
 	case types.StringKind, types.JSONKind:
 		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
 	case types.DateTimeKind:
-		value = execution.Cursor
+		value = run.Cursor
 	case types.DateKind:
 		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
 	}
@@ -558,7 +558,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 		defer r.Close()
-		execution, _ := r.pipeline.Execution()
+		run, _ := r.pipeline.Run()
 		n := 0 // number of properties per record
 		var identityIndex = -1
 		var lastChangeTimeIndex = -1
@@ -633,7 +633,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 					record.Err = err
 					continue Rows
 				}
-				if !record.LastChangeTime.IsZero() && record.LastChangeTime.Before(execution.Cursor) {
+				if !record.LastChangeTime.IsZero() && record.LastChangeTime.Before(run.Cursor) {
 					continue Rows
 				}
 			}

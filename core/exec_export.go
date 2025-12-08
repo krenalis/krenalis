@@ -25,7 +25,7 @@ import (
 
 // exportProfiles exports the profiles for the pipeline.
 //
-// Returns an error if execution does not reach its natural completion.
+// Returns an error if run does not reach its natural completion.
 // If the error is caused by the schema, the connector, or the data warehouse,
 // it returns an *pipelineError, which is expected to be logged as is.
 func (this *Pipeline) exportProfiles(ctx context.Context) error {

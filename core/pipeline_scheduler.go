@@ -34,10 +34,10 @@ func periodIndex(period int16) int8 {
 // pipelineScheduler is the pipeline scheduler.
 type pipelineScheduler struct {
 	core     *Core
-	executor *pipelineSchedulerExecutor
-	ctx      context.Context    // context passes to the pipeline executions.
-	cancel   context.CancelFunc // function to cancel the pipeline executions.
-	wg       sync.WaitGroup     // waiting group that includes the schedulers and pipeline executions.
+	executor *pipelineExecutor
+	ctx      context.Context    // context passes to the pipeline runs.
+	cancel   context.CancelFunc // function to cancel the pipeline runs.
+	wg       sync.WaitGroup     // waiting group that includes the schedulers and pipeline runs.
 }
 
 // newPipelineScheduler returns a new pipeline scheduler.
@@ -58,7 +58,7 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 }
 
 // Close closes the pipeline scheduler closing the executors and interrupting
-// pipeline executions.
+// pipeline runs.
 func (as *pipelineScheduler) Close() {
 	as.core.state.Freeze()
 	as.core.state.Unfreeze()
@@ -146,7 +146,7 @@ func (as *pipelineScheduler) onElectLeader(n state.ElectLeader) {
 	if !as.core.state.IsLeader() {
 		return
 	}
-	as.executor = newPipelineSchedulerExecutor(as.core, &as.wg, as.ctx)
+	as.executor = newPipelineExecutor(as.core, &as.wg, as.ctx)
 }
 
 // onSetPipelineSchedulePeriod is called when the schedule period of a pipeline
@@ -159,10 +159,10 @@ func (as *pipelineScheduler) onSetPipelineSchedulePeriod(n state.SetPipelineSche
 	as.executor.SetPeriod(pipeline)
 }
 
-// pipelineSchedulerExecutor represents an executor for a pipeline scheduler.
-// When a node becomes the leader, it starts an executor, and the previous
-// leader closes its executor.
-type pipelineSchedulerExecutor struct {
+// pipelineExecutor handles the actual execution of pipeline runs.
+// When a node becomes the leader, it starts its executor; the previous leader
+// stops its own executor.
+type pipelineExecutor struct {
 	core      *Core
 	mu        sync.Mutex // for the pipelines and indexes fields.
 	pipelines [len(periods)]map[int16][]*state.Pipeline
@@ -170,12 +170,12 @@ type pipelineSchedulerExecutor struct {
 	close     chan struct{}
 }
 
-// newPipelineSchedulerExecutor returns a new pipeline scheduler executor. wg is
-// the wait group that coordinates goroutines for the executor and pipeline
-// executions. ctx is the context to pass to the pipeline executions.
-func newPipelineSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *pipelineSchedulerExecutor {
+// newPipelineExecutor returns a new pipeline executor. wg is the wait group
+// that coordinates goroutines for the executor and pipeline runs. ctx is the
+// context to pass to the pipeline runs.
+func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *pipelineExecutor {
 
-	se := &pipelineSchedulerExecutor{
+	se := &pipelineExecutor{
 		core:    core,
 		indexes: map[int]scIndex{},
 		close:   make(chan struct{}),
@@ -213,7 +213,7 @@ func newPipelineSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Co
 						c := &Connection{core: se.core, connection: connection, store: store}
 						p := &Pipeline{core: se.core, pipeline: pipeline, connection: c}
 						wg.Go(func() {
-							_, err := p.createExecution(ctx, nil)
+							_, err := p.createRun(ctx, nil)
 							if err != nil {
 								if _, ok := err.(*errors.NotFoundError); ok {
 									return
@@ -221,7 +221,7 @@ func newPipelineSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Co
 								if _, ok := err.(*errors.UnprocessableError); ok {
 									return
 								}
-								slog.Debug("core: cannot add execution for pipeline", "pipeline", p.ID, "err", err)
+								slog.Debug("core: cannot add run for pipeline", "pipeline", p.ID, "err", err)
 							}
 						})
 					}
@@ -235,14 +235,14 @@ func newPipelineSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Co
 	return se
 }
 
-// Close closes the scheduler executor but does not interrupt any pipeline
-// execution.
-func (se *pipelineSchedulerExecutor) Close() {
+// Close stops the executor but does not interrupt any pipeline runs in
+// progress.
+func (se *pipelineExecutor) Close() {
 	close(se.close)
 }
 
 // AddPipeline adds pipeline to the scheduler executor.
-func (se *pipelineSchedulerExecutor) AddPipeline(pipeline *state.Pipeline) {
+func (se *pipelineExecutor) AddPipeline(pipeline *state.Pipeline) {
 	i := periodIndex(pipeline.SchedulePeriod)
 	j := pipeline.ScheduleStart % pipeline.SchedulePeriod
 	se.mu.Lock()
@@ -253,7 +253,7 @@ func (se *pipelineSchedulerExecutor) AddPipeline(pipeline *state.Pipeline) {
 
 // RemovePipeline removes the pipeline with identifier id from the scheduler
 // executor. If the pipeline does not exist it does nothing.
-func (se *pipelineSchedulerExecutor) RemovePipeline(id int) {
+func (se *pipelineExecutor) RemovePipeline(id int) {
 	se.mu.Lock()
 	index, ok := se.indexes[id]
 	if !ok {
@@ -277,7 +277,7 @@ func (se *pipelineSchedulerExecutor) RemovePipeline(id int) {
 }
 
 // SetPeriod sets the period of a pipeline.
-func (se *pipelineSchedulerExecutor) SetPeriod(pipeline *state.Pipeline) {
+func (se *pipelineExecutor) SetPeriod(pipeline *state.Pipeline) {
 	se.mu.Lock()
 	index, ok := se.indexes[pipeline.ID]
 	se.mu.Unlock()
@@ -301,7 +301,7 @@ func toExecute(pipeline *state.Pipeline) bool {
 	if c.Workspace().Warehouse.Mode != state.Normal {
 		return false
 	}
-	if _, ok := pipeline.Execution(); ok {
+	if _, ok := pipeline.Run(); ok {
 		return false
 	}
 	return true

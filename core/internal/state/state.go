@@ -564,7 +564,7 @@ type Workspace struct {
 		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).
 	}
 	connections                    map[int]*Connection
-	executions                     map[int]*PipelineExecution // running pipeline executions.
+	runs                           map[int]*PipelineRun // pipeline runs in progress.
 	ID                             int
 	organization                   *Organization
 	Name                           string
@@ -575,17 +575,17 @@ type Workspace struct {
 	Identifiers                    []string
 	UIPreferences                  UIPreferences
 	IR                             struct {
-		ID        *string    // nil means no IR in execution.
+		ID        *string    // nil means no IR in run.
 		StartTime *time.Time // nil means IR was never started.
 		EndTime   *time.Time // nil means IR is running or has never started.
 	}
 	AlterProfileSchema struct {
-		ID             *string    // nil means no profile schema alterations in execution.
+		ID             *string    // nil means no profile schema alterations in run.
 		StartTime      *time.Time // nil means profile schema alteration was never started.
 		EndTime        *time.Time // nil means profile schema alteration is running or has never started.
-		Err            *string    // pointer to empty string if no errors occurred during last execution of alter profile schema.
+		Err            *string    // pointer to empty string if no errors occurred during last run of alter profile schema.
 		Schema         types.Type
-		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
+		PrimarySources map[string]int // nil if, and only if, schema alteration is not in run.
 		Operations     []warehouses.AlterOperation
 	}
 	pipelinesToPurge []int // never nil
@@ -637,11 +637,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// Execution returns the pipeline execution of the workspace with the given id.
-// The boolean return value reports whether the execution exists.
-func (workspace *Workspace) Execution(id int) (*PipelineExecution, bool) {
+// Run returns the pipeline run of the workspace with the given id.
+// The boolean return value reports whether the run exists.
+func (workspace *Workspace) Run(id int) (*PipelineRun, bool) {
 	workspace.mu.Lock()
-	exe, ok := workspace.executions[id]
+	exe, ok := workspace.runs[id]
 	workspace.mu.Unlock()
 	return exe, ok
 }
@@ -1224,7 +1224,7 @@ type Pipeline struct {
 	ID                   int
 	connection           *Connection
 	format               *Connector
-	execution            *PipelineExecution
+	run                  *PipelineRun
 	propertiesToUnset    []string // is not nil only for source pipelines on users.
 	Target               Target
 	Name                 string
@@ -1263,11 +1263,11 @@ func (pipeline *Pipeline) Connection() *Connection {
 	return c
 }
 
-// Execution returns the execution of the pipeline.
+// Run returns the run of the pipeline.
 // The boolean return value reports whether the pipeline is running.
-func (pipeline *Pipeline) Execution() (*PipelineExecution, bool) {
+func (pipeline *Pipeline) Run() (*PipelineRun, bool) {
 	pipeline.mu.Lock()
-	ex := pipeline.execution
+	ex := pipeline.run
 	pipeline.mu.Unlock()
 	return ex, ex != nil
 }
@@ -1289,8 +1289,8 @@ func (pipeline *Pipeline) Format() *Connector {
 	return c
 }
 
-// PipelineExecution represents a pipeline execution.
-type PipelineExecution struct {
+// PipelineRun represents a pipeline run.
+type PipelineRun struct {
 	mu          *sync.Mutex
 	ID          int
 	node        *uuid.UUID
@@ -1300,18 +1300,17 @@ type PipelineExecution struct {
 	StartTime   time.Time
 }
 
-// Pipeline returns the pipeline of the execution.
-func (ex *PipelineExecution) Pipeline() *Pipeline {
+// Pipeline returns the run's pipeline.
+func (ex *PipelineRun) Pipeline() *Pipeline {
 	ex.mu.Lock()
 	p := ex.pipeline
 	ex.mu.Unlock()
 	return p
 }
 
-// Node returns the node on which the execution is currently running.
-// The boolean return value indicates whether the execution is taking place on a
-// node.
-func (ex *PipelineExecution) Node() (uuid.UUID, bool) {
+// Node returns the node on which the run is executing.
+// The boolean return value indicates whether the run is assigned to a node.
+func (ex *PipelineRun) Node() (uuid.UUID, bool) {
 	ex.mu.Lock()
 	node := ex.node
 	ex.mu.Unlock()

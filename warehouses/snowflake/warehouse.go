@@ -249,7 +249,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 		b.WriteString(`"S".`)
 		b.WriteString(quotedColumn[c.Name])
 	}
-	b.WriteString(")\nWHEN MATCHED AND \"S\".\"$PURGE\" = FALSE THEN\n  UPDATE SET \"_EXECUTION\" = \"S\".\"_EXECUTION\"")
+	b.WriteString(")\nWHEN MATCHED AND \"S\".\"$PURGE\" = FALSE THEN\n  UPDATE SET \"_RUN\" = \"S\".\"_RUN\"")
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 

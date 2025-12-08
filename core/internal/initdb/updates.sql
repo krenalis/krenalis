@@ -115,3 +115,13 @@ WHERE in_schema IS NOT NULL AND  in_schema::text LIKE '%"kind": "uint"%';
 UPDATE pipelines
 SET out_schema = REPLACE(out_schema::text, '"kind": "uint"', '"kind": "int", "unsigned": true')::jsonb
 WHERE out_schema IS NOT NULL AND  out_schema::text LIKE '%"kind": "uint"%';
+
+-- rename 'executions' to 'runs'
+
+ALTER TABLE pipelines_executions RENAME TO pipelines_runs;
+
+DROP INDEX pipelines_executions_function_idx;
+
+CREATE INDEX pipelines_runs_function_idx
+    ON pipelines_runs (function)
+    WHERE function != '' AND end_time IS NOT NULL;

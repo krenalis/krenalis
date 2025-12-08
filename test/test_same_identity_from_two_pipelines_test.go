@@ -64,9 +64,9 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	})
 
 	// Executes the two pipelines and waits for them to complete.
-	exec1 := c.ExecutePipeline(pipeline1)
-	exec2 := c.ExecutePipeline(pipeline2)
-	c.WaitForExecutionsCompletion(dummy, exec1, exec2)
+	exec1 := c.RunPipeline(pipeline1)
+	exec2 := c.RunPipeline(pipeline2)
+	c.WaitRunsCompletion(dummy, exec1, exec2)
 
 	// Run the Identity Resolution and wait for its completion.
 	c.RunIdentityResolution()

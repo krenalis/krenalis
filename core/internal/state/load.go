@@ -280,7 +280,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[int]*Connection{},
-					executions:  map[int]*PipelineExecution{},
+					runs:        map[int]*PipelineRun{},
 					accounts:    map[int]*Account{},
 				}
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
@@ -517,12 +517,12 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return err
 	}
 
-	// Read running pipeline executions.
+	// Read running pipeline runs.
 	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
-		"FROM pipelines_executions\nWHERE end_time IS NULL",
+		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				exe := PipelineExecution{
+				exe := PipelineRun{
 					mu: &sync.Mutex{},
 				}
 				var pipelineID int
@@ -532,9 +532,9 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				}
 				pipeline := state.pipelines[pipelineID]
 				exe.pipeline = pipeline
-				pipeline.execution = &exe
+				pipeline.run = &exe
 				ws := exe.pipeline.connection.workspace
-				ws.executions[exe.ID] = &exe
+				ws.runs[exe.ID] = &exe
 			}
 			return nil
 		})

@@ -19,7 +19,6 @@ const (
 	EmailVerificationRequired     errors.Code = "EmailVerificationRequired" // Returned by apisServer.
 	EventNotExist                 errors.Code = "EventNotExist"
 	EventTypeNotExist             errors.Code = "EventTypeNotExist"
-	ExecutionInProgress           errors.Code = "ExecutionInProgress"
 	FormatNotExist                errors.Code = "FormatNotExist"
 	IdentityResolutionInExecution errors.Code = "IdentityResolutionInExecution"
 	InspectionMode                errors.Code = "InspectionMode"
@@ -41,6 +40,7 @@ const (
 	OrganizationNotExist          errors.Code = "OrganizationNotExist"
 	PipelineDisabled              errors.Code = "PipelineDisabled"
 	PropertyNotExist              errors.Code = "PropertyNotExist"
+	RunInProgress                 errors.Code = "RunInProgress"
 	SchemaNotAligned              errors.Code = "SchemaNotAligned"
 	SheetNotExist                 errors.Code = "SheetNotExist"
 	SingleEventWriteKey           errors.Code = "SingleEventWriteKey"

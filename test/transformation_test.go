@@ -60,8 +60,8 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecutePipeline(importUsersID)
-	c.WaitForExecutionsCompletion(dummyID, exec)
+	exec := c.RunPipeline(importUsersID)
+	c.WaitRunsCompletion(dummyID, exec)
 
 	c.RunIdentityResolution()
 

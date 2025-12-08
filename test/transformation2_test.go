@@ -59,8 +59,8 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecutePipeline(pipeline)
-	c.WaitForExecutionsCompletion(dummy, exec)
+	exec := c.RunPipeline(pipeline)
+	c.WaitRunsCompletion(dummy, exec)
 
 	// Retrieve the profiles.
 	const expectedTotal = 10

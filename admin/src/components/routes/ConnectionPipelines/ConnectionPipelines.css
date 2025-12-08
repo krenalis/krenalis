@@ -79,12 +79,12 @@
 	justify-content: end;
 }
 
-.connection-pipelines__execution-info-title {
+.connection-pipelines__run-info-title {
 	font-weight: 500;
 	font-size: 13px;
 }
 
-.connection-pipelines__execution-info ul {
+.connection-pipelines__run-info ul {
 	padding-left: 17px;
 	margin-top: 5px;
 	margin-bottom: 5px;

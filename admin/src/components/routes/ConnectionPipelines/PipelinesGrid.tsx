@@ -39,9 +39,9 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		handleError,
 		setIsLoadingConnections,
 		connectors,
-		executePipelineButtonRefs,
-		executePipelineDropdownButtonRefs,
-		executePipeline,
+		runPipelineButtonRefs,
+		runPipelineDropdownButtonRefs,
+		runPipeline,
 	} = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
@@ -66,11 +66,11 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 
 	useEffect(() => {
 		for (const a of pipelines) {
-			if (executePipelineButtonRefs?.current[a.id]?.current == null) {
-				executePipelineButtonRefs.current[a.id] = React.createRef();
+			if (runPipelineButtonRefs?.current[a.id]?.current == null) {
+				runPipelineButtonRefs.current[a.id] = React.createRef();
 			}
-			if (executePipelineDropdownButtonRefs?.current[a.id]?.current == null) {
-				executePipelineDropdownButtonRefs.current[a.id] = React.createRef();
+			if (runPipelineDropdownButtonRefs?.current[a.id]?.current == null) {
+				runPipelineDropdownButtonRefs.current[a.id] = React.createRef();
 			}
 		}
 	}, [pipelines]);
@@ -128,14 +128,14 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 	};
 
 	const onManageClick = (pipeline: Pipeline) => {
-		for (const key in executePipelineButtonRefs.current) {
-			const button = executePipelineButtonRefs.current[key].current;
+		for (const key in runPipelineButtonRefs.current) {
+			const button = runPipelineButtonRefs.current[key].current;
 			if (button != null) {
 				button.hideTooltip();
 			}
 		}
-		for (const key in executePipelineDropdownButtonRefs.current) {
-			const button = executePipelineDropdownButtonRefs.current[key].current;
+		for (const key in runPipelineDropdownButtonRefs.current) {
+			const button = runPipelineDropdownButtonRefs.current[key].current;
 			if (button != null) {
 				button.hideTooltip();
 			}
@@ -144,8 +144,8 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 	};
 
 	const onDropdownHide = (pipelineID: number) => {
-		executePipelineButtonRefs.current[pipelineID].current.hideTooltip();
-		executePipelineDropdownButtonRefs.current[pipelineID].current.hideTooltip();
+		runPipelineButtonRefs.current[pipelineID].current.hideTooltip();
+		runPipelineDropdownButtonRefs.current[pipelineID].current.hideTooltip();
 	};
 
 	const rows: GridRow[] = [];
@@ -159,7 +159,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 			);
 		}
 
-		const isPipelineExecutionSupported =
+		const isPipelineRunSupported =
 			(pipeline.target === 'User' || pipeline.target === 'Group') &&
 			connection.connector.type !== 'SDK' &&
 			connection.connector.type !== 'Webhook';
@@ -214,13 +214,13 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		}
 		const pipelinesCell = (
 			<div className='connection-pipelines__buttons'>
-				{isPipelineExecutionSupported && (
+				{isPipelineRunSupported && (
 					<>
 						<FeedbackButton
-							ref={executePipelineButtonRefs.current[pipeline.id]}
+							ref={runPipelineButtonRefs.current[pipeline.id]}
 							className='connection-pipelines__run-button'
 							size='small'
-							onClick={() => executePipeline(connection, pipeline.id, pipeline.target)}
+							onClick={() => runPipeline(connection, pipeline.id, pipeline.target)}
 							disabled={!pipeline.enabled}
 							hoist={true}
 						>
@@ -281,12 +281,12 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 						<SlIcon slot='prefix' name='three-dots-vertical' />
 					</SlButton>
 					<SlMenu className='connection-pipelines__menu'>
-						{isPipelineExecutionSupported && (
+						{isPipelineRunSupported && (
 							<FeedbackButton
-								ref={executePipelineDropdownButtonRefs.current[pipeline.id]}
+								ref={runPipelineDropdownButtonRefs.current[pipeline.id]}
 								className='connection-pipelines__run-button'
 								size='small'
-								onClick={() => executePipeline(connection, pipeline.id, pipeline.target)}
+								onClick={() => runPipeline(connection, pipeline.id, pipeline.target)}
 								disabled={!pipeline.enabled}
 								hoist={true}
 								placement='left'
