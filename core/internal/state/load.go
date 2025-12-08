@@ -517,7 +517,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return err
 	}
 
-	// Read running pipeline runs.
+	// Read pipeline runs in progress.
 	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
 		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {

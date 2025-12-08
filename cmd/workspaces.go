@@ -634,7 +634,7 @@ func (workspace workspace) PipelineRun(_ http.ResponseWriter, r *http.Request) (
 	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid run identifier", r.PathValue("id"))
 	}
-	return ws.Run(r.Context(), id)
+	return ws.PipelineRun(r.Context(), id)
 }
 
 // PipelineRuns returns the runs of the pipelines of the current workspace.
@@ -643,7 +643,7 @@ func (workspace workspace) PipelineRuns(_ http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return nil, err
 	}
-	runs, err := ws.Runs(r.Context())
+	runs, err := ws.PipelineRuns(r.Context())
 	if err != nil {
 		return nil, err
 	}

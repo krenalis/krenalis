@@ -422,7 +422,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	store.mustBeOpen()
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
-	// actual IR run. See issue
+	// actual IR execution. See issue
 	// https://github.com/meergo/meergo/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {

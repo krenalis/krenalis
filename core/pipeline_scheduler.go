@@ -175,22 +175,22 @@ type pipelineExecutor struct {
 // context to pass to the pipeline runs.
 func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *pipelineExecutor {
 
-	se := &pipelineExecutor{
+	pe := &pipelineExecutor{
 		core:    core,
 		indexes: map[int]scIndex{},
 		close:   make(chan struct{}),
 	}
-	for i := range len(se.pipelines) {
-		se.pipelines[i] = map[int16][]*state.Pipeline{}
+	for i := range len(pe.pipelines) {
+		pe.pipelines[i] = map[int16][]*state.Pipeline{}
 	}
-	for _, pipeline := range se.core.state.Pipelines() {
+	for _, pipeline := range pe.core.state.Pipelines() {
 		if pipeline.SchedulePeriod == 0 {
 			continue
 		}
 		i := periodIndex(pipeline.SchedulePeriod)
 		j := pipeline.ScheduleStart % pipeline.SchedulePeriod
-		se.pipelines[i][j] = append(se.pipelines[i][j], pipeline)
-		se.indexes[pipeline.ID] = scIndex{i, j}
+		pe.pipelines[i][j] = append(pe.pipelines[i][j], pipeline)
+		pe.indexes[pipeline.ID] = scIndex{i, j}
 	}
 
 	wg.Go(func() {
@@ -201,17 +201,17 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 				minute := int16(t.Hour()*60 + t.Minute())
 				for i, period := range periods {
 					j := minute % period
-					se.mu.Lock()
-					pipelines := se.pipelines[i][j]
-					se.mu.Unlock()
+					pe.mu.Lock()
+					pipelines := pe.pipelines[i][j]
+					pe.mu.Unlock()
 					for _, pipeline := range pipelines {
 						if !toExecute(pipeline) {
 							continue
 						}
 						connection := pipeline.Connection()
-						store := se.core.datastore.Store(connection.Workspace().ID)
-						c := &Connection{core: se.core, connection: connection, store: store}
-						p := &Pipeline{core: se.core, pipeline: pipeline, connection: c}
+						store := pe.core.datastore.Store(connection.Workspace().ID)
+						c := &Connection{core: pe.core, connection: connection, store: store}
+						p := &Pipeline{core: pe.core, pipeline: pipeline, connection: c}
 						wg.Go(func() {
 							_, err := p.createRun(ctx, nil)
 							if err != nil {
@@ -226,69 +226,69 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 						})
 					}
 				}
-			case <-se.close:
+			case <-pe.close:
 				return
 			}
 		}
 	})
 
-	return se
+	return pe
 }
 
 // Close stops the executor but does not interrupt any pipeline runs in
 // progress.
-func (se *pipelineExecutor) Close() {
-	close(se.close)
+func (pe *pipelineExecutor) Close() {
+	close(pe.close)
 }
 
 // AddPipeline adds pipeline to the scheduler executor.
-func (se *pipelineExecutor) AddPipeline(pipeline *state.Pipeline) {
+func (pe *pipelineExecutor) AddPipeline(pipeline *state.Pipeline) {
 	i := periodIndex(pipeline.SchedulePeriod)
 	j := pipeline.ScheduleStart % pipeline.SchedulePeriod
-	se.mu.Lock()
-	se.pipelines[i][j] = append(slices.Clone(se.pipelines[i][j]), pipeline)
-	se.indexes[pipeline.ID] = scIndex{i, j}
-	se.mu.Unlock()
+	pe.mu.Lock()
+	pe.pipelines[i][j] = append(slices.Clone(pe.pipelines[i][j]), pipeline)
+	pe.indexes[pipeline.ID] = scIndex{i, j}
+	pe.mu.Unlock()
 }
 
 // RemovePipeline removes the pipeline with identifier id from the scheduler
 // executor. If the pipeline does not exist it does nothing.
-func (se *pipelineExecutor) RemovePipeline(id int) {
-	se.mu.Lock()
-	index, ok := se.indexes[id]
+func (pe *pipelineExecutor) RemovePipeline(id int) {
+	pe.mu.Lock()
+	index, ok := pe.indexes[id]
 	if !ok {
-		se.mu.Unlock()
+		pe.mu.Unlock()
 		return
 	}
 	i, j := index.i, index.j
-	pipelines := se.pipelines[i][j]
+	pipelines := pe.pipelines[i][j]
 	for k, pipeline := range pipelines {
 		if pipeline.ID == id {
 			pipelines = slices.Delete(pipelines, k, k+1)
 			if len(pipelines) == 0 {
-				delete(se.pipelines[i], j)
+				delete(pe.pipelines[i], j)
 			} else {
-				se.pipelines[i][j] = pipelines
+				pe.pipelines[i][j] = pipelines
 			}
 			break
 		}
 	}
-	se.mu.Unlock()
+	pe.mu.Unlock()
 }
 
 // SetPeriod sets the period of a pipeline.
-func (se *pipelineExecutor) SetPeriod(pipeline *state.Pipeline) {
-	se.mu.Lock()
-	index, ok := se.indexes[pipeline.ID]
-	se.mu.Unlock()
+func (pe *pipelineExecutor) SetPeriod(pipeline *state.Pipeline) {
+	pe.mu.Lock()
+	index, ok := pe.indexes[pipeline.ID]
+	pe.mu.Unlock()
 	if ok {
 		if periods[index.i] == pipeline.SchedulePeriod {
 			return
 		}
-		se.RemovePipeline(pipeline.ID)
+		pe.RemovePipeline(pipeline.ID)
 	}
 	if pipeline.SchedulePeriod != 0 {
-		se.AddPipeline(pipeline)
+		pe.AddPipeline(pipeline)
 	}
 }
 

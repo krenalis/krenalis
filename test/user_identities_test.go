@@ -83,11 +83,11 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.RunPipeline(pipeline1)
-	exec2 := c.RunPipeline(pipeline2)
+	run1 := c.RunPipeline(pipeline1)
+	run2 := c.RunPipeline(pipeline2)
 
-	c.WaitRunsCompletion(fs1, exec1)
-	c.WaitRunsCompletion(fs2, exec2)
+	c.WaitRunsCompletion(fs1, run1)
+	c.WaitRunsCompletion(fs2, run2)
 
 	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 

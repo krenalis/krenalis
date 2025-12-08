@@ -888,7 +888,7 @@ func (state *State) endAlterProfileSchema(n notification) uuid.UUID {
 	return ws.organization.ID
 }
 
-// EndIdentityResolution is the event sent when the run of the Identity
+// EndIdentityResolution is the event sent when the execution of the Identity
 // Resolution ends.
 type EndIdentityResolution struct {
 	Workspace int
@@ -1196,7 +1196,7 @@ func (state *State) startAlterProfileSchema(n notification) uuid.UUID {
 	return ws.organization.ID
 }
 
-// StartIdentityResolution is the event sent when the run of the Identity
+// StartIdentityResolution is the event sent when the execution of the Identity
 // Resolution starts.
 type StartIdentityResolution struct {
 	Workspace int

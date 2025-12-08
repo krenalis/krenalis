@@ -457,7 +457,7 @@ func (core *Core) Close() {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel the run of pipelines initiated via API.
+	// Cancel pipeline runs initiated via the API.
 	core.close.cancelCtx()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()

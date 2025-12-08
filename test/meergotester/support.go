@@ -327,21 +327,6 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-func (c *Meergo) Run(id int) Run {
-	var run Run
-	path := fmt.Sprintf("/v1/pipelines/runs/%d", id)
-	c.MustCall("GET", path, nil, &run)
-	return run
-}
-
-func (c *Meergo) Runs() []Run {
-	var response struct {
-		Runs []Run
-	}
-	c.MustCall("GET", "/v1/pipelines/runs", nil, &response)
-	return response.Runs
-}
-
 func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
 		"path":           []string{path},
@@ -383,6 +368,21 @@ func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	}
 	c.MustCall("GET", "/v1/identity-resolution/latest", nil, &response)
 	return response.StartTime, response.EndTime
+}
+
+func (c *Meergo) PipelineRun(id int) PipelineRun {
+	var run PipelineRun
+	path := fmt.Sprintf("/v1/pipelines/runs/%d", id)
+	c.MustCall("GET", path, nil, &run)
+	return run
+}
+
+func (c *Meergo) PipelineRuns() []PipelineRun {
+	var response struct {
+		Runs []PipelineRun
+	}
+	c.MustCall("GET", "/v1/pipelines/runs", nil, &response)
+	return response.Runs
 }
 
 func (c *Meergo) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
@@ -674,7 +674,7 @@ func (c *Meergo) waitForRunsCompletion(allowFailed bool, ids ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		if len(ids) == 1 {
-			run := c.Run(ids[0])
+			run := c.PipelineRun(ids[0])
 			if run.EndTime != nil {
 				// If the pipeline run ended with an error, make the test fail.
 				if run.Error != "" {
@@ -689,7 +689,7 @@ func (c *Meergo) waitForRunsCompletion(allowFailed bool, ids ...int) {
 			continue
 		}
 		completed := true
-		for _, run := range c.Runs() {
+		for _, run := range c.PipelineRuns() {
 			if !slices.Contains(ids, run.ID) {
 				continue
 			}

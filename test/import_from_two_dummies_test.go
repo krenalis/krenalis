@@ -52,10 +52,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Import from both pipelines - and implicitly trigger the identity resolution
 	// process.
-	exec1 := c.RunPipeline(pipeline1)
-	exec2 := c.RunPipeline(pipeline2)
-	c.WaitRunsCompletion(dummy1, exec1)
-	c.WaitRunsCompletion(dummy2, exec2)
+	run1 := c.RunPipeline(pipeline1)
+	run2 := c.RunPipeline(pipeline2)
+	c.WaitRunsCompletion(dummy1, run1)
+	c.WaitRunsCompletion(dummy2, run2)
 
 	// Ensure that the connection have the correct identities associated.
 	{

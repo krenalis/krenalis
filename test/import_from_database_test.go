@@ -44,9 +44,9 @@ func TestImportFromDatabase(t *testing.T) {
 		LastChangeTimeFormat: "",
 	})
 
-	exec := c.RunPipeline(importUsers)
+	run := c.RunPipeline(importUsers)
 
-	c.WaitRunsCompletion(pgSQL, exec)
+	c.WaitRunsCompletion(pgSQL, run)
 
 	identities, total := c.ConnectionIdentities(pgSQL, 0, 100)
 

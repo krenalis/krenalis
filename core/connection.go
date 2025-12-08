@@ -849,8 +849,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	return marshaledRows, schema, issues, nil
 }
 
-// A Run describes a pipeline run as returned by Runs.
-type Run struct {
+// A PipelineRun describes a pipeline run as returned by Runs.
+type PipelineRun struct {
 	ID        int        `json:"id"`
 	Pipeline  int        `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`

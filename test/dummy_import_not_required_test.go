@@ -44,8 +44,8 @@ func TestDummyImportNotRequired(t *testing.T) {
 			},
 		},
 	})
-	exec := c.RunPipeline(importUsersID)
-	c.WaitRunsCompletion(dummySrc, exec)
+	run := c.RunPipeline(importUsersID)
+	c.WaitRunsCompletion(dummySrc, run)
 
 	// Test that the "favorite_movie.title" property, which has been imported
 	// from a not required property in Dummy, has been imported just for some

@@ -575,17 +575,17 @@ type Workspace struct {
 	Identifiers                    []string
 	UIPreferences                  UIPreferences
 	IR                             struct {
-		ID        *string    // nil means no IR in run.
+		ID        *string    // nil means no IR in execution.
 		StartTime *time.Time // nil means IR was never started.
 		EndTime   *time.Time // nil means IR is running or has never started.
 	}
 	AlterProfileSchema struct {
-		ID             *string    // nil means no profile schema alterations in run.
+		ID             *string    // nil means no profile schema alterations in execution.
 		StartTime      *time.Time // nil means profile schema alteration was never started.
 		EndTime        *time.Time // nil means profile schema alteration is running or has never started.
-		Err            *string    // pointer to empty string if no errors occurred during last run of alter profile schema.
+		Err            *string    // pointer to empty string if no errors occurred during last execution of alter profile schema.
 		Schema         types.Type
-		PrimarySources map[string]int // nil if, and only if, schema alteration is not in run.
+		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
 		Operations     []warehouses.AlterOperation
 	}
 	pipelinesToPurge []int // never nil
@@ -637,8 +637,8 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// Run returns the pipeline run of the workspace with the given id.
-// The boolean return value reports whether the run exists.
+// Run returns the pipeline run in the workspace with the given id.
+// The boolean return value indicates whether the run exists.
 func (workspace *Workspace) Run(id int) (*PipelineRun, bool) {
 	workspace.mu.Lock()
 	exe, ok := workspace.runs[id]
@@ -1263,8 +1263,8 @@ func (pipeline *Pipeline) Connection() *Connection {
 	return c
 }
 
-// Run returns the run of the pipeline.
-// The boolean return value reports whether the pipeline is running.
+// Run returns the current run of the pipeline.
+// The boolean return value indicates whether the pipeline is currently running.
 func (pipeline *Pipeline) Run() (*PipelineRun, bool) {
 	pipeline.mu.Lock()
 	ex := pipeline.run
@@ -1300,7 +1300,7 @@ type PipelineRun struct {
 	StartTime   time.Time
 }
 
-// Pipeline returns the run's pipeline.
+// Pipeline returns the pipeline associated with the run.
 func (ex *PipelineRun) Pipeline() *Pipeline {
 	ex.mu.Lock()
 	p := ex.pipeline
@@ -1308,7 +1308,7 @@ func (ex *PipelineRun) Pipeline() *Pipeline {
 	return p
 }
 
-// Node returns the node on which the run is executing.
+// Node returns the node on which the run is currently executing.
 // The boolean return value indicates whether the run is assigned to a node.
 func (ex *PipelineRun) Node() (uuid.UUID, bool) {
 	ex.mu.Lock()
