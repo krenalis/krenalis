@@ -175,7 +175,19 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 		}
 	}
 	order := q.Get("order")
-	orderDesc := q.Get("orderDesc") == "true"
+	if order == "" {
+		order = "timestamp"
+	}
+	ascending := false
+	if asc := q.Get("ascending"); asc != "" {
+		switch asc {
+		case "true":
+			ascending = true
+		case "false":
+		default:
+			errors.BadRequest("invalid ascending")
+		}
+	}
 	first := 0
 	limit := 100
 	if f := q.Get("first"); f != "" {
@@ -191,7 +203,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 		}
 	}
 
-	evts, err := ws.Events(r.Context(), properties, filter, order, orderDesc, first, limit)
+	evts, err := ws.Events(r.Context(), properties, filter, order, !ascending, first, limit)
 	if err != nil {
 		return nil, err
 	}

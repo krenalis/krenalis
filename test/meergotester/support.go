@@ -317,8 +317,6 @@ func (c *Meergo) ExternalEventURL() string {
 func (c *Meergo) Events(properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
-		"order":      []string{"timestamp"},
-		"orderDesc":  []string{"true"},
 		"first":      []string{"0"},
 		"limit":      []string{"10"},
 	}
