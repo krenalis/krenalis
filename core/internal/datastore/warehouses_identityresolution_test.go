@@ -12,7 +12,6 @@ import (
 	"os"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -526,16 +525,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(platform.Name))
-				settingsFile, ok := os.LookupEnv(settingsEnvKey)
+				settingsFile, ok := os.LookupEnv("MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE")
 				if !ok {
-					t.Skipf("the %s environment variable is not present", settingsEnvKey)
+					t.Skipf("the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
 				}
 				// Read the JSON file with the warehouse settings.
 				var err error
 				settings, err = os.ReadFile(settingsFile)
 				if err != nil {
-					t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+					t.Fatalf("cannot open the path %q specified in the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
 				}
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
