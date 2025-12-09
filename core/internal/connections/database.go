@@ -105,37 +105,6 @@ func (database *Database) Connector() string {
 	return database.connector
 }
 
-// LastChangeTimePlaceholder returns the value used for the last_change_time
-// placeholder for the provided pipeline.
-func (database *Database) LastChangeTimePlaceholder(pipeline *state.Pipeline) (string, error) {
-	if database.err != nil {
-		return "", database.err
-	}
-	if pipeline == nil {
-		return database.inner.QuoteTime(nil, types.Type{}), nil
-	}
-	run, ok := pipeline.Run()
-	if !ok {
-		return "", errors.New("pipeline is not currently running")
-	}
-	cursor := run.Cursor
-	property := pipeline.LastChangeTimeColumn
-	if property == "" || cursor.IsZero() {
-		return database.inner.QuoteTime(nil, types.Type{}), nil
-	}
-	p, _ := pipeline.InSchema.Properties().ByName(property)
-	var value any
-	switch p.Type.Kind() {
-	case types.StringKind, types.JSONKind:
-		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
-	case types.DateTimeKind:
-		value = run.Cursor
-	case types.DateKind:
-		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
-	}
-	return database.inner.QuoteTime(value, p.Type), nil
-}
-
 // Schema returns the schema for the given table and role, along with any issues
 // encountered while reading the schema, such as unsupported column types.
 // The returned schema may be invalid if there are no supported columns.
@@ -295,6 +264,37 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, pipeline, database.timeLayouts)
 	return records, nil
+}
+
+// UpdatedAtPlaceholder returns the value used for the updated_at placeholder
+// for the provided pipeline.
+func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string, error) {
+	if database.err != nil {
+		return "", database.err
+	}
+	if pipeline == nil {
+		return database.inner.QuoteTime(nil, types.Type{}), nil
+	}
+	run, ok := pipeline.Run()
+	if !ok {
+		return "", errors.New("pipeline is not currently running")
+	}
+	cursor := run.Cursor
+	property := pipeline.LastChangeTimeColumn
+	if property == "" || cursor.IsZero() {
+		return database.inner.QuoteTime(nil, types.Type{}), nil
+	}
+	p, _ := pipeline.InSchema.Properties().ByName(property)
+	var value any
+	switch p.Type.Kind() {
+	case types.StringKind, types.JSONKind:
+		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
+	case types.DateTimeKind:
+		value = run.Cursor
+	case types.DateKind:
+		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
+	}
+	return database.inner.QuoteTime(value, p.Type), nil
 }
 
 // Writer returns a Writer to create and update users.

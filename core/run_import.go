@@ -53,13 +53,13 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		defer database.Close()
 		replacer := func(name string) (string, bool) {
 			switch name {
-			case "last_change_time":
+			case "updated_at":
 				var v string
 				if run.Incremental {
 					purge = run.Cursor.IsZero()
-					v, _ = database.LastChangeTimePlaceholder(pipeline)
+					v, _ = database.UpdatedAtPlaceholder(pipeline)
 				} else {
-					v, _ = database.LastChangeTimePlaceholder(nil)
+					v, _ = database.UpdatedAtPlaceholder(nil)
 				}
 				return v, true
 			case "limit":
