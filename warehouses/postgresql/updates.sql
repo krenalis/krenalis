@@ -56,5 +56,3 @@ ALTER TABLE profiles          RENAME _last_change_time TO _updated_at;
 ALTER TABLE meergo_profiles_0 RENAME _last_change_time TO _updated_at;
 
 ALTER TABLE meergo_identities RENAME COLUMN _execution TO _run;
-ALTER TYPE notification_name RENAME VALUE 'ExecutePipeline' TO 'RunPipeline';
-ALTER TYPE notification_name RENAME VALUE 'EndPipelineExecution' TO 'EndPipelineRun';
