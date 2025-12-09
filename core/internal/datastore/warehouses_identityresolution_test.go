@@ -597,7 +597,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							"_connection":    profile.connection,
 							"_anonymous_ids": toSliceAny(profile.anonymousIDs),
 							"_updated_at":    time.Now().UTC(),
-							"_execution":     1,
+							"_run":           1,
 						}
 						for k, v := range profile.attributes {
 							row[k] = v
@@ -700,7 +700,7 @@ func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses
 	columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
 	columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
 	columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	columns[6] = warehouses.Column{Name: "_execution", Type: types.Int(32), Nullable: true}
+	columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
 	i := 7
 	for _, column := range iwColumns {
 		columns[i] = column

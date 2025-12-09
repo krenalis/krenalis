@@ -1022,88 +1022,6 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
-// Execution returns the execution with the specified identifier for a pipeline
-// in the workspace.
-//
-// If the execution does not exist, it returns an errors.NotFound error.
-func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error) {
-	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid execution identifier", id)
-	}
-	// Check if the execution is running.
-	if exe, ok := this.workspace.Execution(id); ok {
-		return &Execution{
-			ID:        exe.ID,
-			Pipeline:  exe.Pipeline().ID,
-			StartTime: exe.StartTime,
-		}, nil
-	}
-	var exe Execution
-	err := this.core.db.QueryRow(ctx,
-		"SELECT e.id, e.pipeline, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
-			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4,"+
-			" e.failed_5, e.error\n"+
-			"FROM pipelines_executions e\n"+
-			"INNER JOIN pipelines a ON a.id = e.pipeline\n"+
-			"INNER JOIN connections c ON c.id = a.connection\n"+
-			"WHERE c.workspace = $1 AND e.id = $2", this.workspace.ID, id).Scan(
-		&exe.ID, &exe.Pipeline, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
-		&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
-		&exe.Failed[5], &exe.Error)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.NotFound("pipeline execution %d does not exist", id)
-		}
-		return nil, err
-	}
-	if exe.EndTime == nil {
-		exe.Passed = [6]int{}
-		exe.Failed = [6]int{}
-	}
-	return &exe, nil
-}
-
-// Executions returns the executions of the pipelines of the workspace.
-func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
-
-	this.core.mustBeOpen()
-
-	executions := []*Execution{}
-	err := this.core.db.QueryScan(ctx,
-		"SELECT e.id, e.pipeline, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
-			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4, e.failed_5, e.error\n"+
-			"FROM pipelines_executions e\n"+
-			"INNER JOIN pipelines a ON a.id = e.pipeline\n"+
-			"INNER JOIN connections c ON c.id = a.connection\n"+
-			"WHERE c.workspace = $1\n"+
-			"ORDER BY id DESC", this.workspace.ID, func(rows *db.Rows) error {
-			var err error
-			for rows.Next() {
-				var exe Execution
-				if err = rows.Scan(&exe.ID, &exe.Pipeline, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
-					&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
-					&exe.Failed[5], &exe.Error); err != nil {
-					return err
-				}
-				executions = append(executions, &exe)
-			}
-			return nil
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, exe := range executions {
-		if exe.EndTime == nil {
-			exe.Passed = [6]int{}
-			exe.Failed = [6]int{}
-		}
-	}
-
-	return executions, nil
-}
-
 // Identities returns the identities for the provided MPID, and an estimate of
 // their total number without applying first and limit.
 //
@@ -1220,6 +1138,88 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 		observedEvents[i] = slices.Clone(event)
 	}
 	return observedEvents, omitted, nil
+}
+
+// PipelineRun returns the run with the specified identifier for a pipeline in
+// the workspace.
+//
+// If the run does not exist, it returns an errors.NotFound error.
+func (this *Workspace) PipelineRun(ctx context.Context, id int) (*PipelineRun, error) {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid run identifier", id)
+	}
+	// Check whether the run is in progress.
+	if run, ok := this.workspace.Run(id); ok {
+		return &PipelineRun{
+			ID:        run.ID,
+			Pipeline:  run.Pipeline().ID,
+			StartTime: run.StartTime,
+		}, nil
+	}
+	var run PipelineRun
+	err := this.core.db.QueryRow(ctx,
+		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
+			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
+			" r.failed_5, r.error\n"+
+			"FROM pipelines_runs r\n"+
+			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
+			"INNER JOIN connections c ON c.id = p.connection\n"+
+			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
+		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
+		&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+		&run.Failed[5], &run.Error)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.NotFound("pipeline run %d does not exist", id)
+		}
+		return nil, err
+	}
+	if run.EndTime == nil {
+		run.Passed = [6]int{}
+		run.Failed = [6]int{}
+	}
+	return &run, nil
+}
+
+// PipelineRuns returns the runs of the pipelines of the workspace.
+func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error) {
+
+	this.core.mustBeOpen()
+
+	runs := []*PipelineRun{}
+	err := this.core.db.QueryScan(ctx,
+		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
+			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.error\n"+
+			"FROM pipelines_runs r\n"+
+			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
+			"INNER JOIN connections c ON c.id = p.connection\n"+
+			"WHERE c.workspace = $1\n"+
+			"ORDER BY id DESC", this.workspace.ID, func(rows *db.Rows) error {
+			var err error
+			for rows.Next() {
+				var run PipelineRun
+				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
+					&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+					&run.Failed[5], &run.Error); err != nil {
+					return err
+				}
+				runs = append(runs, &run)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, run := range runs {
+		if run.EndTime == nil {
+			run.Passed = [6]int{}
+			run.Failed = [6]int{}
+		}
+	}
+
+	return runs, nil
 }
 
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile

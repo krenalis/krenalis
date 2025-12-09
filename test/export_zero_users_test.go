@@ -60,8 +60,8 @@ func TestExportZeroProfiles(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		exec := c.ExecutePipeline(exportProfilesPipelineID)
-		c.WaitForExecutionsCompletion(dummyDest, exec)
+		run := c.RunPipeline(exportProfilesPipelineID)
+		c.WaitRunsCompletion(dummyDest, run)
 	}()
 
 	// Test the export of zero profiles to file (CSV).
@@ -109,11 +109,11 @@ func TestExportZeroProfiles(t *testing.T) {
 			"compression": core.NoCompression,
 		}, nil)
 
-		// Execute the pipeline that export profiles.
-		exec := c.ExecutePipeline(exportProfilesPipelineID)
+		// Run the pipeline that export profiles.
+		run := c.RunPipeline(exportProfilesPipelineID)
 
 		// Wait for the export to finish.
-		c.WaitForExecutionsCompletion(fsID, exec)
+		c.WaitRunsCompletion(fsID, run)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

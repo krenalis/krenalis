@@ -26,9 +26,9 @@ func (pipeline pipeline) Delete(_ http.ResponseWriter, r *http.Request) (any, er
 	return nil, err
 }
 
-// Execute executes a pipeline.
-func (pipeline pipeline) Execute(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := pipeline.id(r)
+// Run runs a pipeline.
+func (pipeline pipeline) Run(_ http.ResponseWriter, r *http.Request) (any, error) {
+	p, err := pipeline.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (pipeline pipeline) Execute(_ http.ResponseWriter, r *http.Request) (any, e
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := a.Execute(r.Context(), body.Incremental)
+	id, err := p.Run(r.Context(), body.Incremental)
 	if err != nil {
 		return nil, err
 	}

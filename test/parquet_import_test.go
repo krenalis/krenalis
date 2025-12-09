@@ -92,8 +92,8 @@ func TestParquetImport(t *testing.T) {
 	})
 
 	// Import and wait.
-	exec1 := c.ExecutePipeline(pipeline1)
-	c.WaitForExecutionsCompletionAllowFailed(fs, exec1)
+	run1 := c.RunPipeline(pipeline1)
+	c.WaitForRunsCompletionAllowFailed(fs, run1)
 
 	// Check that the count of profiles imported from the file is correct.
 	profiles, _, count := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)

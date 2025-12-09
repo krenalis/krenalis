@@ -70,11 +70,11 @@ func TestImportUsersFromFile(t *testing.T) {
 		}),
 	})
 
-	// Execute the pipeline that imports users.
-	exec := c.ExecutePipeline(importUsersPipelineID)
+	// Run the pipeline that imports users.
+	run := c.RunPipeline(importUsersPipelineID)
 
 	// Wait for the import to finish.
-	c.WaitForExecutionsCompletion(fsID, exec)
+	c.WaitRunsCompletion(fsID, run)
 
 	// Retrieve the profiles and test them.
 	const (

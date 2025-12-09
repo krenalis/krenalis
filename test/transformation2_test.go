@@ -27,8 +27,7 @@ func TestTransformation2(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
 
-	// Create a pipeline with a transformation function which imports users, then
-	// execute it.
+	// Create a pipeline with a transformation function which imports users, then run it.
 	pipeline := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
@@ -59,8 +58,8 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecutePipeline(pipeline)
-	c.WaitForExecutionsCompletion(dummy, exec)
+	run := c.RunPipeline(pipeline)
+	c.WaitRunsCompletion(dummy, run)
 
 	// Retrieve the profiles.
 	const expectedTotal = 10

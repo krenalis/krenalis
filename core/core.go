@@ -317,11 +317,11 @@ func New(conf *Config) (*Core, error) {
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
-	// Try to start pending pipeline executions.
+	// Try to start pending pipeline runs.
 	for _, pipeline := range core.state.Pipelines() {
-		if exe, ok := pipeline.Execution(); ok {
+		if exe, ok := pipeline.Run(); ok {
 			if _, ok := exe.Node(); !ok {
-				core.tryStartPipelineExecution(pipeline.ID)
+				core.tryStartPipelineRun(pipeline.ID)
 			}
 		}
 	}
@@ -457,7 +457,7 @@ func (core *Core) Close() {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel the execution of pipelines initiated via API.
+	// Cancel pipeline runs initiated via the API.
 	core.close.cancelCtx()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
@@ -1005,8 +1005,8 @@ func (core *Core) mustBeOpen() {
 }
 
 // onExecutePipeline is called when a pipeline is executed.
-func (core *Core) onExecutePipeline(n state.ExecutePipeline) {
-	core.tryStartPipelineExecution(n.Pipeline)
+func (core *Core) onExecutePipeline(n state.RunPipeline) {
+	core.tryStartPipelineRun(n.Pipeline)
 }
 
 // pipelineError represents a pipeline error.
@@ -1023,51 +1023,51 @@ func (err pipelineError) Error() string {
 	return err.err.Error()
 }
 
-// tryStartPipelineExecution attempts to start a pipeline execution.
-// It returns immediately and spawns a new goroutine to handle the execution.
-func (core *Core) tryStartPipelineExecution(pipelineID int) {
+// tryStartPipelineRun attempts to start a pipeline run.
+// It returns immediately and spawns a new goroutine to handle the run.
+func (core *Core) tryStartPipelineRun(pipelineID int) {
 
 	core.close.Go(func() {
 
 		ctx := core.close.ctx
 
 		var pipeline *state.Pipeline
-		var execution *state.PipelineExecution
+		var run *state.PipelineRun
 
 		var ok bool
 		pipeline, ok = core.state.Pipeline(pipelineID)
 		if !ok {
 			return
 		}
-		execution, ok = pipeline.Execution()
+		run, ok = pipeline.Run()
 		if !ok {
 			return
 		}
-		if _, ok := execution.Node(); ok {
+		if _, ok := run.Node(); ok {
 			return
 		}
 
-		// Attempt to acquire the execution. If already acquired by another node, return early.
+		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
 		for bo.Next(ctx) {
 			var node uuid.UUID
 			err := core.db.QueryRow(core.close.ctx,
-				"UPDATE pipelines_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
-				core.state.ID(), execution.ID).Scan(&node)
+				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
+				core.state.ID(), run.ID).Scan(&node)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// The execution no longer exists.
+					// The run no longer exists.
 					return
 				}
 				if err := ctx.Err(); err != nil {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
 			if node != core.state.ID() {
-				// Another node acquired the execution.
+				// Another node acquired the run.
 				return
 			}
 			break
@@ -1077,7 +1077,7 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 			return
 		}
 
-		// Ping the execution.
+		// Ping the run.
 		pingCtx, stopPing := context.WithCancel(ctx)
 		go func(id int) {
 			ticker := time.NewTicker(5 * time.Second)
@@ -1085,25 +1085,25 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 				select {
 				case <-ticker.C:
 					pingTime := time.Now().UTC()
-					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_executions SET ping_time = $1 WHERE id = $2", pingTime, id)
+					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_runs SET ping_time = $1 WHERE id = $2", pingTime, id)
 					if err != nil && pingCtx.Err() == nil {
-						slog.Error("core: cannot update pipeline execution ping time", "err", err)
+						slog.Error("core: cannot update pipeline run ping time", "err", err)
 					}
 				case <-pingCtx.Done():
 					return
 				}
 			}
-		}(execution.ID)
+		}(run.ID)
 		defer stopPing()
 
-		// Prepare the execution metrics.
-		timeSlot := coremetrics.TimeSlotFromTime(execution.StartTime)
+		// Prepare the run metrics.
+		timeSlot := coremetrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
-				// If statistics from previous executions of the same pipeline are available,
-				// they are subtracted from the current execution's statistics. This ensures
-				// that when all slot statistics are merged into those of this execution,
+				// If statistics from previous runs of the same pipeline are available,
+				// they are subtracted from the current run's statistics. This ensures
+				// that when all slot statistics are merged into those of this run,
 				// the resulting data will be accurate and consistent.
 				"WITH s AS (\n"+
 					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
@@ -1112,33 +1112,33 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 					"	FROM pipelines_metrics\n"+
 					"	WHERE pipeline = $2 AND timeslot = $3\n"+
 					")\n"+
-					"UPDATE pipelines_executions\n"+
+					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
 					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
 					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", execution.ID, pipeline.ID, timeSlot)
+					"WHERE id = $1", run.ID, pipeline.ID, timeSlot)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// The execution no longer exists.
+					// The run no longer exists.
 					return
 				}
 				if err := ctx.Err(); err != nil {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
 			break
 		}
 		if err := ctx.Err(); err != nil {
 			// The context has been canceled.
-			// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
+			// TODO(marco): What happens if the node successfully assigns itself the run, but the context gets canceled?
 			return
 		}
 
-		// Starts the execution.
+		// Starts the run.
 		c := pipeline.Connection()
 		ws := c.Workspace()
 		store := core.datastore.Store(ws.ID)
@@ -1152,8 +1152,8 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 			err = p.exportProfiles(ctx)
 		}
 
-		// Mark the execution as ended.
-		p.endExecution(err)
+		// Mark the run as ended.
+		p.endRun(err)
 
 		// Stop pinging as it is no longer required.
 		stopPing()
@@ -1165,7 +1165,7 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
 				} else {
-					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "execution", execution.ID, "err", err)
+					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "err", err)
 				}
 			}
 		}

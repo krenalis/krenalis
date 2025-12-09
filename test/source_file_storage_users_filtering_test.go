@@ -65,9 +65,9 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecutePipeline(pipeline1)
+	run1 := c.RunPipeline(pipeline1)
 
-	c.WaitForExecutionsCompletionAllowFailed(fs1, exec1)
+	c.WaitForRunsCompletionAllowFailed(fs1, run1)
 
 	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 

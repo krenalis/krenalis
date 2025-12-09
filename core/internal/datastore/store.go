@@ -295,10 +295,10 @@ func (store *Store) Mode() state.WarehouseMode {
 }
 
 // NewBatchIdentityWriter returns an identity writer for writing identities in
-// batch, relative to the given pipeline (which must be in execution) on the
-// data warehouse. purge reports whether identities should be purged from the
-// data warehouse after all identities have been written. The ack parameter is
-// the acknowledgment function.
+// batch, relative to the given pipeline (which must be running) on the data
+// warehouse. purge reports whether identities should be purged from the data
+// warehouse after all identities have been written. The ack parameter is the
+// acknowledgment function.
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.

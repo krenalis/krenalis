@@ -103,7 +103,7 @@ func TestIdentityResolution2(t *testing.T) {
 		"last_change_time": "2000-01-03 12:00:00",
 	})
 
-	// Create and execute the pipelines.
+	// Create and run the pipelines.
 
 	addJSONPipeline := func(source int, filename string, properties map[string]bool) int {
 		return c.CreatePipeline(source, "User", meergotester.PipelineToSet{
@@ -143,12 +143,12 @@ func TestIdentityResolution2(t *testing.T) {
 	pipelineB := addJSONPipeline(sourceB, "B.json", properties)
 	pipelineC := addJSONPipeline(sourceC, "C.json", properties)
 
-	exec1 := c.ExecutePipeline(pipelineA)
-	exec2 := c.ExecutePipeline(pipelineB)
-	exec3 := c.ExecutePipeline(pipelineC)
-	c.WaitForExecutionsCompletion(sourceA, exec1)
-	c.WaitForExecutionsCompletion(sourceB, exec2)
-	c.WaitForExecutionsCompletion(sourceC, exec3)
+	run1 := c.RunPipeline(pipelineA)
+	run2 := c.RunPipeline(pipelineB)
+	run3 := c.RunPipeline(pipelineC)
+	c.WaitRunsCompletion(sourceA, run1)
+	c.WaitRunsCompletion(sourceB, run2)
+	c.WaitRunsCompletion(sourceC, run3)
 
 	// Resolve the identities.
 	c.RunIdentityResolution()

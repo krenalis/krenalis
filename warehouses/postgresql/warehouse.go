@@ -310,7 +310,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(`"s".`)
 		b.WriteString(quotedColumn[c.Name])
 	}
-	b.WriteString(")\nWHEN MATCHED AND \"s\".\"$purge\" = FALSE THEN\n  UPDATE SET \"_execution\" = \"s\".\"_execution\"")
+	b.WriteString(")\nWHEN MATCHED AND \"s\".\"$purge\" = FALSE THEN\n  UPDATE SET \"_run\" = \"s\".\"_run\"")
 	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 

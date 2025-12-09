@@ -329,32 +329,6 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 	}, nil
 }
 
-// Execution returns the execution of a pipeline in the current workspace.
-func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	id, ok := parseID(r.PathValue("id")) // ID of the execution.
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", r.PathValue("id"))
-	}
-	return ws.Execution(r.Context(), id)
-}
-
-// Executions returns the executions of the pipelines of the current workspace.
-func (workspace workspace) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	executions, err := ws.Executions(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"executions": executions}, nil
-}
-
 // IdentityResolutionSettings returns the identity resolution settings of the
 // workspace.
 func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -648,6 +622,32 @@ func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *ht
 		"end":    metrics.End,
 		"passed": metrics.Passed,
 		"failed": metrics.Failed}, nil
+}
+
+// PipelineRun returns the run of a pipeline in the current workspace.
+func (workspace workspace) PipelineRun(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	id, ok := parseID(r.PathValue("id")) // ID of the run.
+	if !ok {
+		return nil, errors.BadRequest("identifier %q is not a valid run identifier", r.PathValue("id"))
+	}
+	return ws.PipelineRun(r.Context(), id)
+}
+
+// PipelineRuns returns the runs of the pipelines of the current workspace.
+func (workspace workspace) PipelineRuns(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	runs, err := ws.PipelineRuns(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"runs": runs}, nil
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema
