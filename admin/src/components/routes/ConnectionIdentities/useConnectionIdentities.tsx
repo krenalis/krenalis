@@ -54,12 +54,12 @@ const useConnectionIdentities = () => {
 
 		const columns: GridColumn[] = [
 			{
-				name: 'Last update',
+				name: 'Last updated',
 				type: 'datetime',
-				explanation: 'The last update time on the source.',
+				explanation: 'Last time the identity was updated in its source.',
 			},
 			{
-				name: connection.connector.getIdentityIDLabel(),
+				name: connection.connector.terms.userID,
 			},
 			{
 				name: 'Pipeline',
@@ -74,9 +74,9 @@ const useConnectionIdentities = () => {
 			const pipelineName = connection.pipelines.find((p) => p.id === identity.pipeline).name;
 			const row: GridRow = {
 				cells: [
-					identity.lastChangeTime,
-					identity.id ? (
-						identity.id
+					identity.updatedAt,
+					'userId' in identity ? (
+						identity.userId
 					) : (
 						<span className='connection-identities__anonymous-identity'>
 							<SlIcon name='incognito' />
@@ -89,16 +89,16 @@ const useConnectionIdentities = () => {
 						</Link>
 					</span>,
 				],
-				key: identity.id,
+				key: identity.userId,
 			};
 			if (connection.hasAnonymousIdentifiers) {
-				const anonymousIds: ReactNode[] = [];
-				if (identity.anonymousIds != null) {
+				const anonymousIDs: ReactNode[] = [];
+				if ('anonymousIds' in identity) {
 					for (const id of identity.anonymousIds) {
-						anonymousIds.push(<code>{id}</code>);
+						anonymousIDs.push(<code>{id}</code>);
 					}
 				}
-				row.cells.splice(2, 0, anonymousIds);
+				row.cells.splice(2, 0, anonymousIDs);
 			}
 			rows.push(row);
 		}

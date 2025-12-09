@@ -47,11 +47,11 @@ type State struct {
 	id uuid.UUID
 	db *db.DB
 
-	changing         *sync.RWMutex
-	connectors       map[string]*Connector
-	warehouseDrivers map[string]WarehouseDriver
-	metadata         metadata
-	sendStats        bool
+	changing           *sync.RWMutex
+	connectors         map[string]*Connector
+	warehousePlatforms map[string]WarehousePlatform
+	metadata           metadata
+	sendStats          bool
 
 	mu               *sync.Mutex                 // for the 'pipelines', ..., and 'workspaces' fields
 	pipelines        map[int]*Pipeline           // protected by mu
@@ -352,29 +352,29 @@ func (state *State) Unfreeze() {
 	state.changing.RUnlock()
 }
 
-// WarehouseDriver returns the warehouse driver with the provided name.
-// The boolean return value reports whether the warehouse driver exists.
-func (state *State) WarehouseDriver(name string) (WarehouseDriver, bool) {
+// WarehousePlatform returns the warehouse platform with the provided name.
+// The boolean return value reports whether the warehouse platform exists.
+func (state *State) WarehousePlatform(name string) (WarehousePlatform, bool) {
 	state.mu.Lock()
-	driver, ok := state.warehouseDrivers[name]
+	platform, ok := state.warehousePlatforms[name]
 	state.mu.Unlock()
-	return driver, ok
+	return platform, ok
 }
 
-// WarehouseDrivers returns all warehouse drivers.
-func (state *State) WarehouseDrivers() []WarehouseDriver {
+// WarehousePlatforms returns all warehouse platforms.
+func (state *State) WarehousePlatforms() []WarehousePlatform {
 	state.mu.Lock()
-	drivers := make([]WarehouseDriver, len(state.warehouseDrivers))
+	platforms := make([]WarehousePlatform, len(state.warehousePlatforms))
 	i := 0
-	for _, t := range state.warehouseDrivers {
-		drivers[i] = t
+	for _, p := range state.warehousePlatforms {
+		platforms[i] = p
 		i++
 	}
 	state.mu.Unlock()
-	sort.Slice(drivers, func(i, j int) bool {
-		return drivers[i].Name < drivers[j].Name
+	sort.Slice(platforms, func(i, j int) bool {
+		return platforms[i].Name < platforms[j].Name
 	})
-	return drivers
+	return platforms
 }
 
 // Workspace returns the workspace with identifier id.
@@ -495,8 +495,8 @@ func (organization *Organization) Workspaces() []*Workspace {
 	return workspaces
 }
 
-// WarehouseDriver represents a warehouse driver.
-type WarehouseDriver struct {
+// WarehousePlatform represents a warehouse platform.
+type WarehousePlatform struct {
 	Name string
 }
 
@@ -558,13 +558,13 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 type Workspace struct {
 	mu        *sync.Mutex
 	Warehouse struct {
-		Name        string
+		Platform    string
 		Mode        WarehouseMode
 		Settings    json.RawMessage
 		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).
 	}
 	connections                    map[int]*Connection
-	executions                     map[int]*PipelineExecution // running pipeline executions.
+	runs                           map[int]*PipelineRun // pipeline runs in progress.
 	ID                             int
 	organization                   *Organization
 	Name                           string
@@ -637,11 +637,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// Execution returns the pipeline execution of the workspace with the given id.
-// The boolean return value reports whether the execution exists.
-func (workspace *Workspace) Execution(id int) (*PipelineExecution, bool) {
+// Run returns the pipeline run in the workspace with the given id.
+// The boolean return value indicates whether the run exists.
+func (workspace *Workspace) Run(id int) (*PipelineRun, bool) {
 	workspace.mu.Lock()
-	exe, ok := workspace.executions[id]
+	exe, ok := workspace.runs[id]
 	workspace.mu.Unlock()
 	return exe, ok
 }
@@ -704,7 +704,6 @@ type Connector struct {
 	HasSheets              bool
 	HasSourceSettings      bool
 	HasDestinationSettings bool
-	IdentityIDLabel        string
 	TimeLayouts            TimeLayouts
 	FileExtension          string
 	SampleQuery            string
@@ -741,8 +740,9 @@ func (t ConnectorTargets) Contains(target Target) bool {
 // ConnectorTerms represents the terms that a connector uses to refer to various
 // entities, such as users or groups.
 type ConnectorTerms struct {
-	User  string
-	Users string
+	User   string
+	Users  string
+	UserID string
 	// Group  string  TODO(Marco): implement groups
 	// Groups string
 }
@@ -930,7 +930,7 @@ type Connection struct {
 	account           *Account
 	Strategy          *Strategy
 	SendingMode       *SendingMode
-	LinkedConnections []int // It's nil if events aren't supported or if there are no linked connections.
+	LinkedConnections []int // Non-nil if events are supported; otherwise nil.
 	Keys              []string
 	Settings          []byte
 	UsersQuery        string
@@ -1224,7 +1224,7 @@ type Pipeline struct {
 	ID                   int
 	connection           *Connection
 	format               *Connector
-	execution            *PipelineExecution
+	run                  *PipelineRun
 	propertiesToUnset    []string // is not nil only for source pipelines on users.
 	Target               Target
 	Name                 string
@@ -1263,11 +1263,11 @@ func (pipeline *Pipeline) Connection() *Connection {
 	return c
 }
 
-// Execution returns the execution of the pipeline.
-// The boolean return value reports whether the pipeline is running.
-func (pipeline *Pipeline) Execution() (*PipelineExecution, bool) {
+// Run returns the current run of the pipeline.
+// The boolean return value indicates whether the pipeline is currently running.
+func (pipeline *Pipeline) Run() (*PipelineRun, bool) {
 	pipeline.mu.Lock()
-	ex := pipeline.execution
+	ex := pipeline.run
 	pipeline.mu.Unlock()
 	return ex, ex != nil
 }
@@ -1289,8 +1289,8 @@ func (pipeline *Pipeline) Format() *Connector {
 	return c
 }
 
-// PipelineExecution represents a pipeline execution.
-type PipelineExecution struct {
+// PipelineRun represents a pipeline run.
+type PipelineRun struct {
 	mu          *sync.Mutex
 	ID          int
 	node        *uuid.UUID
@@ -1300,18 +1300,17 @@ type PipelineExecution struct {
 	StartTime   time.Time
 }
 
-// Pipeline returns the pipeline of the execution.
-func (ex *PipelineExecution) Pipeline() *Pipeline {
+// Pipeline returns the pipeline associated with the run.
+func (ex *PipelineRun) Pipeline() *Pipeline {
 	ex.mu.Lock()
 	p := ex.pipeline
 	ex.mu.Unlock()
 	return p
 }
 
-// Node returns the node on which the execution is currently running.
-// The boolean return value indicates whether the execution is taking place on a
-// node.
-func (ex *PipelineExecution) Node() (uuid.UUID, bool) {
+// Node returns the node on which the run is currently executing.
+// The boolean return value indicates whether the run is assigned to a node.
+func (ex *PipelineRun) Node() (uuid.UUID, bool) {
 	ex.mu.Lock()
 	node := ex.node
 	ex.mu.Unlock()

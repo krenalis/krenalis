@@ -25,7 +25,7 @@ By participating, you are expected to adhere to the [Code of Conduct](CODE_OF_CO
 
 ## Meergo repositories and packages
 
-Meergo is an **open development project** and is **freely available**. Connectors, warehouse drivers, and SDKs are MIT-licensed (open source). These are the areas where we expect most community contributions.
+Meergo is an **open development project** and is **freely available**. Connectors, warehouse integrations, and SDKs are MIT-licensed (open source). These are the areas where we expect most community contributions.
 
 Here's a list of Meergo components:
 
@@ -34,7 +34,7 @@ Here's a list of Meergo components:
 - [meergo/connectors](https://github.com/meergo/meergo/tree/main/connectors) - Meergo connectors (MIT)
 - [meergo/core](https://github.com/meergo/meergo/tree/main/core) - Meergo Core (Elastic License v2)
 - [meergo/tools](https://github.com/meergo/meergo/tree/main/tools) - Meergo tools (Elastic License v2)
-- [meergo/warehouses](https://github.com/meergo/meergo/tree/main/warehouses) - Meergo warehouse drivers (MIT)
+- [meergo/warehouses](https://github.com/meergo/meergo/tree/main/warehouses) - Meergo warehouse integrations (MIT)
 
 ### SDKs for event collection
 

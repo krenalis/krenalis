@@ -11,7 +11,7 @@ import (
 const (
 	AlterSchemaInExecution        errors.Code = "AlterSchemaInExecution"
 	AuthenticationFailed          errors.Code = "AuthenticationFailed"
-	CannotExecuteIncrementally    errors.Code = "CannotExecuteIncrementally"
+	CannotRunIncrementally        errors.Code = "CannotRunIncrementally"
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
@@ -19,7 +19,6 @@ const (
 	EmailVerificationRequired     errors.Code = "EmailVerificationRequired" // Returned by apisServer.
 	EventNotExist                 errors.Code = "EventNotExist"
 	EventTypeNotExist             errors.Code = "EventTypeNotExist"
-	ExecutionInProgress           errors.Code = "ExecutionInProgress"
 	FormatNotExist                errors.Code = "FormatNotExist"
 	IdentityResolutionInExecution errors.Code = "IdentityResolutionInExecution"
 	InspectionMode                errors.Code = "InspectionMode"
@@ -41,6 +40,7 @@ const (
 	OrganizationNotExist          errors.Code = "OrganizationNotExist"
 	PipelineDisabled              errors.Code = "PipelineDisabled"
 	PropertyNotExist              errors.Code = "PropertyNotExist"
+	RunInProgress                 errors.Code = "RunInProgress"
 	SchemaNotAligned              errors.Code = "SchemaNotAligned"
 	SheetNotExist                 errors.Code = "SheetNotExist"
 	SingleEventWriteKey           errors.Code = "SingleEventWriteKey"
@@ -50,7 +50,7 @@ const (
 	TransformationFailed          errors.Code = "TransformationFailed"
 	TypeNotAllowed                errors.Code = "TypeNotAllowed"
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
-	WarehouseDriverNotExist       errors.Code = "WarehouseDriverNotExist"
 	WarehouseNonInitializable     errors.Code = "WarehouseNonInitializable"
+	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
 )

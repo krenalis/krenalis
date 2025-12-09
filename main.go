@@ -11,7 +11,7 @@
 //  1. Create a new directory: mkdir meergo
 //  2. Change into it: cd meergo
 //  3. Copy this file into the new directory
-//  4. (optional) Add a new file for your connectors and warehouse drivers:
+//  4. (optional) Add a new file for your connectors and warehouse platforms:
 //     package meergo
 //     import _ "github.com/example/connector"
 //     import _ "github.com/example/warehouse"
@@ -63,7 +63,7 @@ import (
 	"github.com/meergo/meergo/cmd"
 )
 
-//go:embed meergo-assets/*
+//go:embed admin/assets/*
 var assets embed.FS
 
 func main() {

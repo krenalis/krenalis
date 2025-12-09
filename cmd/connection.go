@@ -84,6 +84,9 @@ func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.Target == 0 {
+		return nil, errors.BadRequest("target is required")
+	}
 	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
 		body.FormatSettings = nil
 	}

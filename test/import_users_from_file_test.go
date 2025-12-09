@@ -70,11 +70,11 @@ func TestImportUsersFromFile(t *testing.T) {
 		}),
 	})
 
-	// Execute the pipeline that imports users.
-	exec := c.ExecutePipeline(importUsersPipelineID)
+	// Run the pipeline that imports users.
+	run := c.RunPipeline(importUsersPipelineID)
 
 	// Wait for the import to finish.
-	c.WaitForExecutionsCompletion(fsID, exec)
+	c.WaitRunsCompletion(fsID, run)
 
 	// Retrieve the profiles and test them.
 	const (
@@ -102,8 +102,8 @@ func TestImportUsersFromFile(t *testing.T) {
 		if identity.Pipeline != importUsersPipelineID {
 			t.Fatalf("expected pipeline %d, got %d", importUsersPipelineID, identity.Pipeline)
 		}
-		if len(identity.AnonymousIds) != 0 {
-			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIds)
+		if len(identity.AnonymousIDs) != 0 {
+			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIDs)
 		}
 	}
 

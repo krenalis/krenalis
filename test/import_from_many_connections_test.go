@@ -72,8 +72,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecutePipeline(dummyPipeline)
-		c.WaitForExecutionsCompletion(dummy, exec)
+		run := c.RunPipeline(dummyPipeline)
+		c.WaitRunsCompletion(dummy, run)
 	}
 
 	// Ensure that there are 10 profiles.
@@ -116,8 +116,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"HasColumnNames": true,
 			}),
 		})
-		exec := c.ExecutePipeline(csvPipeline)
-		c.WaitForExecutionsCompletion(fs, exec)
+		run := c.RunPipeline(csvPipeline)
+		c.WaitRunsCompletion(fs, run)
 	}
 
 	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).
@@ -219,36 +219,36 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 	{
 		eventIdentity := getIdentityByConnection(t, identities, javaScript)
-		eventIdentity.LastChangeTime = time.Time{}
+		eventIdentity.UpdatedAt = time.Time{}
 		assertEqualIdentity(eventIdentity, meergotester.Identity{
-			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Pipeline:       javascriptUsersPipeline,
-			ID:             "f4ca124298",
-			AnonymousIds:   []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
-			LastChangeTime: time.Time{},
+			UserID:       "f4ca124298",
+			AnonymousIDs: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
+			UpdatedAt:    time.Time{},
+			Connection:   javaScript,
+			Pipeline:     javascriptUsersPipeline,
 		})
 	}
 	t.Log("identity imported from JavaScript is ok")
 	{
 		csvIdentity := getIdentityByConnection(t, identities, fs)
 		assertEqualIdentity(csvIdentity, meergotester.Identity{
-			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Pipeline:       csvPipeline,
-			ID:             "1",
-			AnonymousIds:   nil,
-			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+			UserID:       "1",
+			AnonymousIDs: nil,
+			UpdatedAt:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+			Connection:   fs,
+			Pipeline:     csvPipeline,
 		})
 	}
 	t.Log("identity imported from CSV is ok")
 	{
 		dummyIdentity := getIdentityByConnection(t, identities, dummy)
-		dummyIdentity.LastChangeTime = time.Time{}
+		dummyIdentity.UpdatedAt = time.Time{}
 		assertEqualIdentity(dummyIdentity, meergotester.Identity{
-			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
-			Pipeline:       dummyPipeline,
-			ID:             "dummy1",
-			AnonymousIds:   nil,
-			LastChangeTime: time.Time{},
+			UserID:       "dummy1",
+			AnonymousIDs: nil,
+			UpdatedAt:    time.Time{},
+			Connection:   dummy,
+			Pipeline:     dummyPipeline,
 		})
 	}
 	t.Log("identity imported from Dummy is ok")

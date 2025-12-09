@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/analytics-go"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/tools/types"
+
+	"github.com/meergo/analytics-go"
 )
 
 func TestAnonymousNotAnonymous(t *testing.T) {
@@ -110,8 +111,8 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	var pipeline1Found, pipeline2Found bool
 	for _, identity := range identities {
-		if identity.ID != "" {
-			t.Fatalf("expected no identity ID, got %v", identity.ID)
+		if identity.UserID != "" {
+			t.Fatalf("expected no user ID, got %v", identity.UserID)
 		}
 		switch identity.Pipeline {
 		case pipeline1:
@@ -144,7 +145,7 @@ waitLoop:
 	for {
 		identities, _ := c.ConnectionIdentities(javaScriptID, 0, 100)
 		for _, identity := range identities {
-			if identity.ID != "" {
+			if identity.UserID != "" {
 				break waitLoop
 			}
 		}
@@ -167,10 +168,10 @@ waitLoop:
 	if identity.Pipeline != pipeline1 {
 		t.Fatalf("identity should have pipeline %d, got %d instead", pipeline1, identity.Pipeline)
 	}
-	if len(identity.AnonymousIds) != 1 {
-		t.Fatalf("pipeline should have just one anonymous ID, got %d instead", len(identity.AnonymousIds))
+	if len(identity.AnonymousIDs) != 1 {
+		t.Fatalf("pipeline should have just one anonymous ID, got %d instead", len(identity.AnonymousIDs))
 	}
-	anonID := identity.AnonymousIds[0]
+	anonID := identity.AnonymousIDs[0]
 	if anonID != "f3421606-a5a4-4027-bc81-50aedae5ccf3" {
 		t.Fatalf("unexpected anonymous ID %q", anonID)
 	}

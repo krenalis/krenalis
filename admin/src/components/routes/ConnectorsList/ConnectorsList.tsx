@@ -8,7 +8,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { authCodeURLResponse } from '../../../lib/api/types/responses';
+import { authURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
 import * as marked from 'marked';
@@ -139,7 +139,7 @@ const ConnectorsList = () => {
 			}
 			localStorage.setItem(ADD_CONNECTOR_CODE_KEY, c.code);
 			localStorage.setItem(ADD_CONNECTION_ROLE_KEY, connectionRole);
-			let res: authCodeURLResponse;
+			let res: authURLResponse;
 			const redirectURI = new URL(`${api.connectors.origin}${UI_BASE_PATH}oauth/authorize`);
 			if (c.oauth.disallow127_0_0_1 && redirectURI.hostname === '127.0.0.1') {
 				redirectURI.hostname = 'localhost';
@@ -147,12 +147,12 @@ const ConnectorsList = () => {
 				redirectURI.hostname = '127.0.0.1';
 			}
 			try {
-				res = await api.connectors.authCodeURL(c.code, connectionRole as Role, redirectURI.toString());
+				res = await api.connectors.authURL(c.code, connectionRole as Role, redirectURI.toString());
 			} catch (err) {
 				handleError(err);
 				return;
 			}
-			window.location.href = res.url;
+			window.location.href = res.authUrl;
 			return;
 		}
 		if (c.isFile) {

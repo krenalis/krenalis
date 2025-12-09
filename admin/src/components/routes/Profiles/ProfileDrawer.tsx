@@ -169,7 +169,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 						)}
 					<span className='profile-drawer__mpid'>
 						<SlTooltip
-							content='Meergo profile ID'
+							content='Meergo Profile ID'
 							onSlHide={(e) => {
 								// Prevent the event from bubbling up and
 								// causing the drawer to close.
@@ -260,7 +260,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									<LittleLogo code={connection?.connector.code} path={CONNECTORS_ASSETS_PATH} />
 								);
 								return (
-									<div className='profile-drawer__identity' key={identity.lastChangeTime}>
+									<div className='profile-drawer__identity' key={identity.updatedAt}>
 										<div className='profile-drawer__identity-head'>
 											<SlTooltip className='profile-drawer__action' placement='left' hoist>
 												<div slot='content'>
@@ -285,18 +285,17 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 													</div>
 												</Link>
 											</SlTooltip>
-											<div className='profile-drawer__identity-date'>
-												{toJSDate(identity.lastChangeTime).toLocaleString()}
+											<div className='profile-drawer__identity-updated-at'>
+												{toJSDate(identity.updatedAt).toLocaleString()}
 											</div>
 										</div>
 										<div className='profile-drawer__identity-info'>
-											{identity.id && (
-												<div className='profile-drawer__identity-id'>
-													{connection.connector.getIdentityIDLabel()}:{' '}
-													<code>{identity.id}</code>
+											{'userId' in identity && (
+												<div className='profile-drawer__user-id'>
+													{connection.connector.terms.userID}: <code>{identity.userId}</code>
 												</div>
 											)}
-											{identity.anonymousIds !== null && (
+											{'anonymousIds' in identity && (
 												<div className='profile-drawer__identity-anonymous-ids'>
 													Anonymous IDs: <code>{identity.anonymousIds.join(', ')}</code>
 												</div>

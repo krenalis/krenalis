@@ -8,7 +8,7 @@ go 1.25.4
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.41.0
 	github.com/andybalholm/brotli v1.2.0
-	github.com/avct/uasurfer v0.0.0-20251103211900-a0b2b1af2b48
+	github.com/avct/uasurfer v0.0.0-20251203101750-d127e02ee278
 	github.com/aws/aws-sdk-go-v2 v1.40.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.10
@@ -27,7 +27,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/jxskiss/base62 v1.1.0
-	github.com/klauspost/compress v1.18.1
+	github.com/klauspost/compress v1.18.2
 	github.com/mark3labs/mcp-go v0.43.0
 	github.com/meergo/analytics-go v0.0.6
 	github.com/oschwald/maxminddb-golang/v2 v2.1.0

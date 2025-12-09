@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -20,6 +21,9 @@ import (
 
 	"github.com/getsentry/sentry-go"
 )
+
+//go:embed static
+var static embed.FS
 
 // Main is the function that executes Meergo. It is designed to be used in
 // executable packages that run Meergo's code, and should be utilized in the
@@ -48,11 +52,11 @@ func Main(assets fs.FS) {
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
 
-	if assets != nil {
-		var err error
-		assets, err = fs.Sub(assets, "meergo-assets")
+	if !devMode && assets != nil {
+		assets, _ = fs.Sub(assets, "admin/assets")
+		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
-			fatal(1, `directory "meergo-assets" not found in assets (did you forget to generate and embed them?)`)
+			fatal(1, `file "admin/assets/index.html.br" not found in assets (did you forget to generate and embed them?)`)
 		}
 	}
 

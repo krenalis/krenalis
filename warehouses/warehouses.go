@@ -22,22 +22,23 @@ import (
 	"github.com/google/uuid"
 )
 
-// Driver represents a warehouse driver.
-type Driver struct {
+// Platform represents a warehouse platform.
+type Platform struct {
 	Name string
 
 	newFunc reflect.Value
 	ct      reflect.Type
 }
 
-// ReflectType returns the type of the value implementing the warehouse driver.
-func (driver Driver) ReflectType() reflect.Type {
-	return driver.ct
+// ReflectType returns the type of the value implementing the warehouse
+// platform.
+func (platform Platform) ReflectType() reflect.Type {
+	return platform.ct
 }
 
 // New returns a new data warehouse instance.
-func (driver Driver) New(conf *Config) (Warehouse, error) {
-	out := driver.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (platform Platform) New(conf *Config) (Warehouse, error) {
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	err, _ := reflect.TypeAssert[error](out[1])
 	return d, err
@@ -48,7 +49,7 @@ type Config struct {
 	Settings []byte
 }
 
-// NewFunc represents functions that create new warehouse driver instance.
+// NewFunc represents functions that create new warehouse platform instance.
 type NewFunc[T Warehouse] func(*Config) (T, error)
 
 // AlterOperation represents an operation that alters the columns of the profile
@@ -113,7 +114,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Warehouse is the interface implemented by warehouse drivers.
+// Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
 	// AlterProfileSchema alters the profile schema.
@@ -186,20 +187,20 @@ type Warehouse interface {
 	// ones. columns are the columns whose values are present in the rows and
 	// contain at least the columns:
 	//
-	//   __pipeline__
-	//   __is_anonymous__
-	//   __identity_id__
-	//   __connection__
-	//   __last_change_time__
+	//   _pipeline
+	//   _is_anonymous
+	//   _identity_id
+	//   _connection
+	//   _updated_at
 	//
-	// If there is the __anonymous_ids__ column, its values can contain at most one
+	// If there is the _anonymous_ids column, its values can contain at most one
 	// non-NULL element, which is appended in the identity table if it does not
 	// already exist.
 	//
 	// rows contains the rows to update or add if not already present. If a row
 	// contains the $purge column with a value of true, the matching row is purged.
-	// If the value is false, only the __execution__ column is updated to indicate
-	// that the row should not be purged.
+	// If the value is false, only the _run column is updated to indicate that
+	// the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
 	// PreviewAlterProfileSchema provides a preview of an alter profile schema
@@ -355,7 +356,7 @@ type Join struct {
 }
 
 // NormalizeFunc is a function type representing the normalization function
-// exposed by data warehouse drivers to normalize values returned by them.
+// exposed by data warehouse to normalize values returned by them.
 type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
 
 // IsValidIdentifier reports whether name is a valid identifier.

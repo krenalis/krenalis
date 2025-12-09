@@ -24,7 +24,7 @@ import (
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/db"
+	dbpkg "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -46,7 +46,7 @@ import (
 )
 
 type Core struct {
-	db                *db.DB
+	db                *dbpkg.DB
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
@@ -130,6 +130,7 @@ type LocalConfig struct {
 	PythonExecutable string
 	FunctionsDir     string
 	SudoUser         string
+	DoasUser         string
 }
 
 type SMTPConfig struct {
@@ -164,7 +165,7 @@ func New(conf *Config) (*Core, error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
-	db, err := db.Open(&db.Options{
+	db, err := dbpkg.Open(&dbpkg.Options{
 		Host:           ps.Host,
 		Port:           ps.Port,
 		Username:       ps.Username,
@@ -195,19 +196,27 @@ func New(conf *Config) (*Core, error) {
 		}
 		if isEmpty {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
-			err := initdb.Initialize(dbInitCtx, db)
-			if err != nil {
-				return nil, fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
-			}
-			slog.Info("PostgreSQL database initialized correctly")
-			// Also initialize the Docker member, if requested.
-			if conf.DatabaseInitialization.InitDockerMember {
-				slog.Info("initializing Docker member...")
-				err := initdb.InitializeDockerMember(dbInitCtx, db)
+			// Initialize the PostgreSQL database in a transaction, so if it is
+			// fails, there is no need to manually empty the database.
+			err := db.Transaction(dbInitCtx, func(tx *dbpkg.Tx) error {
+				err := initdb.Initialize(dbInitCtx, tx)
 				if err != nil {
-					return nil, fmt.Errorf("cannot initialize the Docker member: %s", err)
+					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 				}
-				slog.Info("Docker member initialized")
+				slog.Info("PostgreSQL database initialized correctly")
+				// Also initialize the Docker member, if requested.
+				if conf.DatabaseInitialization.InitDockerMember {
+					slog.Info("initializing Docker member...")
+					err := initdb.InitializeDockerMember(dbInitCtx, tx)
+					if err != nil {
+						return fmt.Errorf("cannot initialize the Docker member: %s", err)
+					}
+					slog.Info("Docker member initialized")
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
 			}
 		} else {
 			slog.Info("the PostgreSQL database is not empty, so it won't be initialized")
@@ -292,7 +301,7 @@ func New(conf *Config) (*Core, error) {
 	for _, ws := range core.state.Workspaces() {
 		var wh warehouses.Warehouse
 		if ws.Warehouse.MCPSettings != nil {
-			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
+			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
 		}
 		core.mcp[ws.ID] = wh
 	}
@@ -308,11 +317,11 @@ func New(conf *Config) (*Core, error) {
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
-	// Try to start pending pipeline executions.
+	// Try to start pending pipeline runs.
 	for _, pipeline := range core.state.Pipelines() {
-		if exe, ok := pipeline.Execution(); ok {
+		if exe, ok := pipeline.Run(); ok {
 			if _, ok := exe.Node(); !ok {
-				core.tryStartPipelineExecution(pipeline.ID)
+				core.tryStartPipelineRun(pipeline.ID)
 			}
 		}
 	}
@@ -344,7 +353,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
@@ -421,7 +430,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
@@ -448,7 +457,7 @@ func (core *Core) Close() {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel the execution of pipelines initiated via API.
+	// Cancel pipeline runs initiated via the API.
 	core.close.cancelCtx()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
@@ -488,17 +497,16 @@ func (core *Core) Connector(code string) (*Connector, error) {
 		return nil, errors.NotFound("connector %q does not exist", code)
 	}
 	connector := Connector{
-		core:            core,
-		connector:       c,
-		Code:            c.Code,
-		Label:           c.Label,
-		Type:            ConnectorType(c.Type),
-		Categories:      categoryBitmaskToCategoryNames(c.Categories),
-		IdentityIDLabel: c.IdentityIDLabel,
-		HasSheets:       c.HasSheets,
-		FileExtension:   c.FileExtension,
-		Terms:           ConnectorTerms(c.Terms),
-		Strategies:      c.Strategies,
+		core:          core,
+		connector:     c,
+		Code:          c.Code,
+		Label:         c.Label,
+		Type:          ConnectorType(c.Type),
+		Categories:    categoryBitmaskToCategoryNames(c.Categories),
+		HasSheets:     c.HasSheets,
+		FileExtension: c.FileExtension,
+		Terms:         ConnectorTerms(c.Terms),
+		Strategies:    c.Strategies,
 	}
 	if c.SourceTargets != 0 {
 		connector.AsSource = &SourceConnector{
@@ -524,18 +532,6 @@ func (core *Core) Connector(code string) (*Connector, error) {
 			DisallowLocalhost: c.OAuth.DisallowLocalhost,
 		}
 	}
-	if connector.Terms.User == "" {
-		connector.Terms.User = "user"
-	}
-	if connector.Terms.Users == "" {
-		connector.Terms.Users = "users"
-	}
-	//if connector.Terms.Group == "" { TODO(marco): Implement groups
-	//	connector.Terms.Group = "group"
-	//}
-	//if connector.Terms.Groups == "" {
-	//	connector.Terms.Groups = "groups"
-	//}
 	return &connector, nil
 }
 
@@ -576,17 +572,16 @@ func (core *Core) Connectors() []*Connector {
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
-			core:            core,
-			connector:       c,
-			Code:            c.Code,
-			Label:           c.Label,
-			Type:            ConnectorType(c.Type),
-			Categories:      categoryBitmaskToCategoryNames(c.Categories),
-			IdentityIDLabel: c.IdentityIDLabel,
-			HasSheets:       c.HasSheets,
-			FileExtension:   c.FileExtension,
-			Terms:           ConnectorTerms(c.Terms),
-			Strategies:      c.Strategies,
+			core:          core,
+			connector:     c,
+			Code:          c.Code,
+			Label:         c.Label,
+			Type:          ConnectorType(c.Type),
+			Categories:    categoryBitmaskToCategoryNames(c.Categories),
+			HasSheets:     c.HasSheets,
+			FileExtension: c.FileExtension,
+			Terms:         ConnectorTerms(c.Terms),
+			Strategies:    c.Strategies,
 		}
 		if c.SourceTargets != 0 {
 			connector.AsSource = &SourceConnector{
@@ -614,18 +609,6 @@ func (core *Core) Connectors() []*Connector {
 				}
 			}
 		}
-		if connector.Terms.User == "" {
-			connector.Terms.User = "user"
-		}
-		if connector.Terms.Users == "" {
-			connector.Terms.Users = "users"
-		}
-		//if connector.Terms.Group == "" { TODO(marco): Implement groups
-		//	connector.Terms.Group = "group"
-		//}
-		//if connector.Terms.Groups == "" {
-		//	connector.Terms.Groups = "groups"
-		//}
 		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {
@@ -996,22 +979,22 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 	return "", nil
 }
 
-// WarehouseDriver represents a warehouse driver.
-type WarehouseDriver struct {
+// WarehousePlatform represents a warehouse platform.
+type WarehousePlatform struct {
 	Name string `json:"name"`
 }
 
-// WarehouseDrivers returns the warehouse drivers.
-func (core *Core) WarehouseDrivers() []WarehouseDriver {
+// WarehousePlatforms returns the warehouse platforms.
+func (core *Core) WarehousePlatforms() []WarehousePlatform {
 	core.mustBeOpen()
-	types := core.state.WarehouseDrivers()
-	warehouseDrivers := make([]WarehouseDriver, len(types))
-	for i, t := range types {
-		warehouseDrivers[i] = WarehouseDriver{
-			Name: t.Name,
+	platforms := core.state.WarehousePlatforms()
+	warehousePlatforms := make([]WarehousePlatform, len(platforms))
+	for i, p := range platforms {
+		warehousePlatforms[i] = WarehousePlatform{
+			Name: p.Name,
 		}
 	}
-	return warehouseDrivers
+	return warehousePlatforms
 }
 
 // mustBeOpen panics if core has been closed.
@@ -1022,8 +1005,8 @@ func (core *Core) mustBeOpen() {
 }
 
 // onExecutePipeline is called when a pipeline is executed.
-func (core *Core) onExecutePipeline(n state.ExecutePipeline) {
-	core.tryStartPipelineExecution(n.Pipeline)
+func (core *Core) onExecutePipeline(n state.RunPipeline) {
+	core.tryStartPipelineRun(n.Pipeline)
 }
 
 // pipelineError represents a pipeline error.
@@ -1040,51 +1023,51 @@ func (err pipelineError) Error() string {
 	return err.err.Error()
 }
 
-// tryStartPipelineExecution attempts to start a pipeline execution.
-// It returns immediately and spawns a new goroutine to handle the execution.
-func (core *Core) tryStartPipelineExecution(pipelineID int) {
+// tryStartPipelineRun attempts to start a pipeline run.
+// It returns immediately and spawns a new goroutine to handle the run.
+func (core *Core) tryStartPipelineRun(pipelineID int) {
 
 	core.close.Go(func() {
 
 		ctx := core.close.ctx
 
 		var pipeline *state.Pipeline
-		var execution *state.PipelineExecution
+		var run *state.PipelineRun
 
 		var ok bool
 		pipeline, ok = core.state.Pipeline(pipelineID)
 		if !ok {
 			return
 		}
-		execution, ok = pipeline.Execution()
+		run, ok = pipeline.Run()
 		if !ok {
 			return
 		}
-		if _, ok := execution.Node(); ok {
+		if _, ok := run.Node(); ok {
 			return
 		}
 
-		// Attempt to acquire the execution. If already acquired by another node, return early.
+		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
 		for bo.Next(ctx) {
 			var node uuid.UUID
 			err := core.db.QueryRow(core.close.ctx,
-				"UPDATE pipelines_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
-				core.state.ID(), execution.ID).Scan(&node)
+				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
+				core.state.ID(), run.ID).Scan(&node)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// The execution no longer exists.
+					// The run no longer exists.
 					return
 				}
 				if err := ctx.Err(); err != nil {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
 			if node != core.state.ID() {
-				// Another node acquired the execution.
+				// Another node acquired the run.
 				return
 			}
 			break
@@ -1094,7 +1077,7 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 			return
 		}
 
-		// Ping the execution.
+		// Ping the run.
 		pingCtx, stopPing := context.WithCancel(ctx)
 		go func(id int) {
 			ticker := time.NewTicker(5 * time.Second)
@@ -1102,25 +1085,25 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 				select {
 				case <-ticker.C:
 					pingTime := time.Now().UTC()
-					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_executions SET ping_time = $1 WHERE id = $2", pingTime, id)
+					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_runs SET ping_time = $1 WHERE id = $2", pingTime, id)
 					if err != nil && pingCtx.Err() == nil {
-						slog.Error("core: cannot update pipeline execution ping time", "err", err)
+						slog.Error("core: cannot update pipeline run ping time", "err", err)
 					}
 				case <-pingCtx.Done():
 					return
 				}
 			}
-		}(execution.ID)
+		}(run.ID)
 		defer stopPing()
 
-		// Prepare the execution metrics.
-		timeSlot := coremetrics.TimeSlotFromTime(execution.StartTime)
+		// Prepare the run metrics.
+		timeSlot := coremetrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
-				// If statistics from previous executions of the same pipeline are available,
-				// they are subtracted from the current execution's statistics. This ensures
-				// that when all slot statistics are merged into those of this execution,
+				// If statistics from previous runs of the same pipeline are available,
+				// they are subtracted from the current run's statistics. This ensures
+				// that when all slot statistics are merged into those of this run,
 				// the resulting data will be accurate and consistent.
 				"WITH s AS (\n"+
 					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
@@ -1129,33 +1112,33 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 					"	FROM pipelines_metrics\n"+
 					"	WHERE pipeline = $2 AND timeslot = $3\n"+
 					")\n"+
-					"UPDATE pipelines_executions\n"+
+					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
 					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
 					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", execution.ID, pipeline.ID, timeSlot)
+					"WHERE id = $1", run.ID, pipeline.ID, timeSlot)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// The execution no longer exists.
+					// The run no longer exists.
 					return
 				}
 				if err := ctx.Err(); err != nil {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
 			break
 		}
 		if err := ctx.Err(); err != nil {
 			// The context has been canceled.
-			// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
+			// TODO(marco): What happens if the node successfully assigns itself the run, but the context gets canceled?
 			return
 		}
 
-		// Starts the execution.
+		// Starts the run.
 		c := pipeline.Connection()
 		ws := c.Workspace()
 		store := core.datastore.Store(ws.ID)
@@ -1169,8 +1152,8 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 			err = p.exportProfiles(ctx)
 		}
 
-		// Mark the execution as ended.
-		p.endExecution(err)
+		// Mark the run as ended.
+		p.endRun(err)
 
 		// Stop pinging as it is no longer required.
 		stopPing()
@@ -1182,7 +1165,7 @@ func (core *Core) tryStartPipelineExecution(pipelineID int) {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
 				} else {
-					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "execution", execution.ID, "err", err)
+					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "err", err)
 				}
 			}
 		}
@@ -1279,7 +1262,7 @@ Identifiers:
 		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
 	}
 	for {
-		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1375,7 +1358,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo = backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1407,7 +1390,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var wh warehouses.Warehouse
 	if ws.Warehouse.MCPSettings != nil {
-		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
+		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = wh
@@ -1500,7 +1483,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 
 	// The MCP settings were unset (nil) and have now been set.
 	if prevWarehouse == nil && n.MCPSettings != nil {
-		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
+		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
 		core.mcpMu.Lock()
 		core.mcp[n.Workspace] = nextWarehouse
 		core.mcpMu.Unlock()
@@ -1508,7 +1491,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	}
 
 	// The MCP settings were set and have been set again with the same value.
-	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
+	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
 	if bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		return
 	}
@@ -1571,7 +1554,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -1628,7 +1611,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
@@ -1678,10 +1661,10 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 
 // getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
 // to implement features for the MCP server.
-// name is the name of the warehouse driver and settings are the settings for
+// platform is the warehouse platform and settings are the settings for
 // connecting to it.
-func getMCPWarehouseInstance(name string, settings []byte) (warehouses.Warehouse, error) {
-	wh, err := warehouses.Registered(name).New(&warehouses.Config{Settings: settings})
+func getMCPWarehouseInstance(platform string, settings []byte) (warehouses.Warehouse, error) {
+	wh, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return nil, err
 	}

@@ -67,7 +67,8 @@ const Members = () => {
 			}
 		}
 		setIsRemoveAlertOpen(false);
-		setIsLoading(true);
+		setMembers(members.filter((member) => member.id !== pendingDeletedMember.current));
+		pendingDeletedMember.current = 0;
 	};
 
 	const onLogout = async () => {
@@ -93,22 +94,16 @@ const Members = () => {
 		return (
 			<div className='members'>
 				<div className='members__content'>
-					<Link path='organization'>
-						<SlButton className='members__back-button' variant='text'>
-							<SlIcon slot='prefix' name='arrow-left' />
-							Organization
-						</SlButton>
-					</Link>
 					<div className='members__title'>
-						<p className='members__title-text'>Members</p>
+						<p className='members__title-text'>Team members</p>
 						{publicMetadata.memberEmailVerificationRequired ? (
 							<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
-								Invite a new member
+								Invite a new team member
 							</SlButton>
 						) : (
 							<Link path={'organization/members/add'}>
 								<SlButton size='small' variant='primary' onClick={() => null}>
-									Add a new member
+									Add a new team member
 								</SlButton>
 							</Link>
 						)}
@@ -176,7 +171,7 @@ const Members = () => {
 					variant='danger'
 					isOpen={isRemoveAlertOpen}
 					onClose={onDeleteMemberCancel}
-					title='Delete the member?'
+					title='Delete the team member?'
 					actions={
 						<>
 							<SlButton onClick={onDeleteMemberCancel}>Cancel</SlButton>
@@ -186,7 +181,7 @@ const Members = () => {
 						</>
 					}
 				>
-					If you delete the member they will no longer have access to your organization.
+					If you delete the team member they will no longer have access to this account.
 				</AlertDialog>
 				<InviteMemberDialog
 					isOpen={isInviteMemberDialogOpen}
@@ -272,12 +267,12 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 	return (
 		<SlDialog
 			className='members__invite-dialog'
-			label='Invite new member'
+			label='Invite new team member'
 			open={isOpen}
 			onSlAfterHide={() => setIsOpen(false)}
 		>
 			<div className='members__invite-dialog-description'>
-				An invitation to create a new member account will be sent to the email address provided.
+				An invitation to create a new team member account will be sent to the email address provided.
 			</div>
 			<form onSubmit={onInviteMember}>
 				<SlInput ref={inputRef} label='Email' type='email' value={email} onSlInput={onUpdateEmail} required />

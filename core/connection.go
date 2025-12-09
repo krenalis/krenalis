@@ -56,15 +56,9 @@ type Connection struct {
 	Role              Role          `json:"role"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
-	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
-	PipelinesCount    int           `json:"pipelinesCount"`
+	LinkedConnections []int         `json:"linkedConnections,omitempty"`
 	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
-
-	// Pipelines is populated only by the (*Workspace).Connection method.
-	Pipelines *[]Pipeline `json:"pipelines,omitzero"`
-
-	// PipelinesInfo is populated only by the (*Workspace).Connections method.
-	PipelinesInfo *[]PipelineInfo `json:"pipelinesInfo,omitzero"`
+	Pipelines         []Pipeline    `json:"pipelines"`
 
 	// EventTypes is populated only by the (*Workspace).Connection method.
 	EventTypes *[]EventType `json:"eventTypes,omitzero"`
@@ -855,8 +849,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	return marshaledRows, schema, issues, nil
 }
 
-// An Execution describes a pipeline execution as returned by Executions.
-type Execution struct {
+// A PipelineRun describes a pipeline run as returned by Runs.
+type PipelineRun struct {
 	ID        int        `json:"id"`
 	Pipeline  int        `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
@@ -995,8 +989,8 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 // It returns the identities in range [first,first+limit] with first >= 0 and
 // 0 < limit <= 1000.
 //
-// Identities are sorted by last change time, in descending order, so the most
-// recently changed identities are returned first.
+// Identities are sorted by updated-at time in descending order, so the most
+// recently updated identities come first.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode, if
 // the data warehouse is in maintenance mode.
@@ -1008,17 +1002,17 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	coreWs := &Workspace{
+	ws := &Workspace{
 		core:      this.core,
 		store:     this.store,
 		workspace: this.connection.Workspace(),
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__connection__"},
+		Property: []string{"_connection"},
 		Operator: state.OpIs,
-		Values:   []any{strconv.Itoa(this.connection.ID)},
+		Values:   []any{this.connection.ID},
 	}}}
-	identities, total, err := coreWs.identities(ctx, where, first, limit)
+	identities, total, err := ws.identities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1276,18 +1270,18 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 			var name, description string
 			if c.Role == state.Source {
 				// Source/API/User.
-				name = "Import " + connector.Label + " " + connector.Terms.Users
-				description = "Import " + connector.Terms.Users
-				if connector.Terms.Users != "users" {
+				name = "Import " + connector.Label + " " + strings.ToLower(connector.Terms.Users)
+				description = "Import " + strings.ToLower(connector.Terms.Users)
+				if connector.Terms.Users != "Users" {
 					description += " as users"
 				}
 				description += " into the data warehouse"
 			} else {
 				// Destination/API/User.
-				name = "Export " + connector.Terms.Users
+				name = "Export " + strings.ToLower(connector.Terms.Users)
 				description = "Export users from the data warehouse"
-				if connector.Terms.Users != "users" {
-					description += " as " + connector.Terms.Users
+				if connector.Terms.Users != "Users" {
+					description += " as " + strings.ToLower(connector.Terms.Users)
 				}
 				description += " to " + connector.Label
 			}

@@ -7,6 +7,7 @@ package cmd
 import (
 	_ "embed"
 	"html"
+	"io"
 	"net/http"
 	"strings"
 
@@ -15,9 +16,6 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
-
-//go:embed api-index.html
-var apiIndexHTML []byte
 
 type api struct {
 	*apisServer
@@ -121,7 +119,12 @@ func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 	wantsHTML := accept == "" || strings.Contains(accept, "text/html") || strings.Contains(accept, "*/*") && !strings.Contains(accept, "application/json")
 	if wantsHTML {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(apiIndexHTML)
+		fi, err := static.Open("static/api_index.html")
+		if err != nil {
+			return nil, errors.New("embedded file 'static/api_index.html' not found in executable")
+		}
+		_, _ = io.Copy(w, fi)
+		_ = fi.Close()
 		return nil, nil
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -174,7 +177,7 @@ type publicMetadata struct {
 //
 //   - installationID: installation ID
 //   - externalURL: canonical external URL - https://example.com/
-//   - externalEventURL: external event URL - https://example.com/api/v1/events
+//   - externalEventURL: external event URL - https://example.com/v1/events
 //   - externalAssetsURLs: external assets URLs.
 //   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
 //   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/meergo.min.js
@@ -216,7 +219,11 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 		return nil, errors.New("there are no organizations")
 	}
 	org := organizations[0]
-	emailTemplate := strings.ReplaceAll(resetPasswordEmail, "${externalURL}", html.EscapeString(api.externalURL))
+	resetPasswordEmail, err := static.ReadFile("static/reset_password_email.html")
+	if err != nil {
+		return nil, errors.New("embedded file 'static/reset_password_email.html' not found in executable")
+	}
+	emailTemplate := strings.ReplaceAll(string(resetPasswordEmail), "${externalURL}", html.EscapeString(api.externalURL))
 	err = org.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
 	return nil, err
 }
@@ -279,14 +286,39 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	return api.core.ValidateExpression(body.Expression, body.Properties, body.Type)
 }
 
-// WarehouseDrivers returns the supported data warehouse drivers.
-func (api api) WarehouseDrivers(_ http.ResponseWriter, r *http.Request) (any, error) {
+// WarehousePlatforms returns the supported data warehouse platforms.
+func (api api) WarehousePlatforms(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
-	return map[string]any{"drivers": api.core.WarehouseDrivers()}, nil
+	return map[string]any{"platforms": api.core.WarehousePlatforms()}, nil
 }
 
 func (api api) code(r *http.Request) string {
 	return r.PathValue("code")
+}
+
+// splitQueryParameters expands comma-separated query parameter values.
+// Each input string may contain one or more comma-delimited entries.
+// All entries are split, trimmed, and returned individually.
+// Empty or whitespace-only entries are discarded.
+//
+// For example, []string{"1,2,3"} becomes []string{"1", "2", "3"}.
+//
+// If no valid entries exist, it returns nil.
+func splitQueryParameters(values []string) []string {
+	var properties []string
+	for _, v := range values {
+		for p := range strings.SplitSeq(v, ",") {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			if properties == nil {
+				properties = make([]string, 0, len(values))
+			}
+			properties = append(properties, p)
+		}
+	}
+	return properties
 }

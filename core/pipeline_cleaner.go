@@ -38,7 +38,7 @@ const functionDeletionInterval = 10 * time.Minute
 //   - Unsets identity properties in the data warehouse that are no longer
 //     transformed.
 //   - Deletes discontinued functions from its function provider.
-//   - Terminates orphaned pipeline executions.
+//   - Terminates orphaned pipeline runs.
 //
 // Pipeline cleaning occurs only when the data warehouse is in Normal mode.
 type pipelineCleaner struct {
@@ -96,8 +96,8 @@ func newPipelineCleaner(core *Core, provider transformers.FunctionProvider) *pip
 		go c.deleteDiscontinuedFunctions()
 	}
 
-	// Start a goroutine to terminate orphaned pipeline executions.
-	go c.terminateOrphanedPipelineExecutions()
+	// Start a goroutine to terminate orphaned pipeline runs.
+	go c.terminateOrphanedRuns()
 
 	return c
 }
@@ -154,7 +154,7 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 			// minutes ago, with no pipelines still using them.
 			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id\n"+
 				"FROM discontinued_functions AS f\n"+
-				"LEFT JOIN pipelines_executions AS e ON f.id = e.function AND e.end_time IS NULL\n"+
+				"LEFT JOIN pipelines_runs AS e ON f.id = e.function AND e.end_time IS NULL\n"+
 				"WHERE f.discontinued_at < $1 AND e.id IS NULL",
 				time.Now().Add(-10*time.Minute))
 			if err != nil {
@@ -308,10 +308,10 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 			store := c.core.datastore.Store(id)
 			err := store.PurgePipelines(c.close.ctx, pipelines)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot purge pipelines: %s", err)
 			}
 
-			n := state.PurgePipeline{
+			n := state.PurgePipelines{
 				Workspace: id,
 			}
 
@@ -340,24 +340,31 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 				}
 				return n, nil
 			})
+			if err != nil {
+				return fmt.Errorf("cannot set pipelines as purged: %s", err)
+			}
 
-			return err
+			return nil
 		})
-		if err == nil {
-			break
+		if err != nil {
+			slog.Error(err.Error(), "workspace", ws.ID)
+		} else {
+			// Try one last time to check whether any pipelines were added in the meantime and still need purging.
+			// Note that we pass 1ns to SetNextWaitTime because it does not accept 0ns.
+			bo.SetNextWaitTime(1)
 		}
 
 	}
 
 }
 
-// terminateOrphanedPipelineExecutions starts a termination task for pipeline
-// executions whose node is no longer running or unresponsive.
+// terminateOrphanedRuns starts a termination task for pipeline runs whose node
+// is no longer running or has become unresponsive.
 // It must be called in its own goroutine.
 //
-// A pipeline execution is considered orphaned if it is not yet terminated, and
+// A pipeline run is considered orphaned if it has not yet been terminated and
 // its last ping time is older than 15 seconds.
-func (c *pipelineCleaner) terminateOrphanedPipelineExecutions() {
+func (c *pipelineCleaner) terminateOrphanedRuns() {
 	pipelineErr := newPipelineError(metrics.ReceiveStep, errors.New("pipeline has been terminated because the node became unresponsive"))
 	ctx := c.close.ctx
 	tick := time.NewTicker(15 * time.Second)
@@ -368,7 +375,7 @@ func (c *pipelineCleaner) terminateOrphanedPipelineExecutions() {
 		case <-tick.C:
 		}
 		pingTime := time.Now().UTC().Add(-15 * time.Second)
-		err := c.core.db.QueryScan(ctx, "SELECT pipeline FROM pipelines_executions WHERE end_time IS NULL AND ping_time < $1",
+		err := c.core.db.QueryScan(ctx, "SELECT pipeline FROM pipelines_runs WHERE end_time IS NULL AND ping_time < $1",
 			pingTime, func(rows *db.Rows) error {
 				var pipelineID int
 				for rows.Next() {
@@ -384,12 +391,12 @@ func (c *pipelineCleaner) terminateOrphanedPipelineExecutions() {
 					store := c.core.datastore.Store(ws.ID)
 					connection := &Connection{core: c.core, store: store, connection: c2}
 					p := &Pipeline{core: c.core, pipeline: pipeline, connection: connection}
-					go p.endExecution(pipelineErr)
+					go p.endRun(pipelineErr)
 				}
 				return nil
 			})
 		if err != nil && ctx.Err() == nil {
-			slog.Error("core: cannot terminate orphaned pipeline executions", "err", err)
+			slog.Error("core: cannot terminate orphaned pipeline runs", "err", err)
 		}
 	}
 }

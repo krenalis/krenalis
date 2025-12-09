@@ -504,7 +504,7 @@
 	padding-top: 4px;
 }
 
-.profile-drawer__identity-date {
+.profile-drawer__identity-updated-at {
 	font-size: 13px;
 	opacity: 0.8;
 	position: relative;
@@ -515,7 +515,7 @@
 	padding-left: calc(var(--logo-width) + var(--logo-gap));
 }
 
-.profile-drawer__identity-id,
+.profile-drawer__user-id,
 .profile-drawer__identity-anonymous-ids {
 	font-size: 13px;
 	margin-bottom: 2px;

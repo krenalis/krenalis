@@ -43,7 +43,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			showHead = true;
 		}
 
-		const isConnected = c.pipelinesCount > 0 || c.linkedConnections?.length > 0;
+		const isConnected = c.pipelines.length > 0 || c.linkedConnections?.length > 0;
 		const hasRelations = c.relations(connections).length > 0;
 
 		const isHovered =
@@ -60,8 +60,8 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			(isSomethingHovered &&
 				!(isHovered && isConnected) &&
 				!c.linkedConnections?.includes(hoveredConnection) &&
-				!(isUserDbHovered && c.pipelinesInfo.findIndex((p) => p.target === 'User') != -1) &&
-				!(isEventDbHovered && c.isSource && c.pipelinesInfo.findIndex((p) => p.target === 'Event') != -1));
+				!(isUserDbHovered && c.pipelines.findIndex((p) => p.target === 'User') != -1) &&
+				!(isEventDbHovered && c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1));
 
 		const arrow = (
 			<Arrow

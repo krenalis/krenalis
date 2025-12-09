@@ -98,8 +98,8 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	})
 
 	// Import from the first pipeline, which should import just the first name.
-	exec := c.ExecutePipeline(pipelineFirstName)
-	c.WaitForExecutionsCompletion(fsID, exec)
+	run := c.RunPipeline(pipelineFirstName)
+	c.WaitRunsCompletion(fsID, run)
 
 	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
@@ -122,8 +122,8 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 
 	// Import from the second pipeline, which should import just the last name,
 	// and that should result in profiles with both first name and last name.
-	exec = c.ExecutePipeline(pipelineLastName)
-	c.WaitForExecutionsCompletion(fsID, exec)
+	run = c.RunPipeline(pipelineLastName)
+	c.WaitRunsCompletion(fsID, run)
 
 	// Check the profiles.
 	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)

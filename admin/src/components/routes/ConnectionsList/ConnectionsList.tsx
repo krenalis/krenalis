@@ -86,8 +86,8 @@ const ConnectionsList = () => {
 					<StatusDot status={c.status} />
 					<div>{c.status.text}</div>
 				</div>,
-*/
-				c.pipelinesCount,
+				*/
+				c.pipelines.length,
 			];
 			if (hasEventConnections) {
 				if (c.linkedConnections != null) {

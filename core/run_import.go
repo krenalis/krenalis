@@ -23,7 +23,7 @@ import (
 
 // importUsers imports the users of the pipeline.
 //
-// Returns an error if execution does not reach its natural completion.
+// Returns an error if run does not reach its natural completion.
 // If the error is caused by the schema, the connector, or the data warehouse,
 // it returns an *pipelineError, which is expected to be logged as is.
 func (this *Pipeline) importUsers(ctx context.Context) error {
@@ -31,7 +31,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	pipeline := this.pipeline
 	connection := pipeline.Connection()
 	connector := connection.Connector()
-	execution, _ := pipeline.Execution()
+	run, _ := pipeline.Run()
 
 	// purge specifies whether identities should be purged from the
 	// data warehouse after all identities have been written.
@@ -46,8 +46,8 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 
 	switch connector.Type {
 	case state.API:
-		purge = execution.Cursor.IsZero()
-		records, err = this.api().Users(ctx, pipeline.InSchema, nil, execution.Cursor)
+		purge = run.Cursor.IsZero()
+		records, err = this.api().Users(ctx, pipeline.InSchema, nil, run.Cursor)
 	case state.Database:
 		database := this.database()
 		defer database.Close()
@@ -55,8 +55,8 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			switch name {
 			case "last_change_time":
 				var v string
-				if execution.Incremental {
-					purge = execution.Cursor.IsZero()
+				if run.Incremental {
+					purge = run.Cursor.IsZero()
 					v, _ = database.LastChangeTimePlaceholder(pipeline)
 				} else {
 					v, _ = database.LastChangeTimePlaceholder(nil)
@@ -70,8 +70,8 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		records, err = database.Records(ctx, pipeline, replacer)
 	case state.FileStorage:
 		var lastChangeTime time.Time
-		if !execution.Cursor.IsZero() && pipeline.LastChangeTimeColumn != "" {
-			lastChangeTime = execution.Cursor
+		if !run.Cursor.IsZero() && pipeline.LastChangeTimeColumn != "" {
+			lastChangeTime = run.Cursor
 		}
 		purge = lastChangeTime.IsZero()
 		records, err = this.file().Records(ctx, lastChangeTime)
@@ -187,7 +187,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			}
 
 			// Set the cursor.
-			err = this.setExecutionCursor(ctx, cursor)
+			err = this.setRunCursor(ctx, cursor)
 			if err != nil {
 				return err
 			}

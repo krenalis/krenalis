@@ -482,7 +482,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		isTrack    = typ == "track"
 	)
 
-	// AnonymousId and UserId.
+	// Anonymous ID and user ID.
 	if _, ok := event["anonymousId"]; !ok {
 		if _, ok := event["userId"]; !ok {
 			if isIdentify || isAlias {

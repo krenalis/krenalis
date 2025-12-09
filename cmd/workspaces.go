@@ -53,7 +53,11 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 	connector := query.Get("connector")
 	redirectURI := query.Get("redirectURI")
 	authCode := query.Get("authCode")
-	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
+	authToken, err := ws.AuthToken(r.Context(), connector, redirectURI, authCode)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"authToken": authToken}, nil
 }
 
 // Connection returns a connection of the current workspace.
@@ -159,7 +163,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
-	properties := q["properties"]
+	properties := splitQueryParameters(q["properties"])
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)
@@ -171,15 +175,27 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 		}
 	}
 	order := q.Get("order")
-	orderDesc := q.Get("orderDesc") == "true"
-	var first int
+	if order == "" {
+		order = "timestamp"
+	}
+	ascending := false
+	if asc := q.Get("ascending"); asc != "" {
+		switch asc {
+		case "true":
+			ascending = true
+		case "false":
+		default:
+			errors.BadRequest("invalid ascending")
+		}
+	}
+	first := 0
+	limit := 100
 	if f := q.Get("first"); f != "" {
 		first, err = strconv.Atoi(f)
 		if err != nil {
 			return nil, errors.BadRequest("invalid first")
 		}
 	}
-	var limit int
 	if l := q.Get("limit"); l != "" {
 		limit, err = strconv.Atoi(l)
 		if err != nil {
@@ -187,7 +203,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 		}
 	}
 
-	evts, err := ws.Events(r.Context(), properties, filter, order, orderDesc, first, limit)
+	evts, err := ws.Events(r.Context(), properties, filter, order, !ascending, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -313,32 +329,6 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 	}, nil
 }
 
-// Execution returns the execution of a pipeline in the current workspace.
-func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	id, ok := parseID(r.PathValue("id")) // ID of the execution.
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", r.PathValue("id"))
-	}
-	return ws.Execution(r.Context(), id)
-}
-
-// Executions returns the executions of the pipelines of the current workspace.
-func (workspace workspace) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	executions, err := ws.Executions(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"executions": executions}, nil
-}
-
 // IdentityResolutionSettings returns the identity resolution settings of the
 // workspace.
 func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -392,9 +382,10 @@ func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -473,9 +464,10 @@ func (workspace workspace) PipelineMetricsPerDate(_ http.ResponseWriter, r *http
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -517,9 +509,10 @@ func (workspace workspace) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("an 'pipeline' parameter is not valid")
@@ -561,9 +554,10 @@ func (workspace workspace) PipelineMetricsPerHour(_ http.ResponseWriter, r *http
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -605,9 +599,10 @@ func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *ht
 
 	// Parse pipelines.
 	var pipelines []int
-	if ids, ok := q["pipelines"]; ok {
+	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
 		pipelines = make([]int, len(ids))
 		for i, id := range ids {
+			var ok bool
 			pipelines[i], ok = parseID(id)
 			if !ok {
 				return nil, errors.BadRequest("a pipeline is not valid")
@@ -627,6 +622,32 @@ func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *ht
 		"end":    metrics.End,
 		"passed": metrics.Passed,
 		"failed": metrics.Failed}, nil
+}
+
+// PipelineRun returns the run of a pipeline in the current workspace.
+func (workspace workspace) PipelineRun(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	id, ok := parseID(r.PathValue("id")) // ID of the run.
+	if !ok {
+		return nil, errors.BadRequest("identifier %q is not a valid run identifier", r.PathValue("id"))
+	}
+	return ws.PipelineRun(r.Context(), id)
+}
+
+// PipelineRuns returns the runs of the pipelines of the current workspace.
+func (workspace workspace) PipelineRuns(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	runs, err := ws.PipelineRuns(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"runs": runs}, nil
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema
@@ -849,10 +870,7 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse the properties.
-	properties, ok := q["properties"]
-	if !ok {
-		return nil, errors.BadRequest("no properties were provided to return")
-	}
+	properties := splitQueryParameters(q["properties"])
 
 	filter := &core.Filter{
 		Logical: core.OpAnd,
@@ -895,7 +913,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
-	properties := q["properties"]
+	properties := splitQueryParameters(q["properties"])
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)
@@ -938,9 +956,9 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		}
 		b.writeString(`{"mpid":"`)
 		b.writeString(profile.MPID)
-		b.writeString(`","sourcesLastUpdate":"`)
+		b.writeString(`","updatedAt":"`)
 		buf := b.availableBuffer()
-		b.write(profile.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
+		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","attributes":`)
 		s, _ := types.Marshal(profile.Attributes, schema)
 		b.write(s)
@@ -958,16 +976,16 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	return nil, nil
 }
 
-// Warehouse returns the type, settings and MCP settings of the data warehouse
-// for a workspace.
+// Warehouse returns the platform, settings and MCP settings of the data
+// warehouse for a workspace.
 func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	name, settings, mcpSettings := ws.Warehouse()
+	platform, settings, mcpSettings := ws.Warehouse()
 	return map[string]any{
-		"name":        name,
+		"platform":    platform,
 		"settings":    settings,
 		"mcpSettings": mcpSettings,
 	}, nil

@@ -124,11 +124,11 @@ interface ProfileEvent {
 type ProfileAttributes = Record<string, any>;
 
 interface Identity {
+	userId?: string;
+	anonymousIds?: string[];
+	updatedAt: string;
 	pipeline: number;
 	connection: number;
-	id: string;
-	anonymousIds: string[] | null;
-	lastChangeTime: string;
 }
 
 interface Profile {

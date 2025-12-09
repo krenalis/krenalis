@@ -21,7 +21,7 @@
     "recharts": "3.2.0"
   },
   "scripts": {
-    "make-vendor": "go run ./make-vendor",
+    "makevendor": "go run ./makevendor",
     "minify-snippet": "node minify-snippet.js",
     "typecheck": "npx -p typescript@5.9.2 tsc",
     "prettier": "npx prettier@3.6.2 --log-level warn --write \"src/**/*\" minify-snippet.js"

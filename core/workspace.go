@@ -252,7 +252,7 @@ func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value,
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__mpid__"},
+		Property: []string{"_mpid"},
 		Operator: state.OpIs,
 		Values:   []any{mpid},
 	}}}
@@ -487,16 +487,14 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		LinkedConnections: slices.Clone(c.LinkedConnections),
-		PipelinesCount:    len(c.Pipelines()),
 		Health:            Health(c.Health),
 	}
 
 	// Set the pipelines.
 	pipelines := c.Pipelines()
-	p := make([]Pipeline, len(pipelines))
-	connection.Pipelines = &p
+	connection.Pipelines = make([]Pipeline, len(pipelines))
 	for i, pipeline := range pipelines {
-		(*connection.Pipelines)[i].fromState(this.core, this.store, pipeline)
+		connection.Pipelines[i].fromState(this.core, this.store, pipeline)
 	}
 
 	// Set the event types.
@@ -540,29 +538,14 @@ func (this *Workspace) Connections() []*Connection {
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			LinkedConnections: slices.Clone(c.LinkedConnections),
-			PipelinesCount:    len(c.Pipelines()),
 			Health:            Health(c.Health),
 		}
 
-		// Set the pipelines info.
+		// Set the pipelines.
 		pipelines := c.Pipelines()
-		p := make([]PipelineInfo, len(pipelines))
-		connection.PipelinesInfo = &p
+		connection.Pipelines = make([]Pipeline, len(pipelines))
 		for i, pipeline := range pipelines {
-			info := PipelineInfo{
-				ID:      pipeline.ID,
-				Target:  Target(pipeline.Target),
-				Enabled: pipeline.Enabled,
-			}
-			if pipeline.Target == state.TargetUser || pipeline.Target == state.TargetGroup {
-				if pipeline.SchedulePeriod != 0 {
-					start := int(pipeline.ScheduleStart)
-					period := SchedulePeriod(pipeline.SchedulePeriod)
-					info.ScheduleStart = &start
-					info.SchedulePeriod = &period
-				}
-			}
-			p[i] = info
+			connection.Pipelines[i].fromState(this.core, this.store, pipeline)
 		}
 
 		infos[i] = &connection
@@ -942,13 +925,14 @@ func (this *Workspace) DeleteEventListener(listener string) {
 
 // Events returns events that match the provided filter, if not nil, and are
 // within the range [first,first+limit], where first >= 0, 0 < limit <= 1000,
-// and only includes the specified properties from the event schema. properties
-// must contain at least one property.
+// and only includes the specified properties from the event schema.
+//
+// If properties is nil, all properties are returned; otherwise, properties
+// must contain at least one element.
 //
 // order specifies the property by which to sort the events. It cannot be of
-// type json or object. If not provided, the events are sorted by messageId.
-// orderDesc controls whether the events should be sorted in descending order,
-// when true, or ascending order.
+// type json or object. orderDesc, when true, orders the returned events in
+// descending order instead of ascending order.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore. It returns an errors.UnprocessableError error with code
@@ -960,18 +944,22 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	eventProperties := schemas.Event.Properties()
 
 	// Validate the properties.
-	if len(properties) == 0 {
-		return nil, errors.BadRequest("properties is empty")
-	}
-	for _, name := range properties {
-		if _, ok := eventProperties.ByName(name); !ok {
-			if name == "" {
-				return nil, errors.BadRequest("a property name is empty")
+	if properties == nil {
+		properties = eventPropertyNames
+	} else {
+		if len(properties) == 0 {
+			return nil, errors.BadRequest("properties is empty")
+		}
+		for _, name := range properties {
+			if _, ok := eventProperties.ByName(name); !ok {
+				if name == "" {
+					return nil, errors.BadRequest("a property name is empty")
+				}
+				if !types.IsValidPropertyName(name) {
+					return nil, errors.BadRequest("property name %q is not valid", name)
+				}
+				return nil, errors.BadRequest("property %q does not exist", name)
 			}
-			if !types.IsValidPropertyName(name) {
-				return nil, errors.BadRequest("property name %q is not valid", name)
-			}
-			return nil, errors.BadRequest("property %q does not exist", name)
 		}
 	}
 
@@ -989,20 +977,19 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	}
 
 	// Validate the order.
-	if order != "" {
-		orderProperty, ok := eventProperties.ByName(order)
-		if !ok {
-			if !types.IsValidPropertyName(order) {
-				return nil, errors.BadRequest("order %q is not a valid property name", order)
-			}
-			return nil, errors.BadRequest("order property %q does not exist", order)
+	if order == "" {
+		return nil, errors.BadRequest("order is missing")
+	}
+	orderProperty, ok := eventProperties.ByName(order)
+	if !ok {
+		if !types.IsValidPropertyName(order) {
+			return nil, errors.BadRequest("order %q is not a valid property name", order)
 		}
-		switch orderProperty.Type.Kind() {
-		case types.JSONKind, types.ObjectKind:
-			return nil, errors.BadRequest("cannot sort by %s: property has type %s", order, orderProperty.Type)
-		}
-	} else {
-		order = "messageId"
+		return nil, errors.BadRequest("order property %q does not exist", order)
+	}
+	switch orderProperty.Type.Kind() {
+	case types.JSONKind, types.ObjectKind:
+		return nil, errors.BadRequest("cannot sort by %s: property has type %s", order, orderProperty.Type)
 	}
 
 	// Validate first and limit.
@@ -1035,96 +1022,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
-// Execution returns the execution with the specified identifier for a pipeline
-// in the workspace.
-//
-// If the execution does not exist, it returns an errors.NotFound error.
-func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error) {
-	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid execution identifier", id)
-	}
-	// Check if the execution is running.
-	if exe, ok := this.workspace.Execution(id); ok {
-		return &Execution{
-			ID:        exe.ID,
-			Pipeline:  exe.Pipeline().ID,
-			StartTime: exe.StartTime,
-		}, nil
-	}
-	var exe Execution
-	err := this.core.db.QueryRow(ctx,
-		"SELECT e.id, e.pipeline, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
-			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4,"+
-			" e.failed_5, e.error\n"+
-			"FROM pipelines_executions e\n"+
-			"INNER JOIN pipelines a ON a.id = e.pipeline\n"+
-			"INNER JOIN connections c ON c.id = a.connection\n"+
-			"WHERE c.workspace = $1 AND e.id = $2", this.workspace.ID, id).Scan(
-		&exe.ID, &exe.Pipeline, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
-		&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
-		&exe.Failed[5], &exe.Error)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.NotFound("pipeline execution %d does not exist", id)
-		}
-		return nil, err
-	}
-	if exe.EndTime == nil {
-		exe.Passed = [6]int{}
-		exe.Failed = [6]int{}
-	}
-	return &exe, nil
-}
-
-// Executions returns the executions of the pipelines of the workspace.
-func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
-
-	this.core.mustBeOpen()
-
-	executions := []*Execution{}
-	err := this.core.db.QueryScan(ctx,
-		"SELECT e.id, e.pipeline, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
-			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4, e.failed_5, e.error\n"+
-			"FROM pipelines_executions e\n"+
-			"INNER JOIN pipelines a ON a.id = e.pipeline\n"+
-			"INNER JOIN connections c ON c.id = a.connection\n"+
-			"WHERE c.workspace = $1\n"+
-			"ORDER BY id DESC", this.workspace.ID, func(rows *db.Rows) error {
-			var err error
-			for rows.Next() {
-				var exe Execution
-				if err = rows.Scan(&exe.ID, &exe.Pipeline, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
-					&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
-					&exe.Failed[5], &exe.Error); err != nil {
-					return err
-				}
-				executions = append(executions, &exe)
-			}
-			return nil
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, exe := range executions {
-		if exe.EndTime == nil {
-			exe.Passed = [6]int{}
-			exe.Failed = [6]int{}
-		}
-	}
-
-	return executions, nil
-}
-
 // Identities returns the identities for the provided MPID, and an estimate of
 // their total number without applying first and limit.
 //
 // It returns the identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
-// Identities are sorted by last change time, in descending order, so the most
-// recently changed identities are returned first.
+// Identities are sorted by updated-at time in descending order, so the most
+// recently updated identities come first.
 //
 // If the MPID does not exist, still return an empty slice instead of an error.
 //
@@ -1142,7 +1047,7 @@ func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__mpid__"},
+		Property: []string{"_mpid"},
 		Operator: state.OpIs,
 		Values:   []any{mpid},
 	}}}
@@ -1235,6 +1140,88 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 	return observedEvents, omitted, nil
 }
 
+// PipelineRun returns the run with the specified identifier for a pipeline in
+// the workspace.
+//
+// If the run does not exist, it returns an errors.NotFound error.
+func (this *Workspace) PipelineRun(ctx context.Context, id int) (*PipelineRun, error) {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid run identifier", id)
+	}
+	// Check whether the run is in progress.
+	if run, ok := this.workspace.Run(id); ok {
+		return &PipelineRun{
+			ID:        run.ID,
+			Pipeline:  run.Pipeline().ID,
+			StartTime: run.StartTime,
+		}, nil
+	}
+	var run PipelineRun
+	err := this.core.db.QueryRow(ctx,
+		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
+			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
+			" r.failed_5, r.error\n"+
+			"FROM pipelines_runs r\n"+
+			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
+			"INNER JOIN connections c ON c.id = p.connection\n"+
+			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
+		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
+		&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+		&run.Failed[5], &run.Error)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.NotFound("pipeline run %d does not exist", id)
+		}
+		return nil, err
+	}
+	if run.EndTime == nil {
+		run.Passed = [6]int{}
+		run.Failed = [6]int{}
+	}
+	return &run, nil
+}
+
+// PipelineRuns returns the runs of the pipelines of the workspace.
+func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error) {
+
+	this.core.mustBeOpen()
+
+	runs := []*PipelineRun{}
+	err := this.core.db.QueryScan(ctx,
+		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
+			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.error\n"+
+			"FROM pipelines_runs r\n"+
+			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
+			"INNER JOIN connections c ON c.id = p.connection\n"+
+			"WHERE c.workspace = $1\n"+
+			"ORDER BY id DESC", this.workspace.ID, func(rows *db.Rows) error {
+			var err error
+			for rows.Next() {
+				var run PipelineRun
+				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
+					&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+					&run.Failed[5], &run.Error); err != nil {
+					return err
+				}
+				runs = append(runs, &run)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, run := range runs {
+		if run.EndTime == nil {
+			run.Passed = [6]int{}
+			run.Failed = [6]int{}
+		}
+	}
+
+	return runs, nil
+}
+
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the
@@ -1248,16 +1235,18 @@ func (this *Workspace) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 
 // Profile represents a profile.
 type Profile struct {
-	MPID           string         `json:"mpid"`
-	Attributes     map[string]any `json:"attributes"`
-	LastChangeTime time.Time      `json:"lastChangeTime"`
+	MPID       string         `json:"mpid"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	Attributes map[string]any `json:"attributes"`
 }
 
 // Profiles returns the profiles, the profile schema, and an estimate of their
 // total number without applying first and limit. It returns the profiles that
 // satisfies the filter, if not nil, and in range [first,first+limit] with
-// first >= 0 and 0 < limit <= 1000 and only the given properties. properties
-// cannot be empty.
+// first >= 0 and 0 < limit <= 1000 and only the given properties.
+//
+// If properties is nil, all properties are returned; otherwise, properties
+// must contain at least one element.
 //
 // order is the name of the property by which to sort the returned profiles and
 // cannot have type json, array, object, or map; when not provided, the profiles
@@ -1282,18 +1271,22 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	profileProperties := ws.ProfileSchema.Properties()
 
 	// Validate the properties.
-	if len(properties) == 0 {
-		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
-	}
-	for _, name := range properties {
-		if _, ok := profileProperties.ByName(name); !ok {
-			if name == "" {
-				return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
+	if properties == nil {
+		properties = profileProperties.Names()
+	} else {
+		if len(properties) == 0 {
+			return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
+		}
+		for _, name := range properties {
+			if _, ok := profileProperties.ByName(name); !ok {
+				if name == "" {
+					return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
+				}
+				if !types.IsValidPropertyName(name) {
+					return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
+				}
+				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 			}
-			if !types.IsValidPropertyName(name) {
-				return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
-			}
-			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
 
@@ -1325,7 +1318,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		order = "__last_change_time__"
+		order = "_updated_at"
 	}
 
 	// Validate first and limit.
@@ -1338,7 +1331,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: append([]string{"__mpid__", "__last_change_time__"}, properties...),
+		Properties: append([]string{"_mpid", "_updated_at"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1364,11 +1357,11 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
-		profiles[i].MPID = row["__mpid__"].(string)
+		profiles[i].MPID = row["_mpid"].(string)
+		profiles[i].UpdatedAt = row["_updated_at"].(time.Time)
 		profiles[i].Attributes = row
-		profiles[i].LastChangeTime = row["__last_change_time__"].(time.Time)
-		delete(row, "__mpid__")
-		delete(row, "__last_change_time__")
+		delete(row, "_mpid")
+		delete(row, "_updated_at")
 	}
 
 	return profiles, schema, total, nil
@@ -1529,7 +1522,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1538,10 +1531,10 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	}
 	if mcpSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if this.workspace.Warehouse.Name == "Snowflake" {
+		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1551,7 +1544,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Name, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1725,7 +1718,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1735,11 +1728,11 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	if mcpSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if this.workspace.Warehouse.Name == "Snowflake" {
+		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
 		var err error
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1749,7 +1742,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Name, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1854,8 +1847,8 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// Warehouse returns driver name, settings and MCP settings of the data
-// warehouse for the workspace.
+// Warehouse returns platform, settings and MCP settings of the data warehouse
+// for the workspace.
 func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
@@ -1866,7 +1859,7 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	} else {
 		mcpSettings = json.Value("null")
 	}
-	return ws.Warehouse.Name, settings, mcpSettings
+	return ws.Warehouse.Platform, settings, mcpSettings
 }
 
 // identities returns the identities matching the provided where condition and
@@ -1875,8 +1868,8 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 // It returns the identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
-// Identities are sorted by last change time, in descending order, so the most
-// recently changed identities are returned first.
+// Identities are sorted by updated-at time in descending order, so the most
+// recently updated identities come first.
 //
 // If there are no identities, a nil slice is returned.
 //
@@ -1885,17 +1878,17 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 func (this *Workspace) identities(ctx context.Context, where *state.Where, first, limit int) ([]Identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	records, total, err := this.store.Identities(ctx, datastore.Query{
+	rows, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
-			"__pipeline__",
-			"__is_anonymous__",
-			"__identity_id__",
-			"__connection__",
-			"__anonymous_ids__",
-			"__last_change_time__",
+			"_pipeline",
+			"_is_anonymous",
+			"_identity_id",
+			"_connection",
+			"_anonymous_ids",
+			"_updated_at",
 		},
 		Where:     where,
-		OrderBy:   "__last_change_time__",
+		OrderBy:   "_updated_at",
 		OrderDesc: true,
 		First:     first,
 		Limit:     limit,
@@ -1907,56 +1900,56 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		return nil, 0, err
 	}
 
-	// Create the identities from the records returned by the datastore.
-	var identities []Identity
+	// Build the identities from the rows returned by the datastore.
+	identities := make([]Identity, 0, len(rows))
 
-	for _, record := range records {
+	for _, row := range rows {
 
-		// Retrieve the connection.
-		connID := record["__connection__"].(int)
+		// Get the connection.
+		connID := row["_connection"].(int)
 		conn, ok := this.workspace.Connection(connID)
 		if !ok {
 			// The connection for this identity no longer exists, so skip this identity.
 			continue
 		}
 
-		// Retrieve the pipeline.
-		pipelineID := record["__pipeline__"].(int)
+		// Get the pipeline.
+		pipelineID := row["_pipeline"].(int)
 		_, ok = conn.Pipeline(pipelineID)
 		if !ok {
 			// The pipeline for this identity no longer exists, so skip this identity.
 			continue
 		}
 
-		// Determine the value for the identity ID.
-		identityID := record["__identity_id__"].(string)
+		// Get the value for the identity ID.
+		identityID := row["_identity_id"].(string)
 
-		// Determine the anonymous IDs.
-		var anonIDs []string
-		if ids, ok := record["__anonymous_ids__"].([]any); ok {
-			anonIDs = make([]string, len(ids))
+		// Get the anonymous IDs.
+		var anonymousIDs []string
+		if ids, ok := row["_anonymous_ids"].([]any); ok {
+			anonymousIDs = make([]string, len(ids))
 			for i := range ids {
-				anonIDs[i] = ids[i].(string)
+				anonymousIDs[i] = ids[i].(string)
 			}
 		}
 
 		// In the case of anonymous identities, the anonymous ID is inside the
 		// identity ID, so there is the need to populate the anonymous IDs by
 		// taking that value, then reset the identity ID.
-		if record["__is_anonymous__"].(bool) {
-			anonIDs = append(anonIDs, identityID)
+		if row["_is_anonymous"].(bool) {
+			anonymousIDs = append(anonymousIDs, identityID)
 			identityID = ""
 		}
 
-		// Determine the last change time.
-		lastChangeTime := record["__last_change_time__"].(time.Time)
+		// Get the updated-at time.
+		updatedAt := row["_updated_at"].(time.Time)
 
 		identities = append(identities, Identity{
-			Connection:     connID,
-			Pipeline:       pipelineID,
-			ID:             identityID,
-			AnonymousIds:   anonIDs,
-			LastChangeTime: lastChangeTime,
+			UserID:       identityID,
+			AnonymousIDs: anonymousIDs,
+			UpdatedAt:    updatedAt,
+			Connection:   connID,
+			Pipeline:     pipelineID,
 		})
 
 	}
@@ -2034,7 +2027,7 @@ func (mode WarehouseMode) String() string {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, null) {
-		return nil
+		return errors.BadRequest("mode cannot be null")
 	}
 	var v any
 	err := json.Unmarshal(data, &v)
@@ -2078,16 +2071,11 @@ func suitableAsIdentifier(t types.Type) bool {
 
 // Identity represents an identity.
 type Identity struct {
-	// TODO(Gianluca): the Connection field is kept here redundantly (the pipeline
-	// is already there) because the Admin console does not currently have the
-	// Pipeline => Connection mapping available, and it would be very inconvenient
-	// to retrieve this information where it is needed. When it will have it in
-	// the future, we will remove this field.
-	Connection     int       `json:"connection"`
-	Pipeline       int       `json:"pipeline"`
-	ID             string    `json:"id"`                           // empty string for identities imported from anonymous events.
-	AnonymousIds   []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
-	LastChangeTime time.Time `json:"lastChangeTime"`
+	UserID       string    `json:"userId,omitempty"`       // is omitted if anonymous
+	AnonymousIDs []string  `json:"anonymousIds,omitempty"` // is omitted for identities not ingested from events
+	Connection   int       `json:"connection"`
+	Pipeline     int       `json:"pipeline"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 // filterWorkspacePipelines returns from pipelines, only the pipelines of the

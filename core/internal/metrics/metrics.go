@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file.
 
 // Package metrics collects and stores pipeline metrics in the database. It
-// tracks both batch executions and events related to receiving or dispatching.
+// tracks both batch runs and events related to receiving or dispatching.
 package metrics
 
 import (
@@ -32,7 +32,7 @@ var (
 	MaxTime = TimeSlotToTime(maxTimeslot) // 2262-04-11 23:47:00
 )
 
-// Step represents a step of an execution.
+// Step represents a step of a run.
 type Step int
 
 const (

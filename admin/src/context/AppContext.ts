@@ -33,15 +33,15 @@ interface AppContext {
 	logout: () => Promise<void>;
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 	toastRef: React.MutableRefObject<SlAlert>;
-	executePipeline: (
+	runPipeline: (
 		connection: TransformedConnection,
 		pipelineID: number,
 		pipelineTarget: PipelineTarget,
 	) => Promise<void>;
-	executePipelineButtonRefs: React.MutableRefObject<{
+	runPipelineButtonRefs: React.MutableRefObject<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>;
-	executePipelineDropdownButtonRefs: React.MutableRefObject<{
+	runPipelineDropdownButtonRefs: React.MutableRefObject<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>;
 	isPasswordless: boolean;

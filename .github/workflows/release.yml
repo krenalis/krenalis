@@ -1,4 +1,4 @@
-name: Publish Docker image
+name: Release Meergo
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
 permissions: {}
 
 jobs:
-  push_to_registry:
+  push_to_docker_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     permissions:

@@ -86,7 +86,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 		{
 			name: "Meta properties",
 			schema: types.Object([]types.Property{
-				{Name: "__id__", Type: types.String(), ReadOptional: true},
+				{Name: "_id", Type: types.String(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},

@@ -27,7 +27,13 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	conns := connectors.Connectors()
 	state.connectors = make(map[string]*Connector, len(conns))
 	for code, connector := range conns {
-		c := Connector{}
+		c := Connector{
+			Terms: ConnectorTerms{
+				User:   "User",
+				Users:  "Users",
+				UserID: "User ID",
+			},
+		}
 		switch connector := connector.(type) {
 		case connectors.APISpec:
 			c.Code = connector.Code
@@ -46,7 +52,15 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.Documentation.Destination.Summary = asDest.Documentation.Summary
 				c.Documentation.Destination.Overview = asDest.Documentation.Overview
 			}
-			c.Terms = ConnectorTerms(connector.Terms)
+			if connector.Terms.User != "" {
+				c.Terms.User = connector.Terms.User
+			}
+			if connector.Terms.Users != "" {
+				c.Terms.Users = connector.Terms.Users
+			}
+			if connector.Terms.UserID != "" {
+				c.Terms.UserID = connector.Terms.UserID
+			}
 			switch connector.AsDestination.SendingMode {
 			case connectors.Client:
 				mode := Client
@@ -58,7 +72,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				mode := ClientAndServer
 				c.SendingMode = &mode
 			}
-			c.IdentityIDLabel = connector.IdentityIDLabel
 			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
 				c.OAuth = &OAuth{
@@ -160,12 +173,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Label = connector.Label
 			c.Type = SDK
 			c.Categories = connector.Categories
-			c.Terms = ConnectorTerms{
-				User:  "user",
-				Users: "users",
-				// Group:  "group", TODO(marco): Implement groups
-				// Groups: "groups",
-			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Strategies = connector.Strategies
 			c.FallbackToRequestIP = connector.FallbackToRequestIP
@@ -175,24 +182,18 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Label = connector.Label
 			c.Type = Webhook
 			c.Categories = connector.Categories
-			c.Terms = ConnectorTerms{
-				User:  "user",
-				Users: "users",
-				// Group:  "group", TODO(marco): Implement groups
-				// Groups: "groups",
-			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Documentation = connector.Documentation
 		}
 		state.connectors[code] = &c
 	}
 
-	// Read all warehouse drivers.
-	drivers := warehouses.Drivers()
-	state.warehouseDrivers = make(map[string]WarehouseDriver, len(drivers))
-	for _, driver := range drivers {
-		state.warehouseDrivers[driver.Name] = WarehouseDriver{
-			Name: driver.Name,
+	// Read all warehouse platforms.
+	platforms := warehouses.Platforms()
+	state.warehousePlatforms = make(map[string]WarehousePlatform, len(platforms))
+	for _, platform := range platforms {
+		state.warehousePlatforms[platform.Name] = WarehousePlatform{
+			Name: platform.Name,
 		}
 	}
 
@@ -270,7 +271,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID uuid.UUID
-			var warehouseName string
+			var warehousePlatform string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterProfileSchemaSchema []byte
@@ -279,10 +280,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[int]*Connection{},
-					executions:  map[int]*PipelineExecution{},
+					runs:        map[int]*PipelineRun{},
 					accounts:    map[int]*Account{},
 				}
-				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
+				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
 					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterProfileSchema.ID,
 					&alterProfileSchemaSchema, &ws.AlterProfileSchema.PrimarySources,
 					&ws.AlterProfileSchema.Operations, &ws.AlterProfileSchema.StartTime,
@@ -294,10 +295,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
-				if _, ok := state.warehouseDrivers[warehouseName]; !ok {
-					return fmt.Errorf("warehouse driver for %q is required but not registered. (Possibly forgotten import?)", warehouseName)
+				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
+					return fmt.Errorf("warehouse platform for %q is required but not registered. (Possibly forgotten import?)", warehousePlatform)
 				}
-				ws.Warehouse.Name = warehouseName
+				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
 				if _json.Value(warehouseMCPSettings).IsNull() {
@@ -516,12 +517,12 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return err
 	}
 
-	// Read running pipeline executions.
+	// Read pipeline runs in progress.
 	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
-		"FROM pipelines_executions\nWHERE end_time IS NULL",
+		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				exe := PipelineExecution{
+				exe := PipelineRun{
 					mu: &sync.Mutex{},
 				}
 				var pipelineID int
@@ -531,9 +532,9 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				}
 				pipeline := state.pipelines[pipelineID]
 				exe.pipeline = pipeline
-				pipeline.execution = &exe
+				pipeline.run = &exe
 				ws := exe.pipeline.connection.workspace
-				ws.executions[exe.ID] = &exe
+				ws.runs[exe.ID] = &exe
 			}
 			return nil
 		})

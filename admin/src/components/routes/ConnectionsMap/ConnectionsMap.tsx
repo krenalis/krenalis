@@ -33,13 +33,12 @@ const ConnectionsMap = () => {
 		let isImportUserDbConnectedToHover = false;
 		let isImportUserDbHighlighted = false;
 		if (hovered != null && hovered.isSource) {
-			isImportUserDbConnectedToHover = hovered.pipelinesInfo.findIndex((p) => p.target === 'User') != -1;
+			isImportUserDbConnectedToHover = hovered.pipelines.findIndex((p) => p.target === 'User') != -1;
 			isImportUserDbHighlighted = hovered.relations(connections).includes('dwh-user');
 		} else if (isUserDbHovered) {
 			isImportUserDbConnectedToHover =
-				connections.findIndex(
-					(c) => c.isSource && c.pipelinesInfo.findIndex((p) => p.target === 'User') != -1,
-				) != -1;
+				connections.findIndex((c) => c.isSource && c.pipelines.findIndex((p) => p.target === 'User') != -1) !=
+				-1;
 			isImportUserDbHighlighted =
 				connections.findIndex((c) => c.isSource && c.relations(connections).includes('dwh-user')) != -1;
 		}
@@ -47,12 +46,12 @@ const ConnectionsMap = () => {
 		let isExportUserDbConnectedToHover = false;
 		let isExportUserDbHighlighted = false;
 		if (hovered != null && hovered.isDestination) {
-			isExportUserDbConnectedToHover = hovered.pipelinesInfo.findIndex((p) => p.target === 'User') != -1;
+			isExportUserDbConnectedToHover = hovered.pipelines.findIndex((p) => p.target === 'User') != -1;
 			isExportUserDbHighlighted = hovered.relations(connections).includes('dwh-user');
 		} else if (isUserDbHovered) {
 			isExportUserDbConnectedToHover =
 				connections.findIndex(
-					(c) => c.isDestination && c.pipelinesInfo.findIndex((p) => p.target === 'User') != -1,
+					(c) => c.isDestination && c.pipelines.findIndex((p) => p.target === 'User') != -1,
 				) != -1;
 			isExportUserDbHighlighted =
 				connections.findIndex((c) => c.isDestination && c.relations(connections).includes('dwh-user')) != -1;
@@ -61,13 +60,12 @@ const ConnectionsMap = () => {
 		let isEventDbConnectedToHover = false;
 		let isEventDbHighlighted = false;
 		if (hovered != null && hovered.isSource) {
-			isEventDbConnectedToHover = hovered.pipelinesInfo.findIndex((p) => p.target === 'Event') != -1;
+			isEventDbConnectedToHover = hovered.pipelines.findIndex((p) => p.target === 'Event') != -1;
 			isEventDbHighlighted = hovered.relations(connections).includes('dwh-event');
 		} else if (isEventDbHovered) {
 			isEventDbConnectedToHover =
-				connections.findIndex(
-					(c) => c.isSource && c.pipelinesInfo.findIndex((p) => p.target === 'Event') != -1,
-				) != -1;
+				connections.findIndex((c) => c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1) !=
+				-1;
 			isEventDbHighlighted =
 				connections.findIndex((c) => c.isSource && c.relations(connections).includes('dwh-event')) != -1;
 		}

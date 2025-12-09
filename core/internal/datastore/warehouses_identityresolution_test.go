@@ -12,7 +12,6 @@ import (
 	"os"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,7 +20,7 @@ import (
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
-	// Import warehouse drivers for TestWarehousesIdentityResolution.
+	// Import warehouse platforms for TestWarehousesIdentityResolution.
 	_ "github.com/meergo/meergo/warehouses/postgresql"
 	_ "github.com/meergo/meergo/warehouses/snowflake"
 
@@ -62,7 +61,7 @@ type identity struct {
 	pipeline     int // can be 1, 2 ... 9
 	id           string
 	isAnonymous  bool
-	anonymousIds []string
+	anonymousIDs []string
 	attributes   map[string]any
 }
 
@@ -469,15 +468,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Run the tests on PostgreSQL and Snowflake warehouse driver.
-	warehouseDrivers := warehouses.Drivers()
-	if len(warehouseDrivers) == 0 {
-		t.Fatal("there are no warehouse drivers. Missing warehouse drivers import in test file?")
+	// Run the tests on PostgreSQL and Snowflake warehouse platforms.
+	platforms := warehouses.Platforms()
+	if len(platforms) == 0 {
+		t.Fatal("there are no warehouse platform. Missing warehouse platforms import in test file?")
 	}
-	for _, warehouseDriver := range warehouseDrivers {
-		t.Run(warehouseDriver.Name, func(t *testing.T) {
+	for _, platform := range platforms {
+		t.Run(platform.Name, func(t *testing.T) {
 			var settings []byte
-			switch warehouseDriver.Name {
+			switch platform.Name {
 			case "PostgreSQL":
 				const (
 					database = "test_meergo"
@@ -526,23 +525,22 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseDriver.Name))
-				settingsFile, ok := os.LookupEnv(settingsEnvKey)
+				settingsFile, ok := os.LookupEnv("MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE")
 				if !ok {
-					t.Skipf("the %s environment variable is not present", settingsEnvKey)
+					t.Skipf("the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
 				}
 				// Read the JSON file with the warehouse settings.
 				var err error
 				settings, err = os.ReadFile(settingsFile)
 				if err != nil {
-					t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+					t.Fatalf("cannot open the path %q specified in the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
 				}
 			default:
-				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseDriver.Name))
+				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}
 
 			// Open the warehouse.
-			wh, err := warehouseDriver.New(&warehouses.Config{
+			wh, err := platform.New(&warehouses.Config{
 				Settings: settings,
 			})
 			if err != nil {
@@ -569,7 +567,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 					// Truncate the existing identities.
 					//
-					// TODO(Gianluca): how should the drivers expose the table names? We
+					// TODO(Gianluca): how should the platforms expose the table names? We
 					// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
 					err = wh.Truncate(ctx, "meergo_identities")
 					if err != nil {
@@ -591,13 +589,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						// making the test fail.
 						time.Sleep(1 * time.Millisecond)
 						row := map[string]any{
-							"__pipeline__":         profile.pipeline,
-							"__is_anonymous__":     profile.isAnonymous,
-							"__identity_id__":      profile.id,
-							"__connection__":       profile.connection,
-							"__anonymous_ids__":    toSliceAny(profile.anonymousIds),
-							"__last_change_time__": time.Now().UTC(),
-							"__execution__":        1,
+							"_pipeline":      profile.pipeline,
+							"_is_anonymous":  profile.isAnonymous,
+							"_identity_id":   profile.id,
+							"_connection":    profile.connection,
+							"_anonymous_ids": toSliceAny(profile.anonymousIDs),
+							"_updated_at":    time.Now().UTC(),
+							"_run":           1,
 						}
 						for k, v := range profile.attributes {
 							row[k] = v
@@ -694,13 +692,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 // merge operation, both when importing in batch.
 func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
 	columns := make([]warehouses.Column, 7+len(iwColumns))
-	columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
-	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
-	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
-	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
+	columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
+	columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
+	columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
+	columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
 	i := 7
 	for _, column := range iwColumns {
 		columns[i] = column

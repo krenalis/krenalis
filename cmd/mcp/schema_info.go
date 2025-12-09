@@ -34,18 +34,18 @@ func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescripti
 			},
 		})
 	}
-	// Add information about the "__mpid__" and "__last_change_time__".
+	// Add information about the "_mpid" and "_updated_at".
 	info = append(info, map[string]any{
 		"profileViewColumn": map[string]any{
-			"name":        "__mpid__",
+			"name":        "_mpid",
 			"type":        "uuid",
 			"nullable":    true,
-			"description": "The MPID (Meergo profile ID) uniquely identifies an unified profile within Meergo. It doesn't have a corresponding property in the profile schema. It's used to reference the 'events.mpid' column.",
+			"description": "The MPID (Meergo Profile ID) uniquely identifies an unified profile within Meergo. It doesn't have a corresponding property in the profile schema. It's used to reference the 'events.mpid' column.",
 		},
 	})
 	info = append(info, map[string]any{
 		"profileViewColumn": map[string]any{
-			"name":        "__last_change_time__",
+			"name":        "_updated_at",
 			"type":        "timestamp without time zone",
 			"nullable":    true,
 			"description": "Timestamp of the profile's last update. It doesn't have a corresponding property in the profile schema.",

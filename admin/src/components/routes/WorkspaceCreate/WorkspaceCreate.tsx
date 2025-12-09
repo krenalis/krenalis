@@ -23,7 +23,7 @@ const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOU
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
-		localStorage.getItem(IS_DOCKER_KEY) != null ? 'PostgreSQL-Docker' : 'PostgreSQL',
+		localStorage.getItem(IS_DOCKER_KEY) != null ? 'PostgreSQL-Docker' : 'Snowflake',
 	);
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
@@ -167,6 +167,14 @@ const WorkspaceCreate = () => {
 				placeholder='My workspace'
 				helpText='A name for the workspace, so it can be easily recognized among other workspaces. It can be changed later.'
 			/>
+			<div className='workspace-create__data-warehouse'>Workspace's data warehouse</div>
+			<p className='workspace-create__data-warehouse-description'>
+				Profile data and events of the workspace will be stored in your own data warehouse.
+				<br />
+				<br />
+				Please provide the login credentials for an empty database within the data warehouse. Meergo will create
+				views and tables for storing profile data and events.
+			</p>
 			<SlSelect
 				className='workspace-create__warehouse-list'
 				value={selectedWarehouse}

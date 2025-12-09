@@ -2,11 +2,10 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package snowflake
+package postgresql
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
 	"fmt"
 	"log/slog"
@@ -18,14 +17,14 @@ import (
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/jackc/pgx/v5"
 )
 
 //go:embed identity_resolution.sql
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -33,7 +32,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.resolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
+	err = warehouse.resolveIdentities(ctx, opID, identifiers, profileColumns, profilePrimarySources)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -50,7 +49,12 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
+
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
 
 	// Determine the current version of the "meergo_profiles" table and create a copy
 	// of it with the incremented version.
@@ -59,20 +63,19 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		return err
 	}
 	newProfilesVersion := profilesVersion + 1
-	newProfilesName := fmt.Sprintf("MEERGO_PROFILES_%d", newProfilesVersion)
+	newProfilesName := fmt.Sprintf("meergo_profiles_%d", newProfilesVersion)
 
 	// Create a copy of the current profiles table and set its new version in
-	// '_MEERGO_PROFILE_SCHEMA_VERSIONS'.
-	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		likeTable := fmt.Sprintf(`MEERGO_PROFILES_%d`, profilesVersion)
-		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteIdent(newProfilesName), quoteIdent(likeTable)))
+	// 'meergo_profile_schema_versions'.
+	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "meergo_profiles_%d")`, quoteIdent(newProfilesName), profilesVersion))
 		if err != nil {
-			return fmt.Errorf("cannot create profiles table (with name %s) like table %s: %s", quoteIdent(newProfilesName), quoteIdent(likeTable), err)
+			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
-		_, err = tx.Exec(`INSERT INTO "_MEERGO_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
-			` VALUES (?, ?, ?)`, newProfilesVersion, opID, time.Now().UTC())
+		_, err = tx.Exec(ctx, `INSERT INTO "meergo_profile_schema_versions" ("version", "operation", "timestamp")`+
+			` VALUES ($1, $2, $3)`, newProfilesVersion, opID, time.Now().UTC())
 		if err != nil {
-			return snowflake(err)
+			return err
 		}
 		return nil
 	})
@@ -87,13 +90,13 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		sameProfile.WriteString("( CASE\n")
 		for _, ident := range identifiers {
 			id := quoteIdent(ident.Name)
-			sameProfile.WriteString(`                WHEN "I1".`)
+			sameProfile.WriteString(`                WHEN "i1".`)
 			sameProfile.WriteString(id)
-			sameProfile.WriteString(` IS NOT NULL AND "I2".`)
+			sameProfile.WriteString(` IS NOT NULL AND "i2".`)
 			sameProfile.WriteString(id)
-			sameProfile.WriteString(` IS NOT NULL THEN "I1".`)
+			sameProfile.WriteString(` IS NOT NULL THEN "i1".`)
 			sameProfile.WriteString(id)
-			sameProfile.WriteString(`::text = "I2".`)
+			sameProfile.WriteString(`::text = "i2".`)
 			sameProfile.WriteString(id)
 			sameProfile.WriteString(`::text`)
 			sameProfile.WriteByte('\n')
@@ -103,43 +106,52 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		sameProfile.WriteString("false")
 	}
 
+	// Drop (if exists) and create the aggregation function "array_cat_agg"
+	// which is used by the identities merge query.
+	const aggregateFunction = `
+		DROP AGGREGATE IF EXISTS array_cat_agg(anycompatiblearray);
+		CREATE AGGREGATE array_cat_agg(anycompatiblearray) (
+			SFUNC=array_cat,
+			STYPE=anycompatiblearray
+		);`
+	_, err = pool.Exec(ctx, aggregateFunction)
+	if err != nil {
+		return fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err)
+	}
+
 	// Generate the SQL queries that merge the identities to obtain the profiles.
 	var mergeProfiles strings.Builder
-	mergeProfiles.WriteString(`EXECUTE IMMEDIATE 'INSERT INTO `)
+	mergeProfiles.WriteString(`INSERT INTO `)
 	mergeProfiles.WriteString(quoteIdent(newProfilesName))
 	mergeProfiles.WriteString(` (`)
 	for _, c := range profileColumns {
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"__IDENTITIES__", "__MPID__", "__LAST_CHANGE_TIME__"`)
+	mergeProfiles.WriteString(`"_identities", "_mpid", "_updated_at"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
-			mergeProfiles.WriteString(`CASE WHEN ARRAY_AGG(` + quoteIdent(c.Name) +
-				`) = [] THEN NULL ELSE ARRAY_SORT(ARRAY_DISTINCT(ARRAY_FLATTEN(ARRAY_AGG(` + quoteIdent(c.Name) + `)))) END`)
+			mergeProfiles.WriteString(`(array_cat_agg(DISTINCT ` + quoteIdent(c.Name) + ` ORDER BY ` + quoteIdent(c.Name) + `) FILTER ( WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL))`)
 		} else {
-			mergeProfiles.WriteString(`(ARRAY_CAT(`)
-			if s, ok := profilePrimarySources[c.Name]; ok {
+			mergeProfiles.WriteByte('(')
+			if s, ok := primarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "__CONNECTION__" = %d THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
-			} else {
-				mergeProfiles.WriteString("ARRAY_CONSTRUCT()")
+				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_updated_at" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "_connection" = ` + strconv.Itoa(s) + `) || `)
 			}
-			mergeProfiles.WriteString(", ")
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
-			mergeProfiles.WriteString(`))[0]`)
+			mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_updated_at" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
+			mergeProfiles.WriteString(`)[1]`)
 		}
 		mergeProfiles.WriteString(" AS ")
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "__identities__" column.
-	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
-	// Write the "__mpid__" column.
+	// Write the "_identities" column.
+	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_pk"), `)
+	// Write the "_mpid" column.
 	// If all MPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's MPID; otherwise,
 	// if we are in a situation where a previously split profile is now merged,
@@ -147,32 +159,32 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	// also in this case, create a new random MPID.
 	mergeProfiles.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "__mpid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("__mpid__"::text)::varchar
-			ELSE UUID_STRING()
+			WHEN COUNT(DISTINCT "_mpid") FILTER ( WHERE "_mpid" IS NOT NULL ) = 1
+				THEN MAX("_mpid"::text)::uuid
+			ELSE gen_random_uuid()
 		END,
-		UUID_STRING()
+		gen_random_uuid()
 	),`)
-	// Write the "__last_change_time__" column.
-	mergeProfiles.WriteString(`MAX("__LAST_CHANGE_TIME__")`)
-	mergeProfiles.WriteString(` FROM "_IDENTITIES" GROUP BY "__CLUSTER__"';` + "\n")
+	// Write the "_updated_at" column.
+	mergeProfiles.WriteString(`MAX("_updated_at")`)
+	mergeProfiles.WriteString(` FROM "meergo_identities" GROUP BY "_cluster";` + "\n")
 
-	// If two profiles who were previously one are split, they will end up having
-	// the same MPID, which is incorrect. So this query, in that situation,
-	// replaces the MPID of both profiles with new random MPIDs.
+	// If two profiles who were previously one are split, they will end up
+	// having the same MPID, which is incorrect. So this query, in that
+	// situation, replaces the MPID of both profiles with new random MPIDs.
 	mergeProfiles.WriteString(`UPDATE `)
 	mergeProfiles.WriteString(quoteIdent(newProfilesName))
-	mergeProfiles.WriteString(` "U"
+	mergeProfiles.WriteString(` "u"
 		SET
-			"__MPID__" = UUID_STRING()
+			"_mpid" = gen_random_uuid()
 		WHERE
-			"U"."__MPID__" IN (
+			"u"."_mpid" IN (
 				SELECT
-					"U2"."__MPID__"
+					"u2"."_mpid"
 				FROM
-					` + quoteIdent(newProfilesName) + ` "U2"
+					` + quoteIdent(newProfilesName) + ` "u2"
 				GROUP BY
-					"U2"."__MPID__"
+					"u2"."_mpid"
 				HAVING
 					COUNT(*) > 1
 	)`)
@@ -182,36 +194,31 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	query = strings.Replace(query, "{{ merge_identities_in_profiles }}", mergeProfiles.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_profiles_name }}", quoteIdent(newProfilesName))
 	query = strings.ReplaceAll(query, "{{ new_profiles_version }}", strconv.Itoa(newProfilesVersion))
-	ctxMulti, err := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
+	_, err = pool.Exec(ctx, query)
 	if err != nil {
-		return snowflake(err)
-	}
-	db := warehouse.openDB()
-	_, err = db.ExecContext(ctxMulti, query)
-	if err != nil {
-		return snowflake(err)
+		return err
 	}
 
-	// Call the 'RESOLVE_IDENTITIES' stored procedure (which is declared in the
+	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, err = db.ExecContext(ctx, "CALL RESOLVE_IDENTITIES()")
+	_, err = pool.Exec(ctx, "CALL resolve_identities()")
 	if err != nil {
-		return snowflake(err)
+		return err
 	}
 
 	// Replace the current "profiles" view with a new one using the "CREATE OR
-	// REPLACE VIEW" statement since the table "_profiles" that the view refers to
-	// has changed its name.
-	_, err = db.ExecContext(ctx, createViewQuery(newProfilesName, profileColumns, true))
+	// REPLACE VIEW" statement since the table "_profiles" that the view refers
+	// to has changed its name.
+	_, err = pool.Exec(ctx, createViewQuery(newProfilesName, profileColumns, true))
 	if err != nil {
-		return snowflake(err)
+		return err
 	}
 
 	// Drop the 'profiles' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "MEERGO_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
+	_, err = pool.Exec(ctx, `DROP TABLE IF EXISTS "meergo_profiles_`+strconv.Itoa(profilesVersion)+`"`)
 	if err != nil {
-		return snowflake(err)
+		return err
 	}
 
 	return nil

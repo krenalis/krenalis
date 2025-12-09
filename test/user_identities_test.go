@@ -83,11 +83,11 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecutePipeline(pipeline1)
-	exec2 := c.ExecutePipeline(pipeline2)
+	run1 := c.RunPipeline(pipeline1)
+	run2 := c.RunPipeline(pipeline2)
 
-	c.WaitForExecutionsCompletion(fs1, exec1)
-	c.WaitForExecutionsCompletion(fs2, exec2)
+	c.WaitRunsCompletion(fs1, run1)
+	c.WaitRunsCompletion(fs2, run2)
 
 	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 
@@ -109,14 +109,14 @@ func Test_Identities(t *testing.T) {
 
 		for _, identity := range identities {
 
-			if anonIds := identity.AnonymousIds; anonIds != nil {
-				t.Fatalf("identity should have a nil 'AnonymousIds', got %v", anonIds)
+			if anonIds := identity.AnonymousIDs; anonIds != nil {
+				t.Fatalf("identity should have a nil 'AnonymousIDs', got %v", anonIds)
 			}
 
 			t.Logf(
 				"the APIs returned an identity for profile with MPID %s that has"+
-					" pipeline = %d, identity ID = %v and last change time = %q",
-				profile.MPID, identity.Pipeline, identity.ID, identity.LastChangeTime)
+					" pipeline = %d, user ID = %v and updated at = %q",
+				profile.MPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
 
 			var idPrefix string
 			switch identity.Pipeline {
@@ -129,8 +129,8 @@ func Test_Identities(t *testing.T) {
 			}
 
 			// Check the identity ID label.
-			if !strings.HasPrefix(identity.ID, idPrefix) {
-				t.Fatalf("unexpected identity ID %q, it should have prefix %q", identity.ID, idPrefix)
+			if !strings.HasPrefix(identity.UserID, idPrefix) {
+				t.Fatalf("unexpected user ID %q, it should have prefix %q", identity.UserID, idPrefix)
 			}
 
 			totalIdentities++
@@ -150,7 +150,7 @@ func Test_Identities(t *testing.T) {
 			Identities []any `json:"identities"`
 			Total      int   `json:"total"`
 		}
-		err := c.Call("GET", "/api/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
+		err := c.Call("GET", "/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
 		if err != nil {
 			t.Fatalf("expected no identities, got error: %q", err)
 		}

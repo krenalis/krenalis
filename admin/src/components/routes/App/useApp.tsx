@@ -14,7 +14,7 @@ import { Connection } from '../../../lib/api/types/connection';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from './App.types';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
-import { Execution, Member, PublicMetadata } from '../../../lib/api/types/responses';
+import { PipelineRun, Member, PublicMetadata } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
@@ -50,11 +50,11 @@ const useApp = (
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
-	const executePipelineButtonRefs = useRef<{
+	const runPipelineButtonRefs = useRef<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
-	const executePipelineDropdownButtonRefs = useRef<{
+	const runPipelineDropdownButtonRefs = useRef<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
@@ -98,7 +98,7 @@ const useApp = (
 				// Initialize the Sentry SDK.
 				Sentry.init({
 					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
-					tunnel: '/api/v1/sentry/errors',
+					tunnel: '/v1/sentry/errors',
 					// Setting this option to true will send default PII
 					// data to Sentry. For example, automatic IP address
 					// collection on events.
@@ -178,7 +178,6 @@ const useApp = (
 						c.categories,
 						c.asSource,
 						c.asDestination,
-						c.identityIDLabel,
 						c.hasSheets,
 						c.fileExtension,
 						c.oauth,
@@ -194,7 +193,7 @@ const useApp = (
 				member = await api.member();
 			} catch (err) {
 				if (err instanceof NotFoundError) {
-					handleError('The current logged in member does not exist anymore');
+					handleError('The current logged in team member does not exist anymore');
 					setTimeout(() => {
 						logout();
 						setIsLoadingState(false);
@@ -241,7 +240,6 @@ const useApp = (
 					c.name,
 					connector,
 					c.role,
-					c.pipelinesCount,
 					c.health,
 					c.storage,
 					c.compression,
@@ -253,7 +251,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
-				transformedConnection.pipelinesInfo = c.pipelinesInfo;
+				transformedConnection.pipelines = c.pipelines;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -276,7 +274,7 @@ const useApp = (
 				return;
 			}
 			setWarehouse({
-				name: warehouseResponse.name,
+				platform: warehouseResponse.platform,
 				settings: warehouseResponse.settings,
 			});
 
@@ -313,7 +311,6 @@ const useApp = (
 					c.name,
 					connector,
 					c.role,
-					c.pipelinesCount,
 					c.health,
 					c.storage,
 					c.compression,
@@ -325,7 +322,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
-				transformedConnection.pipelinesInfo = c.pipelinesInfo;
+				transformedConnection.pipelines = c.pipelines;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -371,7 +368,7 @@ const useApp = (
 				m = await api.member();
 			} catch (err) {
 				if (err instanceof NotFoundError) {
-					handleError('The current logged in member does not exist anymore');
+					handleError('The current logged in team member does not exist anymore');
 					setIsLoadingMember(false);
 					logout();
 					return;
@@ -398,45 +395,45 @@ const useApp = (
 		}
 	}, [selectedWorkspace]);
 
-	const executePipeline = async (
+	const runPipeline = async (
 		connection: TransformedConnection,
 		pipelineID: number,
 		pipelineTarget: PipelineTarget,
 	) => {
-		executePipelineButtonRefs.current[pipelineID]?.current?.load();
-		executePipelineDropdownButtonRefs.current[pipelineID]?.current?.load();
-		let executionID: number;
+		runPipelineButtonRefs.current[pipelineID]?.current?.load();
+		runPipelineDropdownButtonRefs.current[pipelineID]?.current?.load();
+		let runID: number;
 		try {
-			executionID = await api.workspaces.connections.executePipeline(pipelineID);
+			runID = await api.workspaces.connections.runPipeline(pipelineID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				executePipelineButtonRefs.current[pipelineID]?.current?.error(err.message);
-				executePipelineDropdownButtonRefs.current[pipelineID]?.current?.error(err.message);
+				runPipelineButtonRefs.current[pipelineID]?.current?.error(err.message);
+				runPipelineDropdownButtonRefs.current[pipelineID]?.current?.error(err.message);
 				return;
 			}
-			executePipelineButtonRefs.current[pipelineID]?.current?.stop();
-			executePipelineDropdownButtonRefs.current[pipelineID]?.current?.error(err.message);
+			runPipelineButtonRefs.current[pipelineID]?.current?.stop();
+			runPipelineDropdownButtonRefs.current[pipelineID]?.current?.error(err.message);
 			handleError(err);
 			return;
 		}
 
-		let execution: Execution | null = null;
-		while (execution == null) {
+		let run: PipelineRun | null = null;
+		while (run == null) {
 			await sleep(500);
 			try {
-				execution = await api.workspaces.connections.execution(executionID);
+				run = await api.workspaces.connections.run(runID);
 			} catch (err) {
 				handleError(err);
 				return;
 			}
-			if (execution.endTime == null) {
-				execution = null;
+			if (run.endTime == null) {
+				run = null;
 			}
 		}
 
 		let link = `connections/${connection.id}/metrics`;
-		if (execution.error) {
-			link += `?failed-execution-pipeline=${pipelineID}`;
+		if (run.error) {
+			link += `?pipeline-with-failed-run=${pipelineID}`;
 		}
 		link += `?target=${pipelineTarget === 'Event' ? 'event' : 'user'}`;
 		const metricsLink = (
@@ -449,56 +446,56 @@ const useApp = (
 			</div>
 		);
 
-		if (execution.error !== '') {
-			executePipelineButtonRefs.current[pipelineID]?.current?.error(
+		if (run.error !== '') {
+			runPipelineButtonRefs.current[pipelineID]?.current?.error(
 				<>
-					{execution.error}
+					{run.error}
 					{metricsLink}
 				</>,
 			);
-			executePipelineDropdownButtonRefs.current[pipelineID]?.current?.error(
+			runPipelineDropdownButtonRefs.current[pipelineID]?.current?.error(
 				<>
-					{execution.error}
+					{run.error}
 					{metricsLink}
 				</>,
 			);
 			return;
 		}
 
-		const passed = execution.passed[5];
-		const failed = execution.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
+		const passed = run.passed[5];
+		const failed = run.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
 
 		const pipeline = connection.pipelines.find((p) => p.id === pipelineID);
 
 		let filteredItem: ReactNode;
 		if (hasFilters(connection, pipeline.target)) {
-			const filtered = execution.failed[FILTER_STEP];
+			const filtered = run.failed[FILTER_STEP];
 			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
 		}
 
 		const user = connection.isSource ? 'identity' : 'profile';
 		const users = connection.isSource ? 'identities' : 'profiles';
-		const executed = connection.isSource ? 'imported' : 'exported';
+		const completed = connection.isSource ? 'imported' : 'exported';
 
 		const infoMessage = (
-			<div className='connection-pipelines__execution-info'>
-				<div className='connection-pipelines__execution-info-title'>
+			<div className='connection-pipelines__run-info'>
+				<div className='connection-pipelines__run-info-title'>
 					{connection.isSource ? 'Import' : 'Export'} completed
 				</div>
 				<ul>
 					<li>
-						{formatNumber(passed)} {passed === 1 ? user : users} {executed}
+						{formatNumber(passed)} {passed === 1 ? user : users} {completed}
 					</li>
 					{filteredItem}
 					<li>
-						{failed === 0 ? 'No errors occurred' : `${formatNumber(failed)} not ${executed} due to errors`}
+						{failed === 0 ? 'No errors occurred' : `${formatNumber(failed)} not ${completed} due to errors`}
 					</li>
 				</ul>
 				{metricsLink}
 			</div>
 		);
-		executePipelineButtonRefs.current[pipelineID]?.current?.info(infoMessage);
-		executePipelineDropdownButtonRefs.current[pipelineID]?.current?.info(infoMessage);
+		runPipelineButtonRefs.current[pipelineID]?.current?.info(infoMessage);
+		runPipelineDropdownButtonRefs.current[pipelineID]?.current?.info(infoMessage);
 	};
 
 	return {
@@ -515,9 +512,9 @@ const useApp = (
 		selectedWorkspace,
 		setSelectedWorkspace,
 		api,
-		executePipeline,
-		executePipelineButtonRefs,
-		executePipelineDropdownButtonRefs,
+		runPipeline,
+		runPipelineButtonRefs,
+		runPipelineDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
 		publicMetadata,

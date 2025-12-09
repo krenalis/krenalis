@@ -51,7 +51,7 @@ type BatchIdentityWriter struct {
 	store      *Store
 	pipeline   int
 	connection int
-	execution  int
+	run        int
 	ack        IdentityWriterAckFunc
 	flatter    *flatter
 	columns    []warehouses.Column
@@ -73,10 +73,10 @@ type BatchIdentityWriter struct {
 }
 
 // newBatchIdentityWriter returns an identity writer for writing identities in
-// batch, relative to the given pipeline (which must be in execution) on the
-// data warehouse. purge reports whether identities should be purged from the
-// data warehouse after all identities have been written. The ack parameter is
-// the acknowledgment function.
+// batch, relative to the given pipeline (which must be running) on the data
+// warehouse. purge reports whether identities should be purged from the data
+// warehouse after all identities have been written. The ack parameter is the
+// acknowledgment function.
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
@@ -89,9 +89,9 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, 
 	}
 
 	connection := pipeline.Connection()
-	execution, ok := pipeline.Execution()
+	run, ok := pipeline.Run()
 	if !ok {
-		return nil, fmt.Errorf("pipeline is not in execution")
+		return nil, fmt.Errorf("pipeline is not running")
 	}
 
 	// Check that pipeline's output schema is aligned with the profile schema.
@@ -104,7 +104,7 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, 
 		store:      store,
 		pipeline:   pipeline.ID,
 		connection: connection.ID,
-		execution:  execution.ID,
+		run:        run.ID,
 		flatter:    newFlatter(pipeline.OutSchema, store.identityColumnByProperty()),
 		index:      map[identityKey]int{},
 		ack:        ack,
@@ -113,13 +113,13 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, 
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
 	iw.columns = make([]warehouses.Column, 7, 7+len(pipeline.Transformation.OutPaths))
-	iw.columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
-	iw.columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
-	iw.columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
-	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	iw.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	iw.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
+	iw.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
+	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
+	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
+	iw.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	return &iw, nil
@@ -193,8 +193,8 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 			return ErrPurgeSkipped
 		}
 		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}, warehouses.OpIs, iw.pipeline),
-			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OpIsNot, iw.execution),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, iw.pipeline),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.Int(32)}, warehouses.OpIsNot, iw.run),
 		})
 		err := iw.store.warehouse().Delete(ctx, "meergo_identities", where)
 		if err != nil {
@@ -223,12 +223,12 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 	}
 	key := identityKey{pipeline: iw.pipeline, identityID: id}
 	row := map[string]any{
-		"$purge":           false,
-		"__pipeline__":     key.pipeline,
-		"__is_anonymous__": false,
-		"__identity_id__":  key.identityID,
-		"__connection__":   iw.connection,
-		"__execution__":    iw.execution,
+		"$purge":        false,
+		"_pipeline":     key.pipeline,
+		"_is_anonymous": false,
+		"_identity_id":  key.identityID,
+		"_connection":   iw.connection,
+		"_run":          iw.run,
 	}
 	iw.appendRow(key, row, "")
 }
@@ -250,12 +250,12 @@ func (iw *BatchIdentityWriter) Write(identity Identity) {
 	key := identityKey{pipeline: iw.pipeline, identityID: identity.ID}
 	row := identity.Attributes
 	iw.flatter.flat(row)
-	row["__pipeline__"] = key.pipeline
-	row["__is_anonymous__"] = false
-	row["__identity_id__"] = key.identityID
-	row["__connection__"] = iw.connection
-	row["__last_change_time__"] = identity.LastChangeTime
-	row["__execution__"] = iw.execution
+	row["_pipeline"] = key.pipeline
+	row["_is_anonymous"] = false
+	row["_identity_id"] = key.identityID
+	row["_connection"] = iw.connection
+	row["_updated_at"] = identity.LastChangeTime
+	row["_run"] = iw.run
 	iw.appendRow(key, row, "")
 }
 

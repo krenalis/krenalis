@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"bufio"
-	_ "embed"
 	"io"
 	"log/slog"
 	"math"
@@ -35,12 +34,6 @@ var (
 	errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
 )
 
-//go:embed invite-member-email.html
-var inviteMemberEmail string
-
-//go:embed reset-password-email.html
-var resetPasswordEmail string
-
 // sessionMaxAge contains the max age property for the session cookie (6 hours).
 const sessionMaxAge = 6 * 60 * 60
 
@@ -51,7 +44,7 @@ type sessionCookie struct {
 
 const (
 	sessionCookieName = "meergo_session"
-	sessionCookiePath = "/api/"
+	sessionCookiePath = "/v1/"
 )
 
 type apisServer struct {
@@ -135,7 +128,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "POST", "PUT":
-		if r.URL.Path == "/api/v1/sentry/errors" {
+		if r.URL.Path == "/v1/sentry/errors" {
 			// In this case, do not validate the content type, because when the
 			// Sentry SDK sends user feedback with screenshots attached, the
 			// content type is not JSON, and therefore this check would fail,
@@ -168,13 +161,13 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = io.NopCloser(payload)
 	}
 
-	if !strings.HasPrefix(r.URL.Path, "/api/v1/") {
+	if !strings.HasPrefix(r.URL.Path, "/v1/") {
 		http.NotFound(w, r)
 		return
 	}
-	r.URL.Path = r.URL.Path[len("/api/v1"):]
+	r.URL.Path = r.URL.Path[len("/v1"):]
 	if r.URL.RawPath != "" {
-		r.URL.RawPath = r.URL.RawPath[len("/api/v1"):]
+		r.URL.RawPath = r.URL.RawPath[len("/v1"):]
 	}
 
 	s.mux.ServeHTTP(w, r)

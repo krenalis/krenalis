@@ -67,7 +67,7 @@ type DummySettings struct {
 	URLForDispatchingEvents string
 }
 
-type Execution struct {
+type PipelineRun struct {
 	ID        int        `json:"id"`
 	Pipeline  int        `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
@@ -140,17 +140,17 @@ type KV struct {
 }
 
 type Profile struct {
-	MPID              uuid.UUID      `json:"mpid"`
-	SourcesLastUpdate time.Time      `json:"sourcesLastUpdate"`
-	Attributes        map[string]any `json:"attributes"`
+	MPID       uuid.UUID      `json:"mpid"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	Attributes map[string]any `json:"attributes"`
 }
 
 type Identity struct {
-	Connection     int       // do not use in tests. Currently, this serves just for the UI.
-	Pipeline       int       `json:"pipeline"`
-	ID             string    `json:"id"`
-	AnonymousIds   []string  `json:"anonymousIds"`
-	LastChangeTime time.Time `json:"lastChangeTime"`
+	UserID       string    `json:"userId"`
+	AnonymousIDs []string  `json:"anonymousIds"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+	Connection   int       `json:"connection"`
+	Pipeline     int       `json:"pipeline"`
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.

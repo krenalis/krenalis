@@ -2,7 +2,8 @@
 # repository.
 #
 # Keep this file synchronized with the other Compose file,
-# "compose-release.yaml," which refers to the latest Meergo release.
+# "tools/docker-compose/compose-release.yaml," which refers to the latest Meergo
+# release.
 
 services:
   meergo:
@@ -60,7 +61,7 @@ services:
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/storage
-      # MEERGO_TRANSFORMERS_LOCAL_SUDO_USER: transformeruser # TODO: temporarily disabled until https://github.com/meergo/meergo/issues/2019 is resolved.
+      MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
 
       # This configures the File System connector to access the mounted directory
       # via Docker. If you change these settings, also change the volumes
@@ -94,7 +95,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: meergo
       POSTGRES_PASSWORD: meergo
@@ -108,7 +109,7 @@ services:
       retries: 5
 
   warehouse:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: warehouse
       POSTGRES_PASSWORD: warehouse

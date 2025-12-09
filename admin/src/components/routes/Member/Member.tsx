@@ -193,7 +193,7 @@ const Member = () => {
 		setTimeout(() => {
 			setIsSaving(false);
 			setIsLoadingMember(true);
-			showStatus({ variant: 'success', icon: icons.OK, text: 'Member information saved successfully' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'Team member information saved successfully' });
 			redirect('organization/members');
 		}, 300);
 	};
@@ -212,7 +212,7 @@ const Member = () => {
 					/>
 				) : (
 					<>
-						<div className='member__title'>{isUpdate ? 'Your profile' : 'Add a new member'}</div>
+						<div className='member__title'>{isUpdate ? 'Your profile' : 'Add a new team member'}</div>
 						<form onSubmit={onSave}>
 							<div className='member__name'>
 								<SlInput

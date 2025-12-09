@@ -21,6 +21,8 @@ import (
 	esbuild "github.com/evanw/esbuild/pkg/api"
 )
 
+const devMode = true
+
 // moduleRoot is the root directory of the Go module.
 var moduleRoot string
 
@@ -70,7 +72,7 @@ type assetsHandler struct {
 func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 
 	// Create a temporary directory for the assets.
-	outDir, err := os.MkdirTemp("", "meergo-assets-")
+	outDir, err := os.MkdirTemp("", "admin-assets-")
 	if err != nil {
 		return nil, err
 	}

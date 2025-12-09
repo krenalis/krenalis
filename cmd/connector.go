@@ -15,9 +15,9 @@ type connector struct {
 	*apisServer
 }
 
-// AuthCodeURL returns a URL that directs to the consent page of an OAuth 2.0
+// AuthURL returns a URL that directs to the consent page of an OAuth 2.0
 // provider.
-func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (connector connector) AuthURL(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := connector.authenticateRequest(r); err != nil {
 		return nil, err
 	}
@@ -36,9 +36,9 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 		return nil, errors.BadRequest("unexpected connection role '%s'", role)
 	}
 	redirectURI := q.Get("redirectURI")
-	authCodeURL, err := c.AuthCodeURL(role, redirectURI)
+	authURL, err := c.AuthURL(role, redirectURI)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"url": authCodeURL}, nil
+	return map[string]any{"authUrl": authURL}, nil
 }

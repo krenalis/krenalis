@@ -4,8 +4,12 @@ import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { ProfileEvent, Identity, ProfileAttributes } from './profile';
 
-interface authCodeURLResponse {
-	url: string;
+interface authURLResponse {
+	authUrl: string;
+}
+
+interface authTokenResponse {
+	authToken: string;
 }
 
 type ConnectorSettings = Record<string, any>;
@@ -17,7 +21,7 @@ interface ConnectorUIResponse {
 	settings: ConnectorSettings;
 }
 
-interface Execution {
+interface PipelineRun {
 	id: number;
 	pipeline: number;
 	startTime: string;
@@ -86,7 +90,7 @@ interface TransformDataResponse {
 
 interface ResponseProfile {
 	mpid: string;
-	sourcesLastUpdate: string;
+	updatedAt: string;
 	attributes: Record<string, any>;
 }
 
@@ -181,7 +185,8 @@ interface PublicMetadata {
 }
 
 export type {
-	authCodeURLResponse,
+	authURLResponse,
+	authTokenResponse,
 	profileAttributesResponse,
 	PipelineError,
 	PipelineErrorsResponse,
@@ -195,7 +200,7 @@ export type {
 	Event,
 	EventListenerEventsResponse,
 	ExecQueryResponse,
-	Execution,
+	PipelineRun,
 	FindProfilesResponse,
 	Member,
 	MemberAvatar,

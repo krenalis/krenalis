@@ -84,13 +84,13 @@ func newEventIdentityWriter(store *Store, pipelineID int, ack EventIdentityWrite
 	store.mu.Unlock()
 
 	iw.columns = make([]warehouses.Column, 7)
-	iw.columns[0] = warehouses.Column{Name: "__pipeline__", Type: types.Int(32)}
-	iw.columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.String()}
-	iw.columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.String()), Nullable: true}
-	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	iw.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	iw.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
+	iw.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
+	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
+	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
+	iw.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
@@ -196,12 +196,12 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 				identityID:  identity.AnonymousID,
 			}
 			row := map[string]any{
-				"$purge":               true,
-				"__pipeline__":         key.pipeline,
-				"__is_anonymous__":     true,
-				"__identity_id__":      key.identityID,
-				"__connection__":       iw.connection,
-				"__last_change_time__": identity.LastChangeTime,
+				"$purge":        true,
+				"_pipeline":     key.pipeline,
+				"_is_anonymous": true,
+				"_identity_id":  key.identityID,
+				"_connection":   iw.connection,
+				"_updated_at":   identity.LastChangeTime,
 			}
 			iw.appendRow(key, row, "")
 		}
@@ -214,14 +214,14 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		row = identity.Attributes
 		flatter.flat(row)
 	}
-	row["__pipeline__"] = key.pipeline
-	row["__is_anonymous__"] = key.isAnonymous
-	row["__identity_id__"] = key.identityID
-	row["__connection__"] = iw.connection
+	row["_pipeline"] = key.pipeline
+	row["_is_anonymous"] = key.isAnonymous
+	row["_identity_id"] = key.identityID
+	row["_connection"] = iw.connection
 	if !key.isAnonymous {
-		row["__anonymous_ids__"] = []any{identity.AnonymousID}
+		row["_anonymous_ids"] = []any{identity.AnonymousID}
 	}
-	row["__last_change_time__"] = identity.LastChangeTime
+	row["_updated_at"] = identity.LastChangeTime
 
 	iw.appendRow(key, row, ackID)
 

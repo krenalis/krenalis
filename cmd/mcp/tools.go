@@ -33,8 +33,8 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			name, _, _ := ws.Warehouse()
-			information := fmt.Sprintf("Connected to the workspace there is a %s data warehouse", name)
+			platform, _, _ := ws.Warehouse()
+			information := fmt.Sprintf("Connected to the workspace there is a %s data warehouse", platform)
 			return mcp.NewToolResultText(string(information)), nil
 		},
 	},
@@ -136,7 +136,7 @@ var tools = []server.ServerTool{
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return mcp.NewToolResultText(strings.Join([]string{
 				"The 'meergo_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'profiles' view.",
-				"The 'meergo_identities.__connection__' column references the ID (integer) of the connection from which the identity was imported.",
+				"The 'meergo_identities._connection' column references the ID (integer) of the connection from which the identity was imported.",
 				"If there's no match between the contents of 'meergo_identities' and the 'profiles' view, it might be because the Identity Resolution process hasn't been run recently.",
 			}, " ")), nil
 		},
@@ -212,7 +212,7 @@ var tools = []server.ServerTool{
 					"connector":      c.Connector,
 					"connectorType":  c.ConnectorType,
 					"role":           c.Role,
-					"pipelinesCount": c.PipelinesCount,
+					"pipelinesCount": len(c.Pipelines),
 				})
 			}
 			encoded, err := json.Marshal(info)

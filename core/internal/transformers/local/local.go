@@ -25,7 +25,7 @@ import (
 	"github.com/meergo/meergo/tools/types"
 )
 
-const functionsDir = "meergo-functions"
+const functionsDir = ".meergo-functions"
 
 type function struct {
 	settings Settings
@@ -36,6 +36,7 @@ type Settings struct {
 	PythonExecutable string // eg. "/usr/bin/python".
 	FunctionsDir     string
 	SudoUser         string // "" means: don't call sudo and keep the current user.
+	DoasUser         string // "" means: don't call doas and keep the current user.
 }
 
 func New(settings Settings) transformers.FunctionProvider {
@@ -97,6 +98,8 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	}
 	if fn.settings.SudoUser != "" {
 		args = append([]string{"sudo", "-u", fn.settings.SudoUser}, args...)
+	} else if fn.settings.DoasUser != "" {
+		args = append([]string{"doas", "-u", fn.settings.DoasUser}, args...)
 	}
 
 	// Limit the execution time to 10 seconds. This is more than enough time to

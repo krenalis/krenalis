@@ -14,8 +14,6 @@ import (
 
 func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 
-	t.Skip() // TODO: skipped until https://github.com/meergo/meergo/issues/2017 is resolved.
-
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
@@ -23,6 +21,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	c := meergotester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
+
+	c.UpdateIdentityResolution(false, nil)
 
 	// Create two Dummy connections for importing users.
 	dummy1 := c.CreateDummy("Dummy 1", meergotester.Source)
@@ -53,12 +53,12 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	pipeline1 := c.CreatePipeline(dummy1, "User", pipelineParams)
 	pipeline2 := c.CreatePipeline(dummy2, "User", pipelineParams)
 
-	// Import from both pipelines - and implicitly trigger the identity resolution
-	// process.
-	exec1 := c.ExecutePipeline(pipeline1)
-	exec2 := c.ExecutePipeline(pipeline2)
-	c.WaitForExecutionsCompletion(dummy1, exec1)
-	c.WaitForExecutionsCompletion(dummy2, exec2)
+	// Import from both pipelines, then run the identity resolution.
+	run1 := c.RunPipeline(pipeline1)
+	run2 := c.RunPipeline(pipeline2)
+	c.WaitRunsCompletion(dummy1, run1)
+	c.WaitRunsCompletion(dummy2, run2)
+	c.RunIdentityResolution()
 
 	// Now there should be total of 20 profiles.
 	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
@@ -69,7 +69,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Delete one Dummy, wait for the identities to be purged, resolve
 	// identities, and ensure that only 10 profiles remain.
 	c.DeleteConnection(dummy1)
-	time.Sleep(time.Second)
+	time.Sleep(1 * time.Second)
 	c.RunIdentityResolution()
 	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 10 {
@@ -79,7 +79,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Delete also the other Dummy connection; now the total number of profiles
 	// should be zero.
 	c.DeleteConnection(dummy2)
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	c.RunIdentityResolution()
 	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 0 {

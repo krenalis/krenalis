@@ -89,10 +89,8 @@ func (state *State) keep() {
 			org = state.endAlterProfileSchema(n)
 		case "EndIdentityResolution":
 			org = state.endIdentityResolution(n)
-		case "EndPipelineExecution":
-			org = state.endPipelineExecution(n)
-		case "ExecutePipeline":
-			org = state.executePipeline(n)
+		case "EndPipelineRun":
+			org = state.endPipelineRun(n)
 		case "LinkConnection":
 			org = state.linkConnection(n)
 		case "PurgePipelines":
@@ -101,6 +99,8 @@ func (state *State) keep() {
 			org = state.renameConnection(n)
 		case "RenameWorkspace":
 			org = state.renameWorkspace(n)
+		case "RunPipeline":
+			org = state.runPipeline(n)
 		case "SeeLeader":
 			state.seeLeader(n)
 		case "SetAccount":
@@ -509,7 +509,7 @@ type CreateWorkspace struct {
 	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Name        string
+		Platform    string
 		Mode        WarehouseMode
 		Settings    json.RawMessage
 		MCPSettings json.RawMessage
@@ -533,7 +533,7 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
 		connections:                    map[int]*Connection{},
-		executions:                     map[int]*PipelineExecution{},
+		runs:                           map[int]*PipelineRun{},
 		ID:                             e.ID,
 		organization:                   organization,
 		Name:                           e.Name,
@@ -910,63 +910,28 @@ func (state *State) endIdentityResolution(n notification) uuid.UUID {
 	return ws.organization.ID
 }
 
-// EndPipelineExecution is the event sent when pipeline execution ends.
-type EndPipelineExecution struct {
+// EndPipelineRun is the event sent when pipeline run ends.
+type EndPipelineRun struct {
 	ID       int
 	Pipeline int
 	Health   Health
 }
 
-// endPipelineExecution ends a pipeline execution in progress.
-func (state *State) endPipelineExecution(n notification) uuid.UUID {
-	e := EndPipelineExecution{}
+// endPipelineRun marks an in-progress pipeline run as finished.
+func (state *State) endPipelineRun(n notification) uuid.UUID {
+	e := EndPipelineRun{}
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
 	p := state.pipelines[e.Pipeline]
 	ws := p.connection.workspace
 	ws.mu.Lock()
-	delete(ws.executions, e.ID)
+	delete(ws.runs, e.ID)
 	ws.mu.Unlock()
 	state.replacePipeline(p.ID, func(p *Pipeline) {
-		p.execution = nil
+		p.run = nil
 		p.Health = e.Health
 	})
-	return ws.organization.ID
-}
-
-// ExecutePipeline is the event sent when a pipeline is executed.
-type ExecutePipeline struct {
-	ID          int
-	Pipeline    int
-	Incremental bool
-	Cursor      time.Time
-	StartTime   time.Time
-}
-
-// executePipeline executes a pipeline.
-func (state *State) executePipeline(n notification) uuid.UUID {
-	e := ExecutePipeline{}
-	if !decodeNotification(n, &e) {
-		return uuid.Nil
-	}
-	p := state.pipelines[e.Pipeline]
-	ws := p.connection.workspace
-	exe := &PipelineExecution{
-		mu:          &sync.Mutex{},
-		ID:          e.ID,
-		pipeline:    p,
-		Incremental: e.Incremental,
-		Cursor:      e.Cursor,
-		StartTime:   e.StartTime,
-	}
-	ws.mu.Lock()
-	ws.executions[exe.ID] = exe
-	ws.mu.Unlock()
-	p.mu.Lock()
-	p.execution = exe
-	p.mu.Unlock()
-	dispatchNotification(state, e)
 	return ws.organization.ID
 }
 
@@ -990,15 +955,15 @@ func (state *State) linkConnection(n notification) uuid.UUID {
 	return c.organization.ID
 }
 
-// PurgePipeline is the event sent when pipeline of a workspace are purged.
-type PurgePipeline struct {
+// PurgePipelines is the event sent when pipelines of a workspace are purged.
+type PurgePipelines struct {
 	Workspace        int
 	PipelinesToPurge []int // remaining pipelines to purge. Never nil.
 }
 
 // purgePipelines purges pipelines of a workspace.
 func (state *State) purgePipelines(n notification) uuid.UUID {
-	e := PurgePipeline{}
+	e := PurgePipelines{}
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
@@ -1042,6 +1007,41 @@ func (state *State) renameWorkspace(n notification) uuid.UUID {
 	ws := state.replaceWorkspace(e.Workspace, func(ws *Workspace) {
 		ws.Name = e.Name
 	})
+	return ws.organization.ID
+}
+
+// RunPipeline is the event sent when a pipeline run starts.
+type RunPipeline struct {
+	ID          int
+	Pipeline    int
+	Incremental bool
+	Cursor      time.Time
+	StartTime   time.Time
+}
+
+// runPipeline runs a pipeline.
+func (state *State) runPipeline(n notification) uuid.UUID {
+	e := RunPipeline{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	p := state.pipelines[e.Pipeline]
+	ws := p.connection.workspace
+	run := &PipelineRun{
+		mu:          &sync.Mutex{},
+		ID:          e.ID,
+		pipeline:    p,
+		Incremental: e.Incremental,
+		Cursor:      e.Cursor,
+		StartTime:   e.StartTime,
+	}
+	ws.mu.Lock()
+	ws.runs[run.ID] = run
+	ws.mu.Unlock()
+	p.mu.Lock()
+	p.run = run
+	p.mu.Unlock()
+	dispatchNotification(state, e)
 	return ws.organization.ID
 }
 

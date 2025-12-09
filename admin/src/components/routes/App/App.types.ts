@@ -1,7 +1,7 @@
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 
 interface Warehouse {
-	name: string;
+	platform: string;
 	settings: WarehouseSettings;
 }
 

@@ -35,9 +35,17 @@ import (
 // It excludes the mpid property.
 var eventPipelineSchema types.Type
 
+// eventPropertyNames lists all event property names.
+// The first name is always "mpid".
+var eventPropertyNames []string
+
 func init() {
 	properties := schemas.Event.Properties().Slice()
 	eventPipelineSchema = types.Object(properties[1:])
+	eventPropertyNames = make([]string, len(properties))
+	for i, p := range properties {
+		eventPropertyNames[i] = p.Name
+	}
 }
 
 // Pipeline represents a pipeline of a connection.
@@ -163,14 +171,13 @@ func (at Target) String() string {
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (at *Target) UnmarshalJSON(data []byte) error {
-	var v any
-	err := json.Unmarshal(data, &v)
-	if err != nil {
-		return err
+	if bytes.Equal(data, null) {
+		return errors.BadRequest("target cannot be null")
 	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.Target value", v)
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return errors.BadRequest(`target must be "Event", "User", or "Group"`)
 	}
 	switch s {
 	case "Event":
@@ -180,7 +187,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	case "Group":
 		*at = TargetGroup
 	default:
-		return fmt.Errorf("json: invalid core.Target: %s", s)
+		return errors.BadRequest(`target must be "Event", "User", or "Group"`)
 	}
 	return nil
 }
@@ -224,56 +231,6 @@ func (this *Pipeline) Delete(ctx context.Context) error {
 		return n, nil
 	})
 	return err
-}
-
-// Execute executes the pipeline, which must be an API, database, or file
-// pipeline with a target of User or Group. It starts an execution and returns
-// its identifier. The pipeline must be enabled and must not already be
-// executing.
-//
-// It returns an errors.NotFoundError error if the pipeline does not exist
-// anymore.
-// It returns an errors.UnprocessableError error with code
-//
-//   - CannotExecuteIncrementally, if incremental requires a last change time
-//     column.
-//   - ExecutionInProgress, if the pipeline is already in progress.
-//   - InspectionMode, if the data warehouse is in inspection mode.
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - PipelineDisabled, if the pipeline is disabled.
-func (this *Pipeline) Execute(ctx context.Context, incremental *bool) (int, error) {
-	this.core.mustBeOpen()
-	c := this.pipeline.Connection()
-	if t := this.pipeline.Target; t != state.TargetUser && t != state.TargetGroup {
-		return 0, errors.BadRequest("pipeline %d with target %s cannot be executed", this.pipeline.ID, t)
-	}
-	typ := c.Connector().Type
-	switch typ {
-	case state.API, state.Database, state.FileStorage:
-	default:
-		return 0, errors.BadRequest("%s pipelines cannot be executed", strings.ToLower(typ.String()))
-	}
-	if incremental != nil {
-		if c.Role == state.Destination {
-			return 0, errors.BadRequest("incremental cannot be provided for destination pipelines")
-		}
-		if *incremental && typ != state.API && this.pipeline.LastChangeTimeColumn == "" {
-			return 0, errors.Unprocessable(CannotExecuteIncrementally, "incremental requires a last change time column")
-		}
-	}
-	if !this.pipeline.Enabled {
-		return 0, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", c.ID)
-	}
-	if _, ok := this.pipeline.Execution(); ok {
-		return 0, errors.Unprocessable(ExecutionInProgress, "pipeline %d is already in progress", this.pipeline.ID)
-	}
-	switch this.connection.store.Mode() {
-	case state.Inspection:
-		return 0, errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-	case state.Maintenance:
-		return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-	}
-	return this.createExecution(ctx, incremental)
 }
 
 // MarshalJSON encodes the Pipeline as JSON.
@@ -519,6 +476,54 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 		panic(fmt.Sprintf("unexpected role: %s, target: %s, type: %s", p.ConnectionRole, p.Target, p.ConnectorType))
 	}
 	return json.Marshal(serialized)
+}
+
+// Run starts a new run for the pipeline and returns its identifier.
+// The pipeline must be an API, database, or file pipeline with a target of User
+// or Group. It must be enabled and must not already have a run in progress.
+//
+// It returns an errors.NotFoundError if the pipeline no longer exists.
+// It returns an errors.UnprocessableError with one of the following codes:
+//
+//   - CannotRunIncrementally, if incremental mode requires a last-change-time
+//     column.
+//   - RunInProgress, if the pipeline already has a run in progress.
+//   - InspectionMode, if the data warehouse is in inspection mode.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - PipelineDisabled, if the pipeline is disabled.
+func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
+	this.core.mustBeOpen()
+	c := this.pipeline.Connection()
+	if t := this.pipeline.Target; t != state.TargetUser && t != state.TargetGroup {
+		return 0, errors.BadRequest("pipeline %d with target %s cannot be run", this.pipeline.ID, t)
+	}
+	typ := c.Connector().Type
+	switch typ {
+	case state.API, state.Database, state.FileStorage:
+	default:
+		return 0, errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
+	}
+	if incremental != nil {
+		if c.Role == state.Destination {
+			return 0, errors.BadRequest("incremental cannot be provided for destination pipelines")
+		}
+		if *incremental && typ != state.API && this.pipeline.LastChangeTimeColumn == "" {
+			return 0, errors.Unprocessable(CannotRunIncrementally, "incremental requires a last change time column")
+		}
+	}
+	if !this.pipeline.Enabled {
+		return 0, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", c.ID)
+	}
+	if _, ok := this.pipeline.Run(); ok {
+		return 0, errors.Unprocessable(RunInProgress, "pipeline %d is already in progress", this.pipeline.ID)
+	}
+	switch this.connection.store.Mode() {
+	case state.Inspection:
+		return 0, errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+	case state.Maintenance:
+		return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+	}
+	return this.createRun(ctx, incremental)
 }
 
 // ServeUI serves the user interface for the format settings of a file pipeline.
@@ -850,16 +855,14 @@ func (this *Pipeline) api() *connections.API {
 	return this.core.connections.API(this.pipeline.Connection())
 }
 
-// createExecution creates an execution for the pipeline and returns its
-// identifier.
+// createRun creates a new pipeline run and returns its identifier.
 //
-// It returns an errors.NotFoundError error if the pipeline does not exist
-// anymore.
-// It returns an errors.UnprocessableError error with code ExecutionInProgress
-// if the pipeline is already in progress.
-func (this *Pipeline) createExecution(ctx context.Context, incremental *bool) (int, error) {
+// It returns a errors.NotFoundError if the pipeline no longer exists.
+// It returns a errors.UnprocessableError with code RunInProgress if a run for
+// this pipeline is already in progress.
+func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (int, error) {
 
-	n := state.ExecutePipeline{
+	n := state.RunPipeline{
 		Pipeline:  this.pipeline.ID,
 		StartTime: time.Now().UTC(),
 	}
@@ -870,7 +873,7 @@ func (this *Pipeline) createExecution(ctx context.Context, incremental *bool) (i
 		var cursor time.Time
 		err := tx.QueryRow(ctx, "SELECT p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
 			"FROM pipelines AS p\n"+
-			"LEFT JOIN pipelines_executions AS e ON p.id = e.pipeline\n"+
+			"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
 			"WHERE p.id = $1\n"+
 			"ORDER BY e.id DESC\n"+
 			"LIMIT 1", n.Pipeline).Scan(&function, &inc, &cursor, &executing)
@@ -881,7 +884,7 @@ func (this *Pipeline) createExecution(ctx context.Context, incremental *bool) (i
 			return nil, err
 		}
 		if executing {
-			return nil, errors.Unprocessable(ExecutionInProgress, "execution of pipeline %d is in progress", this.pipeline.ID)
+			return nil, errors.Unprocessable(RunInProgress, "pipeline run %d is already in progress", this.pipeline.ID)
 		}
 		if incremental == nil {
 			n.Incremental = inc
@@ -891,11 +894,11 @@ func (this *Pipeline) createExecution(ctx context.Context, incremental *bool) (i
 		if n.Incremental {
 			n.Cursor = cursor
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO pipelines_executions (pipeline, function, cursor, incremental, start_time, ping_time)\n"+
+		err = tx.QueryRow(ctx, "INSERT INTO pipelines_runs (pipeline, function, cursor, incremental, start_time, ping_time)\n"+
 			"VALUES ($1, $2, $3, $4, $5, $5)\nRETURNING id", n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
-				if db.ErrConstraintName(err) == "pipelines_executions_pipeline_fkey" {
+				if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
 					err = errors.NotFound("pipeline %d does not exit", n.Pipeline)
 				}
 			}
@@ -918,20 +921,19 @@ func (this *Pipeline) database() *connections.Database {
 	return this.core.connections.Database(p.Connection())
 }
 
-// endExecution marks a pipeline execution as completed, setting the specified
-// error if any.
-func (this *Pipeline) endExecution(err error) {
+// endRun marks a pipeline run as completed, setting the specified error if any.
+func (this *Pipeline) endRun(err error) {
 
 	ctx := this.core.close.ctx
 
-	execution, ok := this.pipeline.Execution()
+	run, ok := this.pipeline.Run()
 	if !ok {
 		return
 	}
 
 	endTime := time.Now().UTC()
 
-	// Handle the execution error, if any.
+	// Handle the run error, if any.
 	var errorStep = metrics.ReceiveStep
 	var errorMessage string
 	if err != nil {
@@ -940,10 +942,10 @@ func (this *Pipeline) endExecution(err error) {
 			errorMessage = err.Error()
 		} else {
 			if ctx.Err() != nil {
-				errorMessage = "execution has been cancelled"
+				errorMessage = "run has been cancelled"
 			} else {
 				errorMessage = "an internal error has occurred"
-				slog.Error("core: cannot execute pipeline", "pipeline", this.pipeline.ID, "execution", execution.ID, "err", err)
+				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "err", err)
 			}
 		}
 		this.core.metrics.Failed(errorStep, this.pipeline.ID, 0, errorMessage)
@@ -952,15 +954,15 @@ func (this *Pipeline) endExecution(err error) {
 	// Waits for the metrics to be saved.
 	this.core.metrics.WaitStore()
 
-	n := state.EndPipelineExecution{
-		ID:       execution.ID,
+	n := state.EndPipelineRun{
+		ID:       run.ID,
 		Pipeline: this.pipeline.ID,
 		Health:   state.Healthy,
 	}
 
-	timeSlot := metrics.TimeSlotFromTime(execution.StartTime)
+	timeSlot := metrics.TimeSlotFromTime(run.StartTime)
 
-	// Mark the execution as completed, summarise the metrics, and send the end notification.
+	// Mark the run as completed, summarise the metrics, and send the end notification.
 	bo := backoff.New(200)
 	for bo.Next(ctx) {
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
@@ -973,7 +975,7 @@ func (this *Pipeline) endExecution(err error) {
 					" FROM pipelines_metrics\n"+
 					"\tWHERE pipeline = $2 AND timeslot >= $3\n"+
 					")\n"+
-					"UPDATE pipelines_executions AS e\n"+
+					"UPDATE pipelines_runs AS e\n"+
 					"SET function = '', end_time = $4,"+
 					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
 					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
@@ -981,17 +983,17 @@ func (this *Pipeline) endExecution(err error) {
 					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
 					" error = $5\n"+
 					"FROM s\n"+
-					"WHERE id = $1 AND end_time IS NULL", execution.ID, this.pipeline.ID, timeSlot, endTime, errorMessage)
+					"WHERE id = $1 AND end_time IS NULL", run.ID, this.pipeline.ID, timeSlot, endTime, errorMessage)
 			if err != nil {
 				return nil, err
 			}
-			// Do nothing if the execution no longer exists or has already been closed.
+			// Do nothing if the run no longer exists or has already been closed.
 			if res.RowsAffected() == 0 {
 				return nil, nil
 			}
 			// Update the pipeline's cursor.
 			var exists bool
-			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_executions WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
+			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
 				n.ID, n.Health, this.pipeline.ID).Scan(&exists)
 			if err != nil {
 				if err == sql.ErrNoRows {
@@ -1007,7 +1009,7 @@ func (this *Pipeline) endExecution(err error) {
 				// The context has been canceled.
 				return
 			}
-			slog.Error(fmt.Sprintf("core: cannot end pipeline execution, retrying after %s", bo.WaitTime()), "error", err)
+			slog.Error(fmt.Sprintf("core: cannot end pipeline run, retrying after %s", bo.WaitTime()), "error", err)
 			continue
 		}
 		break
@@ -1039,7 +1041,7 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 		et := pipeline.EventType
 		this.EventType = &et
 	}
-	_, this.Running = this.pipeline.Execution()
+	_, this.Running = this.pipeline.Run()
 	if pipeline.Target == state.TargetUser || pipeline.Target == state.TargetGroup {
 		if pipeline.SchedulePeriod != 0 {
 			start := int(pipeline.ScheduleStart)
@@ -1120,10 +1122,10 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	}
 }
 
-// setExecutionCursor sets the cursor of the pipeline execution.
-func (this *Pipeline) setExecutionCursor(ctx context.Context, cursor time.Time) error {
-	execution, _ := this.pipeline.Execution()
-	_, err := this.core.db.Exec(ctx, "UPDATE pipelines_executions SET cursor = $1 WHERE id = $2", cursor, execution.ID)
+// setRunCursor sets the cursor of the pipeline run.
+func (this *Pipeline) setRunCursor(ctx context.Context, cursor time.Time) error {
+	run, _ := this.pipeline.Run()
+	_, err := this.core.db.Exec(ctx, "UPDATE pipelines_runs SET cursor = $1 WHERE id = $2", cursor, run.ID)
 	return err
 }
 
@@ -1302,14 +1304,10 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, null) {
 		return nil
 	}
-	var v any
-	err := json.Unmarshal(data, &v)
+	var s string
+	err := json.Unmarshal(data, &s)
 	if err != nil {
-		return err
-	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an core.SchedulePeriod value", v)
+		return errors.BadRequest(`schedule period can be "5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", or "24h"`)
 	}
 	var p SchedulePeriod
 	switch s {
@@ -1334,7 +1332,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	case "24h":
 		p = 1440
 	default:
-		return fmt.Errorf("json: invalid core.SchedulePeriod: %s", s)
+		return errors.BadRequest(`schedule period can be "5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", or "24h"`)
 	}
 	*period = p
 	return nil
@@ -1380,9 +1378,8 @@ func onlyForMatching(schema types.Type) types.Type {
 	})
 }
 
-// shouldReload determines if the next execution of the pipeline requires
-// reloading, based on whether the notification n is used to update the
-// pipeline.
+// shouldReload reports whether the next pipeline run requires reloading, based
+// on whether the update notification applies to the pipeline.
 func shouldReload(a *state.Pipeline, n *state.UpdatePipeline) bool {
 	if a.Target != state.TargetUser && a.Target != state.TargetGroup {
 		return false

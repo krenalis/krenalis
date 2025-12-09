@@ -2,9 +2,9 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// This program builds and compresses the assets, storing them in a directory
-// named 'meergo-assets' within the current working directory. If a directory
-// with the same name already exists, it will be deleted.
+// This program builds and compresses the assets, storing them in the directory
+// './admin/assets'. If a directory with the same name already exists, it will
+// be deleted.
 package main
 
 import (
@@ -31,7 +31,7 @@ var assetsFS embed.FS
 // Path to the Shoelace icons within the "node_modules" directory.
 const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
 
-// Destination directory for the Shoelace icons in "meergo-assets".
+// Destination directory for the Shoelace icons in "admin/assets".
 const shoelaceIconsDir = "shoelace/dist/assets/icons"
 
 func main() {
@@ -64,7 +64,7 @@ var generatedFiles = []string{
 func buildAssets() error {
 
 	// Create the directory used to build the assets.
-	buildDir, err := os.MkdirTemp("", "meergo-assets-build")
+	buildDir, err := os.MkdirTemp("", "admin-assets-build")
 	if err != nil {
 		return fmt.Errorf("cannot create a temporary directory: %s", err)
 	}
@@ -312,12 +312,12 @@ func buildAssets() error {
 
 	// Copy the assets to the destination.
 	for _, file := range generatedFiles {
-		err = os.Remove(filepath.Join(root, "meergo-assets", file+".br"))
+		err = os.Remove(filepath.Join(root, "admin", "assets", file+".br"))
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 	}
-	err = os.CopyFS(filepath.Join(root, "meergo-assets"), os.DirFS(dstDir))
+	err = os.CopyFS(filepath.Join(root, "admin", "assets"), os.DirFS(dstDir))
 	if err != nil {
 		return err
 	}

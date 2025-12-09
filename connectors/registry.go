@@ -344,11 +344,11 @@ func validateAPIConnector(api APISpec) {
 		}
 	}
 
-	if api.Terms.User != "" || api.Terms.Users != "" {
+	if api.Terms.User != "" || api.Terms.Users != "" || api.Terms.UserID != "" {
 		if (api.AsSource == nil || api.AsSource.Targets&TargetUser == 0) &&
 			(api.AsDestination == nil || api.AsDestination.Targets&TargetUser == 0) {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: cannot specify a term for user and/or users"+
-				" if it does not support the User target neither as source nor as destination", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: cannot specify terms for users"+
+				" if it does not support the User target as either source or destination", api.Code))
 		}
 	}
 

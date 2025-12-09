@@ -13,7 +13,6 @@ interface Connector {
 	categories: Array<string>;
 	asSource: SourceConnector | null;
 	asDestination: DestinationConnector | null;
-	identityIDLabel: string;
 	hasSheets: boolean;
 	fileExtension: string;
 	oauth: ConnectorOAuth;
@@ -55,6 +54,7 @@ interface ConnectorDocumentation {
 interface ConnectorTerms {
 	user: string;
 	users: string;
+	userID: string;
 	// group: string;  // TODO(marco): Implement groups
 	// groups: string;
 }

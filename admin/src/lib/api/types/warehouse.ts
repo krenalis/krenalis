@@ -3,7 +3,7 @@ type WarehouseMode = 'Normal' | 'Inspection' | 'Maintenance';
 type WarehouseSettings = Record<string, any>;
 
 interface WarehouseResponse {
-	name: string;
+	platform: string;
 	settings: WarehouseSettings;
 	mcpSettings: WarehouseSettings;
 }

@@ -88,9 +88,9 @@ func (e receivedEvent) Type() string {
 	return e.event["type"].(string)
 }
 
-func (e receivedEvent) UserId() (string, bool) {
-	userId, ok := e.event["userId"].(string)
-	return userId, ok
+func (e receivedEvent) UserID() (string, bool) {
+	userID, ok := e.event["userId"].(string)
+	return userID, ok
 }
 
 type receivedEventContext struct {

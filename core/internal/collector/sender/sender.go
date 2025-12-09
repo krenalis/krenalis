@@ -266,15 +266,15 @@ func (s *Sender) Close(ctx context.Context) error {
 // The returned event must be passed to the QueueEvent method, optionally after
 // setting the Properties field.
 func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event events.Event) *Event {
-	anonymousId, ok := event["anonymousId"].(string)
+	anonymousID, ok := event["anonymousId"].(string)
 	if !ok {
 		panic("core/events/connector/sender: missing anonymousId")
 	}
 	s.mu.Lock()
-	u, ok := s.users[anonymousId]
+	u, ok := s.users[anonymousID]
 	if !ok {
 		u = &user{}
-		s.users[anonymousId] = u
+		s.users[anonymousID] = u
 	}
 	seq := u.nextSeq
 	u.nextSeq++

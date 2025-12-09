@@ -37,7 +37,7 @@ import {
 	Event,
 	EventListenerEventsResponse,
 	ExecQueryResponse,
-	Execution,
+	PipelineRun,
 	FindProfilesResponse,
 	Member,
 	MemberInvitationResponse,
@@ -52,13 +52,14 @@ import {
 	TransformationLanguagesResponse,
 	ProfileEventsResponse,
 	IdentitiesResponse,
-	authCodeURLResponse,
+	authURLResponse,
+	authTokenResponse,
 	profileAttributesResponse,
 	PublicMetadata,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
-const API_BASE_PATH = '/api/v1';
+const API_BASE_PATH = '/v1';
 
 class API {
 	apiURL: string;
@@ -233,6 +234,11 @@ class Connections {
 
 	find = async (): Promise<Connection[]> => {
 		const res = await call(`${this.apiURL}/connections`, http.GET, this.workspaceID);
+		for (let c of res.connections) {
+			if (!('linkedConnections' in c)) {
+				c.linkedConnections = null;
+			}
+		}
 		return res.connections as Connection[];
 	};
 
@@ -242,6 +248,9 @@ class Connections {
 			http.GET,
 			this.workspaceID,
 		);
+		if (!('linkedConnections' in c)) {
+			c.linkedConnections = null;
+		}
 		// Transform the 'pipelines.transformation' field to match the expected format used throughout the rest of the codebase.
 		for (let pipeline of c.pipelines) {
 			if (pipeline.transformation == null) {
@@ -271,12 +280,12 @@ class Connections {
 		);
 	};
 
-	execution = async (id: number): Promise<Execution> => {
-		return await call(`${this.apiURL}/pipelines/executions/${id}`, http.GET, this.workspaceID);
+	run = async (id: number): Promise<PipelineRun> => {
+		return await call(`${this.apiURL}/pipelines/runs/${id}`, http.GET, this.workspaceID);
 	};
 
-	executions = async (): Promise<Execution[]> => {
-		return await call(`${this.apiURL}/pipelines/executions`, http.GET, this.workspaceID);
+	runs = async (): Promise<PipelineRun[]> => {
+		return await call(`${this.apiURL}/pipelines/runs`, http.GET, this.workspaceID);
 	};
 
 	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
@@ -483,9 +492,9 @@ class Connections {
 		);
 	};
 
-	executePipeline = async (pipeline: number): Promise<number> => {
+	runPipeline = async (pipeline: number): Promise<number> => {
 		const res = await call(
-			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/exec`,
+			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/runs`,
 			http.POST,
 			this.workspaceID,
 			{
@@ -641,9 +650,7 @@ class Profiles {
 		limit: number,
 	): Promise<FindProfilesResponse> => {
 		let params = [];
-		properties.forEach(function (property) {
-			params.push(['properties', property]);
-		});
+		params.push(['properties', properties.join(',')]);
 		if (filter != null) {
 			params.push(['filter', JSON.stringify(filter)]);
 		}
@@ -674,9 +681,7 @@ class Profiles {
 			'type',
 			'userId',
 		];
-		properties.forEach(function (property) {
-			params.push(['properties', property]);
-		});
+		params.push(['properties', properties.join(',')]);
 		let filter = {
 			logical: 'and',
 			conditions: [
@@ -805,11 +810,12 @@ class Workspaces {
 	};
 
 	authToken = async (connector: string, authCode: string, redirectURI: string): Promise<string> => {
-		return await call(
+		const res: authTokenResponse = await call(
 			`${this.apiURL}/connections/auth-token?connector=${connector}&redirectURI=${encodeURIComponent(redirectURI)}&authCode=${encodeURIComponent(authCode)}`,
 			http.GET,
 			this.workspaceID,
 		);
+		return res.authToken;
 	};
 
 	updateIdentityResolution = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {
@@ -887,15 +893,14 @@ class Workspaces {
 		limit: number,
 		step?: PipelineStep,
 	): Promise<PipelineErrorsResponse> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r: PipelineErrorsResponse = await call(
-			`${this.apiURL}/pipelines/errors/${encodeURIComponent(start.toISOString())}/${encodeURIComponent(end.toISOString())}?${pipelinesQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
+			`${this.apiURL}/pipelines/errors/` +
+				`${encodeURIComponent(start.toISOString())}/` +
+				`${encodeURIComponent(end.toISOString())}` +
+				`?pipelines=${pipelines.join(',')}` +
+				`&first=${first}` +
+				`&limit=${limit}` +
+				(step ? `&step=${step}` : ''),
 			http.GET,
 			this.workspaceID,
 		);
@@ -906,17 +911,13 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/dates/${encodeURIComponent(sd)}/${encodeURIComponent(ed)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/dates/` +
+				`${encodeURIComponent(sd)}/` +
+				`${encodeURIComponent(ed)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -926,15 +927,10 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerDay = async (days: number, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/days/${encodeURIComponent(days)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/days/` +
+				`${encodeURIComponent(days)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -944,15 +940,10 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerHour = async (hours: number, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/hours/${encodeURIComponent(hours)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/hours/` +
+				`${encodeURIComponent(hours)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -962,15 +953,10 @@ class Workspaces {
 	};
 
 	pipelineMetricsPerMinute = async (minutes: number, pipelines: number[]): Promise<PipelineMetrics> => {
-		let pipelinesQueryString = '';
-		for (let i = 0; i < pipelines.length; i++) {
-			if (i > 0) {
-				pipelinesQueryString += '&';
-			}
-			pipelinesQueryString += `pipelines=${encodeURIComponent(pipelines[i])}`;
-		}
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/minutes/${encodeURIComponent(minutes)}?${pipelinesQueryString}`,
+			`${this.apiURL}/pipelines/metrics/minutes/` +
+				`${encodeURIComponent(minutes)}?` +
+				`pipelines=${pipelines.join(',')}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -997,7 +983,7 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authCodeURL = async (connector: string, role: Role, redirectURI: string): Promise<authCodeURLResponse> => {
+	authURL = async (connector: string, role: Role, redirectURI: string): Promise<authURLResponse> => {
 		return await call(
 			`${this.apiURL}/connections/auth-url?connector=${connector}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,
