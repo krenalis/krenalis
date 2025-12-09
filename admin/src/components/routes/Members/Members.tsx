@@ -67,7 +67,8 @@ const Members = () => {
 			}
 		}
 		setIsRemoveAlertOpen(false);
-		setIsLoading(true);
+		setMembers(members.filter((member) => member.id !== pendingDeletedMember.current));
+		pendingDeletedMember.current = 0;
 	};
 
 	const onLogout = async () => {
