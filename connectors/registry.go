@@ -427,7 +427,7 @@ func validateDatabaseConnector(database DatabaseSpec) {
 		Columns(ctx context.Context, table string) ([]Column, error)
 		Merge(ctx context.Context, table Table, rows [][]any) error
 		Query(ctx context.Context, query string) (Rows, []Column, error)
-		QuoteTime(value any, typ types.Type) string
+		SQLLiteral(value any, typ types.Type) string
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !database.ct.Implements(iface) {

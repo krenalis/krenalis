@@ -137,9 +137,10 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows,
 	return withCloseError{rows}, columns, nil
 }
 
-// QuoteTime returns a quoted time value for the specified type or "NULL" if the
-// value is nil.
-func (ps *PostgreSQL) QuoteTime(value any, typ types.Type) string {
+// SQLLiteral returns the SQL literal representation of v according to the
+// provided Meergo type t. It supports nil values and the following Meergo
+// types: string, datetime, date, and json.
+func (ps *PostgreSQL) SQLLiteral(value any, typ types.Type) string {
 	if value == nil {
 		return "NULL"
 	}
