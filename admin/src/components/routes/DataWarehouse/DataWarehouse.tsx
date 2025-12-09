@@ -30,7 +30,7 @@ const DataWarehouse = () => {
 		const fetchWarehouse = async () => {
 			try {
 				const response = await api.workspaces.warehouse();
-				setConnectedWarehouse(response.name);
+				setConnectedWarehouse(response.platform);
 				setWarehouseSettings(response.settings);
 				setWarehouseMCPSettings(response.mcpSettings);
 			} catch (err) {

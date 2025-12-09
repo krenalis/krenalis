@@ -274,7 +274,7 @@ const useApp = (
 				return;
 			}
 			setWarehouse({
-				name: warehouseResponse.name,
+				platform: warehouseResponse.platform,
 				settings: warehouseResponse.settings,
 			});
 

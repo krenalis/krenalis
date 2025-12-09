@@ -76,7 +76,7 @@ const AccessKeys = () => {
 					}, 300);
 					return;
 				}
-				warehouseByWorkspace[w.id] = res.name;
+				warehouseByWorkspace[w.id] = res.platform;
 			}
 
 			setTimeout(() => {
