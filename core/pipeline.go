@@ -508,7 +508,7 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
 			return 0, errors.BadRequest("incremental cannot be provided for destination pipelines")
 		}
 		if *incremental && typ != state.API && this.pipeline.LastChangeTimeColumn == "" {
-			return 0, errors.Unprocessable(CannotExecuteIncrementally, "incremental requires a last change time column")
+			return 0, errors.Unprocessable(CannotRunIncrementally, "incremental requires a last change time column")
 		}
 	}
 	if !this.pipeline.Enabled {

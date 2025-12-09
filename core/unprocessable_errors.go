@@ -11,7 +11,7 @@ import (
 const (
 	AlterSchemaInExecution        errors.Code = "AlterSchemaInExecution"
 	AuthenticationFailed          errors.Code = "AuthenticationFailed"
-	CannotExecuteIncrementally    errors.Code = "CannotExecuteIncrementally"
+	CannotRunIncrementally        errors.Code = "CannotRunIncrementally"
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
