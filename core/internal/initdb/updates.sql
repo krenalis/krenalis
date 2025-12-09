@@ -125,3 +125,12 @@ DROP INDEX pipelines_executions_function_idx;
 CREATE INDEX pipelines_runs_function_idx
     ON pipelines_runs (function)
     WHERE function != '' AND end_time IS NOT NULL;
+
+ALTER TABLE pipelines_runs
+    RENAME CONSTRAINT actions_executions_pkey TO pipelines_runs_pkey;
+
+ALTER TABLE pipelines_runs
+    RENAME CONSTRAINT actions_executions_action_fkey
+        TO pipelines_runs_pipeline_fkey;
+
+DROP INDEX actions_executions_function_idx;
