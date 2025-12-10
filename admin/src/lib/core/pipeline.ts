@@ -572,8 +572,10 @@ const transformPipelineMapping = (mapping: Mapping, outputSchema: ObjectType): T
 };
 
 const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): TransformedPipeline => {
-	let pipelineMapping = pipeline.transformation.mapping;
-	if (pipeline.transformation.function == null && pipelineMapping == null) {
+	const hasTransformation = pipeline.transformation != null;
+
+	let pipelineMapping = null;
+	if (hasTransformation && pipeline.transformation.function == null && pipelineMapping == null) {
 		// Mappings are selected but there is nothing mapped.
 		pipelineMapping = {};
 	}
@@ -624,7 +626,7 @@ const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): Transf
 		filter: pipeline.filter,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
-			function: pipeline.transformation.function,
+			function: hasTransformation ? pipeline.transformation.function : null,
 		},
 		query: pipeline.query,
 		path: pipeline.path,
@@ -1132,10 +1134,7 @@ const transformInPipelineToSet = async (
 		filter: filter,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
-		transformation: {
-			mapping: mapping,
-			function: func,
-		},
+		transformation: mapping == null && func == null ? null : { mapping: mapping, function: func },
 		query: query!,
 		path: pipeline.path,
 		tableName: pipeline.tableName,
