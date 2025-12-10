@@ -117,7 +117,7 @@ const SchemaEdit = () => {
 							) : (
 								<div className='schema-edit__no-query'>No query for this operation</div>
 							)}
-							<div className='schema-edit__queries-buttons'>
+							<div className='schema-edit__queries-buttons' slot='footer'>
 								<SlButton size='small' onClick={onCancelChanges}>
 									Cancel
 								</SlButton>

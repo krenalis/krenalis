@@ -195,7 +195,6 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 
 	await page.click('.schema-edit__header-apply-button');
 
-	await page.locator('.schema-edit__apply-alter-button').scrollIntoViewIfNeeded();
 	await page.click('.schema-edit__apply-alter-button');
 
 	await expect(page.locator('.schema-grid')).toBeAttached();
