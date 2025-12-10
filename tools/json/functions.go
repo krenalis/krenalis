@@ -31,7 +31,8 @@ type SyntaxError struct {
 	offset int64
 }
 
-// NewSyntaxError returns a new SyntaxError with the provided error and offset.
+// NewSyntaxError returns a new [SyntaxError] with the provided error and
+// offset.
 func NewSyntaxError(err error, offset int64) *SyntaxError {
 	return &SyntaxError{err: err, offset: offset}
 }
@@ -232,7 +233,7 @@ func TrimSpace(data []byte) []byte {
 }
 
 // Unmarshal decodes the JSON-encoded data into the value pointed to by out.
-// It returns a [SyntaxError] if the input data is not valid JSON. It also
+// It returns a [*SyntaxError] if the input data is not valid JSON. It also
 // returns an error if out is nil or is not a pointer, or if data cannot be
 // decoded into out.
 //
@@ -264,8 +265,8 @@ func Valid(data []byte) bool {
 	return jsontext.Value(data).IsValid()
 }
 
-// Validate checks data and returns a *SyntaxError if it is not valid JSON or is
-// not properly encoded in UTF-8. For a simple boolean check, see the Valid
+// Validate checks data and returns a [*SyntaxError] if it is not valid JSON or
+// is not properly encoded in UTF-8. For a simple boolean check, see the Valid
 // function.
 func Validate(data []byte) error {
 	dec := getDecoder(data)
