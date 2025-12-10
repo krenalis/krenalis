@@ -144,6 +144,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	// Instantiate a new MCP (Model Context Protocol) server.
 	mcpServer := mcp.NewMCPServer(core)
 
+	// Instantiate the Prometheus handler.
+	metricsHandler := promhttp.Handler()
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Handle panics.
@@ -183,7 +186,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":
-			promhttp.Handler().ServeHTTP(w, r)
+			metricsHandler.ServeHTTP(w, r)
 			return
 		case metrics.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
 			expvar.Handler().ServeHTTP(w, r)
