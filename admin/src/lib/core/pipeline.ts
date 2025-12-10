@@ -571,12 +571,19 @@ const transformPipelineMapping = (mapping: Mapping, outputSchema: ObjectType): T
 	return s;
 };
 
-const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): TransformedPipeline => {
-	const hasTransformation = pipeline.transformation != null;
-
-	let pipelineMapping = null;
-	if (hasTransformation && pipeline.transformation.function == null && pipelineMapping == null) {
-		// Mappings are selected but there is nothing mapped.
+const transformPipeline = (
+	pipeline: Pipeline,
+	outputSchema: ObjectType,
+	supportsTransformation: boolean,
+): TransformedPipeline => {
+	let pipelineMapping = pipeline.transformation?.mapping;
+	if (
+		supportsTransformation &&
+		(pipeline.transformation == null ||
+			(pipeline.transformation.mapping == null && pipeline.transformation.function == null))
+	) {
+		// Mappings are selected but empty because the transformation is
+		// optional in this pipeline.
 		pipelineMapping = {};
 	}
 
@@ -626,7 +633,7 @@ const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): Transf
 		filter: pipeline.filter,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
-			function: hasTransformation ? pipeline.transformation.function : null,
+			function: pipeline.transformation?.function,
 		},
 		query: pipeline.query,
 		path: pipeline.path,

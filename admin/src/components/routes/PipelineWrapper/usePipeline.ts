@@ -248,7 +248,11 @@ const usePipeline = (
 
 			let transformedPipeline: TransformedPipeline;
 			if (isEditing) {
-				transformedPipeline = transformPipeline(providedPipeline, outputSchema);
+				transformedPipeline = transformPipeline(
+					providedPipeline,
+					outputSchema,
+					fields.includes('Transformation'),
+				);
 				if (transformedPipeline.transformation.function != null) {
 					// Set the initial value of the selected properties
 					// of the function.
