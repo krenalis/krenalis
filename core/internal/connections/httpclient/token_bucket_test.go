@@ -155,9 +155,9 @@ func TestTokenBucket_PauseAndResume(t *testing.T) {
 	}
 }
 
-// Tests that Take returns an error when the context is cancelled and does not
+// Tests that Take returns an error when the context is canceled and does not
 // return too early.
-func TestTokenBucket_TakeCancelled(t *testing.T) {
+func TestTokenBucket_TakeCanceled(t *testing.T) {
 	tb := newTokenBucket(1, func() int { return 0 })
 
 	// Consume token
@@ -169,7 +169,7 @@ func TestTokenBucket_TakeCancelled(t *testing.T) {
 	start := time.Now()
 	err := tb.Take(ctx)
 	if err == nil {
-		t.Fatalf("expected error on cancelled context")
+		t.Fatalf("expected error on canceled context")
 	}
 	elapsed := time.Since(start)
 	// Allow some leeway for timing variations and goroutine scheduling.

@@ -125,7 +125,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 //
 // (1) the operation was successful and no error was returned;
 //
-// (2) the context was cancelled;
+// (2) the context was canceled;
 //
 // (3) the operation ended with an error of type *warehouses.OperationError, and
 // this means that even if the method is called again with the same ID, this
@@ -409,7 +409,7 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 //
 // (1) the operation was successful and no error was returned;
 //
-// (2) the context was cancelled;
+// (2) the context was canceled;
 //
 // (3) the operation ended with an error of type *warehouses.OperationError, and
 // this means that even if the method is called again with the same ID, this

@@ -134,7 +134,7 @@ func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
 	if iw.close.Swap(true) {
 		return
 	}
-	// Cancel the flushes if the context is cancelled.
+	// Cancel the flushes if the context is canceled.
 	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
 	defer stop()
 	// Wait for the flushes to terminate.
@@ -174,7 +174,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	if iw.close.Swap(true) {
 		return nil
 	}
-	// Cancel the flushes if the context is cancelled.
+	// Cancel the flushes if the context is canceled.
 	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
 	defer stop()
 	// Wait for the flushes to terminate.

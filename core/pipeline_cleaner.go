@@ -109,7 +109,7 @@ func (c *pipelineCleaner) Close(ctx context.Context) {
 	if c.close.Swap(true) {
 		return
 	}
-	// Cancel c.close.ctx if ctx is cancelled.
+	// Cancel c.close.ctx if ctx is canceled.
 	stop := context.AfterFunc(ctx, func() { c.close.cancel() })
 	defer stop()
 	// Waits for the ongoing operations to finish.

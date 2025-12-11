@@ -1697,7 +1697,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 // nil) of the warehouse associated with the workspace.
 //
 // If cancelIncompatibleOperations is true, the operations currently in progress
-// on the warehouse that are incompatible with mode are cancelled.
+// on the warehouse that are incompatible with mode are canceled.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
@@ -1805,7 +1805,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 // UpdateWarehouseMode updates the mode of the data warehouse for the workspace.
 //
 // If cancelIncompatibleOperations is true, the operations currently in progress
-// on the warehouse that are incompatible with mode are cancelled.
+// on the warehouse that are incompatible with mode are canceled.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore.
