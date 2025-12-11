@@ -942,7 +942,7 @@ func (this *Pipeline) endRun(err error) {
 			errorMessage = err.Error()
 		} else {
 			if ctx.Err() != nil {
-				errorMessage = "run has been cancelled"
+				errorMessage = "run has been canceled"
 			} else {
 				errorMessage = "an internal error has occurred"
 				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "err", err)

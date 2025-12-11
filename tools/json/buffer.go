@@ -175,7 +175,7 @@ func (b *Buffer) Truncate(n int) {
 }
 
 // Value returns a copy of the unread portion of the buffer as a Value.
-// It returns a *SyntaxError if the unread portion is not valid JSON.
+// It returns a [*SyntaxError] if the unread portion is not valid JSON.
 func (b *Buffer) Value() (Value, error) {
 	v := b.buffer.Bytes()
 	if err := Validate(v); err != nil {

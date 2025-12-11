@@ -396,7 +396,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 	await page.click('.monaco-editor');
 	await page.keyboard.press('Control+A');
 	await page.keyboard.press('Backspace');
-	await page.keyboard.type('SELECT email, first_name, last_name FROM users WHERE ${last_change_time} LIMIT ${limit}');
+	await page.keyboard.type('SELECT email, first_name, last_name FROM users WHERE ${updated_at} LIMIT ${limit}');
 	await page.click('.pipeline__query-confirm');
 	await expect(page.locator('.pipeline__transformation')).toBeAttached();
 
@@ -485,7 +485,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 				"last_name": "last_name"
 			}
 		},
-		"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
+		"query": "SELECT email, first_name, last_name FROM users WHERE \${updated_at} LIMIT \${limit}",
 		"incremental": false,
 		"identityColumn": "email",
 		"lastChangeTimeColumn": "",

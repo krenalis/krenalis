@@ -84,6 +84,9 @@ services:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER:
 
+      # Enable the /metrics endpoint for Prometheus monitoring.
+      MEERGO_METRICS_ENABLED: true
+
     # If you change the volumes settings, also change the File System env vars
     # settings to point to the mount point.
     volumes:

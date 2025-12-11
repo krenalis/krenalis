@@ -251,15 +251,6 @@ class Connections {
 		if (!('linkedConnections' in c)) {
 			c.linkedConnections = null;
 		}
-		// Transform the 'pipelines.transformation' field to match the expected format used throughout the rest of the codebase.
-		for (let pipeline of c.pipelines) {
-			if (pipeline.transformation == null) {
-				pipeline.transformation = {
-					mapping: null,
-					function: null,
-				};
-			}
-		}
 		return c as Connection;
 	};
 
@@ -442,12 +433,6 @@ class Connections {
 		eventType: string,
 		pipeline: PipelineToSet,
 	): Promise<number> => {
-		// Transform the 'pipelines.transformation' field to match the API expected format.
-		if ('transformation' in pipeline) {
-			if (pipeline.transformation.mapping == null && pipeline.transformation.function == null) {
-				pipeline.transformation = null;
-			}
-		}
 		return await call(`${this.apiURL}/pipelines`, http.POST, this.workspaceID, {
 			connection,
 			target,
@@ -457,12 +442,6 @@ class Connections {
 	};
 
 	updatePipeline = async (id: number, pipeline: PipelineToSet): Promise<void> => {
-		// Transform the 'pipelines.transformation' field to match the API expected format.
-		if ('transformation' in pipeline) {
-			if (pipeline.transformation.mapping == null && pipeline.transformation.function == null) {
-				pipeline.transformation = null;
-			}
-		}
 		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, pipeline);
 	};
 

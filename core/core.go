@@ -1186,7 +1186,8 @@ func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema t
 		return
 	}
 	// Keep calling 'AlterProfileSchema' until it (1) returns successfully, (2)
-	// returns with a *warehouses.OperationError, or (3) the context is cancelled.
+	// returns with a *warehouses.OperationError, or (3) the context is
+	// canceled.
 	var alterSchemaErr *warehouses.OperationError
 	bo := backoff.New(200)
 	bo.SetCap(5 * time.Minute)
@@ -1324,7 +1325,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	store := core.datastore.Store(workspace)
 	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
 	// (2) returns with a *warehouses.OperationError, or (3) the context is
-	// cancelled.
+	// canceled.
 	bo := backoff.New(200)
 	bo.SetCap(5 * time.Minute)
 	for bo.Next(ctx) {

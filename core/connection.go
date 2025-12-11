@@ -793,8 +793,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	database := this.database()
 	replacer := func(name string) (string, bool) {
 		switch name {
-		case "last_change_time":
-			v, _ := database.LastChangeTimePlaceholder(nil)
+		case "updated_at":
+			v, _ := database.UpdatedAtPlaceholder(nil)
 			return v, true
 		case "limit":
 			return strconv.Itoa(limit), true

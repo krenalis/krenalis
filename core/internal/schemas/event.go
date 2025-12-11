@@ -10,9 +10,9 @@ import (
 
 // Event is the event schema.
 var Event = types.Object([]types.Property{
-	{Name: "mpid", Type: types.UUID(), ReadOptional: true, Description: "User"},
-	{Name: "connectionId", Type: types.Int(32), Description: "Connection Id"},
-	{Name: "anonymousId", Type: types.String(), Description: "Anonymous Id"},
+	{Name: "mpid", Type: types.UUID(), ReadOptional: true, Description: "Meergo Profile ID"},
+	{Name: "connectionId", Type: types.Int(32), Description: "Connection ID"},
+	{Name: "anonymousId", Type: types.String(), Description: "Anonymous ID"},
 	{Name: "channel", Type: types.String(), ReadOptional: true, Description: "Channel"},
 	{Name: "category", Type: types.String(), ReadOptional: true, Description: "Category"},
 	{
@@ -55,7 +55,7 @@ var Event = types.Object([]types.Property{
 				Name: "device",
 				Type: types.Object([]types.Property{
 					{Name: "id", Type: types.String(), ReadOptional: true, Description: "Id"},
-					{Name: "advertisingId", Type: types.String(), ReadOptional: true, Description: "Advertising Id"},
+					{Name: "advertisingId", Type: types.String(), ReadOptional: true, Description: "Advertising ID"},
 					{Name: "adTrackingEnabled", Type: types.Boolean(), ReadOptional: true, Description: "Ad tracking enabled"},
 					{Name: "manufacturer", Type: types.String(), ReadOptional: true, Description: "Manufacturer"},
 					{Name: "model", Type: types.String(), ReadOptional: true, Description: "Model"},
@@ -125,7 +125,7 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "referrer",
 				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.String(), ReadOptional: true, Description: "Id"},
+					{Name: "id", Type: types.String(), ReadOptional: true, Description: "ID"},
 					{Name: "type", Type: types.String(), ReadOptional: true, Description: "Type"},
 				}),
 				ReadOptional: true,
@@ -144,7 +144,7 @@ var Event = types.Object([]types.Property{
 			{
 				Name: "session",
 				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(64), ReadOptional: true, Description: "Id"},
+					{Name: "id", Type: types.Int(64), ReadOptional: true, Description: "ID"},
 					{Name: "start", Type: types.Boolean(), ReadOptional: true, Description: "Start"},
 				}),
 				ReadOptional: true,
@@ -157,8 +157,8 @@ var Event = types.Object([]types.Property{
 		Description:  "Context",
 	},
 	{Name: "event", Type: types.String(), ReadOptional: true, Description: "Event"},
-	{Name: "groupId", Type: types.String(), ReadOptional: true, Description: "Group Id"},
-	{Name: "messageId", Type: types.String(), Description: "Message Id"},
+	{Name: "groupId", Type: types.String(), ReadOptional: true, Description: "Group ID"},
+	{Name: "messageId", Type: types.String(), Description: "Message ID"},
 	{Name: "name", Type: types.String(), ReadOptional: true, Description: "Name"},
 	{Name: "properties", Type: types.JSON(), ReadOptional: true, Description: "Properties"},
 	{Name: "receivedAt", Type: types.DateTime(), Description: "Received at"},
@@ -167,6 +167,6 @@ var Event = types.Object([]types.Property{
 	{Name: "timestamp", Type: types.DateTime(), Description: "Timestamp"},
 	{Name: "traits", Type: types.JSON(), Description: "Traits"},
 	{Name: "type", Type: types.String().WithValues("alias", "identify", "group", "page", "screen", "track"), Description: "Type"},
-	{Name: "previousId", Type: types.String(), ReadOptional: true, Description: "Previous Id"},
-	{Name: "userId", Type: types.String(), ReadOptional: true, Description: "User Id"},
+	{Name: "previousId", Type: types.String(), ReadOptional: true, Description: "Previous ID"},
+	{Name: "userId", Type: types.String(), ReadOptional: true, Description: "User ID"},
 })

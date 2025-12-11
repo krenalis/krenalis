@@ -41,7 +41,7 @@ const ExternalLogo = ({ code, path, slot }: ExternalLogoProps) => {
 			return;
 		}
 
-		let cancelled = false;
+		let canceled = false;
 
 		(async () => {
 			for (const src of sources) {
@@ -49,7 +49,7 @@ const ExternalLogo = ({ code, path, slot }: ExternalLogoProps) => {
 					// test the images outside of the DOM to prevent delays and
 					// flickers during render.
 					const ok = await isImageOK(src);
-					if (cancelled) {
+					if (canceled) {
 						return;
 					}
 					if (ok) {
@@ -62,14 +62,14 @@ const ExternalLogo = ({ code, path, slot }: ExternalLogoProps) => {
 				}
 			}
 			// all images have failed.
-			if (!cancelled) {
+			if (!canceled) {
 				okSrcCache.set(code, null);
 				setSrc(null);
 			}
 		})();
 
 		return () => {
-			cancelled = true;
+			canceled = true;
 		};
 	}, [code, publicMetadata.externalAssetsURLs]);
 

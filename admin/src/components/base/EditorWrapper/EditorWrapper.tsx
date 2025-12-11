@@ -171,7 +171,7 @@ const Editor = ({ value, sync, language, onChange, onMount, options }: EditorPro
 		const handler = (event: PromiseRejectionEvent) => {
 			// avoid the behaviour of Monaco which prints an error in
 			// the console when an asynchronous editor operation is
-			// cancelled after the editor is closed. The cancellation of
+			// canceled after the editor is closed. The cancellation of
 			// operations is a standard optimisation task and is not to
 			// be regarded as an error in our use case.
 			if (event.reason?.name === 'Canceled' || event.reason?.message === 'Canceled') {

@@ -571,10 +571,19 @@ const transformPipelineMapping = (mapping: Mapping, outputSchema: ObjectType): T
 	return s;
 };
 
-const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): TransformedPipeline => {
-	let pipelineMapping = pipeline.transformation.mapping;
-	if (pipeline.transformation.function == null && pipelineMapping == null) {
-		// Mappings are selected but there is nothing mapped.
+const transformPipeline = (
+	pipeline: Pipeline,
+	outputSchema: ObjectType,
+	supportsTransformation: boolean,
+): TransformedPipeline => {
+	let pipelineMapping = pipeline.transformation?.mapping;
+	if (
+		supportsTransformation &&
+		(pipeline.transformation == null ||
+			(pipeline.transformation.mapping == null && pipeline.transformation.function == null))
+	) {
+		// Mappings are selected but empty because the transformation is
+		// optional in this pipeline.
 		pipelineMapping = {};
 	}
 
@@ -624,7 +633,7 @@ const transformPipeline = (pipeline: Pipeline, outputSchema: ObjectType): Transf
 		filter: pipeline.filter,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
-			function: pipeline.transformation.function,
+			function: pipeline.transformation?.function,
 		},
 		query: pipeline.query,
 		path: pipeline.path,
@@ -1132,10 +1141,7 @@ const transformInPipelineToSet = async (
 		filter: filter,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
-		transformation: {
-			mapping: mapping,
-			function: func,
-		},
+		transformation: mapping == null && func == null ? null : { mapping: mapping, function: func },
 		query: query!,
 		path: pipeline.path,
 		tableName: pipeline.tableName,

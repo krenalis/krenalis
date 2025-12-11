@@ -67,6 +67,7 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
+	MetricsEnabled   bool
 	OAuthCredentials map[string]*core.OAuthCredentials
 }
 
@@ -94,7 +95,7 @@ type LocalConfig struct {
 }
 
 // Run runs the server.
-// Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
+// Cancel ctx to terminate the execution. If ctx is canceled, Run does not
 // return any error.
 // initDBIfEmpty controls whether the PostgreSQL database should be initialized
 // in case it is empty; if initDockerMember is true in addition to
@@ -144,6 +145,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	// Instantiate a new MCP (Model Context Protocol) server.
 	mcpServer := mcp.NewMCPServer(core)
 
+	// Instantiate the Prometheus handler.
+	var metricsHandler http.Handler
+	if settings.MetricsEnabled {
+		metricsHandler = promhttp.Handler()
+	}
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Handle panics.
@@ -183,15 +190,17 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":
-			promhttp.Handler().ServeHTTP(w, r)
-			return
+			if settings.MetricsEnabled {
+				metricsHandler.ServeHTTP(w, r)
+				return
+			}
 		case metrics.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
 			expvar.Handler().ServeHTTP(w, r)
 			return
 		default:
-			http.NotFound(w, r)
-			return
 		}
+
+		http.NotFound(w, r)
 
 	})
 
@@ -225,15 +234,18 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	}()
 
 	// Log a human-readable overview of all externally exposed server endpoints.
+	metricsLine := ""
+	if settings.MetricsEnabled {
+		metricsLine = fmt.Sprintf("├─ Metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
+	}
 	msg := fmt.Sprintf(
 		"The Meergo server has been started at %s\n"+
-			"├─ Metrics:  %s\n"+
+			"%s"+
 			"├─ REST API: %s\n"+
-			"└─ Event ingestion endpoint: %s\n"+
-			"\n"+
+			"└─ Event ingestion endpoint: %s\n\n"+
 			"> Admin console: %s",
 		addr,
-		settings.HTTP.ExternalURL+"metrics",
+		metricsLine,
 		settings.HTTP.ExternalURL+"v1/",
 		settings.HTTP.ExternalEventURL,
 		settings.HTTP.ExternalURL+"admin",

@@ -312,7 +312,7 @@ func (testDatabaseConnector) Query(context.Context, string) (Rows, []Column, err
 	return nil, nil, nil
 }
 
-func (testDatabaseConnector) QuoteTime(any, types.Type) string {
+func (testDatabaseConnector) SQLLiteral(any, types.Type) string {
 	return ""
 }
 

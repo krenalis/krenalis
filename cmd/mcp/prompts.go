@@ -23,7 +23,7 @@ var prompts = []server.ServerPrompt{
 		"describe-event-schema",
 		"Get a better understanding of the event schema",
 		"Retrieve the event schema and provide a high-level description of it."+
-			" Also explain the relationship between the properties of the event schema and the columns of the corresponding 'events' table on the data warehouse.",
+			" Also explain the relationship between the properties of the event schema and the columns of the corresponding 'events' view on the data warehouse.",
 	),
 	simplePrompt(
 		"workspace-connections",

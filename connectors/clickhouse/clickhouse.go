@@ -111,9 +111,10 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (connectors.Rows,
 	return ch.query(ctx, query, false)
 }
 
-// QuoteTime returns a quoted time value for the specified type or "NULL" if the
-// value is nil.
-func (ch *ClickHouse) QuoteTime(value any, typ types.Type) string {
+// SQLLiteral returns the SQL literal representation of v according to the
+// provided Meergo type t. It supports nil values and the following Meergo
+// types: string, datetime, date, and json.
+func (ch *ClickHouse) SQLLiteral(value any, typ types.Type) string {
 	if value == nil {
 		return "NULL"
 	}

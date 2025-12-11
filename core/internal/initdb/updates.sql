@@ -134,3 +134,6 @@ ALTER TABLE pipelines_runs
         TO pipelines_runs_pipeline_fkey;
 
 DROP INDEX actions_executions_function_idx;
+
+ALTER TYPE notification_name RENAME VALUE 'ExecutePipeline' TO 'RunPipeline';
+ALTER TYPE notification_name RENAME VALUE 'EndPipelineExecution' TO 'EndPipelineRun';

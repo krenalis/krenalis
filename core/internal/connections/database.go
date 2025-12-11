@@ -43,15 +43,24 @@ type databaseConnection interface {
 	// property will describe the problem.
 	Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error)
 
-	// QuoteTime returns a quoted time value for the specified type or "NULL" if the
-	// value is nil.
+	// SQLLiteral returns the SQL literal representation of v according to the
+	// provided Meergo type t. It supports nil values and the following Meergo
+	// types: string, datetime, date, and json.
 	//
-	// value is the time value to quote, and typ specifies its type, which can be
-	// datetime, date, string, or json:
+	// Examples:
+	//   (nil, types.Type{})
+	//   ("foo", types.String())
+	//   ("{\"boo\":5}", types.JSON())
+	//   (time.Date(2025, 12, 9, 12, 53, 45, 730139838, time.UTC), types.DateTime())
+	//   (time.Date(2025, 12, 9, 0, 0, 0, 0, time.UTC), types.Date())
 	//
-	//   - For datetime and date types, value is a time.Time.
-	//   - For string and json types, value is a string.
-	QuoteTime(value any, typ types.Type) string
+	// For the inputs above, the PostgreSQL connector returns:
+	//   NULL
+	//   'foo'
+	//   '{"boo": 5}'
+	//   '2025-12-09 12:53:45.730139'
+	//   '2025-12-09'
+	SQLLiteral(v any, t types.Type) string
 }
 
 // Database represents the database of a database connection.
@@ -103,37 +112,6 @@ func (database *Database) Close() error {
 // Connector returns the name of the database connector.
 func (database *Database) Connector() string {
 	return database.connector
-}
-
-// LastChangeTimePlaceholder returns the value used for the last_change_time
-// placeholder for the provided pipeline.
-func (database *Database) LastChangeTimePlaceholder(pipeline *state.Pipeline) (string, error) {
-	if database.err != nil {
-		return "", database.err
-	}
-	if pipeline == nil {
-		return database.inner.QuoteTime(nil, types.Type{}), nil
-	}
-	run, ok := pipeline.Run()
-	if !ok {
-		return "", errors.New("pipeline is not currently running")
-	}
-	cursor := run.Cursor
-	property := pipeline.LastChangeTimeColumn
-	if property == "" || cursor.IsZero() {
-		return database.inner.QuoteTime(nil, types.Type{}), nil
-	}
-	p, _ := pipeline.InSchema.Properties().ByName(property)
-	var value any
-	switch p.Type.Kind() {
-	case types.StringKind, types.JSONKind:
-		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
-	case types.DateTimeKind:
-		value = run.Cursor
-	case types.DateKind:
-		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
-	}
-	return database.inner.QuoteTime(value, p.Type), nil
 }
 
 // Schema returns the schema for the given table and role, along with any issues
@@ -295,6 +273,37 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 	// Return the records.
 	records = newDatabaseRecords(rows, columns, pipeline, database.timeLayouts)
 	return records, nil
+}
+
+// UpdatedAtPlaceholder returns the value used for the updated_at placeholder
+// for the provided pipeline.
+func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string, error) {
+	if database.err != nil {
+		return "", database.err
+	}
+	if pipeline == nil {
+		return database.inner.SQLLiteral(nil, types.Type{}), nil
+	}
+	run, ok := pipeline.Run()
+	if !ok {
+		return "", errors.New("pipeline is not currently running")
+	}
+	cursor := run.Cursor
+	property := pipeline.LastChangeTimeColumn
+	if property == "" || cursor.IsZero() {
+		return database.inner.SQLLiteral(nil, types.Type{}), nil
+	}
+	p, _ := pipeline.InSchema.Properties().ByName(property)
+	var value any
+	switch p.Type.Kind() {
+	case types.StringKind, types.JSONKind:
+		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
+	case types.DateTimeKind:
+		value = run.Cursor
+	case types.DateKind:
+		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
+	}
+	return database.inner.SQLLiteral(value, p.Type), nil
 }
 
 // Writer returns a Writer to create and update users.

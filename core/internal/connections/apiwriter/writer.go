@@ -126,7 +126,7 @@ func (w *Writer) Close(ctx context.Context) error {
 		}
 		if ctx.Err() != nil {
 			if trace {
-				fmt.Print("Writer.Close: context has been cancelled\n")
+				fmt.Print("Writer.Close: context has been canceled\n")
 			}
 			break
 		}
