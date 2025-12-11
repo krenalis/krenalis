@@ -116,7 +116,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		Name          string     `json:"name"`
 		ProfileSchema types.Type `json:"profileSchema"`
 		Warehouse     struct {
-			Name        string             `json:"name"`
+			Platform    string             `json:"platform"`
 			Mode        core.WarehouseMode `json:"mode"`
 			Settings    json.Value         `json:"settings"`
 			MCPSettings json.Value         `json:"mcpSettings"`
@@ -131,7 +131,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		body.Warehouse.MCPSettings = nil
 	}
 	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema,
-		body.UIPreferences, body.Warehouse.Name, body.Warehouse.Settings,
+		body.UIPreferences, body.Warehouse.Platform, body.Warehouse.Settings,
 		body.Warehouse.MCPSettings, body.Warehouse.Mode)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
@@ -221,7 +221,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		Name          string     `json:"name"`
 		ProfileSchema types.Type `json:"profileSchema"`
 		Warehouse     struct {
-			Name        string             `json:"name"`
+			Platform    string             `json:"platform"`
 			Mode        core.WarehouseMode `json:"mode"`
 			Settings    json.Value         `json:"settings"`
 			MCPSettings json.Value         `json:"mcpSettings"`
@@ -236,7 +236,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		body.Warehouse.MCPSettings = nil
 	}
 	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema,
-		body.UIPreferences, body.Warehouse.Name, body.Warehouse.Settings,
+		body.UIPreferences, body.Warehouse.Platform, body.Warehouse.Settings,
 		body.Warehouse.MCPSettings, body.Warehouse.Mode)
 	return nil, err
 }

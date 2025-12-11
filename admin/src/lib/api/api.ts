@@ -717,7 +717,7 @@ class Workspaces {
 	create = async (
 		name: string,
 		profileSchema: ObjectType,
-		warehouseName: string,
+		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 		warehouseMCPSettings: WarehouseSettings | null,
@@ -727,7 +727,7 @@ class Workspaces {
 			name: name,
 			profileSchema: profileSchema,
 			warehouse: {
-				name: warehouseName,
+				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 				mcpSettings: warehouseMCPSettings,
@@ -739,7 +739,7 @@ class Workspaces {
 	testCreation = async (
 		name: string,
 		profileSchema: ObjectType,
-		warehouseName: string,
+		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 		mcpWarehouseSettings: WarehouseSettings | null,
@@ -749,7 +749,7 @@ class Workspaces {
 			name: name,
 			profileSchema: profileSchema,
 			warehouse: {
-				name: warehouseName,
+				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 				mcpSettings: mcpWarehouseSettings,

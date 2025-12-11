@@ -507,7 +507,7 @@ func (c *Meergo) createWorkspace(name string, profileSchema types.Type, uiPrefer
 		"name":          name,
 		"profileSchema": profileSchema,
 		"warehouse": map[string]any{
-			"name":     testsSettings.WarehouseName,
+			"platform": testsSettings.WarehousePlatform,
 			"settings": testsSettings.Warehouse,
 		},
 		"uiPreferences": uiPreferences,
