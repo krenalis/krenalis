@@ -155,7 +155,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	),`)
 	// Write the "_updated_at" column.
 	mergeProfiles.WriteString(`MAX("_UPDATED_AT")`)
-	mergeProfiles.WriteString(` FROM "_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
+	mergeProfiles.WriteString(` FROM "MEERGO_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
 
 	// If two profiles who were previously one are split, they will end up having
 	// the same MPID, which is incorrect. So this query, in that situation,

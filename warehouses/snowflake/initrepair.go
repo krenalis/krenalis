@@ -76,7 +76,7 @@ func (warehouse *Snowflake) Repair(ctx context.Context, profileColumns []warehou
 // internally by the driver, the given profile columns.
 func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 	var b strings.Builder
-	b.WriteString(`CREATE TABLE IF NOT EXISTS "_IDENTITIES" (
+	b.WriteString(`CREATE TABLE IF NOT EXISTS "MEERGO_IDENTITIES" (
 		"_PK" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
 		"_PIPELINE" INT NOT NULL,
 		"_IS_ANONYMOUS" BOOLEAN NOT NULL DEFAULT FALSE,
