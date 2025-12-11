@@ -139,7 +139,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	}
 	// Write the "_identities" column.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
-	// Write the "_mpid" column.
+	// Write the "_MPID" column.
 	// If all MPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's MPID; otherwise,
 	// if we are in a situation where a previously split profile is now merged,
@@ -147,8 +147,8 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	// also in this case, create a new random MPID.
 	mergeProfiles.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "_mpid" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("_mpid"::text)::varchar
+			WHEN COUNT(CASE WHEN "_MPID" IS NOT NULL THEN 1 ELSE 0 END) > 0
+				THEN MAX("_MPID"::text)::varchar
 			ELSE UUID_STRING()
 		END,
 		UUID_STRING()

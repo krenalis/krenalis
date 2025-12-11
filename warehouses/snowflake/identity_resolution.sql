@@ -118,14 +118,14 @@ BEGIN
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
     UPDATE "MEERGO_IDENTITIES" AS "I"
-    SET "_mpid" = "U"."_MPID"
+    SET "_MPID" = "U"."_MPID"
     FROM {{ new_profiles_name }} AS "U"
     WHERE ARRAY_CONTAINS("I"."_PK", "U"."_IDENTITIES");
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.
     UPDATE "MEERGO_EVENTS" SET "MPID" = null;
-    UPDATE "MEERGO_EVENTS" SET "MPID" = "MEERGO_IDENTITIES"."_mpid"
+    UPDATE "MEERGO_EVENTS" SET "MPID" = "MEERGO_IDENTITIES"."_MPID"
     FROM "MEERGO_IDENTITIES" WHERE
        "MEERGO_EVENTS"."CONNECTION_ID" = "MEERGO_IDENTITIES"."_CONNECTION"
            AND

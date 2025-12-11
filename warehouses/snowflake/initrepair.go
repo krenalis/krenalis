@@ -85,7 +85,7 @@ func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 		"_ANONYMOUS_IDS" ARRAY,
 		"_UPDATED_AT" TIMESTAMP_NTZ NOT NULL,
 		"_RUN" INT,
-		"_mpid" VARCHAR(36),
+		"_MPID" VARCHAR(36),
 		"_CLUSTER" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")
