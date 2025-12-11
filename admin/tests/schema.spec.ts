@@ -119,23 +119,40 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.click('.property-dialog__save');
 	await logValidationErrors(page, ['.property-dialog__control-error']);
 
-	let isRequestDone = false;
+	await page.waitForTimeout(2000); // Add a timeout to ensure that editable schema in the React state is synced with the newly added property.
+
+	let isRequestOK = false;
 	page.on('request', async (request) => {
-		if (request.url().includes('/users/schema') && request.method() === 'PUT') {
-			isRequestDone = true;
+		if (request.url().includes('/profiles/schema') && request.method() === 'PUT') {
 			const body = request.postData();
 			const parsed = JSON.parse(body);
-			JSON.stringify(parsed.rePaths) === JSON.stringify({ foo: 'bar', bar: null });
+			isRequestOK = JSON.stringify(parsed.rePaths) === JSON.stringify({ foo: 'bar', bar: null });
 		}
 	});
 
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
 
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
-	expect(isRequestDone).toBe(true);
-
 	await expect(page.locator('.schema-grid')).toBeAttached();
+
+	await page.waitForTimeout(5000); // Add a timeout to ensure that the saving was completed.
+	expect(isRequestOK).toBe(true);
+
+	let fooCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', {
+		hasText: /^foo$/,
+	});
+	let barCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^bar$/ });
+	await expect(fooCell).toBeAttached();
+	await expect(barCell).toBeAttached();
+
+	await page.reload();
+
+	fooCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', {
+		hasText: /^foo$/,
+	});
+	barCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^bar$/ });
+	await expect(fooCell).toBeAttached();
+	await expect(barCell).toBeAttached();
 });
 
 test(`Add schema object property with sub-property`, async ({ page }) => {
@@ -172,13 +189,12 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	}, 'string');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
-	
+
 	await page.click('.property-dialog__save');
 	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	await page.click('.schema-edit__header-apply-button');
 
-	await page.locator('.schema-edit__apply-alter-button').scrollIntoViewIfNeeded();
 	await page.click('.schema-edit__apply-alter-button');
 
 	await expect(page.locator('.schema-grid')).toBeAttached();

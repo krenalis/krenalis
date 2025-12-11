@@ -93,7 +93,6 @@
 }
 
 .schema-edit__queries-buttons {
-	margin-top: 30px;
 	display: flex;
 	justify-content: end;
 	gap: 15px;
