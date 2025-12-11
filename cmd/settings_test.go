@@ -188,7 +188,7 @@ func TestParseSettings(t *testing.T) {
 			t.Errorf("expected s.MaxMindDBPath empty, got %q", s.MaxMindDBPath)
 		}
 
-		// Metric enabled.
+		// Metrics enabled.
 		if s.MetricsEnabled {
 			t.Error("expected MetricsEnabled false, got true")
 		}
@@ -803,6 +803,7 @@ func TestParseSettings(t *testing.T) {
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
+
 	})
 
 	t.Run("SMTP conditional block", func(t *testing.T) {
