@@ -234,15 +234,18 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	}()
 
 	// Log a human-readable overview of all externally exposed server endpoints.
+	metricsLine := ""
+	if settings.MetricsEnabled {
+		metricsLine = fmt.Sprintf("├─ Metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
+	}
 	msg := fmt.Sprintf(
 		"The Meergo server has been started at %s\n"+
-			"├─ Metrics:  %s\n"+
+			"%s"+
 			"├─ REST API: %s\n"+
-			"└─ Event ingestion endpoint: %s\n"+
-			"\n"+
+			"└─ Event ingestion endpoint: %s\n\n"+
 			"> Admin console: %s",
 		addr,
-		settings.HTTP.ExternalURL+"metrics",
+		metricsLine,
 		settings.HTTP.ExternalURL+"v1/",
 		settings.HTTP.ExternalEventURL,
 		settings.HTTP.ExternalURL+"admin",
