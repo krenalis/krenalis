@@ -128,7 +128,7 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, prof
 // identitiesIndex returns a query in the format "CREATE INDEX ..." that creates
 // the necessary indexes for the identities table.
 func identitiesIndex() string {
-	return `CREATE INDEX IF NOT EXISTS "last_change_time_idx" ON "meergo_identities" ("_updated_at");`
+	return `CREATE INDEX IF NOT EXISTS "updated_atx" ON "meergo_identities" ("_updated_at");`
 }
 
 // identitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE ...")

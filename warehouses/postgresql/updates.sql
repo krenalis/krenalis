@@ -56,3 +56,5 @@ ALTER TABLE profiles          RENAME _last_change_time TO _updated_at;
 ALTER TABLE meergo_profiles_0 RENAME _last_change_time TO _updated_at;
 
 ALTER TABLE meergo_identities RENAME COLUMN _execution TO _run;
+
+ALTER INDEX last_change_time_idx RENAME TO updated_atx;
