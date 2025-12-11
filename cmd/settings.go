@@ -288,6 +288,11 @@ func parseEnvSettings() (*Settings, error) {
 			" and MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: you must specify one of the two, or neither")
 	}
 
+	settings.MetricsEnabled, err = boolEnvVar(envVars.Get("MEERGO_METRICS_ENABLED"), false)
+	if err != nil {
+		return nil, fmt.Errorf("MEERGO_METRICS_ENABLED must be a boolean: %s", err)
+	}
+
 	if id := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); id != "" {
 		secret := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET")
 		if secret == "" {

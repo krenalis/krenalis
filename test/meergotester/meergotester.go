@@ -304,6 +304,7 @@ func (c *Meergo) Start() {
 			"MEERGO_EXTERNAL_ASSETS_URLS=https://assets.meergo.com/",
 			"MEERGO_POTENTIAL_CONNECTORS_URL=https://assets.meergo.com/admin/connectors/potentials.json",
 			"MEERGO_TELEMETRY_LEVEL=none",
+			"MEERGO_METRICS_ENABLED=true",
 			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
 			"MEERGO_DB_HOST=" + testsSettings.Database.Host,

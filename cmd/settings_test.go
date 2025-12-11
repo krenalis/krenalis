@@ -188,6 +188,11 @@ func TestParseSettings(t *testing.T) {
 			t.Errorf("expected s.MaxMindDBPath empty, got %q", s.MaxMindDBPath)
 		}
 
+		// Metrics enabled.
+		if s.MetricsEnabled {
+			t.Error("expected MetricsEnabled false, got true")
+		}
+
 	})
 
 	t.Run("termination delay valid and invalid", func(t *testing.T) {
@@ -763,6 +768,42 @@ func TestParseSettings(t *testing.T) {
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
+
+	})
+
+	t.Run("metrics enabled parsing", func(t *testing.T) {
+
+		setBaseline(t)
+		t.Setenv("MEERGO_METRICS_ENABLED", "false")
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if s.MetricsEnabled {
+			t.Errorf("expected false, got true")
+		}
+
+		setBaseline(t)
+		t.Setenv("MEERGO_METRICS_ENABLED", "true")
+		s, err = parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !s.MetricsEnabled {
+			t.Errorf("expected true, got false")
+		}
+
+		setBaseline(t)
+		t.Setenv("MEERGO_METRICS_ENABLED", "not-bool")
+		_, err = parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for invalid boolean, got nil")
+		}
+		want := "MEERGO_METRICS_ENABLED must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+
 	})
 
 	t.Run("SMTP conditional block", func(t *testing.T) {
