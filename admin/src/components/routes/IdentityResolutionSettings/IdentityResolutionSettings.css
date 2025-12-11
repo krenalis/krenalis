@@ -60,6 +60,8 @@
 	color: var(--text-onaccent);
 	width: 25px;
 	height: 25px;
+	min-width: 25px;
+	min-height: 25px;
 	border-radius: 100%;
 	display: flex;
 	justify-content: center;
