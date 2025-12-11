@@ -26,6 +26,8 @@ import (
 // maxRequestSize is the maximum size bytes for an API request.
 const maxRequestSize = 500 * 1024
 
+var newline = []byte("\n")
+
 var (
 	// errMissingWorkspace is returned when the "Meergo-Workspace" header is required but not provided.
 	errMissingWorkspace = errors.Forbidden("Meergo-Workspace header is missing; provide it in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
@@ -116,6 +118,13 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 			if response != nil {
 				w.Header().Set("Content-Type", "application/json")
 				_ = json.Encode(w, response)
+			}
+			// Append a newline to JSON responses without a Content-Length header.
+			// This keeps terminal tools like curl from printing the prompt on the same line.
+			if h := w.Header(); h.Get("Content-Type") == "application/json" {
+				if _, ok := h["Content-Length"]; !ok {
+					_, _ = w.Write(newline)
+				}
 			}
 		})
 	}

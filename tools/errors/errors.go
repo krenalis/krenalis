@@ -262,6 +262,8 @@ func writeTo(w http.ResponseWriter, status int, code Code, message, cause string
 		_ = b.EncodeKeyValue("cause", cause)
 	}
 	b.WriteString(`}}`)
+	// Append a newline. This keeps terminal tools like curl from printing the prompt on the same line.
+	b.WriteByte('\n')
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
 	w.Header().Set("X-Content-Type-Options", "nosniff")

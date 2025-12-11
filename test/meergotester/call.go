@@ -85,7 +85,7 @@ func (c *Meergo) call(method, path string, body any, response any) error {
 		if err != nil {
 			return err
 		}
-		return &StatusCodeError{Code: resp.StatusCode, ResponseText: string(text)}
+		return &StatusCodeError{Code: resp.StatusCode, ResponseText: string(bytes.TrimSpace(text))}
 	}
 
 	if response != nil {

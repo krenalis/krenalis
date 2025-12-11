@@ -5,7 +5,7 @@
 package errors
 
 import (
-	stdErrors "errors"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,11 +23,11 @@ func Test_BadRequestError(t *testing.T) {
 	if err.Unwrap() != cause {
 		t.Fatalf("expected unwrap %v, got %v", cause, err.Unwrap())
 	}
-	expected := "{\"error\":{\"code\":\"BadRequest\",\"message\":\"bad: wrong\",\"cause\":\"wrong\"}}"
+	expected := "{\"error\":{\"code\":\"BadRequest\",\"message\":\"bad: wrong\",\"cause\":\"wrong\"}}\n"
 	checkResponse(t, err, http.StatusBadRequest, "BadRequest", expected)
 
 	errNoCause := BadRequest("simple")
-	expected = "{\"error\":{\"code\":\"BadRequest\",\"message\":\"simple\"}}"
+	expected = "{\"error\":{\"code\":\"BadRequest\",\"message\":\"simple\"}}\n"
 	checkResponse(t, errNoCause, http.StatusBadRequest, "BadRequest", expected)
 }
 
@@ -38,7 +38,7 @@ func Test_ForbiddenError(t *testing.T) {
 	if err.Error() != "forbidden" {
 		t.Fatalf("unexpected error string: %q", err.Error())
 	}
-	expected := "{\"error\":{\"code\":\"Forbidden\",\"message\":\"forbidden\"}}"
+	expected := "{\"error\":{\"code\":\"Forbidden\",\"message\":\"forbidden\"}}\n"
 	checkResponse(t, err, http.StatusForbidden, "Forbidden", expected)
 }
 
@@ -48,7 +48,7 @@ func Test_NotFoundError(t *testing.T) {
 	if err.Error() != "missing" {
 		t.Fatalf("unexpected error string: %q", err.Error())
 	}
-	expected := "{\"error\":{\"code\":\"NotFound\",\"message\":\"missing\"}}"
+	expected := "{\"error\":{\"code\":\"NotFound\",\"message\":\"missing\"}}\n"
 	checkResponse(t, err, http.StatusNotFound, "NotFound", expected)
 }
 
@@ -77,7 +77,7 @@ func Test_StdWrappers(t *testing.T) {
 	}
 
 	// confirm behavior matches std errors functions
-	if stdErrors.Unwrap(wrap) != err || !stdErrors.Is(wrap, err) {
+	if errors.Unwrap(wrap) != err || !errors.Is(wrap, err) {
 		t.Fatalf("stdlib mismatch")
 	}
 }
@@ -88,7 +88,7 @@ func Test_UnauthorizedError(t *testing.T) {
 	if err.Error() != "no auth" {
 		t.Fatalf("unexpected error string: %q", err.Error())
 	}
-	expected := "{\"error\":{\"code\":\"Unauthorized\",\"message\":\"no auth\"}}"
+	expected := "{\"error\":{\"code\":\"Unauthorized\",\"message\":\"no auth\"}}\n"
 	checkResponse(t, err, http.StatusUnauthorized, "Unauthorized", expected)
 }
 
@@ -102,7 +102,7 @@ func Test_UnavailableError(t *testing.T) {
 	if err.Unwrap() != cause {
 		t.Fatalf("expected unwrap %v, got %v", cause, err.Unwrap())
 	}
-	expected := "{\"error\":{\"code\":\"ServiceUnavailable\",\"message\":\"unavail: temp\",\"cause\":\"temp\"}}"
+	expected := "{\"error\":{\"code\":\"ServiceUnavailable\",\"message\":\"unavail: temp\",\"cause\":\"temp\"}}\n"
 	checkResponse(t, err, http.StatusServiceUnavailable, "ServiceUnavailable", expected)
 }
 
@@ -117,7 +117,7 @@ func Test_UnprocessableError(t *testing.T) {
 	if err.Unwrap() != cause {
 		t.Fatalf("expected unwrap %v, got %v", cause, err.Unwrap())
 	}
-	expected := "{\"error\":{\"code\":\"SomeCode\",\"message\":\"cannot: bad state\",\"cause\":\"bad state\"}}"
+	expected := "{\"error\":{\"code\":\"SomeCode\",\"message\":\"cannot: bad state\",\"cause\":\"bad state\"}}\n"
 	checkResponse(t, err, http.StatusUnprocessableEntity, "SomeCode", expected)
 }
 
