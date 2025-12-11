@@ -260,6 +260,7 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await filters.nth(1).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'dummy_id' }).click();
 	await filters.nth(1).locator('.pipeline__filters-operator sl-option[value="6"]').click(); // option is "is between".
 	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(2) >> input').fill('1200');
+	await page.waitForTimeout(2000);
 	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(4) >> input').fill('1800');
 
 	await filters.nth(2).locator('.pipeline__filters-remove-condition').click(); // remove the last filter.
