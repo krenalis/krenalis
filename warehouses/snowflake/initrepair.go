@@ -103,6 +103,7 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profi
 	queries := []string{
 		createDestinationProfilesTable,
 		createEventsTable,
+		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "MEERGO_EVENTS"`,
 		createOperationsTable,
 		createProfileSchemaVersionTable,
 		identitiesSQLSchema(profileColumns),
