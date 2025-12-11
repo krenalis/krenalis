@@ -137,3 +137,21 @@ DROP INDEX actions_executions_function_idx;
 
 ALTER TYPE notification_name RENAME VALUE 'ExecutePipeline' TO 'RunPipeline';
 ALTER TYPE notification_name RENAME VALUE 'EndPipelineExecution' TO 'EndPipelineRun';
+
+-- convert warehouse settings columns from varchar to jsonb
+
+BEGIN;
+
+ALTER TABLE workspaces
+    ALTER COLUMN warehouse_settings
+        TYPE jsonb
+        USING warehouse_settings::jsonb,
+    ALTER COLUMN warehouse_mcp_settings
+        TYPE jsonb
+        USING warehouse_mcp_settings::jsonb;
+
+ALTER TABLE workspaces
+    ALTER COLUMN warehouse_mcp_settings
+        SET DEFAULT 'null'::jsonb;
+
+COMMIT;
