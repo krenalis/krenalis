@@ -348,6 +348,14 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	return n.ID, n.Token, nil
 }
 
+// Warehouse represents a data warehouse.
+type Warehouse struct {
+	Platform    string        `json:"platform"`
+	Mode        WarehouseMode `json:"mode"`
+	Settings    json.Value    `json:"settings"`
+	MCPSettings json.Value    `json:"mcpSettings"`
+}
+
 // CreateWorkspace creates a workspace with the given name, profile schema and
 // displayed properties, and connects to a data warehouse of the given platform,
 // settings and MCP settings (which can be nil, meaning that they are not
@@ -355,7 +363,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 // Returns the identifier of the workspace that has been created.
 // name must be between 1 and 100 runes long.
 //
-// whMode specifies the initial mode of the workspace's data warehouse.
+// wharehouse.Mode specifies the initial mode of the workspace's data warehouse.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -365,20 +373,17 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string,
-	profileSchema types.Type, uiPreferences UIPreferences,
-	whPlatform string, whSettings, whMCPSettings []byte, whMode WarehouseMode) (int, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (int, error) {
 
 	this.core.mustBeOpen()
 
-	whSettings, whMCPSettings, err := this.validateWorkspaceCreation(ctx, name,
-		profileSchema, uiPreferences, whPlatform, whSettings, whMCPSettings, whMode)
+	settings, mcpSettings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
 	if err != nil {
 		return 0, err
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, whPlatform, whSettings, profileSchema)
+	err = this.core.datastore.Initialize(ctx, warehouse.Platform, settings, profileSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return 0, errors.Unavailable("%s", err)
@@ -393,10 +398,10 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		ResolveIdentitiesOnBatchImport: true,
 		UIPreferences:                  state.UIPreferences(uiPreferences),
 	}
-	n.Warehouse.Platform = whPlatform
-	n.Warehouse.Mode = state.WarehouseMode(whMode)
-	n.Warehouse.Settings = whSettings
-	n.Warehouse.MCPSettings = whMCPSettings
+	n.Warehouse.Platform = warehouse.Platform
+	n.Warehouse.Mode = state.WarehouseMode(warehouse.Mode)
+	n.Warehouse.Settings = settings
+	n.Warehouse.MCPSettings = mcpSettings
 
 	// Generate the identifier.
 	n.ID, err = generateRandomID()
@@ -678,12 +683,9 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string,
-	profileSchema types.Type, uiPreferences UIPreferences, whPlatform string,
-	whSettings, whMCPSettings []byte, mode WarehouseMode) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
-	_, _, err := this.validateWorkspaceCreation(ctx, name, profileSchema, uiPreferences,
-		whPlatform, whSettings, whMCPSettings, mode)
+	_, _, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
 
 	return err
 }
@@ -839,9 +841,7 @@ func (this *Organization) Workspaces() []*Workspace {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
-func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string,
-	profileSchema types.Type, uiPreferences UIPreferences,
-	whPlatform string, whSettings []byte, whMCPSettings []byte, whMode WarehouseMode) ([]byte, []byte, error) {
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) ([]byte, []byte, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
@@ -853,10 +853,10 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	if err := validateUIPreferences(uiPreferences); err != nil {
 		return nil, nil, errors.BadRequest("%s", err)
 	}
-	if whPlatform == "" {
+	if warehouse.Platform == "" {
 		return nil, nil, errors.BadRequest("warehouse platform is empty")
 	}
-	switch whMode {
+	switch warehouse.Mode {
 	case Normal, Inspection, Maintenance:
 	default:
 		return nil, nil, errors.BadRequest("warehouse mode is not valid")
@@ -871,10 +871,10 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Normalize the warehouse settings.
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(whPlatform, whSettings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(warehouse.Platform, warehouse.Settings)
 	if err != nil {
 		if err == datastore.ErrWarehousePlatformNotExist {
-			return nil, nil, errors.Unprocessable(WarehousePlatformNotExist, "warehouse platform %s does not exist", whPlatform)
+			return nil, nil, errors.Unprocessable(WarehousePlatformNotExist, "warehouse platform %s does not exist", warehouse.Platform)
 		}
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -883,23 +883,24 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Normalize the warehouse MCP settings, if provided.
-	if whMCPSettings != nil {
+	var mcpSettings json.Value
+	if warehouse.MCPSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if whPlatform == "Snowflake" {
+		if warehouse.Platform == "Snowflake" {
 			return nil, nil, errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
 		var err error
-		whMCPSettings, err = this.core.datastore.NormalizeWarehouseSettings(whPlatform, whMCPSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(warehouse.Platform, warehouse.MCPSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return nil, nil, err
 		}
-		if bytes.Equal(settings, whMCPSettings) {
+		if bytes.Equal(settings, mcpSettings) {
 			return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, whPlatform, whMCPSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return nil, nil, errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -912,7 +913,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, whPlatform, settings)
+	err = this.core.datastore.CanInitialize(ctx, warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
 			return nil, nil, errors.Unprocessable(WarehouseNonInitializable, "data warehouse is not initializable: %w", err.Err)
@@ -923,7 +924,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	return settings, whMCPSettings, nil
+	return settings, mcpSettings, nil
 }
 
 // generateAccessKeyToken generates a new access key token.

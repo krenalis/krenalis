@@ -113,14 +113,9 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	var body struct {
-		Name          string     `json:"name"`
-		ProfileSchema types.Type `json:"profileSchema"`
-		Warehouse     struct {
-			Platform    string             `json:"platform"`
-			Mode        core.WarehouseMode `json:"mode"`
-			Settings    json.Value         `json:"settings"`
-			MCPSettings json.Value         `json:"mcpSettings"`
-		} `json:"warehouse"`
+		Name          string             `json:"name"`
+		ProfileSchema types.Type         `json:"profileSchema"`
+		Warehouse     core.Warehouse     `json:"warehouse"`
 		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
 	err = json.Decode(r.Body, &body)
@@ -130,9 +125,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
 		body.Warehouse.MCPSettings = nil
 	}
-	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema,
-		body.UIPreferences, body.Warehouse.Platform, body.Warehouse.Settings,
-		body.Warehouse.MCPSettings, body.Warehouse.Mode)
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -218,14 +211,9 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
-		Name          string     `json:"name"`
-		ProfileSchema types.Type `json:"profileSchema"`
-		Warehouse     struct {
-			Platform    string             `json:"platform"`
-			Mode        core.WarehouseMode `json:"mode"`
-			Settings    json.Value         `json:"settings"`
-			MCPSettings json.Value         `json:"mcpSettings"`
-		} `json:"warehouse"`
+		Name          string             `json:"name"`
+		ProfileSchema types.Type         `json:"profileSchema"`
+		Warehouse     core.Warehouse     `json:"warehouse"`
 		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
 	err = json.Decode(r.Body, &body)
@@ -235,9 +223,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
 		body.Warehouse.MCPSettings = nil
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema,
-		body.UIPreferences, body.Warehouse.Platform, body.Warehouse.Settings,
-		body.Warehouse.MCPSettings, body.Warehouse.Mode)
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	return nil, err
 }
 
