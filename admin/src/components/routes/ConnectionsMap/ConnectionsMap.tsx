@@ -192,7 +192,7 @@ const ConnectionsMap = () => {
 									meergo
 								</div>
 								<div className='connections-map__databases'>
-									<Link path='users'>
+									<Link path='profile-unification/profiles'>
 										<div
 											className='connections-map__database connections-map__database--users'
 											id='users-database'
