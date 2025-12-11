@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS "MEERGO_EVENTS" (
     PRIMARY KEY ("MESSAGE_ID")
 );
 
--- Note: The query that creates the 'events' view is outside of this file, to
+-- Note: The query that creates the 'EVENTS' view is outside of this file, to
 -- ensure that the Snowflake warehouse executes one statement per request when
 -- initializing the warehouse, otherwise Snowflake returns an error like:
 -- “Actual statement count 2 did not match the desired statement count 1”.
