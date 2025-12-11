@@ -38,6 +38,9 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
+	// Disable automatic execution of Identity Resolution.
+	c.UpdateIdentityResolution(false, nil)
+
 	// Create the File System connection.
 	fsID := c.CreateSourceFileSystem()
 
@@ -97,9 +100,11 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		}),
 	})
 
-	// Import from the first pipeline, which should import just the first name.
+	// Import from the first pipeline, which should import just the first name,
+	// then run the Identity Resolution.
 	run := c.RunPipeline(pipelineFirstName)
 	c.WaitRunsCompletion(fsID, run)
+	c.RunIdentityResolution()
 
 	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
@@ -121,9 +126,11 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	assertEq("run #1: second profile last name", nil, profiles[1].Attributes["last_name"])
 
 	// Import from the second pipeline, which should import just the last name,
-	// and that should result in profiles with both first name and last name.
+	// and that should result in profiles with both first name and last name,
+	// then run the Identity Resolution.
 	run = c.RunPipeline(pipelineLastName)
 	c.WaitRunsCompletion(fsID, run)
+	c.RunIdentityResolution()
 
 	// Check the profiles.
 	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
