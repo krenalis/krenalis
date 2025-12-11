@@ -378,7 +378,7 @@ func (warehouse *Snowflake) openDB() *sql.DB {
 func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
 	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "_MEERGO_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "MEERGO_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
 	if err != nil {
 		return 0, snowflake(err)
 	}
