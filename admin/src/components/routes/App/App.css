@@ -328,15 +328,13 @@ sl-icon::part(svg) {
 	padding: 24px;
 	padding-bottom: 50px;
 	background-color: var(--bg-gray);
-	border-top-left-radius: 8px;
-	border: 1px solid #ececec;
 	min-height: calc(100vh - var(--header-height));
 }
 
 .app .route-content--connection {
 	min-height: calc(100vh - 140px);
 	border-radius: 0;
-	border-color: #f9e3fe;
+	border-top: 1px solid #f9e3fe;
 }
 
 /* || App spinner */
