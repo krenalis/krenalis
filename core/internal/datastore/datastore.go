@@ -72,7 +72,7 @@ func New(st *state.State) *Datastore {
 // settings can be initialized.
 //
 // It returns a *warehouses.WarehouseSettingsError error if the settings are not
-// valid, a *warehouses.WarehouseNonInitializableError if the data warehouse is
+// valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
 // not initializable, and *UnavailableError if an error occurred with the data
 // warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {

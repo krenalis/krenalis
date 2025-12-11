@@ -372,7 +372,7 @@ type Warehouse struct {
 //     read-only user on the data warehouse.
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
-//   - WarehouseNonInitializable, if the warehouse is not initializable.
+//   - WarehouseNotInitializable, if the warehouse is not initializable.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (int, error) {
 
 	this.core.mustBeOpen()
@@ -681,7 +681,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 //   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
 //     read-only user on the data warehouse.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
-//   - WarehouseNonInitializable, if the warehouse intended for connection is
+//   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
@@ -839,7 +839,7 @@ func (this *Organization) Workspaces() []*Workspace {
 //   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
 //     read-only user on the data warehouse.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
-//   - WarehouseNonInitializable, if the warehouse intended for connection is
+//   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) ([]byte, []byte, error) {
 
@@ -916,7 +916,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	err = this.core.datastore.CanInitialize(ctx, warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
-			return nil, nil, errors.Unprocessable(WarehouseNonInitializable, "data warehouse is not initializable: %w", err.Err)
+			return nil, nil, errors.Unprocessable(WarehouseNotInitializable, "data warehouse is not initializable: %w", err.Err)
 		}
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return nil, nil, errors.Unavailable("%s", err)
