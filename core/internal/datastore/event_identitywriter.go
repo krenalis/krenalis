@@ -129,7 +129,7 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 		return nil
 	}
 	delete(iw.store.eventIdentityWriters, iw.pipeline)
-	// Cancel the flushes if the context is cancelled.
+	// Cancel the flushes if the context is canceled.
 	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
 	defer stop()
 	// Wait for the flushes and method calls to terminate.

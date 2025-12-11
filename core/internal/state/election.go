@@ -180,7 +180,7 @@ func (state *State) electAsLeader(election int) error {
 }
 
 // sleep pauses the current goroutine for at least the duration d, unless the
-// state.ctx context is cancelled, in that case it returns immediately with the
+// state.ctx context is canceled, in that case it returns immediately with the
 // context error.
 func (state *State) sleep(d time.Duration) error {
 	select {

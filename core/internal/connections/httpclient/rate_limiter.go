@@ -73,7 +73,7 @@ func newRateLimiter(rate float64, capacity, maxConcurrency int) *rateLimiter {
 }
 
 // OnFailure must be called after a request completes with an error or is
-// cancelled. For every call to Wait, either OnSuccess or OnFailure must be
+// canceled. For every call to Wait, either OnSuccess or OnFailure must be
 // called to avoid leaking concurrency slots.
 func (b *rateLimiter) OnFailure(duration time.Duration, reason connectors.FailureReason, waitTime time.Duration) {
 	if b.inFlight != nil {
