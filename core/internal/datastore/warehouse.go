@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
@@ -42,7 +43,7 @@ func unavailableError(err error) error {
 //
 // It panics if the given warehouse platform does not exist.
 // It returns a *warehouses.SettingsError if the settings are invalid.
-func getWarehouseInstance(platform string, settings []byte) (warehouse, error) {
+func getWarehouseInstance(platform string, settings json.Value) (warehouse, error) {
 	inner, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return warehouse{}, err
@@ -120,7 +121,7 @@ func (dw warehouse) Repair(ctx context.Context, profileColumns []warehouses.Colu
 	return unavailableError(dw.inner.Repair(ctx, profileColumns))
 }
 
-func (dw warehouse) Settings() []byte {
+func (dw warehouse) Settings() json.Value {
 	return dw.inner.Settings()
 }
 

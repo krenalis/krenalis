@@ -17,6 +17,7 @@ import (
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
@@ -475,7 +476,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 // been connected to another workspace, the method returns the error
 // ErrDifferentWarehouse. If an error occurs with the data warehouse, it returns
 // an *UnavailableError error.
-func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) error {
+func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Value) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {

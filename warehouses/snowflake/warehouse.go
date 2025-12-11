@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	_ "embed"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
@@ -54,7 +54,7 @@ var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 // It returns a *warehouses.SettingsError if the settings are not valid.
 func New(conf *warehouses.Config) (*Snowflake, error) {
 	var s sfSettings
-	err := jsonstd.Unmarshal(conf.Settings, &s)
+	err := json.Unmarshal(conf.Settings, &s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
@@ -100,13 +100,13 @@ type Snowflake struct {
 }
 
 type sfSettings struct {
-	Username  string
-	Password  string
-	Account   string
-	Warehouse string
-	Database  string
-	Schema    string
-	Role      string
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Account   string `json:"account"`
+	Warehouse string `json:"warehouse"`
+	Database  string `json:"database"`
+	Schema    string `json:"schema"`
+	Role      string `json:"role"`
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
@@ -306,8 +306,8 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 }
 
 // Settings returns the data warehouse settings.
-func (warehouse *Snowflake) Settings() []byte {
-	s, _ := jsonstd.Marshal(warehouse.settings)
+func (warehouse *Snowflake) Settings() json.Value {
+	s, _ := json.Marshal(warehouse.settings)
 	return s
 }
 

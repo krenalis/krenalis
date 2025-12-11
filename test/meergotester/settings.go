@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/meergo/meergo/tools/json"
 )
 
 type TestsSettings struct {
@@ -28,24 +30,24 @@ type HTTPSettings struct {
 }
 
 type DBSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Schema   string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+	Schema   string `json:"schema"`
 }
 
 // PostgresWarehouseSettings returns the settings of the PostgreSQL warehouse.
 // Should be called only after that the test has been initialized.
-func PostgresWarehouseSettings() []byte {
+func PostgresWarehouseSettings() json.Value {
 	return JSONEncodeSettings(map[string]any{
-		"Host":     testsSettings.Warehouse.Host,
-		"Port":     testsSettings.Warehouse.Port,
-		"Username": testsSettings.Warehouse.Username,
-		"Password": testsSettings.Warehouse.Password,
-		"Database": testsSettings.Warehouse.Database,
-		"Schema":   testsSettings.Warehouse.Schema,
+		"host":     testsSettings.Warehouse.Host,
+		"port":     testsSettings.Warehouse.Port,
+		"username": testsSettings.Warehouse.Username,
+		"password": testsSettings.Warehouse.Password,
+		"database": testsSettings.Warehouse.Database,
+		"schema":   testsSettings.Warehouse.Schema,
 	})
 }
 

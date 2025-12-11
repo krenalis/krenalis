@@ -46,7 +46,7 @@ func (platform Platform) New(conf *Config) (Warehouse, error) {
 
 // Config represents the configuration of a data warehouse.
 type Config struct {
-	Settings []byte
+	Settings json.Value
 }
 
 // NewFunc represents functions that create new warehouse platform instance.
@@ -269,7 +269,7 @@ type Warehouse interface {
 	Repair(ctx context.Context, profileColumns []Column) error
 
 	// Settings returns the data warehouse settings.
-	Settings() []byte
+	Settings() json.Value
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error

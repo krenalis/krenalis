@@ -16,6 +16,7 @@ import (
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -75,7 +76,7 @@ func New(st *state.State) *Datastore {
 // valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
 // not initializable, and *UnavailableError if an error occurred with the data
 // warehouse.
-func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {
+func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {
@@ -93,7 +94,7 @@ func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []
 // that datastore's warehouse access with these settings is read-only (at least
 // on the Meergo tables), returning a *warehouses.WarehouseSettingsNotReadOnly
 // error in case it is not, explaining the reason.
-func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings []byte) error {
+func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {
@@ -132,7 +133,7 @@ func (ds *Datastore) Close() {
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *datastore.UnavailableError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte, profileSchema types.Type) error {
+func (ds *Datastore) Initialize(ctx context.Context, name string, settings json.Value, profileSchema types.Type) error {
 	ds.mustBeOpen()
 	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {
@@ -153,7 +154,7 @@ func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byt
 // It returns the ErrWarehousePlatformNotExist error if the given warehouse
 // platform does not exist, and it returns a SettingsError error if the settings
 // are not valid.
-func (ds *Datastore) NormalizeWarehouseSettings(platform string, settings []byte) ([]byte, error) {
+func (ds *Datastore) NormalizeWarehouseSettings(platform string, settings json.Value) (json.Value, error) {
 	ds.mustBeOpen()
 	if _, ok := ds.state.WarehousePlatform(platform); !ok {
 		return nil, ErrWarehousePlatformNotExist

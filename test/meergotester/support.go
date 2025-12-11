@@ -7,7 +7,7 @@ package meergotester
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
@@ -108,12 +109,12 @@ func (c *Meergo) CreatePipeline(conn int, target string, pipeline PipelineToSet)
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
-	pipelineJSON, err := json.Marshal(pipeline)
+	pipelineJSON, err := stdjson.Marshal(pipeline)
 	if err != nil {
 		panic(err)
 	}
 	var body map[string]any
-	err = json.Unmarshal(pipelineJSON, &body)
+	err = stdjson.Unmarshal(pipelineJSON, &body)
 	if err != nil {
 		panic(err)
 	}
@@ -132,12 +133,12 @@ func (c *Meergo) CreatePipelineErr(conn int, target string, pipeline PipelineToS
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
-	pipelineJSON, err := json.Marshal(pipeline)
+	pipelineJSON, err := stdjson.Marshal(pipeline)
 	if err != nil {
 		panic(err)
 	}
 	var body map[string]any
-	err = json.Unmarshal(pipelineJSON, &body)
+	err = stdjson.Unmarshal(pipelineJSON, &body)
 	if err != nil {
 		panic(err)
 	}
@@ -231,12 +232,12 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 }
 
 func (c *Meergo) CreateEventPipeline(conn int, eventType string, pipeline PipelineToSet) int {
-	pipelineJSON, err := json.Marshal(pipeline)
+	pipelineJSON, err := stdjson.Marshal(pipeline)
 	if err != nil {
 		panic(err)
 	}
 	var body map[string]any
-	err = json.Unmarshal(pipelineJSON, &body)
+	err = stdjson.Unmarshal(pipelineJSON, &body)
 	if err != nil {
 		panic(err)
 	}
@@ -327,7 +328,7 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
+func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings stdjson.RawMessage, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -482,7 +483,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 	s.ch <- err
 }
 
-func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.RawMessage) []string {
+func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings stdjson.RawMessage) []string {
 	queryString := url.Values{
 		"path":           []string{string(path)},
 		"format":         []string{format},
@@ -510,22 +511,22 @@ func (c *Meergo) TableSchema(conn int, table string) (types.Type, []string) {
 	return response.Schema, response.Issues
 }
 
-func (c *Meergo) TestWarehouseUpdate(settings []byte) {
+func (c *Meergo) TestWarehouseUpdate(settings json.Value) {
 	body := map[string]any{
-		"settings": json.RawMessage(settings),
+		"settings": settings,
 	}
 	c.MustCall("PUT", "/v1/warehouse/test", body, nil)
 }
 
 func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
-	uiPreferences UIPreferences, whPlatform string, whSettings []byte, mode WarehouseMode) error {
+	uiPreferences UIPreferences, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
 	body := map[string]any{
 		"name":          name,
 		"profileSchema": profileSchema,
 		"warehouse": map[string]any{
 			"platform": whPlatform,
 			"mode":     mode,
-			"settings": json.RawMessage(whSettings),
+			"settings": whSettings,
 		},
 		"uiPreferences": uiPreferences,
 	}
@@ -552,10 +553,10 @@ func (c *Meergo) UpdateIdentityResolutionErr(identifiers []string) error {
 	return c.Call("PUT", "/v1/identity-resolution/settings", body, nil)
 }
 
-func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
+func (c *Meergo) UpdateWarehouse(mode string, settings json.Value) {
 	body := map[string]any{
 		"mode":     mode,
-		"settings": json.RawMessage(settings),
+		"settings": settings,
 	}
 	c.MustCall("PUT", "/v1/warehouse", body, nil)
 }
@@ -574,7 +575,7 @@ func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string
 				Values:   []string{mpid.String()}},
 		},
 	}
-	jsonFilter, err := json.Marshal(filter)
+	jsonFilter, err := stdjson.Marshal(filter)
 	if err != nil {
 		panic(err)
 	}

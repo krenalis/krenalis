@@ -5,13 +5,13 @@
 package state
 
 import (
-	"encoding/json"
+	stdjson "encoding/json"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
-	_json "github.com/meergo/meergo/tools/json"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
@@ -419,7 +419,7 @@ type CreatePipeline struct {
 	SchedulePeriod       int16
 	InSchema             types.Type
 	OutSchema            types.Type
-	Filter               json.RawMessage
+	Filter               stdjson.RawMessage
 	Transformation       Transformation
 	Query                string
 	Format               string
@@ -445,10 +445,10 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.RawMessage(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.RawMessage("null"), so this code converts it
-	// back to json.RawMessage(nil).
-	if _json.Value(e.Filter).IsNull() {
+	// json.Value(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.Value("null"), so this code converts it
+	// back to json.Value(nil).
+	if json.Value(e.Filter).IsNull() {
 		e.Filter = nil
 	}
 	c := state.connections[e.Connection]
@@ -511,8 +511,8 @@ type CreateWorkspace struct {
 	Warehouse                      struct {
 		Platform    string
 		Mode        WarehouseMode
-		Settings    json.RawMessage
-		MCPSettings json.RawMessage
+		Settings    json.Value
+		MCPSettings json.Value
 	}
 	UIPreferences UIPreferences
 }
@@ -523,10 +523,10 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.RawMessage(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.RawMessage("null"), so this code converts it
-	// back to json.RawMessage(nil).
-	if _json.Value(e.Warehouse.MCPSettings).IsNull() {
+	// json.Value(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.Value("null"), so this code converts it
+	// back to json.Value(nil).
+	if e.Warehouse.MCPSettings.IsNull() {
 		e.Warehouse.MCPSettings = nil
 	}
 	organization := state.organizations[e.Organization]
@@ -1312,7 +1312,7 @@ type UpdatePipeline struct {
 	Enabled              bool
 	InSchema             types.Type
 	OutSchema            types.Type
-	Filter               json.RawMessage
+	Filter               stdjson.RawMessage
 	Transformation       Transformation
 	Query                string
 	Format               string
@@ -1339,10 +1339,10 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.RawMessage(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.RawMessage("null"), so this code converts it
-	// back to json.RawMessage(nil).
-	if _json.Value(e.Filter).IsNull() {
+	// json.Value(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.Value("null"), so this code converts it
+	// back to json.Value(nil).
+	if json.Value(e.Filter).IsNull() {
 		e.Filter = nil
 	}
 	format := state.connectors[e.Format]
@@ -1383,8 +1383,8 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 type UpdateWarehouse struct {
 	Workspace                    int
 	Mode                         WarehouseMode
-	Settings                     json.RawMessage
-	MCPSettings                  json.RawMessage // it can be a JSON object or json.RawMessage(nil).
+	Settings                     json.Value
+	MCPSettings                  json.Value // it can be a JSON object or json.Value(nil).
 	CancelIncompatibleOperations bool
 }
 
@@ -1394,10 +1394,10 @@ func (state *State) updateWarehouse(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.RawMessage(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.RawMessage("null"), so this code converts it
-	// back to json.RawMessage(nil).
-	if _json.Value(e.MCPSettings).IsNull() {
+	// json.Value(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.Value("null"), so this code converts it
+	// back to json.Value(nil).
+	if e.MCPSettings.IsNull() {
 		e.MCPSettings = nil
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {

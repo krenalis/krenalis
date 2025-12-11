@@ -475,7 +475,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 	}
 	for _, platform := range platforms {
 		t.Run(platform.Name, func(t *testing.T) {
-			var settings []byte
+			var settings json.Value
 			switch platform.Name {
 			case "PostgreSQL":
 				const (
@@ -512,12 +512,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				}
 
 				settings, err = json.Marshal(map[string]any{
-					"Host":     host,
-					"Port":     port.Int(),
-					"Username": username,
-					"Password": password,
-					"Database": database,
-					"Schema":   "public",
+					"host":     host,
+					"port":     port.Int(),
+					"username": username,
+					"password": password,
+					"database": database,
+					"schema":   "public",
 				})
 				if err != nil {
 					t.Fatal(err)

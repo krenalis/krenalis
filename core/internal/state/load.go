@@ -7,14 +7,13 @@ package state
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
-	_json "github.com/meergo/meergo/tools/json"
+	json "github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
@@ -275,7 +274,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterProfileSchemaSchema []byte
-			var warehouseSettings, warehouseMCPSettings []byte
+			var warehouseSettings, warehouseMCPSettings json.Value
 			for rows.Next() {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
@@ -301,7 +300,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
-				if _json.Value(warehouseMCPSettings).IsNull() {
+				if warehouseMCPSettings.IsNull() {
 					ws.Warehouse.MCPSettings = nil
 				} else {
 					ws.Warehouse.MCPSettings = warehouseMCPSettings

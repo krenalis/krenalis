@@ -7,7 +7,6 @@ package postgresql
 import (
 	"context"
 	_ "embed"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -19,6 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
@@ -50,7 +50,7 @@ func init() {
 // It returns a *warehouses.SettingsError if the settings are not valid.
 func New(conf *warehouses.Config) (*PostgreSQL, error) {
 	var s psSettings
-	err := jsonstd.Unmarshal(conf.Settings, &s)
+	err := json.Unmarshal(conf.Settings, &s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
@@ -95,12 +95,12 @@ type PostgreSQL struct {
 }
 
 type psSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Schema   string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+	Schema   string `json:"schema"`
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
@@ -347,8 +347,8 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 }
 
 // Settings returns the data warehouse settings.
-func (warehouse *PostgreSQL) Settings() []byte {
-	s, _ := jsonstd.Marshal(warehouse.settings)
+func (warehouse *PostgreSQL) Settings() json.Value {
+	s, _ := json.Marshal(warehouse.settings)
 	return s
 }
 

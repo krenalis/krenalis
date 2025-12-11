@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
@@ -560,8 +560,8 @@ type Workspace struct {
 	Warehouse struct {
 		Platform    string
 		Mode        WarehouseMode
-		Settings    json.RawMessage
-		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).
+		Settings    json.Value
+		MCPSettings json.Value // it can be a JSON object or json.Value(nil)
 	}
 	connections                    map[int]*Connection
 	runs                           map[int]*PipelineRun // pipeline runs in progress.

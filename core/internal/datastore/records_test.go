@@ -65,12 +65,12 @@ func Test_Records(t *testing.T) {
 	}
 
 	settings, err := json.Marshal(map[string]any{
-		"Host":     testHost,
-		"Port":     testPort.Int(),
-		"Username": testUser,
-		"Password": testPassword,
-		"Database": testDatabase,
-		"Schema":   "public",
+		"host":     testHost,
+		"port":     testPort.Int(),
+		"username": testUser,
+		"password": testPassword,
+		"database": testDatabase,
+		"schema":   "public",
 	})
 	if err != nil {
 		t.Fatal(err)

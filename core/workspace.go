@@ -1519,7 +1519,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 //   - InvalidWarehouseSettings, if the settings are not valid.
 //   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
 //     read-only user on the data warehouse.
-func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings []byte) error {
+func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings json.Value) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
@@ -1707,7 +1707,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 //   - InvalidWarehouseSettings, if the settings are not valid.
 //   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
 //     read-only user on the data warehouse.
-func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings, mcpSettings []byte, cancelIncompatibleOperations bool) error {
+func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings, mcpSettings json.Value, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
 	switch mode {
@@ -1852,10 +1852,10 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings := json.Value(slices.Clone(ws.Warehouse.Settings))
+	settings := slices.Clone(ws.Warehouse.Settings)
 	var mcpSettings json.Value
 	if ws.Warehouse.MCPSettings != nil {
-		mcpSettings = json.Value(slices.Clone(ws.Warehouse.MCPSettings))
+		mcpSettings = slices.Clone(ws.Warehouse.MCPSettings)
 	} else {
 		mcpSettings = json.Value("null")
 	}

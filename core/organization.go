@@ -686,7 +686,6 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
 	_, _, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
-
 	return err
 }
 
@@ -841,7 +840,7 @@ func (this *Organization) Workspaces() []*Workspace {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
-func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) ([]byte, []byte, error) {
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (json.Value, json.Value, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
