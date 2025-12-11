@@ -95,7 +95,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 	//
 	// (1) DROP VIEW.
 	// (2) DROP columns.
-	// (3) RENAME columns ?????
+	// (3) RENAME columns (TODO: investigate about this step)
 	// (4) ADD columns.
 	// (5) CREATE VIEW.
 
