@@ -25,9 +25,9 @@ BEGIN
         "I1"."_PK",
         "I2"."_PK"
     FROM
-        "_IDENTITIES" "I1"
+        "MEERGO_IDENTITIES" "I1"
             CROSS JOIN
-        "_IDENTITIES" "I2"
+        "MEERGO_IDENTITIES" "I2"
     WHERE
         "I1"."_PK" < "I2"."_PK" AND (
             ("I1"."_CONNECTION" = "I2"."_CONNECTION"
@@ -48,11 +48,11 @@ BEGIN
             "_PK",
             ROW_NUMBER() OVER (ORDER BY "_PK") AS "CLUSTER_VALUE"
         FROM 
-            "_IDENTITIES";
-    UPDATE "_IDENTITIES"
+            "MEERGO_IDENTITIES";
+    UPDATE "MEERGO_IDENTITIES"
     SET "_CLUSTER" = "NUMBERED_PROFILES"."CLUSTER_VALUE"
     FROM "NUMBERED_PROFILES"
-    WHERE "_IDENTITIES"."_PK" = "NUMBERED_PROFILES"."_PK";
+    WHERE "MEERGO_IDENTITIES"."_PK" = "NUMBERED_PROFILES"."_PK";
     DROP TABLE IF EXISTS "NUMBERED_PROFILES";
 
     -- Do the clustering.
@@ -73,8 +73,8 @@ BEGIN
             "I2"."_CLUSTER" "C2"
         FROM
             "MEERGO_GRAPH_EDGES"
-            JOIN "_IDENTITIES" "I1" ON "MEERGO_GRAPH_EDGES"."I1" = "I1"."_PK"
-            JOIN "_IDENTITIES" "I2" ON "MEERGO_GRAPH_EDGES"."I2" = "I2"."_PK"
+            JOIN "MEERGO_IDENTITIES" "I1" ON "MEERGO_GRAPH_EDGES"."I1" = "I1"."_PK"
+            JOIN "MEERGO_IDENTITIES" "I2" ON "MEERGO_GRAPH_EDGES"."I2" = "I2"."_PK"
         WHERE
             "I1"."_CLUSTER" <> "I2"."_CLUSTER";
 
@@ -92,11 +92,11 @@ BEGIN
         
         -- Update the clusters of the identities.
         UPDATE
-            "_IDENTITIES" "IDENTITIES_A"
+            "MEERGO_IDENTITIES" "IDENTITIES_A"
         SET
             "_CLUSTER" = least("IDENTITIES_A"."_CLUSTER", "TARGET")
         FROM
-            "_IDENTITIES" "IDENTITIES_B"
+            "MEERGO_IDENTITIES" "IDENTITIES_B"
             JOIN (
                 SELECT
                     "C1" "SOURCE",
@@ -117,7 +117,7 @@ BEGIN
 
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
-    UPDATE "_IDENTITIES" AS "I"
+    UPDATE "MEERGO_IDENTITIES" AS "I"
     SET "_mpid" = "U"."_MPID"
     FROM {{ new_profiles_name }} AS "U"
     WHERE ARRAY_CONTAINS("I"."_PK", "U"."_IDENTITIES");
@@ -125,14 +125,14 @@ BEGIN
     -- Update associations between events and profiles by updating the MPID of
     -- the events.
     UPDATE "MEERGO_EVENTS" SET "MPID" = null;
-    UPDATE "MEERGO_EVENTS" SET "MPID" = "_IDENTITIES"."_mpid"
-    FROM "_IDENTITIES" WHERE
-       "MEERGO_EVENTS"."CONNECTION_ID" = "_IDENTITIES"."_CONNECTION"
+    UPDATE "MEERGO_EVENTS" SET "MPID" = "MEERGO_IDENTITIES"."_mpid"
+    FROM "MEERGO_IDENTITIES" WHERE
+       "MEERGO_EVENTS"."CONNECTION_ID" = "MEERGO_IDENTITIES"."_CONNECTION"
            AND
        (
-           ("MEERGO_EVENTS"."USER_ID" <> '' AND "MEERGO_EVENTS"."USER_ID" = "_IDENTITIES"."_IDENTITY_ID")
+           ("MEERGO_EVENTS"."USER_ID" <> '' AND "MEERGO_EVENTS"."USER_ID" = "MEERGO_IDENTITIES"."_IDENTITY_ID")
                OR
-           ("MEERGO_EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("MEERGO_EVENTS"."ANONYMOUS_ID"::variant, "_IDENTITIES"."_ANONYMOUS_IDS"))
+           ("MEERGO_EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("MEERGO_EVENTS"."ANONYMOUS_ID"::variant, "MEERGO_IDENTITIES"."_ANONYMOUS_IDS"))
        );
 
     RETURN true;

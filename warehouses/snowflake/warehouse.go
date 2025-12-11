@@ -203,12 +203,12 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$PURGE" FROM "_IDENTITIES" LIMIT 0`)
+	b.WriteString(`FALSE AS "$PURGE" FROM "MEERGO_IDENTITIES" LIMIT 0`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_IDENTITIES\" AS \"D\"\nUSING \"")
+	b.WriteString("MERGE INTO \"MEERGO_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString(`" AS "S"` + "\n" + `ON "D"."_PIPELINE" = "S"."_PIPELINE" AND "D"."_IDENTITY_ID" = "S"."_IDENTITY_ID" AND "D"."_IS_ANONYMOUS" = "S"."_IS_ANONYMOUS"`)
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
@@ -325,7 +325,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 // given pipeline.
 func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
 	var b strings.Builder
-	b.WriteString("UPDATE \"_IDENTITIES\" SET ")
+	b.WriteString("UPDATE \"MEERGO_IDENTITIES\" SET ")
 	for i, column := range columns {
 		if i > 0 {
 			b.WriteString(", ")

@@ -117,7 +117,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 			}
 		}
 		if len(toDrop) > 0 {
-			for _, table := range []string{profilesTableName, "_IDENTITIES"} {
+			for _, table := range []string{profilesTableName, "MEERGO_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, c := range toDrop {
@@ -135,7 +135,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
 			queries = append(queries, `ALTER TABLE `+quoteIdent(profilesTableName)+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
-			queries = append(queries, `ALTER TABLE "_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
+			queries = append(queries, `ALTER TABLE "MEERGO_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
 		}
 	}
 
@@ -148,7 +148,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 			}
 		}
 		if len(toAdd) > 0 {
-			for _, table := range []string{profilesTableName, "_IDENTITIES"} {
+			for _, table := range []string{profilesTableName, "MEERGO_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, op := range toAdd {
