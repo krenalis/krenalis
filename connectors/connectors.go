@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/meergo/meergo/tools/json"
+
 	"github.com/google/uuid"
 )
 
@@ -75,7 +77,7 @@ type ConnectorSpec interface {
 }
 
 // A SetSettingsFunc value is a function used by connectors to set settings.
-type SetSettingsFunc func(context.Context, []byte) error
+type SetSettingsFunc func(context.Context, json.Value) error
 
 // TimeLayouts represents the layouts for time values.
 // If a layout is left empty, it is ISO 8601.

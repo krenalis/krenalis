@@ -527,7 +527,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
-			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
+			n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {

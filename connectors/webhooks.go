@@ -6,6 +6,8 @@ package connectors
 
 import (
 	"reflect"
+
+	"github.com/meergo/meergo/tools/json"
 )
 
 // WebhookSpec represents a webhook connector specification.
@@ -37,7 +39,7 @@ func (spec WebhookSpec) New(env *WebhookEnv) (any, error) {
 type WebhookEnv struct {
 
 	// Settings is the raw settings data.
-	Settings []byte
+	Settings json.Value
 
 	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc

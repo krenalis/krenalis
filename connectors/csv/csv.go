@@ -54,7 +54,7 @@ func init() {
 func New(env *connectors.FileEnv) (*CSV, error) {
 	c := CSV{env: env}
 	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
+		err := env.Settings.Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of connector for CSV")
 		}

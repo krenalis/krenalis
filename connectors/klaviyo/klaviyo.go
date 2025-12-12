@@ -92,7 +92,7 @@ const apiRevision = "2024-07-15"
 func New(env *connectors.APIEnv) (*Klaviyo, error) {
 	c := Klaviyo{env: env}
 	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
+		err := env.Settings.Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of connector for Klaviyo")
 		}

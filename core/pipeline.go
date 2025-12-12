@@ -834,7 +834,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, mapping,
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy,
-			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
+			n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
 			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.PropertiesToUnset,
 			n.ID,
 		)

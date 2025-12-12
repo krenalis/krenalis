@@ -330,7 +330,7 @@ type CreateConnection struct {
 	SendingMode       *SendingMode // sending mode
 	LinkedConnections []int        // linked connections
 	EventWriteKey     string       // event write key to add
-	Settings          []byte
+	Settings          json.Value
 }
 
 // createConnection creates a new connection.
@@ -427,7 +427,7 @@ type CreatePipeline struct {
 	Sheet                string
 	Compression          Compression
 	OrderBy              string
-	FormatSettings       []byte
+	FormatSettings       json.Value
 	ExportMode           ExportMode
 	Matching             Matching
 	UpdateOnDuplicates   bool
@@ -1092,7 +1092,7 @@ func (state *State) setAccount(n notification) uuid.UUID {
 // changed.
 type SetConnectionSettings struct {
 	Connection int
-	Settings   []byte
+	Settings   json.Value
 }
 
 // setConnectionSettings sets the settings of a connection.
@@ -1112,7 +1112,7 @@ func (state *State) setConnectionSettings(n notification) uuid.UUID {
 // pipeline are changed.
 type SetPipelineFormatSettings struct {
 	Pipeline int
-	Settings []byte
+	Settings json.Value
 }
 
 // setPipelineFormatSettings sets the format settings of a pipeline.
@@ -1320,7 +1320,7 @@ type UpdatePipeline struct {
 	Sheet                string
 	Compression          Compression
 	OrderBy              string
-	FormatSettings       []byte
+	FormatSettings       json.Value
 	ExportMode           ExportMode
 	Matching             Matching
 	UpdateOnDuplicates   bool

@@ -7,6 +7,7 @@ package connectors
 import (
 	"reflect"
 
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -41,7 +42,7 @@ func (spec DatabaseSpec) New(env *DatabaseEnv) (any, error) {
 type DatabaseEnv struct {
 
 	// Settings holds the raw settings data.
-	Settings []byte
+	Settings json.Value
 
 	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc

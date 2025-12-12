@@ -53,7 +53,7 @@ func init() {
 func New(env *connectors.APIEnv) (*Analytics, error) {
 	c := Analytics{env: env}
 	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
+		err := env.Settings.Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of connector for Google Analytics")
 		}

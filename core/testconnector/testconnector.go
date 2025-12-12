@@ -77,7 +77,7 @@ func NewAPI(code string, settings any) (any, error) {
 	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
 	api, err := registeredAPI.New(&connectors.APIEnv{
 		Settings:    s,
-		SetSettings: func(ctx context.Context, b []byte) error { return nil },
+		SetSettings: func(ctx context.Context, v json.Value) error { return nil },
 		HTTPClient:  httpClient,
 	})
 	return api, err

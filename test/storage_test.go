@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -45,7 +46,7 @@ func TestStorage(t *testing.T) {
 
 	// Test the "/files/sheets" endpoint.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}
-	gotSheets := c.Sheets(storage, "file_with_3_sheets.xlsx", "excel", meergotester.NoCompression, []byte("{}"))
+	gotSheets := c.Sheets(storage, "file_with_3_sheets.xlsx", "excel", meergotester.NoCompression, json.Value("{}"))
 	if !reflect.DeepEqual(expectedSheets, gotSheets) {
 		t.Fatalf("expected sheets %#v, got %#v", expectedSheets, gotSheets)
 	}

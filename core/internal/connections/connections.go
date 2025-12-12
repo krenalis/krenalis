@@ -580,7 +580,7 @@ func rewriteColumnErrors(err error) error {
 }
 
 // setConnectionSettings sets the settings of the provided connection.
-func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings []byte) error {
+func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings json.Value) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
 	}
@@ -604,13 +604,13 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 // setConnectionSettingsFunc returns a connectors.SetSettingsFunc that sets the
 // settings for the connection.
 func setConnectionSettingsFunc(st *state.State, c *state.Connection) connectors.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
+	return func(ctx context.Context, settings json.Value) error {
 		return setConnectionSettings(ctx, st, c.ID, settings)
 	}
 }
 
 // setPipelineSettings sets the settings of the provided pipeline.
-func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, settings []byte) error {
+func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, settings json.Value) error {
 	if !utf8.Valid(settings) {
 		return errors.New("settings is not valid UTF-8")
 	}
@@ -634,7 +634,7 @@ func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, set
 // setPipelineSettingsFunc returns a connector.SetSettingsFunc function that
 // sets the settings for the pipeline.
 func setPipelineSettingsFunc(st *state.State, p *state.Pipeline) connectors.SetSettingsFunc {
-	return func(ctx context.Context, settings []byte) error {
+	return func(ctx context.Context, settings json.Value) error {
 		return setPipelineSettings(ctx, st, p.ID, settings)
 	}
 }

@@ -1664,7 +1664,7 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 // to implement features for the MCP server.
 // platform is the warehouse platform and settings are the settings for
 // connecting to it.
-func getMCPWarehouseInstance(platform string, settings []byte) (warehouses.Warehouse, error) {
+func getMCPWarehouseInstance(platform string, settings json.Value) (warehouses.Warehouse, error) {
 	wh, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return nil, err

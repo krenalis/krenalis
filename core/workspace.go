@@ -783,7 +783,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			" strategy, sending_mode, linked_connections, settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
 			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
-			n.SendingMode, n.LinkedConnections, string(n.Settings))
+			n.SendingMode, n.LinkedConnections, n.Settings)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
@@ -1781,7 +1781,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2, warehouse_mcp_settings = $3 WHERE id = $4",
-			n.Mode, string(n.Settings), mcp, n.Workspace)
+			n.Mode, n.Settings, mcp, n.Workspace)
 		if err != nil {
 			return nil, err
 		}

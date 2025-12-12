@@ -108,7 +108,7 @@ CREATE TABLE connections (
     strategy strategy,
     sending_mode sending_mode,
     linked_connections integer[],
-    settings varchar(65535),
+    settings jsonb,
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );
@@ -142,7 +142,7 @@ CREATE TABLE pipelines (
     sheet varchar(31) NOT NULL DEFAULT '',
     compression compression NOT NULL DEFAULT '',
     order_by varchar(1024) NOT NULL DEFAULT '',
-    format_settings varchar(65535),
+    format_settings jsonb,
     export_mode export_mode NOT NULL DEFAULT '',
     matching_in text NOT NULL,
     matching_out text NOT NULL,

@@ -932,7 +932,7 @@ type Connection struct {
 	SendingMode       *SendingMode
 	LinkedConnections []int // Non-nil if events are supported; otherwise nil.
 	Keys              []string
-	Settings          []byte
+	Settings          json.Value
 	UsersQuery        string
 	pipelines         map[int]*Pipeline
 	Health            Health
@@ -1241,7 +1241,7 @@ type Pipeline struct {
 	Sheet                string
 	Compression          Compression
 	OrderBy              string
-	FormatSettings       []byte
+	FormatSettings       json.Value
 	ExportMode           ExportMode
 	Matching             Matching
 	UpdateOnDuplicates   bool

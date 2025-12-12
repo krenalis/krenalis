@@ -7,6 +7,8 @@ package connectors
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/meergo/meergo/tools/json"
 )
 
 // An InvalidPathError value is returned by FileStorage.AbsolutePath when the
@@ -67,7 +69,7 @@ func (spec FileStorageSpec) New(env *FileStorageEnv) (any, error) {
 type FileStorageEnv struct {
 
 	// Settings is the raw settings data.
-	Settings []byte
+	Settings json.Value
 
 	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc

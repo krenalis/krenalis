@@ -9,6 +9,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -62,7 +63,7 @@ func (spec FileSpec) New(env *FileEnv) (any, error) {
 type FileEnv struct {
 
 	// Settings is the raw settings data.
-	Settings []byte
+	Settings json.Value
 
 	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc

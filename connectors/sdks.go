@@ -6,6 +6,8 @@ package connectors
 
 import (
 	"reflect"
+
+	"github.com/meergo/meergo/tools/json"
 )
 
 // SDKSpec represents an SDK connector specification.
@@ -39,7 +41,7 @@ func (spec SDKSpec) New(env *SDKEnv) (any, error) {
 type SDKEnv struct {
 
 	// Settings is the raw settings data.
-	Settings []byte
+	Settings json.Value
 
 	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc

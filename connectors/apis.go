@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/tools/decimal"
+	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -128,7 +129,7 @@ func (api APISpec) New(env *APIEnv) (any, error) {
 type APIEnv struct {
 
 	// Settings holds the raw settings data.
-	Settings []byte
+	Settings json.Value
 
 	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc

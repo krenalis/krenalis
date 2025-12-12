@@ -144,7 +144,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	}
 
 	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{
-		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
+		SetSettings: func(ctx context.Context, innerSettings json.Value) error { return nil },
 	})
 	if err != nil {
 		return nil, nil, nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
@@ -204,7 +204,7 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	}
 
 	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{
-		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
+		SetSettings: func(ctx context.Context, settings json.Value) error { return nil },
 	})
 	if err != nil {
 		return nil, connectorError(fmt.Errorf("failed to register the file: %s", err))

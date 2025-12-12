@@ -187,8 +187,8 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
 	var inner any
 	var err error
-	var updatedSettings []byte
-	setSettings := func(_ context.Context, innerSettings []byte) error {
+	var updatedSettings json.Value
+	setSettings := func(_ context.Context, innerSettings json.Value) error {
 		if !utf8.Valid(innerSettings) {
 			return errors.New("inner settings is not valid UTF-8")
 		}

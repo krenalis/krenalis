@@ -208,7 +208,7 @@ func (c *Meergo) CreateDummy(name string, role Role) int {
 		Name:      name,
 		Role:      role,
 		Connector: "dummy",
-		Settings:  []byte("{}"),
+		Settings:  json.Value("{}"),
 	}
 	if role == Destination {
 		mode := Server
@@ -328,7 +328,7 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings stdjson.RawMessage, limit int) ([]map[string]any, types.Type) {
+func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -483,7 +483,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 	s.ch <- err
 }
 
-func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings stdjson.RawMessage) []string {
+func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.Value) []string {
 	queryString := url.Values{
 		"path":           []string{string(path)},
 		"format":         []string{format},
@@ -713,7 +713,7 @@ func (c *Meergo) waitForRunsCompletion(allowFailed bool, ids ...int) {
 	}
 }
 
-func JSONEncodeSettings(values any) []byte {
+func JSONEncodeSettings(values any) json.Value {
 	data, err := json.Marshal(values)
 	if err != nil {
 		panic(fmt.Sprintf("cannot encode connection settings to JSON: %s", err))
@@ -721,7 +721,7 @@ func JSONEncodeSettings(values any) []byte {
 	return data
 }
 
-func SettingsProperties(properties map[string]bool) []byte {
+func SettingsProperties(properties map[string]bool) json.Value {
 	var settings = struct {
 		Properties []KV
 	}{
