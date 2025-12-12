@@ -8,7 +8,6 @@ import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
 import { WarehouseMode, WarehouseSettings } from '../../../lib/api/types/warehouse';
-import objectKeysToLower from '../../../utils/objectKeysToLower';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import Section from '../../base/Section/Section';
@@ -31,10 +30,8 @@ const DataWarehouseSettings = ({
 	currentMCPSettings,
 }: DataWarehouseSettingsProps) => {
 	const [mode, setMode] = useState<WarehouseMode>(currentMode || 'Normal');
-	const [settings, setSettings] = useState<Record<string, any> | undefined>(objectKeysToLower(currentSettings));
-	const [mcpSettings, setMCPSettings] = useState<Record<string, any> | undefined>(
-		objectKeysToLower(currentMCPSettings),
-	);
+	const [settings, setSettings] = useState<Record<string, any> | undefined>(currentSettings);
+	const [mcpSettings, setMCPSettings] = useState<Record<string, any> | undefined>(currentMCPSettings);
 	const [isCheckLoading, setIsCheckLoading] = useState<boolean>(false);
 	const [isPipelineButtonLoading, setIsPipelineButtonLoading] = useState<boolean>(false);
 	const [isMCPEnabled, setIsMCPEnabled] = useState<boolean>(currentMCPSettings != null);
