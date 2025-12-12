@@ -341,11 +341,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if !isValidMemberToken(token) {
 		return errors.NotFound("invitation token %q does not exist", token)
 	}
-	m := MemberToSet{
-		Name:     name,
-		Password: password,
-	}
-	err := validateMemberToSet(m, true, false, true)
+	err := validateMemberToSet(MemberToSet{Name: name, Password: password}, true, false, true)
 	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
@@ -354,9 +350,9 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		return err
 	}
 	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-		var id int
+		n := state.AcceptInvitation{}
 		var createdAt time.Time
-		err := tx.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
+		err := tx.QueryRow(ctx, "SELECT id, organization, created_at FROM members WHERE invitation_token = $1", token).Scan(&n.Member, &n.Organization, &createdAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, errors.NotFound("invitation token %q does not exist", token)
@@ -366,9 +362,12 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		if isInvitationTokenExpired(createdAt) {
 			return nil, errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 		}
-		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
-			name, string(pass), id)
-		return nil, err
+		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3 AND organization = $4",
+			name, string(pass), n.Member, n.Organization)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
 	})
 	return err
 }

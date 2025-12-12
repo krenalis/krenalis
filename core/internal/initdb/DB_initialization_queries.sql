@@ -264,6 +264,7 @@ CREATE TABLE accounts (
 CREATE INDEX ON accounts (connector);
 
 CREATE TYPE notification_name AS ENUM (
+    'AcceptInvitation',
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',

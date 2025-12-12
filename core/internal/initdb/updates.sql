@@ -158,3 +158,5 @@ COMMIT;
 
 ALTER TABLE connections ALTER COLUMN settings TYPE jsonb USING NULLIF(btrim(settings), '')::jsonb;
 ALTER TABLE pipelines ALTER COLUMN format_settings TYPE jsonb USING NULLIF(btrim(format_settings), '')::jsonb;
+
+ALTER TYPE notification_name ADD VALUE 'AcceptInvitation' BEFORE 'AddMember';

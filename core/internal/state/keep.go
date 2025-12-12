@@ -59,6 +59,8 @@ func (state *State) keep() {
 		var org uuid.UUID
 		state.changing.Lock()
 		switch n.Name {
+		case "AcceptInvitation":
+			org = state.acceptInvitation(n)
 		case "AddMember":
 			org = state.addMember(n)
 		case "CreateAccessKey":
@@ -262,6 +264,27 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 		}
 	}
 	return ww
+}
+
+// AcceptInvitation is the event sent when a member accept an invitation.
+type AcceptInvitation struct {
+	Member       int
+	Organization uuid.UUID
+}
+
+// acceptInvitation accepts a member invitation.
+func (state *State) acceptInvitation(n notification) uuid.UUID {
+	e := AcceptInvitation{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	state.mu.Lock()
+	org := state.organizations[e.Organization]
+	state.mu.Unlock()
+	org.mu.Lock()
+	org.members[e.Member] = struct{}{}
+	org.mu.Unlock()
+	return org.ID
 }
 
 // AddMember is the event sent when a member is added.
