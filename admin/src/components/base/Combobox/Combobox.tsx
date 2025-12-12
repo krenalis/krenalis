@@ -192,13 +192,10 @@ const Combobox = ({
 			}
 		}
 		if (autoResize) {
-			// Resize the combobox with a short delay. The combobox is resized
-			// when the value changes or when the error changes (to take into
-			// consideration the error icon shown in the suffix slot of the
-			// input).
-			setTimeout(() => {
-				resizeCombobox();
-			}, 50);
+			// Resize the combobox. The combobox is resized when the value
+			// changes or when the error changes (to take into consideration the
+			// error icon shown in the suffix slot of the input).
+			resizeCombobox();
 		}
 	}, [value, error]);
 
@@ -259,16 +256,6 @@ const Combobox = ({
 			}
 		});
 	}, [items, isOpen, selectedTab]);
-
-	useEffect(() => {
-		if (autoResize) {
-			// Resize the combobox after a delay to allow the shadow DOM to
-			// fully load.
-			setTimeout(() => {
-				resizeCombobox();
-			}, 50);
-		}
-	}, []);
 
 	useLayoutEffect(() => {
 		if (listRef.current == null || !isOpen) {
@@ -441,12 +428,6 @@ const Combobox = ({
 		updateCursorPosition();
 	};
 
-	const onInputBlur = () => {
-		if (autoResize) {
-			resizeCombobox();
-		}
-	};
-
 	let functionItems = useMemo(() => {
 		if (!isExpression) {
 			return [];
@@ -500,11 +481,6 @@ const Combobox = ({
 			updateComboboxValue(v);
 			programmaticFocus.current = true;
 			inputRef.current.focus();
-			setTimeout(() => {
-				if (autoResize) {
-					resizeCombobox();
-				}
-			});
 			onSelectFunc(name, v);
 			validate(name, v);
 			setIsOpen(false);
@@ -564,9 +540,6 @@ const Combobox = ({
 		programmaticFocus.current = true;
 		inputRef.current.focus();
 		setTimeout(() => {
-			if (autoResize) {
-				resizeCombobox();
-			}
 			inputRef.current.setSelectionRange(position, position);
 			updateCursorPosition();
 		});
@@ -602,7 +575,6 @@ const Combobox = ({
 					data-is-combobox-input
 					onSlInput={disabled ? undefined : onInput}
 					onSlFocus={onInputFocus}
-					onSlBlur={onInputBlur}
 					disabled={disabled}
 					autocomplete='off'
 					size={size}
