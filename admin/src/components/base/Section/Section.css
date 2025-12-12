@@ -30,6 +30,7 @@
 
 .section--annotated .section__heading {
 	width: 20%;
+	min-width: 20%;
 }
 
 .section--annotated .section__content {
