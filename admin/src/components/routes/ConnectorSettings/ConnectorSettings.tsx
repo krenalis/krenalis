@@ -78,8 +78,8 @@ const ConnectorSettings = () => {
 			}
 			setConnector(connector);
 			setTitle(
-				<Flex alignItems='baseline' gap={10}>
-					<span style={{ position: 'relative', top: '3px' }}>
+				<Flex alignItems='center' gap={10}>
+					<span>
 						<LittleLogo code={connector.code} path={CONNECTORS_ASSETS_PATH} />
 					</span>
 					<span>
