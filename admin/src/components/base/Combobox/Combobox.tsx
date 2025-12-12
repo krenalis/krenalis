@@ -255,7 +255,7 @@ const Combobox = ({
 				setListWidth(maxWidth + 50);
 			}
 		});
-	}, [items, isOpen, selectedTab]);
+	}, [items, cursorPosition, isOpen, selectedTab]);
 
 	useLayoutEffect(() => {
 		if (listRef.current == null || !isOpen) {
