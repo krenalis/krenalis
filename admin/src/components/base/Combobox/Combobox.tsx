@@ -191,7 +191,7 @@ const Combobox = ({
 				updateComboboxValue(value);
 			}
 		}
-		if (autoResize) {
+		if (autoResize && !isFirstControl.current) {
 			// Resize the combobox. The combobox is resized when the value
 			// changes or when the error changes (to take into consideration the
 			// error icon shown in the suffix slot of the input).
