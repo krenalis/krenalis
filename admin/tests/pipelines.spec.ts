@@ -842,12 +842,12 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 			"compression": "",
 			"format": "csv",
 			"formatSettings": {
-				"Separator": ",",
-				"NumberOfColumns": 0,
-				"HasColumnNames": true,
-				"LazyQuotes": false,
-				"TrimLeadingSpace": false,
-				"UseCRLF": false
+				"separator": ",",
+				"numberOfColumns": 0,
+				"hasColumnNames": true,
+				"lazyQuotes": false,
+				"trimLeadingSpace": false,
+				"useCRLF": false
 			}
 		}`;
 
@@ -1180,12 +1180,12 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 			"orderBy": "email",
 			"format": "csv",
 			"formatSettings": {
-				"Separator": ",",
-				"NumberOfColumns": 0,
-				"HasColumnNames": false,
-				"LazyQuotes": false,
-				"TrimLeadingSpace": false,
-				"UseCRLF": false
+				"separator": ",",
+				"numberOfColumns": 0,
+				"hasColumnNames": false,
+				"lazyQuotes": false,
+				"trimLeadingSpace": false,
+				"useCRLF": false
 			}
 		}`;
 	let saveButton = page.locator('.pipeline__header-save >> button');

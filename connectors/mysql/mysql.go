@@ -148,11 +148,11 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value,
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
-			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+			&connectors.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
+			&connectors.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&connectors.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
@@ -265,11 +265,11 @@ func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test boo
 }
 
 type innerSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
 }
 
 func (s *innerSettings) config() *mysql.Config {

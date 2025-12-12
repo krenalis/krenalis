@@ -142,13 +142,13 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Va
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Account", Label: "Account Identifier", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 3, MaxLength: 255},
-			&connectors.Input{Name: "Username", Label: "User Name", Placeholder: "USERNAME", Type: "text", MinLength: 1, MaxLength: 255},
-			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
-			&connectors.Input{Name: "Role", Label: "Role", Placeholder: "CUSTOM_ROLE", Type: "text", MinLength: 1, MaxLength: 255},
-			&connectors.Input{Name: "Database", Label: "Database", Placeholder: "MY_DATABASE", Type: "text", MinLength: 1, MaxLength: 255},
-			&connectors.Input{Name: "Schema", Label: "Schema", Placeholder: "PUBLIC", Type: "text", MinLength: 1, MaxLength: 255},
-			&connectors.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "COMPUTE_WH", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "account", Label: "Account Identifier", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 3, MaxLength: 255},
+			&connectors.Input{Name: "username", Label: "User Name", Placeholder: "USERNAME", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "role", Label: "Role", Placeholder: "CUSTOM_ROLE", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "database", Label: "Database", Placeholder: "MY_DATABASE", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "schema", Label: "Schema", Placeholder: "PUBLIC", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "warehouse", Label: "Warehouse", Placeholder: "COMPUTE_WH", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
@@ -160,13 +160,13 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Va
 }
 
 type innerSettings struct {
-	Account   string
-	Username  string
-	Password  string
-	Role      string
-	Database  string
-	Schema    string
-	Warehouse string
+	Account   string `json:"account"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Role      string `json:"role"`
+	Database  string `json:"database"`
+	Schema    string `json:"schema"`
+	Warehouse string `json:"warehouse"`
 }
 
 // connector returns a driver.Connector from the settings.

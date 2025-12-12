@@ -73,7 +73,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			Role:      meergotester.Destination,
 			Connector: "filesystem",
 			Settings: meergotester.JSONEncodeSettings(map[string]any{
-				"Root": storage.Root(),
+				"root": storage.Root(),
 			}),
 		})
 
@@ -94,7 +94,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			Format:  "csv",
 			OrderBy: "email",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-				"Separator": ",",
+				"separator": ",",
 			}),
 		})
 

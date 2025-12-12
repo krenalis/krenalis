@@ -145,11 +145,11 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.V
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "localhost", Type: "text", MinLength: 1, MaxLength: 253},
-			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5, HelpText: "Native ClickHouse protocol port (9000 default; 9440 with TLS)"},
-			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "default", Type: "text", MinLength: 1, MaxLength: 64},
-			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 100},
-			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "default", Type: "text", MinLength: 1, MaxLength: 64},
+			&connectors.Input{Name: "host", Label: "Host", Placeholder: "localhost", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5, HelpText: "Native ClickHouse protocol port (9000 default; 9440 with TLS)"},
+			&connectors.Input{Name: "username", Label: "Username", Placeholder: "default", Type: "text", MinLength: 1, MaxLength: 64},
+			&connectors.Input{Name: "password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 100},
+			&connectors.Input{Name: "database", Label: "Database name", Placeholder: "default", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
@@ -249,11 +249,11 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 }
 
 type innerSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
 }
 
 // options returns the connection options, from s.

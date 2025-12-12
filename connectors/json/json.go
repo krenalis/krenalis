@@ -64,10 +64,10 @@ type JSON struct {
 }
 
 type innerSettings struct {
-	Properties         []connectors.KV `json:",omitzero"`
-	Indent             bool
-	GenerateASCII      bool
-	AllowSpecialFloats bool
+	Properties         []connectors.KV `json:"properties,omitzero"`
+	Indent             bool            `json:"indent"`
+	GenerateASCII      bool            `json:"generateASCII"`
+	AllowSpecialFloats bool            `json:"allowSpecialFloats"`
 }
 
 var errInvalidJSON = errors.New("file does not contain valid JSON")
@@ -225,17 +225,17 @@ func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, r
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
 			&connectors.KeyValue{
-				Name:           "Properties",
+				Name:           "properties",
 				Label:          "Properties",
 				KeyLabel:       "Name",
 				ValueLabel:     "Required",
-				KeyComponent:   &connectors.Input{Name: "Name", Placeholder: "Name", Rows: 1},
-				ValueComponent: &connectors.Select{Name: "Required", Label: "Required", Options: []connectors.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
+				KeyComponent:   &connectors.Input{Name: "name", Placeholder: "Name", Rows: 1},
+				ValueComponent: &connectors.Select{Name: "required", Label: "Required", Options: []connectors.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
 				Role:           connectors.Source,
 			},
-			&connectors.Checkbox{Name: "Indent", Label: "Indent the generated output", Role: connectors.Destination},
-			&connectors.Checkbox{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: connectors.Destination},
-			&connectors.Checkbox{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "indent", Label: "Indent the generated output", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "generateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: connectors.Destination},
 		},
 		Settings: settings,
 	}

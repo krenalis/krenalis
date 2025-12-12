@@ -112,8 +112,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 			Format:               "csv",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-				"Separator":      ",",
-				"HasColumnNames": true,
+				"separator":      ",",
+				"hasColumnNames": true,
 			}),
 		})
 		run := c.RunPipeline(csvPipeline)

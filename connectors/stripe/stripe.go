@@ -93,7 +93,7 @@ type Stripe struct {
 }
 
 type innerSettings struct {
-	APIKey string
+	APIKey string `json:"apiKey"`
 }
 
 // RecordSchema returns the schema of the specified target and role.
@@ -160,7 +160,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
+			&connectors.Input{Name: "apiKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
 		Settings: settings,
 	}

@@ -69,7 +69,7 @@ type Excel struct {
 }
 
 type innerSettings struct {
-	HasColumnNames bool
+	HasColumnNames bool `json:"hasColumnNames"`
 }
 
 // ContentType returns the content type of the file.
@@ -180,7 +180,7 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, settings json.Valu
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
+			&connectors.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
 		},
 		Settings: settings,
 	}

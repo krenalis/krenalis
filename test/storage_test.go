@@ -63,7 +63,7 @@ func TestStorage(t *testing.T) {
 
 	// Test the "/files" endpoint.
 	excelSettings := meergotester.JSONEncodeSettings(map[string]any{
-		"HasColumnNames": true,
+		"hasColumnNames": true,
 	})
 	records, schema := c.File(storage, "storage_users.xlsx", "excel", "Sheet1", meergotester.NoCompression, excelSettings, 100)
 

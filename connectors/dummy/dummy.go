@@ -267,9 +267,9 @@ func init() {
 }
 
 type innerSettings struct {
-	CustomerExportFailPercentage int // in [0, 100]
-	URLForDispatchingEvents      string
-	SimulateHTTPDelay            bool
+	CustomerExportFailPercentage int    `json:"customerExportFailPercentage"`
+	URLForDispatchingEvents      string `json:"urlForDispatchingEvents"`
+	SimulateHTTPDelay            bool   `json:"simulateHTTPDelay"`
 }
 
 // SendEvents sends events to the API.
@@ -297,7 +297,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
 			&connectors.Input{
-				Name:            "CustomerExportFailPercentage",
+				Name:            "customerExportFailPercentage",
 				Type:            "number",
 				Label:           "Percentage that the export of every single customer may fail",
 				Placeholder:     "10",
@@ -306,13 +306,13 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 				Role:            connectors.Destination,
 			},
 			&connectors.Input{
-				Name:        "URLForDispatchingEvents",
+				Name:        "urlForDispatchingEvents",
 				Label:       "URL for dispatching events",
 				Placeholder: "https://example.com",
 				Role:        connectors.Destination,
 			},
 			&connectors.Checkbox{
-				Name:  "SimulateHTTPDelay",
+				Name:  "simulateHTTPDelay",
 				Label: "Pretend that Dummy operates via HTTP calls, introducing fictitious delays",
 				Role:  connectors.Both,
 			},

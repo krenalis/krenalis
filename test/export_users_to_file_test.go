@@ -74,7 +74,7 @@ func TestExportUsersToFile(t *testing.T) {
 		Role:      meergotester.Destination,
 		Connector: "filesystem",
 		Settings: meergotester.JSONEncodeSettings(map[string]any{
-			"SimulateHighIOLatency": false,
+			"simulateHighIOLatency": false,
 		}),
 	})
 
@@ -94,7 +94,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}),
 		Format: "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-			"Separator": ",",
+			"separator": ",",
 		}),
 		OrderBy: "email",
 	})
@@ -132,7 +132,7 @@ func TestExportUsersToFile(t *testing.T) {
 			}),
 			Format: "csv",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-				"Separator": ",",
+				"separator": ",",
 			}),
 			Compression: meergotester.Compression(compression),
 			OrderBy:     "email",

@@ -89,26 +89,26 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "MyInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
-			&connectors.Input{Name: "MyTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
-			&connectors.Select{Name: "MySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []connectors.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
-			&connectors.Checkbox{Name: "MyCheckbox", Label: "Checkbox"},
-			&connectors.ColorPicker{Name: "MyColorPicker", Label: "ColorPicker"},
-			&connectors.Radios{Name: "MyRadios", Label: "Radios", Options: []connectors.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
-			&connectors.Range{Name: "MyRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
-			&connectors.Switch{Name: "MySwitch", Label: "Switch"},
+			&connectors.Input{Name: "myInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
+			&connectors.Input{Name: "myTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
+			&connectors.Select{Name: "mySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []connectors.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
+			&connectors.Checkbox{Name: "myCheckbox", Label: "Checkbox"},
+			&connectors.ColorPicker{Name: "myColorPicker", Label: "ColorPicker"},
+			&connectors.Radios{Name: "myRadios", Label: "Radios", Options: []connectors.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
+			&connectors.Range{Name: "myRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
+			&connectors.Switch{Name: "mySwitch", Label: "Switch"},
 			&connectors.KeyValue{
-				Name:       "MyKeyValue",
+				Name:       "myKeyValue",
 				Label:      "KeyValue",
 				KeyLabel:   "Key label",
 				ValueLabel: "Value label",
 				KeyComponent: &connectors.Input{
-					Name:        "MyKeyValueKey",
+					Name:        "myKeyValueKey",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
 				ValueComponent: &connectors.Input{
-					Name:        "MyKeyValueValue",
+					Name:        "myKeyValueValue",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
@@ -119,22 +119,22 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 				HelpText: "Help text of the alternativeFieldSets component",
 				Sets: []connectors.FieldSet{
 					{
-						Name:  "FirstSet",
+						Name:  "firstSet",
 						Label: "First Set",
 						Fields: []connectors.Component{
-							&connectors.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&connectors.Input{Name: "MyFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&connectors.Input{Name: "MyFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
+							&connectors.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "myFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "myFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
 						},
 					},
 					{
-						Name:  "SecondSet",
+						Name:  "secondSet",
 						Label: "Second Set",
 						Fields: []connectors.Component{
-							&connectors.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&connectors.Input{Name: "MySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&connectors.Input{Name: "MySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
-							&connectors.Checkbox{Name: "MySecondSetCheckbox", Label: "Set Checkbox"},
+							&connectors.Input{Name: "mySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "mySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "mySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
+							&connectors.Checkbox{Name: "mySecondSetCheckbox", Label: "Set Checkbox"},
 						},
 					},
 				},
@@ -171,24 +171,24 @@ func (uiSample *UISample) saveSettings(ctx context.Context, options json.Value) 
 }
 
 type innerSettings struct {
-	MyInput       string
-	MyTextarea    string
-	MySelect      string
-	MyCheckbox    bool
-	MyColorPicker string
-	MyRadios      string
-	MyRange       int
-	MySwitch      bool
-	MyKeyValue    []connectors.KV
+	MyInput       string          `json:"myInput"`
+	MyTextarea    string          `json:"myTextarea"`
+	MySelect      string          `json:"mySelect"`
+	MyCheckbox    bool            `json:"myCheckbox"`
+	MyColorPicker string          `json:"myColoPicker"`
+	MyRadios      string          `json:"myRadios"`
+	MyRange       int             `json:"myRange"`
+	MySwitch      bool            `json:"mySwitch"`
+	MyKeyValue    []connectors.KV `json:"myKeyValue"`
 	FirstSet      *struct {
-		MySharedInput      string
-		MyFirstSetInput    string
-		MyFirstSetTextarea string
-	}
+		MySharedInput      string `json:"mySharedInput"`
+		MyFirstSetInput    string `json:"myFirstSetInput"`
+		MyFirstSetTextarea string `json:"myFirstSetTextarea"`
+	} `json:"firstSet"`
 	SecondSet *struct {
-		MySharedInput       string
-		MySecondSetInput    string
-		MySecondSetTextarea string
-		MySecondSetCheckbox bool
-	}
+		MySharedInput       string `json:"mySharedInput"`
+		MySecondSetInput    string `json:"mySecondSetInput"`
+		MySecondSetTextarea string `json:"mySecondSetTextarea"`
+		MySecondSetCheckbox bool   `json:"mySecondSetCheckbox"`
+	} `json:"secondSet"`
 }

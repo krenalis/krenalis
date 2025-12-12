@@ -64,7 +64,7 @@ type ConnectionToCreate struct {
 }
 
 type DummySettings struct {
-	URLForDispatchingEvents string
+	URLForDispatchingEvents string `json:"urlForDispatchingEvents"`
 }
 
 type PipelineRun struct {

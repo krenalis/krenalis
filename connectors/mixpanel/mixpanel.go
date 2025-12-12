@@ -64,9 +64,9 @@ type Mixpanel struct {
 }
 
 type innerSettings struct {
-	ProjectID     string
-	ProjectToken  string
-	DataResidency string
+	ProjectID     string `json:"projectID"`
+	ProjectToken  string `json:"projectToken"`
+	DataResidency string `json:"dataResidency"`
 }
 
 // New returns a new connector instance for Mixpanel.
@@ -214,9 +214,9 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&connectors.Input{Name: "ProjectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
-			&connectors.Select{Name: "DataResidency", Label: "Data Residency", Options: []connectors.Option{
+			&connectors.Input{Name: "projectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
+			&connectors.Input{Name: "projectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
+			&connectors.Select{Name: "dataResidency", Label: "Data Residency", Options: []connectors.Option{
 				{Text: "United States", Value: "US"},
 				{Text: "European Union", Value: "EU"},
 				{Text: "India", Value: "IN"},

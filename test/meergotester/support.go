@@ -182,7 +182,7 @@ func (c *Meergo) CreateDestinationFilesystem() int {
 		Role:      Destination,
 		Connector: "filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
-			"SimulateHighIOLatency": false,
+			"simulateHighIOLatency": false,
 		}),
 	})
 }
@@ -193,12 +193,12 @@ func (c *Meergo) CreateDestinationPostgreSQL() int {
 		Role:      Destination,
 		Connector: "postgresql",
 		Settings: JSONEncodeSettings(map[string]any{
-			"Host":     testsSettings.Database.Host,
-			"Port":     testsSettings.Database.Port,
-			"Username": testsSettings.Database.Username,
-			"Password": testsSettings.Database.Password,
-			"Database": testsSettings.Database.Database,
-			"Schema":   testsSettings.Database.Schema,
+			"host":     testsSettings.Database.Host,
+			"port":     testsSettings.Database.Port,
+			"username": testsSettings.Database.Username,
+			"password": testsSettings.Database.Password,
+			"database": testsSettings.Database.Database,
+			"schema":   testsSettings.Database.Schema,
 		}),
 	})
 }
@@ -274,7 +274,7 @@ func (c *Meergo) CreateSourceFileSystem() int {
 		Role:      Source,
 		Connector: "filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
-			"SimulateHighIOLatency": false,
+			"simulateHighIOLatency": false,
 		}),
 	})
 }
@@ -285,12 +285,12 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 		Role:      Source,
 		Connector: "postgresql",
 		Settings: JSONEncodeSettings(map[string]any{
-			"Host":     testsSettings.Database.Host,
-			"Port":     testsSettings.Database.Port,
-			"Username": testsSettings.Database.Username,
-			"Password": testsSettings.Database.Password,
-			"Database": testsSettings.Database.Database,
-			"Schema":   testsSettings.Database.Schema,
+			"host":     testsSettings.Database.Host,
+			"port":     testsSettings.Database.Port,
+			"username": testsSettings.Database.Username,
+			"password": testsSettings.Database.Password,
+			"database": testsSettings.Database.Database,
+			"schema":   testsSettings.Database.Schema,
 		}),
 	})
 }
@@ -485,7 +485,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 
 func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.Value) []string {
 	queryString := url.Values{
-		"path":           []string{string(path)},
+		"path":           []string{path},
 		"format":         []string{format},
 		"compression":    []string{string(compression)},
 		"formatSettings": []string{string(settings)},
@@ -723,7 +723,7 @@ func JSONEncodeSettings(values any) json.Value {
 
 func SettingsProperties(properties map[string]bool) json.Value {
 	var settings = struct {
-		Properties []KV
+		Properties []KV `json:"properties"`
 	}{
 		Properties: []KV{},
 	}

@@ -68,12 +68,12 @@ type CSV struct {
 }
 
 type innerSettings struct {
-	Separator        string
-	NumberOfColumns  int
-	LazyQuotes       bool
-	TrimLeadingSpace bool
-	UseCRLF          bool
-	HasColumnNames   bool
+	Separator        string `json:"separator"`
+	NumberOfColumns  int    `json:"numberOfColumns"`
+	LazyQuotes       bool   `json:"lazyQuotes"`
+	TrimLeadingSpace bool   `json:"trimLeadingSpace"`
+	UseCRLF          bool   `json:"useCRLF"`
+	HasColumnNames   bool   `json:"hasColumnNames"`
 }
 
 // ContentType returns the content type of the file.
@@ -171,11 +171,11 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&connectors.Input{Name: "NumberOfColumns", Label: "Number of columns", Placeholder: "", HelpText: "When 0, it is determined from the first record.", Type: "number", OnlyIntegerPart: true, Role: connectors.Source},
-			&connectors.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space in fields", Role: connectors.Source},
-			&connectors.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: connectors.Destination},
-			&connectors.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
+			&connectors.Input{Name: "separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&connectors.Input{Name: "numberOfColumns", Label: "Number of columns", Placeholder: "", HelpText: "When 0, it is determined from the first record.", Type: "number", OnlyIntegerPart: true, Role: connectors.Source},
+			&connectors.Checkbox{Name: "trimLeadingSpace", Label: "Trim leading space in fields", Role: connectors.Source},
+			&connectors.Checkbox{Name: "useCRLF", Label: "Use CRLF", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
 		},
 		Settings: settings,
 	}

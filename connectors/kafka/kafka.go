@@ -145,27 +145,27 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, settings json.Val
 			&connectors.AlternativeFieldSets{
 				Sets: []connectors.FieldSet{
 					{
-						Name:  "Kafka",
+						Name:  "kafka",
 						Label: "Kafka",
 						Fields: []connectors.Component{
-							&connectors.Input{Name: "Host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&connectors.Input{Name: "Port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-							&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
-							&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+							&connectors.Input{Name: "host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+							&connectors.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
+							&connectors.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
 						},
 					},
 					{
-						Name:  "Confluent",
+						Name:  "confluent",
 						Label: "Confluent",
 						Fields: []connectors.Component{
-							&connectors.Input{Name: "Server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
-							&connectors.Input{Name: "Key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
-							&connectors.Input{Name: "Secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
+							&connectors.Input{Name: "server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
+							&connectors.Input{Name: "key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
+							&connectors.Input{Name: "secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
 						},
 					},
 				},
 			},
-			&connectors.Input{Name: "Topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
@@ -235,22 +235,22 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 }
 
 type kafkaSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type confluentSettings struct {
-	Server string
-	Key    string
-	Secret string
+	Server string `json:"server"`
+	Key    string `json:"key"`
+	Secret string `json:"secret"`
 }
 
 type innerSettings struct {
-	Kafka     *kafkaSettings
-	Confluent *confluentSettings
-	Topic     string
+	Kafka     *kafkaSettings     `json:"kafka"`
+	Confluent *confluentSettings `json:"confluent"`
+	Topic     string             `json:"topic"`
 }
 
 // opts returns s as options to configure a client.

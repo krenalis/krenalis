@@ -94,7 +94,7 @@ type FileSystem struct {
 }
 
 type innerSettings struct {
-	SimulateHighIOLatency bool
+	SimulateHighIOLatency bool `json:"simulateHighIOLatency"`
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
@@ -156,7 +156,7 @@ func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, setting
 			&connectors.Text{Text: intro},
 			&connectors.Text{Text: rootToShow},
 			&connectors.Text{Label: "Testing options"},
-			&connectors.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
+			&connectors.Checkbox{Name: "simulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
 		Settings: settings,
 	}

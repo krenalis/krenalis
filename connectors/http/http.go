@@ -71,9 +71,9 @@ type HTTP struct {
 }
 
 type innerSettings struct {
-	Host    string
-	Port    int
-	Headers []connectors.KV
+	Host    string          `json:"host"`
+	Port    int             `json:"port"`
+	Headers []connectors.KV `json:"headers"`
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
@@ -159,9 +159,9 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, r
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&connectors.KeyValue{Name: "Headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+			&connectors.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.KeyValue{Name: "headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
 				KeyComponent:   &connectors.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
 				ValueComponent: &connectors.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},

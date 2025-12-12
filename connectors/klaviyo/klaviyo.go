@@ -106,7 +106,7 @@ type Klaviyo struct {
 }
 
 type innerSettings struct {
-	PrivateAPIKey string
+	PrivateAPIKey string `json:"privateAPIKey"`
 }
 
 // EventTypeSchema returns the schema of the specified event type.
@@ -434,7 +434,7 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
+			&connectors.Input{Name: "privateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Settings: settings,
 	}

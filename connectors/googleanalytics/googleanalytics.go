@@ -67,9 +67,9 @@ type Analytics struct {
 }
 
 type innerSettings struct {
-	MeasurementID      string
-	APISecret          string
-	CollectionEndpoint string
+	MeasurementID      string `json:"measurementID"`
+	APISecret          string `json:"apiSecret"`
+	CollectionEndpoint string `json:"collectionEndpoint"`
 }
 
 // EventTypes returns the event types.
@@ -118,9 +118,9 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&connectors.Input{Name: "APISecret", Label: "API secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
-			&connectors.Select{Name: "CollectionEndpoint", Label: "Collection endpoint", Options: []connectors.Option{{Text: "Global", Value: "Global"}, {Text: "European Union", Value: "EU"}}},
+			&connectors.Input{Name: "measurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+			&connectors.Input{Name: "apiSecret", Label: "API secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+			&connectors.Select{Name: "collectionEndpoint", Label: "Collection endpoint", Options: []connectors.Option{{Text: "Global", Value: "Global"}, {Text: "European Union", Value: "EU"}}},
 		},
 		Settings: settings,
 	}

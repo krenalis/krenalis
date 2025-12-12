@@ -181,12 +181,12 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
-			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
-			&connectors.Input{Name: "Schema", Label: "Schema name", Placeholder: "public", Type: "text", MinLength: 1, MaxLength: 63},
+			&connectors.Input{Name: "host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
+			&connectors.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&connectors.Input{Name: "database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
+			&connectors.Input{Name: "schema", Label: "Schema name", Placeholder: "public", Type: "text", MinLength: 1, MaxLength: 63},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
@@ -198,12 +198,12 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 }
 
 type innerSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Schema   string
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+	Schema   string `json:"schema"`
 }
 
 // dsn returns the connection string, from s, in the URL format.

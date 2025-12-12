@@ -70,10 +70,10 @@ type S3 struct {
 }
 
 type innerSettings struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Bucket          string
+	AccessKeyID     string `json:"accessKeyID"`
+	SecretAccessKey string `json:"secretAccessKey"`
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
@@ -129,9 +129,9 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, r
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "AccessKeyID", Label: "Access Key ID", Placeholder: "", Type: "text", MinLength: 20, MaxLength: 20},
-			&connectors.Input{Name: "SecretAccessKey", Label: "Secret Access Key", Placeholder: "", Type: "password", MinLength: 40, MaxLength: 200},
-			&connectors.Select{Name: "Region", Label: "Region", Placeholder: "", Options: []connectors.Option{
+			&connectors.Input{Name: "accessKeyID", Label: "Access Key ID", Placeholder: "", Type: "text", MinLength: 20, MaxLength: 20},
+			&connectors.Input{Name: "secretAccessKey", Label: "Secret Access Key", Placeholder: "", Type: "password", MinLength: 40, MaxLength: 200},
+			&connectors.Select{Name: "region", Label: "Region", Placeholder: "", Options: []connectors.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
 				{Text: "US West (N. California) us-west-1", Value: "us-west-1"},
@@ -166,7 +166,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, r
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) sa-east-1", Value: "sa-east-1"},
 			}},
-			&connectors.Input{Name: "Bucket", Label: "Bucket name", Placeholder: "mybucket", Type: "text", MinLength: 3, MaxLength: 63},
+			&connectors.Input{Name: "bucket", Label: "Bucket name", Placeholder: "mybucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Settings: settings,
 	}

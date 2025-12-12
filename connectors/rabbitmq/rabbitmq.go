@@ -136,8 +136,8 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Va
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Input{Name: "URL", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
-			&connectors.Input{Name: "Queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "url", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
+			&connectors.Input{Name: "queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
 		Buttons: []connectors.Button{
@@ -149,8 +149,8 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Va
 }
 
 type innerSettings struct {
-	URL   string
-	Queue string
+	URL   string `json:"url"`
+	Queue string `json:"queue"`
 }
 
 const defaultConnectionTimeout = 30 * time.Second

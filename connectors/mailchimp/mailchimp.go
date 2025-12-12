@@ -124,9 +124,9 @@ type MailChimp struct {
 }
 
 type innerSettings struct {
-	Audience      string
-	DataCenter    string
-	WebhookSecret string
+	Audience      string `json:"audience"`
+	DataCenter    string `json:"dataCenter"`
+	WebhookSecret string `json:"webhookSecret"`
 }
 
 // OAuthAccount returns the API's account associated with the OAuth
@@ -376,7 +376,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Va
 
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
-			&connectors.Select{Name: "Audience", Label: "Audience", Options: options},
+			&connectors.Select{Name: "audience", Label: "Audience", Options: options},
 		},
 		Settings: settings,
 	}
