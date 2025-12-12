@@ -6,6 +6,7 @@ interface ListTileProps {
 	name: ReactNode;
 	id?: string;
 	description?: ReactNode;
+	showHover?: boolean;
 	disabled?: boolean;
 	disablingReason?: string;
 	action?: ReactNode;
@@ -18,6 +19,7 @@ const ListTile = ({
 	name,
 	id,
 	description,
+	showHover,
 	disabled,
 	disablingReason,
 	action,
@@ -26,7 +28,7 @@ const ListTile = ({
 }: ListTileProps) => {
 	return (
 		<div
-			className={`list-tile${className ? ' ' + className : ''}${disabled ? ' list-tile--disabled' : ''}`}
+			className={`list-tile${className ? ' ' + className : ''}${showHover ? ' list-tile--show-hover' : ''}${disabled ? ' list-tile--disabled' : ''}`}
 			onClick={disabled ? null : onClick}
 			data-id={id ? id : ''}
 			style={

@@ -19,6 +19,7 @@ const Organization = () => {
 						icon={<SlIcon name='people' />}
 						name={'Team members'}
 						description='View and modify your team members'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
@@ -28,6 +29,7 @@ const Organization = () => {
 						icon={<SlIcon name='key' />}
 						name={'API and MCP keys'}
 						description='View and modify your API and MCP keys'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>

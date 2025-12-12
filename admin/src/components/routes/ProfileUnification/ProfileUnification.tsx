@@ -28,6 +28,7 @@ const ProfileUnification = () => {
 						icon={<SlIcon name='people' />}
 						name='Profiles'
 						description='Browse and manage unified profiles'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
@@ -37,6 +38,7 @@ const ProfileUnification = () => {
 						icon={<SlIcon name='bookmark-check' />}
 						name='Schema'
 						description='Explore and alter the profile schema'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
@@ -46,6 +48,7 @@ const ProfileUnification = () => {
 						icon={<SlIcon name='sliders2' />}
 						name='Rules'
 						description='Configure the rules used to unify identities'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>

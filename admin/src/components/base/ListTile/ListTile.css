@@ -11,7 +11,7 @@
 		border 0.3s;
 }
 
-.list-tile:hover {
+.list-tile--show-hover:hover {
 	background-color: var(--sl-color-primary-50);
 	border: 1px solid var(--sl-color-primary-200);
 }
@@ -19,6 +19,11 @@
 .list-tile--disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.list-tile--disabled:hover {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--sl-color-neutral-200);
 }
 
 .list-tile__content {

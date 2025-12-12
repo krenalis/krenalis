@@ -28,6 +28,7 @@ const Settings = () => {
 						icon={<SlIcon name='list' />}
 						name={'General'}
 						description='Update your workspace name or delete it'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
@@ -37,6 +38,7 @@ const Settings = () => {
 						icon={<SlIcon name='database' />}
 						name={'Data Warehouse'}
 						description='Manage data warehouse mode and settings'
+						showHover={true}
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>

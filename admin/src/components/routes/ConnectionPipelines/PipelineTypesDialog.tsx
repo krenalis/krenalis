@@ -39,6 +39,7 @@ const PipelineTypesDialog = ({
 				icon={connectionLogo}
 				name={type.name}
 				description={type.description}
+				showHover={true}
 				disablingReason={disablingReason}
 				disabled={disablingReason != null}
 				onClick={() => {
