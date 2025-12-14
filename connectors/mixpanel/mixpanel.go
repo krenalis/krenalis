@@ -117,18 +117,6 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*connectors.EventType, er
 	}, nil
 }
 
-// PreviewSendEvents returns the HTTP request that would be used to send the
-// events to the API, without actually sending it.
-func (mp *Mixpanel) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
-	return mp.sendEvents(ctx, events, true)
-}
-
-// SendEvents sends events to the API.
-func (mp *Mixpanel) SendEvents(ctx context.Context, events connectors.Events) error {
-	_, err := mp.sendEvents(ctx, events, false)
-	return err
-}
-
 // EventTypeSchema returns the schema of the specified event type.
 func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 
@@ -194,6 +182,18 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 	}
 
 	return schema, nil
+}
+
+// PreviewSendEvents returns the HTTP request that would be used to send the
+// events to the API, without actually sending it.
+func (mp *Mixpanel) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
+	return mp.sendEvents(ctx, events, true)
+}
+
+// SendEvents sends events to the API.
+func (mp *Mixpanel) SendEvents(ctx context.Context, events connectors.Events) error {
+	_, err := mp.sendEvents(ctx, events, false)
+	return err
 }
 
 // ServeUI serves the connector's user interface.
