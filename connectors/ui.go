@@ -29,6 +29,10 @@ func NewInvalidSettingsError(msg string) error {
 	return &InvalidSettingsError{msg}
 }
 
+func NewInvalidSettingsErrorf(msg string, a ...any) error {
+	return &InvalidSettingsError{fmt.Sprintf(msg, a...)}
+}
+
 // UI represents the user interface of a connector that is shown to users.
 type UI struct {
 	Alert    *Alert      // Alert, if not empty, appears as a notification.
