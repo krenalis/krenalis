@@ -186,6 +186,10 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const id = Number(e.target.name.split('-')[1]);
 		const operator = FILTER_OPERATORS[e.target.value];
 		changeOperator(id, operator);
+	};
+
+	const onOperatorSelectClose = (e: any) => {
+		const operator = FILTER_OPERATORS[e.target.value];
 		if (!isUnaryOperator(operator)) {
 			// Focus the first value input.
 			setTimeout(() => {
@@ -417,6 +421,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					className='pipeline__filters-operator'
 					value={String(FILTER_OPERATORS.findIndex((op) => op === condition.operator))}
 					onSlChange={onChangeOperatorFragment}
+					onSlHide={onOperatorSelectClose}
 					placeholder='Operator'
 					disabled={isInvalidProperty || isDisabled}
 				>

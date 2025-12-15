@@ -1240,8 +1240,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		.click();
 	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="0"]').click(); // option is "is".
 
-	await filters.nth(0).locator('.pipeline__filters-value-input').click();
-	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click();
+	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
 	const expectedBody = `
 	{
