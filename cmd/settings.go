@@ -5,10 +5,8 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -66,7 +64,7 @@ func parseEnvSettings() (*Settings, error) {
 	if assetsURLs := envVars.Get("MEERGO_EXTERNAL_ASSETS_URLS"); assetsURLs != "" {
 		for url := range strings.SplitSeq(assetsURLs, ",") {
 			url = strings.TrimSpace(url) // there may be spaces around commas.
-			url, err := parseURL(url, noQuery)
+			url, err := validation.ParseURL(url, validation.NoQuery)
 			if err != nil {
 				return nil, fmt.Errorf("invalid URL specified in environment variable MEERGO_EXTERNAL_ASSETS_URLS: %s", err)
 			}
@@ -85,7 +83,7 @@ func parseEnvSettings() (*Settings, error) {
 	case "none":
 		settings.PotentialConnectorsURL = ""
 	default:
-		settings.PotentialConnectorsURL, err = parseURL(potentialsURL, 0)
+		settings.PotentialConnectorsURL, err = validation.ParseURL(potentialsURL, 0)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value specified for environment variable MEERGO_POTENTIAL_CONNECTORS_URL, which is neither empty, the string \"none\" nor a valid URL (%s)", err)
 		}
@@ -136,7 +134,7 @@ func parseEnvSettings() (*Settings, error) {
 		}
 	}
 
-	if externalURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_URL", noPath|noQuery); err != nil {
+	if externalURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_URL", validation.NoPath|validation.NoQuery); err != nil {
 		return nil, err
 	} else if externalURL == "" {
 		protocol := "http"
@@ -154,7 +152,7 @@ func parseEnvSettings() (*Settings, error) {
 		settings.HTTP.ExternalURL = externalURL
 	}
 
-	if eventURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", noQuery); err != nil {
+	if eventURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", validation.NoQuery); err != nil {
 		return nil, err
 	} else if eventURL == "" {
 		settings.HTTP.ExternalEventURL = settings.HTTP.ExternalURL + "v1/events"
@@ -371,98 +369,19 @@ func (err errInvalidURL) Error() string {
 	return fmt.Sprintf("invalid URL specified for %s: %s", err.key, err.msg)
 }
 
-type urlValidationFlag int
-
-const (
-	noPath urlValidationFlag = 1 << iota
-	noQuery
-)
-
-func hasURLValidationFlag(f, flag urlValidationFlag) bool {
-	return f&flag != 0
-}
-
 // parseEnvURL parses the value of a configuration setting into a normalized
 // URL. If the input string is empty, it returns an empty string.
-func parseEnvURL(key string, flags urlValidationFlag) (string, error) {
+func parseEnvURL(key string, flags validation.URLValidationFlag) (string, error) {
 	envVars, err := connectors.GetEnvVars()
 	if err != nil {
 		return "", err
 	}
 	s := envVars.Get(key)
-	u, err := parseURL(s, flags)
+	u, err := validation.ParseURL(s, flags)
 	if err != nil {
 		return "", errInvalidURL{key, err.Error()}
 	}
 	return u, nil
-}
-
-// parseURL parses the string s into a normalized URL. If the input string is
-// empty, it returns an empty string.
-func parseURL(s string, flags urlValidationFlag) (string, error) {
-	if s == "" {
-		return "", nil
-	}
-	if s[0] == ' ' {
-		return "", errors.New(`it starts with a space`)
-	}
-	if s[len(s)-1] == ' ' {
-		return "", errors.New(`it ends with a space`)
-	}
-	u, err := url.Parse(s)
-	if err != nil {
-		return "", err
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", errors.New(`scheme must be "http" or "https"`)
-	}
-	if u.User != nil {
-		return "", errors.New("user and password cannot be specified")
-	}
-	if u.Host == "" {
-		return "", errors.New("host must be specified")
-	}
-	if err := validation.ValidateHost(u.Hostname()); err != nil {
-		return "", err
-	}
-	port := u.Port()
-	if port != "" {
-		if _, err := validation.ValidatePortString(port); err != nil {
-			return "", err
-		}
-	}
-	if hasURLValidationFlag(flags, noPath) {
-		if u.Path != "" && u.Path != "/" {
-			return "", errors.New(`path must be "/"`)
-		}
-	}
-	if hasURLValidationFlag(flags, noQuery) {
-		if u.RawQuery != "" || u.ForceQuery {
-			return "", errors.New("query cannot be specified")
-		}
-	}
-	if strings.IndexByte(s, '#') != -1 {
-		return "", errors.New("fragment cannot be specified")
-	}
-	var normalized bool
-	if port != "" && port[0] == '0' {
-		port = strings.TrimLeft(port, "0")
-		u.Host = net.JoinHostPort(u.Hostname(), port)
-		normalized = true
-	}
-	if u.Scheme == "http" && port == "80" || u.Scheme == "https" && port == "443" {
-		i := strings.LastIndex(u.Host, ":")
-		u.Host = u.Host[:i]
-		normalized = true
-	}
-	if u.Path == "" {
-		u.Path = "/"
-		normalized = true
-	}
-	if normalized {
-		s = u.String()
-	}
-	return s, nil
 }
 
 // resolveFilePath resolves a file configuration setting to its absolute path,

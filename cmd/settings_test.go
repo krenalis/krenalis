@@ -16,6 +16,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/tools/dotenv"
+	"github.com/meergo/meergo/tools/validation"
 )
 
 func TestEnvLoading(t *testing.T) {
@@ -1077,7 +1078,7 @@ func TestParseEnvURLFlags(t *testing.T) {
 
 	t.Run("noPath rejects non-root path", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOPATH_FLAG_BAD", "https://example.com/foo")
-		_, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_BAD", noPath)
+		_, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_BAD", validation.NoPath)
 		wantErr := `invalid URL specified for MEERGO_URL_NOPATH_FLAG_BAD: path must be "/"`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1086,7 +1087,7 @@ func TestParseEnvURLFlags(t *testing.T) {
 
 	t.Run("noPath allows empty path which normalizes to slash", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOPATH_FLAG_OK", "https://example.com")
-		got, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_OK", noPath)
+		got, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_OK", validation.NoPath)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1098,7 +1099,7 @@ func TestParseEnvURLFlags(t *testing.T) {
 
 	t.Run("noQuery rejects non-empty query", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOQUERY_BAD", "https://example.com/?a=b")
-		_, err := parseEnvURL("MEERGO_URL_NOQUERY_BAD", noQuery)
+		_, err := parseEnvURL("MEERGO_URL_NOQUERY_BAD", validation.NoQuery)
 		wantErr := "invalid URL specified for MEERGO_URL_NOQUERY_BAD: query cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1107,7 +1108,7 @@ func TestParseEnvURLFlags(t *testing.T) {
 
 	t.Run("noQuery rejects trailing question mark (ForceQuery)", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOQUERY_FORCE", "https://example.com/?")
-		_, err := parseEnvURL("MEERGO_URL_NOQUERY_FORCE", noQuery)
+		_, err := parseEnvURL("MEERGO_URL_NOQUERY_FORCE", validation.NoQuery)
 		wantErr := "invalid URL specified for MEERGO_URL_NOQUERY_FORCE: query cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
