@@ -552,19 +552,19 @@ type Events interface {
 
 // ReceivedEvent represents an event as received from a source connector.
 type ReceivedEvent interface {
-	AnonymousId() string
+	AnonymousID() string
 	Channel() (string, bool)
 	Category() (string, bool)
 	Context() (ReceivedEventContext, bool)
 	Event() (string, bool)
-	GroupId() (string, bool)
-	MessageId() string
+	GroupID() (string, bool)
+	MessageID() string
 	Name() (string, bool)
 	ReceivedAt() time.Time
 	SentAt() time.Time
 	Timestamp() time.Time
 	Type() string
-	PreviousId() (string, bool)
+	PreviousID() (string, bool)
 	UserID() (string, bool)
 }
 
@@ -609,8 +609,8 @@ type ReceivedEventContextCampaign interface {
 }
 
 type ReceivedEventContextDevice interface {
-	Id() (string, bool)
-	AdvertisingId() (string, bool)
+	ID() (string, bool)
+	AdvertisingID() (string, bool)
 	AdTrackingEnabled() (bool, bool)
 	Manufacturer() (string, bool)
 	Model() (string, bool)
@@ -653,7 +653,7 @@ type ReceivedEventContextPage interface {
 }
 
 type ReceivedEventContextReferrer interface {
-	Id() (string, bool)
+	ID() (string, bool)
 	Type() (string, bool)
 }
 
@@ -664,6 +664,6 @@ type ReceivedEventContextScreen interface {
 }
 
 type ReceivedEventContextSession interface {
-	Id() (int, bool)
+	ID() (int, bool)
 	Start() (bool, bool)
 }

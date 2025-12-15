@@ -199,7 +199,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 			// batch.
 			userID, _ = event.Received.UserID()
 			bb.WriteByte('{')
-			bb.EncodeKeyValue("client_id", event.Received.AnonymousId())
+			bb.EncodeKeyValue("client_id", event.Received.AnonymousID())
 			if userID != "" {
 				bb.EncodeKeyValue("user_id", userID)
 			}

@@ -395,7 +395,7 @@ func (api *api) SendEvents(ctx context.Context, events connectors.Events) error 
 		api.validateEvent(event)
 		if event.Type.ID == "Valid" {
 			api.mu.Lock()
-			api.consumed = append(api.consumed, event.Received.MessageId())
+			api.consumed = append(api.consumed, event.Received.MessageID())
 			api.mu.Unlock()
 			time.Sleep(time.Duration(rng.Int()%10) * time.Nanosecond)
 			return nil
@@ -424,7 +424,7 @@ func (api *api) SendEvents(ctx context.Context, events connectors.Events) error 
 		} else if event.Type.ID == "Invalid" {
 			events.Discard(errors.New("event is invalid"))
 		} else {
-			consumed = append(consumed, event.Received.MessageId())
+			consumed = append(consumed, event.Received.MessageID())
 		}
 		if n == rng.Int()/2 {
 			break
@@ -461,7 +461,7 @@ func (api *api) ack(acks []Ack, err error) {
 
 func (api *api) validateEvent(e *connectors.Event) {
 	api.t.Helper()
-	if e.Received.MessageId() == "" {
+	if e.Received.MessageID() == "" {
 		api.t.Fatal("SendEvents: expected non-empty message ID, got empty")
 	}
 	if e.Type.ID != "Valid" && e.Type.ID != "Invalid" {

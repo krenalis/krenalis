@@ -314,10 +314,10 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		if !preview {
 			insertId = strconv.Itoa(event.DestinationPipeline)
 		}
-		insertId += "*" + event.Received.MessageId()
+		insertId += "*" + event.Received.MessageID()
 
 		properties := map[string]any{
-			"$device_id": event.Received.AnonymousId(),
+			"$device_id": event.Received.AnonymousID(),
 			"$insert_id": insertId,
 			"$source":    "meergo",
 			"time":       event.Received.Timestamp().UnixMilli(),
@@ -333,7 +333,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		if userID, ok := event.Received.UserID(); ok {
 			properties["distinct_id"] = userID
 		} else {
-			properties["distinct_id"] = event.Received.AnonymousId()
+			properties["distinct_id"] = event.Received.AnonymousID()
 		}
 
 		if context, ok := event.Received.Context(); ok {
@@ -381,10 +381,10 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 				}
 			}
 			if device, ok := context.Device(); ok {
-				if id, ok := device.Id(); ok {
+				if id, ok := device.ID(); ok {
 					properties["device_id"] = id
 				}
-				if advertisingId, ok := device.AdvertisingId(); ok {
+				if advertisingId, ok := device.AdvertisingID(); ok {
 					properties["$ios_ifa"] = advertisingId
 				}
 				if adTrackingEnabled, ok := device.AdTrackingEnabled(); ok {
@@ -491,7 +491,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 				}
 			}
 			if session, ok := context.Session(); ok {
-				if id, ok := session.Id(); ok {
+				if id, ok := session.ID(); ok {
 					properties["session_id"] = id
 				}
 			}

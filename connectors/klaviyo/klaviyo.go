@@ -641,7 +641,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events connectors.Events, pre
 		if !preview {
 			uniqueId = strconv.Itoa(event.DestinationPipeline)
 		}
-		uniqueId += "/" + event.Received.MessageId()
+		uniqueId += "/" + event.Received.MessageID()
 
 		if n > 0 {
 			bb.WriteByte(',')
