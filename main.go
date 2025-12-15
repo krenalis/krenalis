@@ -47,6 +47,7 @@ import (
 	_ "github.com/meergo/meergo/connectors/mysql"
 	_ "github.com/meergo/meergo/connectors/parquet"
 	_ "github.com/meergo/meergo/connectors/postgresql"
+	_ "github.com/meergo/meergo/connectors/posthog"
 	_ "github.com/meergo/meergo/connectors/rudderstack"
 	_ "github.com/meergo/meergo/connectors/s3"
 	_ "github.com/meergo/meergo/connectors/sdk"
