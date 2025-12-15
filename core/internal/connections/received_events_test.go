@@ -109,8 +109,8 @@ func Test_ReceivedEvent(t *testing.T) {
 
 	r := ReceivedEvent(event)
 
-	if r.AnonymousId() != "anon1" {
-		t.Fatalf("unexpected anonymousId %q", r.AnonymousId())
+	if r.AnonymousID() != "anon1" {
+		t.Fatalf("unexpected anonymousId %q", r.AnonymousID())
 	}
 	if channel, _ := r.Channel(); channel != "web" {
 		t.Fatalf("unexpected channel %q", channel)
@@ -121,11 +121,11 @@ func Test_ReceivedEvent(t *testing.T) {
 	if event, _ := r.Event(); event != "Login" {
 		t.Fatalf("unexpected event %q", event)
 	}
-	if groupId, _ := r.GroupId(); groupId != "group1" {
+	if groupId, _ := r.GroupID(); groupId != "group1" {
 		t.Fatalf("unexpected groupId %q", groupId)
 	}
-	if r.MessageId() != "ca333bd6-38d8-4de5-8d7f-f49f14752e8f" {
-		t.Fatalf("unexpected messageId %q", r.MessageId())
+	if r.MessageID() != "ca333bd6-38d8-4de5-8d7f-f49f14752e8f" {
+		t.Fatalf("unexpected messageId %q", r.MessageID())
 	}
 	if name, _ := r.Name(); name != "LoginName" {
 		t.Fatalf("unexpected name %q", name)
@@ -205,10 +205,10 @@ func Test_ReceivedEvent(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected device context")
 	}
-	if id, _ := device.Id(); id != "dev1" {
+	if id, _ := device.ID(); id != "dev1" {
 		t.Fatalf("unexpected device context")
 	}
-	if advId, _ := device.AdvertisingId(); advId != "ad1" {
+	if advId, _ := device.AdvertisingID(); advId != "ad1" {
 		t.Fatalf("unexpected device context")
 	}
 	if enabled, _ := device.AdTrackingEnabled(); !enabled {
@@ -321,7 +321,7 @@ func Test_ReceivedEvent(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected referrer context")
 	}
-	if id, _ := referrer.Id(); id != "ref1" {
+	if id, _ := referrer.ID(); id != "ref1" {
 		t.Fatalf("unexpected referrer context")
 	}
 	if typ, _ := referrer.Type(); typ != "link" {
@@ -342,7 +342,7 @@ func Test_ReceivedEvent(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected session context")
 	}
-	if id, _ := session.Id(); id != 1751031467043 {
+	if id, _ := session.ID(); id != 1751031467043 {
 		t.Fatalf("unexpected session context")
 	}
 	if start, _ := session.Start(); !start {
@@ -386,7 +386,7 @@ func Test_ReceivedEventMissingFields(t *testing.T) {
 		t.Fatal("expected no 'event'")
 	}
 
-	if _, ok := r.GroupId(); ok {
+	if _, ok := r.GroupID(); ok {
 		t.Fatal("expected no groupId")
 	}
 

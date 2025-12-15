@@ -619,7 +619,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		}
 	}
 
-	// GroupId.
+	// Group ID.
 	if _, ok := event["groupId"]; ok {
 		if !isGroup {
 			return nil, errors.BadRequest("property 'groupId' is not permitted for a %s event", typ)
@@ -630,7 +630,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		}
 	}
 
-	// MessageId.
+	// Message ID.
 	if _, ok := event["messageId"]; !ok {
 		event["messageId"] = "meergo-" + uuid.NewString()
 	}
@@ -642,7 +642,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		}
 	}
 
-	// PreviousId.
+	// Previous ID.
 	if isAlias {
 		if _, ok := event["previousId"]; !ok {
 			return nil, errors.BadRequest("property 'previousId' is required for an alias event")

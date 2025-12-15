@@ -154,7 +154,7 @@ func (it *iterator) read(consume bool) (*connectors.Event, bool) {
 			return nil, false
 		}
 		event := it.events[it.index]
-		if it.sameUser.on && it.sameUser.user != nil && *it.sameUser.user != event.Received.AnonymousId() {
+		if it.sameUser.on && it.sameUser.user != nil && *it.sameUser.user != event.Received.AnonymousID() {
 			if consume {
 				it.index += 1
 			}

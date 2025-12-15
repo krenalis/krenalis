@@ -27,7 +27,7 @@ func ReceivedEvent(event events.Event) connectors.ReceivedEvent {
 	return receivedEvent{event}
 }
 
-func (e receivedEvent) AnonymousId() string {
+func (e receivedEvent) AnonymousID() string {
 	return e.event["anonymousId"].(string)
 }
 
@@ -53,17 +53,17 @@ func (e receivedEvent) Event() (string, bool) {
 	return event, ok
 }
 
-func (e receivedEvent) GroupId() (string, bool) {
+func (e receivedEvent) GroupID() (string, bool) {
 	groupId, ok := e.event["groupId"].(string)
 	return groupId, ok
 }
 
-func (e receivedEvent) PreviousId() (string, bool) {
+func (e receivedEvent) PreviousID() (string, bool) {
 	previousId, ok := e.event["messageId"].(string)
 	return previousId, ok
 }
 
-func (e receivedEvent) MessageId() string {
+func (e receivedEvent) MessageID() string {
 	return e.event["messageId"].(string)
 }
 
@@ -277,12 +277,12 @@ type receivedEventContextDevice struct {
 	device map[string]any
 }
 
-func (c receivedEventContextDevice) Id() (string, bool) {
+func (c receivedEventContextDevice) ID() (string, bool) {
 	id, ok := c.device["id"].(string)
 	return id, ok
 }
 
-func (c receivedEventContextDevice) AdvertisingId() (string, bool) {
+func (c receivedEventContextDevice) AdvertisingID() (string, bool) {
 	advertisingId, ok := c.device["advertisingId"].(string)
 	return advertisingId, ok
 }
@@ -431,7 +431,7 @@ type receivedEventContextReferrer struct {
 	referrer map[string]any
 }
 
-func (c receivedEventContextReferrer) Id() (string, bool) {
+func (c receivedEventContextReferrer) ID() (string, bool) {
 	id, ok := c.referrer["id"].(string)
 	return id, ok
 }
@@ -464,7 +464,7 @@ type receivedEventContextSession struct {
 	session map[string]any
 }
 
-func (c receivedEventContextSession) Id() (int, bool) {
+func (c receivedEventContextSession) ID() (int, bool) {
 	id, ok := c.session["id"].(int)
 	return id, ok
 }

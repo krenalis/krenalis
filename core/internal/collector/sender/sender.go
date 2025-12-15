@@ -92,7 +92,7 @@ type user struct {
 }
 
 // Sender sends events, buffering them internally for batch delivery.
-// It ensures that events from the same user (i.e., with the same AnonymousId)
+// It ensures that events from the same user (i.e., with the same Anonymous ID)
 // are delivered to the API in the exact order they were received.
 //
 // To send an event, follow these steps:
@@ -447,7 +447,7 @@ func (s *Sender) discard(err error) {
 	}
 	ack := Ack{
 		Pipeline: e.pipeline,
-		Event:    e.Received.MessageId(),
+		Event:    e.Received.MessageID(),
 	}
 	trace("Sender.discard: send ack for iterator %p with ack %#v and error %#v\n", s.iterator, ack, err)
 	s.mu.Unlock()
@@ -564,8 +564,8 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	}
 	if traces {
 		if event != nil {
-			messageId := event.Received.MessageId()
-			anonymousId := event.Received.AnonymousId()
+			messageId := event.Received.MessageID()
+			anonymousId := event.Received.AnonymousID()
 			if consume {
 				trace("Sender.read: iterator %p read and consumed event %q of pipeline %d (anonymousId %q) at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
 			} else {
@@ -696,7 +696,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			s.releasableUsers[user] = struct{}{}
 			ack := Ack{
 				Pipeline: s.events[i].pipeline,
-				Event:    s.events[i].Received.MessageId(),
+				Event:    s.events[i].Received.MessageID(),
 			}
 			var err error
 			if errEvents != nil {
