@@ -131,7 +131,7 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 }
 
 // PreviewSendEvent returns the request that would be used to send events to
-// the API.
+// the API. If no error is returned, the request is non-nil.
 //
 // It validates the event schema, which must align with the schema of the event
 // type, then passes that event type schema to the connector.
@@ -174,6 +174,9 @@ func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*
 	}
 	if err = iterator.Err(); err != nil {
 		return nil, &InvalidEventError{Err: err}
+	}
+	if req == nil {
+		return nil, fmt.Errorf("%s.PreviewSendEvents returned nil without discarding events", api.connector)
 	}
 	return req, nil
 }

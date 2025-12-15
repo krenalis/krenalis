@@ -419,8 +419,9 @@ type EventSender interface {
 	// PreviewSendEvents builds and returns the HTTP request that would be used
 	// to send the given events to the API, without actually sending it.
 	//
-	// If any event type does not exist, it returns the ErrEventTypeNotExist
-	// error.
+	// If no events were sent (for example, because they were all discarded), it
+	// returns nil, nil. If any event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
 	//
 	// Authentication data in the returned request is redacted (i.e., replaced
 	// with "[REDACTED]"). If the destination pipeline's identifier would appear
