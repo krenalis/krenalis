@@ -272,14 +272,14 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 
 		if (values.length === 1) {
 			const v = values[0];
-			if (v === 'true' || v === 'false' || !isNaN(Number(v))) {
+			if (v === 'true' || v === 'false' || (v !== '' && !isNaN(Number(v)))) {
 				return v;
 			}
 			return escapeString(v);
 		}
 
 		const formattedList = values.map((v) => {
-			if (v === 'true' || v === 'false' || !isNaN(Number(v))) {
+			if (v === 'true' || v === 'false' || (v !== '' && !isNaN(Number(v)))) {
 				return v;
 			}
 			return escapeString(v);

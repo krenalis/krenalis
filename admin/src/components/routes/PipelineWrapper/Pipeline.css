@@ -246,7 +246,8 @@
 	width: 150px;
 }
 
-.pipeline__filters-operator sl-option::part(base) {
+.pipeline__filters-operator sl-option::part(base),
+.pipeline__filters-value-input sl-option::part(base) {
 	font-size: 13px;
 }
 
@@ -265,13 +266,33 @@
 
 .pipeline__filters-value-remove sl-icon {
 	position: relative;
-	top: 2px;
+	top: 1px;
 }
 
 .pipeline__filters-value-remove::part(base) {
 	background-color: transparent !important;
 	border: 0;
 	border-radius: 5px !important;
+}
+
+.pipeline__filters-value-control--removable .pipeline__filters-value-input {
+	width: 180px;
+}
+
+.pipeline__filters-value-control--removable .pipeline__filters-value-input::part(combobox) {
+	height: 30px !important;
+}
+
+.pipeline__filters-value-control--removable .pipeline__filters-value-input::part(suffix) {
+	margin-left: 0;
+	position: relative;
+	left: 26px;
+}
+
+.pipeline__filters-value-control--removable .pipeline__filters-value-input::part(expand-icon) {
+	margin-left: 0;
+	position: relative;
+	left: -25px;
 }
 
 .pipeline__filters-condition + .pipeline__filters-add-condition {
