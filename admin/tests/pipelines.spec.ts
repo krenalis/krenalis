@@ -1239,7 +1239,9 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^type$/ })
 		.click();
 	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="0"]').click(); // option is "is".
-	await filters.nth(0).locator('.pipeline__filters-value-input >> input').fill('track');
+
+	await filters.nth(0).locator('.pipeline__filters-value-input').click();
+	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click();
 
 	const expectedBody = `
 	{

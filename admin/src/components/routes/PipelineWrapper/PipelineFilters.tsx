@@ -18,9 +18,11 @@ import {
 	isUnaryOperator,
 	splitPropertyAndPath,
 	TransformedPipeline,
+	TransformedProperty,
 } from '../../../lib/core/pipeline';
 import { FilterLogical, FilterOperator } from '../../../lib/api/types/pipeline';
 import { checkIfPropertyExists } from './Pipeline.helpers';
+import { StringType } from '../../../lib/api/types/types';
 
 const PipelineFilters = forwardRef<any>((_, ref) => {
 	const { pipeline, setPipeline, pipelineType, connection, isTransformationDisabled } = useContext(PipelineContext);
@@ -28,6 +30,21 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const flatInputSchema = useMemo(() => {
 		return flattenSchema(pipelineType.inputSchema);
 	}, [pipelineType.inputSchema]);
+
+	const findPropertyInSchema = (propertyName: string): TransformedProperty | undefined => {
+		if (propertyName == null || propertyName === '') {
+			return undefined;
+		}
+		return flatInputSchema[propertyName] ?? flatInputSchema[splitPropertyAndPath(propertyName, flatInputSchema)[0]];
+	};
+
+	const getPropertyValues = (property: TransformedProperty | undefined): string[] | null => {
+		if (property == null || property.type !== 'string') {
+			return null;
+		}
+		const stringType = property.full.type as StringType;
+		return stringType.values ?? null;
+	};
 
 	const onAddCondition = () => {
 		const p = structuredClone(pipeline);
@@ -96,8 +113,14 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const updatePropertyFragment = (name: string, value: string): TransformedPipeline => {
 		const p = structuredClone(pipeline);
 		const id = Number(name.split('-')[1]);
-		const propertyName = p.filter!.conditions[id]['property'];
-		const [_, path] = splitPropertyAndPath(propertyName, flatInputSchema);
+
+		const condition = p.filter!.conditions[id];
+
+		const previousPropertyName = condition['property'];
+		const previousProperty = findPropertyInSchema(previousPropertyName);
+		const previousPropertyValues = getPropertyValues(previousProperty);
+
+		const [_, path] = splitPropertyAndPath(previousPropertyName, flatInputSchema);
 		let newPropertyName = '';
 		let hasPath = path !== '';
 		if (hasPath && flatInputSchema[value]?.type === 'json') {
@@ -105,23 +128,40 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		} else {
 			newPropertyName = value;
 		}
+
 		const compatibleOperators = getCompatibleFilterOperators(
 			flatInputSchema[newPropertyName],
 			hasPath,
 			connection.role,
 			pipeline.target,
 		);
-		const currentOperator = p.filter!.conditions[id]['operator'];
+		const currentOperator = condition['operator'];
 		if (currentOperator != null && currentOperator !== '') {
 			const index = FILTER_OPERATORS.indexOf(currentOperator);
 			if (!compatibleOperators.includes(index)) {
 				// The current operator is not compatible with the new property.
 				// Reset the operator and the values.
-				p.filter!.conditions[id]['operator'] = '';
-				p.filter!.conditions[id]['values'] = [''];
+				condition['operator'] = '';
+				condition['values'] = [''];
 			}
 		}
-		p.filter!.conditions[id]['property'] = newPropertyName;
+
+		condition['property'] = newPropertyName;
+		const newProperty = findPropertyInSchema(newPropertyName);
+		const newPropertyValues = getPropertyValues(newProperty);
+		const hasDifferentValues =
+			previousPropertyName !== newPropertyName && (previousPropertyValues != null || newPropertyValues != null);
+		if (hasDifferentValues) {
+			// Reset the old values, because the new property has a different
+			// set of enumerated values.
+			const op = condition.operator;
+			if (isBetweenOperator(op)) {
+				condition.values = ['', ''];
+			} else {
+				condition.values = [''];
+			}
+		}
+
 		setPipeline(p);
 		return p;
 	};
@@ -152,7 +192,12 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				const valueInput = e.target
 					.closest('.pipeline__filters-condition')
 					.querySelector('.pipeline__filters-value-input');
-				valueInput.focus();
+				const isSelect = valueInput.tagName === 'SL-SELECT';
+				if (isSelect) {
+					valueInput.show();
+				} else {
+					valueInput.focus();
+				}
 			}, 50);
 		}
 	};
@@ -201,12 +246,12 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		setPipeline(p);
 	};
 
-	const onInputValueFragment = (e: any) => {
+	const onChangeValueFragment = (name: string, value: string) => {
 		const p = structuredClone(pipeline);
-		const split = e.target.name.split('-');
+		const split = name.split('-');
 		const id = Number(split[1]);
 		const position = Number(split[2]);
-		p.filter!.conditions[id]['values'][position] = e.target.value;
+		p.filter!.conditions[id]['values'][position] = value;
 		setPipeline(p);
 	};
 
@@ -228,7 +273,12 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				.closest('.pipeline__filters-condition')
 				.querySelectorAll('.pipeline__filters-value-input');
 			const newValueInput = valueInputs[currentLength];
-			newValueInput.focus();
+			const isSelect = newValueInput.tagName === 'SL-SELECT';
+			if (isSelect) {
+				newValueInput.show();
+			} else {
+				newValueInput.focus();
+			}
 		}, 50);
 	};
 
@@ -271,6 +321,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			let operatorSelect: ReactNode;
 			let valueElements: ReactNode[] = [];
 
+			// Logical
 			if (i === 0) {
 				if (pipeline.filter.conditions.length > 1) {
 					// Add a placeholder to maintain alignment.
@@ -307,6 +358,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				);
 			}
 
+			// Property
 			const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipeline.target === 'User';
 			const isAppEventsExport = connection.isAPI && connection.isDestination && pipeline.target === 'Event';
 			const isEventImport = connection.isSource && pipeline.target === 'Event';
@@ -357,6 +409,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				);
 			}
 
+			// Operator
 			operatorSelect = (
 				<SlSelect
 					size='small'
@@ -383,19 +436,27 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				</SlSelect>
 			);
 
+			// Values
 			if (!isUnary) {
 				const id = `value-${i}-0`;
+
+				let propertyValues = [];
+				if (!isInvalidProperty && property.type === 'string') {
+					const typ = property.full.type as StringType;
+					propertyValues = typ.values || [];
+				}
+
 				valueElements.push(
-					<SlInput
+					<PipelineFilterValueControl
 						key={id}
-						size='small'
-						className='pipeline__filters-value-input'
-						value={condition.values != null ? condition.values[0] : ''}
-						onSlInput={onInputValueFragment}
 						name={id}
+						value={condition.values != null ? condition.values[0] : ''}
+						options={propertyValues}
 						disabled={isInvalidProperty || isDisabled}
+						onValueChange={onChangeValueFragment}
 					/>,
 				);
+
 				if (isBetween) {
 					valueElements.push(
 						<span className='pipeline__filters-value-and' key='and'>
@@ -404,14 +465,13 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					);
 					const id = `value-${i}-1`;
 					valueElements.push(
-						<SlInput
+						<PipelineFilterValueControl
 							key={id}
-							size='small'
-							className='pipeline__filters-value-input'
-							value={condition.values != null ? (condition.values[1] ? condition.values[1] : '') : ''}
-							onSlInput={onInputValueFragment}
 							name={id}
+							value={condition.values != null ? (condition.values[1] ? condition.values[1] : '') : ''}
+							options={propertyValues}
 							disabled={isInvalidProperty || isDisabled}
+							onValueChange={onChangeValueFragment}
 						/>,
 					);
 				} else if (isOneOf) {
@@ -421,26 +481,16 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 						const currentK = k;
 						const id = `value-${i}-${currentK}`;
 						const input = (
-							<SlInput
-								size='small'
-								className='pipeline__filters-value-input'
-								value={value}
-								onSlInput={onInputValueFragment}
+							<PipelineFilterValueControl
+								key={id}
 								name={id}
+								value={value}
+								options={propertyValues}
 								disabled={isInvalidProperty || isDisabled}
-							>
-								<SlButton
-									variant='default'
-									size='small'
-									circle
-									className='pipeline__filters-value-remove'
-									onClick={() => onRemoveValue(i, currentK)}
-									slot='suffix'
-									disabled={isDisabled}
-								>
-									<SlIcon name='x' />
-								</SlButton>
-							</SlInput>
+								onValueChange={onChangeValueFragment}
+								removable={true}
+								onRemove={() => onRemoveValue(i, currentK)}
+							/>
 						);
 						valueElements.push(
 							<div className='pipeline__filters-value pipeline__filters-value--additional' key={id}>
@@ -523,5 +573,96 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		</Section>
 	);
 });
+
+interface PipelineFilterValueControlProps {
+	name: string;
+	value: string;
+	options: string[] | null;
+	disabled: boolean;
+	onValueChange: (name: string, value: string) => void;
+	removable?: boolean;
+	onRemove?: () => void;
+}
+
+const PipelineFilterValueControl = ({
+	name,
+	value,
+	options,
+	disabled,
+	onValueChange,
+	removable = false,
+	onRemove,
+}: PipelineFilterValueControlProps) => {
+	const handleInput = (event: any) => {
+		onValueChange(name, event.target.value);
+	};
+
+	const handleSelect = (event: any) => {
+		const target = event.target as any;
+		const v = event.detail?.value ?? target.value;
+		onValueChange(name, v);
+	};
+
+	if (options != null && options.length > 0) {
+		return (
+			<div
+				className={`pipeline__filters-value-control${removable ? ' pipeline__filters-value-control--removable' : ''}`}
+			>
+				<SlSelect
+					size='small'
+					className='pipeline__filters-value-input'
+					name={name}
+					value={value ?? ''}
+					onSlChange={handleSelect}
+					disabled={disabled}
+				>
+					{options.map((option, index) => (
+						<SlOption key={`${index}-${option}`} value={option}>
+							{option === '' ? '\u00A0' : option}
+						</SlOption>
+					))}
+					{removable && (
+						<SlButton
+							slot='suffix'
+							variant='default'
+							size='small'
+							circle
+							className='pipeline__filters-value-remove'
+							onClick={onRemove}
+							disabled={disabled}
+						>
+							<SlIcon name='x' />
+						</SlButton>
+					)}
+				</SlSelect>
+			</div>
+		);
+	}
+
+	return (
+		<SlInput
+			size='small'
+			className='pipeline__filters-value-input'
+			value={value ?? ''}
+			onSlInput={handleInput}
+			name={name}
+			disabled={disabled}
+		>
+			{removable && (
+				<SlButton
+					variant='default'
+					size='small'
+					circle
+					className='pipeline__filters-value-remove'
+					onClick={onRemove}
+					slot='suffix'
+					disabled={disabled}
+				>
+					<SlIcon name='x' />
+				</SlButton>
+			)}
+		</SlInput>
+	);
+};
 
 export default PipelineFilters;

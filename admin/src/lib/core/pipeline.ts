@@ -1553,11 +1553,20 @@ const validateAndNormalizeFilterCondition = (
 
 	let values: string[] | null = [];
 	if (isJsonOrText && condition.values != null) {
+		const stringType = property.type === 'string' ? (property.full.type as StringType) : null;
+		const propertyValues = stringType?.values ?? null;
+		const allowsEmptySelection = propertyValues != null && propertyValues.includes('');
+
 		for (const [i, v] of condition.values.entries()) {
-			if ((i === 0 && v === '') || (i === 1 && v === '' && isBetweenOperator(condition.operator))) {
+			const isFirstValueEmpty = i === 0 && v === '';
+			const isSecondBetweenEmpty = i === 1 && v === '' && isBetweenOperator(condition.operator);
+			if ((isFirstValueEmpty || isSecondBetweenEmpty) && !allowsEmptySelection) {
 				throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
 			}
 			if (v === '') {
+				if (allowsEmptySelection) {
+					values.push('');
+				}
 				// discard empty values.
 				continue;
 			}
