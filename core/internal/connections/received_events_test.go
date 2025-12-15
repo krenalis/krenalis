@@ -104,6 +104,7 @@ func Test_ReceivedEvent(t *testing.T) {
 		"originalTimestamp": now,
 		"timestamp":         now,
 		"type":              "track",
+		"previousId":        "user0",
 		"userId":            "user1",
 	}
 
@@ -141,6 +142,9 @@ func Test_ReceivedEvent(t *testing.T) {
 	}
 	if r.Type() != "track" {
 		t.Fatalf("unexpected type %q", r.Type())
+	}
+	if previousId, _ := r.PreviousID(); previousId != "user0" {
+		t.Fatalf("unexpected previousId %q", previousId)
 	}
 	if userId, _ := r.UserID(); userId != "user1" {
 		t.Fatalf("unexpected userId %q", userId)

@@ -59,7 +59,7 @@ func (e receivedEvent) GroupID() (string, bool) {
 }
 
 func (e receivedEvent) PreviousID() (string, bool) {
-	previousId, ok := e.event["messageId"].(string)
+	previousId, ok := e.event["previousId"].(string)
 	return previousId, ok
 }
 
