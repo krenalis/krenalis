@@ -29,6 +29,7 @@ func TestSendEvents(t *testing.T) {
 	endpoint := endpointURLForTests(t, posthog.settings)
 
 	timestamp := time.Now().UTC().Truncate(time.Millisecond)
+	const sessionID int64 = 1736972405123
 
 	sendAndTestEvents := func(t *testing.T, events []*connectors.Event, expectedBody json.Value) {
 		t.Helper()
@@ -69,9 +70,13 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("identify", func(t *testing.T) {
 
-		anonymousID := uuid.NewString()
+		anonymousID := "anon-identify-01"
 		userID := "user_891273"
 		messageID := uuid.NewString()
+		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
+		if err != nil {
+			t.Fatalf("expected session UUID generation to succeed, got %v", err)
+		}
 
 		received := map[string]any{
 			"connectionId": 187239,
@@ -79,6 +84,10 @@ func TestSendEvents(t *testing.T) {
 			"userId":       userID,
 			"context": map[string]any{
 				"ip": "203.0.113.9",
+				"session": map[string]any{
+					"id":    int(sessionID),
+					"start": true,
+				},
 			},
 			"messageId":         messageID,
 			"originalTimestamp": timestamp,
@@ -128,6 +137,7 @@ func TestSendEvents(t *testing.T) {
 							"first_name": "Sam",
 							"plan":       "enterprise",
 						},
+						"$session_id": sessionUUID,
 					},
 					"timestamp": timestamp.Format(time.RFC3339),
 					"uuid":      messageID,
@@ -140,10 +150,14 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("group", func(t *testing.T) {
 
-		anonymousID := uuid.NewString()
+		anonymousID := "anon-group-01"
 		userID := "user_73155"
 		groupID := "company-413"
 		messageID := uuid.NewString()
+		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
+		if err != nil {
+			t.Fatalf("expected session UUID generation to succeed, got %v", err)
+		}
 
 		received := map[string]any{
 			"connectionId": 276219,
@@ -152,6 +166,10 @@ func TestSendEvents(t *testing.T) {
 			"groupId":      groupID,
 			"context": map[string]any{
 				"ip": "198.51.100.24",
+				"session": map[string]any{
+					"id":    int(sessionID),
+					"start": true,
+				},
 			},
 			"messageId":         messageID,
 			"originalTimestamp": timestamp,
@@ -196,6 +214,7 @@ func TestSendEvents(t *testing.T) {
 						"$group_set":  map[string]any{"employees": 48, "name": "Globex", "tier": "growth"},
 						"$group_type": "company",
 						"$ip":         "198.51.100.24",
+						"$session_id": sessionUUID,
 					},
 					"timestamp": timestamp.Format(time.RFC3339),
 					"uuid":      messageID,
@@ -211,6 +230,7 @@ func TestSendEvents(t *testing.T) {
 		anonymousID := uuid.NewString()
 		userID := "user_4891"
 		messageID := uuid.NewString()
+		const explicitSessionID = "01946b9f-859b-7cce-ab5c-f9e68680be6e"
 
 		received := map[string]any{
 			"connectionId": 962351,
@@ -219,6 +239,10 @@ func TestSendEvents(t *testing.T) {
 			"event":        "Checkout Started",
 			"context": map[string]any{
 				"ip": "192.0.2.23",
+				"session": map[string]any{
+					"id":    int(sessionID),
+					"start": true,
+				},
 			},
 			"messageId":         messageID,
 			"originalTimestamp": timestamp,
@@ -251,6 +275,7 @@ func TestSendEvents(t *testing.T) {
 				Values: values,
 			},
 		}
+		event.Type.Values["session_id"] = explicitSessionID
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
 			"api_key": posthog.settings.APIKey,
@@ -259,10 +284,11 @@ func TestSendEvents(t *testing.T) {
 					"event":       "Checkout Started",
 					"distinct_id": userID,
 					"properties": map[string]any{
-						"$ip":        "192.0.2.23",
-						"cart_value": 147.95,
-						"coupon":     "NEW10",
-						"currency":   "USD",
+						"$ip":         "192.0.2.23",
+						"$session_id": explicitSessionID,
+						"cart_value":  147.95,
+						"coupon":      "NEW10",
+						"currency":    "USD",
 					},
 					"timestamp": timestamp.Format(time.RFC3339),
 					"uuid":      messageID,
@@ -277,12 +303,20 @@ func TestSendEvents(t *testing.T) {
 
 		anonymousID := uuid.NewString()
 		messageID := uuid.NewString()
+		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
+		if err != nil {
+			t.Fatalf("expected session UUID generation to succeed, got %v", err)
+		}
 
 		received := map[string]any{
 			"connectionId": 408231,
 			"anonymousId":  anonymousID,
 			"context": map[string]any{
 				"ip": "203.0.113.5",
+				"session": map[string]any{
+					"id":    int(sessionID),
+					"start": true,
+				},
 				"page": map[string]any{
 					"url": "https://app.example.com/dashboard?from=ad",
 				},
@@ -327,6 +361,7 @@ func TestSendEvents(t *testing.T) {
 					"properties": map[string]any{
 						"$current_url": "https://app.example.com/dashboard?from=ad",
 						"$ip":          "203.0.113.5",
+						"$session_id":  sessionUUID,
 						"referrer":     "https://ref.example.com/",
 						"title":        "Dashboard",
 					},
@@ -344,6 +379,10 @@ func TestSendEvents(t *testing.T) {
 		anonymousID := uuid.NewString()
 		userID := "user_70351"
 		messageID := uuid.NewString()
+		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
+		if err != nil {
+			t.Fatalf("expected session UUID generation to succeed, got %v", err)
+		}
 
 		received := map[string]any{
 			"connectionId":      789351,
@@ -360,6 +399,12 @@ func TestSendEvents(t *testing.T) {
 				"hasCards": true,
 				"section":  "wallet",
 			}),
+			"context": map[string]any{
+				"session": map[string]any{
+					"id":    int(sessionID),
+					"start": true,
+				},
+			},
 		}
 
 		schema, err := posthog.EventTypeSchema(t.Context(), "screen")
@@ -390,6 +435,7 @@ func TestSendEvents(t *testing.T) {
 					"properties": map[string]any{
 						"$geoip_disable": true,
 						"$screen_name":   "Transactions",
+						"$session_id":    sessionUUID,
 						"hasCards":       true,
 						"section":        "wallet",
 					},
@@ -407,6 +453,10 @@ func TestSendEvents(t *testing.T) {
 		anonymousID := "anon_492"
 		userID := "user_982"
 		messageID := uuid.NewString()
+		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
+		if err != nil {
+			t.Fatalf("expected session UUID generation to succeed, got %v", err)
+		}
 
 		received := map[string]any{
 			"connectionId": 902351,
@@ -415,6 +465,10 @@ func TestSendEvents(t *testing.T) {
 			"previousId":   anonymousID,
 			"context": map[string]any{
 				"ip": "203.0.113.99",
+				"session": map[string]any{
+					"id":    int(sessionID),
+					"start": true,
+				},
 			},
 			"messageId":         messageID,
 			"originalTimestamp": timestamp,
@@ -450,8 +504,9 @@ func TestSendEvents(t *testing.T) {
 					"event":       "$create_alias",
 					"distinct_id": anonymousID,
 					"properties": map[string]any{
-						"$ip":   "203.0.113.99",
-						"alias": userID,
+						"$ip":         "203.0.113.99",
+						"$session_id": sessionUUID,
+						"alias":       userID,
 					},
 					"timestamp": timestamp.Format(time.RFC3339),
 					"uuid":      messageID,
@@ -461,6 +516,60 @@ func TestSendEvents(t *testing.T) {
 
 		sendAndTestEvents(t, []*connectors.Event{event}, expectedBody)
 	})
+}
+
+func TestMakeSessionUUIDv7(t *testing.T) {
+
+	const (
+		anonymousID = "anon-123456789"
+		sessionID   = int64(1736972405123)
+	)
+
+	got, err := makeSessionUUIDv7(anonymousID, sessionID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	expected := "01946b9f-859b-7cce-ab5c-f9e68680be6e"
+	if got != expected {
+		t.Fatalf("expected %s, got %s", expected, got)
+	}
+
+	// Ensure determinism.
+	got2, err := makeSessionUUIDv7(anonymousID, sessionID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if got2 != got {
+		t.Fatalf("expected deterministic UUIDs, got %s and %s", got, got2)
+	}
+
+	// Validate version/variant and timestamp component.
+	parsed, err := uuid.Parse(got)
+	if err != nil {
+		t.Fatalf("expected a valid UUID, got %v", err)
+	}
+	if parsed.Version() != 7 {
+		t.Fatalf("expected version 7, got %d", parsed.Version())
+	}
+	if parsed.Variant() != uuid.RFC4122 {
+		t.Fatalf("expected RFC4122 variant, got %d", parsed.Variant())
+	}
+	ts := int64(parsed[0])<<40 |
+		int64(parsed[1])<<32 |
+		int64(parsed[2])<<24 |
+		int64(parsed[3])<<16 |
+		int64(parsed[4])<<8 |
+		int64(parsed[5])
+	if ts != sessionID-1000 {
+		t.Fatalf("expected timestamp %d, got %d", sessionID-1000, ts)
+	}
+}
+
+func TestMakeSessionUUIDv7InvalidSession(t *testing.T) {
+	_, err := makeSessionUUIDv7("anon", 999)
+	if err == nil {
+		t.Fatal("expected error for invalid session ID, got nil")
+	}
 }
 
 // marshalCanonicalJSON marshals data as canonical JSON and returns it.
