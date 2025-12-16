@@ -329,6 +329,9 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 					if currentURL, ok := page.URL(); ok {
 						properties["$current_url"] = currentURL
 					}
+					if referrer, ok := page.Referrer(); ok {
+						properties["$referrer"] = referrer
+					}
 				}
 			}
 		case "screen":
@@ -352,6 +355,36 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 		}
 		if _, ok := properties["$ip"]; !ok {
 			properties["$geoip_disable"] = true
+		}
+
+		// Session.
+		if ctx, ok := ev.Received.Context(); ok {
+			if session, ok := ctx.Session(); ok {
+				if id, ok := session.ID(); ok {
+					properties["$session_id"] = id
+				}
+			}
+		}
+
+		// Campaign.
+		if ctx, ok := ev.Received.Context(); ok {
+			if campaign, ok := ctx.Campaign(); ok {
+				if name, ok := campaign.Name(); ok {
+					properties["utm_campaign"] = name
+				}
+				if source, ok := campaign.Source(); ok {
+					properties["utm_source"] = source
+				}
+				if medium, ok := campaign.Medium(); ok {
+					properties["utm_medium"] = medium
+				}
+				if term, ok := campaign.Term(); ok {
+					properties["utm_term"] = term
+				}
+				if content, ok := campaign.Content(); ok {
+					properties["utm_content"] = content
+				}
+			}
 		}
 
 		if wroteEvent {
