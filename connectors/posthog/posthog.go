@@ -11,10 +11,13 @@ package posthog
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -23,6 +26,8 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/tools/validation"
+
+	"github.com/google/uuid"
 )
 
 // PostHog supports NoEncoding and Gzip for request bodies.
@@ -123,10 +128,16 @@ func (posthog *PostHog) EventTypes(ctx context.Context) ([]*connectors.EventType
 
 // EventTypeSchema returns the schema of the specified event type.
 func (posthog *PostHog) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	sessionID := types.Property{
+		Name:        "session_id",
+		Type:        types.UUID(),
+		Description: "Session ID (UUIDv7) — if not set, Meergo generates one automatically.",
+	}
 	switch eventType {
 	case "identify":
 		return types.Object([]types.Property{
 			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), CreateRequired: true, Description: "Properties"},
+			sessionID,
 		}), nil
 	case "alias":
 		// Segment's "alias" events do not have a "traits" or "properties" object.
@@ -134,20 +145,24 @@ func (posthog *PostHog) EventTypeSchema(ctx context.Context, eventType string) (
 		// empty map that can be enriched by mappings.
 		return types.Object([]types.Property{
 			{Name: "properties", Prefilled: `map()`, Type: types.Map(types.JSON()), CreateRequired: true, Description: "Properties"},
+			sessionID,
 		}), nil
 	case "group":
 		return types.Object([]types.Property{
 			{Name: "group_type", Prefilled: `"company"`, Type: types.String().WithMaxLength(400), CreateRequired: true, Description: "Group type"},
 			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), CreateRequired: true, Description: "Properties"},
+			sessionID,
 		}), nil
 	case "track":
 		return types.Object([]types.Property{
 			{Name: "event", Prefilled: `event`, Type: types.String(), CreateRequired: true, Description: "Event"},
 			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), CreateRequired: true, Description: "Properties"},
+			sessionID,
 		}), nil
 	case "page", "screen":
 		return types.Object([]types.Property{
 			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), CreateRequired: true, Description: "Properties"},
+			sessionID,
 		}), nil
 	}
 	return types.Type{}, connectors.ErrEventTypeNotExist
@@ -286,6 +301,7 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 		if !ok {
 			distinctID = ev.Received.AnonymousID()
 		}
+		eventCtx, _ := ev.Received.Context()
 		values := ev.Type.Values
 		properties := values["properties"].(map[string]any)
 
@@ -324,8 +340,8 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 			distinctID = previousID
 		case "page":
 			event = "$pageview"
-			if ctx, ok := ev.Received.Context(); ok {
-				if page, ok := ctx.Page(); ok {
+			if eventCtx != nil {
+				if page, ok := eventCtx.Page(); ok {
 					if currentURL, ok := page.URL(); ok {
 						properties["$current_url"] = currentURL
 					}
@@ -348,8 +364,8 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 		}
 
 		// IP address.
-		if ctx, ok := ev.Received.Context(); ok {
-			if ip, ok := ctx.IP(); ok {
+		if eventCtx != nil {
+			if ip, ok := eventCtx.IP(); ok {
 				properties["$ip"] = ip
 			}
 		}
@@ -357,18 +373,9 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 			properties["$geoip_disable"] = true
 		}
 
-		// Session.
-		if ctx, ok := ev.Received.Context(); ok {
-			if session, ok := ctx.Session(); ok {
-				if id, ok := session.ID(); ok {
-					properties["$session_id"] = id
-				}
-			}
-		}
-
 		// Campaign.
-		if ctx, ok := ev.Received.Context(); ok {
-			if campaign, ok := ctx.Campaign(); ok {
+		if eventCtx != nil {
+			if campaign, ok := eventCtx.Campaign(); ok {
 				if name, ok := campaign.Name(); ok {
 					properties["utm_campaign"] = name
 				}
@@ -383,6 +390,20 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 				}
 				if content, ok := campaign.Content(); ok {
 					properties["utm_content"] = content
+				}
+			}
+		}
+
+		// Session: honor mapped "session_id" or deterministically generate a UUIDv7 from event's session data.
+		if sessionID, ok := values["session_id"]; ok {
+			properties["$session_id"] = sessionID
+		} else if eventCtx != nil {
+			if session, ok := eventCtx.Session(); ok {
+				if id, ok := session.ID(); ok {
+					sessionID, err := makeSessionUUIDv7(ev.Received.AnonymousID(), int64(id))
+					if err == nil {
+						properties["$session_id"] = sessionID
+					}
 				}
 			}
 		}
@@ -460,4 +481,42 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 
 	// Handle the error.
 	return nil, fmt.Errorf("PostHog server responded with %d error code", res.StatusCode)
+}
+
+// makeSessionUUIDv7 deterministically builds a UUIDv7 using the anonymous ID
+// and Meergo session ID. The UUID timestamp is set to sessionID-1000
+// milliseconds to avoid overlap, and the remaining bits derive from the
+// anonymous ID for deterministic, repeatable results.
+func makeSessionUUIDv7(anonymousID string, sessionID int64) (string, error) {
+	if sessionID < 1000 {
+		return "", fmt.Errorf("expected session ID to be at least 1000, got %d", sessionID)
+	}
+
+	const (
+		versionMask = 0x70
+		variantMask = 0x80
+	)
+
+	// Use the session start minus 1s as UUIDv7 timestamp.
+	ts := sessionID - 1000
+
+	seed := sha256.Sum256([]byte(anonymousID + "|" + strconv.FormatInt(sessionID, 10)))
+
+	var u uuid.UUID
+
+	u[0] = byte(ts >> 40)
+	u[1] = byte(ts >> 32)
+	u[2] = byte(ts >> 24)
+	u[3] = byte(ts >> 16)
+	u[4] = byte(ts >> 8)
+	u[5] = byte(ts)
+
+	seq := binary.BigEndian.Uint16(seed[0:2]) & 0x0fff
+	u[6] = versionMask | byte(seq>>8)
+	u[7] = byte(seq)
+
+	u[8] = variantMask | (seed[2] & 0x3f)
+	copy(u[9:], seed[3:10])
+
+	return u.String(), nil
 }
