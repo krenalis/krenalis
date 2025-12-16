@@ -55,6 +55,8 @@ jobs:
           MEERGO_TEST_MIXPANEL_PROJECT_ID: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_ID }}
           MEERGO_TEST_MIXPANEL_PROJECT_TOKEN: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_TOKEN }}
           MEERGO_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.MEERGO_TEST_MIXPANEL_DATA_RESIDENCY }}
+          MEERGO_TEST_POSTHOG_API_KEY: ${{ secrets.MEERGO_TEST_POSTHOG_API_KEY }}
+          MEERGO_TEST_POSTHOG_PROJECT_REGION: ${{ secrets.MEERGO_TEST_POSTHOG_PROJECT_REGION }}
         run: go run ./test/commit
 
       - name: Check that the repository is clean

@@ -1,12 +1,7 @@
 # This is the Docker Compose file that runs the latest released image of Meergo.
 #
-# For users: you can customize this file, see:
+# For customizing the Meergo instance, see https://www.meergo.com/docs/configuration.
 #
-#       https://www.meergo.com/docs/configuration
-#
-# For Meergo developers: keep this file synchronized with the other Compose
-# file, "compose.yaml," (in the root of the repository) which builds and runs
-# Meergo from the repository.
 
 services:
   meergo:
