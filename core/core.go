@@ -536,15 +536,15 @@ func (core *Core) Connector(code string) (*Connector, error) {
 
 // ConnectorDocumentation represents the documentation of a connector.
 type ConnectorDocumentation struct {
-	Source      ConnectorRoleDocumentation
-	Destination ConnectorRoleDocumentation
+	Source      ConnectorRoleDocumentation `json:"source"`
+	Destination ConnectorRoleDocumentation `json:"destination"`
 }
 
 // ConnectorRoleDocumentation represents the documentation of a connector
 // relative to a role.
 type ConnectorRoleDocumentation struct {
-	Summary  string
-	Overview string
+	Summary  string `json:"summary"`
+	Overview string `json:"overview"`
 }
 
 // ConnectorDocumentation returns the documentation of the connector with the

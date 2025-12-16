@@ -168,7 +168,7 @@ const ConnectorsList = () => {
 		let doc: string;
 		try {
 			const res = await api.connectors.connectorDocumentation(connector.code);
-			doc = await marked.parse(res[connectionRole].Overview);
+			doc = await marked.parse(res[connectionRole.toLowerCase()].overview);
 		} catch (err) {
 			setSelectedConnector(null);
 			setIsLoadingDocumentation(false);
