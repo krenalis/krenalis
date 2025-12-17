@@ -153,13 +153,13 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 
 	// Validate start and end.
 	if start.Before(metrics.MinTime) {
-		return nil, errors.New("start date is too far in the past")
+		return nil, errors.BadRequest("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return nil, errors.New("end date is too far in the future")
+		return nil, errors.BadRequest("end date is too far in the future")
 	}
 	if end.Before(start) {
-		return nil, fmt.Errorf("end date cannot be earlier than start date")
+		return nil, errors.BadRequest("end date cannot be earlier than start date")
 	}
 
 	// Validate pipelines.
