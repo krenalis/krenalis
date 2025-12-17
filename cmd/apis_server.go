@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"log/slog"
 	"math"
@@ -135,27 +136,24 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 // ServeHTTP servers the API methods from HTTP.
 func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
+	if !strings.HasPrefix(r.URL.Path, "/v1/") {
+		http.NotFound(w, r)
+		return
+	}
+
 	switch r.Method {
-	case "POST", "PUT":
-		if r.URL.Path == "/v1/sentry/errors" {
-			// In this case, do not validate the content type, because when the
-			// Sentry SDK sends user feedback with screenshots attached, the
-			// content type is not JSON, and therefore this check would fail,
-			// preventing such reports from being sent to Sentry.
-		} else {
-			// Validate the content type.
-			mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-			if err != nil || (mt != "application/json" && mt != "text/plain") || len(params) > 1 {
-				err := errors.BadRequest("request's content type must be 'application/json'")
+	case "GET", "DELETE":
+		err := validateForbiddenBody(r)
+		if err != nil {
+			if err, ok := err.(errors.ResponseWriterTo); ok {
 				_ = err.WriteTo(w)
 				return
 			}
-			if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
-				err := errors.BadRequest("request's content type charset must be 'utf-8'")
-				_ = err.WriteTo(w)
-				return
-			}
+			slog.Error("cmd: error occurred serving Core", "err", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
 		}
+	case "POST", "PUT":
 		// Validate the content length.
 		if cl := r.Header.Get("Content-Length"); cl != "" {
 			length, _ := strconv.Atoi(cl)
@@ -165,15 +163,9 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-		payload := norm.NFC.Reader(lr)
-		r.Body = io.NopCloser(payload)
+
 	}
 
-	if !strings.HasPrefix(r.URL.Path, "/v1/") {
-		http.NotFound(w, r)
-		return
-	}
 	r.URL.Path = r.URL.Path[len("/v1"):]
 	if r.URL.RawPath != "" {
 		r.URL.RawPath = r.URL.RawPath[len("/v1"):]
@@ -317,13 +309,18 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 	if _, _, _, err := s.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
+	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
+	payload := norm.NFC.Reader(lr)
+	r.Body = io.NopCloser(payload)
 	s.sentryTelemetry.errorTunnel.ServeHTTP(w, r)
 	return nil, nil
 }
 
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
-
+	if err := validateRequiredBody(r); err != nil {
+		return nil, err
+	}
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -380,6 +377,9 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 
 // logout logs the user out.
 func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
 	cookie, _ := r.Cookie(sessionCookieName)
 	if cookie == nil {
 		return nil, nil
@@ -419,6 +419,70 @@ func parseID(s string) (int, bool) {
 		return 0, false
 	}
 	return int(n), true
+}
+
+// validateForbiddenBody rejects requests that contain a request body.
+func validateForbiddenBody(r *http.Request) error {
+	if r.ContentLength == 0 {
+		return nil
+	}
+	if r.ContentLength > 0 {
+		return errors.BadRequest("request body not allowed")
+	}
+	var b [1]byte
+	n, err := r.Body.Read(b[:])
+	if err == io.EOF && n == 0 {
+		return nil
+	}
+	if err != nil && !(err == io.EOF && n > 0) {
+		return err
+	}
+	if n > 0 {
+		// Put back the consumed byte to keep the body stream intact for downstream logging/handlers.
+		r.Body = io.NopCloser(io.MultiReader(bytes.NewReader(b[:n]), r.Body))
+		return errors.BadRequest("request body not allowed")
+	}
+	return nil
+}
+
+// validateRequiredBody validates that the request body is present and is JSON,
+// then applies size limiting and NFC normalization.
+func validateRequiredBody(r *http.Request) error {
+	if r.ContentLength == 0 {
+		return errors.BadRequest("request's body is missing")
+	}
+	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || strings.ToLower(mt) != "application/json" {
+		return errors.BadRequest("request's content type must be 'application/json'")
+	}
+	for k := range params {
+		if strings.ToLower(k) != "charset" {
+			return errors.BadRequest("request's content type must be 'application/json'")
+		}
+	}
+	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
+		return errors.BadRequest("request's content type charset must be 'utf-8'")
+	}
+	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
+	normalized := norm.NFC.Reader(lr)
+	r.Body = io.NopCloser(&overLimitReader{
+		r:  normalized,
+		lr: lr,
+	})
+	return nil
+}
+
+type overLimitReader struct {
+	r  io.Reader
+	lr *io.LimitedReader
+}
+
+func (o *overLimitReader) Read(p []byte) (int, error) {
+	n, err := o.r.Read(p)
+	if o.lr != nil && o.lr.N <= 0 {
+		return n, errors.New("request body too large")
+	}
+	return n, err
 }
 
 // writeSessionCookie writes a session cookie on w. If one already exists,

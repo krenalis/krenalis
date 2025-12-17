@@ -5,10 +5,16 @@
 package cmd
 
 import (
+	"bytes"
+	stderrors "errors"
+	"io"
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/meergo/meergo/tools/errors"
 )
 
 func TestParseID(t *testing.T) {
@@ -117,4 +123,202 @@ func TestWriteSessionCookie(t *testing.T) {
 		}
 	})
 
+}
+
+// TestValidateForbiddenBody tests the validateForbiddenBody function.
+func TestValidateForbiddenBody(t *testing.T) {
+
+	t.Run("allows empty body with zero content length", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+		if err := validateForbiddenBody(req); err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+	})
+
+	t.Run("allows empty body with unknown length", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+		req.ContentLength = -1
+
+		if err := validateForbiddenBody(req); err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+	})
+
+	t.Run("rejects known-length body", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("abc"))
+
+		err := validateForbiddenBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if _, ok := err.(*errors.BadRequestError); !ok {
+			t.Fatalf("expected *errors.BadRequestError, got %T", err)
+		}
+		if err.Error() != "request body not allowed" {
+			t.Fatalf("expected request body not allowed, got %q", err.Error())
+		}
+	})
+
+	t.Run("rejects unknown-length body and keeps payload intact", func(t *testing.T) {
+		const payload = "payload"
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
+		req.ContentLength = -1
+
+		err := validateForbiddenBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request body not allowed" {
+			t.Fatalf("expected request body not allowed, got %q", err.Error())
+		}
+		body, readErr := io.ReadAll(req.Body)
+		if readErr != nil {
+			t.Fatalf("expected to read body, got %v", readErr)
+		}
+		if string(body) != payload {
+			t.Fatalf("expected body %q, got %q", payload, string(body))
+		}
+	})
+
+	t.Run("propagates body read errors", func(t *testing.T) {
+		testErr := stderrors.New("boom")
+		req := httptest.NewRequest(http.MethodPost, "/", errReader{err: testErr})
+		req.ContentLength = -1
+
+		err := validateForbiddenBody(req)
+		if !stderrors.Is(err, testErr) {
+			t.Fatalf("expected %v, got %v", testErr, err)
+		}
+	})
+}
+
+// TestValidateRequiredBody tests the validateRequiredBody function.
+func TestValidateRequiredBody(t *testing.T) {
+
+	t.Run("fails when body is missing", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", nil)
+
+		err := validateRequiredBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request's body is missing" {
+			t.Fatalf("expected request's body is missing, got %q", err.Error())
+		}
+	})
+
+	t.Run("fails when content type is missing", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+
+		err := validateRequiredBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request's content type must be 'application/json'" {
+			t.Fatalf("expected request's content type must be 'application/json', got %q", err.Error())
+		}
+	})
+
+	t.Run("fails when content type is not json", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+		req.Header.Set("Content-Type", "text/plain")
+
+		err := validateRequiredBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request's content type must be 'application/json'" {
+			t.Fatalf("expected request's content type must be 'application/json', got %q", err.Error())
+		}
+	})
+
+	t.Run("fails when content type has unsupported parameters", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8; version=1")
+
+		err := validateRequiredBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request's content type must be 'application/json'" {
+			t.Fatalf("expected request's content type must be 'application/json', got %q", err.Error())
+		}
+	})
+
+	t.Run("fails when charset is not utf8", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+		req.Header.Set("Content-Type", "application/json; charset=iso-8859-1")
+
+		err := validateRequiredBody(req)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request's content type charset must be 'utf-8'" {
+			t.Fatalf("expected request's content type charset must be 'utf-8', got %q", err.Error())
+		}
+	})
+
+	t.Run("accepts valid json content type case-insensitively", func(t *testing.T) {
+		const payload = `{"ok":true}`
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "Application/Json; Charset=UTF-8")
+
+		if err := validateRequiredBody(req); err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("expected to read body, got %v", err)
+		}
+		if string(body) != payload {
+			t.Fatalf("expected body %q, got %q", payload, string(body))
+		}
+	})
+
+	t.Run("normalizes body", func(t *testing.T) {
+		const payload = "{\"text\":\"Cafe\u0301\"}"
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+		if err := validateRequiredBody(req); err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("expected to read body, got %v", err)
+		}
+		if string(body) != "{\"text\":\"Café\"}" {
+			t.Fatalf("expected normalized body {\"text\":\"Café\"}, got %q", string(body))
+		}
+	})
+
+	t.Run("fails when payload exceeds limit", func(t *testing.T) {
+		oversized := bytes.Repeat([]byte{'a'}, maxRequestSize+1)
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(oversized))
+		req.Header.Set("Content-Type", "application/json")
+
+		if err := validateRequiredBody(req); err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		body, err := io.ReadAll(req.Body)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request body too large" {
+			t.Fatalf("expected request body too large, got %q", err.Error())
+		}
+		if len(body) != maxRequestSize {
+			t.Fatalf("expected to read %d bytes, got %d", maxRequestSize, len(body))
+		}
+	})
+
+}
+
+type errReader struct {
+	err error
+}
+
+func (r errReader) Read(p []byte) (int, error) {
+	return 0, r.err
 }

@@ -58,10 +58,14 @@ func (c *Meergo) call(method, path string, body any, response any) error {
 	path = strings.TrimLeft(path, "/")
 	url := "http://" + c.Addr() + "/" + path
 
-	data := &bytes.Buffer{}
-	err := json.NewEncoder(data).Encode(body)
-	if err != nil {
-		return err
+	var data io.Reader
+	if body != nil {
+		var b bytes.Buffer
+		err := json.NewEncoder(&b).Encode(body)
+		if err != nil {
+			return err
+		}
+		data = &b
 	}
 	req, err := http.NewRequest(method, url, data)
 	if err != nil {

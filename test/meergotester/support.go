@@ -305,7 +305,7 @@ func (c *Meergo) RunPipeline(pipeline int) int {
 		ID int
 	}
 	path := fmt.Sprintf("/v1/pipelines/%d/runs", pipeline)
-	c.MustCall("POST", path, nil, &response)
+	c.MustCall("POST", path, map[string]any{}, &response)
 	return response.ID
 }
 

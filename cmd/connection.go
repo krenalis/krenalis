@@ -70,6 +70,9 @@ func (connection connection) AbsolutePath(_ http.ResponseWriter, r *http.Request
 
 // CreatePipeline creates a pipeline.
 func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r); err != nil {
+		return nil, err
+	}
 	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err
@@ -99,6 +102,9 @@ func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Reque
 
 // CreateEventWriteKey creates a new event write key for a connection.
 func (connection connection) CreateEventWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -108,6 +114,9 @@ func (connection connection) CreateEventWriteKey(_ http.ResponseWriter, r *http.
 
 // Delete deletes a connection.
 func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -118,6 +127,9 @@ func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any
 
 // DeleteEventWriteKey deletes an event write key of a connection.
 func (connection connection) DeleteEventWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -128,6 +140,9 @@ func (connection connection) DeleteEventWriteKey(_ http.ResponseWriter, r *http.
 
 // ExecQuery executes a query on a database connection.
 func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r); err != nil {
+		return nil, err
+	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -233,6 +248,9 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 
 // LinkConnection links a connection to another connection and vice versa.
 func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
 	src, err := connection.src(r)
 	if err != nil {
 		return nil, err
@@ -297,6 +315,9 @@ func (connection connection) PipelineTypes(_ http.ResponseWriter, r *http.Reques
 
 // PreviewSendEvent previews sending an event.
 func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r); err != nil {
+		return nil, err
+	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -320,6 +341,11 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 
 // ServeUI serves the user interface for a connection.
 func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
+	if r.Method != http.MethodGet {
+		if err := validateRequiredBody(r); err != nil {
+			return nil, err
+		}
+	}
 	_, ws, _, err := connection.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
@@ -409,6 +435,9 @@ func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request)
 
 // UnlinkConnection unlink a connection from another connection and vice versa.
 func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
 	src, err := connection.src(r)
 	if err != nil {
 		return nil, err
@@ -423,6 +452,9 @@ func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Req
 
 // Update updates a connection.
 func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r); err != nil {
+		return nil, err
+	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
