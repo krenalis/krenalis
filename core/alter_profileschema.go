@@ -235,13 +235,17 @@ func validateRePaths(rePaths map[string]any) error {
 			if new == old {
 				return fmt.Errorf("rePath key cannot match with its value")
 			}
+			// Make sure that rePaths does not contain property renames whose
+			// object parent is different, as this type of operation is not
+			// allowed.
 			if strings.Contains(old, ".") {
 				oldParts := strings.Split(old, ".")
 				oldPrefix := oldParts[:len(oldParts)-1]
 				newParts := strings.Split(new, ".")
 				newPrefix := newParts[:len(newParts)-1]
 				if !slices.Equal(oldPrefix, newPrefix) {
-					return fmt.Errorf("rePath contains a renamed property whose path is different")
+					return fmt.Errorf("renames of properties are only allowed at the same level,"+
+						" so %q cannot be renamed to %q as they have a different parent", old, new)
 				}
 			}
 		case nil:
