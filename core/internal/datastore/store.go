@@ -353,6 +353,63 @@ func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.
 	return store.warehouse().PreviewAlterProfileSchema(ctx, profileColumns, operations)
 }
 
+// ProfileRecords returns an iterator over the profiles, according to the
+// provided query and schema. The properties to return are the properties of
+// schema, and the returned properties will conform to schema.
+//
+// query.Properties must be nil.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If the schema, which must be valid, does not align
+// with the profile schema, it returns a *schemas.Error error. If an error
+// occurs with the data warehouse, it returns an *UnavailableError error.
+func (store *Store) ProfileRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	if query.Properties != nil {
+		return nil, errors.New("query.properties is not nil")
+	}
+	if !schema.Valid() {
+		return nil, errors.New("schema is not valid")
+	}
+	workspace, ok := store.ds.state.Workspace(store.workspace)
+	if !ok {
+		return nil, fmt.Errorf("workspace does not exist anymore")
+	}
+	// Check that schema is aligned with the profile schema.
+	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
+	if err != nil {
+		return nil, err
+	}
+	query.table = "profiles"
+	query.Properties = []string{}
+	for path := range schema.Properties().WalkObjects() {
+		query.Properties = append(query.Properties, path)
+	}
+	return records(ctx, store.warehouse(), query, "_mpid", store.profileColumnByProperty(), true, matching)
+}
+
+// Profiles returns the profiles according to the provided query.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns an *UnavailableError error.
+func (store *Store) Profiles(ctx context.Context, query Query) ([]map[string]any, int, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer done()
+	query.table = "profiles"
+	query.total = true
+	return store.query(ctx, query, store.profileColumnByProperty(), true)
+}
+
 // PurgePipelines purges the provided pipelines from the data warehouse,
 // deleting their associated identities and destination users.
 //
@@ -546,63 +603,6 @@ func (store *Store) UnsetIdentityProperties(ctx context.Context, pipeline int, p
 	defer done()
 	columns := appendColumnsFromProperties(nil, properties, store.profileColumnByProperty())
 	return store.warehouse().UnsetIdentityColumns(ctx, pipeline, columns)
-}
-
-// ProfileRecords returns an iterator over the profiles, according to the
-// provided query and schema. The properties to return are the properties of
-// schema, and the returned properties will conform to schema.
-//
-// query.Properties must be nil.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If the schema, which must be valid, does not align
-// with the profile schema, it returns a *schemas.Error error. If an error
-// occurs with the data warehouse, it returns an *UnavailableError error.
-func (store *Store) ProfileRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return nil, err
-	}
-	defer done()
-	if query.Properties != nil {
-		return nil, errors.New("query.properties is not nil")
-	}
-	if !schema.Valid() {
-		return nil, errors.New("schema is not valid")
-	}
-	workspace, ok := store.ds.state.Workspace(store.workspace)
-	if !ok {
-		return nil, fmt.Errorf("workspace does not exist anymore")
-	}
-	// Check that schema is aligned with the profile schema.
-	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
-	if err != nil {
-		return nil, err
-	}
-	query.table = "profiles"
-	query.Properties = []string{}
-	for path := range schema.Properties().WalkObjects() {
-		query.Properties = append(query.Properties, path)
-	}
-	return records(ctx, store.warehouse(), query, "_mpid", store.profileColumnByProperty(), true, matching)
-}
-
-// Profiles returns the profiles according to the provided query.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
-func (store *Store) Profiles(ctx context.Context, query Query) ([]map[string]any, int, error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer done()
-	query.table = "profiles"
-	query.total = true
-	return store.query(ctx, query, store.profileColumnByProperty(), true)
 }
 
 // close closes the store.
