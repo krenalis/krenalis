@@ -721,7 +721,17 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 
 // decodeContext decodes and returns a context. isDefault indicates if it is the
 // default context. The first token must be '{'.
+//
+// Before returning, decodeContext attempts to advance the decoder so that the
+// next token is the one following the end of the object, even in case of error.
 func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
+
+	skipOut := true
+	defer func() {
+		if skipOut {
+			_ = d.dec.SkipOut()
+		}
+	}()
 
 	_ = d.dec.SkipToken() // skip the first token.
 
@@ -735,6 +745,7 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 	for {
 		tok, _ = d.dec.ReadToken()
 		if tok.Kind() == '}' {
+			skipOut = false
 			break
 		}
 		name = tok.String()
@@ -937,7 +948,18 @@ var contextSections = map[string]*contextSection{
 
 // decodeContextSection decodes and returns a context section. The next token
 // must be '{'.
+//
+// Before returning, decodeContextSection attempts to advance the decoder so
+// that the next token is the one following the end of the object, even in case
+// of error.
 func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) (map[string]any, error) {
+
+	skipOut := true
+	defer func() {
+		if skipOut {
+			_ = d.dec.SkipOut()
+		}
+	}()
 
 	_ = d.dec.SkipToken() // skip the first token.
 
@@ -953,6 +975,7 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 	for {
 		tok, _ = d.dec.ReadToken()
 		if tok.Kind() == '}' {
+			skipOut = false
 			break
 		}
 		name := tok.String()
