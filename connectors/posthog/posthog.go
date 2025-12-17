@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -501,7 +502,16 @@ func makeSessionUUIDv7(anonymousID string, sessionID int64) (string, error) {
 	// Use the session start minus 1s as UUIDv7 timestamp.
 	ts := sessionID - 1000
 
-	seed := sha256.Sum256([]byte(anonymousID + "|" + strconv.FormatInt(sessionID, 10)))
+	var seed [sha256.Size]byte
+	{
+		h := sha256.New()
+		_, _ = io.WriteString(h, anonymousID)
+		_, _ = h.Write([]byte{'|'})
+		var buf [32]byte
+		n := strconv.AppendInt(buf[:0], sessionID, 10)
+		_, _ = h.Write(n)
+		h.Sum(seed[:0])
+	}
 
 	var u uuid.UUID
 
