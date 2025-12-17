@@ -59,31 +59,31 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 
 // Close closes the pipeline scheduler closing the executors and interrupting
 // pipeline runs.
-func (as *pipelineScheduler) Close() {
-	as.core.state.Freeze()
-	as.core.state.Unfreeze()
-	if as.executor != nil {
-		as.executor.Close()
+func (ps *pipelineScheduler) Close() {
+	ps.core.state.Freeze()
+	ps.core.state.Unfreeze()
+	if ps.executor != nil {
+		ps.executor.Close()
 	}
-	as.cancel()
-	as.wg.Wait()
+	ps.cancel()
+	ps.wg.Wait()
 }
 
 // onCreatePipeline is called when a pipeline is created.
-func (as *pipelineScheduler) onCreatePipeline(n state.CreatePipeline) {
-	if as.executor == nil {
+func (ps *pipelineScheduler) onCreatePipeline(n state.CreatePipeline) {
+	if ps.executor == nil {
 		return
 	}
-	pipeline, _ := as.core.state.Pipeline(n.ID)
+	pipeline, _ := ps.core.state.Pipeline(n.ID)
 	if pipeline.SchedulePeriod == 0 {
 		return
 	}
-	as.executor.AddPipeline(pipeline)
+	ps.executor.AddPipeline(pipeline)
 }
 
 // onDeleteConnection is called when a connection is deleted from the state.
-func (as *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
-	if as.executor == nil {
+func (ps *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
+	if ps.executor == nil {
 		return
 	}
 	var pipelines []int
@@ -97,14 +97,14 @@ func (as *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
 	}
 	go func() {
 		for _, pipeline := range pipelines {
-			as.executor.RemovePipeline(pipeline)
+			ps.executor.RemovePipeline(pipeline)
 		}
 	}()
 }
 
 // onDeleteWorkspace is called when a workspace is deleted from the state.
-func (as *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
-	if as.executor == nil {
+func (ps *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
+	if ps.executor == nil {
 		return
 	}
 	var pipelines []int
@@ -120,43 +120,43 @@ func (as *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	}
 	go func() {
 		for _, pipeline := range pipelines {
-			as.executor.RemovePipeline(pipeline)
+			ps.executor.RemovePipeline(pipeline)
 		}
 	}()
 }
 
 // onDeletePipeline is called when a pipeline is deleted from the state.
-func (as *pipelineScheduler) onDeletePipeline(n state.DeletePipeline) {
-	if as.executor == nil {
+func (ps *pipelineScheduler) onDeletePipeline(n state.DeletePipeline) {
+	if ps.executor == nil {
 		return
 	}
 	go func() {
-		as.executor.RemovePipeline(n.ID)
+		ps.executor.RemovePipeline(n.ID)
 	}()
 }
 
 // onElectLeader is called when a leader is elected.
-func (as *pipelineScheduler) onElectLeader(n state.ElectLeader) {
-	if as.executor != nil {
-		if !as.core.state.IsLeader() {
-			go as.executor.Close()
+func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
+	if ps.executor != nil {
+		if !ps.core.state.IsLeader() {
+			go ps.executor.Close()
 		}
 		return
 	}
-	if !as.core.state.IsLeader() {
+	if !ps.core.state.IsLeader() {
 		return
 	}
-	as.executor = newPipelineExecutor(as.core, &as.wg, as.ctx)
+	ps.executor = newPipelineExecutor(ps.core, &ps.wg, ps.ctx)
 }
 
 // onSetPipelineSchedulePeriod is called when the schedule period of a pipeline
 // is set.
-func (as *pipelineScheduler) onSetPipelineSchedulePeriod(n state.SetPipelineSchedulePeriod) {
-	if as.executor == nil {
+func (ps *pipelineScheduler) onSetPipelineSchedulePeriod(n state.SetPipelineSchedulePeriod) {
+	if ps.executor == nil {
 		return
 	}
-	pipeline, _ := as.core.state.Pipeline(n.ID)
-	as.executor.SetPeriod(pipeline)
+	pipeline, _ := ps.core.state.Pipeline(n.ID)
+	ps.executor.SetPeriod(pipeline)
 }
 
 // pipelineExecutor handles the actual execution of pipeline runs.
