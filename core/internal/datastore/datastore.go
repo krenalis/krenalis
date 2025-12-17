@@ -53,6 +53,7 @@ func New(st *state.State) *Datastore {
 	ds.state.AddListener(ds.onCreateWorkspace)
 	ds.state.AddListener(ds.onDeleteConnection)
 	ds.state.AddListener(ds.onDeletePipeline)
+	ds.state.AddListener(ds.onDeleteWorkspace)
 	ds.state.AddListener(ds.onEndAlterProfileSchema)
 	ds.state.AddListener(ds.onUpdatePipeline)
 	ds.state.AddListener(ds.onUpdateWarehouse)
@@ -230,6 +231,24 @@ func (ds *Datastore) onDeletePipeline(n state.DeletePipeline) {
 		return
 	}
 	store.onDeletePipeline(n)
+}
+
+// onDeleteWarkspace is called when a workspace is deleted.
+func (ds *Datastore) onDeleteWorkspace(n state.DeleteWorkspace) {
+	ws := n.Workspace()
+	ds.mu.Lock()
+	store, ok := ds.store[ws.ID]
+	if ok { // see issue https://github.com/meergo/meergo/issues/2051
+		delete(ds.store, ws.ID)
+	}
+	ds.mu.Unlock()
+	if !ok { // see issue https://github.com/meergo/meergo/issues/2051
+		return
+	}
+	err := store.close()
+	if err != nil {
+		slog.Warn("core/internal/datastore: cannot close store", "err", err)
+	}
 }
 
 // onEndAlterProfileSchema is called when the alter of the profile schema ends.
