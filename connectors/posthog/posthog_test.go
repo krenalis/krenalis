@@ -8,9 +8,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -520,48 +522,71 @@ func TestSendEvents(t *testing.T) {
 
 func TestMakeSessionUUIDv7(t *testing.T) {
 
-	const (
-		anonymousID = "anon-123456789"
-		sessionID   = int64(1736972405123)
-	)
-
-	got, err := makeSessionUUIDv7(anonymousID, sessionID)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	expected := "01946b9f-859b-7cce-ab5c-f9e68680be6e"
-	if got != expected {
-		t.Fatalf("expected %s, got %s", expected, got)
-	}
-
-	// Ensure determinism.
-	got2, err := makeSessionUUIDv7(anonymousID, sessionID)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if got2 != got {
-		t.Fatalf("expected deterministic UUIDs, got %s and %s", got, got2)
+	cases := []struct {
+		name        string
+		anonymousID string
+		sessionID   int64
+		want        string
+	}{
+		{
+			name:        "uuid_input_anonymous_id",
+			anonymousID: "9f3c2c2a-1d4b-4b7c-9c2a-8a3f6d3c0e91",
+			sessionID:   1734260905123,
+			want:        "0193ca01-50bb-7b17-acea-34706793f387",
+		},
+		{
+			name:        "regression_known_output",
+			anonymousID: "anon-123456789",
+			sessionID:   1736972405123,
+			want:        "01946b9f-859b-7cce-ab5c-f9e68680be6e",
+		},
 	}
 
-	// Validate version/variant and timestamp component.
-	parsed, err := uuid.Parse(got)
-	if err != nil {
-		t.Fatalf("expected a valid UUID, got %v", err)
-	}
-	if parsed.Version() != 7 {
-		t.Fatalf("expected version 7, got %d", parsed.Version())
-	}
-	if parsed.Variant() != uuid.RFC4122 {
-		t.Fatalf("expected RFC4122 variant, got %d", parsed.Variant())
-	}
-	ts := int64(parsed[0])<<40 |
-		int64(parsed[1])<<32 |
-		int64(parsed[2])<<24 |
-		int64(parsed[3])<<16 |
-		int64(parsed[4])<<8 |
-		int64(parsed[5])
-	if ts != sessionID-1000 {
-		t.Fatalf("expected timestamp %d, got %d", sessionID-1000, ts)
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Helper()
+
+			got, err := makeSessionUUIDv7(tc.anonymousID, tc.sessionID)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if tc.want != "" && got != tc.want {
+				t.Fatalf("expected %s, got %s", tc.want, got)
+			}
+
+			parsed, err := uuid.Parse(got)
+			if err != nil {
+				t.Fatalf("expected a valid UUID, got %v", err)
+			}
+			if parsed.Version() != 7 {
+				t.Fatalf("expected version 7, got %d", parsed.Version())
+			}
+			if parsed.Variant() != uuid.RFC4122 {
+				t.Fatalf("expected RFC4122 variant, got %d", parsed.Variant())
+			}
+
+			if ts := uuidTimestamp(parsed); ts != tc.sessionID-1000 {
+				t.Fatalf("expected timestamp %d, got %d", tc.sessionID-1000, ts)
+			}
+
+			got2, err := makeSessionUUIDv7(tc.anonymousID, tc.sessionID)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if got2 != got {
+				t.Fatalf("expected deterministic UUIDs, got %s and %s", got, got2)
+			}
+
+			seed := sha256.Sum256([]byte(tc.anonymousID + "|" + strconv.FormatInt(tc.sessionID, 10)))
+			var expectedUUID uuid.UUID
+			copy(expectedUUID[6:], seed[:10])
+			expectedUUID[6] = (expectedUUID[6] & 0x0f) | 0x70
+			expectedUUID[8] = (expectedUUID[8] & 0x3f) | 0x80
+			if !bytes.Equal(parsed[6:], expectedUUID[6:]) {
+				t.Fatalf("expected random portion %x, got %x", expectedUUID[6:], parsed[6:])
+			}
+		})
 	}
 }
 
@@ -570,6 +595,55 @@ func TestMakeSessionUUIDv7InvalidSession(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid session ID, got nil")
 	}
+}
+
+func TestMakeSessionUUIDv7DifferentInputs(t *testing.T) {
+	baseAnon := "9f3c2c2a-1d4b-4b7c-9c2a-8a3f6d3c0e91"
+	baseSession := int64(1734260905123)
+
+	base, err := makeSessionUUIDv7(baseAnon, baseSession)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	cases := []struct {
+		name        string
+		anonymousID string
+		sessionID   int64
+	}{
+		{
+			name:        "different_anonymous_id",
+			anonymousID: "9f3c2c2a-1d4b-4b7c-9c2a-8a3f6d3c0e92",
+			sessionID:   baseSession,
+		},
+		{
+			name:        "different_session_id",
+			anonymousID: baseAnon,
+			sessionID:   baseSession + 1,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := makeSessionUUIDv7(tc.anonymousID, tc.sessionID)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if got == base {
+				t.Fatalf("expected different inputs to yield different UUIDs; got same %s", got)
+			}
+		})
+	}
+}
+
+func uuidTimestamp(u uuid.UUID) int64 {
+	return int64(u[0])<<40 |
+		int64(u[1])<<32 |
+		int64(u[2])<<24 |
+		int64(u[3])<<16 |
+		int64(u[4])<<8 |
+		int64(u[5])
 }
 
 // marshalCanonicalJSON marshals data as canonical JSON and returns it.

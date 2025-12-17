@@ -13,7 +13,6 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net/http"
@@ -493,8 +492,10 @@ func makeSessionUUIDv7(anonymousID string, sessionID int64) (string, error) {
 	}
 
 	const (
-		versionMask = 0x70
-		variantMask = 0x80
+		versionMask      = 0x70
+		versionClearMask = 0x0f
+		variantMask      = 0x80
+		variantClearMask = 0x3f
 	)
 
 	// Use the session start minus 1s as UUIDv7 timestamp.
@@ -511,12 +512,11 @@ func makeSessionUUIDv7(anonymousID string, sessionID int64) (string, error) {
 	u[4] = byte(ts >> 8)
 	u[5] = byte(ts)
 
-	seq := binary.BigEndian.Uint16(seed[0:2]) & 0x0fff
-	u[6] = versionMask | byte(seq>>8)
-	u[7] = byte(seq)
-
-	u[8] = variantMask | (seed[2] & 0x3f)
-	copy(u[9:], seed[3:10])
+	// Fill the 10 random bytes contiguously from the seed, then apply
+	// version/variant bits without disturbing the random layout.
+	copy(u[6:], seed[:10])
+	u[6] = (u[6] & versionClearMask) | versionMask
+	u[8] = (u[8] & variantClearMask) | variantMask
 
 	return u.String(), nil
 }
