@@ -105,7 +105,11 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	if body.Settings != nil && body.Settings.IsNull() {
 		body.Settings = nil
 	}
-	return ws.CreateConnection(r.Context(), body.ConnectionToAdd, body.AuthToken)
+	id, err := ws.CreateConnection(r.Context(), body.ConnectionToAdd, body.AuthToken)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]int{"id": id}, nil
 }
 
 // CreateEventListener creates an event listener for a workspace that listens to
@@ -691,7 +695,7 @@ func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *h
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"queries": queries}, nil
+	return map[string][]string{"queries": queries}, nil
 }
 
 // RepairWarehouse repairs the database objects needed by Meergo on a

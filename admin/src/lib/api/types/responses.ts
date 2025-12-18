@@ -42,6 +42,18 @@ interface CreateEventListenerResponse {
 	id: string;
 }
 
+interface CreateEventWriteKeyResponse {
+	key: string;
+}
+
+interface CreatePipelineResponse {
+	id: number;
+}
+
+interface CreateConnectionResponse {
+	id: number;
+}
+
 interface PipelineMatchingSchemas {
 	internal: ObjectType;
 	external: ObjectType;
@@ -196,7 +208,10 @@ export type {
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
 	ConnectorUIResponse,
+	CreateConnectionResponse,
 	CreateEventListenerResponse,
+	CreateEventWriteKeyResponse,
+	CreatePipelineResponse,
 	Event,
 	EventListenerEventsResponse,
 	ExecQueryResponse,

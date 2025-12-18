@@ -97,7 +97,11 @@ func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return c.CreatePipeline(r.Context(), body.Target, body.EventType, body.PipelineToSet)
+	id, err := c.CreatePipeline(r.Context(), body.Target, body.EventType, body.PipelineToSet)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]int{"id": id}, nil
 }
 
 // CreateEventWriteKey creates a new event write key for a connection.
@@ -109,7 +113,11 @@ func (connection connection) CreateEventWriteKey(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, err
 	}
-	return c.CreateEventWriteKey(r.Context())
+	key, err := c.CreateEventWriteKey(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"key": key}, nil
 }
 
 // Delete deletes a connection.
@@ -336,7 +344,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"preview": string(preview)}, nil
+	return map[string]string{"preview": string(preview)}, nil
 }
 
 // ServeUI serves the user interface for a connection.
