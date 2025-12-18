@@ -147,9 +147,16 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		b = append(b, v.String()...)
 		b = append(b, '\'')
 	case time.Time:
-		b = append(b, "new Date("...)
-		b = strconv.AppendInt(b, v.UnixMilli(), 10)
-		b = append(b, ')')
+		b = append(b, '\'')
+		switch k {
+		case types.DateTimeKind:
+			b = v.AppendFormat(b, "2006-01-02T15:04:05.999999999Z")
+		case types.DateKind:
+			b = v.AppendFormat(b, "2006-01-02")
+		case types.TimeKind:
+			b = v.AppendFormat(b, "15:04:05.999999999")
+		}
+		b = append(b, '\'')
 	case []any:
 		b = append(b, '[')
 		elem := t.Elem()
