@@ -136,29 +136,29 @@ func (posthog *PostHog) EventTypeSchema(ctx context.Context, eventType string) (
 	switch eventType {
 	case "identify":
 		return types.Object([]types.Property{
-			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), Description: "Properties"},
+			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), Description: "Event properties"},
 			sessionID,
 		}), nil
 	case "alias":
 		return types.Object([]types.Property{
-			{Name: "properties", Type: types.Map(types.JSON()), Description: "Properties - leave empty unless you want to send additional properties."},
+			{Name: "properties", Type: types.Map(types.JSON()), Description: "Event properties - leave empty unless you want to send additional properties."},
 			sessionID,
 		}), nil
 	case "group":
 		return types.Object([]types.Property{
 			{Name: "group_type", Prefilled: `"company"`, Type: types.String().WithMaxLength(400), CreateRequired: true, Description: "Group type"},
-			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), Description: "Properties"},
+			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), Description: "Event properties"},
 			sessionID,
 		}), nil
 	case "track":
 		return types.Object([]types.Property{
-			{Name: "event", Prefilled: `event`, Type: types.String(), CreateRequired: true, Description: "Event"},
-			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), Description: "Properties"},
+			{Name: "event", Prefilled: `event`, Type: types.String(), CreateRequired: true, Description: "Event name"},
+			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), Description: "Event properties"},
 			sessionID,
 		}), nil
 	case "page", "screen":
 		return types.Object([]types.Property{
-			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), Description: "Properties"},
+			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), Description: "Event properties"},
 			sessionID,
 		}), nil
 	}
