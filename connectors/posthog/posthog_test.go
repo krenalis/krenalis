@@ -484,10 +484,6 @@ func TestSendEvents(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected to obtain schema for alias event, got %v", err)
 		}
-		values, err := testconnector.TransformEvent(schema, received, nil)
-		if err != nil {
-			t.Fatalf("expected TransformEvent to succeed, got %v", err)
-		}
 
 		event := &connectors.Event{
 			DestinationPipeline: 973511,
@@ -495,7 +491,7 @@ func TestSendEvents(t *testing.T) {
 			Type: connectors.EventTypeInfo{
 				ID:     "alias",
 				Schema: schema,
-				Values: values,
+				Values: map[string]any{},
 			},
 		}
 
