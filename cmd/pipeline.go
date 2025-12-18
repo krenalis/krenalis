@@ -31,7 +31,7 @@ func (pipeline pipeline) Delete(_ http.ResponseWriter, r *http.Request) (any, er
 
 // Run runs a pipeline.
 func (pipeline pipeline) Run(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	p, err := pipeline.id(r)
@@ -54,7 +54,7 @@ func (pipeline pipeline) Run(_ http.ResponseWriter, r *http.Request) (any, error
 
 // ServeUI serves the UI of a pipeline.
 func (pipeline pipeline) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	_, ws, _, err := pipeline.authenticateAdminRequest(r)
@@ -85,7 +85,7 @@ func (pipeline pipeline) ServeUI(w http.ResponseWriter, r *http.Request) (any, e
 
 // SetSchedulePeriod sets the schedule period of a pipeline.
 func (pipeline pipeline) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	a, err := pipeline.id(r)
@@ -105,7 +105,7 @@ func (pipeline pipeline) SetSchedulePeriod(_ http.ResponseWriter, r *http.Reques
 
 // SetStatus sets the status of a pipeline.
 func (pipeline pipeline) SetStatus(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	a, err := pipeline.id(r)
@@ -125,7 +125,7 @@ func (pipeline pipeline) SetStatus(_ http.ResponseWriter, r *http.Request) (any,
 
 // Update updates a pipeline.
 func (pipeline pipeline) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	a, err := pipeline.id(r)

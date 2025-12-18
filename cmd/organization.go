@@ -25,7 +25,7 @@ type organization struct {
 // verification has not been enabled, it returns an
 // errors.UnprocessableError error with code EmailVerificationRequired.
 func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -79,7 +79,7 @@ func (organization organization) AccessKeys(_ http.ResponseWriter, r *http.Reque
 
 // CreateAccessKey creates a new access key for an organization.
 func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -114,7 +114,7 @@ func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.
 
 // CreateWorkspace creates a workspace for the organization.
 func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, err := organization.authenticateRequest(r)
@@ -180,7 +180,7 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 
 // InviteMember sends an invitation email.
 func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, memberID, err := organization.authenticateAdminRequest(r)
@@ -224,7 +224,7 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 
 // TestWorkspaceCreation tests a workspace creation.
 func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, err := organization.authenticateRequest(r)
@@ -250,7 +250,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 
 // UpdateAccessKey updates the name of an access key for an organization.
 func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -274,7 +274,7 @@ func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.
 
 // UpdateMember updates the currently logged-in member of the organization.
 func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, memberID, err := organization.authenticateAdminRequest(r)

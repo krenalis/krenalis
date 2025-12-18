@@ -24,7 +24,7 @@ type workspace struct {
 
 // AlterProfileSchema alters the profile schema of a workspace.
 func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -87,7 +87,7 @@ func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (
 
 // CreateConnection creates a connection for a workspace.
 func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -115,7 +115,7 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 // CreateEventListener creates an event listener for a workspace that listens to
 // events.
 func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -279,7 +279,8 @@ func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.Respons
 
 // IngestEvents ingests a batch of events.
 func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	// Unlike other endpoints, it allows "text/plain" as a content type.
+	if err := validateRequiredBody(r, true); err != nil {
 		return nil, err
 	}
 	// Removes the headers that were set earlier, as ServeEvents handles the response fully.
@@ -676,7 +677,7 @@ func (workspace workspace) PipelineRuns(_ http.ResponseWriter, r *http.Request) 
 // operation by returning the queries that would be executed on the warehouse to
 // perform a given alter schema.
 func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -714,7 +715,7 @@ func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Reques
 
 // ServeUI serves the user interface for a connector.
 func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	_, ws, _, err := workspace.authenticateAdminRequest(r)
@@ -767,7 +768,7 @@ func (workspace workspace) StartIdentityResolution(_ http.ResponseWriter, r *htt
 
 // TestWarehouseUpdate tests a warehouse update.
 func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -805,7 +806,7 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 
 // Update updates the name and the displayed properties of a workspace.
 func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -827,7 +828,7 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 // UpdateIdentityResolutionSettings updates the identity resolution settings of
 // the workspace.
 func (workspace workspace) UpdateIdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -848,7 +849,7 @@ func (workspace workspace) UpdateIdentityResolutionSettings(_ http.ResponseWrite
 
 // UpdateWarehouse updates the warehouse of a workspace.
 func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -874,7 +875,7 @@ func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Reques
 
 // UpdateWarehouseMode updates the mode of the data warehouse for a workspace.
 func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
