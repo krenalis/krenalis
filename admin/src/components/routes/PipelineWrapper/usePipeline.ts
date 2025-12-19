@@ -31,6 +31,7 @@ const usePipeline = (
 	const [pipeline, setPipeline] = useState<TransformedPipeline>();
 	const [settings, setSettings] = useState<ConnectorSettings>();
 	const [pipelineType, setPipelineType] = useState<TransformedPipelineType>();
+	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
 	const [isFileConnectorLoading, setIsFileConnectorLoading] = useState<boolean>(
@@ -42,6 +43,7 @@ const usePipeline = (
 	const [selectedOutPaths, setSelectedOutPaths] = useState<string[]>([]);
 	const [issues, setIssues] = useState<string[]>([]);
 	const [showIssues, setShowIssues] = useState<boolean>(true);
+	const [autoSelectedPaths, setAutoSelectedPaths] = useState<string[]>([]);
 
 	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -51,7 +53,7 @@ const usePipeline = (
 
 	useEffect(() => {
 		// Filter out the selected properties that are no longer in the
-		// schemas.
+		// schemas, when they change.
 		if (isLoading) {
 			return;
 		}
@@ -75,7 +77,57 @@ const usePipeline = (
 			}
 			setSelectedOutPaths(outPaths);
 		}
-	}, [pipelineType]);
+	}, [pipelineType?.inputSchema, pipelineType?.outputSchema]);
+
+	useEffect(() => {
+		if (isLoading || pipelineType.outputSchema == null) {
+			return;
+		}
+		computeAutoSelectedPaths('', !isEditing);
+	}, [pipelineType?.outputSchema]);
+
+	const computeAutoSelectedPaths = (prefix: string, updateCheckboxes?: boolean) => {
+		const flatOut = flattenSchema(pipelineType.outputSchema);
+		let paths = Object.keys(flatOut);
+		if (prefix !== '') {
+			paths = paths.filter((pa) => pa === prefix || pa.startsWith(`${prefix}.`));
+		}
+
+		const isEventSend = connection.isDestination && pipelineType.target.includes('Event');
+		if (isEventSend) {
+			// Automatically compute the selected out paths based on the
+			// required properties. These properties will also be pre-populated
+			// in the function editor.
+			let selected = [];
+			for (const path of paths) {
+				const p = flatOut[path];
+				let isAutoSelected = false;
+				if (p.createRequired) {
+					const firstPathFragment = path.split('.')[0];
+					const hasRequiredFirstLevelParent =
+						paths.findIndex((pa) => pa === firstPathFragment && flatOut[pa].createRequired) !== -1;
+					const hasRequiredChild =
+						paths.findIndex((pa) => pa.startsWith(`${path}.`) && flatOut[pa].createRequired) !== -1;
+					const isFirstLevel = !path.includes('.');
+					isAutoSelected = !hasRequiredChild && (isFirstLevel || hasRequiredFirstLevelParent);
+				}
+				if (isAutoSelected) {
+					selected.push(path);
+				}
+			}
+
+			if (prefix !== '') {
+				const filtered = [...selectedOutPaths].filter((pa) => pa !== prefix && !pa.startsWith(`${prefix}.`));
+				const merged = [...filtered, ...selected];
+				selected = merged;
+			}
+
+			setAutoSelectedPaths(selected);
+			if (updateCheckboxes) {
+				setSelectedOutPaths(selected);
+			}
+		}
+	};
 
 	useEffect(() => {
 		const handleException = (err: Error | string) => {
@@ -388,6 +440,8 @@ const usePipeline = (
 		isLoading,
 		pipelineType,
 		setPipelineType,
+		transformationType,
+		setTransformationType,
 		setPipeline,
 		savePipeline,
 		setIsFileChanged,
@@ -403,6 +457,8 @@ const usePipeline = (
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		autoSelectedPaths,
+		computeAutoSelectedPaths,
 		issues,
 		setIssues,
 		showIssues,

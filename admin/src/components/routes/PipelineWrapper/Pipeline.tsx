@@ -17,7 +17,6 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import Section from '../../base/Section/Section';
 
 const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeline }) => {
-	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
 	const [showEmptyMatchingError, setShowEmptyMatchingError] = useState<boolean>(false);
 	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 
@@ -51,6 +50,8 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 		pipelineType,
 		setPipelineType,
 		setPipeline,
+		transformationType,
+		setTransformationType,
 		savePipeline,
 		setIsFileChanged,
 		setIsFileConnectorLoading,
@@ -65,6 +66,8 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		autoSelectedPaths,
+		computeAutoSelectedPaths,
 		issues,
 		setIssues,
 		showIssues,
@@ -124,6 +127,8 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 				setSelectedInPaths,
 				selectedOutPaths,
 				setSelectedOutPaths,
+				autoSelectedPaths,
+				computeAutoSelectedPaths,
 				issues,
 				setIssues,
 				showIssues,

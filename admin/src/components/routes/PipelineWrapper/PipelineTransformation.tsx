@@ -17,14 +17,13 @@ import {
 	TransformedProperty,
 	doesLastChangeTimeColumnNeedFormat,
 	flattenSchema,
-	getTransformationFunctionParameterName,
 	isRecursiveType,
 	propertyTypesAreEqual,
 	splitPropertyAndPath,
 	transformInPipelineToSet,
 	validateAndNormalizeFilterCondition,
+	computeDefaultTransformationFunction,
 } from '../../../lib/core/pipeline';
-import { RAW_TRANSFORMATION_FUNCTIONS } from './Pipeline.constants';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Section from '../../base/Section/Section';
 import EditorWrapper from '../../base/EditorWrapper/EditorWrapper';
@@ -206,28 +205,6 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [isFullscreenTransformationOpen]);
 
-	useEffect(() => {
-		if (selectedLanguage == '') {
-			return;
-		}
-		const p = { ...pipeline };
-		const isTransformationUndefined = p.transformation.function == null;
-		const isLanguageChanged = !isTransformationUndefined && p.transformation.function.language !== selectedLanguage;
-		if (isTransformationUndefined || isLanguageChanged) {
-			p.transformation.function = {
-				source: RAW_TRANSFORMATION_FUNCTIONS[selectedLanguage].replace(
-					'$parameterName',
-					getTransformationFunctionParameterName(connection, pipelineType),
-				),
-				language: selectedLanguage,
-				preserveJSON: false,
-				inPaths: [],
-				outPaths: [],
-			};
-			setPipeline(p);
-		}
-	}, [selectedLanguage]);
-
 	const flatInputSchema = useMemo<TransformedMapping>(() => {
 		return flattenSchema(pipelineType.inputSchema);
 	}, [pipelineType.inputSchema]);
@@ -315,10 +292,10 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			const p = { ...prev };
 			p.transformation.function = {
 				source: source,
-				language: selectedLanguage,
+				language: p.transformation.function.language,
 				preserveJSON: p.transformation.function.preserveJSON,
-				inPaths: [],
-				outPaths: [],
+				inPaths: p.transformation.function.inPaths,
+				outPaths: p.transformation.function.outPaths,
 			};
 			return p;
 		});
@@ -727,7 +704,8 @@ const TransformationBox = ({
 
 	const { handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
-	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport } = useContext(pipelineContext);
+	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport, computeAutoSelectedPaths } =
+		useContext(pipelineContext);
 
 	useEffect(() => {
 		if (transformationType === 'mappings') {
@@ -772,9 +750,11 @@ const TransformationBox = ({
 			} else {
 				p.transformation.mapping = null;
 				p.transformation.function = {
-					source: RAW_TRANSFORMATION_FUNCTIONS[pendingTransformationType.current].replace(
-						'$parameterName',
-						getTransformationFunctionParameterName(connection, pipelineType),
+					source: computeDefaultTransformationFunction(
+						pipelineType.outputSchema,
+						pendingTransformationType.current,
+						connection,
+						pipelineType,
 					),
 					language: pendingTransformationType.current,
 					preserveJSON: false,
@@ -787,6 +767,7 @@ const TransformationBox = ({
 			setPipeline(p);
 			setSelectedInPaths([]);
 			setSelectedOutPaths([]);
+			computeAutoSelectedPaths('', true);
 		}, delay);
 	};
 
@@ -3281,8 +3262,10 @@ const TransformationProperty = ({
 	tableKey,
 	hideCheckbox = false,
 }: TransformationPropertyProps) => {
+	const { connection } = useContext(ConnectionContext);
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
-	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
+	const { isImport, pipelineType, pipeline, autoSelectedPaths, computeAutoSelectedPaths } =
+		useContext(PipelineContext);
 
 	let path = property.name;
 	if (parentName) {
@@ -3295,19 +3278,37 @@ const TransformationProperty = ({
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
 	const isTableKey = !!tableKey && tableKey === path;
+	let isAutoSelected = autoSelectedPaths.includes(path);
 	const isSelectDisabled =
-		transformationType === 'function' && ((isOutMatchingProperty && !isSelected) || hasSelectedParent);
+		transformationType === 'function' &&
+		((isOutMatchingProperty && !isSelected) || hasSelectedParent || isAutoSelected);
 
-	const onWrapperClick = (e: any) => {
+	const onClick = (e: any) => {
 		if (isSelectDisabled) {
 			return;
 		}
 		const isCopy = e.target.closest('.fullscreen-transformation__property-copy') != null;
 		const isCaret = e.target.closest('.fullscreen-transformation__property-caret') != null;
-		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
-		if (isCopy || isCaret || isCheckbox) {
+		if (isCopy || isCaret) {
 			e.stopPropagation();
 			return;
+		}
+		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
+		if (isCheckbox) {
+			e.preventDefault();
+		}
+		let isEventSend = connection.isDestination && pipelineType.target.includes('Event');
+		const isObject = property.type.kind === 'object';
+		if (isEventSend && side === 'output' && isObject && isSelected) {
+			const hasAutoSelectedChild = autoSelectedPaths.findIndex((pa) => pa.startsWith(`${path}.`)) !== -1;
+			if (hasAutoSelectedChild) {
+				// Instead of deselecting the entire property hierarchy,
+				// re-compute the automatically selected leaf properties, if
+				// any.
+				const firstPathFragment = path.split('.')[0];
+				computeAutoSelectedPaths(firstPathFragment, true);
+				return;
+			}
 		}
 		onChangeSelectedPath(path);
 	};
@@ -3382,7 +3383,7 @@ const TransformationProperty = ({
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
 			style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
-			onClick={transformationType === 'function' ? onWrapperClick : null}
+			onClick={transformationType === 'function' ? onClick : null}
 		>
 			<div className='fullscreen-transformation__property-padding'>
 				{isParent && showCaret && (
@@ -3404,7 +3405,6 @@ const TransformationProperty = ({
 						checked={isSelected || hasSelectedParent}
 						indeterminate={hasSelectedChildren && !isSelected}
 						disabled={isSelectDisabled}
-						onSlChange={() => onChangeSelectedPath(path)}
 						size='small'
 					/>
 				))}

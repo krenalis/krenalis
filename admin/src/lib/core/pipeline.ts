@@ -42,6 +42,7 @@ import {
 	isYear,
 	parseText,
 } from '../../utils/filters';
+import { RAW_TRANSFORMATION_FUNCTIONS } from '../../components/routes/PipelineWrapper/Pipeline.constants';
 
 const SCHEDULE_PERIODS: SchedulePeriod[] = ['Off', '5m', '15m', '30m', '1h', '2h', '3h', '6h', '8h', '12h', '24h'];
 
@@ -1502,10 +1503,179 @@ const validateCustomLastChangeTimeFormat = (format: string) => {
 	}
 };
 
-const getTransformationFunctionParameterName = (
+const computeDefaultTransformationFunction = (
+	outputSchema: ObjectType,
+	language: string,
 	connection: TransformedConnection,
 	pipelineType: TransformedPipelineType,
-): String => {
+): string => {
+	if (language !== 'JavaScript' && language !== 'Python') {
+		return '';
+	}
+
+	let func = RAW_TRANSFORMATION_FUNCTIONS[language].replace(
+		'$parameter',
+		getTransformationFunctionParameter(connection, pipelineType),
+	);
+
+	const isEventSend = connection.isDestination && pipelineType.target.includes('Event');
+	if (isEventSend) {
+		// Pre-populate the function.
+		const requiredProperties: Property[] = [];
+		for (const property of outputSchema.properties) {
+			if (property.createRequired) {
+				requiredProperties.push(property);
+			}
+		}
+		let r = '';
+		let imports = new Set();
+		for (let i = 0; i < requiredProperties.length; i++) {
+			r += '\n\t\t';
+			const property = requiredProperties[i];
+			r += getTransformationFunctionReturnField(property, 0, language);
+			if (language === 'Python') {
+				switch (property.type.kind) {
+					case 'decimal':
+						imports.add('decimal');
+						break;
+					case 'datetime':
+					case 'date':
+					case 'time':
+						imports.add('datetime');
+						break;
+					case 'uuid':
+						imports.add('uuid');
+						break;
+					default:
+						break;
+				}
+			}
+			if (i === requiredProperties.length - 1) {
+				r += '\n\t';
+			}
+		}
+		func = func.replace('$return', r);
+		if (imports.size > 0) {
+			let f = '';
+			for (const im of imports) {
+				f += `import ${im}\n`;
+			}
+			func = f + '\n' + func;
+		}
+	} else {
+		func = func.replace('$return', '');
+	}
+
+	return func;
+};
+
+const BASE_FUNCTION_RETURN_INDENTATION = 2;
+
+const getTransformationFunctionReturnField = (
+	property: Property,
+	indentation: number,
+	language: 'JavaScript' | 'Python',
+): string => {
+	let f = '';
+
+	const totalIndentation = BASE_FUNCTION_RETURN_INDENTATION + indentation;
+
+	if (indentation > 0) {
+		f += `\n${'\t'.repeat(totalIndentation)}`;
+	}
+
+	const isPython = language === 'Python';
+
+	if (isPython) {
+		f += `"${property.name}": `;
+	} else {
+		f += `${property.name}: `;
+	}
+
+	switch (property.type.kind) {
+		case 'string':
+			f += '""';
+			break;
+		case 'boolean':
+			f += isPython ? 'False' : 'false';
+			break;
+		case 'int':
+			if (isPython) {
+				f += '0';
+			} else {
+				if (property.type.bitSize === 64) {
+					f += '0n'; // bigint
+				} else {
+					f += '0';
+				}
+			}
+			break;
+		case 'float':
+			f += isPython ? '0.0' : '0';
+			break;
+		case 'decimal':
+			f += isPython ? 'decimal.Decimal(0)' : '0.0';
+			break;
+		case 'datetime':
+			f += isPython ? 'datetime.datetime(1970, 1, 1, 0, 0, 0)' : "'0000-00-00T00:00:00.000'";
+			break;
+		case 'date':
+			f += isPython ? 'datetime.date(1970, 1, 1)' : "'0000-00-00'";
+			break;
+		case 'time':
+			f += isPython ? 'datetime.time(0, 0, 0)' : "'00:00:00.000'";
+			break;
+		case 'year':
+			f += '2000';
+			break;
+		case 'uuid':
+			f += isPython
+				? 'uuid.UUID("00000000-0000-0000-0000-000000000000")'
+				: "'00000000-0000-0000-0000-000000000000'";
+			break;
+		case 'json':
+			f += isPython ? 'None' : 'null';
+			break;
+		case 'ip':
+			f += '"0.0.0.0"';
+			break;
+		case 'array':
+			f += '[]';
+			break;
+		case 'object':
+			const childProperties = property.type.properties;
+			let fragments = [];
+			for (const p of childProperties) {
+				if (p.createRequired) {
+					fragments.push(getTransformationFunctionReturnField(p, indentation + 1, language));
+				}
+			}
+			f += '{';
+			f += fragments.join('');
+			// Closing bracket
+			if (fragments.length > 0) {
+				f += '\n' + '\t'.repeat(totalIndentation) + '}';
+			} else {
+				f += '}';
+			}
+
+			break;
+		case 'map':
+			f += '{}';
+			break;
+		default:
+			break;
+	}
+
+	f += ',';
+
+	return f;
+};
+
+const getTransformationFunctionParameter = (
+	connection: TransformedConnection,
+	pipelineType: TransformedPipelineType,
+): string => {
 	if (isSourceEventConnection(connection.role, connection.connector.type) && pipelineType.target === 'User') {
 		return 'event';
 	}
@@ -1701,7 +1871,8 @@ export {
 	getHierarchicalPaths,
 	getSiblingPaths,
 	doesLastChangeTimeColumnNeedFormat,
-	getTransformationFunctionParameterName,
+	computeDefaultTransformationFunction,
+	getTransformationFunctionParameter,
 	validateAndNormalizeFilterCondition,
 	validateMatching,
 	propertyTypesAreEqual,

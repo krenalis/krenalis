@@ -1,9 +1,9 @@
 const RAW_TRANSFORMATION_FUNCTIONS = {
-	JavaScript: `const transform = ($parameterName) => {
-    return {}
+	JavaScript: `const transform = ($parameter) => {
+    return {$return}
 }`,
-	Python: `def transform($parameterName: dict) -> dict:
-	return {}
+	Python: `def transform($parameter: dict) -> dict:
+	return {$return}
 `,
 };
 
