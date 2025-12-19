@@ -805,7 +805,7 @@ func (t Type) Pattern() *regexp.Regexp {
 }
 
 // WithPattern returns t with the pattern p.
-// Panics if t is not a string type, or t has already apattern or has values.
+// Panics if t is not a string type, or t has already a pattern or has values.
 func (t Type) WithPattern(p *regexp.Regexp) Type {
 	if t.kind != StringKind {
 		panic("cannot set pattern for a non-string type")
