@@ -306,7 +306,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		values := event.Type.Values
 
 		if values["event"].(string) == "" {
-			return nil, errors.New("event cannot be empty")
+			return nil, errors.New(`property "event" cannot be an empty string`)
 		}
 
 		// Build a unique identifier for the event.
