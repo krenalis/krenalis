@@ -747,7 +747,7 @@ func toJavascriptType(t types.Type) string {
 	case types.DecimalKind:
 		return "string"
 	case types.DateTimeKind, types.DateKind, types.TimeKind:
-		return "Date"
+		return "string"
 	case types.YearKind:
 		return "number"
 	case types.UUIDKind, types.JSONKind, types.IPKind:
