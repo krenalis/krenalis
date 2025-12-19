@@ -33,7 +33,10 @@ import {
 	ConnectorSettings,
 	ConnectorUIResponse,
 	CreateAccessKeyResponse,
+	CreateConnectionResponse,
 	CreateEventListenerResponse,
+	CreateEventWriteKeyResponse,
+	CreatePipelineResponse,
 	Event,
 	EventListenerEventsResponse,
 	ExecQueryResponse,
@@ -376,11 +379,12 @@ class Connections {
 	};
 
 	createEventWriteKey = async (connection: number): Promise<string> => {
-		return await call(
+		const res: CreateEventWriteKeyResponse = await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
 			http.POST,
 			this.workspaceID,
 		);
+		return res.key;
 	};
 
 	deleteEventWriteKey = async (connection: number, key: string): Promise<void> => {
@@ -433,12 +437,13 @@ class Connections {
 		eventType: string,
 		pipeline: PipelineToSet,
 	): Promise<number> => {
-		return await call(`${this.apiURL}/pipelines`, http.POST, this.workspaceID, {
+		const res: CreatePipelineResponse = await call(`${this.apiURL}/pipelines`, http.POST, this.workspaceID, {
 			connection,
 			target,
 			eventType,
 			...pipeline,
 		});
+		return res.id;
 	};
 
 	updatePipeline = async (id: number, pipeline: PipelineToSet): Promise<void> => {
@@ -782,10 +787,11 @@ class Workspaces {
 	};
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<number> => {
-		return await call(`${this.apiURL}/connections`, http.POST, this.workspaceID, {
+		const res: CreateConnectionResponse = await call(`${this.apiURL}/connections`, http.POST, this.workspaceID, {
 			...connection,
 			authToken: authToken,
 		});
+		return res.id;
 	};
 
 	authToken = async (connector: string, authCode: string, redirectURI: string): Promise<string> => {

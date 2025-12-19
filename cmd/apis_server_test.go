@@ -199,7 +199,7 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when body is missing", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", nil)
 
-		err := validateRequiredBody(req)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -211,7 +211,7 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type is missing", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 
-		err := validateRequiredBody(req)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -224,7 +224,20 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "text/plain")
 
-		err := validateRequiredBody(req)
+		err := validateRequiredBody(req, false)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != "request's content type must be 'application/json'" {
+			t.Fatalf("expected request's content type must be 'application/json', got %q", err.Error())
+		}
+	})
+
+	t.Run("fails when content type is not json or plain/text", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+		req.Header.Set("Content-Type", "application/xml")
+
+		err := validateRequiredBody(req, true)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -237,7 +250,7 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json; charset=utf-8; version=1")
 
-		err := validateRequiredBody(req)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -250,7 +263,7 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json; charset=iso-8859-1")
 
-		err := validateRequiredBody(req)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -264,7 +277,7 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "Application/Json; Charset=UTF-8")
 
-		if err := validateRequiredBody(req); err != nil {
+		if err := validateRequiredBody(req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)
@@ -281,7 +294,7 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-		if err := validateRequiredBody(req); err != nil {
+		if err := validateRequiredBody(req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)
@@ -298,7 +311,7 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(oversized))
 		req.Header.Set("Content-Type", "application/json")
 
-		if err := validateRequiredBody(req); err != nil {
+		if err := validateRequiredBody(req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)

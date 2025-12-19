@@ -318,7 +318,7 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -447,12 +447,13 @@ func validateForbiddenBody(r *http.Request) error {
 
 // validateRequiredBody validates that the request body is present and is JSON,
 // then applies size limiting and NFC normalization.
-func validateRequiredBody(r *http.Request) error {
+// If allowPlainText is true, it also allows "text/plain" as a content type.
+func validateRequiredBody(r *http.Request, allowPlainText bool) error {
 	if r.ContentLength == 0 {
 		return errors.BadRequest("request's body is missing")
 	}
 	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || strings.ToLower(mt) != "application/json" {
+	if err != nil || mt != "application/json" && (!allowPlainText || mt != "text/plain") {
 		return errors.BadRequest("request's content type must be 'application/json'")
 	}
 	for k := range params {

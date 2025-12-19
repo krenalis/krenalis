@@ -25,7 +25,7 @@ type api struct {
 //
 // Authentication is not required to call AcceptInvitation.
 func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -45,7 +45,7 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
 func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -104,7 +104,7 @@ func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, erro
 // ExpressionsProperties returns all the unique properties contained inside a
 // list of expressions.
 func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
@@ -216,7 +216,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 //
 // Authentication is not required to call SendMemberPasswordReset.
 func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -251,7 +251,7 @@ func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.R
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data.
 func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
@@ -286,7 +286,7 @@ func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (
 
 // ValidateExpression validates an expression.
 func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {

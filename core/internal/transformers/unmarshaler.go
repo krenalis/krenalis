@@ -102,9 +102,9 @@ var javaScriptDecoderOptions = decoderOptions{
 		Type:     toJavascriptType,
 	},
 	int64AsString:  true,
-	datetimeFormat: "2006-01-02T15:04:05.000Z07:00",
-	dateFormat:     "2006-01-02T15:04:05.000Z07:00",
-	timeFormat:     "2006-01-02T15:04:05.000Z07:00",
+	datetimeFormat: "2006-01-02T15:04:05.999999999Z07:00",
+	dateFormat:     "2006-01-02",
+	timeFormat:     "15:04:05.999999999",
 }
 
 // pythonDecoderOptions are the Python's options used by the decoder.
@@ -132,8 +132,10 @@ var pythonDecoderOptions = decoderOptions{
 //   - int(64 bits): a String representing an integer
 //   - float: a Number or one of "NaN", "Infinity", and "-Infinity"
 //   - decimal: a String representing a number
-//   - datetime, date, and time: a String representing a time formatted as
-//     "2006-01-02T15:04:05.000Z07:00"
+//   - datetime: a String representing a time formatted as
+//     "2006-01-02T15:04:05.999999999Z07:00"
+//   - date: a String representing a time formatted as "2006-01-02"
+//   - time: a String representing a time formatted as "15:04:05.999999999"
 //   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
 //   - json: if preserveJSON is false: true, false, a Number, a String, an

@@ -120,9 +120,11 @@ func (c *Meergo) CreatePipeline(conn int, target string, pipeline PipelineToSet)
 	}
 	body["connection"] = conn
 	body["target"] = target
-	var id int
-	c.MustCall("POST", "/v1/pipelines", body, &id)
-	return id
+	var response struct {
+		ID int `json:"id"`
+	}
+	c.MustCall("POST", "/v1/pipelines", body, &response)
+	return response.ID
 }
 
 // CreatePipelineErr is like CreatePipeline but returns an error instead of
@@ -144,12 +146,14 @@ func (c *Meergo) CreatePipelineErr(conn int, target string, pipeline PipelineToS
 	}
 	body["connection"] = conn
 	body["target"] = target
-	var id int
-	err = c.Call("POST", "/v1/pipelines", body, &id)
+	var response struct {
+		ID int `json:"id"`
+	}
+	err = c.Call("POST", "/v1/pipelines", body, &response)
 	if err != nil {
 		return 0, err
 	}
-	return id, nil
+	return response.ID, nil
 }
 
 // DefaultFilterUserFromEvents is the filter that the admin adds by default to
@@ -171,9 +175,11 @@ var DefaultFilterUserFromEvents = &Filter{
 }
 
 func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
-	var id int
-	c.MustCall("POST", "/v1/connections", connection, &id)
-	return id
+	var response struct {
+		ID int `json:"id"`
+	}
+	c.MustCall("POST", "/v1/connections", connection, &response)
+	return response.ID
 }
 
 func (c *Meergo) CreateDestinationFilesystem() int {
@@ -244,9 +250,11 @@ func (c *Meergo) CreateEventPipeline(conn int, eventType string, pipeline Pipeli
 	body["connection"] = conn
 	body["target"] = "Event"
 	body["eventType"] = eventType
-	var id int
-	c.MustCall("POST", "/v1/pipelines", body, &id)
-	return id
+	var response struct {
+		ID int `json:"id"`
+	}
+	c.MustCall("POST", "/v1/pipelines", body, &response)
+	return response.ID
 }
 
 func (c *Meergo) CreateWebhookSource(name string, linkedConnections []int) int {
