@@ -391,14 +391,14 @@ func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request
 	s := r.PathValue("start")
 	start, err := iso8601.ParseString(s)
 	if err != nil {
-		return nil, errors.BadRequest("start is not valid")
+		return nil, errors.NotFound("start is not valid")
 	}
 
 	// Parse end.
 	e := r.PathValue("end")
 	end, err := iso8601.ParseString(e)
 	if err != nil {
-		return nil, errors.BadRequest("end is not valid")
+		return nil, errors.NotFound("end is not valid")
 	}
 
 	q := r.URL.Query()
@@ -471,16 +471,16 @@ func (workspace workspace) PipelineMetricsPerDate(_ http.ResponseWriter, r *http
 
 	// Parse start.
 	s := r.PathValue("start")
-	start, err := iso8601.ParseString(s)
+	start, err := time.Parse(time.DateOnly, s)
 	if err != nil {
-		return nil, errors.BadRequest("start is not valid")
+		return nil, errors.NotFound("start is not valid")
 	}
 
 	// Parse end.
 	e := r.PathValue("end")
-	end, err := iso8601.ParseString(e)
+	end, err := time.Parse(time.DateOnly, e)
 	if err != nil {
-		return nil, errors.BadRequest("end is not valid")
+		return nil, errors.NotFound("end is not valid")
 	}
 
 	q := r.URL.Query()
@@ -525,7 +525,7 @@ func (workspace workspace) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.
 	d := r.PathValue("days")
 	days, err := strconv.Atoi(d)
 	if err != nil {
-		return nil, errors.BadRequest("days is not valid")
+		return nil, errors.NotFound("days is not valid")
 	}
 
 	q := r.URL.Query()
@@ -570,7 +570,7 @@ func (workspace workspace) PipelineMetricsPerHour(_ http.ResponseWriter, r *http
 	h := r.PathValue("hours")
 	hours, err := strconv.Atoi(h)
 	if err != nil {
-		return nil, errors.BadRequest("hours is not valid")
+		return nil, errors.NotFound("hours is not valid")
 	}
 
 	q := r.URL.Query()
@@ -615,7 +615,7 @@ func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *ht
 	m := r.PathValue("minutes")
 	minutes, err := strconv.Atoi(m)
 	if err != nil {
-		return nil, errors.BadRequest("minutes is not valid")
+		return nil, errors.NotFound("minutes is not valid")
 	}
 
 	q := r.URL.Query()

@@ -153,13 +153,13 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 
 	// Validate start and end.
 	if start.Before(metrics.MinTime) {
-		return nil, errors.BadRequest("start date is too far in the past")
+		return nil, errors.NotFound("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return nil, errors.BadRequest("end date is too far in the future")
+		return nil, errors.NotFound("end date is too far in the future")
 	}
 	if end.Before(start) {
-		return nil, errors.BadRequest("end date cannot be earlier than start date")
+		return nil, errors.NotFound("end date cannot be earlier than start date")
 	}
 
 	// Validate pipelines.
@@ -303,13 +303,13 @@ func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end ti
 
 	// Validate start and end.
 	if start.Before(metrics.MinTime) {
-		return PipelineMetrics{}, errors.BadRequest("start date is too far in the past")
+		return PipelineMetrics{}, errors.NotFound("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return PipelineMetrics{}, errors.BadRequest("end date is too far in the future")
+		return PipelineMetrics{}, errors.NotFound("end date is too far in the future")
 	}
 	if !end.After(start) {
-		return PipelineMetrics{}, errors.BadRequest("day of the end date must be after the day of the start date")
+		return PipelineMetrics{}, errors.NotFound("day of the end date must be after the day of the start date")
 	}
 
 	// Validate pipelines.
@@ -359,15 +359,15 @@ func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number in
 	switch unit {
 	case Minute:
 		if number < 1 || number > 60 {
-			return PipelineMetrics{}, errors.BadRequest("minutes must be in range [1,60]")
+			return PipelineMetrics{}, errors.NotFound("minutes must be in range [1,60]")
 		}
 	case Hour:
 		if number < 1 || number > 48 {
-			return PipelineMetrics{}, errors.BadRequest("hours must be in range [1,48]")
+			return PipelineMetrics{}, errors.NotFound("hours must be in range [1,48]")
 		}
 	case Day:
 		if number < 1 || number > 30 {
-			return PipelineMetrics{}, errors.BadRequest("days must be in range [1,30]")
+			return PipelineMetrics{}, errors.NotFound("days must be in range [1,30]")
 		}
 	}
 
