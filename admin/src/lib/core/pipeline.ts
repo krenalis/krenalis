@@ -1594,7 +1594,7 @@ const getTransformationFunctionReturnField = (
 
 	switch (property.type.kind) {
 		case 'string':
-			f += '""';
+			f += isPython ? '""' : "''";
 			break;
 		case 'boolean':
 			f += isPython ? 'False' : 'false';
@@ -1614,16 +1614,16 @@ const getTransformationFunctionReturnField = (
 			f += isPython ? '0.0' : '0';
 			break;
 		case 'decimal':
-			f += isPython ? 'decimal.Decimal(0)' : '0.0';
+			f += isPython ? 'decimal.Decimal(0)' : "'0.0'";
 			break;
 		case 'datetime':
-			f += isPython ? 'datetime.datetime(1970, 1, 1, 0, 0, 0)' : "'0000-00-00T00:00:00.000'";
+			f += isPython ? 'datetime.datetime(2000, 1, 1, 0, 0, 0)' : "'2000-01-01T00:00:00.000000000Z'";
 			break;
 		case 'date':
-			f += isPython ? 'datetime.date(1970, 1, 1)' : "'0000-00-00'";
+			f += isPython ? 'datetime.date(2000, 1, 1)' : "'2000-01-01'";
 			break;
 		case 'time':
-			f += isPython ? 'datetime.time(0, 0, 0)' : "'00:00:00.000'";
+			f += isPython ? 'datetime.time(0, 0, 0)' : "'00:00:00.000000000'";
 			break;
 		case 'year':
 			f += '2000';
@@ -1637,7 +1637,7 @@ const getTransformationFunctionReturnField = (
 			f += isPython ? 'None' : 'null';
 			break;
 		case 'ip':
-			f += '"0.0.0.0"';
+			f += isPython ? '"0.0.0.0"' : "'0.0.0.0'";
 			break;
 		case 'array':
 			f += '[]';
