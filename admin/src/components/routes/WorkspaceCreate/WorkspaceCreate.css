@@ -1,14 +1,16 @@
+.workspace-create .section {
+	margin-bottom: 30px;
+}
+
 .workspace-create__heading {
 	margin-bottom: 20px;
 }
 
 .workspace-create__title {
-	font-size: 23px;
-	font-weight: 600;
-}
-
-.workspace-create__name {
 	margin-bottom: 30px;
+	font-size: 23px;
+	max-width: 100%;
+	font-weight: 600;
 }
 
 .workspace-create__warehouse-list::part(combobox) {
@@ -56,7 +58,7 @@
 
 .workspace-create__buttons {
 	display: flex;
-	justify-content: center;
+	justify-content: end;
 	gap: 30px;
 	margin-top: 40px;
 }
@@ -70,7 +72,6 @@
 	font-weight: 500;
 }
 
-.workspace-create__data-warehouse-description {
-	padding-top: 10px;
-	padding-bottom: 18px;
+.workspace-create__data-warehouse-description-second-p {
+	margin-top: 5px;
 }

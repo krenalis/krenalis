@@ -698,7 +698,6 @@ inherit the disabled style */
 .transformation-box {
 	border-radius: 10px;
 	background-color: var(--bg-primary);
-	box-shadow: var(--sl-shadow-small);
 	border: 1px solid var(--sl-color-neutral-200);
 	min-height: 100%;
 }

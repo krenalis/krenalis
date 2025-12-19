@@ -15,6 +15,7 @@ import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY } from '../../../constants/storage';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
+import Section from '../../base/Section/Section';
 
 const postgresqlIcon = <ExternalLogo slot='prefix' code='postgresql' path={WAREHOUSES_ASSETS_PATH} />;
 
@@ -149,78 +150,84 @@ const WorkspaceCreate = () => {
 
 	return (
 		<div className='workspace-create'>
-			<div className='workspace-create__heading'>
-				<div className='workspace-create__title'>Create workspace</div>
-				{!hasWorkspaces && (
-					<div className='workspace-create__description'>
-						Currently you don't have any workspace. Create a workspace to continue.
+			<div className='workspace-create__title'>
+				{!hasWorkspaces ? 'Create your first workspace' : 'Create a new workspace'}
+			</div>
+			<Section
+				title='Name'
+				description={'Choose a name for the workspace. It can be changed later.'}
+				padded={true}
+				annotated={true}
+			>
+				<SlInput
+					className='workspace-create__name'
+					maxlength={100}
+					value={name}
+					onSlInput={onNameInput}
+					ref={nameInputRef}
+					placeholder='My workspace'
+				/>
+			</Section>
+			<Section
+				title='Data warehouse'
+				description={
+					<p className='workspace-create__data-warehouse-description'>
+						This is the data warehouse where your user data and events will be stored.
+						<br />
+						<div className='workspace-create__data-warehouse-description-second-p'>
+							It must be an empty database. Meergo will create views and tables.
+						</div>
+					</p>
+				}
+				padded={true}
+				annotated={true}
+			>
+				<SlSelect
+					className='workspace-create__warehouse-list'
+					value={selectedWarehouse}
+					onSlChange={onChangeWarehouse}
+				>
+					{selectedWarehouse === 'PostgreSQL' || selectedWarehouse === 'PostgreSQL-Docker'
+						? postgresqlIcon
+						: snowflakeIcon}
+					<SlOption value='PostgreSQL'>
+						{postgresqlIcon}
+						PostgreSQL
+					</SlOption>
+					<SlOption value='Snowflake'>
+						{snowflakeIcon}
+						Snowflake
+					</SlOption>
+					{isDocker && (
+						<SlOption value='PostgreSQL-Docker'>
+							{postgresqlIcon}
+							PostgreSQL via Docker
+						</SlOption>
+					)}
+				</SlSelect>
+				{selectedWarehouse === 'PostgreSQL-Docker' ? (
+					<div className='workspace-create__docker-description'>
+						Since you are using Meergo with Docker you can easily create a new workspace by connecting it to
+						the PostgreSQL warehouse provided directly by our image.
+					</div>
+				) : (
+					<div className='workspace-create__warehouse-settings'>
+						{selectedWarehouse === 'PostgreSQL' ? (
+							<PostgreSQLSettings
+								settings={warehouseSettings}
+								setSettings={setWarehouseSettings}
+								precompileDefault={true}
+							/>
+						) : (
+							<SnowflakeSettings
+								settings={warehouseSettings}
+								setSettings={setWarehouseSettings}
+								precompileDefault={true}
+							/>
+						)}
 					</div>
 				)}
-			</div>
-			<SlInput
-				className='workspace-create__name'
-				maxlength={100}
-				label='Name'
-				value={name}
-				onSlInput={onNameInput}
-				ref={nameInputRef}
-				placeholder='My workspace'
-				helpText='A name for the workspace, so it can be easily recognized among other workspaces. It can be changed later.'
-			/>
-			<div className='workspace-create__data-warehouse'>Workspace's data warehouse</div>
-			<p className='workspace-create__data-warehouse-description'>
-				Profile data and events of the workspace will be stored in your own data warehouse.
-				<br />
-				<br />
-				Please provide the login credentials for an empty database within the data warehouse. Meergo will create
-				views and tables for storing profile data and events.
-			</p>
-			<SlSelect
-				className='workspace-create__warehouse-list'
-				value={selectedWarehouse}
-				onSlChange={onChangeWarehouse}
-				label='Data warehouse'
-			>
-				{selectedWarehouse === 'PostgreSQL' || selectedWarehouse === 'PostgreSQL-Docker'
-					? postgresqlIcon
-					: snowflakeIcon}
-				<SlOption value='PostgreSQL'>
-					{postgresqlIcon}
-					PostgreSQL
-				</SlOption>
-				<SlOption value='Snowflake'>
-					{snowflakeIcon}
-					Snowflake
-				</SlOption>
-				{isDocker && (
-					<SlOption value='PostgreSQL-Docker'>
-						{postgresqlIcon}
-						PostgreSQL via Docker
-					</SlOption>
-				)}
-			</SlSelect>
-			{selectedWarehouse === 'PostgreSQL-Docker' ? (
-				<div className='workspace-create__docker-description'>
-					Since you are using Meergo with Docker you can easily create a new workspace by connecting it to the
-					PostgreSQL warehouse provided directly by our image.
-				</div>
-			) : (
-				<div className='workspace-create__warehouse-settings'>
-					{selectedWarehouse === 'PostgreSQL' ? (
-						<PostgreSQLSettings
-							settings={warehouseSettings}
-							setSettings={setWarehouseSettings}
-							precompileDefault={true}
-						/>
-					) : (
-						<SnowflakeSettings
-							settings={warehouseSettings}
-							setSettings={setWarehouseSettings}
-							precompileDefault={true}
-						/>
-					)}
-				</div>
-			)}
+			</Section>
 			<div className='workspace-create__buttons'>
 				{hasWorkspaces && (
 					<SlButton className='workspace-create__cancel-button' onClick={onCancel}>
