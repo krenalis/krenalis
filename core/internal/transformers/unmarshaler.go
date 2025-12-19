@@ -662,28 +662,34 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.DateTimeKind:
 		if v.Kind() == '"' {
-			if t, err := time.Parse(d.opts.datetimeFormat, d.unquoteString(v)); err == nil {
-				t = t.UTC()
-				if y := t.Year(); 1 <= y && y <= 9999 {
-					return t, nil
-				}
+			t, err := time.Parse(d.opts.datetimeFormat, d.unquoteString(v))
+			if err != nil {
+				return nil, newRecordValidationError("", fmt.Sprintf("is not in the expected datetime format"))
 			}
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, newRecordValidationError("", fmt.Sprintf("has a year outside the allowed range (1–9999)"))
+			}
+			return t, nil
 		}
 	case types.DateKind:
 		if v.Kind() == '"' {
-			if t, err := time.Parse(d.opts.dateFormat, d.unquoteString(v)); err == nil {
-				t = t.UTC()
-				if y := t.Year(); 1 <= y && y <= 9999 {
-					return time.Date(y, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
-				}
+			t, err := time.Parse(d.opts.dateFormat, d.unquoteString(v))
+			if err != nil {
+				return nil, newRecordValidationError("", fmt.Sprintf("is not in the expected date format"))
 			}
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, newRecordValidationError("", fmt.Sprintf("has a year outside the allowed range (1–9999)"))
+			}
+			return t, nil
 		}
 	case types.TimeKind:
 		if v.Kind() == '"' {
-			if t, err := time.Parse(d.opts.timeFormat, d.unquoteString(v)); err == nil {
-				t = t.UTC()
-				return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
+			t, err := time.Parse(d.opts.timeFormat, d.unquoteString(v))
+			if err != nil {
+				return nil, newRecordValidationError("", fmt.Sprintf("is not in the expected time format"))
 			}
+			return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
 		}
 	case types.YearKind:
 		if v.Kind() == '0' {

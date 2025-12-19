@@ -394,7 +394,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Date":"2023-02-30"}}]}`,
-			records:  []Record{{Err: newRecordValidationError("Date", `property «Date» has a value that is not of type «datetime.date»`)}},
+			records:  []Record{{Err: newRecordValidationError("Date", `property «Date» is not in the expected date format`)}},
 		},
 		{
 			language: state.Python,
