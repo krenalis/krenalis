@@ -3,7 +3,6 @@
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
 	border: 1px solid var(--sl-color-neutral-200);
-	box-shadow: var(--sl-shadow-small);
 	overflow: auto;
 	position: relative;
 }
