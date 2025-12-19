@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"database/sql"
@@ -15,6 +16,7 @@ import (
 	"log/slog"
 	"math"
 	mathrand "math/rand/v2"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -1595,75 +1597,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, err
 	}
 
-	// Construct the preview.
-	var b json.Buffer
-	b.WriteString(req.Method)
-	b.WriteString(" ")
-	b.WriteString(req.URL.String())
-	b.WriteByte('\n')
-	err = req.Header.Write(&b)
-	if err != nil {
-		return nil, err
-	}
-	if req.Body != nil {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			return nil, err
-		}
-		b.WriteByte('\n')
-		ct := req.Header.Get("Content-Type")
-		if !utf8.Valid(body) {
-			ct = "application/octet-stream"
-		}
-		switch ct {
-		case "application/json":
-			indented, err := json.Indent(body, "", "  ")
-			if err != nil {
-				b.Write(body)
-				break
-			}
-			b.Write(indented)
-		case "application/x-ndjson":
-			n := b.Len()
-			dec := json.NewDecoder(bytes.NewReader(body))
-			first := true
-			for {
-				var value json.Value
-				value, err = dec.ReadValue()
-				if err != nil {
-					if err == io.EOF {
-						if !first {
-							err = nil
-						}
-					}
-					break
-				}
-				if !first {
-					b.WriteByte('\n')
-				}
-				indented, err := json.Indent(value, "", "    ")
-				if err != nil {
-					break
-				}
-				if err == nil {
-					b.Write(indented)
-				} else {
-					b.Write(value)
-				}
-				first = false
-			}
-			if err != nil {
-				b.Truncate(n)
-				b.Write(body)
-			}
-		case "application/octet-stream":
-			_, _ = fmt.Fprintf(&b, "[A binary body of %d bytes]", len(body))
-		default:
-			b.Write(body)
-		}
-	}
-
-	return b.Bytes(), nil
+	return dumpPreviewEventRequest(req)
 }
 
 // Rename renames the connection with the given new name.
@@ -2103,6 +2037,96 @@ func deserializeCursor(cursor string) (time.Time, error) {
 	}
 	// TODO(marco): validate the cursor's fields.
 	return c, nil
+}
+
+// dumpPreviewEventRequest dumps the HTTP request used to preview an event, and
+// returns it as a byte slice.
+func dumpPreviewEventRequest(req *http.Request) ([]byte, error) {
+
+	var b json.Buffer
+
+	b.WriteString(req.Method)
+	b.WriteString(" ")
+	b.WriteString(req.URL.String())
+	b.WriteByte('\n')
+	err := req.Header.Write(&b)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Body != nil {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		b.WriteByte('\n')
+		contentEncoding := strings.TrimSpace(req.Header.Get("Content-Encoding"))
+		if contentEncoding != "" {
+			encodings := strings.Split(contentEncoding, ",")
+			if len(encodings) == 1 && strings.EqualFold(strings.TrimSpace(encodings[0]), "gzip") {
+				reader, err := gzip.NewReader(bytes.NewReader(body))
+				if err == nil {
+					decoded, readErr := io.ReadAll(reader)
+					closeErr := reader.Close()
+					if readErr == nil && closeErr == nil {
+						body = decoded
+					}
+				}
+			}
+		}
+		ct := req.Header.Get("Content-Type")
+		if !utf8.Valid(body) {
+			ct = "application/octet-stream"
+		}
+		switch ct {
+		case "application/json":
+			indented, err := json.Indent(body, "", "  ")
+			if err != nil {
+				b.Write(body)
+				return b.Bytes(), nil
+			}
+			b.Write(indented)
+		case "application/x-ndjson":
+			n := b.Len()
+			dec := json.NewDecoder(bytes.NewReader(body))
+			first := true
+			for {
+				var value json.Value
+				value, err = dec.ReadValue()
+				if err != nil {
+					if err == io.EOF {
+						if !first {
+							err = nil
+						}
+					}
+					break
+				}
+				if !first {
+					b.WriteByte('\n')
+				}
+				indented, err := json.Indent(value, "", "    ")
+				if err != nil {
+					break
+				}
+				if err == nil {
+					b.Write(indented)
+				} else {
+					b.Write(value)
+				}
+				first = false
+			}
+			if err != nil {
+				b.Truncate(n)
+				b.Write(body)
+			}
+		case "application/octet-stream":
+			_, _ = fmt.Fprintf(&b, "[A binary body of %d bytes]", len(body))
+		default:
+			b.Write(body)
+		}
+	}
+
+	return b.Bytes(), nil
 }
 
 // isValidStrategy reports whether s is a valid strategy.
