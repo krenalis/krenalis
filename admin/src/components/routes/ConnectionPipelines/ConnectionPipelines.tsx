@@ -130,7 +130,7 @@ const ConnectionPipelines = () => {
 			<Section
 				className='connection-pipelines__list'
 				title='Pipelines'
-				description={`Pipelines import events, users, and groups from a website into the workspace's data warehouse using ${connection.name}`}
+				description={`Pipelines import events, users, and groups from a website into the workspace's data warehouse using ${connection.connector.label}`}
 				annotated={true}
 			>
 				{connection.pipelines!.length === 0 ? (
