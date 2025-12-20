@@ -102,8 +102,8 @@ func (file *File) Connector() string {
 // iterator, not Records, will return a *schemas.Error error.
 //
 // If the identity column specified in the pipeline exists in the file schema but
-// its type differs, the iterator returns an error. The same applies to the last
-// change time column, if specified.
+// its type differs, the iterator returns an error. The same applies to the update
+// time column, if specified.
 //
 // If the pipeline's sheet is not found in the file, the All method of the
 // iterator returns immediately and a subsequent call to Err returns
@@ -111,28 +111,28 @@ func (file *File) Connector() string {
 // that case Err returns ErrNoColumnsFound.
 //
 // It returns an error if a non-zero starting time is provided and the pipeline
-// has no last change property.
+// has no update time property.
 func (file *File) Records(ctx context.Context, startTime time.Time) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
-	if !startTime.IsZero() && file.pipeline.LastChangeTimeColumn == "" {
-		return nil, fmt.Errorf("a start time has been provided, but the pipeline does not have the last change property")
+	if !startTime.IsZero() && file.pipeline.UpdatedAtColumn == "" {
+		return nil, fmt.Errorf("a start time has been provided, but the pipeline does not have the update time property")
 	}
 	storage, err := file.storage()
 	if err != nil {
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.pipeline.Compression)
-	rc, storageLastChangeTime, err := s.Reader(ctx, file.pipeline.Path)
+	rc, storageUpdatedAt, err := s.Reader(ctx, file.pipeline.Path)
 	if err != nil {
 		return nil, err
 	}
-	if err = validateLastChangeTime(storageLastChangeTime); err != nil {
-		return nil, fmt.Errorf("invalid last change time returned by the storage: %s", err)
+	if err = validateUpdatedAt(storageUpdatedAt); err != nil {
+		return nil, fmt.Errorf("invalid update time returned by the storage: %s", err)
 	}
 	rw := newRecordWriter(file.pipeline.Format().Code, file.pipeline,
-		storageLastChangeTime, file.timeLayouts, startTime, math.MaxInt)
+		storageUpdatedAt, file.timeLayouts, startTime, math.MaxInt)
 	records := &fileRecords{
 		rw:    rw,
 		rc:    rc,
@@ -238,7 +238,7 @@ func newCompressedStorage(s any, c state.Compression) *compressorStorage {
 }
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
-// from which to read the file and its last change time.
+// from which to read the file and its update time.
 //
 // The storage must support read operations, otherwise this method panics.
 //
@@ -592,21 +592,20 @@ func (rr *recordReader) Record(ctx context.Context) (map[string]any, error) {
 // setYieldFunc method, for each record written, up to a maximum of limit
 // records.
 //
-// storageLastChangeTime is the last change time provided by the storage
-// connector, used when the file columns do not specify a last change time
-// property.
+// storageUpdatedAt is the update time provided by the storage connector, used
+// when the file columns do not specify an update time property.
 //
 // The close method should be called when there are no more records to write.
-func newRecordWriter(format string, pipeline *state.Pipeline, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
+func newRecordWriter(format string, pipeline *state.Pipeline, storageUpdatedAt time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
-		format:                format,
-		pipeline:              pipeline,
-		storageLastChangeTime: storageLastChangeTime,
-		timeLayouts:           layout,
-		startTime:             startTime,
-		limit:                 limit,
-		identityColumnIndex:   -1,
-		lastChangeTimeIndex:   -1,
+		format:              format,
+		pipeline:            pipeline,
+		storageUpdatedAt:    storageUpdatedAt,
+		timeLayouts:         layout,
+		startTime:           startTime,
+		limit:               limit,
+		identityColumnIndex: -1,
+		updatedAtIndex:      -1,
 	}
 	return &rw
 }
@@ -615,12 +614,12 @@ func newRecordWriter(format string, pipeline *state.Pipeline, storageLastChangeT
 type recordWriter struct {
 	format                 string
 	pipeline               *state.Pipeline
-	storageLastChangeTime  time.Time
+	storageUpdatedAt       time.Time
 	timeLayouts            *state.TimeLayouts
 	startTime              time.Time
 	limit                  int
 	identityColumnIndex    int
-	lastChangeTimeIndex    int
+	updatedAtIndex         int
 	numPropertiesPerRecord int
 	properties             []types.Property // properties of the pipeline's schema, or the file's columns if a pipeline has not been provided
 	issues                 []string
@@ -661,16 +660,16 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			if p.Name == rw.pipeline.IdentityColumn {
 				rw.identityColumnIndex = i
 			}
-			if p.Name == rw.pipeline.LastChangeTimeColumn {
-				rw.lastChangeTimeIndex = i
+			if p.Name == rw.pipeline.UpdatedAtColumn {
+				rw.updatedAtIndex = i
 			}
 			rw.numPropertiesPerRecord++
 		}
 		if rw.pipeline.IdentityColumn != "" && rw.identityColumnIndex == -1 {
 			return fmt.Errorf("there is no identity column %q", rw.pipeline.IdentityColumn)
 		}
-		if rw.pipeline.LastChangeTimeColumn != "" && rw.lastChangeTimeIndex == -1 {
-			return fmt.Errorf("there is no last change time column %q", rw.pipeline.LastChangeTimeColumn)
+		if rw.pipeline.UpdatedAtColumn != "" && rw.updatedAtIndex == -1 {
+			return fmt.Errorf("there is no update time column %q", rw.pipeline.UpdatedAtColumn)
 		}
 	}
 	if rw.limit == 0 {
@@ -690,18 +689,18 @@ func (rw *recordWriter) Record(record map[string]any) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.format)
 	}
-	// Get the last change time.
+	// Get the update time.
 	var err error
-	lastChangeTime := rw.storageLastChangeTime
-	if i := rw.lastChangeTimeIndex; i >= 0 {
+	updatedAt := rw.storageUpdatedAt
+	if i := rw.updatedAtIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.pipeline.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
+		t, err = parseUpdatedAtColumn(p.Name, p.Type, rw.pipeline.UpdatedAtFormat, record[p.Name], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
-				lastChangeTime = t
+				updatedAt = t
 			}
-			if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+			if !rw.startTime.IsZero() && updatedAt.Before(rw.startTime) {
 				// Skip the record because it is older than the specified starting time.
 				return nil
 			}
@@ -714,9 +713,9 @@ func (rw *recordWriter) Record(record map[string]any) error {
 		}
 	}
 	rw.record = Record{
-		Attributes:     make(map[string]any, rw.numPropertiesPerRecord),
-		LastChangeTime: lastChangeTime,
-		Err:            err,
+		Attributes: make(map[string]any, rw.numPropertiesPerRecord),
+		UpdatedAt:  updatedAt,
+		Err:        err,
 	}
 	// Get the identity column.
 	if i := rw.identityColumnIndex; i >= 0 {
@@ -764,18 +763,18 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 	if len(record) != len(rw.properties) {
 		return fmt.Errorf("connector %s has returned records with different lengths", rw.format)
 	}
-	// Get the last change time.
+	// Get the update time.
 	var err error
-	lastChangeTime := rw.storageLastChangeTime
-	if i := rw.lastChangeTimeIndex; i >= 0 {
+	updatedAt := rw.storageUpdatedAt
+	if i := rw.updatedAtIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.pipeline.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
+		t, err = parseUpdatedAtColumn(p.Name, p.Type, rw.pipeline.UpdatedAtFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
-				lastChangeTime = t
+				updatedAt = t
 			}
-			if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+			if !rw.startTime.IsZero() && updatedAt.Before(rw.startTime) {
 				// Skip the record because it is older than the specified starting time.
 				return nil
 			}
@@ -788,9 +787,9 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 		}
 	}
 	rw.record = Record{
-		Attributes:     make(map[string]any, rw.numPropertiesPerRecord),
-		LastChangeTime: lastChangeTime,
-		Err:            err,
+		Attributes: make(map[string]any, rw.numPropertiesPerRecord),
+		UpdatedAt:  updatedAt,
+		Err:        err,
 	}
 	// Get the identity column.
 	if i := rw.identityColumnIndex; i >= 0 {
@@ -839,18 +838,18 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 			record[c] = ""
 		}
 	}
-	// Get the last change time.
+	// Get the update time.
 	var err error
-	lastChangeTime := rw.storageLastChangeTime
-	if i := rw.lastChangeTimeIndex; i >= 0 {
+	updatedAt := rw.storageUpdatedAt
+	if i := rw.updatedAtIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.pipeline.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
+		t, err = parseUpdatedAtColumn(p.Name, p.Type, rw.pipeline.UpdatedAtFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
-				lastChangeTime = t
+				updatedAt = t
 			}
-			if !rw.startTime.IsZero() && lastChangeTime.Before(rw.startTime) {
+			if !rw.startTime.IsZero() && updatedAt.Before(rw.startTime) {
 				// Skip the record because it is older than the specified starting time.
 				return nil
 			}
@@ -863,9 +862,9 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 		}
 	}
 	rw.record = Record{
-		Attributes:     make(map[string]any, rw.numPropertiesPerRecord),
-		LastChangeTime: lastChangeTime,
-		Err:            err,
+		Attributes: make(map[string]any, rw.numPropertiesPerRecord),
+		UpdatedAt:  updatedAt,
+		Err:        err,
 	}
 	// Get the identity column.
 	if i := rw.identityColumnIndex; i >= 0 {

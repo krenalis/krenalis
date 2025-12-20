@@ -141,7 +141,7 @@ func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events connectors.Even
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
@@ -169,9 +169,9 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 			b.WriteString(",updated")
 		}
 		b.WriteString("&page%5Bsize%5D=100&sort=updated")
-		if !lastChangeTime.IsZero() {
+		if !updatedAt.IsZero() {
 			b.WriteString("&filter=greater-than%28updated%2C")
-			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
+			b.WriteString(url.QueryEscape(updatedAt.Add(-time.Second).Format(time.RFC3339)))
 			b.WriteString("%29")
 		}
 		if ids != nil {
@@ -216,7 +216,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)
-		lastChangeTime, err := time.Parse(time.RFC3339, updated)
+		updatedAt, err := time.Parse(time.RFC3339, updated)
 		if err != nil {
 			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
 			continue
@@ -233,7 +233,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 			}
 		}
 		users[i].Attributes = data.Attributes
-		users[i].LastChangeTime = lastChangeTime.UTC()
+		users[i].UpdatedAt = updatedAt.UTC()
 	}
 
 	if response.Links.Next == "" {

@@ -265,8 +265,8 @@ type RecordFetcher interface {
 	// Records returns the records of the specified target. The target can only be
 	// either Users or Groups, and it must be a target supported by the connector.
 	//
-	// If lastChangeTime is not the zero time, only the records changed or created
-	// at or after that time will be returned, and its precision is limited to
+	// If updatedAt is not the zero time, only records created or modified at or
+	// after that time are returned. The precision of updatedAt is limited to
 	// microseconds. If ids is not nil, only records with identifiers in ids should
 	// be returned, if any.
 	//
@@ -287,7 +287,7 @@ type RecordFetcher interface {
 	// with the io.EOF error.
 	//
 	// In case of an error, it returns a non-nil and non-EOF error.
-	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]Record, string, error)
+	Records(ctx context.Context, target Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]Record, string, error)
 }
 
 // RecordUpserter is implemented by application connectors that support updating
@@ -305,10 +305,10 @@ type Record struct {
 	ID         string         // Identifier.
 	Attributes map[string]any // Attributes.
 
-	// LastChangeTime is the record's last change time, whose location can be
-	// anything, not necessarily UTC. The precision of this time is limited to
-	// microseconds; any precision beyond microseconds will be truncated.
-	LastChangeTime time.Time
+	// UpdatedAt is the record's last update time. Its location may be any time
+	// zone and is not necessarily UTC. The precision is limited to microseconds;
+	// any finer precision is truncated.
+	UpdatedAt time.Time
 
 	// TODO(marco): implements groups
 	//// Associations contains the identifiers of the user's groups or the group's users.

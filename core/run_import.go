@@ -69,12 +69,12 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		}
 		records, err = database.Records(ctx, pipeline, replacer)
 	case state.FileStorage:
-		var lastChangeTime time.Time
-		if !run.Cursor.IsZero() && pipeline.LastChangeTimeColumn != "" {
-			lastChangeTime = run.Cursor
+		var updatedAt time.Time
+		if !run.Cursor.IsZero() && pipeline.UpdatedAtColumn != "" {
+			updatedAt = run.Cursor
 		}
-		purge = lastChangeTime.IsZero()
-		records, err = this.file().Records(ctx, lastChangeTime)
+		purge = updatedAt.IsZero()
+		records, err = this.file().Records(ctx, updatedAt)
 	default:
 		return fmt.Errorf("invalid connector type %s", connector.Type)
 	}
@@ -138,8 +138,8 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			this.core.metrics.FilterPassed(pipeline.ID, 1)
 		}
 
-		if user.LastChangeTime.After(cursor) {
-			cursor = user.LastChangeTime
+		if user.UpdatedAt.After(cursor) {
+			cursor = user.UpdatedAt
 		}
 
 		users = append(users, user)
@@ -180,9 +180,9 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 				this.core.metrics.TransformationPassed(pipeline.ID, 1)
 				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
 				iw.Write(datastore.Identity{
-					ID:             user.ID,
-					Attributes:     user.Attributes,
-					LastChangeTime: user.LastChangeTime,
+					ID:         user.ID,
+					Attributes: user.Attributes,
+					UpdatedAt:  user.UpdatedAt,
 				})
 			}
 

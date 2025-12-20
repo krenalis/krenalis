@@ -166,10 +166,10 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 		id, _ := event["userId"].(string)
 		// Write the identity on the data warehouse.
 		err = iw.writer.Write(datastore.Identity{
-			ID:             id,
-			AnonymousID:    event["anonymousId"].(string),
-			Attributes:     record.Attributes,
-			LastChangeTime: event["timestamp"].(time.Time),
+			ID:          id,
+			AnonymousID: event["anonymousId"].(string),
+			Attributes:  record.Attributes,
+			UpdatedAt:   event["timestamp"].(time.Time),
 		}, event["messageId"].(string))
 		_ = err // TODO(marco): handle the error
 	}
@@ -180,9 +180,9 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 func (iw *identityWriter) writeDirect(event events.Event) error {
 	id, _ := event["userId"].(string)
 	return iw.writer.Write(datastore.Identity{
-		ID:             id,
-		AnonymousID:    event["anonymousId"].(string),
-		Attributes:     map[string]any{},
-		LastChangeTime: event["timestamp"].(time.Time),
+		ID:          id,
+		AnonymousID: event["anonymousId"].(string),
+		Attributes:  map[string]any{},
+		UpdatedAt:   event["timestamp"].(time.Time),
 	}, event["messageId"].(string))
 }

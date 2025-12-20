@@ -168,8 +168,8 @@ const PipelineFile = () => {
 		p.sheet = format.hasSheets ? '' : null;
 		p.path = '';
 		p.identityColumn = '';
-		p.lastChangeTimeColumn = '';
-		p.lastChangeTimeFormat = '';
+		p.updatedAtColumn = '';
+		p.updatedAtFormat = '';
 		p.transformation.mapping = flattenSchema(pipelineType.outputSchema, true);
 		p.transformation.function = null;
 		setSettings(null);

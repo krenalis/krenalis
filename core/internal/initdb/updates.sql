@@ -160,3 +160,11 @@ ALTER TABLE connections ALTER COLUMN settings TYPE jsonb USING NULLIF(btrim(sett
 ALTER TABLE pipelines ALTER COLUMN format_settings TYPE jsonb USING NULLIF(btrim(format_settings), '')::jsonb;
 
 ALTER TYPE notification_name ADD VALUE 'AcceptInvitation' BEFORE 'AddMember';
+
+-- rename update time columns
+
+ALTER TABLE pipelines
+    RENAME COLUMN last_change_time_column TO updated_at_column;
+
+ALTER TABLE pipelines
+    RENAME COLUMN last_change_time_format TO updated_at_format;

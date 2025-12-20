@@ -30,10 +30,10 @@ var maxQueuedIdentityTime = 500 * time.Millisecond
 
 // Identity is an identity
 type Identity struct {
-	ID             string                 // Identifier of the identity; it is empty for anonymous identities.
-	AnonymousID    string                 // AnonymousID of identities received via events.
-	Attributes     map[string]interface{} // Attributes. Keys are profile schema's properties.
-	LastChangeTime time.Time              // Last change time in UTC.
+	ID          string                 // Identifier of the identity; it is empty for anonymous identities.
+	AnonymousID string                 // AnonymousID of identities received via events.
+	Attributes  map[string]interface{} // Attributes. Keys are profile schema's properties.
+	UpdatedAt   time.Time              // Update time in UTC.
 }
 
 // identityKey represents a key in the meergo_identities table.
@@ -254,7 +254,7 @@ func (iw *BatchIdentityWriter) Write(identity Identity) {
 	row["_is_anonymous"] = false
 	row["_identity_id"] = key.identityID
 	row["_connection"] = iw.connection
-	row["_updated_at"] = identity.LastChangeTime
+	row["_updated_at"] = identity.UpdatedAt
 	row["_run"] = iw.run
 	iw.appendRow(key, row, "")
 }

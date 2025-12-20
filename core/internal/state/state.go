@@ -1220,39 +1220,39 @@ func (target Target) Value() (driver.Value, error) {
 }
 
 type Pipeline struct {
-	mu                   *sync.Mutex
-	ID                   int
-	connection           *Connection
-	format               *Connector
-	run                  *PipelineRun
-	propertiesToUnset    []string // is not nil only for source pipelines on users.
-	Target               Target
-	Name                 string
-	Enabled              bool
-	EventType            string
-	ScheduleStart        int16
-	SchedulePeriod       int16
-	InSchema             types.Type
-	OutSchema            types.Type
-	Filter               *Where
-	Transformation       Transformation
-	Query                string
-	Path                 string
-	Sheet                string
-	Compression          Compression
-	OrderBy              string
-	FormatSettings       json.Value
-	ExportMode           ExportMode
-	Matching             Matching
-	UpdateOnDuplicates   bool
-	TableName            string
-	TableKey             string
-	IdentityColumn       string
-	LastChangeTimeColumn string
-	LastChangeTimeFormat string
-	Reload               bool
-	Incremental          bool
-	Health               Health
+	mu                 *sync.Mutex
+	ID                 int
+	connection         *Connection
+	format             *Connector
+	run                *PipelineRun
+	propertiesToUnset  []string // is not nil only for source pipelines on users.
+	Target             Target
+	Name               string
+	Enabled            bool
+	EventType          string
+	ScheduleStart      int16
+	SchedulePeriod     int16
+	InSchema           types.Type
+	OutSchema          types.Type
+	Filter             *Where
+	Transformation     Transformation
+	Query              string
+	Path               string
+	Sheet              string
+	Compression        Compression
+	OrderBy            string
+	FormatSettings     json.Value
+	ExportMode         ExportMode
+	Matching           Matching
+	UpdateOnDuplicates bool
+	TableName          string
+	TableKey           string
+	IdentityColumn     string
+	UpdatedAtColumn    string
+	UpdatedAtFormat    string
+	Reload             bool
+	Incremental        bool
+	Health             Health
 }
 
 // Connection returns the connection of the pipeline.

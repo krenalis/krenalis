@@ -249,7 +249,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/crm/v3/objects/contacts/"
 
@@ -285,7 +285,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastC
 		path += "batch/read"
 	} else {
 		propertyName := "lastmodifieddate"
-		unix := lastChangeTime.UnixMilli()
+		unix := updatedAt.UnixMilli()
 		if unix < 0 {
 			unix = 0
 		}
@@ -343,7 +343,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastC
 			}
 			records[i].Attributes[group.Name] = pp
 		}
-		records[i].LastChangeTime = updatedAt.UTC()
+		records[i].UpdatedAt = updatedAt.UTC()
 	}
 
 	cursor = response.Paging.Next.After

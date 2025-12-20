@@ -233,7 +233,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, _ []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, _ []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
@@ -270,8 +270,8 @@ func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChan
 		"sort_dir":   {"ASC"},
 		"count":      {"1000"},
 	}
-	if !lastChangeTime.IsZero() {
-		values.Set("since_last_changed", lastChangeTime.Format(time.RFC3339))
+	if !updatedAt.IsZero() {
+		values.Set("since_last_changed", updatedAt.Format(time.RFC3339))
 	}
 	if cursor != "" {
 		values.Set("offset", cursor)
@@ -301,7 +301,7 @@ func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChan
 			delete(attributes, "id")
 		}
 		lastChanged, _ := attributes["last_changed"].(string)
-		lastChangeTime, err = iso8601.ParseString(lastChanged)
+		updatedAt, err = iso8601.ParseString(lastChanged)
 		if err != nil {
 			return nil, "", errors.New("server returned an invalid 'last_changed' property for a member")
 		}
@@ -315,15 +315,15 @@ func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChan
 			}
 		}
 		records[i] = connectors.Record{
-			ID:             id,
-			Attributes:     attributes,
-			LastChangeTime: lastChangeTime.UTC(),
+			ID:         id,
+			Attributes: attributes,
+			UpdatedAt:  updatedAt.UTC(),
 		}
 	}
 
 	offset, _ := strconv.Atoi(cursor)
 	eof := offset+len(response.Members) >= response.TotalItems
-	if last := records[len(records)-1]; last.LastChangeTime.Equal(lastChangeTime) {
+	if last := records[len(records)-1]; last.UpdatedAt.Equal(updatedAt) {
 		offset += len(response.Members)
 	} else {
 		offset = 0

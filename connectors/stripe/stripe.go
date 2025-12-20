@@ -132,9 +132,9 @@ func (stripe *Stripe) Records(ctx context.Context, _ connectors.Targets, _ time.
 			return nil, "", errors.New("unexpected customer identifier from Stripe")
 		}
 		users[i] = connectors.Record{
-			ID:             id,
-			Attributes:     attributes,
-			LastChangeTime: time.Now().UTC(),
+			ID:         id,
+			Attributes: attributes,
+			UpdatedAt:  time.Now().UTC(),
 		}
 	}
 	cursor = users[len(users)-1].ID

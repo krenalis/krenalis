@@ -258,8 +258,8 @@ interface TransformedPipeline {
 	tableKey?: string | null;
 	sheet?: string | null;
 	identityColumn?: string | null;
-	lastChangeTimeColumn?: string | null;
-	lastChangeTimeFormat?: string | null;
+	updatedAtColumn?: string | null;
+	updatedAtFormat?: string | null;
 	incremental?: boolean | null;
 	orderBy?: string | null;
 	exportMode?: ExportMode | null;
@@ -588,15 +588,12 @@ const transformPipeline = (
 	}
 
 	if (
-		pipeline.lastChangeTimeFormat != null &&
-		pipeline.lastChangeTimeFormat != '' &&
-		pipeline.lastChangeTimeFormat.startsWith("'") &&
-		pipeline.lastChangeTimeFormat.endsWith("'")
+		pipeline.updatedAtFormat != null &&
+		pipeline.updatedAtFormat != '' &&
+		pipeline.updatedAtFormat.startsWith("'") &&
+		pipeline.updatedAtFormat.endsWith("'")
 	) {
-		pipeline.lastChangeTimeFormat = pipeline.lastChangeTimeFormat.substring(
-			1,
-			pipeline.lastChangeTimeFormat.length - 1,
-		);
+		pipeline.updatedAtFormat = pipeline.updatedAtFormat.substring(1, pipeline.updatedAtFormat.length - 1);
 	}
 
 	if (pipeline.filter) {
@@ -641,8 +638,8 @@ const transformPipeline = (
 		tableKey: pipeline.tableKey,
 		sheet: pipeline.sheet,
 		identityColumn: pipeline.identityColumn,
-		lastChangeTimeColumn: pipeline.lastChangeTimeColumn,
-		lastChangeTimeFormat: pipeline.lastChangeTimeFormat,
+		updatedAtColumn: pipeline.updatedAtColumn,
+		updatedAtFormat: pipeline.updatedAtFormat,
 		incremental: pipeline.incremental,
 		exportMode: pipeline.exportMode,
 		matching: pipeline.matching,
@@ -961,21 +958,20 @@ const transformInPipelineToSet = async (
 			inSchema.properties.push(identityColumn.full);
 		}
 
-		if (pipeline.lastChangeTimeColumn) {
-			const isAlreadyInSchema =
-				inSchema.properties!.findIndex((p) => p.name === pipeline.lastChangeTimeColumn) !== -1;
+		if (pipeline.updatedAtColumn) {
+			const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === pipeline.updatedAtColumn) !== -1;
 			if (!isAlreadyInSchema) {
-				const lastChangeTimeColumn = flattenedInputSchema[pipeline.lastChangeTimeColumn];
-				if (lastChangeTimeColumn == null) {
-					throw new Error('Last change time must be a valid column');
+				const updatedAtColumn = flattenedInputSchema[pipeline.updatedAtColumn];
+				if (updatedAtColumn == null) {
+					throw new Error('Update time must be a valid column');
 				}
-				inSchema.properties.push(lastChangeTimeColumn.full);
+				inSchema.properties.push(updatedAtColumn.full);
 			}
-			if (doesLastChangeTimeColumnNeedFormat(pipeline.lastChangeTimeColumn, pipelineType.inputSchema)) {
-				if (pipeline.lastChangeTimeFormat !== 'ISO8601' && pipeline.lastChangeTimeFormat !== 'Excel') {
+			if (doesUpdatedAtColumnNeedFormat(pipeline.updatedAtColumn, pipelineType.inputSchema)) {
+				if (pipeline.updatedAtFormat !== 'ISO8601' && pipeline.updatedAtFormat !== 'Excel') {
 					// the format is custom.
 					try {
-						validateCustomLastChangeTimeFormat(pipeline.lastChangeTimeFormat);
+						validateCustomUpdatedAtFormat(pipeline.updatedAtFormat);
 					} catch (err) {
 						throw err;
 					}
@@ -1129,9 +1125,9 @@ const transformInPipelineToSet = async (
 
 	let incremental = pipeline.incremental;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-		// If last change time is not set the import cannot be
+		// If update time is not set the import cannot be
 		// incremental.
-		if (pipeline.lastChangeTimeColumn === '') {
+		if (pipeline.updatedAtColumn === '') {
 			incremental = false;
 		}
 	}
@@ -1149,8 +1145,8 @@ const transformInPipelineToSet = async (
 		tableKey: pipeline.tableKey,
 		sheet: pipeline.sheet,
 		identityColumn: pipeline.identityColumn,
-		lastChangeTimeColumn: pipeline.lastChangeTimeColumn,
-		lastChangeTimeFormat: pipeline.lastChangeTimeFormat,
+		updatedAtColumn: pipeline.updatedAtColumn,
+		updatedAtFormat: pipeline.updatedAtFormat,
 		incremental: incremental,
 		compression: pipeline.compression,
 		orderBy: pipeline.orderBy,
@@ -1223,14 +1219,14 @@ const computeDefaultPipeline = (
 	if (fields.includes('Query')) {
 		pipeline.query = connection.connector.asSource.sampleQuery;
 		pipeline.identityColumn = '';
-		pipeline.lastChangeTimeColumn = '';
-		pipeline.lastChangeTimeFormat = '';
+		pipeline.updatedAtColumn = '';
+		pipeline.updatedAtFormat = '';
 	}
 	if (fields.includes('File')) {
 		pipeline.path = '';
 		pipeline.identityColumn = '';
-		pipeline.lastChangeTimeColumn = '';
-		pipeline.lastChangeTimeFormat = '';
+		pipeline.updatedAtColumn = '';
+		pipeline.updatedAtFormat = '';
 		pipeline.sheet = null;
 		pipeline.compression = '';
 		pipeline.format = '';
@@ -1479,12 +1475,12 @@ const buildHierarchy = (paths: string[], flatSchema: TransformedMapping, propert
 	return hierarchy;
 };
 
-const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema: ObjectType): boolean => {
-	if (lastChangeTimeColumn == null || lastChangeTimeColumn === '') {
+const doesUpdatedAtColumnNeedFormat = (updatedAtColumn: string, schema: ObjectType): boolean => {
+	if (updatedAtColumn == null || updatedAtColumn === '') {
 		return false;
 	}
 	const flatInputSchema = flattenSchema(schema);
-	const p = flatInputSchema[lastChangeTimeColumn];
+	const p = flatInputSchema[updatedAtColumn];
 	if (p == null) {
 		return false;
 	}
@@ -1492,15 +1488,15 @@ const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema
 	return type === 'json' || type === 'string';
 };
 
-const validateCustomLastChangeTimeFormat = (format: string) => {
+const validateCustomUpdatedAtFormat = (format: string) => {
 	if (format === '') {
-		throw new Error('Last change time format cannot be empty');
+		throw new Error('Update time format cannot be empty');
 	}
 	if (Array.from(format).length > 64) {
-		throw new Error('Last change time format is longer than 64 characters');
+		throw new Error('Update time format is longer than 64 characters');
 	}
 	if (!format.includes('%')) {
-		throw new Error(`Last change time format "${format}" is not a valid format`);
+		throw new Error(`Update time format "${format}" is not a valid format`);
 	}
 };
 
@@ -1702,7 +1698,7 @@ export {
 	splitPropertyAndPath,
 	getHierarchicalPaths,
 	getSiblingPaths,
-	doesLastChangeTimeColumnNeedFormat,
+	doesUpdatedAtColumnNeedFormat,
 	getTransformationFunctionParameterName,
 	validateAndNormalizeFilterCondition,
 	validateMatching,

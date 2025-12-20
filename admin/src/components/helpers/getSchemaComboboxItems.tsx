@@ -101,7 +101,7 @@ const getIdentityColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getLastChangeTimeComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getUpdatedAtComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -187,7 +187,7 @@ export {
 	getMatchingComboboxItems,
 	getUIPreferencesComboboxItems,
 	getIdentityColumnComboboxItems,
-	getLastChangeTimeComboboxItems,
+	getUpdatedAtComboboxItems,
 	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,
 	getTableKeyComboboxItems,

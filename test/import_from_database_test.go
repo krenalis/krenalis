@@ -38,10 +38,10 @@ func TestImportFromDatabase(t *testing.T) {
 				"email": "email",
 			},
 		},
-		Query:                `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
-		IdentityColumn:       "id",
-		LastChangeTimeColumn: "",
-		LastChangeTimeFormat: "",
+		Query:           `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
+		IdentityColumn:  "id",
+		UpdatedAtColumn: "",
+		UpdatedAtFormat: "",
 	})
 
 	run := c.RunPipeline(importUsers)

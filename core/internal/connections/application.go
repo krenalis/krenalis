@@ -260,9 +260,9 @@ func (app *Application) SendEvents(ctx context.Context, events connectors.Events
 // schema, with the same types. If where is not nil, only users matching its
 // conditions will be returned.
 //
-// If lastChangeTime is not the zero time, it must be in UTC, and its year
-// cannot be before 1900. In this case, only records changed or created at or
-// after that time will be returned, with a precision limited to microseconds.
+// If updatedAt is not the zero time, it must be in UTC, and its year cannot be
+// before 1900. In this case, only records changed or created at or after that
+// time will be returned, with a precision limited to microseconds.
 //
 // If the connector returns an error, it returns an *UnavailableError error. If
 // the provided schema, that must be valid, does not align with the
@@ -270,7 +270,7 @@ func (app *Application) SendEvents(ctx context.Context, events connectors.Events
 //
 // The Err method of the returned iterator may return an *UnavailableError if
 // the connector encounters an error.
-func (app *Application) Users(ctx context.Context, schema types.Type, where *state.Where, lastChangeTime time.Time) (Records, error) {
+func (app *Application) Users(ctx context.Context, schema types.Type, where *state.Where, updatedAt time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -290,23 +290,23 @@ func (app *Application) Users(ctx context.Context, schema types.Type, where *sta
 	appSchema = types.Prune(appSchema, func(path string) bool {
 		return properties.ContainsPath(path)
 	})
-	if !lastChangeTime.IsZero() {
-		if lastChangeTime.Location() != time.UTC {
-			return nil, fmt.Errorf("lastChangeTime is not UTC")
+	if !updatedAt.IsZero() {
+		if updatedAt.Location() != time.UTC {
+			return nil, fmt.Errorf("updatedAt is not UTC")
 		}
-		if lastChangeTime.Year() < 1900 {
-			return nil, fmt.Errorf("lastChangeTime's year is before 1900")
+		if updatedAt.Year() < 1900 {
+			return nil, fmt.Errorf("updatedAt's year is before 1900")
 		}
-		lastChangeTime = lastChangeTime.Truncate(time.Microsecond)
+		updatedAt = updatedAt.Truncate(time.Microsecond)
 	}
 	records := &appRecords{
-		schema:         schema,
-		where:          where,
-		appSchema:      appSchema,
-		timeLayouts:    app.timeLayouts,
-		lastChangeTime: lastChangeTime,
-		connector:      app.connector,
-		inner:          app.inner,
+		schema:      schema,
+		where:       where,
+		appSchema:   appSchema,
+		timeLayouts: app.timeLayouts,
+		updatedAt:   updatedAt,
+		connector:   app.connector,
+		inner:       app.inner,
 	}
 	return records, nil
 }
@@ -536,16 +536,16 @@ func sameValue(t types.Type, v, v2 any) bool {
 
 // appRecords implements the Records interface for applications.
 type appRecords struct {
-	schema         types.Type
-	where          *state.Where
-	appSchema      types.Type
-	timeLayouts    *state.TimeLayouts
-	lastChangeTime time.Time
-	connector      string
-	inner          any
-	last           bool
-	err            error
-	closed         bool
+	schema      types.Type
+	where       *state.Where
+	appSchema   types.Type
+	timeLayouts *state.TimeLayouts
+	updatedAt   time.Time
+	connector   string
+	inner       any
+	last        bool
+	err         error
+	closed      bool
 }
 
 func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
@@ -570,7 +570,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []connectors.Record
 			var err error
-			users, cursor, err = r.inner.(connectors.RecordFetcher).Records(ctx, connectors.TargetUser, r.lastChangeTime, nil, cursor, r.appSchema)
+			users, cursor, err = r.inner.(connectors.RecordFetcher).Records(ctx, connectors.TargetUser, r.updatedAt, nil, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)
@@ -608,17 +608,17 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				processedIDs[user.ID] = struct{}{}
 
 				record := Record{
-					ID:             user.ID,
-					LastChangeTime: user.LastChangeTime.UTC().Truncate(time.Microsecond),
+					ID:        user.ID,
+					UpdatedAt: user.UpdatedAt.UTC().Truncate(time.Microsecond),
 					// Associations:   user.Associations, TODO(marco): Implement groups
 				}
 
-				// Validate the last change time.
-				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
-					record.Err = errors.New("record's last change time is before 1900 or in the future")
+				// Validate the update time.
+				if err = validateUpdatedAt(record.UpdatedAt); err != nil {
+					record.Err = errors.New("record's update time is before 1900 or in the future")
 				}
-				if !r.lastChangeTime.IsZero() && record.LastChangeTime.Before(r.lastChangeTime) {
-					r.err = fmt.Errorf("%s returned a record whose last change time is earlier than the required minimum", r.connector)
+				if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
+					r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
 					return
 				}
 

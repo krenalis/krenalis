@@ -248,17 +248,17 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 	}
 
 	// Validate the cursor.
-	var lastChangeTime time.Time
+	var updatedAt time.Time
 	if cursor != "" {
 		var err error
-		lastChangeTime, err = deserializeCursor(cursor)
+		updatedAt, err = deserializeCursor(cursor)
 		if err != nil {
 			return nil, "", errors.BadRequest("cursor is malformed")
 		}
 	}
 
 	// Get the users.
-	records, err := this.application().Users(ctx, schema, where, lastChangeTime)
+	records, err := this.application().Users(ctx, schema, where, updatedAt)
 	if err != nil {
 		switch err.(type) {
 		case *connections.UnavailableError:
@@ -293,7 +293,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 	}
 
 	// Build the cursor.
-	cursor, err = serializeCursor(last.LastChangeTime)
+	cursor, err = serializeCursor(last.UpdatedAt)
 	if err != nil {
 		return nil, "", err
 	}
@@ -399,29 +399,29 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	n := state.CreatePipeline{
-		Connection:           c.ID,
-		Target:               state.Target(target),
-		Name:                 pipeline.Name,
-		Enabled:              pipeline.Enabled,
-		EventType:            eventType,
-		InSchema:             inSchema,
-		OutSchema:            pipeline.OutSchema,
-		Transformation:       toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
-		Query:                pipeline.Query,
-		Format:               pipeline.Format,
-		Path:                 pipeline.Path,
-		Sheet:                pipeline.Sheet,
-		Compression:          state.Compression(pipeline.Compression),
-		OrderBy:              pipeline.OrderBy,
-		ExportMode:           state.ExportMode(pipeline.ExportMode),
-		Matching:             state.Matching(pipeline.Matching),
-		UpdateOnDuplicates:   pipeline.UpdateOnDuplicates,
-		TableName:            pipeline.TableName,
-		TableKey:             pipeline.TableKey,
-		IdentityColumn:       pipeline.IdentityColumn,
-		LastChangeTimeColumn: pipeline.LastChangeTimeColumn,
-		LastChangeTimeFormat: pipeline.LastChangeTimeFormat,
-		Incremental:          pipeline.Incremental,
+		Connection:         c.ID,
+		Target:             state.Target(target),
+		Name:               pipeline.Name,
+		Enabled:            pipeline.Enabled,
+		EventType:          eventType,
+		InSchema:           inSchema,
+		OutSchema:          pipeline.OutSchema,
+		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
+		Query:              pipeline.Query,
+		Format:             pipeline.Format,
+		Path:               pipeline.Path,
+		Sheet:              pipeline.Sheet,
+		Compression:        state.Compression(pipeline.Compression),
+		OrderBy:            pipeline.OrderBy,
+		ExportMode:         state.ExportMode(pipeline.ExportMode),
+		Matching:           state.Matching(pipeline.Matching),
+		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
+		TableName:          pipeline.TableName,
+		TableKey:           pipeline.TableKey,
+		IdentityColumn:     pipeline.IdentityColumn,
+		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
+		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
+		Incremental:        pipeline.Incremental,
 	}
 
 	// Set the scheduler.
@@ -522,8 +522,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
 			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
 			"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
-			"update_on_duplicates, table_name, table_key, identity_column, last_change_time_column,\n" +
-			"last_change_time_format, incremental)\n" +
+			"update_on_duplicates, table_name, table_key, identity_column, updated_at_column,\n" +
+			"updated_at_format, incremental)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
@@ -531,7 +531,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
-			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
+			n.TableName, n.TableKey, n.IdentityColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)

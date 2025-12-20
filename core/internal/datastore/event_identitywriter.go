@@ -201,7 +201,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 				"_is_anonymous": true,
 				"_identity_id":  key.identityID,
 				"_connection":   iw.connection,
-				"_updated_at":   identity.LastChangeTime,
+				"_updated_at":   identity.UpdatedAt,
 			}
 			iw.appendRow(key, row, "")
 		}
@@ -221,7 +221,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	if !key.isAnonymous {
 		row["_anonymous_ids"] = []any{identity.AnonymousID}
 	}
-	row["_updated_at"] = identity.LastChangeTime
+	row["_updated_at"] = identity.UpdatedAt
 
 	iw.appendRow(key, row, ackID)
 

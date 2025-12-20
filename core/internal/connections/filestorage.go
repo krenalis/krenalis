@@ -136,7 +136,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, connectorError(err)
 	}
 	defer r.Close()
-	if err = validateLastChangeTime(storageTimestamp); err != nil {
+	if err = validateUpdatedAt(storageTimestamp); err != nil {
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 

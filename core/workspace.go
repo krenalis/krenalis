@@ -1250,7 +1250,7 @@ type Profile struct {
 //
 // order is the name of the property by which to sort the returned profiles and
 // cannot have type json, array, object, or map; when not provided, the profiles
-// are ordered by their last change time.
+// are ordered by their update time.
 //
 // orderDesc control whether the returned profiles should be ordered in+
 // descending order instead of ascending, which is the default.
