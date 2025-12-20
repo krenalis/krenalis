@@ -151,7 +151,7 @@ const ConnectionMetrics = () => {
 	const steps = useMemo(() => {
 		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
 		switch (c.connector.type) {
-			case 'API':
+			case 'Application':
 				if (c.role == 'Destination') {
 					if (selectedTarget == 'Event') {
 						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.

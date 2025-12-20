@@ -364,7 +364,8 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 
 			// Property
 			const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipeline.target === 'User';
-			const isAppEventsExport = connection.isAPI && connection.isDestination && pipeline.target === 'Event';
+			const isAppEventsExport =
+				connection.isApplication && connection.isDestination && pipeline.target === 'Event';
 			const isEventImport = connection.isSource && pipeline.target === 'Event';
 
 			let propertiesToHide = [];

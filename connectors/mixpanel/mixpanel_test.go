@@ -591,9 +591,9 @@ func newMixpanelForTests(t *testing.T) *Mixpanel {
 	default:
 		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
 	}
-	api, err := testconnector.NewAPI("mixpanel", s)
+	app, err := testconnector.NewApplication("mixpanel", s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api.(*Mixpanel)
+	return app.(*Mixpanel)
 }

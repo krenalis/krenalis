@@ -45,10 +45,10 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connections/{id}/pipelines/schemas/Events":   connection.PipelineSchemas, /* only Admin */
 		"GET    /connections/{id}/pipelines/schemas/{target}": connection.PipelineSchemas, /* only Admin */
 		"GET    /connections/{id}/schemas/event":              connection.AppEventSchema,
-		"GET    /connections/{id}/schemas/user":               connection.APIUserSchemas,
+		"GET    /connections/{id}/schemas/user":               connection.ApplicationUserSchemas,
 		"GET    /connections/{id}/tables":                     connection.TableSchema,
 		"GET    /connections/{id}/ui":                         connection.ServeUI, /* only Admin */
-		"GET    /connections/{id}/users":                      connection.APIUsers,
+		"GET    /connections/{id}/users":                      connection.ApplicationUsers,
 		"GET    /connectors":                                  api.Connectors,
 		"GET    /connectors/{code}":                           api.Connector,
 		"GET    /connectors/{code}/documentation":             api.ConnectorDocumentation,

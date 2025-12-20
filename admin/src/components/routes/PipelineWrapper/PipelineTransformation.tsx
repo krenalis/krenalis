@@ -52,7 +52,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import {
-	APIUsersResponse,
+	ApplicationUsersResponse,
 	ExecQueryResponse,
 	FindProfilesResponse,
 	PreviewSendEventResponse,
@@ -127,7 +127,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		return {
 			isEventImport: connection.isSource && pipelineType.target === 'Event',
 			isEventBasedUserImport: connection.isEventBased && connection.isSource && pipelineType.target === 'User',
-			isAppEventsExport: connection.isAPI && connection.isDestination && pipelineType.target === 'Event',
+			isAppEventsExport: connection.isApplication && connection.isDestination && pipelineType.target === 'Event',
 		};
 	}, [connection, pipelineType]);
 
@@ -1444,9 +1444,9 @@ const FullscreenTransformation = ({
 				if (!isFullscreenTransformationOpen) {
 					return;
 				}
-				if (hasAlreadyFetchedSamples.current && !(connection.isAPI || connection.isDatabase)) {
-					// Return if the pipeline is not API/database import or
-					// API/database export. Those are the cases where samples must
+				if (hasAlreadyFetchedSamples.current && !(connection.isApplication || connection.isDatabase)) {
+					// Return if the pipeline is not application/database import or
+					// application/database export. Those are the cases where samples must
 					// be refetched every time the full mode is opened, to apply any
 					// updated filter.
 					return;
@@ -1485,8 +1485,8 @@ const FullscreenTransformation = ({
 					return;
 				}
 				samples = res.rows;
-			} else if (connection.isAPI && connection.isSource) {
-				let res: APIUsersResponse;
+			} else if (connection.isApplication && connection.isSource) {
+				let res: ApplicationUsersResponse;
 				try {
 					res = await api.workspaces.connections.apiUsers(connection.id, inputSchema, normalizedFilter);
 				} catch (err) {
@@ -1495,7 +1495,7 @@ const FullscreenTransformation = ({
 					return;
 				}
 				samples = res.users;
-			} else if ((connection.isAPI || connection.isDatabase) && connection.isDestination) {
+			} else if ((connection.isApplication || connection.isDatabase) && connection.isDestination) {
 				const properties: string[] = [];
 				for (const prop of inputSchema.properties) {
 					properties.push(prop.name);
@@ -2498,7 +2498,7 @@ const FullscreenTransformation = ({
 									<div className='fullscreen-transformation__output-error'>{outputError}</div>
 								) : (
 									<div className='fullscreen-transformation__output-success'>
-										{connection.isAPI &&
+										{connection.isApplication &&
 										connection.isDestination &&
 										pipelineType.target === 'Event' ? (
 											output
@@ -3627,20 +3627,20 @@ const TRANSFORMATION_HEADERS: Record<TransformationHeaderMode, Record<string, [s
 		'source:webhook': ['Event schema', 'Profile schema'],
 		'source:database': ['Database user schema', 'Profile schema'],
 		'source:file': ['File user schema', 'Profile schema'],
-		'source:api': ['App user schema', 'Profile schema'],
+		'source:application': ['Application user schema', 'Profile schema'],
 		'destination:event': ['Event schema', 'Sending event parameters'],
 		'destination:database': ['Profile schema', 'Database table schema'],
-		'destination:api': ['Profile schema', 'App user schema'],
+		'destination:application': ['Profile schema', 'Application user schema'],
 	},
 	full: {
 		'source:sdk': ['Event', 'Profile'],
 		'source:webhook': ['Event', 'Profile'],
 		'source:database': ['Database user', 'Profile'],
 		'source:file': ['File user', 'Profile'],
-		'source:api': ['App user', 'Profile'],
+		'source:application': ['Application user', 'Profile'],
 		'destination:event': ['Event', 'Sending event'],
 		'destination:database': ['Profile', 'Database table'],
-		'destination:api': ['Profile', 'App user'],
+		'destination:application': ['Profile', 'Application user'],
 	},
 };
 
@@ -3663,7 +3663,7 @@ function transformationHeaders(
 		} else if (connection.isFileStorage || connection.isFile) {
 			scenario = 'source:file';
 		} else {
-			scenario = 'source:api';
+			scenario = 'source:application';
 		}
 	} else {
 		if (pipeline.target === 'Event') {
@@ -3671,7 +3671,7 @@ function transformationHeaders(
 		} else if (connection.isDatabase) {
 			scenario = 'destination:database';
 		} else {
-			scenario = 'destination:api';
+			scenario = 'destination:application';
 		}
 	}
 

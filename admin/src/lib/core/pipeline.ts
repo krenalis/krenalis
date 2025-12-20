@@ -400,7 +400,7 @@ const validateTransformation = (
 	pipeline: PipelineToSet,
 ) => {
 	if (connection.isSource) {
-		if (connection.isAPI) {
+		if (connection.isApplication) {
 			if (pipelineType.target === 'User' || pipelineType.target === 'Group') {
 				if (!hasValidTransformation(pipeline)) {
 					throw errInvalidTransformation;
@@ -426,7 +426,7 @@ const validateTransformation = (
 			}
 		}
 	} else {
-		if (connection.isAPI) {
+		if (connection.isApplication) {
 			if (pipelineType.target === 'User' || pipelineType.target === 'Group') {
 				if (!hasValidTransformation(pipeline)) {
 					throw errInvalidTransformation;
@@ -684,7 +684,7 @@ const transformInPipelineToSet = async (
 
 	const allowsConstantTransformation =
 		(connection.isSource && connection.isEventBased && pipelineType.target === 'User') ||
-		(connection.isDestination && connection.isAPI && pipelineType.target === 'Event');
+		(connection.isDestination && connection.isApplication && pipelineType.target === 'Event');
 
 	if (pipeline.transformation.mapping != null) {
 		const inputSchema: ObjectType = { kind: 'object', properties: [] };
@@ -997,7 +997,8 @@ const transformInPipelineToSet = async (
 
 		const isEventImport = connection.isSource && pipelineType.target === 'Event';
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
-		const isAppEventsExport = connection.isAPI && connection.isDestination && pipelineType.target === 'Event';
+		const isAppEventsExport =
+			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
 
 		for (const condition of conditions) {
 			const propertyName = condition.property;
@@ -1120,7 +1121,7 @@ const transformInPipelineToSet = async (
 	// the input schema must be nil, which means the schema of the events.
 	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && pipelineType.target == 'Event';
 	let dispatchEventsToApps =
-		connection.isDestination && connection.connector.type == 'API' && pipelineType.target == 'Event';
+		connection.isDestination && connection.connector.type == 'Application' && pipelineType.target == 'Event';
 	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && pipelineType.target == 'User';
 	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
@@ -1195,7 +1196,8 @@ const computeDefaultPipeline = (
 		name: pipelineType.name,
 		// The pipeline is enabled by default only for batch operations importing or exporting users.
 		enabled:
-			pipelineType.target == 'User' && (connection.isAPI || connection.isDatabase || connection.isFileStorage),
+			pipelineType.target == 'User' &&
+			(connection.isApplication || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
@@ -1270,7 +1272,7 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 
 	const type = connection.connector.type;
 
-	if (type === 'API') {
+	if (type === 'Application') {
 		fields.push('Transformation');
 	} else if (type === 'Database') {
 		fields.push('Transformation');
@@ -1283,7 +1285,7 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 	}
 
 	if (
-		type === 'API' &&
+		type === 'Application' &&
 		connection.role === 'Destination' &&
 		(pipelineType.target === 'User' || pipelineType.target === 'Group')
 	) {
@@ -1310,7 +1312,7 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 	}
 
 	if (
-		(type === 'API' || type === 'Database' || type === 'FileStorage') &&
+		(type === 'Application' || type === 'Database' || type === 'FileStorage') &&
 		connection.role === 'Source' &&
 		(pipelineType.target === 'User' || pipelineType.target === 'Group')
 	) {

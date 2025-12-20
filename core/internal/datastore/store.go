@@ -247,8 +247,8 @@ func (store *Store) Identities(ctx context.Context, query Query) ([]map[string]a
 
 // DestinationProfile represents a profile to be merged.
 type DestinationProfile struct {
-	ExternalID       string // The unique identifier assigned to the corresponding user by the API.
-	OutMatchingValue string // The value for the out matching property in the API.
+	ExternalID       string // The unique identifier assigned to the corresponding user by the application.
+	OutMatchingValue string // The value for the out matching property in the application.
 }
 
 // MergeDestinationUsers merges the destination users for a pipeline. users

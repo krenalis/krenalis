@@ -59,28 +59,28 @@ func DecodeNDJSON(r io.Reader, enc connectors.ContentEncoding) ([]json.Value, er
 	return values, nil
 }
 
-// NewAPI returns an instance of the connector with the specified code for
-// testing purposes. Settings are the connector settings, encoded in JSON and
-// passed to the connector instance.
+// NewApplication returns an instance of the connector with the specified code
+// for testing purposes. Settings are the connector settings, encoded in JSON
+// and passed to the connector instance.
 //
 // It panics if no connector with the specified code has been registered.
-func NewAPI(code string, settings any) (any, error) {
-	registeredAPI := connectors.RegisteredAPI(code)
+func NewApplication(code string, settings any) (any, error) {
+	registeredApplications := connectors.RegisteredApplication(code)
 	connector := &state.Connector{
 		Code:           code,
-		EndpointGroups: registeredAPI.EndpointGroups,
+		EndpointGroups: registeredApplications.EndpointGroups,
 	}
 	s, err := json.Marshal(settings)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal settings: %s", err)
 	}
 	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
-	api, err := registeredAPI.New(&connectors.APIEnv{
+	app, err := registeredApplications.New(&connectors.ApplicationEnv{
 		Settings:    s,
 		SetSettings: func(ctx context.Context, v json.Value) error { return nil },
 		HTTPClient:  httpClient,
 	})
-	return api, err
+	return app, err
 }
 
 // ReceivedEvent wraps a map[string]any and returns a value that implements the

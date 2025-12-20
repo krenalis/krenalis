@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package apiwriter
+package appwriter
 
 import (
 	"context"
@@ -20,23 +20,24 @@ const trace = false  // set to true to trace execution flow
 
 type AcksFunc func(ids []string, err error)
 
-// UpsertFunc updates or creates records via the API for the specified target.
+// UpsertFunc updates or creates records via the application for the specified
+// target.
 type UpsertFunc func(ctx context.Context, target connectors.Targets, records connectors.Records) error
 
 const minBatchSize = 1000
 const maxQueueDelay = 200 * time.Millisecond
 
-// Writer represents a writer for records in the API.
+// Writer represents a writer for records in the application.
 // It implements the connectors.Writer interface.
 //
 // By calling Write for each record to be written, the records are sent to the
-// API, potentially in batches, and the acks function is called for
-// confirmation. To ensure all records are successfully sent to the API, Close
-// must be called after all Write calls have completed.
+// application, potentially in batches, and the acks function is called for
+// confirmation. To ensure all records are successfully sent to the application,
+// Close must be called after all Write calls have completed.
 type Writer struct {
-	connector string             // API connector.
+	connector string             // application connector.
 	target    connectors.Targets // target, can be TargetUser or TargetGroup
-	upsert    UpsertFunc         // function that updates or creates records in the API.
+	upsert    UpsertFunc         // function that updates or creates records in the application.
 	acks      AcksFunc           // ack function
 
 	mu        sync.Mutex  // mutex for iterator, records, index, and available fields
@@ -54,16 +55,17 @@ type Writer struct {
 	}
 }
 
-// record represents a single user or group to be written and sent to the API.
+// record represents a single user or group to be written and sent to the
+// application.
 type record struct {
 	iterator   *iterator      // iterator that has consumed the record, if any
 	id         string         // user or group identifier
 	attributes map[string]any // user or group attributes
 }
 
-// New returns a new Writer. connector is the API's connector, target is the
-// record target, upsert is the function that creates or updates records in the
-// API, and acks acknowledges both successes and failures.
+// New returns a new Writer. connector is the application's connector, target is
+// the record target, upsert is the function that creates or updates records in
+// the application, and acks acknowledges both successes and failures.
 func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc) *Writer {
 	w := &Writer{
 		connector: connector,
@@ -104,8 +106,8 @@ func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc
 	return w
 }
 
-// Close terminates the writer, ensuring that all records are processed
-// before returning, unless the provided context is canceled.
+// Close terminates the writer, ensuring that all records are processed before
+// returning, unless the provided context is canceled.
 // If processing all records fails, an error is returned.
 func (w *Writer) Close(ctx context.Context) error {
 	if w.close.closed.Swap(true) {
@@ -160,7 +162,7 @@ func (w *Writer) Close(ctx context.Context) error {
 // It panics if it called after w has been closed.
 func (w *Writer) Write(_ context.Context, id string, attributes map[string]any) bool {
 	if w.close.closed.Load() {
-		panic("core/connectors/apiwriter: Write called on a closed writer")
+		panic("core/connectors/appwriter: Write called on a closed writer")
 	}
 	var iter *iterator
 	w.mu.Lock()
@@ -382,7 +384,7 @@ func (w *Writer) _assertAvailable(n int) {
 		}
 	}
 	if n != got {
-		panic(fmt.Sprintf("core/connectors/apiwriter: expected %d available, got %d", n, got))
+		panic(fmt.Sprintf("core/connectors/appwriter: expected %d available, got %d", n, got))
 	}
 }
 

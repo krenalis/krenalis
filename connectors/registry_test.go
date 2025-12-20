@@ -17,7 +17,7 @@ import (
 )
 
 type registrySnapshot struct {
-	apis           map[string]APISpec
+	applications   map[string]ApplicationSpec
 	databases      map[string]DatabaseSpec
 	files          map[string]FileSpec
 	storages       map[string]FileStorageSpec
@@ -32,7 +32,7 @@ func replaceRegistryForTest(t *testing.T) {
 
 	registry.Lock()
 	snapshot := registrySnapshot{
-		apis:           maps.Clone(registry.apis),
+		applications:   maps.Clone(registry.applications),
 		databases:      maps.Clone(registry.databases),
 		files:          maps.Clone(registry.files),
 		storages:       maps.Clone(registry.storages),
@@ -41,7 +41,7 @@ func replaceRegistryForTest(t *testing.T) {
 		webhooks:       maps.Clone(registry.webhooks),
 		usedCodes:      maps.Clone(registry.usedCodes),
 	}
-	registry.apis = make(map[string]APISpec)
+	registry.applications = make(map[string]ApplicationSpec)
 	registry.databases = make(map[string]DatabaseSpec)
 	registry.files = make(map[string]FileSpec)
 	registry.storages = make(map[string]FileStorageSpec)
@@ -53,7 +53,7 @@ func replaceRegistryForTest(t *testing.T) {
 
 	t.Cleanup(func() {
 		registry.Lock()
-		registry.apis = snapshot.apis
+		registry.applications = snapshot.applications
 		registry.databases = snapshot.databases
 		registry.files = snapshot.files
 		registry.storages = snapshot.storages
@@ -108,26 +108,26 @@ func TestValidateConnectorCode(t *testing.T) {
 	}
 }
 
-func TestRegisterAPIRegistersConnector(t *testing.T) {
+func TestRegisterApplicationConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	app := APISpec{
-		Code:       "test-api",
-		Label:      "Test API",
+	app := ApplicationSpec{
+		Code:       "test-application",
+		Label:      "Test Application",
 		Categories: CategorySaaS,
-		AsDestination: &AsAPIDestination{
+		AsDestination: &AsApplicationDestination{
 			Targets:     TargetEvent,
 			SendingMode: Server,
 		},
 	}
-	RegisterAPI(app, newTestAPI)
+	RegisterApplication(app, newTestApplication)
 
-	got := RegisteredAPI("test-api")
-	if got.Code != "test-api" {
-		t.Fatalf("expected code test-api, got %s", got.Code)
+	got := RegisteredApplication("test-application")
+	if got.Code != "test-application" {
+		t.Fatalf("expected code test-application, got %s", got.Code)
 	}
-	if _, ok := registry.usedCodes["test-api"]; !ok {
-		t.Fatalf("expected code test-api to be tracked in used codes")
+	if _, ok := registry.usedCodes["test-application"]; !ok {
+		t.Fatalf("expected code test-application to be tracked in used codes")
 	}
 }
 
@@ -268,25 +268,25 @@ func TestRegisterConnectorDuplicateCodePanics(t *testing.T) {
 	}, newTestMessageBroker)
 }
 
-func newTestAPI(*APIEnv) (testAPIConnector, error) {
-	return testAPIConnector{}, nil
+func newTestApplication(*ApplicationEnv) (testApplicationConnector, error) {
+	return testApplicationConnector{}, nil
 }
 
-type testAPIConnector struct{}
+type testApplicationConnector struct{}
 
-func (testAPIConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
+func (testApplicationConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
 	return types.String(), nil
 }
 
-func (testAPIConnector) EventTypes(context.Context) ([]*EventType, error) {
+func (testApplicationConnector) EventTypes(context.Context) ([]*EventType, error) {
 	return nil, nil
 }
 
-func (testAPIConnector) PreviewSendEvents(context.Context, Events) (*http.Request, error) {
+func (testApplicationConnector) PreviewSendEvents(context.Context, Events) (*http.Request, error) {
 	return nil, nil
 }
 
-func (testAPIConnector) SendEvents(context.Context, Events) error {
+func (testApplicationConnector) SendEvents(context.Context, Events) error {
 	return nil
 }
 

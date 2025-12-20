@@ -87,17 +87,18 @@ type Pipeline struct {
 }
 
 // Matching establishes a relationship between a property in Meergo (input
-// property) and a corresponding property in the API (output property) used
-// during an export. This relationship determines whether a user or group in
-// Meergo exists in the API and identifies the corresponding user or group in
-// the API.
+// property) and a corresponding property in the application (output property)
+// used during an export. This relationship determines whether a user or group
+// in Meergo exists in the application and identifies the corresponding user or
+// group in the application.
 //
 // The input property should be a property in the profile schema, while the
 // output property should be a property in the source schema of the connection.
 // If the export mode includes "Create," the output property should also exist
-// in the destination schema with the same type. However, the API does not
-// check these conditions. It only requires that the input property is present
-// in the input schema and the output property is present in the output schema.
+// in the destination schema with the same type. However, the application does
+// not check these conditions. It only requires that the input property is
+// present in the input schema and the output property is present in the output
+// schema.
 //
 // Note: The output property cannot be directly utilized in the pipeline's
 // transformation. During the export process, an implicit transformation maps
@@ -259,7 +260,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	if p.ConnectionRole == Source {
 		if p.Target == TargetUser {
 			switch p.ConnectorType {
-			case API:
+			case Application:
 				serialized = struct {
 					serializedPipeline
 					Filter         *Filter         `json:"filter"`
@@ -376,7 +377,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	if p.ConnectionRole == Destination {
 		if p.Target == TargetUser {
 			switch p.ConnectorType {
-			case API:
+			case Application:
 				serialized = struct {
 					serializedPipeline
 					Filter             *Filter         `json:"filter"`
@@ -478,9 +479,10 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	return json.Marshal(serialized)
 }
 
-// Run starts a new run for the pipeline and returns its identifier.
-// The pipeline must be an API, database, or file pipeline with a target of User
-// or Group. It must be enabled and must not already have a run in progress.
+// Run starts a new run for the pipeline and returns its identifier. The
+// pipeline must be an application, database, or file pipeline with a target of
+// User or Group. It must be enabled and must not already have a run in
+// progress.
 //
 // It returns an errors.NotFoundError if the pipeline no longer exists.
 // It returns an errors.UnprocessableError with one of the following codes:
@@ -499,7 +501,7 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
 	}
 	typ := c.Connector().Type
 	switch typ {
-	case state.API, state.Database, state.FileStorage:
+	case state.Application, state.Database, state.FileStorage:
 	default:
 		return 0, errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
 	}
@@ -507,7 +509,7 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
 		if c.Role == state.Destination {
 			return 0, errors.BadRequest("incremental cannot be provided for destination pipelines")
 		}
-		if *incremental && typ != state.API && this.pipeline.LastChangeTimeColumn == "" {
+		if *incremental && typ != state.Application && this.pipeline.LastChangeTimeColumn == "" {
 			return 0, errors.Unprocessable(CannotRunIncrementally, "incremental requires a last change time column")
 		}
 	}
@@ -670,8 +672,8 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	inSchema := pipeline.InSchema
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.pipeline.Target)
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(c.Connector().Type, c.Role, this.pipeline.Target)
-	dispatchEventsToAPIs := isDispatchingEventsToAPIs(c.Connector().Type, c.Role, this.pipeline.Target)
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
+	dispatchEventsToApplications := isDispatchingEventsToApplications(c.Connector().Type, c.Role, this.pipeline.Target)
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications {
 		inSchema = eventPipelineSchema
 	}
 
@@ -850,9 +852,9 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	return err
 }
 
-// api returns the API of the pipeline.
-func (this *Pipeline) api() *connections.API {
-	return this.core.connections.API(this.pipeline.Connection())
+// application returns the application of the pipeline.
+func (this *Pipeline) application() *connections.Application {
+	return this.core.connections.Application(this.pipeline.Connection())
 }
 
 // createRun creates a new pipeline run and returns its identifier.
@@ -1207,11 +1209,11 @@ type PipelineToSet struct {
 	ExportMode ExportMode `json:"exportMode"`
 
 	// Matching defines a relationship between a property in Meergo ("in") and
-	// a corresponding property in the API ("out") used during an export.
+	// a corresponding property in the application ("out") used during an export.
 	Matching Matching `json:"matching"`
 
 	// UpdateOnDuplicates indicates whether to proceed with the export even if
-	// duplicate users or groups are found in the API.
+	// duplicate users or groups are found in the application.
 	UpdateOnDuplicates bool `json:"updateOnDuplicates"`
 
 	// TableName is the name of the table for the export and it is defined for
@@ -1338,11 +1340,11 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// isDispatchingEventsToAPIs reports whether a connector of the given type,
-// on a connection with the given role, and a pipeline with the given target,
-// is dispatching events to APIs.
-func isDispatchingEventsToAPIs(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.TargetEvent && connectorType == state.API
+// isDispatchingEventsToApplications reports whether a connector of the given
+// type, on a connection with the given role, and a pipeline with the given
+// target, is dispatching events to applications.
+func isDispatchingEventsToApplications(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Destination && target == state.TargetEvent && connectorType == state.Application
 }
 
 // isExportUsersToFile reports whether a connector of the given type, on a

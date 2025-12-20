@@ -36,25 +36,25 @@ var destinationOverview string
 // needed.
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "hubspot",
 		Label:      "HubSpot",
 		Categories: connectors.CategorySaaS,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets: connectors.TargetUser,
 			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets: connectors.TargetUser,
 			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:   "Contact",
 			Users:  "Contacts",
 			UserID: "HubSpot ID",
@@ -81,13 +81,13 @@ func init() {
 }
 
 // New returns a new connector instance for HubSpot.
-func New(env *connectors.APIEnv) (*HubSpot, error) {
+func New(env *connectors.ApplicationEnv) (*HubSpot, error) {
 	c := HubSpot{env: env}
 	return &c, nil
 }
 
 type HubSpot struct {
-	env *connectors.APIEnv
+	env *connectors.ApplicationEnv
 }
 
 // OAuthAccount returns the API's account associated with the OAuth

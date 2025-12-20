@@ -41,14 +41,14 @@ const (
 	// TargetGroup // TOODO(marco) Implement groups
 )
 
-// APISpec represents an API connector specification.
-type APISpec struct {
+// ApplicationSpec represents an application connector specification.
+type ApplicationSpec struct {
 	Code           string
 	Label          string
 	Categories     Categories // bitmask of connector's categories.
-	AsSource       *AsAPISource
-	AsDestination  *AsAPIDestination
-	Terms          APITerms
+	AsSource       *AsApplicationSource
+	AsDestination  *AsApplicationDestination
+	Terms          ApplicationTerms
 	OAuth          OAuth           // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
 	EndpointGroups []EndpointGroup // rate limiting and retry policies per endpoint group.
 	TimeLayouts    TimeLayouts     // layouts for time values. If left empty, it is ISO 8601.
@@ -57,8 +57,9 @@ type APISpec struct {
 	ct      reflect.Type
 }
 
-// APITerms represents the terms that an API connector uses to refer to users.
-type APITerms struct {
+// ApplicationTerms represents the terms that an application connector uses to
+// refer to users.
+type ApplicationTerms struct {
 	User   string
 	Users  string
 	UserID string
@@ -66,27 +67,27 @@ type APITerms struct {
 	// Groups string
 }
 
-// AsAPISource represents the specific information of an API connector used as a
-// source.
-type AsAPISource struct {
+// AsApplicationSource represents the specific information of an application
+// connector used as a source.
+type AsApplicationSource struct {
 	Targets       Targets
 	HasSettings   bool
 	Documentation RoleDocumentation
 }
 
-// AsAPIDestination represents the specific information of an API connector used
-// as a destination.
-type AsAPIDestination struct {
+// AsApplicationDestination represents the specific information of an
+// application connector used as a destination.
+type AsApplicationDestination struct {
 	Targets       Targets
 	HasSettings   bool
-	SendingMode   SendingMode // mode of event sending. 'None' for sources and non-supporting event APIs.
+	SendingMode   SendingMode // mode of event sending. 'None' for sources and non-supporting event applications.
 	Documentation RoleDocumentation
 }
 
 // OAuth represents the OAuth 2.0 connector information.
 type OAuth struct {
-	// AuthURL is the authorization endpoint. It's the URL of the API where users
-	// are redirected to grant consent.
+	// AuthURL is the authorization endpoint. It's the URL of the application
+	// where users are redirected to grant consent.
 	AuthURL string
 
 	// TokenURL is the token endpoint. It's the URL to retrieve the access token,
@@ -111,22 +112,22 @@ type OAuth struct {
 	DisallowLocalhost bool
 }
 
-// ReflectType returns the type of the value implementing the API connector
-// specification.
-func (api APISpec) ReflectType() reflect.Type {
-	return api.ct
+// ReflectType returns the type of the value implementing the application
+// connector specification.
+func (app ApplicationSpec) ReflectType() reflect.Type {
+	return app.ct
 }
 
-// New returns a new API connector instance.
-func (api APISpec) New(env *APIEnv) (any, error) {
-	out := api.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+// New returns a new application connector instance.
+func (app ApplicationSpec) New(env *ApplicationEnv) (any, error) {
+	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err
 }
 
-// APIEnv is the environment for an API connector.
-type APIEnv struct {
+// ApplicationEnv is the environment for an application connector.
+type ApplicationEnv struct {
 
 	// Settings holds the raw settings data.
 	Settings json.Value
@@ -141,13 +142,14 @@ type APIEnv struct {
 	HTTPClient HTTPClient
 }
 
-// APINewFunc represents functions that create new API connector instances.
-type APINewFunc[T any] func(*APIEnv) (T, error)
+// ApplicationNewFunc represents functions that create new application connector
+// instances.
+type ApplicationNewFunc[T any] func(*ApplicationEnv) (T, error)
 
-// EndpointGroup defines a group of API endpoints—specified by one or more
-// patterns using the same syntax as http.ServeMux. All HTTP requests matching
-// any of the given patterns will be subject to the specified rate limiting and
-// retry policies.
+// EndpointGroup defines a group of application endpoints—specified by one or
+// more patterns using the same syntax as http.ServeMux. All HTTP requests
+// matching any of the given patterns will be subject to the specified rate
+// limiting and retry policies.
 type EndpointGroup struct {
 	Patterns     []string    // patterns (e.g. "GET /api/users/", "api.example.com/v1/items") matched by ServeMux-style matching
 	RequireOAuth bool        // require OAuth authentication
@@ -199,7 +201,8 @@ type RetryPolicy map[string]RetryStrategy
 // If the returned waitTime is negative, it is considered zero.
 type RetryStrategy func(res *http.Response, retries int) (reason FailureReason, waitTime time.Duration)
 
-// FailureReason defines how the client should retry after a failed HTTP request.
+// FailureReason defines how the client should retry after a failed HTTP
+// request.
 type FailureReason int
 
 const (
@@ -231,7 +234,7 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
-// EventType represents a type of event that can be sent to an API.
+// EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
 	// type of the connection.
@@ -245,11 +248,13 @@ type EventType struct {
 	// Description is the description of the event type to be displayed.
 	Description string
 
-	// Filter is the recommended default filter to use for pipelines that use this event type.
+	// Filter is the recommended default filter to use for pipelines that use
+	// this event type.
 	Filter string
 }
 
-// RecordFetcher is implemented by API connectors that support fetching records.
+// RecordFetcher is implemented by application connectors that support fetching
+// records.
 type RecordFetcher interface {
 
 	// RecordSchema returns the schema of the specified target in the specified
@@ -285,16 +290,17 @@ type RecordFetcher interface {
 	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]Record, string, error)
 }
 
-// RecordUpserter is implemented by API connectors that support updating and
-// creating records.
+// RecordUpserter is implemented by application connectors that support updating
+// and creating records.
 type RecordUpserter interface {
 	RecordFetcher
 
-	// Upsert updates or creates records in the API for the specified target.
+	// Upsert updates or creates records in the application for the specified
+	// target.
 	Upsert(ctx context.Context, target Targets, records Records) error
 }
 
-// Record represents an API record.
+// Record represents an application record.
 type Record struct {
 	ID         string         // Identifier.
 	Attributes map[string]any // Attributes.
@@ -314,9 +320,10 @@ type Record struct {
 	Err error
 }
 
-// RecordsError is returned by the Upsert method of an API connector when only
-// some records have failed or when the method can distinguish errors based on
-// individual records. It maps record indices to their respective errors.
+// RecordsError is returned by the Upsert method of an application connector
+// when only some records have failed or when the method can distinguish errors
+// based on individual records. It maps record indices to their respective
+// errors.
 type RecordsError map[int]error
 
 func (err RecordsError) Error() string {
@@ -371,8 +378,8 @@ type Records interface {
 	Discard(err error)
 
 	// First returns the first record. The record's attributes may be modified.
-	// Use it instead of All or Some when the API only needs to create or update
-	// one record at a time.
+	// Use it instead of All or Some when the application only needs to create or
+	// update one record at a time.
 	First() Record
 
 	// Peek retrieves the next record without advancing the iterator. It returns the
@@ -397,7 +404,8 @@ type Records interface {
 	Same() iter.Seq[Record]
 }
 
-// EventSender is implemented by API connectors that support event sending.
+// EventSender is implemented by application connectors that support event
+// sending.
 type EventSender interface {
 
 	// EventTypeSchema returns the schema of the specified event type.
@@ -417,7 +425,7 @@ type EventSender interface {
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// PreviewSendEvents builds and returns the HTTP request that would be used
-	// to send the given events to the API, without actually sending it.
+	// to send the given events to the application, without actually sending it.
 	//
 	// If no events were sent (for example, because they were all discarded), it
 	// returns nil, nil. If any event type does not exist, it returns the
@@ -431,7 +439,7 @@ type EventSender interface {
 	// goroutines.
 	PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error)
 
-	// SendEvents sends a non-empty sequence of events to an applicationAPI.
+	// SendEvents sends a non-empty sequence of events to an application.
 	//
 	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
 	//
@@ -448,7 +456,7 @@ type EventSender interface {
 	SendEvents(ctx context.Context, events Events) error
 }
 
-// Event represents an event that will be sent to an API.
+// Event represents an event that will be sent to an application.
 type Event struct {
 	DestinationPipeline int           // Destination pipeline that processes the event.
 	Received            ReceivedEvent // Event as it was received.
@@ -456,7 +464,7 @@ type Event struct {
 }
 
 // EventTypeInfo represents the event type in the context of a specific event
-// to send to an API.
+// to send to an application.
 type EventTypeInfo struct {
 	ID     string         // Identifier.
 	Schema types.Type     // Schema; invalid if the type has no properties.
@@ -464,10 +472,10 @@ type EventTypeInfo struct {
 }
 
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods
-// of an API connector when one or more events are rejected by the API due to
-// validation issues—such as schema mismatches, missing required fields, or
-// invalid values. It maps the index of each failed event (starting from 0) to
-// the corresponding error.
+// of an application connector when one or more events are rejected by the
+// application due to validation issues—such as schema mismatches, missing
+// required fields, or invalid values. It maps the index of each failed event
+// (starting from 0) to the corresponding error.
 //
 // This error type only reports validation-related failures. Other kinds of
 // errors (e.g., network issues or internal failures) may be returned
@@ -488,7 +496,7 @@ func (err EventsError) Error() string {
 }
 
 // Events provides access to a non-empty sequence of events to be sent to an
-// API.
+// application.
 //
 // To iterate over events, call either All, SameUser, or First — only one of
 // these can be used per Events value:

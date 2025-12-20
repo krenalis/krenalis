@@ -187,7 +187,7 @@ var tools = []server.ServerTool{
 					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
 					" A connection performs its operations (importing, sending, and exporting data) through 'pipelines'."+
 					" Each connection can have zero, one, or multiple 'pipelines'."+
-					" API connections interface with external applications outside Meergo."+
+					" Application connections interface with external applications outside Meergo."+
 					" Database connections interface with external databases outside Meergo."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
 					" SDK connections receive data (events and user data) from SDKs, browsers, and server-side applications."+

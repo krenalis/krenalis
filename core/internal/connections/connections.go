@@ -2,8 +2,9 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package connections provides the interface to interact with API, database,
-// file storage, and message broker connections, and to file pipelines.
+// Package connections provides the interface to interact with application,
+// database, file storage, and message broker connections, and to file
+// pipelines.
 package connections
 
 import (
@@ -48,7 +49,7 @@ type Authorization struct {
 
 var (
 	ErrNoColumnsFound = errors.New("file has no columns")
-	ErrNoWebhooks     = errors.New("API has no webhooks")
+	ErrNoWebhooks     = errors.New("application has no webhooks")
 )
 
 // LastChangeTimeColumn represents the last change time column passed to the
@@ -129,8 +130,8 @@ type Record struct {
 	Err error
 }
 
-// Writer is the interface implemented by API, database, and file connectors to
-// write records.
+// Writer is the interface implemented by application, database, and file
+// connectors to write records.
 type Writer interface {
 
 	// Close terminates the writer, ensuring that all records are processed before
@@ -151,8 +152,8 @@ type Writer interface {
 	Write(ctx context.Context, id string, attributes map[string]any) bool
 }
 
-// Connections provides access to API, database, file, file storage, SDK, and
-// message broker connections.
+// Connections provides access to application, database, file, file storage,
+// SDK, and message broker connections.
 type Connections struct {
 	state *state.State
 	http  *httpclient.HTTP
@@ -165,10 +166,10 @@ func New(state *state.State) *Connections {
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
-// provided API connector. This URI is used to redirect users to the OAuth
-// provider's consent page, where they can grant permissions for the scopes of
-// the specified role. After granting permissions, the provider redirects the
-// user to the URI specified by redirectionURI.
+// provided application connector. This URI is used to redirect users to the
+// OAuth provider's consent page, where they can grant permissions for the
+// scopes of the specified role. After granting permissions, the provider
+// redirects the user to the URI specified by redirectionURI.
 //
 // After obtaining the authorization code, call GrantAuthorization to retrieve
 // the account code, access token, refresh token, and expiration time.
@@ -206,8 +207,8 @@ func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role sta
 	return b.String(), nil
 }
 
-// GrantAuthorization grants an OAuth authorization for an API connector, using
-// the provided authorization code and redirection URI.
+// GrantAuthorization grants an OAuth authorization for an application
+// connector, using the provided authorization code and redirection URI.
 //
 // This method can only be called on a connector that implements OAuth.
 func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
@@ -215,13 +216,13 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 	if err != nil {
 		return nil, err
 	}
-	api, err := connectors.RegisteredAPI(connector.Code).New(&connectors.APIEnv{
+	app, err := connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
 		HTTPClient: c.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	account, err := api.(apiOAuthConnector).OAuthAccount(ctx)
+	account, err := app.(applicationOAuthConnector).OAuthAccount(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -238,7 +239,7 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //// ReceivePerAccountWebhook receives a per account webhook request and returns
 //// its payloads. The context is the request's context.
 ////
-//// If the connector of the account is not an API or does not support per account
+//// If the connector of the account is not an application or does not support per account
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
 //func (connectors *Connections) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]connectors.WebhookPayload, error) {
@@ -246,13 +247,13 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //	if connector.WebhooksPer != state.WebhooksPerAccount {
 //		return nil, ErrNoWebhooks
 //	}
-//	config := &connectors.APIEnv{
+//	config := &connectors.ApplicationEnv{
 //		OAuthAccount: account.Code,
 //	}
 //	if connector.OAuth != nil {
 //		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.RetryPolicy)
 //	}
-//	inner, err := connectors.RegisteredAPI(connector.Name).New(config)
+//	inner, err := connectors.RegisteredApplication(connector.Name).New(config)
 //	if err != nil {
 //		return nil, err
 //	}
@@ -267,7 +268,7 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //// ReceivePerConnectionWebhook receives a per connection webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// if the connection is not an API, or it does not support per connection
+//// if the connection is not an application, or it does not support per connection
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
 //func (connectors *Connections) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]connectors.WebhookPayload, error) {
@@ -281,7 +282,7 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //		accountID = a.ID
 //		accountCode = a.Code
 //	}
-//	inner, err := connectors.RegisteredAPI(connector.Name).New(&connectors.APIEnv{
+//	inner, err := connectors.RegisteredApplication(connector.Name).New(&connectors.ApplicationEnv{
 //		Settings:     connection.Settings,
 //		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 //		OAuthAccount: accountCode,
@@ -302,14 +303,14 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //// ReceivePerConnectorWebhook receives a per connector webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// If the connector is not an API, or it does not support per connector
+//// If the connector is not an application, or it does not support per connector
 //// webhooks, it returns the ErrNoWebhooks error. If the request was not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
 //func (connectors *Connections) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	if connector.WebhooksPer != state.WebhooksPerConnector {
 //		return nil, ErrNoWebhooks
 //	}
-//	inner, err := connectors.RegisteredAPI(connector.Name).New(&connectors.APIEnv{})
+//	inner, err := connectors.RegisteredApplication(connector.Name).New(&connectors.ApplicationEnv{})
 //	if err != nil {
 //		return nil, err
 //	}

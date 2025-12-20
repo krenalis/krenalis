@@ -37,12 +37,12 @@ func TestSendEvents(t *testing.T) {
 	}
 
 	// Instantiate the connector for Klaviyo, with a specific settings for testing.
-	api, err := testconnector.NewAPI("klaviyo", settings)
+	app, err := testconnector.NewApplication("klaviyo", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ky := api.(*Klaviyo)
+	ky := app.(*Klaviyo)
 
 	ctx := context.Background()
 

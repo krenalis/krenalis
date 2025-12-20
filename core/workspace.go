@@ -498,9 +498,9 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 	}
 
 	// Set the event types.
-	if conn.Type == state.API && c.Role == state.Destination &&
+	if conn.Type == state.Application && c.Role == state.Destination &&
 		c.Connector().DestinationTargets.Contains(state.TargetEvent) {
-		appEventTypes, err := connection.api().EventTypes(ctx)
+		appEventTypes, err := connection.application().EventTypes(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1981,8 +1981,8 @@ type ConnectionToAdd struct {
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
-	// destination API connections that support it. In this case, it must be one of
-	// the sending modes supported by the API.
+	// destination application connections that support it. In this case, it must be
+	// one of the sending modes supported by the application.
 	SendingMode *SendingMode `json:"sendingMode"`
 
 	// LinkedConnections, for connections supporting events, indicate the

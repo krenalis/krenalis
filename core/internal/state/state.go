@@ -751,7 +751,7 @@ type ConnectorTerms struct {
 type ConnectorType int
 
 const (
-	API ConnectorType = iota + 1
+	Application ConnectorType = iota + 1
 	Database
 	File
 	FileStorage
@@ -768,8 +768,8 @@ func (typ *ConnectorType) Scan(src any) error {
 	}
 	var t ConnectorType
 	switch s {
-	case "API":
-		t = API
+	case "Application":
+		t = Application
 	case "Database":
 		t = Database
 	case "File":
@@ -803,8 +803,8 @@ func (typ ConnectorType) String() string {
 // It returns an error if typ is not a valid ConnectorType.
 func (typ ConnectorType) Value() (driver.Value, error) {
 	switch typ {
-	case API:
-		return "API", nil
+	case Application:
+		return "Application", nil
 	case Database:
 		return "Database", nil
 	case File:

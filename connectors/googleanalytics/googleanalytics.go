@@ -29,11 +29,11 @@ import (
 var overview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "google-analytics",
 		Label:      "Google Analytics",
 		Categories: connectors.CategorySaaS,
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent,
 			HasSettings: true,
 			SendingMode: connectors.Server,
@@ -50,7 +50,7 @@ func init() {
 }
 
 // New returns a new connector instance for Google Analytics.
-func New(env *connectors.APIEnv) (*Analytics, error) {
+func New(env *connectors.ApplicationEnv) (*Analytics, error) {
 	c := Analytics{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -62,7 +62,7 @@ func New(env *connectors.APIEnv) (*Analytics, error) {
 }
 
 type Analytics struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 

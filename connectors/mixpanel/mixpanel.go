@@ -33,11 +33,11 @@ const contentEncoding = connectors.Gzip
 var overview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "mixpanel",
 		Label:      "Mixpanel",
 		Categories: connectors.CategorySaaS,
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent,
 			HasSettings: true,
 			SendingMode: connectors.Server,
@@ -59,7 +59,7 @@ func init() {
 }
 
 type Mixpanel struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 
@@ -70,7 +70,7 @@ type innerSettings struct {
 }
 
 // New returns a new connector instance for Mixpanel.
-func New(env *connectors.APIEnv) (*Mixpanel, error) {
+func New(env *connectors.ApplicationEnv) (*Mixpanel, error) {
 	c := Mixpanel{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)

@@ -36,11 +36,11 @@ var destinationOverview string
 var baseURL = "https://api.stripe.com"
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "stripe",
 		Label:      "Stripe",
 		Categories: connectors.CategorySaaS,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -48,7 +48,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -56,7 +56,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:  "Customer",
 			Users: "Customers",
 		},
@@ -76,7 +76,7 @@ func init() {
 }
 
 // New returns a new connector instance for Stripe.
-func New(env *connectors.APIEnv) (*Stripe, error) {
+func New(env *connectors.ApplicationEnv) (*Stripe, error) {
 	c := Stripe{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -88,7 +88,7 @@ func New(env *connectors.APIEnv) (*Stripe, error) {
 }
 
 type Stripe struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 

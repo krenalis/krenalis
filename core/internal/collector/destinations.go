@@ -74,7 +74,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
 			continue
 		}
-		app := connections.API(c)
+		app := connections.Application(c)
 		sender := sender.New(app, d.sentAcks)
 		pipelines := make([]*destinationPipeline, 0, 1)
 		// Keeps all pipelines active on the connection's events.
@@ -111,8 +111,8 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 	ctx, cancel := context.WithCancelCause(d.close.ctx)
 
 	connection := pipeline.Connection()
-	api := d.connections.API(connection)
-	schema, err := api.Schema(ctx, state.TargetEvent, pipeline.EventType)
+	app := d.connections.Application(connection)
+	schema, err := app.Schema(ctx, state.TargetEvent, pipeline.EventType)
 	if err != nil {
 		panic("TODO")
 	}
@@ -167,8 +167,8 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
 		return
 	}
-	api := d.connections.API(c)
-	d.senders[n.ID] = sender.New(api, d.sentAcks)
+	app := d.connections.Application(c)
+	d.senders[n.ID] = sender.New(app, d.sentAcks)
 	pipelines := make([]*destinationPipeline, 0, 1)
 	d.mu.Lock()
 	d.pipelines[n.ID] = pipelines
@@ -277,8 +277,8 @@ func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
 		return
 	}
 	connection, _ := d.state.Connection(n.Connection)
-	api := d.connections.API(connection)
-	sender.SetAPI(api)
+	app := d.connections.Application(connection)
+	sender.SetApplication(app)
 }
 
 // onSetPipelineStatus is called when the status of a pipeline is set.

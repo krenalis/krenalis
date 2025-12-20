@@ -153,7 +153,7 @@ type Identity struct {
 	Pipeline     int       `json:"pipeline"`
 }
 
-type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.
+type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'core'.
 	Label string `json:"label"`
 	Value string `json:"value"`
 }
@@ -240,7 +240,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.SchedulePeriod value", v)
+		return fmt.Errorf("json: cannot scan a %T value into a SchedulePeriod value", v)
 	}
 	var p SchedulePeriod
 	switch s {
@@ -265,7 +265,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	case "24h":
 		p = 1440
 	default:
-		return fmt.Errorf("json: invalid apis.SchedulePeriod: %s", s)
+		return fmt.Errorf("json: invalid SchedulePeriod: %s", s)
 	}
 	*period = p
 	return nil

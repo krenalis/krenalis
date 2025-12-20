@@ -51,8 +51,8 @@ class TransformedConnector {
 		return this.type === 'SDK';
 	}
 
-	get isAPI() {
-		return this.type === 'API';
+	get isApplication() {
+		return this.type === 'Application';
 	}
 
 	get isDatabase() {

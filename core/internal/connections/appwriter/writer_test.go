@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package apiwriter
+package appwriter
 
 import (
 	"context"
@@ -37,8 +37,8 @@ func Test_Writer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d/%d/%f", test.num, test.seed, test.create), func(t *testing.T) {
 
-			api := newAPI(t, test.seed)
-			w := New("test", state.TargetUser, api.Upsert, api.ack)
+			app := newApplication(t, test.seed)
+			w := New("test", state.TargetUser, app.Upsert, app.ack)
 
 			ctx := context.Background()
 
@@ -64,9 +64,9 @@ func Test_Writer(t *testing.T) {
 			var n int
 			for {
 				time.Sleep(10 * time.Millisecond)
-				api.mu.Lock()
-				n = api.n
-				api.mu.Unlock()
+				app.mu.Lock()
+				n = app.n
+				app.mu.Unlock()
 				if n == test.num {
 					break
 				}
@@ -75,10 +75,10 @@ func Test_Writer(t *testing.T) {
 				t.Fatalf("expected %d IDs, got %d", test.num, n)
 			}
 
-			api.mu.Lock()
-			defer api.mu.Unlock()
+			app.mu.Lock()
+			defer app.mu.Unlock()
 
-			for i, ack := range api.acks {
+			for i, ack := range app.acks {
 				for _, id := range ack.ids {
 					ids[id]--
 					if id != "" && ids[id] < 0 {
@@ -104,7 +104,7 @@ type ack struct {
 	err error
 }
 
-type api struct {
+type application struct {
 	t    *testing.T
 	rng  *rand.Rand
 	mu   sync.Mutex
@@ -112,42 +112,42 @@ type api struct {
 	acks []ack
 }
 
-func newAPI(t *testing.T, seed int64) *api {
-	return &api{t: t, rng: rand.New(rand.NewSource(seed))}
+func newApplication(t *testing.T, seed int64) *application {
+	return &application{t: t, rng: rand.New(rand.NewSource(seed))}
 }
-func (api *api) validateRecord(r connectors.Record) {
+func (app *application) validateRecord(r connectors.Record) {
 	if r.Attributes == nil {
-		api.t.Fatal("Upsert: expected attributes, got nil")
+		app.t.Fatal("Upsert: expected attributes, got nil")
 	}
 	if r.Attributes["id"] != r.ID {
-		api.t.Fatalf("Upsert: expected attributes[\"id\"] == %q, got %q", r.Attributes["id"], r.ID)
+		app.t.Fatalf("Upsert: expected attributes[\"id\"] == %q, got %q", r.Attributes["id"], r.ID)
 	}
 }
 
-func (api *api) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (app *application) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	// Test Peek.
-	if api.rng.Int()%8 == 0 {
+	if app.rng.Int()%8 == 0 {
 		record, _ := records.Peek()
-		api.validateRecord(record)
-		if api.rng.Int()%4 == 0 {
+		app.validateRecord(record)
+		if app.rng.Int()%4 == 0 {
 			record, ok := records.Peek()
 			if !ok {
 				return nil
 			}
-			api.validateRecord(record)
+			app.validateRecord(record)
 		}
 	}
 
 	// Test First.
-	if api.rng.Int()%5 == 0 {
-		api.validateRecord(records.First())
-		time.Sleep(time.Duration(api.rng.Int()%10) * time.Nanosecond)
+	if app.rng.Int()%5 == 0 {
+		app.validateRecord(records.First())
+		time.Sleep(time.Duration(app.rng.Int()%10) * time.Nanosecond)
 		return nil
 	}
 
 	var seq iter.Seq[connectors.Record]
-	if api.rng.Int()%3 == 0 {
+	if app.rng.Int()%3 == 0 {
 		seq = records.Same()
 	} else {
 		seq = records.All()
@@ -155,37 +155,37 @@ func (api *api) Upsert(ctx context.Context, target connectors.Targets, records c
 
 	n := 0
 	for r := range seq {
-		api.validateRecord(r)
+		app.validateRecord(r)
 		if n%4 == 0 {
 			if p, ok := records.Peek(); ok {
-				api.validateRecord(p)
+				app.validateRecord(p)
 			}
 		}
-		if n > 0 && api.rng.Int()%3 == 0 {
+		if n > 0 && app.rng.Int()%3 == 0 {
 			records.Postpone()
-		} else if api.rng.Int()%16 == 0 {
+		} else if app.rng.Int()%16 == 0 {
 			records.Discard(errors.New("event is invalid"))
 		}
-		if n == api.rng.Int()/2 {
+		if n == app.rng.Int()/2 {
 			break
 		}
 		n++
 	}
 
-	time.Sleep(time.Duration(api.rng.Int()%10) * time.Microsecond)
+	time.Sleep(time.Duration(app.rng.Int()%10) * time.Microsecond)
 
 	return nil
 }
 
-func (api *api) ack(ids []string, err error) {
+func (app *application) ack(ids []string, err error) {
 	if len(ids) == 0 {
-		api.t.Fatalf("ack: expected at least one id, got none")
+		app.t.Fatalf("ack: expected at least one id, got none")
 	}
-	api.mu.Lock()
-	if api.acks == nil {
-		api.acks = []ack{}
+	app.mu.Lock()
+	if app.acks == nil {
+		app.acks = []ack{}
 	}
-	api.acks = append(api.acks, ack{ids: ids, err: err})
-	api.n += len(ids)
-	api.mu.Unlock()
+	app.acks = append(app.acks, ack{ids: ids, err: err})
+	app.n += len(ids)
+	app.mu.Unlock()
 }

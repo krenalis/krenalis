@@ -76,11 +76,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	outSchema := pipeline.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToAPIs := isDispatchingEventsToAPIs(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAPIs
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -89,7 +89,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAplications
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -97,8 +97,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for pipelines that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for pipelines that import events into data warehouse")
-			case dispatchEventsToAPIs:
-				return errors.BadRequest("input schema must be invalid for pipelines that send events to apps")
+			case dispatchEventsToAplications:
+				return errors.BadRequest("input schema must be invalid for pipelines that send events to applications")
 			}
 		}
 		inSchema = eventPipelineSchema
@@ -392,7 +392,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("incremental cannot be true for destination pipelines")
 		}
 		switch v.connection.connector.typ {
-		case state.API:
+		case state.Application:
 		case state.Database, state.FileStorage:
 			if pipeline.LastChangeTimeColumn == "" {
 				return errors.BadRequest("incremental requires a last change time column")
@@ -623,7 +623,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	}
 
 	// Check if the export options are needed.
-	needsExportOptions := v.connection.connector.typ == state.API &&
+	needsExportOptions := v.connection.connector.typ == state.Application &&
 		v.connection.role == state.Destination && v.target == state.TargetUser
 	if needsExportOptions {
 		if pipeline.ExportMode == "" {
@@ -644,7 +644,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	targetUsersOrGroups := v.target == state.TargetUser || v.target == state.TargetGroup
 
 	// Check that UpdateOnDuplicates is allowed.
-	updateOnDuplicatesAllowed := v.connection.connector.typ == state.API &&
+	updateOnDuplicatesAllowed := v.connection.connector.typ == state.Application &&
 		v.connection.role == state.Destination && targetUsersOrGroups
 	if !updateOnDuplicatesAllowed && pipeline.UpdateOnDuplicates {
 		return errors.BadRequest("update on duplicates is not allowed")
@@ -661,7 +661,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	// Check if the transformation is mandatory, with at least one input
 	// property.
 	transformationMandatory := targetUsersOrGroups &&
-		(v.connection.connector.typ == state.API || v.connection.connector.typ == state.Database ||
+		(v.connection.connector.typ == state.Application || v.connection.connector.typ == state.Database ||
 			(v.connection.role == state.Source && v.connection.connector.typ == state.FileStorage))
 	if transformationMandatory && pipeline.Transformation == nil {
 		return errors.BadRequest("pipeline must have a transformation")
@@ -721,7 +721,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 }
 
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
-// matching property when exporting users to an API.
+// matching property when exporting users to an application.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only int, uint, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
@@ -815,7 +815,7 @@ func validatePipelineSchema(io string, schema types.Type, role state.Role, targe
 		}
 		if role == state.Destination && io == "output" {
 			switch {
-			case typ == state.API && target == state.TargetEvent:
+			case typ == state.Application && target == state.TargetEvent:
 				if p.UpdateRequired {
 					return fmt.Errorf("output pipeline schema property %q cannot have UpdateRequired set to true", path)
 				}

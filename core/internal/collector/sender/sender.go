@@ -46,7 +46,7 @@ type Ack struct {
 // delivery.
 type AcksFunc func(acks []Ack, err error)
 
-type API interface {
+type Application interface {
 
 	// ID returns the ID of the connection.
 	ID() int
@@ -62,7 +62,7 @@ type API interface {
 	// the call, but there is no guarantee that the request won't still be limited.
 	WaitTime(pattern string) (time.Duration, error)
 
-	// SendEvents is a function that sends events to apps.
+	// SendEvents is a function that sends events to applications.
 	SendEvents(ctx context.Context, events connectors.Events) error
 }
 
@@ -70,7 +70,7 @@ type API interface {
 // sent. See also the Sender.minBatchSize field.
 const maxQueueDelay = 200 * time.Millisecond
 
-// Event represents a message to be delivered to an API.
+// Event represents a message to be delivered to an application.
 type Event struct {
 	connectors.Event           // original event.
 	CreatedAt        time.Time // time at which the event was created.
@@ -93,7 +93,7 @@ type user struct {
 
 // Sender sends events, buffering them internally for batch delivery.
 // It ensures that events from the same user (i.e., with the same Anonymous ID)
-// are delivered to the API in the exact order they were received.
+// are delivered to the application in the exact order they were received.
 //
 // To send an event, follow these steps:
 //  1. Call the CreateEvent method. The order in which this is called determines
@@ -101,7 +101,7 @@ type user struct {
 //  2. (Optional) Transform the event and set the Event.Properties field.
 //  3. Call the QueueEvent method.
 type Sender struct {
-	connector string   // API connector.
+	connector string   // application connector.
 	acks      AcksFunc // ack function.
 
 	metrics struct {
@@ -111,7 +111,7 @@ type Sender struct {
 
 	mu                 sync.Mutex
 	waitTime           func(pattern string) (time.Duration, error)               // function that returns an estimate of how long to wait before calling sendEvents.
-	sendEvents         func(ctx context.Context, events connectors.Events) error // function that sends the events to the API.
+	sendEvents         func(ctx context.Context, events connectors.Events) error // function that sends the events to the application.
 	events             []*Event                                                  // events in the queue; protected by mu.
 	users              map[string]*user                                          // users by anonymous id; protected by mu.
 	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
@@ -131,15 +131,15 @@ type Sender struct {
 	}
 }
 
-// New returns a new Sender. connector is the API's connector, waitTime is the
-// function used to estimate how long to wait before sending a batch of events,
-// sendEvents is the function that sends the events to the API, and acks
-// acknowledges both successes and failures.
-func New(api API, acks AcksFunc) *Sender {
+// New returns a new Sender. connector is the application's connector, waitTime
+// is the function used to estimate how long to wait before sending a batch of
+// events, sendEvents is the function that sends the events to the application,
+// and acks acknowledges both successes and failures.
+func New(app Application, acks AcksFunc) *Sender {
 	s := &Sender{
-		connector:       api.Connector(),
-		waitTime:        api.WaitTime,
-		sendEvents:      api.SendEvents,
+		connector:       app.Connector(),
+		waitTime:        app.WaitTime,
+		sendEvents:      app.SendEvents,
 		acks:            acks,
 		events:          make([]*Event, 0, 1000),
 		users:           make(map[string]*user, 1000),
@@ -168,7 +168,7 @@ func New(api API, acks AcksFunc) *Sender {
 				pattern = s.rateLimiterPattern
 			}
 			s.resetTimerLocked()
-			waitTime := api.WaitTime
+			waitTime := app.WaitTime
 			s.mu.Unlock()
 			if iter == nil {
 				continue
@@ -187,7 +187,7 @@ func New(api API, acks AcksFunc) *Sender {
 		}
 	}()
 	// Set the metrics.
-	connection := strconv.Itoa(api.ID())
+	connection := strconv.Itoa(app.ID())
 	s.metrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
@@ -313,11 +313,11 @@ func (s *Sender) QueueEvent(event *Event) {
 	s.queueOrDiscardEvent(event, false)
 }
 
-// SetAPI replaces the API.
-func (s *Sender) SetAPI(api *connections.API) {
+// SetApplication replaces the application.
+func (s *Sender) SetApplication(app *connections.Application) {
 	s.mu.Lock()
-	s.waitTime = api.WaitTime
-	s.sendEvents = api.SendEvents
+	s.waitTime = app.WaitTime
+	s.sendEvents = app.SendEvents
 	s.mu.Unlock()
 }
 
@@ -636,7 +636,8 @@ func (s *Sender) resetTimerLocked() {
 	}
 }
 
-// send sends events to the API by calling the connector's SendEvents method.
+// send sends events to the application by calling the connector's SendEvents
+// method.
 func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
 	trace("Sender.send: iterator %p started\n", iter)

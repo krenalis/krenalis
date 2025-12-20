@@ -38,11 +38,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "klaviyo",
 		Label:      "Klaviyo",
 		Categories: connectors.CategorySaaS,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -50,7 +50,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			HasSettings: true,
 			SendingMode: connectors.Server,
@@ -59,7 +59,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:   "Profile",
 			Users:  "Profiles",
 			UserID: "Unique ID",
@@ -89,7 +89,7 @@ var retryPolicy = connectors.RetryPolicy{
 const apiRevision = "2024-07-15"
 
 // New returns a new connector instance for Klaviyo.
-func New(env *connectors.APIEnv) (*Klaviyo, error) {
+func New(env *connectors.ApplicationEnv) (*Klaviyo, error) {
 	c := Klaviyo{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -101,7 +101,7 @@ func New(env *connectors.APIEnv) (*Klaviyo, error) {
 }
 
 type Klaviyo struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 

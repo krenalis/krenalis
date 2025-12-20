@@ -33,11 +33,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "dummy",
 		Label:      "Dummy",
 		Categories: connectors.CategoryTesting,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -45,7 +45,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			SendingMode: connectors.Server,
 			HasSettings: true,
@@ -54,7 +54,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:   "Customer",
 			Users:  "Customers",
 			UserID: "Dummy Unique ID",
@@ -69,7 +69,7 @@ func init() {
 }
 
 // New returns a new connector instance for testing.
-func New(env *connectors.APIEnv) (*Dummy, error) {
+func New(env *connectors.ApplicationEnv) (*Dummy, error) {
 	c := Dummy{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -81,7 +81,7 @@ func New(env *connectors.APIEnv) (*Dummy, error) {
 }
 
 type Dummy struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 

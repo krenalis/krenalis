@@ -322,7 +322,8 @@ const Combobox = ({
 		}
 		const doesNotExist = errorMessage.endsWith('does not exist');
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
-		const isAppEventsExport = connection.isAPI && connection.isDestination && pipelineType.target === 'Event';
+		const isAppEventsExport =
+			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
 		if (doesNotExist) {
 			if (isEventBasedUserImport) {
 				errorMessage += `, perhaps you meant "traits.${value}"?`;

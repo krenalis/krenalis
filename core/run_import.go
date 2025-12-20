@@ -45,9 +45,9 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	var records connections.Records
 
 	switch connector.Type {
-	case state.API:
+	case state.Application:
 		purge = run.Cursor.IsZero()
-		records, err = this.api().Users(ctx, pipeline.InSchema, nil, run.Cursor)
+		records, err = this.application().Users(ctx, pipeline.InSchema, nil, run.Cursor)
 	case state.Database:
 		database := this.database()
 		defer database.Close()

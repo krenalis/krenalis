@@ -92,7 +92,7 @@ type DestinationConnector struct {
 type ConnectorType int
 
 const (
-	API ConnectorType = iota + 1
+	Application ConnectorType = iota + 1
 	Database
 	File
 	FileStorage
@@ -111,8 +111,8 @@ func (typ ConnectorType) MarshalJSON() ([]byte, error) {
 // It panics if typ is not a valid ConnectorType value.
 func (typ ConnectorType) String() string {
 	switch typ {
-	case API:
-		return "API"
+	case Application:
+		return "Application"
 	case Database:
 		return "Database"
 	case File:
@@ -145,8 +145,8 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	}
 	var t ConnectorType
 	switch s {
-	case "API":
-		t = API
+	case "Application":
+		t = Application
 	case "Database":
 		t = Database
 	case "File":

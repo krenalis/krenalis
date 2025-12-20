@@ -19,7 +19,7 @@ import (
 // Record represents a record.
 type Record struct {
 	ID         any            // Identifier.
-	ExternalID string         // API external ID.
+	ExternalID string         // Application external ID.
 	Attributes map[string]any // Attributes.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -27,8 +27,8 @@ type Record struct {
 }
 
 // Matching specifies criteria for the ProfileRecords method when exporting users
-// to an API. It filters users based on whether they have or do not have a match
-// with the API users.
+// to an application. It filters users based on whether they have or do not have a match
+// with the application users.
 type Matching struct {
 	Pipeline           int
 	InProperty         string
@@ -43,12 +43,13 @@ type Matching struct {
 // with a nil value should be omitted from each record.
 //
 // pipeline and appExport parameters (if specified) represent the pipeline
-// identifier and the export options for an API pipeline, respectively. When
-// provided, the resulting records are compared against the destination users
-// table.
+// identifier and the export options for an application pipeline, respectively.
+// When provided, the resulting records are compared against the destination
+// users table.
 //
-// If matching is not nil and a matching API user exists for a record, the
-// record's ExternalID will be set to the external ID of the matched API user.
+// If matching is not nil and a matching application user exists for a record,
+// the record's ExternalID will be set to the external ID of the matched
+// application user.
 func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
@@ -308,7 +309,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				ID:         row[last],              // the User ID is the last column.
 				Attributes: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
 			}
-			// If there is no matching API user and the external ID is nil, assign an empty string.
+			// If there is no matching application user and the external ID is nil, assign an empty string.
 			record.ExternalID, _ = row[last-1].(string)
 			// Process the previous records if the value of the matching property differs from the previous records.
 			if len(previous.records) > 0 && value != previous.value {

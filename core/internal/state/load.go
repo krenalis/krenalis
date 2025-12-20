@@ -34,10 +34,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			},
 		}
 		switch connector := connector.(type) {
-		case connectors.APISpec:
+		case connectors.ApplicationSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
-			c.Type = API
+			c.Type = Application
 			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = ConnectorTargets(asSource.Targets)

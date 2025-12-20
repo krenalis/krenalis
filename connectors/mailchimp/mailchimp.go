@@ -41,11 +41,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "mailchimp",
 		Label:      "Mailchimp",
 		Categories: connectors.CategorySaaS,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -53,7 +53,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -61,7 +61,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:  "Contact",
 			Users: "Contacts",
 		},
@@ -102,7 +102,7 @@ func init() {
 }
 
 // New returns a new connector instance for Mailchimp.
-func New(env *connectors.APIEnv) (*MailChimp, error) {
+func New(env *connectors.ApplicationEnv) (*MailChimp, error) {
 	c := MailChimp{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -119,7 +119,7 @@ func New(env *connectors.APIEnv) (*MailChimp, error) {
 }
 
 type MailChimp struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 

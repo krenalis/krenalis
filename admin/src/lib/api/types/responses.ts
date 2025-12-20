@@ -112,7 +112,7 @@ interface FindProfilesResponse {
 	total: number;
 }
 
-interface APIUsersResponse {
+interface ApplicationUsersResponse {
 	users: Record<string, any>[];
 	cursor: string;
 }
@@ -203,7 +203,7 @@ export type {
 	PipelineError,
 	PipelineErrorsResponse,
 	PipelineSchemasResponse,
-	APIUsersResponse,
+	ApplicationUsersResponse,
 	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
