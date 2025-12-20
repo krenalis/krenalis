@@ -90,10 +90,7 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 		}
 	}
 	path, err := storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
-	if err != nil {
-		return "", connectorError(err)
-	}
-	return path, nil
+	return path, connectorError(err)
 }
 
 // Connector returns the name of the file storage connector.

@@ -150,9 +150,6 @@ func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*
 	}
 	eventTypeSchema, err := api.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
-		if err == connectors.ErrEventTypeNotExist {
-			return nil, err
-		}
 		return nil, connectorError(err)
 	}
 	// Check that schema is aligned with the event type's schema.
@@ -167,9 +164,6 @@ func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*
 	iterator := newSingleEventIterator(&event, api.connector)
 	req, err := api.inner.(connectors.EventSender).PreviewSendEvents(ctx, iterator)
 	if err != nil {
-		if err == connectors.ErrEventTypeNotExist {
-			return nil, err
-		}
 		return nil, connectorError(err)
 	}
 	if err = iterator.Err(); err != nil {
@@ -225,9 +219,6 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		schema, err := api.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
 		if err != nil {
-			if err == connectors.ErrEventTypeNotExist {
-				return types.Type{}, err
-			}
 			return types.Type{}, connectorError(err)
 		}
 		if !schema.Valid() {
@@ -236,10 +227,7 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		return types.AsRole(schema, types.Destination), nil
 	case state.TargetUser:
 		schema, err := api.userSchema(ctx, role)
-		if err != nil {
-			return types.Type{}, connectorError(err)
-		}
-		return schema, nil
+		return schema, connectorError(err)
 		// TODO(marco): Implement groups
 		//case state.Groups:
 		//	schema, err := api.inner.(apiSchemaConnector).Schema(ctx, connectors.GroupTarget, connectors.Role(role), "")
@@ -264,10 +252,7 @@ func (api *API) SendEvents(ctx context.Context, events connectors.Events) error 
 		return api.err
 	}
 	err := api.inner.(connectors.EventSender).SendEvents(ctx, events)
-	if err != nil && err != connectors.ErrEventTypeNotExist {
-		err = connectorError(err)
-	}
-	return err
+	return connectorError(err)
 }
 
 // Users returns an iterator to iterate over the API's users. Each returned
