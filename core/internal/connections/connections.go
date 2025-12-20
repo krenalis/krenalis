@@ -52,13 +52,6 @@ var (
 	ErrNoWebhooks     = errors.New("application has no webhooks")
 )
 
-// LastChangeTimeColumn represents the last change time column passed to the
-// (*File).ReadFunc method.
-type LastChangeTimeColumn struct {
-	Name   string
-	Format string
-}
-
 // PlaceholderError is an error representing a placeholder error.
 type PlaceholderError string
 
