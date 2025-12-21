@@ -8,9 +8,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -25,6 +22,7 @@ import (
 
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/datacrypt"
 	"github.com/meergo/meergo/tools/json"
 )
 
@@ -40,7 +38,7 @@ type notification struct {
 type notifier struct {
 	db     *db.DB
 	ch     chan<- notification
-	key    []byte
+	cipher *datacrypt.Cipher
 	next   int64
 	loaded chan struct{}
 	closed struct {
@@ -75,7 +73,7 @@ func (notifier *notifier) Close() {
 // then starts listening for state change notifications.
 // key is the encryption key that will be set and used in the notifier; it must
 // be 32 bytes long.
-func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx, key []byte) error {
+func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx, cipher *datacrypt.Cipher) error {
 	// Read the last notification ID.
 	var latest int64
 	err := tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
@@ -89,7 +87,7 @@ func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx
 	if err != nil {
 		return err
 	}
-	notifier.key = key
+	notifier.cipher = cipher
 	notifier.next = latest + 1
 	notifier.loaded <- struct{}{}
 	return nil
@@ -128,7 +126,7 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 	}
 	const start = "NOTIFY meergo, '"
 	b := []byte(start)
-	b, err := appendEncodeNotification(b, notifier.key, name, n)
+	b, err := appendEncodeNotification(b, notifier.cipher, name, n)
 	if err != nil {
 		return 0, err
 	}
@@ -250,11 +248,11 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 		var payload string
 		if b.Len() > 0 {
 			br := base64.NewDecoder(base64.RawStdEncoding, &b)
-			ciphertext, err := io.ReadAll(br)
+			encrypted, err := io.ReadAll(br)
 			if err != nil {
 				continue
 			}
-			data, err := decryptAESGCM(ciphertext, notifier.key)
+			data, err := notifier.cipher.Decrypt(encrypted)
 			if err != nil {
 				continue
 			}
@@ -301,7 +299,7 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 // encrypts the compressed data using AES-GCM. Finally, it Base64-encodes the
 // encrypted data, appends it to the provided byte slice, and returns the
 // extended slice.
-func appendEncodeNotification(b, key []byte, name string, n any) ([]byte, error) {
+func appendEncodeNotification(b []byte, cipher *datacrypt.Cipher, name string, n any) ([]byte, error) {
 	var z bytes.Buffer
 	zw := gzip.NewWriter(&z)
 	defer zw.Close()
@@ -316,54 +314,11 @@ func appendEncodeNotification(b, key []byte, name string, n any) ([]byte, error)
 	if err = zw.Close(); err != nil {
 		return nil, err
 	}
-	encryptedData, err := encryptAESGCM(z.Bytes(), key)
+	encryptedData, err := cipher.Encrypt(z.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("cannot encrypt notification payload: %s", err)
 	}
 	return base64.RawStdEncoding.AppendEncode(b, encryptedData), nil
-}
-
-// decryptAESGCM decrypts the given ciphertext using AES-GCM with the provided
-// key.
-func decryptAESGCM(ciphertext []byte, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	aesGCM, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	// Extracts the nonce from the beginning of the ciphertext before performing decryption.
-	nonceSize := aesGCM.NonceSize()
-	if len(ciphertext) < nonceSize {
-		return nil, errors.New("cannot decrypt notification payload, ciphertext is too short to contain the nonce")
-	}
-	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
-	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, err
-	}
-	return plaintext, nil
-}
-
-// encryptAESGCM encrypts the given data using AES-GCM with the provided key.
-func encryptAESGCM(data []byte, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	aesGCM, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	// Generates a random nonce and prepends it to the ciphertext for decryption.
-	nonce := make([]byte, aesGCM.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
-	}
-	ciphertext := aesGCM.Seal(nonce, nonce, data, nil)
-	return ciphertext, nil
 }
 
 // parsePayload parses a notification payload and returns the identifier, name,

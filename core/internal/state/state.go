@@ -17,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/tools/datacrypt"
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
@@ -243,6 +244,12 @@ func (state *State) IsLeader() bool {
 	election := state.election
 	state.mu.Unlock()
 	return election.leader == state.id
+}
+
+// NewCipher returns a datacrypt.Cipher bound to the given purpose using the
+// state's encryption key.
+func (state *State) NewCipher(purpose string) (*datacrypt.Cipher, error) {
+	return datacrypt.New(state.metadata.encryptionKey, purpose)
 }
 
 // Organization returns the organization with identifier id.

@@ -596,7 +596,12 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return errors.New("missing key 'installation_id' in table 'metadata'")
 	}
 
-	return state.notifications.CommitAndStartListening(ctx, tx, state.metadata.encryptionKey[:32])
+	cipher, err := state.NewCipher("state.notifier")
+	if err != nil {
+		return fmt.Errorf("state: cannot create notifier cipher: %s", err)
+	}
+
+	return state.notifications.CommitAndStartListening(ctx, tx, cipher)
 }
 
 // article returns "a" or "an" based on the first letter of the name.
