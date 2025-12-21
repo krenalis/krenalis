@@ -569,7 +569,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target connectors.Targets, reco
 // saveSettings validates and saves the settings.
 func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) error {
 	var audience struct {
-		Audience string
+		Audience string `json:"audience"`
 	}
 	err := settings.Unmarshal(&audience)
 	if err != nil {
