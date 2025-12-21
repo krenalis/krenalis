@@ -207,7 +207,7 @@ func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role sta
 func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
 	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, code, redirectionURI)
 	if err != nil {
-		return nil, err
+		return nil, &UnavailableError{Err: fmt.Errorf("cannot get authorization token from %s: %s", connector.Label, err)}
 	}
 	app, err := connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
 		HTTPClient: c.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),

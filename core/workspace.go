@@ -439,6 +439,9 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 
 	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
 	if err != nil {
+		if err, ok := err.(*connections.UnavailableError); ok {
+			return "", errors.Unavailable("%w", err)
+		}
 		return "", err
 	}
 
