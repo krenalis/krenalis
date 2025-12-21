@@ -126,11 +126,10 @@ func (c *Cipher) Decrypt(encrypted []byte) ([]byte, error) {
 //
 // If the data was modified, corrupted, or encrypted with a different key or
 // purpose, Decrypt returns an error.
-func (c *Cipher) DecryptAppend(dst, ciphertext []byte) ([]byte, error) {
-	if len(ciphertext) < c.nonceSize {
-		return nil, errors.New("datacrypt: master key must be 64 bytes")
+func (c *Cipher) DecryptAppend(dst, encrypted []byte) ([]byte, error) {
+	if len(encrypted) < c.nonceSize {
+		return nil, errors.New("datacrypt: encrypted is too short")
 	}
-	nonce := ciphertext[:c.nonceSize]
-	ct := ciphertext[c.nonceSize:]
+	nonce, ct := encrypted[:c.nonceSize], encrypted[c.nonceSize:]
 	return c.aead.Open(dst, nonce, ct, c.aad)
 }

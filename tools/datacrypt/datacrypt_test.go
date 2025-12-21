@@ -207,9 +207,9 @@ func TestDecryptAppend(t *testing.T) {
 		}
 	})
 
-	t.Run("short ciphertext", func(t *testing.T) {
+	t.Run("short encrypted", func(t *testing.T) {
 		t.Parallel()
-		const msg = "datacrypt: master key must be 64 bytes"
+		const msg = "datacrypt: encrypted is too short"
 		short := make([]byte, c.nonceSize-1)
 		_, err := c.DecryptAppend(nil, short)
 		if err == nil {
