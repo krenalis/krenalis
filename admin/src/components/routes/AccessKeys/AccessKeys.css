@@ -69,6 +69,11 @@
 	display: none;
 }
 
+.access-keys__dialog--copy::part(panel) {
+	width: 520px;
+	max-width: calc(100vw - 40px);
+}
+
 .access-keys__dialog-workspaces {
 	margin-top: 20px;
 }

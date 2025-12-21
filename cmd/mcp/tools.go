@@ -238,6 +238,10 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
+	mcpToken, found := strings.CutPrefix(mcpToken, "mcp_ ")
+	if !found {
+		return nil, errors.BadRequest("invalid MCP (Model Context Protocol) key")
+	}
 	organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 	if !found {
 		return nil, errors.New("invalid MCP (Model Context Protocol) key")

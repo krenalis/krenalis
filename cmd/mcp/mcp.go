@@ -88,6 +88,9 @@ func mcpTokenFromRequest(r *http.Request) (string, error) {
 	if !found || token == "" {
 		return "", errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_MCP_KEY>'.")
 	}
+	if !strings.HasPrefix(token, "mcp_") {
+		return "", errors.BadRequest("MCP key is not valid; MCP keys start with the mcp_ prefix.")
+	}
 	return token, nil
 }
 

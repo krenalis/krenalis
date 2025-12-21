@@ -257,6 +257,10 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if !found || token == "" {
 			return nil, nil, errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
 		}
+		token, found = strings.CutPrefix(token, "api_")
+		if !found {
+			return nil, nil, errors.BadRequest("API key is not valid; API keys start with the api_ prefix")
+		}
 		organizationID, workspaceID, found := s.core.AccessKey(token, core.AccessKeyTypeAPI)
 		if !found {
 			return nil, nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")

@@ -74,6 +74,13 @@ func (organization organization) AccessKeys(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
+	for i, key := range keys {
+		prefix := "api_"
+		if key.Type == core.AccessKeyTypeMCP {
+			prefix = "mcp_"
+		}
+		keys[i].Token = prefix + key.Token
+	}
 	return map[string][]*core.AccessKey{"keys": keys}, nil
 }
 
@@ -108,6 +115,12 @@ func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.
 	id, token, err := org.CreateAccessKey(r.Context(), body.Name, workspace, *body.Type)
 	if err != nil {
 		return nil, err
+	}
+	switch *body.Type {
+	case core.AccessKeyTypeAPI:
+		token = "api_" + token
+	case core.AccessKeyTypeMCP:
+		token = "mcp_" + token
 	}
 	return map[string]any{"id": id, "token": token}, nil
 }
@@ -153,11 +166,11 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, err
 	}
-	key, err := organization.key(r) // ID of the access key
+	id, err := organization.key(r)
 	if err != nil {
 		return nil, err
 	}
-	err = org.DeleteAccessKey(r.Context(), key)
+	err = org.DeleteAccessKey(r.Context(), id)
 	return nil, err
 }
 
