@@ -102,8 +102,8 @@ func init() {
 }
 
 // New returns a new connector instance for Mailchimp.
-func New(env *connectors.ApplicationEnv) (*MailChimp, error) {
-	c := MailChimp{env: env}
+func New(env *connectors.ApplicationEnv) (*Mailchimp, error) {
+	c := Mailchimp{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
 		if err != nil {
@@ -118,7 +118,7 @@ func New(env *connectors.ApplicationEnv) (*MailChimp, error) {
 	return &c, nil
 }
 
-type MailChimp struct {
+type Mailchimp struct {
 	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
@@ -131,13 +131,13 @@ type innerSettings struct {
 
 // OAuthAccount returns the API's account associated with the OAuth
 // authorization.
-func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
+func (mc *Mailchimp) OAuthAccount(ctx context.Context) (string, error) {
 	_, account, err := mc.metadata(ctx)
 	return account, err
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
+func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 
 	// Fetch the contact fields, also known as audience fields or merge fields.
 	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
@@ -233,7 +233,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, _ []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (mc *Mailchimp) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, _ []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
@@ -346,7 +346,7 @@ var addressType = types.Object([]types.Property{
 })
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -388,7 +388,7 @@ const maxBodyRecordsBytes = 100 * 1024 * 1024
 const maxBodyRecords = 5000
 
 // Upsert updates or creates records in the API for the specified target.
-func (mc *MailChimp) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
@@ -567,7 +567,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target connectors.Targets, reco
 }
 
 // saveSettings validates and saves the settings.
-func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) error {
+func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) error {
 	var audience struct {
 		Audience string `json:"audience"`
 	}
@@ -638,7 +638,7 @@ func (err *mailchimpError) Error() string {
 }
 
 // call calls the Mailchimp API.
-func (mc *MailChimp) call(ctx context.Context, method, path string, params url.Values, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
+func (mc *Mailchimp) call(ctx context.Context, method, path string, params url.Values, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
 	var dataCenter string
 	if mc.settings == nil {
@@ -692,7 +692,7 @@ type audience struct {
 }
 
 // audiences returns the audiences.
-func (mc *MailChimp) audiences(ctx context.Context) ([]audience, error) {
+func (mc *Mailchimp) audiences(ctx context.Context) ([]audience, error) {
 	params := url.Values{
 		"fields":     {"lists.name,lists.id"},
 		"count":      {"1000"},
@@ -742,7 +742,7 @@ var errAudienceNotExist = errors.New("audience does not exist")
 
 // webhooks returns the webhooks for the provide audience.
 // If audience does not exist, it returns the errAudienceNotExist error.
-func (mc *MailChimp) webhooks(ctx context.Context, audience string) ([]webhook, error) {
+func (mc *Mailchimp) webhooks(ctx context.Context, audience string) ([]webhook, error) {
 	var response struct {
 		Webhooks []webhook `json:"webhooks"`
 	}
@@ -757,7 +757,7 @@ func (mc *MailChimp) webhooks(ctx context.Context, audience string) ([]webhook, 
 }
 
 // metadata returns the datacenter and the account id.
-func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
+func (mc *Mailchimp) metadata(ctx context.Context) (string, string, error) {
 	// Retrieve the datacenter calling the Metadata endpoint.
 	// https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/#implement-the-oauth-2-workflow-on-your-server
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://login.mailchimp.com/oauth2/metadata", nil)
@@ -773,7 +773,7 @@ func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
 		_ = res.Body.Close()
 	}()
 	if res.StatusCode != 200 {
-		return "", "", fmt.Errorf("fetching metadata, MailChimp returned a %d status code", res.StatusCode)
+		return "", "", fmt.Errorf("fetching metadata, Mailchimp returned a %d status code", res.StatusCode)
 	}
 	r := struct {
 		DC     string `json:"dc"`
@@ -784,10 +784,10 @@ func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
 		return "", "", err
 	}
 	if r.DC == "" {
-		return "", "", errors.New("fetching metadata, MailChimp returned an empty data center")
+		return "", "", errors.New("fetching metadata, Mailchimp returned an empty data center")
 	}
 	if r.UserID <= 0 {
-		return "", "", fmt.Errorf("fetching metadata, MailChimp returned an invalid user ID: %d", r.UserID)
+		return "", "", fmt.Errorf("fetching metadata, Mailchimp returned an invalid user ID: %d", r.UserID)
 	}
 	return r.DC, strconv.Itoa(r.UserID), nil
 }
