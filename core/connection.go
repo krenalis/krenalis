@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
@@ -35,8 +34,6 @@ import (
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
-
-	"github.com/jxskiss/base62"
 )
 
 const (
@@ -565,16 +562,13 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
 	}
-	key, err := generateEventWriteKey()
-	if err != nil {
-		return "", err
-	}
+	key := generateEventWriteKeyToken()
 	n := state.CreateEventWriteKey{
 		Connection: c.ID,
 		Key:        key,
 		CreatedAt:  time.Now().UTC(),
 	}
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM event_write_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -718,18 +712,17 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 	if key == "" {
 		return errors.BadRequest("key is empty")
 	}
-	if !isWriteKey(key) {
-		return errors.BadRequest("key %q is malformed", key)
-	}
 	c := this.connection
-	connector := c.Connector()
-	switch connector.Type {
+	switch t := c.Connector().Type; t {
 	case state.SDK, state.Webhook:
 	default:
 		return errors.BadRequest("connection %d is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
+	}
+	if connection, ok := this.core.state.ConnectionByKey(key); !ok || connection.ID != c.ID {
+		return nil
 	}
 	n := state.DeleteEventWriteKey{
 		Connection: c.ID,
@@ -2138,25 +2131,6 @@ func isValidStrategy(s Strategy) bool {
 		return true
 	}
 	return false
-}
-
-// isWriteKey reports whether key can be a write key.
-func isWriteKey(key string) bool {
-	if len(key) != 32 {
-		return false
-	}
-	_, err := base62.DecodeString(key)
-	return err == nil
-}
-
-// generateEventWriteKey generates an event write key in its base62 form.
-func generateEventWriteKey() (string, error) {
-	key := make([]byte, 24)
-	_, err := rand.Read(key)
-	if err != nil {
-		return "", errors.New("cannot generate an event write key")
-	}
-	return base62.EncodeToString(key)[0:32], nil
 }
 
 // marshalSchema marshals the given schema.

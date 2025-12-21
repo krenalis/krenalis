@@ -926,11 +926,23 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	return settings, mcpSettings, nil
 }
 
+const base62alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
 // generateAccessKeyToken generates a new access key token.
 func generateAccessKeyToken() string {
 	// ⌈log₆₂ 2²⁵⁶⌉ ≈ 43 chars
-	const base62alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	src := make([]byte, 43)
+	_, _ = rand.Read(src)
+	for i := range src {
+		src[i] = base62alphabet[src[i]%62]
+	}
+	return string(src)
+}
+
+// generateEventWriteKeyToken generates a new event write key token.
+func generateEventWriteKeyToken() string {
+	// ⌈log₆₂ 2¹⁹²⌉ ≈ 32 chars
+	src := make([]byte, 32)
 	_, _ = rand.Read(src)
 	for i := range src {
 		src[i] = base62alphabet[src[i]%62]

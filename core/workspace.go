@@ -723,10 +723,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 
 	// Generate an event write key.
 	if c.Type == state.SDK || c.Type == state.Webhook {
-		n.EventWriteKey, err = generateEventWriteKey()
-		if err != nil {
-			return 0, err
-		}
+		n.EventWriteKey = generateEventWriteKeyToken()
 	}
 
 	// Build the query to link connections.
