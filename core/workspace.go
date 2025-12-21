@@ -28,8 +28,6 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
-
-	"github.com/jxskiss/base62"
 )
 
 const (
@@ -413,8 +411,8 @@ type authorizedOAuthAccount struct {
 	ExpiresIn    time.Time
 }
 
-// AuthToken returns an authorization token, given an authorization code and
-// the redirection URI used to obtain that code, that can be used to add a new
+// AuthToken returns an authorization token, given an authorization code and the
+// redirection URI used to obtain that code, that can be used to add a new
 // connection to the workspace for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
@@ -444,21 +442,16 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", err
 	}
 
-	account, err := json.Marshal(authorizedOAuthAccount{
+	account := authorizedOAuthAccount{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
 		Code:         auth.AccountCode,
 		AccessToken:  auth.AccessToken,
 		RefreshToken: auth.RefreshToken,
 		ExpiresIn:    auth.ExpiresIn,
-	})
-	if err != nil {
-		return "", err
 	}
 
-	// TODO(marco): Encrypt the token.
-
-	return base62.EncodeToString(account), nil
+	return this.core.encryptAuthorizedOAuthAccount(account)
 }
 
 // Connection returns the connection with identifier id of the workspace.
@@ -671,12 +664,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 
 	// Set the OAuth account. It can be an existing account or an account that needs to be created.
 	if authToken != "" {
-		data, err := base62.DecodeString(authToken)
-		if err != nil {
-			return 0, errors.BadRequest("authorization token is not valid")
-		}
-		var account authorizedOAuthAccount
-		err = json.Unmarshal(data, &account)
+		account, err := this.core.decryptAuthorizedOAuthAccount(authToken)
 		if err != nil {
 			return 0, errors.BadRequest("authorization token is not valid")
 		}
@@ -1448,13 +1436,10 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	}
 
 	// Decode oAuth.
-	var a authorizedOAuthAccount
+	var account authorizedOAuthAccount
 	if authToken != "" {
-		data, err := base62.DecodeString(authToken)
-		if err != nil {
-			return nil, errors.BadRequest("authorization token is not valid")
-		}
-		err = json.Unmarshal(data, &a)
+		var err error
+		account, err = this.core.decryptAuthorizedOAuthAccount(authToken)
 		if err != nil {
 			return nil, errors.BadRequest("authorization token is not valid")
 		}
@@ -1467,9 +1452,9 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	conf := &connections.ConnectorConfig{
 		Role: state.Role(role),
 	}
-	conf.OAuth.Account = a.Code
+	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret
-	conf.OAuth.AccessToken = a.AccessToken
+	conf.OAuth.AccessToken = account.AccessToken
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
