@@ -189,8 +189,8 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	var err error
 	var updatedSettings json.Value
 	setSettings := func(_ context.Context, innerSettings json.Value) error {
-		if !utf8.Valid(innerSettings) {
-			return errors.New("inner settings is not valid UTF-8")
+		if !json.Valid(innerSettings) {
+			return errors.New("inner settings is not valid JSON")
 		}
 		if len(innerSettings) > maxSettingsLen && utf8.RuneCount(innerSettings) > maxSettingsLen {
 			return fmt.Errorf("inner settings is longer than %d runes", maxSettingsLen)

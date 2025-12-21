@@ -574,8 +574,8 @@ func rewriteColumnErrors(err error) error {
 
 // setConnectionSettings sets the settings of the provided connection.
 func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings json.Value) error {
-	if !utf8.Valid(settings) {
-		return errors.New("settings is not valid UTF-8")
+	if !json.Valid(settings) {
+		return errors.New("settings is not valid JSON")
 	}
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
@@ -604,8 +604,8 @@ func setConnectionSettingsFunc(st *state.State, c *state.Connection) connectors.
 
 // setPipelineSettings sets the settings of the provided pipeline.
 func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, settings json.Value) error {
-	if !utf8.Valid(settings) {
-		return errors.New("settings is not valid UTF-8")
+	if !json.Valid(settings) {
+		return errors.New("settings is not valid JSON")
 	}
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
