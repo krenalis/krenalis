@@ -1428,11 +1428,11 @@ const getHierarchicalPaths = (path: string, mapping: TransformedMapping): hierar
 	const ancestors: string[] = [];
 	const descendants: string[] = [];
 	for (const p in mapping) {
-		if (mapping[p].indentation! < indentation! && path.startsWith(p)) {
+		if (mapping[p].indentation! < indentation! && path.startsWith(`${p}.`)) {
 			ancestors.push(p);
 			continue;
 		}
-		if (mapping[p].indentation! > indentation! && p.startsWith(path)) {
+		if (mapping[p].indentation! > indentation! && p.startsWith(`${path}.`)) {
 			descendants.push(p);
 			continue;
 		}
