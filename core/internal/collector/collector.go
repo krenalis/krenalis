@@ -302,7 +302,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			// Authenticate with the API key in the header.
 			key, ok := c.state.AccessKeyByToken(token)
 			if !ok || key.Type != state.AccessKeyTypeAPI {
-				return errors.Unauthorized(`the API key in the Authorization header does not exist`)
+				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
 			if header, ok := r.Header["Meergo-Workspace"]; ok {
 				if len(header) > 1 {
@@ -341,7 +341,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			} else {
 				workspace, ok := c.state.Workspace(key.Workspace)
 				if !ok {
-					return errors.Unauthorized("the API key in the Authorization header does not exist")
+					return errors.Unauthorized("API key in the Authorization header is invalid")
 				}
 				connection, _ = workspace.Connection(id)
 			}
@@ -353,7 +353,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			// Authenticate with the event write key in the header.
 			connection, _ = c.connectionByKey(token)
 			if connection == nil {
-				return errors.Unauthorized("the event write key in the Authorization header does not exist")
+				return errors.Unauthorized("event write key in the Authorization header is not valid")
 			}
 			usingWriteKey = true
 		}
