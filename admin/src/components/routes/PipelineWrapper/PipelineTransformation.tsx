@@ -2984,10 +2984,7 @@ const MapMapping = ({
 									onUpdatePair(i, 'key', e.target.value);
 								}}
 							/>{' '}
-							"
-							<span className='pipeline__transformation-output-property-type'>
-								{elementType.kind}
-							</span>
+							"<span className='pipeline__transformation-output-property-type'>{elementType.kind}</span>
 							<SlTooltip content='Add key' hoist={true}>
 								<SlButton
 									className='pipeline__transformation-output-property-add'
