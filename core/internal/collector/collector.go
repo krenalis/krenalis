@@ -475,9 +475,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Send a successful response to the client.
 	meergoMetrics.Increment("Collector.writeOK.calls", 1)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", "21")
-	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+	w.Header().Set("Content-Type", "text/plain")
 
 	return nil
 }
