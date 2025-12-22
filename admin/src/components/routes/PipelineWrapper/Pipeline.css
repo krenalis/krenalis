@@ -996,6 +996,13 @@ inherit the disabled style */
 	font-size: 12px;
 }
 
+.fullscreen-transformation__panel-schema-search {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background-color: var(--bg-gray);
+}
+
 .fullscreen-transformation__panel-schema-search::part(base) {
 	border-radius: 0;
 	border: 0;
@@ -1016,6 +1023,10 @@ inherit the disabled style */
 	border-bottom: 1px solid var(--border-primary);
 	font-size: 12px;
 	--thumb-size: 14px;
+	position: sticky;
+	top: 40px;
+	z-index: 2;
+	background-color: var(--bg-gray);
 }
 
 .fullscreen-transformation__panel-schema-show-only-selected::part(base) {
@@ -1280,6 +1291,10 @@ inherit the disabled style */
 	overflow: hidden;
 	padding: 0 30px;
 	gap: 9px;
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background-color: var(--bg-primary);
 }
 
 .fullscreen-transformation__samples-reload > sl-button::part(label) {
