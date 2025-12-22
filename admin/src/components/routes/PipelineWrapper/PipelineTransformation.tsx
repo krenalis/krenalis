@@ -60,7 +60,7 @@ import {
 	TransformationLanguagesResponse,
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
-import Type, { ArrayType, MapType, ObjectType, Property, StringType } from '../../../lib/api/types/types';
+import { ArrayType, MapType, ObjectType, Property, StringType } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -1053,17 +1053,20 @@ const TransformationBox = ({
 							}
 						>
 							<div className='pipeline__transformation-output-property-head'>
-								<PropertyTooltip
-									propertyName={path}
-									description={property.full.description}
-									typeName={typeName}
-									type={property.full.type}
-								>
+								<span className='pipeline__transformation-output-property-name-copy'>
+									<SlCopyButton
+										className='pipeline__transformation-output-property-copy'
+										value={path}
+										copyLabel='Click to copy'
+										successLabel='✓ Copied'
+										errorLabel='Copying to clipboard is not supported by your browser'
+										hoist={true}
+									/>
 									<span className='pipeline__transformation-output-property-key'>
 										{property.full.name}
 									</span>
-									<span className='pipeline__transformation-output-property-type'>{typeName}</span>
-								</PropertyTooltip>
+								</span>
+								<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 								{showRequired && (
 									<span className='pipeline__transformation-output-property-required'>required</span>
 								)}
@@ -2907,15 +2910,18 @@ const MapMapping = ({
 				}
 			>
 				<div className='pipeline__transformation-output-property-head'>
-					<PropertyTooltip
-						propertyName={propertyPath}
-						description={property.full.description}
-						typeName={typeName}
-						type={property.full.type}
-					>
+					<span className='pipeline__transformation-output-property-name-copy'>
+						<SlCopyButton
+							className='pipeline__transformation-output-property-copy'
+							value={propertyPath}
+							copyLabel='Click to copy'
+							successLabel='✓ Copied'
+							errorLabel='Copying to clipboard is not supported by your browser'
+							hoist={true}
+						/>
 						<span className='pipeline__transformation-output-property-key'>{property.full.name}</span>
-						<span className='pipeline__transformation-output-property-type'>{typeName}</span>
-					</PropertyTooltip>
+					</span>
+					<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 					{showRequired && (
 						<span className='pipeline__transformation-output-property-required'>required</span>
 					)}
@@ -2979,16 +2985,9 @@ const MapMapping = ({
 								}}
 							/>{' '}
 							"
-							<PropertyTooltip
-								propertyName={''}
-								description={property.full.description}
-								typeName={elementType.kind}
-								type={elementType}
-							>
-								<span className='pipeline__transformation-output-property-type'>
-									{elementType.kind}
-								</span>
-							</PropertyTooltip>
+							<span className='pipeline__transformation-output-property-type'>
+								{elementType.kind}
+							</span>
 							<SlTooltip content='Add key' hoist={true}>
 								<SlButton
 									className='pipeline__transformation-output-property-add'
@@ -3420,31 +3419,26 @@ const TransformationProperty = ({
 									/>
 								</SlTooltip>
 							)}
-							<PropertyTooltip
-								propertyName={path}
-								description={property.description}
-								typeName={typeName}
-								type={property.type}
-							>
+							<span className='fullscreen-transformation__property-name-copy'>
+								{!isOutMatchingProperty && (
+									<SlCopyButton
+										className='fullscreen-transformation__property-copy'
+										value={parentName ? `${parentName}.${property.name}` : property.name}
+										copyLabel='Click to copy'
+										successLabel='✓ Copied'
+										errorLabel='Copying to clipboard is not supported by your browser'
+										hoist={true}
+									/>
+								)}
 								<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
-								<span className='fullscreen-transformation__property-type'>
-									<span>{typeName}</span>
-									{side === 'input' && property.readOptional && <span>- optional</span>}
-									{showRequired && (
-										<span className='fullscreen-transformation__property-required'>required</span>
-									)}
-								</span>
-							</PropertyTooltip>
-							{!isOutMatchingProperty && (
-								<SlCopyButton
-									className='fullscreen-transformation__property-copy'
-									value={parentName ? `${parentName}.${property.name}` : property.name}
-									copyLabel='Click to copy'
-									successLabel='✓ Copied'
-									errorLabel='Copying to clipboard is not supported by your browser'
-									hoist={true}
-								/>
-							)}
+							</span>
+							<span className='fullscreen-transformation__property-type'>
+								<span>{typeName}</span>
+								{side === 'input' && property.readOptional && <span>- optional</span>}
+								{showRequired && (
+									<span className='fullscreen-transformation__property-required'>required</span>
+								)}
+							</span>
 							{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
 								<SlTooltip
 									content='You cannot select this property since it is already used as matching property'
@@ -3472,30 +3466,6 @@ const TransformationProperty = ({
 				</div>
 			</div>
 		</div>
-	);
-};
-
-interface TypeTooltipProps {
-	propertyName: string;
-	description: string | null;
-	typeName: string;
-	type: Type;
-	children: ReactNode;
-}
-
-const PropertyTooltip = ({ propertyName, description, typeName, type, children }: TypeTooltipProps) => {
-	return (
-		<SlTooltip className='type-tooltip' placement='top-start' distance={5} hoist={true}>
-			<div slot='content'>
-				<div className='type-tooltip__title'>
-					<span className='type-tooltip__property-name'>{propertyName}</span>{' '}
-					<span className='type-tooltip__type-name'>{typeName}</span>
-				</div>
-				{description && <div className='type-tooltip__description'>{description}</div>}
-				{typeDescription(type)}
-			</div>
-			{children}
-		</SlTooltip>
 	);
 };
 
@@ -3563,50 +3533,6 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 
 	const isVerticallyVisible = elementTop >= containerTop && elementBottom <= containerBottom;
 	return isVerticallyVisible;
-}
-
-function typeDescription(type: Type): ReactNode[] {
-	let elements: ReactNode[] = [];
-	if (type.kind === 'int' || type.kind === 'float') {
-		if (type.minimum != null) {
-			elements.push(<div>Minimum: {type.minimum}</div>);
-		}
-		if (type.maximum != null) {
-			elements.push(<div>Maximum: {type.maximum}</div>);
-		}
-		if (type.kind === 'float' && type.real != null) {
-			elements.push(<div>Real: {type.real}</div>);
-		}
-	} else if (type.kind === 'decimal') {
-		elements.push(<div>Precision: {type.precision}</div>);
-		elements.push(<div>Scale: {type.scale != null ? type.scale : 0}</div>);
-		if (type.minimum != null) {
-			elements.push(<div>Minimum: {type.minimum}</div>);
-		}
-		if (type.maximum != null) {
-			elements.push(<div>Maximum: {type.maximum}</div>);
-		}
-	} else if (type.kind === 'year') {
-		elements.push(<div>Minimum: 1</div>);
-		elements.push(<div>Maximum: 9999</div>);
-	} else if (type.kind === 'string') {
-		if (type.values != null) {
-			elements.push(<div>Values: {type.values.join(', ')}</div>);
-		}
-		if (type.pattern != null) {
-			elements.push(<div>Regular expression: {type.pattern}</div>);
-		}
-		if (type.maxBytes != null) {
-			elements.push(<div>Max bytes: {type.maxBytes}</div>);
-		}
-		if (type.maxLength != null) {
-			elements.push(<div>Max characters: {type.maxLength}</div>);
-		}
-	} else if (type.kind === 'array' || type.kind === 'map') {
-		const elementTypeDescription = typeDescription(type.elementType);
-		elements = [...elements, ...elementTypeDescription.slice(1)];
-	}
-	return elements;
 }
 
 function removeQuotes(v: any | null) {
