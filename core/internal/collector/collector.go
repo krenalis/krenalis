@@ -26,6 +26,7 @@ import (
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
 	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
 )
@@ -298,8 +299,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if len(auth) > 1 {
 			return errors.BadRequest("request contains multiple Authorization headers")
 		}
-		token, ok := strings.CutPrefix(auth[0], "Bearer ")
-		if !ok || token == "" {
+		token, found := validation.ParseBearer(auth[0])
+		if !found {
 			return errors.BadRequest(`Authorization header is invalid; use "Authorization: Bearer <KEY>" with an API key or an event write key`)
 		}
 
