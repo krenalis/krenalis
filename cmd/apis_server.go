@@ -253,8 +253,8 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if len(auth) > 1 {
 			return nil, nil, errors.BadRequest("request contains multiple Authorization headers")
 		}
-		token, found := strings.CutPrefix(auth[0], "Bearer ")
-		if !found || token == "" {
+		token, found := parseBearer(auth[0])
+		if !found {
 			return nil, nil, errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
 		}
 		token, found = strings.CutPrefix(token, "api_")
@@ -400,6 +400,25 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	}
 	writeSessionCookie(w, c)
 	return nil, nil
+}
+
+// parseBearer extracts a Bearer token from an Authorization header. It reports
+// whether the header uses the Bearer scheme and contains a non-empty token.
+// Keep this in sync with the function of the same name in the "mcp" package.
+func parseBearer(header string) (string, bool) {
+	const scheme = "Bearer"
+	if len(header) < len(scheme) || !strings.EqualFold(header[:len(scheme)], scheme) {
+		return "", false
+	}
+	token := header[len(scheme):]
+	if token == "" || (token[0] != ' ' && token[0] != '\t') {
+		return "", false
+	}
+	token = strings.TrimLeft(token, " \t")
+	if token == "" {
+		return "", false
+	}
+	return token, true
 }
 
 // parseID parses a decimal identifier in the form /^[1-9][0-9]*$/.
