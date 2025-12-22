@@ -253,13 +253,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	}
 	connection, ok := c.connectionByKey(writeKey)
 	if !ok || connection.Strategy == nil {
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Header().Set("Cache-Control", "max-age=31536000")
-		w.WriteHeader(http.StatusNotFound)
-		// Do not modify the returned body, as it is used by the JavaScript SDK
-		// to present an appropriate error message in the console.
-		_, _ = io.WriteString(w, `error: invalid collect key`)
-		return nil
+		return errors.Unauthorized("event write key in the path is invalid")
 	}
 	strategy := string(*connection.Strategy)
 	w.Header().Set("Content-Type", "application/json")
