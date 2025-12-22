@@ -303,7 +303,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			return errors.BadRequest(`Authorization header is invalid; use "Authorization: Bearer <KEY>" with an API key or an event write key`)
 		}
 
-		if len(token) == 43 {
+		if token, found := strings.CutPrefix(token, "api_"); found {
 			// Authenticate with the API key in the header.
 			key, ok := c.state.AccessKeyByToken(token)
 			if !ok || key.Type != state.AccessKeyTypeAPI {
