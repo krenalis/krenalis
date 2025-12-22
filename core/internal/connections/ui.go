@@ -76,8 +76,8 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	var inner any
 	var err error
 	switch connector := connection.Connector(); connector.Type {
-	case state.API:
-		inner, err = connectors.RegisteredAPI(connector.Code).New(&connectors.APIEnv{
+	case state.Application:
+		inner, err = connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
 			Settings:     connection.Settings,
 			SetSettings:  setConnectionSettingsFunc(c.state, connection),
 			OAuthAccount: accountCode,
@@ -146,8 +146,8 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	var err error
 	code := connector.Code
 	switch connector.Type {
-	case state.API:
-		inner, err = connectors.RegisteredAPI(code).New(&connectors.APIEnv{
+	case state.Application:
+		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
@@ -189,8 +189,8 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	var err error
 	var updatedSettings json.Value
 	setSettings := func(_ context.Context, innerSettings json.Value) error {
-		if !utf8.Valid(innerSettings) {
-			return errors.New("inner settings is not valid UTF-8")
+		if !json.Valid(innerSettings) {
+			return errors.New("inner settings is not valid JSON")
 		}
 		if len(innerSettings) > maxSettingsLen && utf8.RuneCount(innerSettings) > maxSettingsLen {
 			return fmt.Errorf("inner settings is longer than %d runes", maxSettingsLen)
@@ -200,8 +200,8 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	}
 	code := connector.Code
 	switch connector.Type {
-	case state.API:
-		inner, err = connectors.RegisteredAPI(code).New(&connectors.APIEnv{
+	case state.Application:
+		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			SetSettings:  setSettings,

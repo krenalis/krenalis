@@ -35,6 +35,7 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/tools/backoff"
+	"github.com/meergo/meergo/tools/datacrypt"
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
@@ -54,6 +55,7 @@ type Core struct {
 	metrics           *coremetrics.Collector
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
+	authTokenCipher   *datacrypt.Cipher
 	pipelineCleaner   *pipelineCleaner
 	pipelineScheduler *pipelineScheduler
 	memberEmailFrom   string
@@ -262,6 +264,12 @@ func New(conf *Config) (*Core, error) {
 	core.state, err = state.New(db, connectorsOAuth, sendStats)
 	if err != nil {
 		return nil, err
+	}
+
+	// Create a Cipher to encrypt and decrypt auth tokens.
+	core.authTokenCipher, err = core.state.NewCipher("core.authcode")
+	if err != nil {
+		return nil, fmt.Errorf("core: cannot create auth token cipher: %s", err)
 	}
 
 	// Add the Meergo installation ID tag to Sentry.
@@ -994,6 +1002,39 @@ func (core *Core) WarehousePlatforms() []WarehousePlatform {
 		}
 	}
 	return warehousePlatforms
+}
+
+// decryptAuthorizedOAuthAccount decrypts an authorized oAuth account encrypted
+// with encryptAuthorizedOAuthAccount.
+func (core *Core) decryptAuthorizedOAuthAccount(account string) (authorizedOAuthAccount, error) {
+	data, err := base64.RawURLEncoding.DecodeString(account)
+	if err != nil {
+		return authorizedOAuthAccount{}, err
+	}
+	data, err = core.authTokenCipher.Decrypt(data)
+	if err != nil {
+		return authorizedOAuthAccount{}, err
+	}
+	var a authorizedOAuthAccount
+	err = json.Unmarshal(data, &a)
+	if err != nil {
+		return authorizedOAuthAccount{}, err
+	}
+	return a, err
+}
+
+// encryptAuthorizedOAuthAccount encrypts an authorized oAuth account.
+// Use decryptAuthorizedOAuthAccount to decrypt it.
+func (core *Core) encryptAuthorizedOAuthAccount(account authorizedOAuthAccount) (string, error) {
+	token, err := json.Marshal(account)
+	if err != nil {
+		return "", err
+	}
+	encrypted, err := core.authTokenCipher.Encrypt(token)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(encrypted), nil
 }
 
 // mustBeOpen panics if core has been closed.

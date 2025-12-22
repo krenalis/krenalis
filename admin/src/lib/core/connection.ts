@@ -74,8 +74,8 @@ class TransformedConnection {
 		}
 	}
 
-	get isAPI() {
-		return this.connector.type === 'API';
+	get isApplication() {
+		return this.connector.type === 'Application';
 	}
 
 	get isDatabase() {
@@ -215,7 +215,7 @@ const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boo
 const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
 	return (
 		(role === 'Source' && (type === 'SDK' || type === 'Webhook')) ||
-		(role === 'Destination' && type === 'API' && targets.includes('Event'))
+		(role === 'Destination' && type === 'Application' && targets.includes('Event'))
 	);
 };
 

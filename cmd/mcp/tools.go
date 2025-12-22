@@ -187,7 +187,7 @@ var tools = []server.ServerTool{
 					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
 					" A connection performs its operations (importing, sending, and exporting data) through 'pipelines'."+
 					" Each connection can have zero, one, or multiple 'pipelines'."+
-					" API connections interface with external applications outside Meergo."+
+					" Application connections interface with external applications outside Meergo."+
 					" Database connections interface with external databases outside Meergo."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
 					" SDK connections receive data (events and user data) from SDKs, browsers, and server-side applications."+
@@ -237,6 +237,10 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	core, err := meergoCoreFromCtx(ctx)
 	if err != nil {
 		return nil, err
+	}
+	mcpToken, found := strings.CutPrefix(mcpToken, "mcp_ ")
+	if !found {
+		return nil, errors.BadRequest("invalid MCP (Model Context Protocol) key")
 	}
 	organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 	if !found {

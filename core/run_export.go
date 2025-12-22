@@ -35,8 +35,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	connector := pipeline.Connection().Connector()
 	meergoMetrics.Increment("Pipeline.exportUsers.calls", 1)
 
-	// Synchronize destinations users with the API's users.
-	if connector.Type == state.API {
+	// Synchronize destinations users with the application's users.
+	if connector.Type == state.Application {
 		err := this.syncDestinationProfiles(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
@@ -48,7 +48,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 	// Get the matching properties.
 	var matchingIn, matchingOut types.Property
-	if connector.Type == state.API {
+	if connector.Type == state.Application {
 		matchingIn, _ = pipeline.InSchema.Properties().ByPath(pipeline.Matching.In)
 		matchingOut, _ = pipeline.OutSchema.Properties().ByPath(pipeline.Matching.Out)
 	}
@@ -69,7 +69,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		query.OrderBy = pipeline.OrderBy
 	}
 	var matching *datastore.Matching
-	if connector.Type == state.API {
+	if connector.Type == state.Application {
 		matching = &datastore.Matching{
 			Pipeline:           pipeline.ID,
 			InProperty:         pipeline.Matching.In,
@@ -114,12 +114,12 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 	// Get the writer.
 	switch connector.Type {
-	case state.API:
-		// The value of the out matching property is written to the API only when
+	case state.Application:
+		// The value of the out matching property is written to the application only when
 		// creating a new user or updating an existing user if the property is update-required.
 		// When updating a user and the property is not update-required, it should not be written again
-		// with the same value. In this case, alignment with the API schema does not need to be validated.
-		// Therefore, the property must be removed from the schema passed to API.Writer
+		// with the same value. In this case, alignment with the application schema does not need to be validated.
+		// Therefore, the property must be removed from the schema passed to Application.Writer
 		// so that the alignment check is skipped.
 		outSchema := pipeline.OutSchema
 		if pipeline.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
@@ -127,7 +127,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 				return path != pipeline.Matching.Out
 			})
 		}
-		writer, err = this.api().Writer(ctx, outSchema, pipeline.ExportMode, pipeline.Target, ack)
+		writer, err = this.application().Writer(ctx, outSchema, pipeline.ExportMode, pipeline.Target, ack)
 	case state.Database:
 		writer, err = this.database().Writer(ctx, pipeline, ack)
 		alreadyExportedKeys = make(map[any]struct{})
@@ -151,9 +151,9 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 	// Profile represents a profile to update or create.
 	type Profile struct {
-		ID            string           // External API identifier; is non-empty only for API's profiles to update.
+		ID            string           // External application identifier; is non-empty only for application's profiles to update.
 		Record        datastore.Record // Profile record.
-		MatchingValue any              // External matching property value added to properties when creating an API profile.
+		MatchingValue any              // External matching property value added to properties when creating an application profile.
 	}
 
 	profiles := make([]Profile, 0, 100)
@@ -188,7 +188,7 @@ Records:
 		switch connector.Type {
 		default:
 			profiles = append(profiles, Profile{Record: record})
-		case state.API:
+		case state.Application:
 			profile := Profile{Record: record}
 			// Update: use ExternalID as the profile ID.
 			if isUpdate := record.ExternalID != ""; isUpdate {
@@ -259,7 +259,7 @@ Records:
 				if user.MatchingValue != nil {
 					setAttribute(record.Attributes, pipeline.Matching.Out, user.MatchingValue)
 				}
-				if connector.Type == state.API && len(record.Attributes) == 0 {
+				if connector.Type == state.Application && len(record.Attributes) == 0 {
 					this.core.metrics.FinalizePassed(pipeline.ID, 1)
 					continue
 				}
@@ -321,7 +321,7 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 	// Build a schema containing only the hierarchy that leads to the matching output property.
 	schema, _ := types.PruneAtPath(this.pipeline.OutSchema, this.pipeline.Matching.Out)
 
-	records, err := this.api().Users(ctx, schema, nil, time.Time{})
+	records, err := this.application().Users(ctx, schema, nil, time.Time{})
 	if err != nil {
 		return err
 	}
@@ -389,7 +389,7 @@ func newPathPlaceholderReplacer(t time.Time) func(string) (string, bool) {
 }
 
 func errMatchingPropertyConversion(in, ex string) error {
-	return fmt.Errorf("%s property value cannot be converted to the API's %s property", in, ex)
+	return fmt.Errorf("%s property value cannot be converted to the application's %s property", in, ex)
 }
 
 // convertToExternal converts the value of an internal property to a type

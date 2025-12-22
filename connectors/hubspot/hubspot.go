@@ -36,25 +36,25 @@ var destinationOverview string
 // needed.
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "hubspot",
 		Label:      "HubSpot",
 		Categories: connectors.CategorySaaS,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets: connectors.TargetUser,
 			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets: connectors.TargetUser,
 			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:   "Contact",
 			Users:  "Contacts",
 			UserID: "HubSpot ID",
@@ -81,13 +81,13 @@ func init() {
 }
 
 // New returns a new connector instance for HubSpot.
-func New(env *connectors.APIEnv) (*HubSpot, error) {
+func New(env *connectors.ApplicationEnv) (*HubSpot, error) {
 	c := HubSpot{env: env}
 	return &c, nil
 }
 
 type HubSpot struct {
-	env *connectors.APIEnv
+	env *connectors.ApplicationEnv
 }
 
 // OAuthAccount returns the API's account associated with the OAuth
@@ -249,7 +249,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/crm/v3/objects/contacts/"
 
@@ -285,7 +285,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastC
 		path += "batch/read"
 	} else {
 		propertyName := "lastmodifieddate"
-		unix := lastChangeTime.UnixMilli()
+		unix := updatedAt.UnixMilli()
 		if unix < 0 {
 			unix = 0
 		}
@@ -343,7 +343,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastC
 			}
 			records[i].Attributes[group.Name] = pp
 		}
-		records[i].LastChangeTime = updatedAt.UTC()
+		records[i].UpdatedAt = updatedAt.UTC()
 	}
 
 	cursor = response.Paging.Next.After

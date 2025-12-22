@@ -18,28 +18,28 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type PipelineToSet struct {
-	Name                 string          `json:"name"`
-	Enabled              bool            `json:"enabled"`
-	Filter               *Filter         `json:"filter"`
-	InSchema             types.Type      `json:"inSchema"`
-	OutSchema            types.Type      `json:"outSchema"`
-	Transformation       *Transformation `json:"transformation"`
-	Query                string          `json:"query"`
-	Format               string          `json:"format"`
-	Path                 string          `json:"path"`
-	Sheet                string          `json:"sheet"`
-	Compression          Compression     `json:"compression"`
-	OrderBy              string          `json:"orderBy"`
-	FormatSettings       json.Value      `json:"formatSettings,omitempty"`
-	ExportMode           ExportMode      `json:"exportMode,omitempty"`
-	Matching             Matching        `json:"matching"`
-	UpdateOnDuplicates   bool            `json:"updateOnDuplicates"`
-	TableName            string          `json:"tableName"`
-	TableKey             string          `json:"tableKey"`
-	IdentityColumn       string          `json:"identityColumn"`
-	LastChangeTimeColumn string          `json:"lastChangeTimeColumn"`
-	LastChangeTimeFormat string          `json:"lastChangeTimeFormat"`
-	Incremental          bool            `json:"incremental"`
+	Name               string          `json:"name"`
+	Enabled            bool            `json:"enabled"`
+	Filter             *Filter         `json:"filter"`
+	InSchema           types.Type      `json:"inSchema"`
+	OutSchema          types.Type      `json:"outSchema"`
+	Transformation     *Transformation `json:"transformation"`
+	Query              string          `json:"query"`
+	Format             string          `json:"format"`
+	Path               string          `json:"path"`
+	Sheet              string          `json:"sheet"`
+	Compression        Compression     `json:"compression"`
+	OrderBy            string          `json:"orderBy"`
+	FormatSettings     json.Value      `json:"formatSettings,omitempty"`
+	ExportMode         ExportMode      `json:"exportMode,omitempty"`
+	Matching           Matching        `json:"matching"`
+	UpdateOnDuplicates bool            `json:"updateOnDuplicates"`
+	TableName          string          `json:"tableName"`
+	TableKey           string          `json:"tableKey"`
+	IdentityColumn     string          `json:"identityColumn"`
+	UpdatedAtColumn    string          `json:"updatedAtColumn"`
+	UpdatedAtFormat    string          `json:"updatedAtFormat"`
+	Incremental        bool            `json:"incremental"`
 }
 
 type Compression string
@@ -153,7 +153,7 @@ type Identity struct {
 	Pipeline     int       `json:"pipeline"`
 }
 
-type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.
+type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'core'.
 	Label string `json:"label"`
 	Value string `json:"value"`
 }
@@ -240,7 +240,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.SchedulePeriod value", v)
+		return fmt.Errorf("json: cannot scan a %T value into a SchedulePeriod value", v)
 	}
 	var p SchedulePeriod
 	switch s {
@@ -265,7 +265,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	case "24h":
 		p = 1440
 	default:
-		return fmt.Errorf("json: invalid apis.SchedulePeriod: %s", s)
+		return fmt.Errorf("json: invalid SchedulePeriod: %s", s)
 	}
 	*period = p
 	return nil

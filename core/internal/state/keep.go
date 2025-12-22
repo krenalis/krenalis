@@ -432,34 +432,34 @@ func (state *State) createConnection(n notification) uuid.UUID {
 
 // CreatePipeline is the event sent when a pipeline is created.
 type CreatePipeline struct {
-	ID                   int
-	Connection           int
-	Target               Target
-	EventType            string
-	Name                 string
-	Enabled              bool
-	ScheduleStart        int16
-	SchedulePeriod       int16
-	InSchema             types.Type
-	OutSchema            types.Type
-	Filter               stdjson.RawMessage
-	Transformation       Transformation
-	Query                string
-	Format               string
-	Path                 string
-	Sheet                string
-	Compression          Compression
-	OrderBy              string
-	FormatSettings       json.Value
-	ExportMode           ExportMode
-	Matching             Matching
-	UpdateOnDuplicates   bool
-	TableName            string
-	TableKey             string
-	IdentityColumn       string
-	LastChangeTimeColumn string
-	LastChangeTimeFormat string
-	Incremental          bool
+	ID                 int
+	Connection         int
+	Target             Target
+	EventType          string
+	Name               string
+	Enabled            bool
+	ScheduleStart      int16
+	SchedulePeriod     int16
+	InSchema           types.Type
+	OutSchema          types.Type
+	Filter             stdjson.RawMessage
+	Transformation     Transformation
+	Query              string
+	Format             string
+	Path               string
+	Sheet              string
+	Compression        Compression
+	OrderBy            string
+	FormatSettings     json.Value
+	ExportMode         ExportMode
+	Matching           Matching
+	UpdateOnDuplicates bool
+	TableName          string
+	TableKey           string
+	IdentityColumn     string
+	UpdatedAtColumn    string
+	UpdatedAtFormat    string
+	Incremental        bool
 }
 
 // createPipeline creates a new pipeline.
@@ -477,34 +477,34 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
 	pipeline := &Pipeline{
-		mu:                   new(sync.Mutex),
-		ID:                   e.ID,
-		connection:           c,
-		format:               format,
-		Target:               e.Target,
-		Name:                 e.Name,
-		Enabled:              e.Enabled,
-		EventType:            e.EventType,
-		ScheduleStart:        e.ScheduleStart,
-		SchedulePeriod:       e.SchedulePeriod,
-		InSchema:             e.InSchema,
-		OutSchema:            e.OutSchema,
-		Transformation:       e.Transformation,
-		Query:                e.Query,
-		Path:                 e.Path,
-		Sheet:                e.Sheet,
-		Compression:          e.Compression,
-		OrderBy:              e.OrderBy,
-		FormatSettings:       e.FormatSettings,
-		ExportMode:           e.ExportMode,
-		Matching:             e.Matching,
-		UpdateOnDuplicates:   e.UpdateOnDuplicates,
-		TableName:            e.TableName,
-		TableKey:             e.TableKey,
-		IdentityColumn:       e.IdentityColumn,
-		LastChangeTimeColumn: e.LastChangeTimeColumn,
-		LastChangeTimeFormat: e.LastChangeTimeFormat,
-		Incremental:          e.Incremental,
+		mu:                 new(sync.Mutex),
+		ID:                 e.ID,
+		connection:         c,
+		format:             format,
+		Target:             e.Target,
+		Name:               e.Name,
+		Enabled:            e.Enabled,
+		EventType:          e.EventType,
+		ScheduleStart:      e.ScheduleStart,
+		SchedulePeriod:     e.SchedulePeriod,
+		InSchema:           e.InSchema,
+		OutSchema:          e.OutSchema,
+		Transformation:     e.Transformation,
+		Query:              e.Query,
+		Path:               e.Path,
+		Sheet:              e.Sheet,
+		Compression:        e.Compression,
+		OrderBy:            e.OrderBy,
+		FormatSettings:     e.FormatSettings,
+		ExportMode:         e.ExportMode,
+		Matching:           e.Matching,
+		UpdateOnDuplicates: e.UpdateOnDuplicates,
+		TableName:          e.TableName,
+		TableKey:           e.TableKey,
+		IdentityColumn:     e.IdentityColumn,
+		UpdatedAtColumn:    e.UpdatedAtColumn,
+		UpdatedAtFormat:    e.UpdatedAtFormat,
+		Incremental:        e.Incremental,
 	}
 	if c.Role == Source && e.Target == TargetUser {
 		pipeline.propertiesToUnset = []string{}
@@ -1330,30 +1330,30 @@ func (state *State) updateIdentityResolutionSettings(n notification) uuid.UUID {
 
 // UpdatePipeline is the event sent when a pipeline is updated.
 type UpdatePipeline struct {
-	ID                   int
-	Name                 string
-	Enabled              bool
-	InSchema             types.Type
-	OutSchema            types.Type
-	Filter               stdjson.RawMessage
-	Transformation       Transformation
-	Query                string
-	Format               string
-	Path                 string
-	Sheet                string
-	Compression          Compression
-	OrderBy              string
-	FormatSettings       json.Value
-	ExportMode           ExportMode
-	Matching             Matching
-	UpdateOnDuplicates   bool
-	TableName            string
-	TableKey             string
-	IdentityColumn       string
-	LastChangeTimeColumn string
-	LastChangeTimeFormat string
-	Incremental          bool
-	PropertiesToUnset    []string
+	ID                 int
+	Name               string
+	Enabled            bool
+	InSchema           types.Type
+	OutSchema          types.Type
+	Filter             stdjson.RawMessage
+	Transformation     Transformation
+	Query              string
+	Format             string
+	Path               string
+	Sheet              string
+	Compression        Compression
+	OrderBy            string
+	FormatSettings     json.Value
+	ExportMode         ExportMode
+	Matching           Matching
+	UpdateOnDuplicates bool
+	TableName          string
+	TableKey           string
+	IdentityColumn     string
+	UpdatedAtColumn    string
+	UpdatedAtFormat    string
+	Incremental        bool
+	PropertiesToUnset  []string
 }
 
 // updatePipeline updates a pipeline.
@@ -1394,8 +1394,8 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 		p.TableName = e.TableName
 		p.TableKey = e.TableKey
 		p.IdentityColumn = e.IdentityColumn
-		p.LastChangeTimeColumn = e.LastChangeTimeColumn
-		p.LastChangeTimeFormat = e.LastChangeTimeFormat
+		p.UpdatedAtColumn = e.UpdatedAtColumn
+		p.UpdatedAtFormat = e.UpdatedAtFormat
 		p.Incremental = e.Incremental
 	})
 	dispatchNotification(state, e)

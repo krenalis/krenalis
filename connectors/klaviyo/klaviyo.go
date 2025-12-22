@@ -38,11 +38,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "klaviyo",
 		Label:      "Klaviyo",
 		Categories: connectors.CategorySaaS,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -50,7 +50,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			HasSettings: true,
 			SendingMode: connectors.Server,
@@ -59,7 +59,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:   "Profile",
 			Users:  "Profiles",
 			UserID: "Unique ID",
@@ -89,7 +89,7 @@ var retryPolicy = connectors.RetryPolicy{
 const apiRevision = "2024-07-15"
 
 // New returns a new connector instance for Klaviyo.
-func New(env *connectors.APIEnv) (*Klaviyo, error) {
+func New(env *connectors.ApplicationEnv) (*Klaviyo, error) {
 	c := Klaviyo{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -101,7 +101,7 @@ func New(env *connectors.APIEnv) (*Klaviyo, error) {
 }
 
 type Klaviyo struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 
@@ -141,7 +141,7 @@ func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events connectors.Even
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
@@ -169,9 +169,9 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 			b.WriteString(",updated")
 		}
 		b.WriteString("&page%5Bsize%5D=100&sort=updated")
-		if !lastChangeTime.IsZero() {
+		if !updatedAt.IsZero() {
 			b.WriteString("&filter=greater-than%28updated%2C")
-			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
+			b.WriteString(url.QueryEscape(updatedAt.Add(-time.Second).Format(time.RFC3339)))
 			b.WriteString("%29")
 		}
 		if ids != nil {
@@ -216,7 +216,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)
-		lastChangeTime, err := time.Parse(time.RFC3339, updated)
+		updatedAt, err := time.Parse(time.RFC3339, updated)
 		if err != nil {
 			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
 			continue
@@ -233,7 +233,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 			}
 		}
 		users[i].Attributes = data.Attributes
-		users[i].LastChangeTime = lastChangeTime.UTC()
+		users[i].UpdatedAt = updatedAt.UTC()
 	}
 
 	if response.Links.Next == "" {

@@ -721,12 +721,12 @@ func newPostHogForTests(t *testing.T) *PostHog {
 		t.Fatal("expected MEERGO_TEST_POSTHOG_PROJECT_REGION or MEERGO_TEST_POSTHOG_SELF_HOSTED_URL to be set, got none")
 	}
 
-	api, err := testconnector.NewAPI("posthog", s)
+	app, err := testconnector.NewApplication("posthog", s)
 	if err != nil {
-		t.Fatalf("expected NewAPI to succeed, got %v", err)
+		t.Fatalf("expected NewApplication to succeed, got %v", err)
 	}
 
-	return api.(*PostHog)
+	return app.(*PostHog)
 }
 
 func endpointURLForTests(t *testing.T, settings *innerSettings) string {

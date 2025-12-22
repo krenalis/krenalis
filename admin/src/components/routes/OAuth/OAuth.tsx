@@ -17,9 +17,9 @@ const errorMessageByOauthErrorCode = {
 	unsupported_response_type:
 		'An internal error has occurred. Please try again later and if the issue persists contact our support.',
 	invalid_scope:
-		"The account with which you are logged in on [api-placeholder] doesn't have the permission to complete the operation.",
-	server_error: '[api-placeholder] is temporarily unavailable. Try again later.',
-	temporarily_unavailable: '[api-placeholder] is temporarily unavailable. Try again later.',
+		"The account with which you are logged in on [application-placeholder] doesn't have the permission to complete the operation.",
+	server_error: '[application-placeholder] is temporarily unavailable. Try again later.',
+	temporarily_unavailable: '[application-placeholder] is temporarily unavailable. Try again later.',
 };
 
 const OAuth = () => {
@@ -48,7 +48,10 @@ const OAuth = () => {
 					errorDescription != null && errorDescription !== '' ? `\nDescription: ${errorDescription}\n` : ''
 				}${errorURI != null && errorURI !== '' ? `\nURI: ${errorURI}\n` : ''}`;
 				console.error(error);
-				const message = errorMessageByOauthErrorCode[oauthError].replace('[api-placeholder]', connector.label);
+				const message = errorMessageByOauthErrorCode[oauthError].replace(
+					'[application-placeholder]',
+					connector.label,
+				);
 				setTimeout(() => {
 					setErrorMessage(message);
 				}, 1000);

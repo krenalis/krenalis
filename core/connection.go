@@ -6,8 +6,8 @@ package core
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"math"
 	mathrand "math/rand/v2"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,8 +34,6 @@ import (
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
-
-	"github.com/jxskiss/base62"
 )
 
 const (
@@ -64,7 +63,7 @@ type Connection struct {
 	EventTypes *[]EventType `json:"eventTypes,omitzero"`
 }
 
-// EventType represents an event type of a destination API connection.
+// EventType represents an event type of a destination application connection.
 type EventType struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -87,7 +86,7 @@ type Strategy string
 type PipelineSchemas struct {
 	In        types.Type                `json:"in"`
 	Out       types.Type                `json:"out"`
-	Matchings *PipelineSchemasMatchings `json:"matchings,omitzero"` // only for destination APIs on users.
+	Matchings *PipelineSchemasMatchings `json:"matchings,omitzero"` // only for destination applications on users.
 }
 
 type PipelineSchemasMatchings struct {
@@ -154,21 +153,21 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 	return path, nil
 }
 
-// APIEventSchema returns the schema of the provided event type of the
+// ApplicationEventSchema returns the schema of the provided event type of the
 // connection. If the event type does not have a schema, it returns an invalid
-// schema. The connection must be a destination API connection that supports
-// events.
+// schema. The connection must be a destination application connection that
+// supports events.
 //
 // It returns an errors.NotFoundError error if the event type does not exist.
-func (this *Connection) APIEventSchema(ctx context.Context, eventType string) (types.Type, error) {
+func (this *Connection) ApplicationEventSchema(ctx context.Context, eventType string) (types.Type, error) {
 	this.core.mustBeOpen()
 	if eventType == "" {
 		return types.Type{}, errors.BadRequest("event type is empty")
 	}
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.API {
-		return types.Type{}, errors.BadRequest("connection %d is not an API", c.ID)
+	if connector.Type != state.Application {
+		return types.Type{}, errors.BadRequest("connection %d is not an application", c.ID)
 	}
 	if c.Role != state.Destination {
 		return types.Type{}, errors.BadRequest("connection %d is not a destination", c.ID)
@@ -176,7 +175,7 @@ func (this *Connection) APIEventSchema(ctx context.Context, eventType string) (t
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
 		return types.Type{}, errors.BadRequest("connection %d does not support events", c.ID)
 	}
-	schema, err := this.api().SchemaAsRole(ctx, state.Destination, state.TargetEvent, eventType)
+	schema, err := this.application().SchemaAsRole(ctx, state.Destination, state.TargetEvent, eventType)
 	if err != nil {
 		if _, ok := err.(*connections.UnavailableError); ok {
 			err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -189,40 +188,41 @@ func (this *Connection) APIEventSchema(ctx context.Context, eventType string) (t
 	return schema, nil // schema can be invalid.
 }
 
-// APIGroupSchemas returns the group schemas for the connection. The connection
-// must be an API connection that supports groups. For a source, it returns only
-// the source schema. For a destination, it returns both the source and
-// destination schemas.
+// ApplicationGroupSchemas returns the group schemas for the connection. The
+// connection must be an application connection that supports groups. For a
+// source, it returns only the source schema. For a destination, it returns both
+// the source and destination schemas.
 //
 // TODO(Gianluca): this method is currently unused, and it has been kept for the
 // future, when we will re-expose the endpoint to retrieve group schemas. See
 // the issue https://github.com/meergo/meergo/issues/895.
-func (this *Connection) APIGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
+func (this *Connection) ApplicationGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
 	this.core.mustBeOpen()
-	return this.appSchemas(ctx, state.TargetGroup)
+	return this.applicationSchemas(ctx, state.TargetGroup)
 }
 
-// APIUserSchemas returns the user schemas for the connection. The connection
-// must be an API connection that supports users. For a source, it returns only
-// the source schema. For a destination, it returns both the source and
-// destination schemas.
-func (this *Connection) APIUserSchemas(ctx context.Context) (src, dst types.Type, err error) {
+// ApplicationUserSchemas returns the user schemas for the connection. The
+// connection must be an application connection that supports users. For a
+// source, it returns only the source schema. For a destination, it returns both
+// the source and destination schemas.
+func (this *Connection) ApplicationUserSchemas(ctx context.Context) (src, dst types.Type, err error) {
 	this.core.mustBeOpen()
-	return this.appSchemas(ctx, state.TargetUser)
+	return this.applicationSchemas(ctx, state.TargetUser)
 }
 
-// APIUsers returns the users of an API connection and the cursor to get the
-// next users. If filter is not nil, only users matching its conditions will be
-// returned.The returned cursor is empty if there are no other users.
+// ApplicationUsers returns the users of an application connection and the
+// cursor to get the next users. If filter is not nil, only users matching its
+// conditions will be returned.The returned cursor is empty if there are no
+// other users.
 //
 // It returns an errors.UnprocessableError error with code SchemaNotAligned if
-// the provided schema is not aligned with the API's source schema.
-func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter *Filter, cursor string) (json.Value, string, error) {
+// the provided schema is not aligned with the application's source schema.
+func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type, filter *Filter, cursor string) (json.Value, string, error) {
 
 	this.core.mustBeOpen()
 
-	if this.connection.Connector().Type != state.API {
-		return nil, "", errors.BadRequest("connection %d is not an API connection", this.connection.ID)
+	if this.connection.Connector().Type != state.Application {
+		return nil, "", errors.BadRequest("connection %d is not an application connection", this.connection.ID)
 	}
 	if !this.connection.Connector().SourceTargets.Contains(state.TargetUser) {
 		return nil, "", errors.BadRequest("connection %d does not support reading of users", this.connection.ID)
@@ -245,23 +245,23 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 	}
 
 	// Validate the cursor.
-	var lastChangeTime time.Time
+	var updatedAt time.Time
 	if cursor != "" {
 		var err error
-		lastChangeTime, err = deserializeCursor(cursor)
+		updatedAt, err = deserializeCursor(cursor)
 		if err != nil {
 			return nil, "", errors.BadRequest("cursor is malformed")
 		}
 	}
 
 	// Get the users.
-	records, err := this.api().Users(ctx, schema, where, lastChangeTime)
+	records, err := this.application().Users(ctx, schema, where, updatedAt)
 	if err != nil {
 		switch err.(type) {
 		case *connections.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		case *schemas.Error:
-			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the API's source schema: %w", err)
+			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the application's source schema: %w", err)
 		}
 		return nil, "", err
 	}
@@ -272,7 +272,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 
 	for user := range records.All(ctx) {
 		if user.Err != nil {
-			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.api().Connector(), user.Err)
+			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.application().Connector(), user.Err)
 		}
 		users = append(users, user.Attributes)
 		if records.Last() {
@@ -290,7 +290,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 	}
 
 	// Build the cursor.
-	cursor, err = serializeCursor(last.LastChangeTime)
+	cursor, err = serializeCursor(last.UpdatedAt)
 	if err != nil {
 		return nil, "", err
 	}
@@ -350,7 +350,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	// Validate the event type.
-	requiresEventType := c.Role == state.Destination && connector.Type == state.API && target == TargetEvent
+	requiresEventType := c.Role == state.Destination && connector.Type == state.Application && target == TargetEvent
 	if requiresEventType && eventType == "" {
 		return 0, errors.BadRequest("eventType is required for pipelines that send events to apps")
 	}
@@ -389,36 +389,36 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	// Determine the input schema.
 	inSchema := pipeline.InSchema
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, c.Role, state.Target(target))
-	dispatchEventsToAPIs := isDispatchingEventsToAPIs(connector.Type, c.Role, state.Target(target))
+	dispatchEventsToApplications := isDispatchingEventsToApplications(connector.Type, c.Role, state.Target(target))
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, c.Role, state.Target(target))
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications {
 		inSchema = eventPipelineSchema
 	}
 
 	n := state.CreatePipeline{
-		Connection:           c.ID,
-		Target:               state.Target(target),
-		Name:                 pipeline.Name,
-		Enabled:              pipeline.Enabled,
-		EventType:            eventType,
-		InSchema:             inSchema,
-		OutSchema:            pipeline.OutSchema,
-		Transformation:       toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
-		Query:                pipeline.Query,
-		Format:               pipeline.Format,
-		Path:                 pipeline.Path,
-		Sheet:                pipeline.Sheet,
-		Compression:          state.Compression(pipeline.Compression),
-		OrderBy:              pipeline.OrderBy,
-		ExportMode:           state.ExportMode(pipeline.ExportMode),
-		Matching:             state.Matching(pipeline.Matching),
-		UpdateOnDuplicates:   pipeline.UpdateOnDuplicates,
-		TableName:            pipeline.TableName,
-		TableKey:             pipeline.TableKey,
-		IdentityColumn:       pipeline.IdentityColumn,
-		LastChangeTimeColumn: pipeline.LastChangeTimeColumn,
-		LastChangeTimeFormat: pipeline.LastChangeTimeFormat,
-		Incremental:          pipeline.Incremental,
+		Connection:         c.ID,
+		Target:             state.Target(target),
+		Name:               pipeline.Name,
+		Enabled:            pipeline.Enabled,
+		EventType:          eventType,
+		InSchema:           inSchema,
+		OutSchema:          pipeline.OutSchema,
+		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
+		Query:              pipeline.Query,
+		Format:             pipeline.Format,
+		Path:               pipeline.Path,
+		Sheet:              pipeline.Sheet,
+		Compression:        state.Compression(pipeline.Compression),
+		OrderBy:            pipeline.OrderBy,
+		ExportMode:         state.ExportMode(pipeline.ExportMode),
+		Matching:           state.Matching(pipeline.Matching),
+		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
+		TableName:          pipeline.TableName,
+		TableKey:           pipeline.TableKey,
+		IdentityColumn:     pipeline.IdentityColumn,
+		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
+		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
+		Incremental:        pipeline.Incremental,
 	}
 
 	// Set the scheduler.
@@ -519,8 +519,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
 			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
 			"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
-			"update_on_duplicates, table_name, table_key, identity_column, last_change_time_column,\n" +
-			"last_change_time_format, incremental)\n" +
+			"update_on_duplicates, table_name, table_key, identity_column, updated_at_column,\n" +
+			"updated_at_format, incremental)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
@@ -528,7 +528,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
-			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
+			n.TableName, n.TableKey, n.IdentityColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
@@ -562,16 +562,13 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
 	}
-	key, err := generateEventWriteKey()
-	if err != nil {
-		return "", err
-	}
+	key := generateEventWriteKeyToken()
 	n := state.CreateEventWriteKey{
 		Connection: c.ID,
 		Key:        key,
 		CreatedAt:  time.Now().UTC(),
 	}
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM event_write_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
@@ -715,18 +712,17 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 	if key == "" {
 		return errors.BadRequest("key is empty")
 	}
-	if !isWriteKey(key) {
-		return errors.BadRequest("key %q is malformed", key)
-	}
 	c := this.connection
-	connector := c.Connector()
-	switch connector.Type {
+	switch t := c.Connector().Type; t {
 	case state.SDK, state.Webhook:
 	default:
 		return errors.BadRequest("connection %d is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
+	}
+	if connection, ok := this.core.state.ConnectionByKey(key); !ok || connection.ID != c.ID {
+		return nil
 	}
 	n := state.DeleteEventWriteKey{
 		Connection: c.ID,
@@ -1103,12 +1099,12 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 
 	switch connector := c.Connector(); connector.Type {
 
-	case state.API:
+	case state.Application:
 		switch target {
 		case TargetUser:
 			var err error
-			// Retrieve the API's source or target schema, depending on the connection's role.
-			schema, err := this.api().Schema(ctx, state.TargetUser, "")
+			// Retrieve the application's source or target schema, depending on the connection's role.
+			schema, err := this.application().Schema(ctx, state.TargetUser, "")
 			if err != nil {
 				if _, ok := err.(*connections.UnavailableError); ok {
 					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -1116,15 +1112,15 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 				return nil, err
 			}
 			if c.Role == state.Source {
-				// Source/API/User.
+				// Source/Application/User.
 				return &PipelineSchemas{In: schema, Out: profiles}, nil
 			} else {
-				// Destination/API/User.
+				// Destination/Application/User.
 				//
-				// The API's destination schema is already available here, but
+				// The application's destination schema is already available here, but
 				// we need to get the source one too because it's needed for the
 				// matching properties.
-				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
+				sourceSchema, err := this.application().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
 				if err != nil {
 					if _, ok := err.(*connections.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -1140,7 +1136,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 			}
 		case TargetGroup:
 			var err error
-			schema, err := this.api().Schema(ctx, state.TargetGroup, "")
+			schema, err := this.application().Schema(ctx, state.TargetGroup, "")
 			if err != nil {
 				if _, ok := err.(*connections.UnavailableError); ok {
 					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -1148,11 +1144,11 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 				return nil, err
 			}
 			if c.Role == state.Source {
-				// Source/API/Group.
+				// Source/Application/Group.
 				return &PipelineSchemas{In: schema, Out: groups}, nil
 			} else {
-				// Destination/API/Group.
-				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
+				// Destination/Application/Group.
+				sourceSchema, err := this.application().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
 				if err != nil {
 					if _, ok := err.(*connections.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -1177,7 +1173,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 				// Source/Database/User.
 				//
 				// The input schema is not set here because it is retrieved via
-				// a separate API call, since it depends on the query, which in
+				// a separate application call, since it depends on the query, which in
 				// the UI case is entered interactively by the user.
 				return &PipelineSchemas{Out: profiles}, nil
 			} else {
@@ -1204,7 +1200,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 				// Source/FileStorage/Source.
 				//
 				// The input schema is not set here because it is retrieved via
-				// a separate API call, since it depends on the file, which in
+				// a separate application call, since it depends on the file, which in
 				// the UI case is entered interactively by the user.
 				return &PipelineSchemas{Out: profiles}, nil
 			} else {
@@ -1266,10 +1262,10 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 	if targets.Contains(state.TargetUser) {
 		switch typ := c.Connector().Type; typ {
 		case
-			state.API:
+			state.Application:
 			var name, description string
 			if c.Role == state.Source {
-				// Source/API/User.
+				// Source/Application/User.
 				name = "Import " + connector.Label + " " + strings.ToLower(connector.Terms.Users)
 				description = "Import " + strings.ToLower(connector.Terms.Users)
 				if connector.Terms.Users != "Users" {
@@ -1277,7 +1273,7 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				}
 				description += " into the data warehouse"
 			} else {
-				// Destination/API/User.
+				// Destination/Application/User.
 				name = "Export " + strings.ToLower(connector.Terms.Users)
 				description = "Export users from the data warehouse"
 				if connector.Terms.Users != "Users" {
@@ -1329,10 +1325,10 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 	//if targets.Contains(state.Group) {
 	//	switch typ := c.Connector().Type; typ {
 	//	case
-	//		state.API:
+	//		state.Application:
 	//		var name, description string
 	//		if c.Role == state.Source {
-	//			// Source/API/Group.
+	//			// Source/Application/Group.
 	//		    name = "Import " + connector.Name + " " + connector.Terms.Groups
 	//			description = "Import " + connector.Terms.Groups
 	//			if connector.Terms.Groups != "groups" {
@@ -1340,7 +1336,7 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 	//			}
 	//			description += " into the data warehouse"
 	//		} else {
-	//			// Destination/API/Group.
+	//			// Destination/Application/Group.
 	//			name = "Export " + connector.Terms.Groups
 	//			description = "Export groups "
 	//			if connector.Terms.Groups != "groups" {
@@ -1400,16 +1396,16 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				}
 				pipelineTypes = slices.Insert(pipelineTypes, 0, at)
 			}
-		case state.API:
+		case state.Application:
 			if c.Role == state.Destination {
-				eventTypes, err := this.api().EventTypes(ctx)
+				eventTypes, err := this.application().EventTypes(ctx)
 				if err != nil {
 					if _, ok := err.(*connections.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 					}
 					return nil, err
 				}
-				// Destination/API/Event.
+				// Destination/Application/Event.
 				for _, et := range eventTypes {
 					id := et.ID
 					pipelineTypes = append(pipelineTypes, PipelineType{
@@ -1428,10 +1424,11 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 	return pipelineTypes, nil
 }
 
-// PreviewSendEvent returns a preview of an event as it would be sent to an API.
-// The connection must be a destination API connection, and it is expected to
-// have an event type with identifier typ. If there is a transformation,
-// outSchema is the output schema of the transformation, and it must be a valid.
+// PreviewSendEvent returns a preview of an event as it would be sent to an
+// application. The connection must be a destination application connection, and
+// it is expected to have an event type with identifier typ. If there is a
+// transformation, outSchema is the output schema of the transformation, and it
+// must be a valid.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
@@ -1447,8 +1444,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 
 	c := this.connection
 
-	if c.Connector().Type != state.API {
-		return nil, errors.BadRequest("connection %d is not an API connection", c.ID)
+	if c.Connector().Type != state.Application {
+		return nil, errors.BadRequest("connection %d is not an application connection", c.ID)
 	}
 	if c.Role != state.Destination {
 		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
@@ -1578,7 +1575,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	}
 
 	// Create a preview before sending the event.
-	req, err := this.api().PreviewSendEvent(ctx, ev)
+	req, err := this.application().PreviewSendEvent(ctx, ev)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
@@ -1595,75 +1592,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, err
 	}
 
-	// Construct the preview.
-	var b json.Buffer
-	b.WriteString(req.Method)
-	b.WriteString(" ")
-	b.WriteString(req.URL.String())
-	b.WriteByte('\n')
-	err = req.Header.Write(&b)
-	if err != nil {
-		return nil, err
-	}
-	if req.Body != nil {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			return nil, err
-		}
-		b.WriteByte('\n')
-		ct := req.Header.Get("Content-Type")
-		if !utf8.Valid(body) {
-			ct = "application/octet-stream"
-		}
-		switch ct {
-		case "application/json":
-			indented, err := json.Indent(body, "", "  ")
-			if err != nil {
-				b.Write(body)
-				break
-			}
-			b.Write(indented)
-		case "application/x-ndjson":
-			n := b.Len()
-			dec := json.NewDecoder(bytes.NewReader(body))
-			first := true
-			for {
-				var value json.Value
-				value, err = dec.ReadValue()
-				if err != nil {
-					if err == io.EOF {
-						if !first {
-							err = nil
-						}
-					}
-					break
-				}
-				if !first {
-					b.WriteByte('\n')
-				}
-				indented, err := json.Indent(value, "", "    ")
-				if err != nil {
-					break
-				}
-				if err == nil {
-					b.Write(indented)
-				} else {
-					b.Write(value)
-				}
-				first = false
-			}
-			if err != nil {
-				b.Truncate(n)
-				b.Write(body)
-			}
-		case "application/octet-stream":
-			_, _ = fmt.Fprintf(&b, "[A binary body of %d bytes]", len(body))
-		default:
-			b.Write(body)
-		}
-	}
-
-	return b.Bytes(), nil
+	return dumpPreviewEventRequest(req)
 }
 
 // Rename renames the connection with the given new name.
@@ -1979,30 +1908,30 @@ func (this *Connection) EventWriteKeys() ([]string, error) {
 	return slices.Clone(c.Keys), nil
 }
 
-// api returns the API of the connection.
-func (this *Connection) api() *connections.API {
-	return this.core.connections.API(this.connection)
+// application returns the application of the connection.
+func (this *Connection) application() *connections.Application {
+	return this.core.connections.Application(this.connection)
 }
 
-// appSchemas returns the user or group schemas, based on target, for an API
-// connection. The connection must support the provided target.
+// applicationSchemas returns the user or group schemas, based on target, for an
+// application connection. The connection must support the provided target.
 //
 // For a source connection, it returns only the group source schema.
 // For a destination connection, it returns both the group source and
 // destination schemas.
-func (this *Connection) appSchemas(ctx context.Context, target state.Target) (src, dst types.Type, err error) {
+func (this *Connection) applicationSchemas(ctx context.Context, target state.Target) (src, dst types.Type, err error) {
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.API {
-		err = errors.BadRequest("connection %d is not an API", c.ID)
+	if connector.Type != state.Application {
+		err = errors.BadRequest("connection %d is not an application", c.ID)
 		return
 	}
 	if !connector.DestinationTargets.Contains(target) {
 		err = errors.BadRequest("connection %d does not support %s", c.ID, target)
 		return
 	}
-	api := this.api()
-	src, err = api.SchemaAsRole(ctx, state.Source, target, "")
+	app := this.application()
+	src, err = app.SchemaAsRole(ctx, state.Source, target, "")
 	if err != nil {
 		if _, ok := err.(*connections.UnavailableError); ok {
 			err = errors.Unavailable("an error occurred fetching the source schema: %w", err)
@@ -2010,7 +1939,7 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 		return
 	}
 	if c.Role == state.Destination {
-		dst, err = api.SchemaAsRole(ctx, state.Destination, target, "")
+		dst, err = app.SchemaAsRole(ctx, state.Destination, target, "")
 		if err != nil {
 			if _, ok := err.(*connections.UnavailableError); ok {
 				err = errors.Unavailable("an error occurred fetching the destination schema: %w", err)
@@ -2076,7 +2005,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
-		schema, err := this.api().Schema(ctx, state.Target(target), eventType)
+		schema, err := this.application().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {
 				err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
@@ -2090,7 +2019,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	return types.Type{}, nil
 }
 
-// deserializeCursor deserializes a cursor passed to the API.
+// deserializeCursor deserializes a cursor passed to the application.
 func deserializeCursor(cursor string) (time.Time, error) {
 	data, err := hex.DecodeString(cursor)
 	if err != nil {
@@ -2105,6 +2034,96 @@ func deserializeCursor(cursor string) (time.Time, error) {
 	return c, nil
 }
 
+// dumpPreviewEventRequest dumps the HTTP request used to preview an event, and
+// returns it as a byte slice.
+func dumpPreviewEventRequest(req *http.Request) ([]byte, error) {
+
+	var b json.Buffer
+
+	b.WriteString(req.Method)
+	b.WriteString(" ")
+	b.WriteString(req.URL.String())
+	b.WriteByte('\n')
+	err := req.Header.Write(&b)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Body != nil {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		b.WriteByte('\n')
+		contentEncoding := strings.TrimSpace(req.Header.Get("Content-Encoding"))
+		if contentEncoding != "" {
+			encodings := strings.Split(contentEncoding, ",")
+			if len(encodings) == 1 && strings.EqualFold(strings.TrimSpace(encodings[0]), "gzip") {
+				reader, err := gzip.NewReader(bytes.NewReader(body))
+				if err == nil {
+					decoded, readErr := io.ReadAll(reader)
+					closeErr := reader.Close()
+					if readErr == nil && closeErr == nil {
+						body = decoded
+					}
+				}
+			}
+		}
+		ct := req.Header.Get("Content-Type")
+		if !utf8.Valid(body) {
+			ct = "application/octet-stream"
+		}
+		switch ct {
+		case "application/json":
+			indented, err := json.Indent(body, "", "  ")
+			if err != nil {
+				b.Write(body)
+				return b.Bytes(), nil
+			}
+			b.Write(indented)
+		case "application/x-ndjson":
+			n := b.Len()
+			dec := json.NewDecoder(bytes.NewReader(body))
+			first := true
+			for {
+				var value json.Value
+				value, err = dec.ReadValue()
+				if err != nil {
+					if err == io.EOF {
+						if !first {
+							err = nil
+						}
+					}
+					break
+				}
+				if !first {
+					b.WriteByte('\n')
+				}
+				indented, err := json.Indent(value, "", "    ")
+				if err != nil {
+					break
+				}
+				if err == nil {
+					b.Write(indented)
+				} else {
+					b.Write(value)
+				}
+				first = false
+			}
+			if err != nil {
+				b.Truncate(n)
+				b.Write(body)
+			}
+		case "application/octet-stream":
+			_, _ = fmt.Fprintf(&b, "[A binary body of %d bytes]", len(body))
+		default:
+			b.Write(body)
+		}
+	}
+
+	return b.Bytes(), nil
+}
+
 // isValidStrategy reports whether s is a valid strategy.
 func isValidStrategy(s Strategy) bool {
 	switch s {
@@ -2112,25 +2131,6 @@ func isValidStrategy(s Strategy) bool {
 		return true
 	}
 	return false
-}
-
-// isWriteKey reports whether key can be a write key.
-func isWriteKey(key string) bool {
-	if len(key) != 32 {
-		return false
-	}
-	_, err := base62.DecodeString(key)
-	return err == nil
-}
-
-// generateEventWriteKey generates an event write key in its base62 form.
-func generateEventWriteKey() (string, error) {
-	key := make([]byte, 24)
-	_, err := rand.Read(key)
-	if err != nil {
-		return "", errors.New("cannot generate an event write key")
-	}
-	return base62.EncodeToString(key)[0:32], nil
 }
 
 // marshalSchema marshals the given schema.
@@ -2146,7 +2146,7 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 	return rawSchema, nil
 }
 
-// serializeCursor serializes a cursor to be returned by the API.
+// serializeCursor serializes a cursor to be returned by the application.
 func serializeCursor(cursor time.Time) (string, error) {
 	b, err := json.Marshal(cursor)
 	if err != nil {
@@ -2295,7 +2295,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.Role value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an core.Role value", v)
 	}
 	var r Role
 	switch s {
@@ -2325,8 +2325,8 @@ type ConnectionToSet struct {
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
-	// destination API connections that support it. In this case, it must be one of
-	// the sending modes supported by the API.
+	// destination application connections that support it. In this case, it must be
+	// one of the sending modes supported by the application.
 	SendingMode *SendingMode `json:"sendingMode"`
 }
 

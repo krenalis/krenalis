@@ -3,7 +3,7 @@ import { PotentialConnector, ConnectorType, ConnectorImplementation } from './ty
 const POTENTIAL_CONNECTORS_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
-	'API',
+	'Application',
 	'Database',
 	'File',
 	'FileStorage',

@@ -98,8 +98,8 @@ interface Pipeline {
 	tableKey: string | null;
 	sheet: string | null;
 	identityColumn: string | null;
-	lastChangeTimeColumn: string | null;
-	lastChangeTimeFormat: string | null;
+	updatedAtColumn: string | null;
+	updatedAtFormat: string | null;
 	incremental: boolean | null;
 	exportMode: ExportMode | null;
 	matching: Matching | null;
@@ -129,8 +129,8 @@ interface PipelineToSet {
 	tableKey?: string | null;
 	sheet?: string | null;
 	identityColumn?: string | null;
-	lastChangeTimeColumn?: string | null;
-	lastChangeTimeFormat?: string | null;
+	updatedAtColumn?: string | null;
+	updatedAtFormat?: string | null;
 	incremental?: boolean;
 	exportMode?: ExportMode;
 	matching?: Matching;

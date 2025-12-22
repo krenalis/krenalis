@@ -34,7 +34,7 @@ func TestExportZeroProfiles(t *testing.T) {
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 
-	// Test the export of zero profiles to an API (Dummy).
+	// Test the export of zero profiles to an application (Dummy).
 	func() {
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
 		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", meergotester.PipelineToSet{

@@ -1,10 +1,10 @@
-,,Source / API / User,Source / Database / User,Source / FileStorage / User,Source / SDK / User,Source / SDK / Event,Destination / API / User,Destination / API / Event,Destination / Database / User,Destination / FileStorage / Users
+,,Source / Application / User,Source / Database / User,Source / FileStorage / User,Source / SDK / User,Source / SDK / Event,Destination / Application / User,Destination / Application / Event,Destination / Database / User,Destination / FileStorage / Users
 Filters,,,,,,,,,,
 ,Filters support,Yes,No (there is already the query for filtering),Yes,Yes,Yes,Yes,Yes,Yes,Yes
 Schemas,,,,,,,,,,
-,Input schema in UI,API user (source),Query,File,Event,(none),User,Event,User,User
-,Output schema in UI,User,User,User,User,(none),API user (destination),"Event Type (none, if Event Type hasn’t one)",Table,(none)
-,Input schema properties in state,Filter properties + transformed properties,Transformed properties + identity column + last change time column,Filter properties + transformed properties + identity column + last change time column,Event schema properties,Event schema properties,Filter properties + Transformed properties + internal matching property,Event schema properties,Filter properties + Transformed properties,Profile schema properties
+,Input schema in UI,Application user (source),Query,File,Event,(none),User,Event,User,User
+,Output schema in UI,User,User,User,User,(none),Application user (destination),"Event Type (none, if Event Type hasn’t one)",Table,(none)
+,Input schema properties in state,Filter properties + transformed properties,Transformed properties + identity column + update time column,Filter properties + transformed properties + identity column + update time column,Event schema properties,Event schema properties,Filter properties + Transformed properties + internal matching property,Event schema properties,Filter properties + Transformed properties,Profile schema properties
 ,Output schema properties in state,Transformed properties,Transformed properties,Transformed properties,Transformed properties,(none),Transformed properties + external matching property,Transformed properties,Transformed properties + table key,(none)
 Input schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,"(event schema, not relevant)","(event schema, not relevant)",Must be empty,"(event schema, not relevant)",Must be empty,Must be empty
@@ -23,7 +23,7 @@ Transformation,,,,,,,,,,
 ,Mapping and Function,Both supported,Both supported,Both supported,Both supported,-,Both supported,Both supported,Both supported,-
 ,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
 Additional information,,,,,,,,,,
-,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
+,Identity and Update Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
 ,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,
@@ -35,7 +35,7 @@ Transformation,,,,,,,,,,
 ,Mapping and Function,Both supported,Both supported,Both supported,Both supported,-,Both supported,Both supported,Both supported,-
 ,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
 Additional information,,,,,,,,,,
-,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
+,Identity and Update Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
 ,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,

@@ -37,11 +37,11 @@ const contentEncoding = connectors.Gzip
 var overview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "posthog",
 		Label:      "PostHog",
 		Categories: connectors.CategorySaaS,
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent,
 			HasSettings: true,
 			SendingMode: connectors.Server,
@@ -54,7 +54,7 @@ func init() {
 }
 
 type PostHog struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 
@@ -73,7 +73,7 @@ type innerSettings struct {
 }
 
 // New returns a new connector instance for PostHog.
-func New(env *connectors.APIEnv) (*PostHog, error) {
+func New(env *connectors.ApplicationEnv) (*PostHog, error) {
 	c := PostHog{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)

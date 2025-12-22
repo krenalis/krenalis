@@ -2,8 +2,9 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package connections provides the interface to interact with API, database,
-// file storage, and message broker connections, and to file pipelines.
+// Package connections provides the interface to interact with application,
+// database, file storage, and message broker connections, and to file
+// pipelines.
 package connections
 
 import (
@@ -48,15 +49,8 @@ type Authorization struct {
 
 var (
 	ErrNoColumnsFound = errors.New("file has no columns")
-	ErrNoWebhooks     = errors.New("API has no webhooks")
+	ErrNoWebhooks     = errors.New("application has no webhooks")
 )
-
-// LastChangeTimeColumn represents the last change time column passed to the
-// (*File).ReadFunc method.
-type LastChangeTimeColumn struct {
-	Name   string
-	Format string
-}
 
 // PlaceholderError is an error representing a placeholder error.
 type PlaceholderError string
@@ -115,9 +109,9 @@ type EventType = connectors.EventType
 // Record represents a record. If an error occurs during the reading or
 // validation of the record, the Err field contains the specific error.
 type Record struct {
-	ID             string         // Identifier.
-	Attributes     map[string]any // Attributes.
-	LastChangeTime time.Time      // Last modification time, in UTC.
+	ID         string         // Identifier.
+	Attributes map[string]any // Attributes.
+	UpdatedAt  time.Time      // Time when the record was last updated, in UTC.
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
@@ -129,8 +123,8 @@ type Record struct {
 	Err error
 }
 
-// Writer is the interface implemented by API, database, and file connectors to
-// write records.
+// Writer is the interface implemented by application, database, and file
+// connectors to write records.
 type Writer interface {
 
 	// Close terminates the writer, ensuring that all records are processed before
@@ -151,8 +145,8 @@ type Writer interface {
 	Write(ctx context.Context, id string, attributes map[string]any) bool
 }
 
-// Connections provides access to API, database, file, file storage, SDK, and
-// message broker connections.
+// Connections provides access to application, database, file, file storage,
+// SDK, and message broker connections.
 type Connections struct {
 	state *state.State
 	http  *httpclient.HTTP
@@ -165,10 +159,10 @@ func New(state *state.State) *Connections {
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
-// provided API connector. This URI is used to redirect users to the OAuth
-// provider's consent page, where they can grant permissions for the scopes of
-// the specified role. After granting permissions, the provider redirects the
-// user to the URI specified by redirectionURI.
+// provided application connector. This URI is used to redirect users to the
+// OAuth provider's consent page, where they can grant permissions for the
+// scopes of the specified role. After granting permissions, the provider
+// redirects the user to the URI specified by redirectionURI.
 //
 // After obtaining the authorization code, call GrantAuthorization to retrieve
 // the account code, access token, refresh token, and expiration time.
@@ -206,22 +200,22 @@ func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role sta
 	return b.String(), nil
 }
 
-// GrantAuthorization grants an OAuth authorization for an API connector, using
-// the provided authorization code and redirection URI.
+// GrantAuthorization grants an OAuth authorization for an application
+// connector, using the provided authorization code and redirection URI.
 //
 // This method can only be called on a connector that implements OAuth.
 func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
 	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, code, redirectionURI)
 	if err != nil {
-		return nil, err
+		return nil, &UnavailableError{Err: fmt.Errorf("cannot get authorization token from %s: %s", connector.Label, err)}
 	}
-	api, err := connectors.RegisteredAPI(connector.Code).New(&connectors.APIEnv{
+	app, err := connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
 		HTTPClient: c.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	account, err := api.(apiOAuthConnector).OAuthAccount(ctx)
+	account, err := app.(applicationOAuthConnector).OAuthAccount(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -238,7 +232,7 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //// ReceivePerAccountWebhook receives a per account webhook request and returns
 //// its payloads. The context is the request's context.
 ////
-//// If the connector of the account is not an API or does not support per account
+//// If the connector of the account is not an application or does not support per account
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
 //func (connectors *Connections) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]connectors.WebhookPayload, error) {
@@ -246,13 +240,13 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //	if connector.WebhooksPer != state.WebhooksPerAccount {
 //		return nil, ErrNoWebhooks
 //	}
-//	config := &connectors.APIEnv{
+//	config := &connectors.ApplicationEnv{
 //		OAuthAccount: account.Code,
 //	}
 //	if connector.OAuth != nil {
 //		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.RetryPolicy)
 //	}
-//	inner, err := connectors.RegisteredAPI(connector.Name).New(config)
+//	inner, err := connectors.RegisteredApplication(connector.Name).New(config)
 //	if err != nil {
 //		return nil, err
 //	}
@@ -267,7 +261,7 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //// ReceivePerConnectionWebhook receives a per connection webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// if the connection is not an API, or it does not support per connection
+//// if the connection is not an application, or it does not support per connection
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
 //func (connectors *Connections) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]connectors.WebhookPayload, error) {
@@ -281,7 +275,7 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //		accountID = a.ID
 //		accountCode = a.Code
 //	}
-//	inner, err := connectors.RegisteredAPI(connector.Name).New(&connectors.APIEnv{
+//	inner, err := connectors.RegisteredApplication(connector.Name).New(&connectors.ApplicationEnv{
 //		Settings:     connection.Settings,
 //		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 //		OAuthAccount: accountCode,
@@ -302,14 +296,14 @@ func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.C
 //// ReceivePerConnectorWebhook receives a per connector webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// If the connector is not an API, or it does not support per connector
+//// If the connector is not an application, or it does not support per connector
 //// webhooks, it returns the ErrNoWebhooks error. If the request was not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
 //func (connectors *Connections) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	if connector.WebhooksPer != state.WebhooksPerConnector {
 //		return nil, ErrNoWebhooks
 //	}
-//	inner, err := connectors.RegisteredAPI(connector.Name).New(&connectors.APIEnv{})
+//	inner, err := connectors.RegisteredApplication(connector.Name).New(&connectors.ApplicationEnv{})
 //	if err != nil {
 //		return nil, err
 //	}
@@ -379,12 +373,12 @@ func connectorError(err error) error {
 	return err
 }
 
-// formatLastChangeTimeColumn formats a time.Time value using the provided
-// format. The Excel format is not allowed here.
+// formatUpdatedAtColumn formats a time.Time value using the provided format.
+// The Excel format is not allowed here.
 //
 // format must be a valid change time format; for accepted formats, refer to the
-// 'core.validateLastChangeTimeFormat' function.
-func formatLastChangeTimeColumn(format string, t time.Time) string {
+// 'core.validateUpdatedAtFormat' function.
+func formatUpdatedAtColumn(format string, t time.Time) string {
 	switch format {
 	case "ISO8601":
 		return t.Format(time.RFC3339)
@@ -472,14 +466,13 @@ func parseIdentityColumn(name string, typ types.Type, value any, layouts *state.
 	return "", fmt.Errorf("identity value is not a JSON string or JSON integer number")
 }
 
-// parseLastChangeTimeColumn parses a last change time column value. If the
-// value cannot be parsed or is not valid, it returns an error. If the value is
-// valid but nil, and nullable is true, it returns the zero time and a nil
-// error.
+// parseUpdatedAtColumn parses an update time column value. If the value cannot
+// be parsed or is not valid, it returns an error. If the value is valid but
+// nil, and nullable is true, it returns the zero time and a nil error.
 //
 // format must be a valid change time format; for accepted formats, refer to the
-// 'core.validateLastChangeTimeFormat' function.
-func parseLastChangeTimeColumn(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
+// 'core.validateUpdatedAtFormat' function.
+func parseUpdatedAtColumn(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
 	v, err := normalize(name, typ, value, nullable, layouts)
 	if err != nil {
 		return time.Time{}, err
@@ -488,67 +481,67 @@ func parseLastChangeTimeColumn(name string, typ types.Type, format string, value
 	case nil:
 		return time.Time{}, nil
 	case time.Time:
-		err = validateLastChangeTime(v)
+		err = validateUpdatedAt(v)
 		if err != nil {
 			return time.Time{}, err
 		}
 		return v, nil
 	case string:
-		t, err := parseLastChangeTimeColumnWithFormat(format, v)
+		t, err := parseUpdatedAtColumnWithFormat(format, v)
 		if err != nil {
 			return time.Time{}, err
 		}
-		err = validateLastChangeTime(t)
+		err = validateUpdatedAt(t)
 		if err != nil {
 			return time.Time{}, err
 		}
 		return t, nil
 	case json.Value:
 		if !v.IsString() {
-			return time.Time{}, fmt.Errorf("last change time is not a JSON string")
+			return time.Time{}, fmt.Errorf("update time is not a JSON string")
 		}
-		t, err := parseLastChangeTimeColumnWithFormat(format, v.String())
+		t, err := parseUpdatedAtColumnWithFormat(format, v.String())
 		if err != nil {
 			return time.Time{}, err
 		}
-		err = validateLastChangeTime(t)
+		err = validateUpdatedAt(t)
 		if err != nil {
 			return time.Time{}, err
 		}
 		return t, nil
 	}
-	return time.Time{}, fmt.Errorf("last change time is not a JSON string")
+	return time.Time{}, fmt.Errorf("update time is not a JSON string")
 }
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
-// parseLastChangeTimeColumnWithFormat parses a last change time value with
-// the given format.
+// parseUpdatedAtColumnWithFormat parses an update time value with the given
+// format.
 //
 // format must be a valid change time format; for accepted formats, refer to the
-// 'core.validateLastChangeTimeFormat' function.
-func parseLastChangeTimeColumnWithFormat(format, v string) (time.Time, error) {
+// 'core.validateUpdatedAtFormat' function.
+func parseUpdatedAtColumnWithFormat(format, v string) (time.Time, error) {
 	switch format {
 	case "ISO8601":
 		dt, err := iso8601.ParseString(v)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("last change time does not conform to the ISO8601 format")
+			return time.Time{}, fmt.Errorf("update time does not conform to the ISO8601 format")
 		}
 		return dt.UTC(), err
 	case "Excel":
 		if !isExcelSimpleFloat(v) {
-			return time.Time{}, errors.New("last change time does not conform to the Excel format")
+			return time.Time{}, errors.New("update time does not conform to the Excel format")
 		}
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datetime-function-812ad674-f7dd-4f31-9245-e79cfa358a4e
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
 		days, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			return time.Time{}, errors.New("last change time does not conform to the Excel format")
+			return time.Time{}, errors.New("update time does not conform to the Excel format")
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
-			return time.Time{}, errors.New("last change time does not conform to the Excel format")
+			return time.Time{}, errors.New("update time does not conform to the Excel format")
 		}
 		if days > 60 {
 			days--
@@ -559,7 +552,7 @@ func parseLastChangeTimeColumnWithFormat(format, v string) (time.Time, error) {
 	default: // any format compatible with strptime, for example '%Y-%m-%d'.
 		t, err := timefmt.Parse(v, format)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("last change time does not conform to the %q format", format)
+			return time.Time{}, fmt.Errorf("update time does not conform to the %q format", format)
 		}
 		return t.UTC(), nil
 	}
@@ -581,8 +574,8 @@ func rewriteColumnErrors(err error) error {
 
 // setConnectionSettings sets the settings of the provided connection.
 func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings json.Value) error {
-	if !utf8.Valid(settings) {
-		return errors.New("settings is not valid UTF-8")
+	if !json.Valid(settings) {
+		return errors.New("settings is not valid JSON")
 	}
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
@@ -611,8 +604,8 @@ func setConnectionSettingsFunc(st *state.State, c *state.Connection) connectors.
 
 // setPipelineSettings sets the settings of the provided pipeline.
 func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, settings json.Value) error {
-	if !utf8.Valid(settings) {
-		return errors.New("settings is not valid UTF-8")
+	if !json.Valid(settings) {
+		return errors.New("settings is not valid JSON")
 	}
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
@@ -639,14 +632,14 @@ func setPipelineSettingsFunc(st *state.State, p *state.Pipeline) connectors.SetS
 	}
 }
 
-// validateLastChangeTime validates the last change time t, returning an error
-// if it is before the year 1900 or too far ahead in the future.
-func validateLastChangeTime(t time.Time) error {
+// validateUpdatedAt validates the update time t, returning an error if it is
+// before the year 1900 or too far ahead in the future.
+func validateUpdatedAt(t time.Time) error {
 	if y := t.Year(); y < 1900 {
-		return errors.New("last change time is before the year 1900")
+		return errors.New("update time is before the year 1900")
 	}
 	if t.After(time.Now().UTC().Add(5 * time.Minute)) {
-		return errors.New("last change time is too far ahead in the future")
+		return errors.New("update time is too far ahead in the future")
 	}
 	return nil
 }

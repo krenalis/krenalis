@@ -50,54 +50,55 @@ func init() {
 
 // Pipeline represents a pipeline of a connection.
 type Pipeline struct {
-	core                 *Core
-	pipeline             *state.Pipeline
-	connection           *Connection
-	ID                   int             `json:"id"`
-	Connector            string          `json:"connector"`
-	ConnectorType        ConnectorType   `json:"connectorType"`
-	Connection           int             `json:"connection"`
-	ConnectionRole       Role            `json:"connectionRole"`
-	Target               Target          `json:"target"`
-	Name                 string          `json:"name"`
-	Enabled              bool            `json:"enabled"`
-	EventType            *string         `json:"eventType"`
-	Running              bool            `json:"running"`
-	ScheduleStart        *int            `json:"scheduleStart"`
-	SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
-	InSchema             types.Type      `json:"inSchema"`
-	OutSchema            types.Type      `json:"outSchema"`
-	Filter               *Filter         `json:"filter"`
-	Transformation       *Transformation `json:"transformation"`
-	Query                *string         `json:"query"`
-	Format               string          `json:"format"`
-	Path                 *string         `json:"path"`
-	Sheet                *string         `json:"sheet"`
-	Compression          Compression     `json:"compression"`
-	OrderBy              *string         `json:"orderBy"`
-	ExportMode           *ExportMode     `json:"exportMode"`
-	Matching             *Matching       `json:"matching"`
-	UpdateOnDuplicates   *bool           `json:"updateOnDuplicates"`
-	TableName            *string         `json:"tableName"`
-	TableKey             *string         `json:"tableKey"`
-	IdentityColumn       *string         `json:"identityColumn"`
-	LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
-	LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
-	Incremental          bool            `json:"incremental"`
+	core               *Core
+	pipeline           *state.Pipeline
+	connection         *Connection
+	ID                 int             `json:"id"`
+	Connector          string          `json:"connector"`
+	ConnectorType      ConnectorType   `json:"connectorType"`
+	Connection         int             `json:"connection"`
+	ConnectionRole     Role            `json:"connectionRole"`
+	Target             Target          `json:"target"`
+	Name               string          `json:"name"`
+	Enabled            bool            `json:"enabled"`
+	EventType          *string         `json:"eventType"`
+	Running            bool            `json:"running"`
+	ScheduleStart      *int            `json:"scheduleStart"`
+	SchedulePeriod     *SchedulePeriod `json:"schedulePeriod"`
+	InSchema           types.Type      `json:"inSchema"`
+	OutSchema          types.Type      `json:"outSchema"`
+	Filter             *Filter         `json:"filter"`
+	Transformation     *Transformation `json:"transformation"`
+	Query              *string         `json:"query"`
+	Format             string          `json:"format"`
+	Path               *string         `json:"path"`
+	Sheet              *string         `json:"sheet"`
+	Compression        Compression     `json:"compression"`
+	OrderBy            *string         `json:"orderBy"`
+	ExportMode         *ExportMode     `json:"exportMode"`
+	Matching           *Matching       `json:"matching"`
+	UpdateOnDuplicates *bool           `json:"updateOnDuplicates"`
+	TableName          *string         `json:"tableName"`
+	TableKey           *string         `json:"tableKey"`
+	IdentityColumn     *string         `json:"identityColumn"`
+	UpdatedAtColumn    *string         `json:"updatedAtColumn"`
+	UpdatedAtFormat    *string         `json:"updatedAtFormat"`
+	Incremental        bool            `json:"incremental"`
 }
 
 // Matching establishes a relationship between a property in Meergo (input
-// property) and a corresponding property in the API (output property) used
-// during an export. This relationship determines whether a user or group in
-// Meergo exists in the API and identifies the corresponding user or group in
-// the API.
+// property) and a corresponding property in the application (output property)
+// used during an export. This relationship determines whether a user or group
+// in Meergo exists in the application and identifies the corresponding user or
+// group in the application.
 //
 // The input property should be a property in the profile schema, while the
 // output property should be a property in the source schema of the connection.
 // If the export mode includes "Create," the output property should also exist
-// in the destination schema with the same type. However, the API does not
-// check these conditions. It only requires that the input property is present
-// in the input schema and the output property is present in the output schema.
+// in the destination schema with the same type. However, the application does
+// not check these conditions. It only requires that the input property is
+// present in the input schema and the output property is present in the output
+// schema.
 //
 // Note: The output property cannot be directly utilized in the pipeline's
 // transformation. During the export process, an implicit transformation maps
@@ -259,7 +260,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	if p.ConnectionRole == Source {
 		if p.Target == TargetUser {
 			switch p.ConnectorType {
-			case API:
+			case Application:
 				serialized = struct {
 					serializedPipeline
 					Filter         *Filter         `json:"filter"`
@@ -284,66 +285,66 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case Database:
 				serialized = struct {
 					serializedPipeline
-					Query                string          `json:"query"`
-					IdentityColumn       string          `json:"identityColumn"`
-					LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
-					LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
-					Incremental          bool            `json:"incremental"`
-					Transformation       Transformation  `json:"transformation"`
-					InSchema             types.Type      `json:"inSchema"`
-					OutSchema            types.Type      `json:"outSchema"`
-					Running              bool            `json:"running"`
-					ScheduleStart        *int            `json:"scheduleStart"`
-					SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
+					Query           string          `json:"query"`
+					IdentityColumn  string          `json:"identityColumn"`
+					UpdatedAtColumn *string         `json:"updatedAtColumn"`
+					UpdatedAtFormat *string         `json:"updatedAtFormat"`
+					Incremental     bool            `json:"incremental"`
+					Transformation  Transformation  `json:"transformation"`
+					InSchema        types.Type      `json:"inSchema"`
+					OutSchema       types.Type      `json:"outSchema"`
+					Running         bool            `json:"running"`
+					ScheduleStart   *int            `json:"scheduleStart"`
+					SchedulePeriod  *SchedulePeriod `json:"schedulePeriod"`
 				}{
-					serializedPipeline:   p,
-					Query:                *this.Query,
-					IdentityColumn:       *this.IdentityColumn,
-					LastChangeTimeColumn: this.LastChangeTimeColumn,
-					LastChangeTimeFormat: this.LastChangeTimeFormat,
-					Incremental:          this.Incremental,
-					Transformation:       *this.Transformation,
-					InSchema:             this.InSchema,
-					OutSchema:            this.OutSchema,
-					Running:              this.Running,
-					ScheduleStart:        this.ScheduleStart,
-					SchedulePeriod:       this.SchedulePeriod,
+					serializedPipeline: p,
+					Query:              *this.Query,
+					IdentityColumn:     *this.IdentityColumn,
+					UpdatedAtColumn:    this.UpdatedAtColumn,
+					UpdatedAtFormat:    this.UpdatedAtFormat,
+					Incremental:        this.Incremental,
+					Transformation:     *this.Transformation,
+					InSchema:           this.InSchema,
+					OutSchema:          this.OutSchema,
+					Running:            this.Running,
+					ScheduleStart:      this.ScheduleStart,
+					SchedulePeriod:     this.SchedulePeriod,
 				}
 			case FileStorage:
 				serialized = struct {
 					serializedPipeline
-					Format               string          `json:"format"`
-					Path                 string          `json:"path"`
-					Sheet                *string         `json:"sheet"`
-					Compression          Compression     `json:"compression"`
-					Filter               *Filter         `json:"filter"`
-					IdentityColumn       string          `json:"identityColumn"`
-					LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
-					LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
-					Incremental          bool            `json:"incremental"`
-					Transformation       Transformation  `json:"transformation"`
-					InSchema             types.Type      `json:"inSchema"`
-					OutSchema            types.Type      `json:"outSchema"`
-					Running              bool            `json:"running"`
-					ScheduleStart        *int            `json:"scheduleStart"`
-					SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
+					Format          string          `json:"format"`
+					Path            string          `json:"path"`
+					Sheet           *string         `json:"sheet"`
+					Compression     Compression     `json:"compression"`
+					Filter          *Filter         `json:"filter"`
+					IdentityColumn  string          `json:"identityColumn"`
+					UpdatedAtColumn *string         `json:"updatedAtColumn"`
+					UpdatedAtFormat *string         `json:"updatedAtFormat"`
+					Incremental     bool            `json:"incremental"`
+					Transformation  Transformation  `json:"transformation"`
+					InSchema        types.Type      `json:"inSchema"`
+					OutSchema       types.Type      `json:"outSchema"`
+					Running         bool            `json:"running"`
+					ScheduleStart   *int            `json:"scheduleStart"`
+					SchedulePeriod  *SchedulePeriod `json:"schedulePeriod"`
 				}{
-					serializedPipeline:   p,
-					Format:               this.Format,
-					Path:                 *this.Path,
-					Sheet:                this.Sheet,
-					Compression:          this.Compression,
-					Filter:               this.Filter,
-					IdentityColumn:       *this.IdentityColumn,
-					LastChangeTimeColumn: this.LastChangeTimeColumn,
-					LastChangeTimeFormat: this.LastChangeTimeFormat,
-					Incremental:          this.Incremental,
-					Transformation:       *this.Transformation,
-					InSchema:             this.InSchema,
-					OutSchema:            this.OutSchema,
-					Running:              this.Running,
-					ScheduleStart:        this.ScheduleStart,
-					SchedulePeriod:       this.SchedulePeriod,
+					serializedPipeline: p,
+					Format:             this.Format,
+					Path:               *this.Path,
+					Sheet:              this.Sheet,
+					Compression:        this.Compression,
+					Filter:             this.Filter,
+					IdentityColumn:     *this.IdentityColumn,
+					UpdatedAtColumn:    this.UpdatedAtColumn,
+					UpdatedAtFormat:    this.UpdatedAtFormat,
+					Incremental:        this.Incremental,
+					Transformation:     *this.Transformation,
+					InSchema:           this.InSchema,
+					OutSchema:          this.OutSchema,
+					Running:            this.Running,
+					ScheduleStart:      this.ScheduleStart,
+					SchedulePeriod:     this.SchedulePeriod,
 				}
 			case SDK, Webhook:
 				serialized = struct {
@@ -376,7 +377,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	if p.ConnectionRole == Destination {
 		if p.Target == TargetUser {
 			switch p.ConnectorType {
-			case API:
+			case Application:
 				serialized = struct {
 					serializedPipeline
 					Filter             *Filter         `json:"filter"`
@@ -478,9 +479,10 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	return json.Marshal(serialized)
 }
 
-// Run starts a new run for the pipeline and returns its identifier.
-// The pipeline must be an API, database, or file pipeline with a target of User
-// or Group. It must be enabled and must not already have a run in progress.
+// Run starts a new run for the pipeline and returns its identifier. The
+// pipeline must be an application, database, or file pipeline with a target of
+// User or Group. It must be enabled and must not already have a run in
+// progress.
 //
 // It returns an errors.NotFoundError if the pipeline no longer exists.
 // It returns an errors.UnprocessableError with one of the following codes:
@@ -499,7 +501,7 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
 	}
 	typ := c.Connector().Type
 	switch typ {
-	case state.API, state.Database, state.FileStorage:
+	case state.Application, state.Database, state.FileStorage:
 	default:
 		return 0, errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
 	}
@@ -507,8 +509,8 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
 		if c.Role == state.Destination {
 			return 0, errors.BadRequest("incremental cannot be provided for destination pipelines")
 		}
-		if *incremental && typ != state.API && this.pipeline.LastChangeTimeColumn == "" {
-			return 0, errors.Unprocessable(CannotRunIncrementally, "incremental requires a last change time column")
+		if *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
+			return 0, errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 		}
 	}
 	if !this.pipeline.Enabled {
@@ -670,33 +672,33 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	inSchema := pipeline.InSchema
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.pipeline.Target)
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(c.Connector().Type, c.Role, this.pipeline.Target)
-	dispatchEventsToAPIs := isDispatchingEventsToAPIs(c.Connector().Type, c.Role, this.pipeline.Target)
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
+	dispatchEventsToApplications := isDispatchingEventsToApplications(c.Connector().Type, c.Role, this.pipeline.Target)
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications {
 		inSchema = eventPipelineSchema
 	}
 
 	n := state.UpdatePipeline{
-		ID:                   this.pipeline.ID,
-		Name:                 pipeline.Name,
-		Enabled:              pipeline.Enabled,
-		InSchema:             inSchema,
-		OutSchema:            pipeline.OutSchema,
-		Transformation:       toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
-		Query:                pipeline.Query,
-		Format:               pipeline.Format,
-		Path:                 pipeline.Path,
-		Sheet:                pipeline.Sheet,
-		Compression:          state.Compression(pipeline.Compression),
-		OrderBy:              pipeline.OrderBy,
-		ExportMode:           state.ExportMode(pipeline.ExportMode),
-		Matching:             state.Matching(pipeline.Matching),
-		UpdateOnDuplicates:   pipeline.UpdateOnDuplicates,
-		TableName:            pipeline.TableName,
-		TableKey:             pipeline.TableKey,
-		IdentityColumn:       pipeline.IdentityColumn,
-		LastChangeTimeColumn: pipeline.LastChangeTimeColumn,
-		LastChangeTimeFormat: pipeline.LastChangeTimeFormat,
-		Incremental:          pipeline.Incremental,
+		ID:                 this.pipeline.ID,
+		Name:               pipeline.Name,
+		Enabled:            pipeline.Enabled,
+		InSchema:           inSchema,
+		OutSchema:          pipeline.OutSchema,
+		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
+		Query:              pipeline.Query,
+		Format:             pipeline.Format,
+		Path:               pipeline.Path,
+		Sheet:              pipeline.Sheet,
+		Compression:        state.Compression(pipeline.Compression),
+		OrderBy:            pipeline.OrderBy,
+		ExportMode:         state.ExportMode(pipeline.ExportMode),
+		Matching:           state.Matching(pipeline.Matching),
+		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
+		TableName:          pipeline.TableName,
+		TableKey:           pipeline.TableKey,
+		IdentityColumn:     pipeline.IdentityColumn,
+		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
+		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
+		Incremental:        pipeline.Incremental,
 	}
 
 	// Add the filter to the notification.
@@ -775,7 +777,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		"transformation_out_paths = $13, query = $14, format = $15, path = $16, sheet = $17, " +
 		"compression = $18, order_by = $19, format_settings = $20, export_mode = $21, matching_in = $22, " +
 		"matching_out = $23, update_on_duplicates = $24, table_name = $25, table_key = $26, " +
-		"identity_column = $27, last_change_time_column = $28, last_change_time_format = $29, incremental = $30, " +
+		"identity_column = $27, updated_at_column = $28, updated_at_format = $29, incremental = $30, " +
 		"properties_to_unset = $31"
 	if (c.Role == state.Source && !pipeline.Incremental) || shouldReload(this.pipeline, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
@@ -835,7 +837,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
-			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.PropertiesToUnset,
+			n.TableKey, n.IdentityColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental, n.PropertiesToUnset,
 			n.ID,
 		)
 		if err != nil {
@@ -850,9 +852,9 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	return err
 }
 
-// api returns the API of the pipeline.
-func (this *Pipeline) api() *connections.API {
-	return this.core.connections.API(this.pipeline.Connection())
+// application returns the application of the pipeline.
+func (this *Pipeline) application() *connections.Application {
+	return this.core.connections.Application(this.pipeline.Connection())
 }
 
 // createRun creates a new pipeline run and returns its identifier.
@@ -1107,13 +1109,13 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 		p := pipeline.IdentityColumn
 		this.IdentityColumn = &p
 	}
-	if pipeline.LastChangeTimeColumn != "" {
-		column := pipeline.LastChangeTimeColumn
-		this.LastChangeTimeColumn = &column
+	if pipeline.UpdatedAtColumn != "" {
+		column := pipeline.UpdatedAtColumn
+		this.UpdatedAtColumn = &column
 	}
-	if pipeline.LastChangeTimeFormat != "" {
-		format := pipeline.LastChangeTimeFormat
-		this.LastChangeTimeFormat = &format
+	if pipeline.UpdatedAtFormat != "" {
+		format := pipeline.UpdatedAtFormat
+		this.UpdatedAtFormat = &format
 	}
 	this.Incremental = pipeline.Incremental
 	if pipeline.OrderBy != "" {
@@ -1207,11 +1209,11 @@ type PipelineToSet struct {
 	ExportMode ExportMode `json:"exportMode"`
 
 	// Matching defines a relationship between a property in Meergo ("in") and
-	// a corresponding property in the API ("out") used during an export.
+	// a corresponding property in the application ("out") used during an export.
 	Matching Matching `json:"matching"`
 
 	// UpdateOnDuplicates indicates whether to proceed with the export even if
-	// duplicate users or groups are found in the API.
+	// duplicate users or groups are found in the application.
 	UpdateOnDuplicates bool `json:"updateOnDuplicates"`
 
 	// TableName is the name of the table for the export and it is defined for
@@ -1229,20 +1231,18 @@ type PipelineToSet struct {
 	// It cannot be longer than 1024 runes.
 	IdentityColumn string `json:"identityColumn"`
 
-	// LastChangeTimeColumn is the last change time column when importing
-	// from a file or from a database. May be empty to indicate that no
-	// properties should be used for reading the last change times. Also refer
-	// to the documentation of LastChangeTimeFormat, which is strictly related
-	// to this.
+	// UpdatedAtColumn is the update time column when importing from a file or from
+	// a database. May be empty to indicate that no properties should be used for
+	// reading the update time. Also refer to the documentation of UpdatedAtFormat,
+	// which is strictly related to this.
 	// It cannot be longer than 1024 runes.
-	LastChangeTimeColumn string `json:"lastChangeTimeColumn"`
+	UpdatedAtColumn string `json:"updatedAtColumn"`
 
-	// LastChangeTimeFormat indicates the last change time value format for
-	// parsing the value read from the last change time column.
+	// UpdatedAtFormat indicates the update time value format for parsing the value
+	// read from the update time column.
 	//
-	// Represents a format when a LastChangeTimeColumn is provided and its
-	// corresponding property kind is json or string, otherwise it is the empty
-	// string.
+	// Represents a format when a UpdatedAtColumn is provided and its corresponding
+	// property kind is json or string, otherwise it is the empty string.
 	//
 	// In case it is provided, accepted values are:
 	//
@@ -1253,8 +1253,8 @@ type PipelineToSet struct {
 	//
 	// "Excel" format is only allowed for file pipelines.
 	//
-	// It cannot be longer than MaxLastChangeTimeFormatSize runes.
-	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
+	// It cannot be longer than MaxUpdatedAtFormatSize runes.
+	UpdatedAtFormat string `json:"updatedAtFormat"`
 
 	// Incremental determine whether users should be imported incrementally.
 	// If false, users will be re-imported from scratch.
@@ -1338,11 +1338,11 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// isDispatchingEventsToAPIs reports whether a connector of the given type,
-// on a connection with the given role, and a pipeline with the given target,
-// is dispatching events to APIs.
-func isDispatchingEventsToAPIs(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.TargetEvent && connectorType == state.API
+// isDispatchingEventsToApplications reports whether a connector of the given
+// type, on a connection with the given role, and a pipeline with the given
+// target, is dispatching events to applications.
+func isDispatchingEventsToApplications(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Destination && target == state.TargetEvent && connectorType == state.Application
 }
 
 // isExportUsersToFile reports whether a connector of the given type, on a
@@ -1408,10 +1408,10 @@ func shouldReload(a *state.Pipeline, n *state.UpdatePipeline) bool {
 	if a.IdentityColumn != n.IdentityColumn {
 		return true
 	}
-	if a.LastChangeTimeColumn != n.LastChangeTimeColumn {
+	if a.UpdatedAtColumn != n.UpdatedAtColumn {
 		return true
 	}
-	if a.LastChangeTimeFormat != n.LastChangeTimeFormat {
+	if a.UpdatedAtFormat != n.UpdatedAtFormat {
 		return true
 	}
 	// Check the filters.

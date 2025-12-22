@@ -17,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/tools/datacrypt"
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
@@ -243,6 +244,12 @@ func (state *State) IsLeader() bool {
 	election := state.election
 	state.mu.Unlock()
 	return election.leader == state.id
+}
+
+// NewCipher returns a datacrypt.Cipher bound to the given purpose using the
+// state's encryption key.
+func (state *State) NewCipher(purpose string) (*datacrypt.Cipher, error) {
+	return datacrypt.New(state.metadata.encryptionKey, purpose)
 }
 
 // Organization returns the organization with identifier id.
@@ -751,7 +758,7 @@ type ConnectorTerms struct {
 type ConnectorType int
 
 const (
-	API ConnectorType = iota + 1
+	Application ConnectorType = iota + 1
 	Database
 	File
 	FileStorage
@@ -768,8 +775,8 @@ func (typ *ConnectorType) Scan(src any) error {
 	}
 	var t ConnectorType
 	switch s {
-	case "API":
-		t = API
+	case "Application":
+		t = Application
 	case "Database":
 		t = Database
 	case "File":
@@ -803,8 +810,8 @@ func (typ ConnectorType) String() string {
 // It returns an error if typ is not a valid ConnectorType.
 func (typ ConnectorType) Value() (driver.Value, error) {
 	switch typ {
-	case API:
-		return "API", nil
+	case Application:
+		return "Application", nil
 	case Database:
 		return "Database", nil
 	case File:
@@ -1220,39 +1227,39 @@ func (target Target) Value() (driver.Value, error) {
 }
 
 type Pipeline struct {
-	mu                   *sync.Mutex
-	ID                   int
-	connection           *Connection
-	format               *Connector
-	run                  *PipelineRun
-	propertiesToUnset    []string // is not nil only for source pipelines on users.
-	Target               Target
-	Name                 string
-	Enabled              bool
-	EventType            string
-	ScheduleStart        int16
-	SchedulePeriod       int16
-	InSchema             types.Type
-	OutSchema            types.Type
-	Filter               *Where
-	Transformation       Transformation
-	Query                string
-	Path                 string
-	Sheet                string
-	Compression          Compression
-	OrderBy              string
-	FormatSettings       json.Value
-	ExportMode           ExportMode
-	Matching             Matching
-	UpdateOnDuplicates   bool
-	TableName            string
-	TableKey             string
-	IdentityColumn       string
-	LastChangeTimeColumn string
-	LastChangeTimeFormat string
-	Reload               bool
-	Incremental          bool
-	Health               Health
+	mu                 *sync.Mutex
+	ID                 int
+	connection         *Connection
+	format             *Connector
+	run                *PipelineRun
+	propertiesToUnset  []string // is not nil only for source pipelines on users.
+	Target             Target
+	Name               string
+	Enabled            bool
+	EventType          string
+	ScheduleStart      int16
+	SchedulePeriod     int16
+	InSchema           types.Type
+	OutSchema          types.Type
+	Filter             *Where
+	Transformation     Transformation
+	Query              string
+	Path               string
+	Sheet              string
+	Compression        Compression
+	OrderBy            string
+	FormatSettings     json.Value
+	ExportMode         ExportMode
+	Matching           Matching
+	UpdateOnDuplicates bool
+	TableName          string
+	TableKey           string
+	IdentityColumn     string
+	UpdatedAtColumn    string
+	UpdatedAtFormat    string
+	Reload             bool
+	Incremental        bool
+	Health             Health
 }
 
 // Connection returns the connection of the pipeline.

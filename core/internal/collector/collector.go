@@ -588,5 +588,5 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		transformer, _ = transformers.New(pipeline, c.functionProvider, nil)
 	}
 	w.(*identityWriter).SetTransformer(transformer)
-	// TODO(marco): il cambio del warehouse mode come influisce sulla source pipeline?
+	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
 }

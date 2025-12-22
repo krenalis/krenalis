@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/connections/apiwriter"
+	"github.com/meergo/meergo/core/internal/connections/appwriter"
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -37,8 +37,8 @@ func (err *InvalidEventError) Error() string {
 	return err.Err.Error()
 }
 
-// API represents the API of an API connection.
-type API struct {
+// Application represents the application of an application connection.
+type Application struct {
 	id          int
 	connector   string
 	role        state.Role
@@ -59,15 +59,15 @@ type API struct {
 //	ReceiveWebhook(r *http.Request, role connectors.Role) ([]connectors.WebhookPayload, error)
 //}
 
-type apiOAuthConnector interface {
-	// OAuthAccount returns the API's account associated with the OAuth authorization.
+type applicationOAuthConnector interface {
+	// OAuthAccount returns the application's account associated with the OAuth authorization.
 	OAuthAccount(ctx context.Context) (string, error)
 }
 
-// API returns the API for the provided connection.
-// Errors are deferred until a method of the API is called.
-// It panics if the connection is not an API connection.
-func (c *Connections) API(connection *state.Connection) *API {
+// Application returns the application for the provided connection.
+// Errors are deferred until a method of the application is called.
+// It panics if the connection is not an application connection.
+func (c *Connections) Application(connection *state.Connection) *Application {
 	connector := connection.Connector()
 	var targets state.ConnectorTargets
 	if connection.Role == state.Source {
@@ -75,7 +75,7 @@ func (c *Connections) API(connection *state.Connection) *API {
 	} else {
 		targets = connector.DestinationTargets
 	}
-	api := &API{
+	app := &Application{
 		id:          connection.ID,
 		connector:   connector.Code,
 		role:        connection.Role,
@@ -90,35 +90,35 @@ func (c *Connections) API(connection *state.Connection) *API {
 		// accountID = a.ID // TODO(marco): implement webhooks
 		accountCode = a.Code
 	}
-	api.inner, api.err = connectors.RegisteredAPI(api.connector).New(&connectors.APIEnv{
+	app.inner, app.err = connectors.RegisteredApplication(app.connector).New(&connectors.ApplicationEnv{
 		Settings:     connection.Settings,
 		SetSettings:  setConnectionSettingsFunc(c.state, connection),
 		OAuthAccount: accountCode,
-		HTTPClient:   api.httpClient,
+		HTTPClient:   app.httpClient,
 		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks
 	})
-	api.err = connectorError(api.err)
-	return api
+	app.err = connectorError(app.err)
+	return app
 }
 
-// ID returns the ID of the API connection.
-func (api *API) ID() int {
-	return api.id
+// ID returns the ID of the application connection.
+func (app *Application) ID() int {
+	return app.id
 }
 
-// Connector returns the name of the API connector.
-func (api *API) Connector() string {
-	return api.connector
+// Connector returns the name of the application connector.
+func (app *Application) Connector() string {
+	return app.connector
 }
 
-// EventTypes returns the API's event types.
+// EventTypes returns the application's event types.
 // If the connector returns an error, it returns an *UnavailableError error.
-// It panics if the API does not support the event target.
-func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
-	if api.err != nil {
-		return nil, api.err
+// It panics if the application does not support the event target.
+func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
+	if app.err != nil {
+		return nil, app.err
 	}
-	eventTypes, err := api.inner.(connectors.EventSender).EventTypes(ctx)
+	eventTypes, err := app.inner.(connectors.EventSender).EventTypes(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -131,7 +131,7 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 }
 
 // PreviewSendEvent returns the request that would be used to send events to
-// the API. If no error is returned, the request is non-nil.
+// the application. If no error is returned, the request is non-nil.
 //
 // It validates the event schema, which must align with the schema of the event
 // type, then passes that event type schema to the connector.
@@ -142,17 +142,14 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 // event is invalid, it returns a *InvalidEventError error. If the connector
 // returns an error, it returns a *UnavailableError error.
 //
-// It panics if the API does not support the event target, or if schema is valid
+// It panics if the application does not support the event target, or if schema is valid
 // but not an object.
-func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*http.Request, error) {
-	if api.err != nil {
-		return nil, api.err
+func (app *Application) PreviewSendEvent(ctx context.Context, event connectors.Event) (*http.Request, error) {
+	if app.err != nil {
+		return nil, app.err
 	}
-	eventTypeSchema, err := api.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
+	eventTypeSchema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
-		if err == connectors.ErrEventTypeNotExist {
-			return nil, err
-		}
 		return nil, connectorError(err)
 	}
 	// Check that schema is aligned with the event type's schema.
@@ -164,56 +161,53 @@ func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*
 	// Pass the event type's schema to the connector.
 	event.Type.Schema = eventTypeSchema
 	// Return the request that represents the event preview.
-	iterator := newSingleEventIterator(&event, api.connector)
-	req, err := api.inner.(connectors.EventSender).PreviewSendEvents(ctx, iterator)
+	iterator := newSingleEventIterator(&event, app.connector)
+	req, err := app.inner.(connectors.EventSender).PreviewSendEvents(ctx, iterator)
 	if err != nil {
-		if err == connectors.ErrEventTypeNotExist {
-			return nil, err
-		}
 		return nil, connectorError(err)
 	}
 	if err = iterator.Err(); err != nil {
 		return nil, &InvalidEventError{Err: err}
 	}
 	if req == nil {
-		return nil, fmt.Errorf("%s.PreviewSendEvents returned nil without discarding events", api.connector)
+		return nil, fmt.Errorf("%s.PreviewSendEvents returned nil without discarding events", app.connector)
 	}
 	return req, nil
 }
 
-// Schema returns the API's schema for the provided target.
+// Schema returns the application's schema for the provided target.
 // If target is state.TargetEvent, eventType represents the type of the event.
 //
-// If the target is state.TargetEvent and the event type refers to an API event
-// for which no schema is expected, this method returns the invalid type and no
-// errors.
+// If the target is state.TargetEvent and the event type refers to an
+// application event for which no schema is expected, this method returns the
+// invalid type and no errors.
 //
 // For the users and the groups target, the returned schema contains only the
-// properties compatible with the API's role. For the event target, the returned
-// schema can be the invalid schema.
+// properties compatible with the application's role. For the event target, the
+// returned schema can be the invalid schema.
 //
 // If the event type does not exist, it returns the
 // connectors.ErrEventTypeNotExist error. If the connector returns an error, it
 // returns a *UnavailableError.
-// It panics if the API does not support the provided target.
-func (api *API) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
-	return api.SchemaAsRole(ctx, api.role, target, eventType)
+// It panics if the application does not support the provided target.
+func (app *Application) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
+	return app.SchemaAsRole(ctx, app.role, target, eventType)
 }
 
 // SchemaAsRole is like Schema but returns the schema as the provided role,
-// instead of the role of the API's connection.
+// instead of the role of the application's connection.
 //
-// If the target is state.TargetEvent and the event type refers to an API event
-// for which no schema is expected, this method returns an invalid type with no
-// error.
+// If the target is state.TargetEvent and the event type refers to an
+// application event for which no schema is expected, this method returns an
+// invalid type with no error.
 //
 // If the event type does not exist, it returns the
 // connectors.ErrEventTypeNotExist error. If the connector returns an error, it
 // returns a *UnavailableError.
 // It panics if role is not Source or Destination.
-func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
-	if api.err != nil {
-		return types.Type{}, api.err
+func (app *Application) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
+	if app.err != nil {
+		return types.Type{}, app.err
 	}
 	if role != state.Source && role != state.Destination {
 		panic("invalid role")
@@ -223,11 +217,8 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := api.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+		schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
 		if err != nil {
-			if err == connectors.ErrEventTypeNotExist {
-				return types.Type{}, err
-			}
 			return types.Type{}, connectorError(err)
 		}
 		if !schema.Valid() {
@@ -235,93 +226,87 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		return types.AsRole(schema, types.Destination), nil
 	case state.TargetUser:
-		schema, err := api.userSchema(ctx, role)
-		if err != nil {
-			return types.Type{}, connectorError(err)
-		}
-		return schema, nil
+		schema, err := app.userSchema(ctx, role)
+		return schema, connectorError(err)
 		// TODO(marco): Implement groups
 		//case state.Groups:
-		//	schema, err := api.inner.(apiSchemaConnector).Schema(ctx, connectors.GroupTarget, connectors.Role(role), "")
+		//	schema, err := app.inner.(applicationSchemaConnector).Schema(ctx, connectors.GroupTarget, connectors.Role(role), "")
 		//	if err != nil {
 		//		return types.Type{}, connectorError(err)
 		//	}
 		//	if !schema.Valid() {
-		//		return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", api.connector)
+		//		return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.connector)
 		//	}
 	}
 	panic("unexpected target")
 }
 
-// SendEvents sends events to an API. events must be a non-empty sequence of
-// events to send.
+// SendEvents sends events to an application. events must be a non-empty
+// sequence of events to send.
 //
 // If an event type does not exist, it returns the ErrEventTypeNotExist error.
 //
-// It panics if the API does not support the event target.
-func (api *API) SendEvents(ctx context.Context, events connectors.Events) error {
-	if api.err != nil {
-		return api.err
+// It panics if the application does not support the event target.
+func (app *Application) SendEvents(ctx context.Context, events connectors.Events) error {
+	if app.err != nil {
+		return app.err
 	}
-	err := api.inner.(connectors.EventSender).SendEvents(ctx, events)
-	if err != nil && err != connectors.ErrEventTypeNotExist {
-		err = connectorError(err)
-	}
-	return err
+	err := app.inner.(connectors.EventSender).SendEvents(ctx, events)
+	return connectorError(err)
 }
 
-// Users returns an iterator to iterate over the API's users. Each returned
-// record will contain, in the Attributes field, the properties in schema, with
-// the same types. If where is not nil, only users matching its conditions will
-// be returned.
+// Users returns an iterator to iterate over the application's users. Each
+// returned record will contain, in the Attributes field, the properties in
+// schema, with the same types. If where is not nil, only users matching its
+// conditions will be returned.
 //
-// If lastChangeTime is not the zero time, it must be in UTC, and its year
-// cannot be before 1900. In this case, only records changed or created at or
-// after that time will be returned, with a precision limited to microseconds.
+// If updatedAt is not the zero time, it must be in UTC, and its year cannot be
+// before 1900. In this case, only records changed or created at or after that
+// time will be returned, with a precision limited to microseconds.
 //
 // If the connector returns an error, it returns an *UnavailableError error. If
-// the provided schema, that must be valid, does not align with the API's source
-// schema, it returns a *schemas.Error error.
+// the provided schema, that must be valid, does not align with the
+// application's source schema, it returns a *schemas.Error error.
 //
 // The Err method of the returned iterator may return an *UnavailableError if
 // the connector encounters an error.
-func (api *API) Users(ctx context.Context, schema types.Type, where *state.Where, lastChangeTime time.Time) (Records, error) {
-	if api.err != nil {
-		return nil, api.err
+func (app *Application) Users(ctx context.Context, schema types.Type, where *state.Where, updatedAt time.Time) (Records, error) {
+	if app.err != nil {
+		return nil, app.err
 	}
 	if !schema.Valid() {
 		return nil, fmt.Errorf("schema is not valid")
 	}
-	// Check that the user schema is aligned with the API's user schema.
-	apiSchema, err := api.userSchema(ctx, state.Source)
+	// Check that the user schema is aligned with the application's user schema.
+	appSchema, err := app.userSchema(ctx, state.Source)
 	if err != nil {
 		return nil, err
 	}
-	err = schemas.CheckAlignment(schema, apiSchema, nil)
+	err = schemas.CheckAlignment(schema, appSchema, nil)
 	if err != nil {
 		return nil, err
 	}
 	properties := schema.Properties()
-	apiSchema = types.Prune(apiSchema, func(path string) bool {
+	appSchema = types.Prune(appSchema, func(path string) bool {
 		return properties.ContainsPath(path)
 	})
-	if !lastChangeTime.IsZero() {
-		if lastChangeTime.Location() != time.UTC {
-			return nil, fmt.Errorf("lastChangeTime is not UTC")
+	if !updatedAt.IsZero() {
+		if updatedAt.Location() != time.UTC {
+			return nil, fmt.Errorf("updatedAt is not UTC")
 		}
-		if lastChangeTime.Year() < 1900 {
-			return nil, fmt.Errorf("lastChangeTime's year is before 1900")
+		if updatedAt.Year() < 1900 {
+			return nil, fmt.Errorf("updatedAt's year is before 1900")
 		}
-		lastChangeTime = lastChangeTime.Truncate(time.Microsecond)
+		updatedAt = updatedAt.Truncate(time.Microsecond)
 	}
-	records := &apiRecords{
-		schema:         schema,
-		where:          where,
-		apiSchema:      apiSchema,
-		timeLayouts:    api.timeLayouts,
-		lastChangeTime: lastChangeTime,
-		connector:      api.connector,
-		inner:          api.inner,
+	records := &appRecords{
+		schema:      schema,
+		where:       where,
+		appSchema:   appSchema,
+		timeLayouts: app.timeLayouts,
+		updatedAt:   updatedAt,
+		connector:   app.connector,
+		inner:       app.inner,
 	}
 	return records, nil
 }
@@ -329,26 +314,26 @@ func (api *API) Users(ctx context.Context, schema types.Type, where *state.Where
 // WaitTime returns an estimate of how long to wait before sending an HTTP
 // request to the client, helping to avoid being queued.
 // pattern is the pattern of the rate limit.
-func (api *API) WaitTime(pattern string) (time.Duration, error) {
-	return api.httpClient.WaitTime(pattern)
+func (app *Application) WaitTime(pattern string) (time.Duration, error) {
+	return app.httpClient.WaitTime(pattern)
 }
 
-// Writer returns a Writer for creating and updating users or groups in the API.
-// outSchema is the output schema of the pipeline, exportMode is the export mode,
-// and target is the target of the pipeline. ack is the function that will receive
-// the acknowledgments and cannot be nil.
+// Writer returns a Writer for creating and updating users or groups in the
+// application. outSchema is the output schema of the pipeline, exportMode is
+// the export mode, and target is the target of the pipeline. ack is the
+// function that will receive the acknowledgments and cannot be nil.
 //
-// If the pipeline's output schema does not align with the API's destination
-// schema, it returns a *schemas.Error indicating the mismatch.
-func (api *API) Writer(ctx context.Context, outSchema types.Type, exportMode state.ExportMode, target state.Target, ack AckFunc) (Writer, error) {
-	if api.err != nil {
-		return nil, api.err
+// If the pipeline's output schema does not align with the application's
+// destination schema, it returns a *schemas.Error indicating the mismatch.
+func (app *Application) Writer(ctx context.Context, outSchema types.Type, exportMode state.ExportMode, target state.Target, ack AckFunc) (Writer, error) {
+	if app.err != nil {
+		return nil, app.err
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
 	// Get the destination schema.
-	destinationSchema, err := api.SchemaAsRole(ctx, state.Destination, state.TargetUser, "")
+	destinationSchema, err := app.SchemaAsRole(ctx, state.Destination, state.TargetUser, "")
 	if err != nil {
 		return nil, err
 	}
@@ -357,45 +342,45 @@ func (api *API) Writer(ctx context.Context, outSchema types.Type, exportMode sta
 	if err != nil {
 		return nil, err
 	}
-	inner := api.inner.(connectors.RecordUpserter)
-	writer := apiwriter.New(api.connector, target, inner.Upsert, apiwriter.AcksFunc(ack))
+	inner := app.inner.(connectors.RecordUpserter)
+	writer := appwriter.New(app.connector, target, inner.Upsert, appwriter.AcksFunc(ack))
 	return writer, nil
 }
 
 // userSchema returns the user schema with the provided role.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if role is not Source or Destination.
-func (api *API) userSchema(ctx context.Context, role state.Role) (types.Type, error) {
+func (app *Application) userSchema(ctx context.Context, role state.Role) (types.Type, error) {
 	if role != state.Source && role != state.Destination {
 		panic("invalid role")
 	}
 	select {
 	case <-ctx.Done():
 		return types.Type{}, errors.New("canceled context")
-	case api.users.lock <- struct{}{}:
+	case app.users.lock <- struct{}{}:
 	}
 	defer func() {
-		<-api.users.lock
+		<-app.users.lock
 	}()
-	if schema := api.users.schemas[role-1]; schema.Valid() {
+	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := api.inner.(connectors.RecordFetcher).RecordSchema(ctx, connectors.TargetUser, connectors.Role(role))
+	schema, err := app.inner.(connectors.RecordFetcher).RecordSchema(ctx, connectors.TargetUser, connectors.Role(role))
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
 	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", api.connector, strings.ToLower(role.String())))
+		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
-	api.users.schemas[role-1] = schema
+	app.users.schemas[role-1] = schema
 	return schema, nil
 }
 
 // singleEventIterator implements the connectors.Events interface that iterates
 // over a single event.
 type singleEventIterator struct {
-	api       string
+	app       string
 	event     *connectors.Event
 	consumed  bool
 	iterating bool
@@ -405,14 +390,14 @@ type singleEventIterator struct {
 }
 
 // newSingleEventIterator returns a singleEventIterator with the provided event.
-// api is the name of the API connector.
-func newSingleEventIterator(event *connectors.Event, api string) *singleEventIterator {
-	return &singleEventIterator{api: api, event: event}
+// app is the name of the application connector.
+func newSingleEventIterator(event *connectors.Event, app string) *singleEventIterator {
+	return &singleEventIterator{app: app, event: event}
 }
 
 func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 	if iter.consumed {
-		panic(iter.api + " connector: SendEvents method called Events.All after the events were consumed")
+		panic(iter.app + " connector: SendEvents method called Events.All after the events were consumed")
 	}
 	iter.consumed = true
 	return func(yield func(event *connectors.Event) bool) {
@@ -423,16 +408,16 @@ func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 
 func (iter *singleEventIterator) Discard(err error) {
 	if !iter.iterating {
-		panic(iter.api + " connector: SendEvents method called Events.Discard outside an iteration")
+		panic(iter.app + " connector: SendEvents method called Events.Discard outside an iteration")
 	}
 	if iter.postponed {
-		panic(iter.api + " connector: SendEvents method called Events.Discard on a postponed event")
+		panic(iter.app + " connector: SendEvents method called Events.Discard on a postponed event")
 	}
 	if iter.discarded {
-		panic(iter.api + " connector: SendEvents method called Events.Discard on a discarded event")
+		panic(iter.app + " connector: SendEvents method called Events.Discard on a discarded event")
 	}
 	if err == nil {
-		panic(iter.api + " connector: SendEvents method called Events.Discard passing a nil error")
+		panic(iter.app + " connector: SendEvents method called Events.Discard passing a nil error")
 	}
 	iter.discarded = true
 	iter.err = err
@@ -446,7 +431,7 @@ func (iter *singleEventIterator) Err() error {
 
 func (iter *singleEventIterator) First() *connectors.Event {
 	if iter.consumed {
-		panic(iter.api + " connector: SendEvents method called Events.First after the events were consumed")
+		panic(iter.app + " connector: SendEvents method called Events.First after the events were consumed")
 	}
 	iter.consumed = true
 	return iter.event
@@ -454,7 +439,7 @@ func (iter *singleEventIterator) First() *connectors.Event {
 
 func (iter *singleEventIterator) Peek() (*connectors.Event, bool) {
 	if iter.consumed && !iter.iterating {
-		panic(iter.api + " connector: SendEvents method called Events.Peek outside of an iteration")
+		panic(iter.app + " connector: SendEvents method called Events.Peek outside of an iteration")
 	}
 	if iter.consumed {
 		return nil, false
@@ -464,20 +449,20 @@ func (iter *singleEventIterator) Peek() (*connectors.Event, bool) {
 
 func (iter *singleEventIterator) Postpone() {
 	if !iter.iterating {
-		panic(iter.api + " connector: SendEvents method called Events.Postpone outside an iteration")
+		panic(iter.app + " connector: SendEvents method called Events.Postpone outside an iteration")
 	}
 	if iter.postponed {
 		return
 	}
 	if iter.discarded {
-		panic(iter.api + " connector: SendEvents method called Events.Postpone on a discarded event")
+		panic(iter.app + " connector: SendEvents method called Events.Postpone on a discarded event")
 	}
 	iter.postponed = true
 }
 
 func (iter *singleEventIterator) SameUser() iter.Seq[*connectors.Event] {
 	if iter.consumed {
-		panic(iter.api + " connector: SendEvents method called Events.Some after the events were consumed")
+		panic(iter.app + " connector: SendEvents method called Events.Some after the events were consumed")
 	}
 	iter.consumed = true
 	return func(yield func(event *connectors.Event) bool) {
@@ -549,21 +534,21 @@ func sameValue(t types.Type, v, v2 any) bool {
 	}
 }
 
-// apiRecords implements the Records interface for APIs.
-type apiRecords struct {
-	schema         types.Type
-	where          *state.Where
-	apiSchema      types.Type
-	timeLayouts    *state.TimeLayouts
-	lastChangeTime time.Time
-	connector      string
-	inner          any
-	last           bool
-	err            error
-	closed         bool
+// appRecords implements the Records interface for applications.
+type appRecords struct {
+	schema      types.Type
+	where       *state.Where
+	appSchema   types.Type
+	timeLayouts *state.TimeLayouts
+	updatedAt   time.Time
+	connector   string
+	inner       any
+	last        bool
+	err         error
+	closed      bool
 }
 
-func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
+func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 	return func(yield func(Record) bool) {
 
@@ -585,7 +570,7 @@ func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []connectors.Record
 			var err error
-			users, cursor, err = r.inner.(connectors.RecordFetcher).Records(ctx, connectors.TargetUser, r.lastChangeTime, nil, cursor, r.apiSchema)
+			users, cursor, err = r.inner.(connectors.RecordFetcher).Records(ctx, connectors.TargetUser, r.updatedAt, nil, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)
@@ -623,17 +608,17 @@ func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
 				processedIDs[user.ID] = struct{}{}
 
 				record := Record{
-					ID:             user.ID,
-					LastChangeTime: user.LastChangeTime.UTC().Truncate(time.Microsecond),
+					ID:        user.ID,
+					UpdatedAt: user.UpdatedAt.UTC().Truncate(time.Microsecond),
 					// Associations:   user.Associations, TODO(marco): Implement groups
 				}
 
-				// Validate the last change time.
-				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
-					record.Err = errors.New("record's last change time is before 1900 or in the future")
+				// Validate the update time.
+				if err = validateUpdatedAt(record.UpdatedAt); err != nil {
+					record.Err = errors.New("record's update time is before 1900 or in the future")
 				}
-				if !r.lastChangeTime.IsZero() && record.LastChangeTime.Before(r.lastChangeTime) {
-					r.err = fmt.Errorf("%s returned a record whose last change time is earlier than the required minimum", r.connector)
+				if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
+					r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
 					return
 				}
 
@@ -689,16 +674,16 @@ func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
 
 }
 
-func (r *apiRecords) Close() error {
+func (r *appRecords) Close() error {
 	r.closed = true
 	return nil
 }
 
-func (r *apiRecords) Err() error {
+func (r *appRecords) Err() error {
 	return r.err
 }
 
-func (r *apiRecords) Last() bool {
+func (r *appRecords) Last() bool {
 	return r.last
 }
 

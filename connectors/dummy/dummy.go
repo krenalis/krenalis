@@ -33,11 +33,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "dummy",
 		Label:      "Dummy",
 		Categories: connectors.CategoryTesting,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -45,7 +45,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			SendingMode: connectors.Server,
 			HasSettings: true,
@@ -54,7 +54,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: connectors.APITerms{
+		Terms: connectors.ApplicationTerms{
 			User:   "Customer",
 			Users:  "Customers",
 			UserID: "Dummy Unique ID",
@@ -69,7 +69,7 @@ func init() {
 }
 
 // New returns a new connector instance for testing.
-func New(env *connectors.APIEnv) (*Dummy, error) {
+func New(env *connectors.ApplicationEnv) (*Dummy, error) {
 	c := Dummy{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -81,14 +81,14 @@ func New(env *connectors.APIEnv) (*Dummy, error) {
 }
 
 type Dummy struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 
 var (
-	allCustomers             map[string]map[string]any
-	customersLastChangeTimes map[string]time.Time
-	customersLock            sync.Mutex
+	allCustomers       map[string]map[string]any
+	customersUpdatedAt map[string]time.Time
+	customersLock      sync.Mutex
 )
 
 //go:embed customers.json
@@ -203,7 +203,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, ids []string, _ string, _ types.Type) ([]connectors.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, ids []string, _ string, _ types.Type) ([]connectors.Record, string, error) {
 	metrics.Increment("Dummy.Records.calls", 1)
 	dummy.simulateHTTPDelay()
 	select {
@@ -215,16 +215,16 @@ func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, lastChang
 	defer customersLock.Unlock()
 	customers := make([]connectors.Record, 0, len(allCustomers))
 	for id, attributes := range allCustomers {
-		if customersLastChangeTimes[id].Before(lastChangeTime) {
+		if customersUpdatedAt[id].Before(updatedAt) {
 			continue
 		}
 		if ids != nil && !slices.Contains(ids, id) {
 			continue
 		}
 		customers = append(customers, connectors.Record{
-			ID:             id,
-			Attributes:     deepClone(attributes),
-			LastChangeTime: customersLastChangeTimes[id],
+			ID:         id,
+			Attributes: deepClone(attributes),
+			UpdatedAt:  customersUpdatedAt[id],
 		})
 	}
 	sort.Slice(customers, func(i, j int) bool { return customers[i].ID < customers[j].ID })
@@ -251,7 +251,7 @@ func init() {
 
 	customersLock.Lock()
 	allCustomers = make(map[string]map[string]any, len(rawCustomers))
-	customersLastChangeTimes = make(map[string]time.Time, len(rawCustomers))
+	customersUpdatedAt = make(map[string]time.Time, len(rawCustomers))
 	for _, u := range rawCustomers {
 		u.Attributes["dummyId"] = u.ID
 		allCustomers[u.ID] = u.Attributes
@@ -260,7 +260,7 @@ func init() {
 		// some randomness, but not so large that a timestamp is in the past
 		// since the last import.
 		nanosecDelta := rand.IntN(100e6)
-		customersLastChangeTimes[u.ID] = now.Add(-time.Duration(nanosecDelta)).Truncate(time.Microsecond)
+		customersUpdatedAt[u.ID] = now.Add(-time.Duration(nanosecDelta)).Truncate(time.Microsecond)
 	}
 	customersLock.Unlock()
 
@@ -387,7 +387,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 			id = record.ID
 		}
 
-		customersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
+		customersUpdatedAt[id] = time.Now().UTC().Truncate(time.Microsecond)
 		n++
 
 	}

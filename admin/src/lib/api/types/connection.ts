@@ -1,7 +1,7 @@
 import { Pipeline, PipelineType } from './pipeline';
 import { ConnectorSettings } from './responses';
 
-type ConnectorType = 'API' | 'Database' | 'File' | 'FileStorage' | 'MessageBroker' | 'SDK' | 'Webhook';
+type ConnectorType = 'Application' | 'Database' | 'File' | 'FileStorage' | 'MessageBroker' | 'SDK' | 'Webhook';
 
 type ConnectionRole = 'Source' | 'Destination';
 

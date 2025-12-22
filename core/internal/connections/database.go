@@ -234,7 +234,7 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 		}
 	}()
 	properties := pipeline.InSchema.Properties()
-	var identityColumn, lastChangeTimeColumn types.Property
+	var identityColumn, updatedAtColumn types.Property
 	for i, c := range columns {
 		if !c.Type.Valid() {
 			columns[i] = connectors.Column{}
@@ -251,15 +251,15 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 		if c.Name == pipeline.IdentityColumn {
 			identityColumn = p
 		}
-		if c.Name == pipeline.LastChangeTimeColumn {
-			lastChangeTimeColumn = p
+		if c.Name == pipeline.UpdatedAtColumn {
+			updatedAtColumn = p
 		}
 	}
 	if identityColumn.Name == "" {
 		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no identity column %q", pipeline.IdentityColumn)}
 	}
-	if pipeline.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
-		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no last change time column %q", pipeline.LastChangeTimeColumn)}
+	if pipeline.UpdatedAtColumn != "" && updatedAtColumn.Name == "" {
+		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no update time column %q", pipeline.UpdatedAtColumn)}
 	}
 	// Check that schema is aligned with the query's schema.
 	schema, err := types.ObjectOf(columnsProperties(columns, state.Source))
@@ -289,7 +289,7 @@ func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string
 		return "", errors.New("pipeline is not currently running")
 	}
 	cursor := run.Cursor
-	property := pipeline.LastChangeTimeColumn
+	property := pipeline.UpdatedAtColumn
 	if property == "" || cursor.IsZero() {
 		return database.inner.SQLLiteral(nil, types.Type{}), nil
 	}
@@ -297,7 +297,7 @@ func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string
 	var value any
 	switch p.Type.Kind() {
 	case types.StringKind, types.JSONKind:
-		value = formatLastChangeTimeColumn(pipeline.LastChangeTimeFormat, cursor)
+		value = formatUpdatedAtColumn(pipeline.UpdatedAtFormat, cursor)
 	case types.DateTimeKind:
 		value = run.Cursor
 	case types.DateKind:
@@ -570,7 +570,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 		run, _ := r.pipeline.Run()
 		n := 0 // number of properties per record
 		var identityIndex = -1
-		var lastChangeTimeIndex = -1
+		var updatedAtIndex = -1
 		scanner := scanner{
 			values: make([]any, len(r.columns)),
 		}
@@ -587,8 +587,8 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			if p.Name == r.pipeline.IdentityColumn {
 				identityIndex = i
 			}
-			if p.Name == r.pipeline.LastChangeTimeColumn {
-				lastChangeTimeIndex = i
+			if p.Name == r.pipeline.UpdatedAtColumn {
+				updatedAtIndex = i
 			}
 			n++
 		}
@@ -628,26 +628,26 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				record.ID = id
 			}
-			// Get the last change time.
-			if lastChangeTimeIndex >= 0 {
-				v := scanner.values[lastChangeTimeIndex]
+			// Get the update time.
+			if updatedAtIndex >= 0 {
+				v := scanner.values[updatedAtIndex]
 				if v == nil {
-					record.Err = errors.New("last change time value is NULL")
+					record.Err = errors.New("update time value is NULL")
 					continue Rows
 				}
-				p := properties[lastChangeTimeIndex]
+				p := properties[updatedAtIndex]
 				var err error
-				record.LastChangeTime, err = parseLastChangeTimeColumn(p.Name, p.Type, r.pipeline.LastChangeTimeFormat, v, p.Nullable, r.timeLayouts)
+				record.UpdatedAt, err = parseUpdatedAtColumn(p.Name, p.Type, r.pipeline.UpdatedAtFormat, v, p.Nullable, r.timeLayouts)
 				if err != nil {
 					record.Err = err
 					continue Rows
 				}
-				if !record.LastChangeTime.IsZero() && record.LastChangeTime.Before(run.Cursor) {
+				if !record.UpdatedAt.IsZero() && record.UpdatedAt.Before(run.Cursor) {
 					continue Rows
 				}
 			}
-			if record.LastChangeTime.IsZero() {
-				record.LastChangeTime = time.Now().UTC()
+			if record.UpdatedAt.IsZero() {
+				record.UpdatedAt = time.Now().UTC()
 			}
 			// Get the attributes.
 			record.Attributes = make(map[string]any, n)

@@ -34,10 +34,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			},
 		}
 		switch connector := connector.(type) {
-		case connectors.APISpec:
+		case connectors.ApplicationSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
-			c.Type = API
+			c.Type = Application
 			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = ConnectorTargets(asSource.Targets)
@@ -450,7 +450,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		"transformation_version, transformation_language, transformation_source, transformation_preserve_json,\n"+
 		"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression::TEXT,\n"+
 		"order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates, table_name,\n"+
-		"table_key, identity_column, last_change_time_column, last_change_time_format, health, properties_to_unset\n"+
+		"table_key, identity_column, updated_at_column, updated_at_format, health, properties_to_unset\n"+
 		"FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
@@ -466,8 +466,8 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					&pipeline.Transformation.InPaths, &pipeline.Transformation.OutPaths, &pipeline.Query, &format,
 					&pipeline.Path, &pipeline.Sheet, &pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
 					&pipeline.Matching.In, &pipeline.Matching.Out, &pipeline.UpdateOnDuplicates, &pipeline.TableName,
-					&pipeline.TableKey, &pipeline.IdentityColumn, &pipeline.LastChangeTimeColumn,
-					&pipeline.LastChangeTimeFormat, &pipeline.Health, &pipeline.propertiesToUnset)
+					&pipeline.TableKey, &pipeline.IdentityColumn, &pipeline.UpdatedAtColumn,
+					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return err
 				}
@@ -596,7 +596,12 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return errors.New("missing key 'installation_id' in table 'metadata'")
 	}
 
-	return state.notifications.CommitAndStartListening(ctx, tx, state.metadata.encryptionKey[:32])
+	cipher, err := state.NewCipher("state.notifier")
+	if err != nil {
+		return fmt.Errorf("state: cannot create notifier cipher: %s", err)
+	}
+
+	return state.notifications.CommitAndStartListening(ctx, tx, cipher)
 }
 
 // article returns "a" or "an" based on the first letter of the name.

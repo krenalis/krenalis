@@ -54,7 +54,7 @@ func Test_validatePipeline(t *testing.T) {
 		// Pipelines that are correct.
 
 		{
-			name: "GOOD: Source/API/User - with mapping",
+			name: "GOOD: Source/Application/User - with mapping",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -71,10 +71,10 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Source/API/User - with mapping and filter",
+			name: "GOOD: Source/Application/User - with mapping and filter",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
@@ -101,10 +101,10 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Source/API/User - with transformation function",
+			name: "GOOD: Source/Application/User - with transformation function",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -128,11 +128,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Source/API/User - incremental",
+			name: "GOOD: Source/Application/User - incremental",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -150,7 +150,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
@@ -170,9 +170,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -195,10 +195,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
-				Incremental:          true,
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
+				Incremental:     true,
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -221,10 +221,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "csv",
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "csv",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -266,10 +266,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "csv",
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "csv",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -296,11 +296,11 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "csv",
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
-				Incremental:          true,
+				Format:          "csv",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
+				Incremental:     true,
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -454,7 +454,7 @@ func Test_validatePipeline(t *testing.T) {
 			connectionConnectorType: state.Webhook,
 		},
 		{
-			name: "GOOD: Destination/API/User - with mapping",
+			name: "GOOD: Destination/Application/User - with mapping",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -479,10 +479,10 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Destination/API/User - update on duplicates allowed",
+			name: "GOOD: Destination/Application/User - update on duplicates allowed",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -507,10 +507,10 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Destination/API/User - with transformation",
+			name: "GOOD: Destination/Application/User - with transformation",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -542,11 +542,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Destination/API/User - with mapping and filters",
+			name: "GOOD: Destination/Application/User - with mapping and filters",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
@@ -581,12 +581,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Destination/API/Event - with a mapping",
+			name: "GOOD: Destination/Application/Event - with a mapping",
 			pipeline: PipelineToSet{
-				Name:     "Dispatch events to api",
+				Name:     "Dispatch events to application",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String()},
@@ -599,12 +599,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Destination/API/Event - with a constant mapping",
+			name: "GOOD: Destination/Application/Event - with a constant mapping",
 			pipeline: PipelineToSet{
-				Name:     "Dispatch events to api",
+				Name:     "Dispatch events to application",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String()},
@@ -617,12 +617,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Destination/API/Event - with a transformation function",
+			name: "GOOD: Destination/Application/Event - with a transformation function",
 			pipeline: PipelineToSet{
-				Name:     "Dispatch events to api",
+				Name:     "Dispatch events to application",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String()},
@@ -642,13 +642,13 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Destination/API/Event - with a constant transformation function",
+			name: "GOOD: Destination/Application/Event - with a constant transformation function",
 			pipeline: PipelineToSet{
-				Name:     "Dispatch events to api",
+				Name:     "Dispatch events to application",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String()},
@@ -668,7 +668,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
@@ -802,7 +802,7 @@ func Test_validatePipeline(t *testing.T) {
 			formatHasSheets:         false,
 		},
 		{
-			name: "GOOD: Source/API/User - input schema can contain meta properties",
+			name: "GOOD: Source/Application/User - input schema can contain meta properties",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -820,10 +820,10 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Source/API/User - InPaths refers to second-level property of input schema",
+			name: "GOOD: Source/Application/User - InPaths refers to second-level property of input schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -857,14 +857,14 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 
 		// Pipelines that are invalid.
 
 		{
-			name: "BAD: Source/API/User - empty name",
+			name: "BAD: Source/Application/User - empty name",
 			pipeline: PipelineToSet{
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.String()},
@@ -880,11 +880,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "name is empty",
 		},
 		{
-			name: "BAD: Source/API/User - pipeline name contains invalid UTF-8 encoded characters",
+			name: "BAD: Source/Application/User - pipeline name contains invalid UTF-8 encoded characters",
 			pipeline: PipelineToSet{
 				Name: "hello\xc5world",
 				InSchema: types.Object([]types.Property{
@@ -901,11 +901,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "name contains invalid UTF-8 encoded characters",
 		},
 		{
-			name: "BAD: Source/API/User - name is too long",
+			name: "BAD: Source/Application/User - name is too long",
 			pipeline: PipelineToSet{
 				Name: "qwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyq",
 				InSchema: types.Object([]types.Property{
@@ -922,11 +922,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "name is longer than 60 runes",
 		},
 		{
-			name: "BAD: Source/API/User - mapping a not existent property",
+			name: "BAD: Source/Application/User - mapping a not existent property",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -943,11 +943,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `invalid mapping: property path "not_existent_property" does not exist`,
 		},
 		{
-			name: "BAD: Source/API/User - invalid input schema with mapping",
+			name: "BAD: Source/Application/User - invalid input schema with mapping",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
@@ -961,11 +961,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `input schema is required by the mapping`,
 		},
 		{
-			name: "BAD: Source/API/User - invalid output schema with mapping",
+			name: "BAD: Source/Application/User - invalid output schema with mapping",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -979,11 +979,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "output schema is required by the mapping",
 		},
 		{
-			name: "BAD: Source/API/User - invalid input schema with transformation function",
+			name: "BAD: Source/Application/User - invalid input schema with transformation function",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
@@ -1004,12 +1004,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     `input schema is required by the transformation function`,
 		},
 		{
-			name: "BAD: Source/API/User - invalid output schema with transformation function",
+			name: "BAD: Source/Application/User - invalid output schema with transformation function",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1030,12 +1030,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "output schema is required by the transformation function",
 		},
 		{
-			name: "BAD: Source/API/User - empty source code in transformation function",
+			name: "BAD: Source/Application/User - empty source code in transformation function",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1054,12 +1054,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "source of transformation function is empty",
 		},
 		{
-			name: "BAD: Source/API/User - transformation language is empty",
+			name: "BAD: Source/Application/User - transformation language is empty",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1082,12 +1082,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "transformation language is empty",
 		},
 		{
-			name: "BAD: Source/API/User - transformation language is invalid",
+			name: "BAD: Source/Application/User - transformation language is invalid",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1111,7 +1111,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     `transformation language "SomeWeirdLanguage" is not valid`,
 		},
@@ -1132,9 +1132,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1142,7 +1142,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "pipelines on file storage connections must have a format",
 		},
 		{
-			name: "BAD: Source/API/User - cannot specify a connector",
+			name: "BAD: Source/Application/User - cannot specify a connector",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1160,12 +1160,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			formatType:              state.File,
 			formatTargets:           state.UsersFlag,
 			formatHasSettings:       false,
 			formatHasSheets:         false,
-			err:                     "pipelines on API connections cannot have a format",
+			err:                     "pipelines on Application connections cannot have a format",
 		},
 		{
 			name: "BAD: Source/FileStorage/User - connector does not exist",
@@ -1184,10 +1184,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "NotExistentFormat",
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "NotExistentFormat",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1211,15 +1211,15 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "Dummy",
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "Dummy",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			formatType:              state.API,
+			formatType:              state.Application,
 			err:                     "format does not refer to a file connector",
 		},
 		{
@@ -1239,8 +1239,8 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1263,9 +1263,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT timestamp, email_in FROM my_table",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT timestamp, email_in FROM my_table",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1273,7 +1273,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "identity column \"id\" not found within input schema",
 		},
 		{
-			name: "BAD: Source/Database/User - incremental without last change time column",
+			name: "BAD: Source/Database/User - incremental without update time column",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1295,7 +1295,7 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Database,
-			err:                     "incremental requires a last change time column",
+			err:                     "incremental requires an update time column",
 		},
 		{
 			name: "BAD: Source/Database/User - identity column has invalid type",
@@ -1314,9 +1314,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1324,7 +1324,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "identity column \"id\" has kind array instead of int, uuid, json, or string",
 		},
 		{
-			name: "BAD: Source/API/User - cannot specify an identity column",
+			name: "BAD: Source/Application/User - cannot specify an identity column",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1342,11 +1342,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "pipeline cannot specify an identity column",
 		},
 		{
-			name: "BAD: Source/API/User - with both mapping and transformation function",
+			name: "BAD: Source/Application/User - with both mapping and transformation function",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1373,7 +1373,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "pipeline cannot have both transformation mapping and function",
 		},
 		{
@@ -1393,10 +1393,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "csv",
-				Path:                 strings.Repeat("a", 1025),
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "csv",
+				Path:            strings.Repeat("a", 1025),
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1425,10 +1425,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "csv",
-				Path:                 "my_file-${now}.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "csv",
+				Path:            "my_file-${now}.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1440,7 +1440,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "placeholders syntax is not supported by source pipelines",
 		},
 		{
-			name: "BAD: Source/API/User - cannot specify a path",
+			name: "BAD: Source/Application/User - cannot specify a path",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1458,11 +1458,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
-			err:                     "API pipelines cannot have a path",
+			connectionConnectorType: state.Application,
+			err:                     "Application pipelines cannot have a path",
 		},
 		{
-			name: "BAD: Source/API/User - cannot specify a sheet",
+			name: "BAD: Source/Application/User - cannot specify a sheet",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1480,8 +1480,8 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
-			err:                     "API pipelines cannot have a sheet",
+			connectionConnectorType: state.Application,
+			err:                     "Application pipelines cannot have a sheet",
 		},
 		{
 			name: "BAD: Source/FileStorage/User - invalid input schema",
@@ -1495,10 +1495,10 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Format:               "csv",
-				Path:                 "my_file.csv",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Format:          "csv",
+				Path:            "my_file.csv",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -1510,7 +1510,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "input schema is required by the mapping",
 		},
 		{
-			name: "BAD: Source/FileStorage/User - incremental without last change time column",
+			name: "BAD: Source/FileStorage/User - incremental without update time column",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1537,7 +1537,7 @@ func Test_validatePipeline(t *testing.T) {
 			formatTargets:           state.UsersFlag,
 			formatHasSettings:       false,
 			formatHasSheets:         false,
-			err:                     "incremental requires a last change time column",
+			err:                     "incremental requires an update time column",
 		},
 		{
 			name: "BAD: Destination/Database/User - table name contains invalid UTF-8 encoded characters",
@@ -1629,7 +1629,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     `table name cannot be empty for destination database pipelines`,
 		},
 		{
-			name: "BAD: Source/API/User - output schema is not an object",
+			name: "BAD: Source/Application/User - output schema is not an object",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1644,11 +1644,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "out schema, if provided, must be an object",
 		},
 		{
-			name: "BAD: Source/API/User - input schema is not an object",
+			name: "BAD: Source/Application/User - input schema is not an object",
 			pipeline: PipelineToSet{
 				Name:     "Import users",
 				InSchema: types.Int(32),
@@ -1663,11 +1663,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "input schema, if provided, must be an object",
 		},
 		{
-			name: "BAD: Source/API/User - output schema contains a nullable property",
+			name: "BAD: Source/Application/User - output schema contains a nullable property",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1686,11 +1686,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `output pipeline schema property "x.email" cannot have Nullable set to true`,
 		},
 		{
-			name: "BAD: Source/API/User - output schema contains a required property",
+			name: "BAD: Source/Application/User - output schema contains a required property",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1707,11 +1707,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `output pipeline schema property "email_out" cannot have CreateRequired set to true`,
 		},
 		{
-			name: "BAD: Destination/API/User - input schema contains a nullable property",
+			name: "BAD: Destination/Application/User - input schema contains a nullable property",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1735,11 +1735,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `input pipeline schema property "email_in" cannot have Nullable set to true`,
 		},
 		{
-			name: "BAD: Destination/API/User - input schema contains a required property",
+			name: "BAD: Destination/Application/User - input schema contains a required property",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1763,11 +1763,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `input pipeline schema property "email_in" cannot have CreateRequired set to true`,
 		},
 		{
-			name: "BAD: Source/API/User - output schema cannot contain meta properties",
+			name: "BAD: Source/Application/User - output schema cannot contain meta properties",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1786,11 +1786,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `output pipeline schema property "_id" is a meta property`,
 		},
 		{
-			name: "BAD: Destination/API/User - input schema cannot contain meta properties",
+			name: "BAD: Destination/Application/User - input schema cannot contain meta properties",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1815,11 +1815,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `input pipeline schema property "_id" is a meta property`,
 		},
 		{
-			name: "BAD: Destination/API/User - incremental is not supported",
+			name: "BAD: Destination/Application/User - incremental is not supported",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1837,13 +1837,13 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "incremental cannot be true for destination pipelines",
 		},
 		{
-			name: "BAD: Destination/API/Event - input schema must be invalid",
+			name: "BAD: Destination/Application/Event - input schema must be invalid",
 			pipeline: PipelineToSet{
-				Name: "Dispatch events to api",
+				Name: "Dispatch events to application",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.String()},
 				}),
@@ -1858,8 +1858,8 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
-			err:                     "input schema must be invalid for pipelines that send events to apps",
+			connectionConnectorType: state.Application,
+			err:                     "input schema must be invalid for pipelines that send events to applications",
 		},
 		{
 			name: "BAD: Source/SDK/User - input schema must be invalid",
@@ -2195,7 +2195,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "the out properties of the transformation function must contain the table key",
 		},
 		{
-			name: "BAD: Source/API/User - table key cannot be specified",
+			name: "BAD: Source/Application/User - table key cannot be specified",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2213,11 +2213,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "table key is not allowed",
 		},
 		{
-			name: "BAD: Source/API/User - transformation function with unused property in input schema",
+			name: "BAD: Source/Application/User - transformation function with unused property in input schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2242,12 +2242,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "input schema contains an unused property: tax_code",
 		},
 		{
-			name: "BAD: Source/API/User - transformation function with unused property in output schema",
+			name: "BAD: Source/Application/User - transformation function with unused property in output schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2272,12 +2272,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "output schema contains an unused property: last_name",
 		},
 		{
-			name: "GOOD: Source/API/Group - target Group is not supported, but this should be checked before validating the pipeline, not by the pipeline validation itself",
+			name: "GOOD: Source/Application/Group - target Group is not supported, but this should be checked before validating the pipeline, not by the pipeline validation itself",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2294,10 +2294,10 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetGroup,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 		},
 		{
-			name: "GOOD: Destination/API/User - in matching property can be a property path",
+			name: "GOOD: Destination/Application/User - in matching property can be a property path",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2324,11 +2324,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Destination/API/User - out matching property can be a property path",
+			name: "GOOD: Destination/Application/User - out matching property can be a property path",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2354,11 +2354,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 		},
 		{
-			name: "BAD: Source/API/User - input schema cannot contain a property with a prefilled value",
+			name: "BAD: Source/Application/User - input schema cannot contain a property with a prefilled value",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2375,11 +2375,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `input pipeline schema property "email_in" has a prefilled value, but pipeline schema properties cannot have prefilled values`,
 		},
 		{
-			name: "BAD: Source/API/User - output schema cannot contain a property with a prefilled value",
+			name: "BAD: Source/Application/User - output schema cannot contain a property with a prefilled value",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2396,11 +2396,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `output pipeline schema property "email_out" has a prefilled value, but pipeline schema properties cannot have prefilled values`,
 		},
 		{
-			name: "BAD: Source/API/User - output schema - which refers to users - cannot contain conflicting properties",
+			name: "BAD: Source/Application/User - output schema - which refers to users - cannot contain conflicting properties",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2421,11 +2421,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `two output pipeline schema properties would have the same column name "email_out" in the data warehouse, case-insensitively`,
 		},
 		{
-			name: "BAD: Source/API/User - output schema - which refers to users - cannot have a property with type array(object)",
+			name: "BAD: Source/Application/User - output schema - which refers to users - cannot have a property with type array(object)",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2449,11 +2449,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `output pipeline schema property "many_values_out" cannot have type array(object)`,
 		},
 		{
-			name: "BAD: Destination/API/User - filter refers to a property not in input schema",
+			name: "BAD: Destination/Application/User - filter refers to a property not in input schema",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
@@ -2487,11 +2487,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "filter is not valid: property path \"_id\" does not exist",
 		},
 		{
-			name: "BAD: Destination/API/User - filter refers to a meta property in input schema",
+			name: "BAD: Destination/Application/User - filter refers to a meta property in input schema",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
@@ -2526,7 +2526,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     `input pipeline schema property "_id" is a meta property`,
 		},
 		{
@@ -2548,7 +2548,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "input schema must be valid when exporting profiles to file",
 		},
 		{
-			name: "BAD: Destination/API/User - output matching property transformed using mapping",
+			name: "BAD: Destination/Application/User - output matching property transformed using mapping",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2576,11 +2576,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - output matching property, with simple name, transformed with mapping",
+			name: "BAD: Destination/Application/User - output matching property, with simple name, transformed with mapping",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2606,11 +2606,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - parent of an output matching property transformed with mapping",
+			name: "BAD: Destination/Application/User - parent of an output matching property transformed with mapping",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2639,11 +2639,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - output matching property transformed with function",
+			name: "BAD: Destination/Application/User - output matching property transformed with function",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2678,12 +2678,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - output matching property, with simple name, transformed with function",
+			name: "BAD: Destination/Application/User - output matching property, with simple name, transformed with function",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2716,12 +2716,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - parent of an output matching property transformed with with function",
+			name: "BAD: Destination/Application/User - parent of an output matching property transformed with with function",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2758,12 +2758,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - output matching property not in out schema",
+			name: "BAD: Destination/Application/User - output matching property not in out schema",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2787,7 +2787,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "output matching property \"email_out\" not found within the output schema",
 		},
 		{
@@ -2822,9 +2822,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				IdentityColumn:       "id",
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:  "id",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -2868,7 +2868,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "output schema must be invalid when importing events into data warehouse",
 		},
 		{
-			name: "BAD: Source/API/User - InPaths refers to a not-existent second-level property of input schema",
+			name: "BAD: Source/Application/User - InPaths refers to a not-existent second-level property of input schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2903,12 +2903,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "input property \"additional_properties.zzzz\" of transformation function does not exist in schema",
 		},
 		{
-			name: "BAD: Destination/API/User - with mapping transformation that overwrites the out matching property",
+			name: "BAD: Destination/Application/User - with mapping transformation that overwrites the out matching property",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2931,12 +2931,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/API/User - with transformation function that overwrites the out matching property",
+			name: "BAD: Destination/Application/User - with transformation function that overwrites the out matching property",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2966,12 +2966,12 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Source/API/User - with constant mapping (not allowed) and filter",
+			name: "BAD: Source/Application/User - with constant mapping (not allowed) and filter",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
@@ -2998,7 +2998,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "transformation must map at least one property",
 		},
 		{
@@ -3056,7 +3056,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "the out properties of the transformation function must contain at least one other property in addition to the table key",
 		},
 		{
-			name: "BAD: Source/API/User - unused property in output schema",
+			name: "BAD: Source/Application/User - unused property in output schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3076,11 +3076,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "output schema contains an unused property: x.z",
 		},
 		{
-			name: "BAD: Source/API/User - with filter but no input schema",
+			name: "BAD: Source/Application/User - with filter but no input schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
@@ -3104,11 +3104,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "input schema is required by the filter",
 		},
 		{
-			name: "BAD: Source/API/User - with non-nil mapping but no properties mapped",
+			name: "BAD: Source/Application/User - with non-nil mapping but no properties mapped",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3123,11 +3123,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "transformation mapping must have mapped properties",
 		},
 		{
-			name: "BAD: Destination/API/User - missing input matching property",
+			name: "BAD: Destination/Application/User - missing input matching property",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -3151,11 +3151,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "input matching property cannot be empty if output matching property is not empty",
 		},
 		{
-			name: "BAD: Destination/API/User - missing output matching property",
+			name: "BAD: Destination/Application/User - missing output matching property",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -3179,7 +3179,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "output matching property cannot be empty if input matching property is not empty",
 		},
 		{
@@ -3199,9 +3199,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				IdentityColumn:       "id column",
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:  "id column",
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -3225,9 +3225,9 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Query:                "SELECT id, timestamp, email_in FROM my_table",
-				IdentityColumn:       strings.Repeat("c", 1025),
-				LastChangeTimeColumn: "timestamp",
+				Query:           "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:  strings.Repeat("c", 1025),
+				UpdatedAtColumn: "timestamp",
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -3235,7 +3235,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "identity column is longer than 1024 runes",
 		},
 		{
-			name: "BAD: Source/API/User - table name is not allowed",
+			name: "BAD: Source/Application/User - table name is not allowed",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3253,11 +3253,11 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "table name is not allowed",
 		},
 		{
-			name: "BAD: Source/API/User - update on duplicates is not allowed",
+			name: "BAD: Source/Application/User - update on duplicates is not allowed",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3275,7 +3275,7 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.API,
+			connectionConnectorType: state.Application,
 			err:                     "update on duplicates is not allowed",
 		},
 	}
@@ -3553,7 +3553,7 @@ func Test_unusedProperties(t *testing.T) {
 	}
 }
 
-func Test_validateLastChangeTimeFormat(t *testing.T) {
+func Test_validateUpdatedAtFormat(t *testing.T) {
 	tests := []struct {
 		format string
 		err    string
@@ -3567,16 +3567,16 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 		{format: "%"},
 
 		// Invalid.
-		{format: "", err: "last change time format is empty"},
-		{format: "iso8601", err: `last change time format "iso8601" is not valid`},
-		{format: "excel", err: `last change time format "excel" is not valid`},
-		{format: "Y-m-d", err: `last change time format "Y-m-d" is not valid`},
-		{format: "%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y", err: "last change time format is longer than 64 runes"},
-		{format: "%Y-%m-%d\x00%H:%M:%S", err: "last change time format contains the NUL byte"},
+		{format: "", err: "update time format is empty"},
+		{format: "iso8601", err: `update time format "iso8601" is not valid`},
+		{format: "excel", err: `update time format "excel" is not valid`},
+		{format: "Y-m-d", err: `update time format "Y-m-d" is not valid`},
+		{format: "%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y", err: "update time format is longer than 64 runes"},
+		{format: "%Y-%m-%d\x00%H:%M:%S", err: "update time format contains the NUL byte"},
 	}
 	for _, test := range tests {
 		t.Run(test.format, func(t *testing.T) {
-			got := validateLastChangeTimeFormat(test.format)
+			got := validateUpdatedAtFormat(test.format)
 			var gotStr string
 			if got != nil {
 				gotStr = got.Error()

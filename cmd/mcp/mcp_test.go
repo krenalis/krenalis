@@ -105,7 +105,7 @@ func (mcp *testMCPClient) jsonRPCRequest(method string, params map[string]any) (
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer C8MdB29AVjo5DMF6dG7tcyR41faJYDkx6lxDL1Djqzo") // just a random key.
+	req.Header.Add("Authorization", "Bearer mcp_C8MdB29AVjo5DMF6dG7tcyR41faJYDkx6lxDL1Djqzo") // just a random key.
 	if mcp.sessionID != "" {
 		req.Header.Add("Mcp-Session-Id", mcp.sessionID)
 	}

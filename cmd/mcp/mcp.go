@@ -84,9 +84,15 @@ func mcpTokenFromRequest(r *http.Request) (string, error) {
 	if !ok {
 		return "", errors.New("no Authorization header found in request")
 	}
-	token, found := strings.CutPrefix(auth[0], "Bearer ")
-	if !found || token == "" {
+	if len(auth) > 1 {
+		return "", errors.BadRequest("request contains multiple Authorization headers")
+	}
+	token, found := parseBearer(auth[0])
+	if !found {
 		return "", errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_MCP_KEY>'.")
+	}
+	if !strings.HasPrefix(token, "mcp_") {
+		return "", errors.BadRequest("MCP key is not valid; MCP keys start with the mcp_ prefix.")
 	}
 	return token, nil
 }
@@ -99,4 +105,23 @@ func meergoCoreFromCtx(ctx context.Context) (*core.Core, error) {
 		return nil, errors.New("meergo core not found in context")
 	}
 	return core, nil
+}
+
+// parseBearer extracts a Bearer token from an Authorization header. It reports
+// whether the header uses the Bearer scheme and contains a non-empty token.
+// Keep this in sync with the function of the same name in the "cmd" package.
+func parseBearer(header string) (string, bool) {
+	const scheme = "Bearer"
+	if len(header) < len(scheme) || !strings.EqualFold(header[:len(scheme)], scheme) {
+		return "", false
+	}
+	token := header[len(scheme):]
+	if token == "" || (token[0] != ' ' && token[0] != '\t') {
+		return "", false
+	}
+	token = strings.TrimLeft(token, " \t")
+	if token == "" {
+		return "", false
+	}
+	return token, true
 }

@@ -21,11 +21,11 @@ import (
 var overview string
 
 func init() {
-	connectors.RegisterAPI(connectors.APISpec{
+	connectors.RegisterApplication(connectors.ApplicationSpec{
 		Code:       "ui-sample",
 		Label:      "UISample",
 		Categories: connectors.CategoryTesting,
-		AsSource: &connectors.AsAPISource{
+		AsSource: &connectors.AsApplicationSource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -33,7 +33,7 @@ func init() {
 				Overview: overview,
 			},
 		},
-		AsDestination: &connectors.AsAPIDestination{
+		AsDestination: &connectors.AsApplicationDestination{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
@@ -45,7 +45,7 @@ func init() {
 }
 
 // New returns a new connector instance for UI sample.
-func New(env *connectors.APIEnv) (*UISample, error) {
+func New(env *connectors.ApplicationEnv) (*UISample, error) {
 	c := UISample{env: env}
 	if len(env.Settings) > 0 {
 		err := env.Settings.Unmarshal(&c.settings)
@@ -57,7 +57,7 @@ func New(env *connectors.APIEnv) (*UISample, error) {
 }
 
 type UISample struct {
-	env      *connectors.APIEnv
+	env      *connectors.ApplicationEnv
 	settings *innerSettings
 }
 
@@ -67,7 +67,7 @@ func (uiSample *UISample) RecordSchema(ctx context.Context, target connectors.Ta
 }
 
 // Records returns the records of the specified target.
-func (uiSample *UISample) Records(ctx context.Context, target connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (uiSample *UISample) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	return nil, "", io.EOF
 }
 

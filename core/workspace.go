@@ -28,8 +28,6 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
-
-	"github.com/jxskiss/base62"
 )
 
 const (
@@ -153,13 +151,13 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 
 	// Validate start and end.
 	if start.Before(metrics.MinTime) {
-		return nil, errors.BadRequest("start date is too far in the past")
+		return nil, errors.NotFound("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return nil, errors.BadRequest("end date is too far in the future")
+		return nil, errors.NotFound("end date is too far in the future")
 	}
 	if end.Before(start) {
-		return nil, errors.BadRequest("end date cannot be earlier than start date")
+		return nil, errors.NotFound("end date cannot be earlier than start date")
 	}
 
 	// Validate pipelines.
@@ -303,13 +301,13 @@ func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end ti
 
 	// Validate start and end.
 	if start.Before(metrics.MinTime) {
-		return PipelineMetrics{}, errors.BadRequest("start date is too far in the past")
+		return PipelineMetrics{}, errors.NotFound("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return PipelineMetrics{}, errors.BadRequest("end date is too far in the future")
+		return PipelineMetrics{}, errors.NotFound("end date is too far in the future")
 	}
 	if !end.After(start) {
-		return PipelineMetrics{}, errors.BadRequest("day of the end date must be after the day of the start date")
+		return PipelineMetrics{}, errors.NotFound("day of the end date must be after the day of the start date")
 	}
 
 	// Validate pipelines.
@@ -359,15 +357,15 @@ func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number in
 	switch unit {
 	case Minute:
 		if number < 1 || number > 60 {
-			return PipelineMetrics{}, errors.BadRequest("minutes must be in range [1,60]")
+			return PipelineMetrics{}, errors.NotFound("minutes must be in range [1,60]")
 		}
 	case Hour:
 		if number < 1 || number > 48 {
-			return PipelineMetrics{}, errors.BadRequest("hours must be in range [1,48]")
+			return PipelineMetrics{}, errors.NotFound("hours must be in range [1,48]")
 		}
 	case Day:
 		if number < 1 || number > 30 {
-			return PipelineMetrics{}, errors.BadRequest("days must be in range [1,30]")
+			return PipelineMetrics{}, errors.NotFound("days must be in range [1,30]")
 		}
 	}
 
@@ -413,8 +411,8 @@ type authorizedOAuthAccount struct {
 	ExpiresIn    time.Time
 }
 
-// AuthToken returns an authorization token, given an authorization code and
-// the redirection URI used to obtain that code, that can be used to add a new
+// AuthToken returns an authorization token, given an authorization code and the
+// redirection URI used to obtain that code, that can be used to add a new
 // connection to the workspace for the specified connector.
 //
 // It returns an errors.NotFound error if the workspace does not exist anymore.
@@ -441,24 +439,22 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 
 	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
 	if err != nil {
+		if err, ok := err.(*connections.UnavailableError); ok {
+			return "", errors.Unavailable("%w", err)
+		}
 		return "", err
 	}
 
-	account, err := json.Marshal(authorizedOAuthAccount{
+	account := authorizedOAuthAccount{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
 		Code:         auth.AccountCode,
 		AccessToken:  auth.AccessToken,
 		RefreshToken: auth.RefreshToken,
 		ExpiresIn:    auth.ExpiresIn,
-	})
-	if err != nil {
-		return "", err
 	}
 
-	// TODO(marco): Encrypt the token.
-
-	return base62.EncodeToString(account), nil
+	return this.core.encryptAuthorizedOAuthAccount(account)
 }
 
 // Connection returns the connection with identifier id of the workspace.
@@ -498,9 +494,9 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 	}
 
 	// Set the event types.
-	if conn.Type == state.API && c.Role == state.Destination &&
+	if conn.Type == state.Application && c.Role == state.Destination &&
 		c.Connector().DestinationTargets.Contains(state.TargetEvent) {
-		appEventTypes, err := connection.api().EventTypes(ctx)
+		appEventTypes, err := connection.application().EventTypes(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -671,12 +667,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 
 	// Set the OAuth account. It can be an existing account or an account that needs to be created.
 	if authToken != "" {
-		data, err := base62.DecodeString(authToken)
-		if err != nil {
-			return 0, errors.BadRequest("authorization token is not valid")
-		}
-		var account authorizedOAuthAccount
-		err = json.Unmarshal(data, &account)
+		account, err := this.core.decryptAuthorizedOAuthAccount(authToken)
 		if err != nil {
 			return 0, errors.BadRequest("authorization token is not valid")
 		}
@@ -735,10 +726,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 
 	// Generate an event write key.
 	if c.Type == state.SDK || c.Type == state.Webhook {
-		n.EventWriteKey, err = generateEventWriteKey()
-		if err != nil {
-			return 0, err
-		}
+		n.EventWriteKey = generateEventWriteKeyToken()
 	}
 
 	// Build the query to link connections.
@@ -1250,7 +1238,7 @@ type Profile struct {
 //
 // order is the name of the property by which to sort the returned profiles and
 // cannot have type json, array, object, or map; when not provided, the profiles
-// are ordered by their last change time.
+// are ordered by their update time.
 //
 // orderDesc control whether the returned profiles should be ordered in+
 // descending order instead of ascending, which is the default.
@@ -1448,13 +1436,10 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	}
 
 	// Decode oAuth.
-	var a authorizedOAuthAccount
+	var account authorizedOAuthAccount
 	if authToken != "" {
-		data, err := base62.DecodeString(authToken)
-		if err != nil {
-			return nil, errors.BadRequest("authorization token is not valid")
-		}
-		err = json.Unmarshal(data, &a)
+		var err error
+		account, err = this.core.decryptAuthorizedOAuthAccount(authToken)
 		if err != nil {
 			return nil, errors.BadRequest("authorization token is not valid")
 		}
@@ -1467,9 +1452,9 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	conf := &connections.ConnectorConfig{
 		Role: state.Role(role),
 	}
-	conf.OAuth.Account = a.Code
+	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret
-	conf.OAuth.AccessToken = a.AccessToken
+	conf.OAuth.AccessToken = account.AccessToken
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
@@ -1981,8 +1966,8 @@ type ConnectionToAdd struct {
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
-	// destination API connections that support it. In this case, it must be one of
-	// the sending modes supported by the API.
+	// destination application connections that support it. In this case, it must be
+	// one of the sending modes supported by the application.
 	SendingMode *SendingMode `json:"sendingMode"`
 
 	// LinkedConnections, for connections supporting events, indicate the

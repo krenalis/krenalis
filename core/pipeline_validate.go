@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	MaxFilePathSize             = 1024   // maximum allowed length for a file path.
-	MaxFunctionSourceSize       = 50_000 // maximum allowed size for a transformation function source.
-	MaxLastChangeTimeFormatSize = 64     // maximum allowed size for a last change time format.
-	MaxQuerySize                = 1_000  // maximum allowed size for a database query.
-	MaxTableNameSize            = 1024   // maximum allowed length for a database table name.
+	MaxFilePathSize        = 1024   // maximum allowed length for a file path.
+	MaxFunctionSourceSize  = 50_000 // maximum allowed size for a transformation function source.
+	MaxUpdatedAtFormatSize = 64     // maximum allowed size for an update time format.
+	MaxQuerySize           = 1_000  // maximum allowed size for a database query.
+	MaxTableNameSize       = 1024   // maximum allowed length for a database table name.
 )
 
 // validationState is a state for the validation of a pipeline.
@@ -76,11 +76,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	outSchema := pipeline.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToAPIs := isDispatchingEventsToAPIs(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAPIs
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -89,7 +89,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAplications
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -97,8 +97,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for pipelines that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for pipelines that import events into data warehouse")
-			case dispatchEventsToAPIs:
-				return errors.BadRequest("input schema must be invalid for pipelines that send events to apps")
+			case dispatchEventsToAplications:
+				return errors.BadRequest("input schema must be invalid for pipelines that send events to applications")
 			}
 		}
 		inSchema = eventPipelineSchema
@@ -362,18 +362,18 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("identity column is longer than 1024 runes")
 		}
 	}
-	// Validate the last change time column.
-	if pipeline.LastChangeTimeColumn != "" {
-		if !types.IsValidPropertyName(pipeline.LastChangeTimeColumn) {
-			return errors.BadRequest("last change time column is not a valid property name")
+	// Validate the update time column.
+	if pipeline.UpdatedAtColumn != "" {
+		if !types.IsValidPropertyName(pipeline.UpdatedAtColumn) {
+			return errors.BadRequest("update time column is not a valid property name")
 		}
-		if utf8.RuneCountInString(pipeline.LastChangeTimeColumn) > 1024 {
-			return errors.BadRequest("last change time column is longer than 1024 runes")
+		if utf8.RuneCountInString(pipeline.UpdatedAtColumn) > 1024 {
+			return errors.BadRequest("update time column is longer than 1024 runes")
 		}
 	}
-	// Validate the last change time format.
-	if pipeline.LastChangeTimeFormat != "" {
-		if err := validateLastChangeTimeFormat(pipeline.LastChangeTimeFormat); err != nil {
+	// Validate the update time format.
+	if pipeline.UpdatedAtFormat != "" {
+		if err := validateUpdatedAtFormat(pipeline.UpdatedAtFormat); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
@@ -392,10 +392,10 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("incremental cannot be true for destination pipelines")
 		}
 		switch v.connection.connector.typ {
-		case state.API:
+		case state.Application:
 		case state.Database, state.FileStorage:
-			if pipeline.LastChangeTimeColumn == "" {
-				return errors.BadRequest("incremental requires a last change time column")
+			if pipeline.UpdatedAtColumn == "" {
+				return errors.BadRequest("incremental requires an update time column")
 			}
 		default:
 			return errors.BadRequest("incremental cannot be true for %s pipelines", v.connection.connector.typ)
@@ -498,41 +498,41 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("identity column cannot be optional")
 		}
 		usedInPaths = append(usedInPaths, pipeline.IdentityColumn)
-		// Validate the last change time column and format.
-		var requiresLastChangeTimeFormat bool
-		if pipeline.LastChangeTimeColumn != "" {
-			lastChangeTime, ok := inProperties.ByName(pipeline.LastChangeTimeColumn)
+		// Validate the update time column and format.
+		var requiresUpdatedAtFormat bool
+		if pipeline.UpdatedAtColumn != "" {
+			updatedAt, ok := inProperties.ByName(pipeline.UpdatedAtColumn)
 			if !ok {
-				return errors.BadRequest("last change time column %q not found within input schema", pipeline.LastChangeTimeColumn)
+				return errors.BadRequest("update time column %q not found within input schema", pipeline.UpdatedAtColumn)
 			}
-			switch k := lastChangeTime.Type.Kind(); k {
+			switch k := updatedAt.Type.Kind(); k {
 			case types.StringKind, types.JSONKind:
-				requiresLastChangeTimeFormat = true
+				requiresUpdatedAtFormat = true
 			case types.DateTimeKind, types.DateKind:
 			default:
-				return errors.BadRequest("last change time column %q has kind %s instead of datetime, date, json, or string", pipeline.LastChangeTimeColumn, k)
+				return errors.BadRequest("update time column %q has kind %s instead of datetime, date, json, or string", pipeline.UpdatedAtColumn, k)
 			}
-			usedInPaths = append(usedInPaths, pipeline.LastChangeTimeColumn)
+			usedInPaths = append(usedInPaths, pipeline.UpdatedAtColumn)
 		}
-		if !requiresLastChangeTimeFormat && pipeline.LastChangeTimeFormat != "" {
-			return errors.BadRequest("pipeline cannot specify a last change time format")
-		} else if requiresLastChangeTimeFormat {
-			if pipeline.LastChangeTimeFormat == "" {
-				return errors.BadRequest("last change time format is required")
+		if !requiresUpdatedAtFormat && pipeline.UpdatedAtFormat != "" {
+			return errors.BadRequest("pipeline cannot specify an update time format")
+		} else if requiresUpdatedAtFormat {
+			if pipeline.UpdatedAtFormat == "" {
+				return errors.BadRequest("update time format is required")
 			}
-			if v.connection.connector.typ == state.Database && pipeline.LastChangeTimeFormat == "Excel" {
-				return errors.BadRequest("last change time format cannot be Excel for database pipelines")
+			if v.connection.connector.typ == state.Database && pipeline.UpdatedAtFormat == "Excel" {
+				return errors.BadRequest("update time format cannot be Excel for database pipelines")
 			}
 		}
 	} else {
 		if pipeline.IdentityColumn != "" {
 			return errors.BadRequest("pipeline cannot specify an identity column")
 		}
-		if pipeline.LastChangeTimeColumn != "" {
-			return errors.BadRequest("pipeline cannot specify a last change time column")
+		if pipeline.UpdatedAtColumn != "" {
+			return errors.BadRequest("pipeline cannot specify an update time column")
 		}
-		if pipeline.LastChangeTimeFormat != "" {
-			return errors.BadRequest("pipeline cannot specify a last change time format")
+		if pipeline.UpdatedAtFormat != "" {
+			return errors.BadRequest("pipeline cannot specify an update time format")
 		}
 	}
 
@@ -623,7 +623,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	}
 
 	// Check if the export options are needed.
-	needsExportOptions := v.connection.connector.typ == state.API &&
+	needsExportOptions := v.connection.connector.typ == state.Application &&
 		v.connection.role == state.Destination && v.target == state.TargetUser
 	if needsExportOptions {
 		if pipeline.ExportMode == "" {
@@ -644,7 +644,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	targetUsersOrGroups := v.target == state.TargetUser || v.target == state.TargetGroup
 
 	// Check that UpdateOnDuplicates is allowed.
-	updateOnDuplicatesAllowed := v.connection.connector.typ == state.API &&
+	updateOnDuplicatesAllowed := v.connection.connector.typ == state.Application &&
 		v.connection.role == state.Destination && targetUsersOrGroups
 	if !updateOnDuplicatesAllowed && pipeline.UpdateOnDuplicates {
 		return errors.BadRequest("update on duplicates is not allowed")
@@ -661,7 +661,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	// Check if the transformation is mandatory, with at least one input
 	// property.
 	transformationMandatory := targetUsersOrGroups &&
-		(v.connection.connector.typ == state.API || v.connection.connector.typ == state.Database ||
+		(v.connection.connector.typ == state.Application || v.connection.connector.typ == state.Database ||
 			(v.connection.role == state.Source && v.connection.connector.typ == state.FileStorage))
 	if transformationMandatory && pipeline.Transformation == nil {
 		return errors.BadRequest("pipeline must have a transformation")
@@ -721,7 +721,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 }
 
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
-// matching property when exporting users to an API.
+// matching property when exporting users to an application.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only int, uint, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
@@ -815,7 +815,7 @@ func validatePipelineSchema(io string, schema types.Type, role state.Role, targe
 		}
 		if role == state.Destination && io == "output" {
 			switch {
-			case typ == state.API && target == state.TargetEvent:
+			case typ == state.Application && target == state.TargetEvent:
 				if p.UpdateRequired {
 					return fmt.Errorf("output pipeline schema property %q cannot have UpdateRequired set to true", path)
 				}
@@ -851,9 +851,8 @@ func validatePipelineSchema(io string, schema types.Type, role state.Role, targe
 	return nil
 }
 
-// validateLastChangeTimeFormat validates the given last change time format for
-// importing files and database rows, returning an error in case the format is
-// not valid.
+// validateUpdatedAtFormat validates the given update time format for importing
+// files and database rows, returning an error in case the format is not valid.
 //
 // Valid formats are
 //
@@ -862,19 +861,19 @@ func validatePipelineSchema(io string, schema types.Type, role state.Role, targe
 //   - a string containing a '%' character: the strftime() function format
 //
 // NOTE: keep in sync with the function
-// 'core/connectors.parseLastChangeTimeColumnWithFormat'.
-func validateLastChangeTimeFormat(format string) error {
+// 'core/connectors.parseUpdatedAtColumnWithFormat'.
+func validateUpdatedAtFormat(format string) error {
 	switch format {
 	case
 		"ISO8601",
 		"Excel":
 		return nil
 	}
-	if err := util.ValidateStringField("last change time format", format, MaxLastChangeTimeFormatSize); err != nil {
+	if err := util.ValidateStringField("update time format", format, MaxUpdatedAtFormatSize); err != nil {
 		return err
 	}
 	if !strings.Contains(format, "%") {
-		return fmt.Errorf("last change time format %q is not valid", format)
+		return fmt.Errorf("update time format %q is not valid", format)
 	}
 	return nil
 }

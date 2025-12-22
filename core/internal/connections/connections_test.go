@@ -66,7 +66,7 @@ func Test_ReplacePlaceHolders(t *testing.T) {
 
 }
 
-func Test_parseLastChangeTimeColumnWithFormat(t *testing.T) {
+func Test_parseUpdatedAtColumnWithFormat(t *testing.T) {
 	tests := []struct {
 		name        string
 		format      string
@@ -102,7 +102,7 @@ func Test_parseLastChangeTimeColumnWithFormat(t *testing.T) {
 			name:        "ISO8601 - wrong value format",
 			format:      "ISO8601",
 			value:       "2033-12-14T13-",
-			expectedErr: "last change time does not conform to the ISO8601 format",
+			expectedErr: "update time does not conform to the ISO8601 format",
 		},
 		{
 			name:     "Excel",
@@ -114,13 +114,13 @@ func Test_parseLastChangeTimeColumnWithFormat(t *testing.T) {
 			name:        "Excel - invalid timestamp (1)",
 			format:      "Excel",
 			value:       "2000-01-02",
-			expectedErr: "last change time does not conform to the Excel format",
+			expectedErr: "update time does not conform to the Excel format",
 		},
 		{
 			name:        "Excel - invalid timestamp (2)",
 			format:      "Excel",
 			value:       "12.34.45",
-			expectedErr: "last change time does not conform to the Excel format",
+			expectedErr: "update time does not conform to the Excel format",
 		},
 		{
 			name:     "Excel - only date",
@@ -155,7 +155,7 @@ func Test_parseLastChangeTimeColumnWithFormat(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := parseLastChangeTimeColumnWithFormat(test.format, test.value)
+			got, err := parseUpdatedAtColumnWithFormat(test.format, test.value)
 			var gotErr string
 			if err != nil {
 				gotErr = err.Error()

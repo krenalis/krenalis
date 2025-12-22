@@ -97,10 +97,7 @@ func (broker *MessageBroker) Connector() string {
 // Receive can be used by multiple goroutines at the same time.
 func (broker *MessageBroker) Receive(ctx context.Context) (event []byte, ack func(), err error) {
 	event, ack, err = broker.inner.Receive(ctx)
-	if err != nil {
-		return nil, nil, connectorError(err)
-	}
-	return event, ack, nil
+	return event, ack, connectorError(err)
 }
 
 // Send sends an event to the message broker. If ack is not nil, the broker

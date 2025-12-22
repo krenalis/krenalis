@@ -13,7 +13,8 @@ import (
 )
 
 // receivedEvent implements the connectors.ReceivedEvent interface.
-// A ReceivedEvent is passed to the SendEvents method of an API connector.
+// A ReceivedEvent is passed to the SendEvents method of an application
+// connector.
 type receivedEvent struct {
 	event events.Event
 }

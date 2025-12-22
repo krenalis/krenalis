@@ -1,4 +1,4 @@
-type ConnectorType = 'API' | 'Database' | 'File' | 'FileStorage' | 'MessageBroker' | 'SDK' | 'Webhook';
+type ConnectorType = 'Application' | 'Database' | 'File' | 'FileStorage' | 'MessageBroker' | 'SDK' | 'Webhook';
 
 // type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector'; // TODO(marco): implement webhooks
 

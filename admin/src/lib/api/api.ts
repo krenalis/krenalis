@@ -27,7 +27,7 @@ import {
 	AccessKeyResponse,
 	PipelineErrorsResponse,
 	PipelineSchemasResponse,
-	APIUsersResponse,
+	ApplicationUsersResponse,
 	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
@@ -525,7 +525,7 @@ class Connections {
 		schema: ObjectType,
 		filter: Filter | null,
 		cursor?: string,
-	): Promise<APIUsersResponse> => {
+	): Promise<ApplicationUsersResponse> => {
 		let params = [];
 		params.push(['schema', JSON.stringify(schema)]);
 		if (filter != null) {

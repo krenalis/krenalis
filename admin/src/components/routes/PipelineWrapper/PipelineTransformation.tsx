@@ -8,14 +8,14 @@ import {
 import {
 	getSchemaComboboxItems,
 	getIdentityColumnComboboxItems,
-	getLastChangeTimeComboboxItems,
+	getUpdatedAtComboboxItems,
 } from '../../helpers/getSchemaComboboxItems';
 import {
 	TransformedPipeline,
 	TransformedPipelineType,
 	TransformedMapping,
 	TransformedProperty,
-	doesLastChangeTimeColumnNeedFormat,
+	doesUpdatedAtColumnNeedFormat,
 	flattenSchema,
 	isRecursiveType,
 	propertyTypesAreEqual,
@@ -51,7 +51,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import {
-	APIUsersResponse,
+	ApplicationUsersResponse,
 	ExecQueryResponse,
 	FindProfilesResponse,
 	PreviewSendEventResponse,
@@ -85,7 +85,7 @@ import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 import { toJavascriptType, toMeergoStringType, toPythonType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
-const lastChangeTimeFormats = {
+const updatedAtFormats = {
 	iso8601: 'ISO8601',
 	excel: 'Excel',
 };
@@ -93,7 +93,7 @@ const lastChangeTimeFormats = {
 const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
-	const [isCustomLastChangeTimeFormatSelected, setIsCustomLastChangeTimeFormatSelected] = useState<boolean>(false);
+	const [isCustomUpdatedAtFormatSelected, setIsCustomUpdatedAtFormatSelected] = useState<boolean>(false);
 	const [mapMappingsPairs, setMapMappingsPairs] = useState<Record<string, Array<[string, string]>>>({});
 
 	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
@@ -113,8 +113,8 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	} = useContext(PipelineContext);
 
 	const isFirstCompilation = useRef(true);
-	const lastChangeTimeFormatRef = useRef(null);
-	const lastChangeTimeCustomFormatInputRef = useRef(null);
+	const updatedAtFormatRef = useRef(null);
+	const updatedAtCustomFormatInputRef = useRef(null);
 
 	const hasIdentityColumns = useMemo(() => {
 		return (
@@ -126,7 +126,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		return {
 			isEventImport: connection.isSource && pipelineType.target === 'Event',
 			isEventBasedUserImport: connection.isEventBased && connection.isSource && pipelineType.target === 'User',
-			isAppEventsExport: connection.isAPI && connection.isDestination && pipelineType.target === 'Event',
+			isAppEventsExport: connection.isApplication && connection.isDestination && pipelineType.target === 'Event',
 		};
 	}, [connection, pipelineType]);
 
@@ -163,19 +163,19 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (!hasIdentityColumns || !pipeline.lastChangeTimeColumn) {
+		if (!hasIdentityColumns || !pipeline.updatedAtColumn) {
 			return;
 		}
-		// check if the last change time format is custom.
-		const formats = Object.values(lastChangeTimeFormats);
-		if (!formats.includes(pipeline.lastChangeTimeFormat)) {
-			setIsCustomLastChangeTimeFormatSelected(true);
+		// check if the update time format is custom.
+		const formats = Object.values(updatedAtFormats);
+		if (!formats.includes(pipeline.updatedAtFormat)) {
+			setIsCustomUpdatedAtFormatSelected(true);
 		}
 	}, []);
 
 	useEffect(() => {
 		if (hasIdentityColumns && isFirstCompilation.current && !isEditing) {
-			// precompile the 'IdentityColumn' and 'lastChangeTimeColumn'
+			// precompile the 'IdentityColumn' and 'updatedAtColumn'
 			// fields, if possible.
 			const p = { ...pipeline };
 			const hasIdColumn = pipelineType.inputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
@@ -183,12 +183,12 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 				p.identityColumn = 'id';
 				isFirstCompilation.current = false;
 			}
-			const hasLastChangeTimeColumn =
+			const hasUpdatedAtColumn =
 				pipelineType.inputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
-			if (hasLastChangeTimeColumn) {
-				p.lastChangeTimeColumn = 'timestamp';
-				if (doesLastChangeTimeColumnNeedFormat(p.lastChangeTimeColumn, pipelineType.inputSchema)) {
-					p.lastChangeTimeFormat = '';
+			if (hasUpdatedAtColumn) {
+				p.updatedAtColumn = 'timestamp';
+				if (doesUpdatedAtColumnNeedFormat(p.updatedAtColumn, pipelineType.inputSchema)) {
+					p.updatedAtFormat = '';
 				}
 			}
 			setPipeline(p);
@@ -246,10 +246,10 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const needFormat: boolean = useMemo(() => {
 		if (
 			(connection.isFileStorage || connection.isDatabase) &&
-			pipeline.lastChangeTimeColumn &&
+			pipeline.updatedAtColumn &&
 			!isTransformationDisabled
 		) {
-			return doesLastChangeTimeColumnNeedFormat(pipeline.lastChangeTimeColumn, pipelineType.inputSchema);
+			return doesUpdatedAtColumnNeedFormat(pipeline.updatedAtColumn, pipelineType.inputSchema);
 		}
 		return false;
 	}, [pipeline, pipelineType, isTransformationDisabled]);
@@ -270,16 +270,16 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [pipeline, flatInputSchema]);
 
-	const lastChangeTimeColumnError = useMemo<string>(() => {
+	const updatedAtColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			return checkIfPropertyExists(pipeline.lastChangeTimeColumn, flatInputSchema);
+			return checkIfPropertyExists(pipeline.updatedAtColumn, flatInputSchema);
 		}
 	}, [pipeline, flatInputSchema]);
 
-	const { identityColumnList, lastChangeTimeList, mappingList } = useMemo(() => {
+	const { identityColumnList, updatedAtList, mappingList } = useMemo(() => {
 		return {
 			identityColumnList: getIdentityColumnComboboxItems(pipelineType.inputSchema),
-			lastChangeTimeList: getLastChangeTimeComboboxItems(pipelineType.inputSchema),
+			updatedAtList: getUpdatedAtComboboxItems(pipelineType.inputSchema),
 			mappingList: getSchemaComboboxItems(
 				pipelineType.inputSchema,
 				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['mpid'] : null,
@@ -318,11 +318,11 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 				isFirstCompilation.current = false;
 			}
 			return;
-		} else if (path === 'lastChangeTimeColumn') {
+		} else if (path === 'updatedAtColumn') {
 			const p = { ...pipeline };
-			p.lastChangeTimeColumn = value;
-			if (value === '' || !doesLastChangeTimeColumnNeedFormat(value, pipelineType.inputSchema)) {
-				p.lastChangeTimeFormat = '';
+			p.updatedAtColumn = value;
+			if (value === '' || !doesUpdatedAtColumnNeedFormat(value, pipelineType.inputSchema)) {
+				p.updatedAtFormat = '';
 			}
 			setPipeline(p);
 			return;
@@ -339,46 +339,46 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const onUpdateLastChangeTimeColumn = (_: string, value: string) => {
+	const onUpdateUpdatedAtColumn = (_: string, value: string) => {
 		const p = { ...pipeline };
-		const oldValue = p.lastChangeTimeColumn;
-		p.lastChangeTimeColumn = value;
-		const needFormat = doesLastChangeTimeColumnNeedFormat(value, pipelineType.inputSchema);
+		const oldValue = p.updatedAtColumn;
+		p.updatedAtColumn = value;
+		const needFormat = doesUpdatedAtColumnNeedFormat(value, pipelineType.inputSchema);
 		if (value === '' || !needFormat) {
-			setIsCustomLastChangeTimeFormatSelected(false);
-			p.lastChangeTimeFormat = '';
+			setIsCustomUpdatedAtFormatSelected(false);
+			p.updatedAtFormat = '';
 		} else {
-			const neededFormat = doesLastChangeTimeColumnNeedFormat(oldValue, pipelineType.inputSchema);
+			const neededFormat = doesUpdatedAtColumnNeedFormat(oldValue, pipelineType.inputSchema);
 			if (!neededFormat) {
 				setTimeout(() => {
-					lastChangeTimeFormatRef.current.show();
+					updatedAtFormatRef.current.show();
 				}, 50);
 			}
 		}
 		setPipeline(p);
 	};
 
-	const onChangeLastChangeTimeFormat = (e) => {
+	const onChangeUpdatedAtFormat = (e) => {
 		const p = { ...pipeline };
 		const v = e.target.value;
 		if (v === 'custom') {
-			setIsCustomLastChangeTimeFormatSelected(true);
-			p.lastChangeTimeFormat = '';
+			setIsCustomUpdatedAtFormatSelected(true);
+			p.updatedAtFormat = '';
 			setTimeout(() => {
-				if (lastChangeTimeCustomFormatInputRef.current) {
-					lastChangeTimeCustomFormatInputRef.current.focus();
+				if (updatedAtCustomFormatInputRef.current) {
+					updatedAtCustomFormatInputRef.current.focus();
 				}
 			}, 50);
 		} else {
-			setIsCustomLastChangeTimeFormatSelected(false);
-			p.lastChangeTimeFormat = lastChangeTimeFormats[e.target.value];
+			setIsCustomUpdatedAtFormatSelected(false);
+			p.updatedAtFormat = updatedAtFormats[e.target.value];
 		}
 		setPipeline(p);
 	};
 
-	const onInputLastChangeTimeCustomFormat = (e) => {
+	const onInputUpdatedAtCustomFormat = (e) => {
 		const p = { ...pipeline };
-		p.lastChangeTimeFormat = e.target.value;
+		p.updatedAtFormat = e.target.value;
 		setPipeline(p);
 	};
 
@@ -492,61 +492,60 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 								helpText='A column that uniquely identifies an identity'
 							/>
 						</div>
-						<div className='pipeline__transformation-last-change-time-column'>
-							<div className='pipeline__transformation-last-change-time'>
+						<div className='pipeline__transformation-updated-at-column'>
+							<div className='pipeline__transformation-updated-at'>
 								<Combobox
-									onInput={onUpdateLastChangeTimeColumn}
-									onSelect={onUpdateLastChangeTimeColumn}
-									value={pipeline.lastChangeTimeColumn == null ? '' : pipeline.lastChangeTimeColumn}
-									name='lastChangeTimeColumn'
+									onInput={onUpdateUpdatedAtColumn}
+									onSelect={onUpdateUpdatedAtColumn}
+									value={pipeline.updatedAtColumn == null ? '' : pipeline.updatedAtColumn}
+									name='updatedAtColumn'
 									disabled={isTransformationDisabled}
 									className='pipeline__transformation-input-property'
 									isExpression={false}
-									label='Last change time'
+									label='Updated at time'
 									caret={true}
-									items={lastChangeTimeList}
-									clearable={pipeline.lastChangeTimeColumn?.length > 0}
-									error={lastChangeTimeColumnError}
+									items={updatedAtList}
+									clearable={pipeline.updatedAtColumn?.length > 0}
+									error={updatedAtColumnError}
 									size='small'
 									helpText='A column with the time of the last modification of an identity'
 								/>
 							</div>
 							{needFormat && (
-								<div className='pipeline__transformation-last-change-format-property'>
-									<div className='pipeline__transformation-last-change-format'>
+								<div className='pipeline__transformation-updated-at-format-property'>
+									<div className='pipeline__transformation-updated-at-format'>
 										<SlSelect
-											onSlChange={onChangeLastChangeTimeFormat}
+											onSlChange={onChangeUpdatedAtFormat}
 											value={
-												isCustomLastChangeTimeFormatSelected
+												isCustomUpdatedAtFormatSelected
 													? 'custom'
-													: pipeline.lastChangeTimeColumn
-														? Object.keys(lastChangeTimeFormats).find(
+													: pipeline.updatedAtColumn
+														? Object.keys(updatedAtFormats).find(
 																(key) =>
-																	lastChangeTimeFormats[key] ===
-																	pipeline.lastChangeTimeFormat,
+																	updatedAtFormats[key] === pipeline.updatedAtFormat,
 															)
 														: ''
 											}
-											name='lastChangeTimeFormat'
+											name='updatedAtFormat'
 											label='Format'
 											size='small'
-											ref={lastChangeTimeFormatRef}
+											ref={updatedAtFormatRef}
 										>
 											<SlOption value='iso8601'>ISO 8601</SlOption>
 											{format?.code === 'excel' && <SlOption value='excel'>Excel</SlOption>}
 											<SlOption value='custom'>Custom...</SlOption>
 										</SlSelect>
 									</div>
-									{isCustomLastChangeTimeFormatSelected && (
-										<div className='pipeline__transformation-last-change-custom-format'>
+									{isCustomUpdatedAtFormatSelected && (
+										<div className='pipeline__transformation-updated-at-custom-format'>
 											<SlInput
-												onSlInput={onInputLastChangeTimeCustomFormat}
-												value={pipeline.lastChangeTimeFormat}
-												name='lastChangeTimeCustomFormat'
+												onSlInput={onInputUpdatedAtCustomFormat}
+												value={pipeline.updatedAtFormat}
+												name='updatedAtCustomFormat'
 												placeholder='%Y-%m-%d'
 												helpText='C89 "strftime" format string'
 												size='small'
-												ref={lastChangeTimeCustomFormatInputRef}
+												ref={updatedAtCustomFormatInputRef}
 											></SlInput>
 										</div>
 									)}
@@ -558,8 +557,8 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 								<SlCheckbox
 									checked={pipeline.incremental}
 									onSlChange={onChangeIncremental}
-									disabled={pipeline.lastChangeTimeColumn === ''}
-									helpText='Only imports users whose last change time is subsequent to the last import'
+									disabled={pipeline.updatedAtColumn === ''}
+									helpText='Only imports users whose update time is subsequent to the last import'
 								>
 									Run incremental import
 								</SlCheckbox>
@@ -1425,9 +1424,9 @@ const FullscreenTransformation = ({
 				if (!isFullscreenTransformationOpen) {
 					return;
 				}
-				if (hasAlreadyFetchedSamples.current && !(connection.isAPI || connection.isDatabase)) {
-					// Return if the pipeline is not API/database import or
-					// API/database export. Those are the cases where samples must
+				if (hasAlreadyFetchedSamples.current && !(connection.isApplication || connection.isDatabase)) {
+					// Return if the pipeline is not application/database import or
+					// application/database export. Those are the cases where samples must
 					// be refetched every time the full mode is opened, to apply any
 					// updated filter.
 					return;
@@ -1466,8 +1465,8 @@ const FullscreenTransformation = ({
 					return;
 				}
 				samples = res.rows;
-			} else if (connection.isAPI && connection.isSource) {
-				let res: APIUsersResponse;
+			} else if (connection.isApplication && connection.isSource) {
+				let res: ApplicationUsersResponse;
 				try {
 					res = await api.workspaces.connections.apiUsers(connection.id, inputSchema, normalizedFilter);
 				} catch (err) {
@@ -1476,7 +1475,7 @@ const FullscreenTransformation = ({
 					return;
 				}
 				samples = res.users;
-			} else if ((connection.isAPI || connection.isDatabase) && connection.isDestination) {
+			} else if ((connection.isApplication || connection.isDatabase) && connection.isDestination) {
 				const properties: string[] = [];
 				for (const prop of inputSchema.properties) {
 					properties.push(prop.name);
@@ -2479,7 +2478,7 @@ const FullscreenTransformation = ({
 									<div className='fullscreen-transformation__output-error'>{outputError}</div>
 								) : (
 									<div className='fullscreen-transformation__output-success'>
-										{connection.isAPI &&
+										{connection.isApplication &&
 										connection.isDestination &&
 										pipelineType.target === 'Event' ? (
 											output
@@ -3627,20 +3626,20 @@ const TRANSFORMATION_HEADERS: Record<TransformationHeaderMode, Record<string, [s
 		'source:webhook': ['Event schema', 'Profile schema'],
 		'source:database': ['Database user schema', 'Profile schema'],
 		'source:file': ['File user schema', 'Profile schema'],
-		'source:api': ['App user schema', 'Profile schema'],
+		'source:application': ['Application user schema', 'Profile schema'],
 		'destination:event': ['Event schema', 'Sending event parameters'],
 		'destination:database': ['Profile schema', 'Database table schema'],
-		'destination:api': ['Profile schema', 'App user schema'],
+		'destination:application': ['Profile schema', 'Application user schema'],
 	},
 	full: {
 		'source:sdk': ['Event', 'Profile'],
 		'source:webhook': ['Event', 'Profile'],
 		'source:database': ['Database user', 'Profile'],
 		'source:file': ['File user', 'Profile'],
-		'source:api': ['App user', 'Profile'],
+		'source:application': ['Application user', 'Profile'],
 		'destination:event': ['Event', 'Sending event'],
 		'destination:database': ['Profile', 'Database table'],
-		'destination:api': ['Profile', 'App user'],
+		'destination:application': ['Profile', 'Application user'],
 	},
 };
 
@@ -3663,7 +3662,7 @@ function transformationHeaders(
 		} else if (connection.isFileStorage || connection.isFile) {
 			scenario = 'source:file';
 		} else {
-			scenario = 'source:api';
+			scenario = 'source:application';
 		}
 	} else {
 		if (pipeline.target === 'Event') {
@@ -3671,7 +3670,7 @@ function transformationHeaders(
 		} else if (connection.isDatabase) {
 			scenario = 'destination:database';
 		} else {
-			scenario = 'destination:api';
+			scenario = 'destination:application';
 		}
 	}
 

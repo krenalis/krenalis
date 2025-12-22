@@ -90,10 +90,7 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 		}
 	}
 	path, err := storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
-	if err != nil {
-		return "", connectorError(err)
-	}
-	return path, nil
+	return path, connectorError(err)
 }
 
 // Connector returns the name of the file storage connector.
@@ -139,7 +136,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, connectorError(err)
 	}
 	defer r.Close()
-	if err = validateLastChangeTime(storageTimestamp); err != nil {
+	if err = validateUpdatedAt(storageTimestamp); err != nil {
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 

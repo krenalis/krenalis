@@ -18,7 +18,7 @@ import (
 
 var registry = struct {
 	sync.RWMutex
-	apis           map[string]APISpec
+	applications   map[string]ApplicationSpec
 	databases      map[string]DatabaseSpec
 	files          map[string]FileSpec
 	messageBrokers map[string]MessageBrokerSpec
@@ -27,7 +27,7 @@ var registry = struct {
 	webhooks       map[string]WebhookSpec
 	usedCodes      map[string]struct{} // used connector codes
 }{
-	apis:           make(map[string]APISpec),
+	applications:   make(map[string]ApplicationSpec),
 	databases:      make(map[string]DatabaseSpec),
 	files:          make(map[string]FileSpec),
 	messageBrokers: make(map[string]MessageBrokerSpec),
@@ -41,7 +41,7 @@ var registry = struct {
 // ConnectorSpec.
 func Connectors() map[string]ConnectorSpec {
 	registry.Lock()
-	n := len(registry.apis) +
+	n := len(registry.applications) +
 		len(registry.databases) +
 		len(registry.files) +
 		len(registry.storages) +
@@ -49,7 +49,7 @@ func Connectors() map[string]ConnectorSpec {
 		len(registry.sdks) +
 		len(registry.webhooks)
 	connectors := make(map[string]ConnectorSpec, n)
-	for _, c := range registry.apis {
+	for _, c := range registry.applications {
 		connectors[c.Code] = c
 	}
 	for _, c := range registry.databases {
@@ -74,22 +74,23 @@ func Connectors() map[string]ConnectorSpec {
 	return connectors
 }
 
-// RegisterAPI makes an API connector available by the provided code. If
-// RegisterAPI is called twice with the same code or if new is nil, it panics.
-func RegisterAPI[T any](api APISpec, new APINewFunc[T]) {
+// RegisterApplication makes an application connector available by the provided
+// code. If RegisterApplication is called twice with the same code or if new is
+// nil, it panics.
+func RegisterApplication[T any](app ApplicationSpec, new ApplicationNewFunc[T]) {
 	if new == nil {
-		panic("meergo/connectors: new function is nil for connector " + api.Code)
+		panic("meergo/connectors: new function is nil for connector " + app.Code)
 	}
-	api.newFunc = reflect.ValueOf(new)
-	api.ct = reflect.TypeOf((*T)(nil)).Elem()
-	validateAPIConnector(api)
+	app.newFunc = reflect.ValueOf(new)
+	app.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateApplicationConnector(app)
 	registry.Lock()
 	defer registry.Unlock()
-	if _, ok := registry.usedCodes[api.Code]; ok {
-		panic("meergo/connectors: RegisterAPI called with a connector code already registered: " + api.Code)
+	if _, ok := registry.usedCodes[app.Code]; ok {
+		panic("meergo/connectors: RegisterApplication called with a connector code already registered: " + app.Code)
 	}
-	registry.apis[api.Code] = api
-	registry.usedCodes[api.Code] = struct{}{}
+	registry.applications[app.Code] = app
+	registry.usedCodes[app.Code] = struct{}{}
 }
 
 // RegisterDatabase makes a database connector available by the provided code.
@@ -205,16 +206,16 @@ func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 	registry.usedCodes[webhook.Code] = struct{}{}
 }
 
-// RegisteredAPI returns the API registered with the given code. If an API with
-// this code is not registered, it panics.
-func RegisteredAPI(code string) APISpec {
+// RegisteredApplication returns the application registered with the given code.
+// If an application with this code is not registered, it panics.
+func RegisteredApplication(code string) ApplicationSpec {
 	registry.Lock()
-	api, ok := registry.apis[code]
+	app, ok := registry.applications[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo/connectors: unknown API connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown application connector %q (forgotten import?)", code))
 	}
-	return api
+	return app
 }
 
 // RegisteredDatabase returns the database registered with the given code.
@@ -296,120 +297,120 @@ func validateCategories(connectorName string, categories Categories) {
 	}
 }
 
-// validateAPIConnector validates the passed API connector, performing checks to
-// detect errors that could cause panic or errors in the Meergo code that uses
-// the connectors.
+// validateApplicationConnector validates the passed application connector,
+// performing checks to detect errors that could cause panic or errors in the
+// Meergo code that uses the connectors.
 //
 // In case of a validation error, this function panics.
-func validateAPIConnector(api APISpec) {
+func validateApplicationConnector(app ApplicationSpec) {
 
-	validateConnectorCode("API", api.Code)
-	validateCategories(api.Code, api.Categories)
+	validateConnectorCode("Application", app.Code)
+	validateCategories(app.Code, app.Categories)
 
-	if api.AsSource == nil && api.AsDestination == nil {
-		panic(fmt.Sprintf("meergo/connectors: connector %s: APISpec must include at least the AsSource and AsDestination fields", api.Code))
+	if app.AsSource == nil && app.AsDestination == nil {
+		panic(fmt.Sprintf("meergo/connectors: connector %s: ApplicationSpec must include at least the AsSource and AsDestination fields", app.Code))
 	}
 
-	if api.AsSource != nil {
-		targets := api.AsSource.Targets
+	if app.AsSource != nil {
+		targets := app.AsSource.Targets
 		//if targets == 0 || (targets&^(TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^TargetUser) != 0 {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: APISpec.AsSource.Target is not valid; possible value is connectors.TargetUser", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: ApplicationSpec.AsSource.Target is not valid; possible value is connectors.TargetUser", app.Code))
 		}
 		if targets&TargetUser != 0 {
-			if !api.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
-				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+			if !app.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
+				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 			}
 		}
 	}
 
-	if api.AsDestination != nil {
-		targets := api.AsDestination.Targets
+	if app.AsDestination != nil {
+		targets := app.AsDestination.Targets
 		//if targets == 0 || (targets&^(TargetEvent|TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: APISpec.AsDestination.Target is not valid; possible values are connectors.TargetEvent, connectors.TargetUser, or a combination of them using the bitwise OR operator", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: ApplicationSpec.AsDestination.Target is not valid; possible values are connectors.TargetEvent, connectors.TargetUser, or a combination of them using the bitwise OR operator", app.Code))
 		}
 		if targets&TargetEvent != 0 {
-			if !api.ct.Implements(reflect.TypeFor[EventSender]()) {
-				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+			if !app.ct.Implements(reflect.TypeFor[EventSender]()) {
+				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 			}
-			if api.AsDestination.SendingMode == None {
-				panic(fmt.Sprintf("meergo/connectors: connector %s is declared to support Event as destination, but it does not specify a sending mode", api.Code))
+			if app.AsDestination.SendingMode == None {
+				panic(fmt.Sprintf("meergo/connectors: connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Code))
 			}
 		}
 		if targets&TargetUser != 0 {
-			if !api.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
-				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+			if !app.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
+				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 			}
 		}
 	}
 
-	if api.Terms.User != "" || api.Terms.Users != "" || api.Terms.UserID != "" {
-		if (api.AsSource == nil || api.AsSource.Targets&TargetUser == 0) &&
-			(api.AsDestination == nil || api.AsDestination.Targets&TargetUser == 0) {
+	if app.Terms.User != "" || app.Terms.Users != "" || app.Terms.UserID != "" {
+		if (app.AsSource == nil || app.AsSource.Targets&TargetUser == 0) &&
+			(app.AsDestination == nil || app.AsDestination.Targets&TargetUser == 0) {
 			panic(fmt.Sprintf("meergo/connectors: connector %s: cannot specify terms for users"+
-				" if it does not support the User target as either source or destination", api.Code))
+				" if it does not support the User target as either source or destination", app.Code))
 		}
 	}
 
 	// TODO(marco): Implement groups
-	//if api.Terms.Group != "" || api.Terms.Groups != "" {
-	//	if (api.AsSource == nil || api.AsSource.Targets&GroupTarget == 0) &&
-	//		(api.AsDestination == nil || api.AsDestination.Targets&GroupTarget == 0) {
+	//if app.Terms.Group != "" || app.Terms.Groups != "" {
+	//	if (app.AsSource == nil || app.AsSource.Targets&GroupTarget == 0) &&
+	//		(app.AsDestination == nil || app.AsDestination.Targets&GroupTarget == 0) {
 	//		panic(fmt.Sprintf("meergo/connectors: connector %s: cannot specify a term for group and/or groups"+
-	//			" if it does not support the Group target neither as source nor as destination", api.Name))
+	//			" if it does not support the Group target neither as source nor as destination", app.Name))
 	//	}
 	//}
 
-	var hasSourceSettings = api.AsSource != nil && api.AsSource.HasSettings
-	var hasDestinationSettings = api.AsDestination != nil && api.AsDestination.HasSettings
+	var hasSourceSettings = app.AsSource != nil && app.AsSource.HasSettings
+	var hasDestinationSettings = app.AsDestination != nil && app.AsDestination.HasSettings
 	if hasSourceSettings || hasDestinationSettings {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
-		if !api.ct.Implements(iface) {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+		if !app.ct.Implements(iface) {
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 		}
 	} else {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
-		if api.ct.Implements(iface) {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: ServeUI is implemented, but neither APISpec.AsSource.HasSettings nor APISpec.AsDestination.HasSettings is set to true", api.Code))
+		if app.ct.Implements(iface) {
+			panic(fmt.Sprintf("meergo/connectors: connector %s: ServeUI is implemented, but neither ApplicationSpec.AsSource.HasSettings nor ApplicationSpec.AsDestination.HasSettings is set to true", app.Code))
 		}
 	}
 
-	if api.OAuth.AuthURL != "" {
+	if app.OAuth.AuthURL != "" {
 		iface := reflect.TypeFor[interface {
 			OAuthAccount(ctx context.Context) (string, error)
 		}]()
-		if !api.ct.Implements(iface) {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+		if !app.ct.Implements(iface) {
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 		}
 	}
 
 	// Patterns are checked for validity when rate limiters are created; invalid patterns will cause construction to panic.
 	var requireOAuth bool
-	for _, group := range api.EndpointGroups {
+	for _, group := range app.EndpointGroups {
 		requireOAuth = requireOAuth || group.RequireOAuth
 		if group.Patterns != nil && len(group.Patterns) == 0 {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: Patterns must be nil or contain at least one pattern", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: Patterns must be nil or contain at least one pattern", app.Code))
 		}
 		if group.RateLimit.RequestsPerSecond <= 0 {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: RequestsPerSecond must be > 0", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: RequestsPerSecond must be > 0", app.Code))
 		}
 		if group.RateLimit.Burst <= 0 {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: Burst must be > 0", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: Burst must be > 0", app.Code))
 		}
 		if group.RateLimit.MaxConcurrentRequests < 0 {
-			panic(fmt.Sprintf("meergo/connectors: connector %s: MaxConcurrentRequests must be >= 0", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: MaxConcurrentRequests must be >= 0", app.Code))
 		}
 	}
-	if api.OAuth.AuthURL == "" && requireOAuth {
-		panic(fmt.Sprintf("meergo/connectors: connector %s: RequireOAuth cannot be true when OAuth is not supported", api.Code))
+	if app.OAuth.AuthURL == "" && requireOAuth {
+		panic(fmt.Sprintf("meergo/connectors: connector %s: RequireOAuth cannot be true when OAuth is not supported", app.Code))
 	}
-	if api.OAuth.AuthURL != "" && !requireOAuth {
-		panic(fmt.Sprintf("meergo/connectors: connector %s: OAuth is supported, but there are no endpoint groups that require it", api.Code))
+	if app.OAuth.AuthURL != "" && !requireOAuth {
+		panic(fmt.Sprintf("meergo/connectors: connector %s: OAuth is supported, but there are no endpoint groups that require it", app.Code))
 	}
 
 }

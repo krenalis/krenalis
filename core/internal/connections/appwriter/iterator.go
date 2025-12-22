@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package apiwriter
+package appwriter
 
 import (
 	"fmt"
@@ -66,7 +66,7 @@ func (it *iterator) First() connectors.Record {
 	record, ok := it.writer.read(opAll, true)
 	it.writer.complete()
 	if !ok {
-		panic("core/connectors/apiwriter: iterator has called Writer.read, but no records are available")
+		panic("core/connectors/appwriter: iterator has called Writer.read, but no records are available")
 	}
 	return record
 }

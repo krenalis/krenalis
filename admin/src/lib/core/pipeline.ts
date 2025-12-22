@@ -259,8 +259,8 @@ interface TransformedPipeline {
 	tableKey?: string | null;
 	sheet?: string | null;
 	identityColumn?: string | null;
-	lastChangeTimeColumn?: string | null;
-	lastChangeTimeFormat?: string | null;
+	updatedAtColumn?: string | null;
+	updatedAtFormat?: string | null;
 	incremental?: boolean | null;
 	orderBy?: string | null;
 	exportMode?: ExportMode | null;
@@ -401,7 +401,7 @@ const validateTransformation = (
 	pipeline: PipelineToSet,
 ) => {
 	if (connection.isSource) {
-		if (connection.isAPI) {
+		if (connection.isApplication) {
 			if (pipelineType.target === 'User' || pipelineType.target === 'Group') {
 				if (!hasValidTransformation(pipeline)) {
 					throw errInvalidTransformation;
@@ -427,7 +427,7 @@ const validateTransformation = (
 			}
 		}
 	} else {
-		if (connection.isAPI) {
+		if (connection.isApplication) {
 			if (pipelineType.target === 'User' || pipelineType.target === 'Group') {
 				if (!hasValidTransformation(pipeline)) {
 					throw errInvalidTransformation;
@@ -589,15 +589,12 @@ const transformPipeline = (
 	}
 
 	if (
-		pipeline.lastChangeTimeFormat != null &&
-		pipeline.lastChangeTimeFormat != '' &&
-		pipeline.lastChangeTimeFormat.startsWith("'") &&
-		pipeline.lastChangeTimeFormat.endsWith("'")
+		pipeline.updatedAtFormat != null &&
+		pipeline.updatedAtFormat != '' &&
+		pipeline.updatedAtFormat.startsWith("'") &&
+		pipeline.updatedAtFormat.endsWith("'")
 	) {
-		pipeline.lastChangeTimeFormat = pipeline.lastChangeTimeFormat.substring(
-			1,
-			pipeline.lastChangeTimeFormat.length - 1,
-		);
+		pipeline.updatedAtFormat = pipeline.updatedAtFormat.substring(1, pipeline.updatedAtFormat.length - 1);
 	}
 
 	if (pipeline.filter) {
@@ -642,8 +639,8 @@ const transformPipeline = (
 		tableKey: pipeline.tableKey,
 		sheet: pipeline.sheet,
 		identityColumn: pipeline.identityColumn,
-		lastChangeTimeColumn: pipeline.lastChangeTimeColumn,
-		lastChangeTimeFormat: pipeline.lastChangeTimeFormat,
+		updatedAtColumn: pipeline.updatedAtColumn,
+		updatedAtFormat: pipeline.updatedAtFormat,
 		incremental: pipeline.incremental,
 		exportMode: pipeline.exportMode,
 		matching: pipeline.matching,
@@ -685,7 +682,7 @@ const transformInPipelineToSet = async (
 
 	const allowsConstantTransformation =
 		(connection.isSource && connection.isEventBased && pipelineType.target === 'User') ||
-		(connection.isDestination && connection.isAPI && pipelineType.target === 'Event');
+		(connection.isDestination && connection.isApplication && pipelineType.target === 'Event');
 
 	if (pipeline.transformation.mapping != null) {
 		const inputSchema: ObjectType = { kind: 'object', properties: [] };
@@ -962,21 +959,20 @@ const transformInPipelineToSet = async (
 			inSchema.properties.push(identityColumn.full);
 		}
 
-		if (pipeline.lastChangeTimeColumn) {
-			const isAlreadyInSchema =
-				inSchema.properties!.findIndex((p) => p.name === pipeline.lastChangeTimeColumn) !== -1;
+		if (pipeline.updatedAtColumn) {
+			const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === pipeline.updatedAtColumn) !== -1;
 			if (!isAlreadyInSchema) {
-				const lastChangeTimeColumn = flattenedInputSchema[pipeline.lastChangeTimeColumn];
-				if (lastChangeTimeColumn == null) {
-					throw new Error('Last change time must be a valid column');
+				const updatedAtColumn = flattenedInputSchema[pipeline.updatedAtColumn];
+				if (updatedAtColumn == null) {
+					throw new Error('Update time must be a valid column');
 				}
-				inSchema.properties.push(lastChangeTimeColumn.full);
+				inSchema.properties.push(updatedAtColumn.full);
 			}
-			if (doesLastChangeTimeColumnNeedFormat(pipeline.lastChangeTimeColumn, pipelineType.inputSchema)) {
-				if (pipeline.lastChangeTimeFormat !== 'ISO8601' && pipeline.lastChangeTimeFormat !== 'Excel') {
+			if (doesUpdatedAtColumnNeedFormat(pipeline.updatedAtColumn, pipelineType.inputSchema)) {
+				if (pipeline.updatedAtFormat !== 'ISO8601' && pipeline.updatedAtFormat !== 'Excel') {
 					// the format is custom.
 					try {
-						validateCustomLastChangeTimeFormat(pipeline.lastChangeTimeFormat);
+						validateCustomUpdatedAtFormat(pipeline.updatedAtFormat);
 					} catch (err) {
 						throw err;
 					}
@@ -998,7 +994,8 @@ const transformInPipelineToSet = async (
 
 		const isEventImport = connection.isSource && pipelineType.target === 'Event';
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
-		const isAppEventsExport = connection.isAPI && connection.isDestination && pipelineType.target === 'Event';
+		const isAppEventsExport =
+			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
 
 		for (const condition of conditions) {
 			const propertyName = condition.property;
@@ -1121,7 +1118,7 @@ const transformInPipelineToSet = async (
 	// the input schema must be nil, which means the schema of the events.
 	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && pipelineType.target == 'Event';
 	let dispatchEventsToApps =
-		connection.isDestination && connection.connector.type == 'API' && pipelineType.target == 'Event';
+		connection.isDestination && connection.connector.type == 'Application' && pipelineType.target == 'Event';
 	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && pipelineType.target == 'User';
 	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
@@ -1129,9 +1126,9 @@ const transformInPipelineToSet = async (
 
 	let incremental = pipeline.incremental;
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-		// If last change time is not set the import cannot be
+		// If update time is not set the import cannot be
 		// incremental.
-		if (pipeline.lastChangeTimeColumn === '') {
+		if (pipeline.updatedAtColumn === '') {
 			incremental = false;
 		}
 	}
@@ -1149,8 +1146,8 @@ const transformInPipelineToSet = async (
 		tableKey: pipeline.tableKey,
 		sheet: pipeline.sheet,
 		identityColumn: pipeline.identityColumn,
-		lastChangeTimeColumn: pipeline.lastChangeTimeColumn,
-		lastChangeTimeFormat: pipeline.lastChangeTimeFormat,
+		updatedAtColumn: pipeline.updatedAtColumn,
+		updatedAtFormat: pipeline.updatedAtFormat,
 		incremental: incremental,
 		compression: pipeline.compression,
 		orderBy: pipeline.orderBy,
@@ -1196,7 +1193,8 @@ const computeDefaultPipeline = (
 		name: pipelineType.name,
 		// The pipeline is enabled by default only for batch operations importing or exporting users.
 		enabled:
-			pipelineType.target == 'User' && (connection.isAPI || connection.isDatabase || connection.isFileStorage),
+			pipelineType.target == 'User' &&
+			(connection.isApplication || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
@@ -1222,14 +1220,14 @@ const computeDefaultPipeline = (
 	if (fields.includes('Query')) {
 		pipeline.query = connection.connector.asSource.sampleQuery;
 		pipeline.identityColumn = '';
-		pipeline.lastChangeTimeColumn = '';
-		pipeline.lastChangeTimeFormat = '';
+		pipeline.updatedAtColumn = '';
+		pipeline.updatedAtFormat = '';
 	}
 	if (fields.includes('File')) {
 		pipeline.path = '';
 		pipeline.identityColumn = '';
-		pipeline.lastChangeTimeColumn = '';
-		pipeline.lastChangeTimeFormat = '';
+		pipeline.updatedAtColumn = '';
+		pipeline.updatedAtFormat = '';
 		pipeline.sheet = null;
 		pipeline.compression = '';
 		pipeline.format = '';
@@ -1271,7 +1269,7 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 
 	const type = connection.connector.type;
 
-	if (type === 'API') {
+	if (type === 'Application') {
 		fields.push('Transformation');
 	} else if (type === 'Database') {
 		fields.push('Transformation');
@@ -1284,7 +1282,7 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 	}
 
 	if (
-		type === 'API' &&
+		type === 'Application' &&
 		connection.role === 'Destination' &&
 		(pipelineType.target === 'User' || pipelineType.target === 'Group')
 	) {
@@ -1311,7 +1309,7 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 	}
 
 	if (
-		(type === 'API' || type === 'Database' || type === 'FileStorage') &&
+		(type === 'Application' || type === 'Database' || type === 'FileStorage') &&
 		connection.role === 'Source' &&
 		(pipelineType.target === 'User' || pipelineType.target === 'Group')
 	) {
@@ -1478,12 +1476,12 @@ const buildHierarchy = (paths: string[], flatSchema: TransformedMapping, propert
 	return hierarchy;
 };
 
-const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema: ObjectType): boolean => {
-	if (lastChangeTimeColumn == null || lastChangeTimeColumn === '') {
+const doesUpdatedAtColumnNeedFormat = (updatedAtColumn: string, schema: ObjectType): boolean => {
+	if (updatedAtColumn == null || updatedAtColumn === '') {
 		return false;
 	}
 	const flatInputSchema = flattenSchema(schema);
-	const p = flatInputSchema[lastChangeTimeColumn];
+	const p = flatInputSchema[updatedAtColumn];
 	if (p == null) {
 		return false;
 	}
@@ -1491,15 +1489,15 @@ const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema
 	return type === 'json' || type === 'string';
 };
 
-const validateCustomLastChangeTimeFormat = (format: string) => {
+const validateCustomUpdatedAtFormat = (format: string) => {
 	if (format === '') {
-		throw new Error('Last change time format cannot be empty');
+		throw new Error('Update time format cannot be empty');
 	}
 	if (Array.from(format).length > 64) {
-		throw new Error('Last change time format is longer than 64 characters');
+		throw new Error('Update time format is longer than 64 characters');
 	}
 	if (!format.includes('%')) {
-		throw new Error(`Last change time format "${format}" is not a valid format`);
+		throw new Error(`Update time format "${format}" is not a valid format`);
 	}
 };
 
@@ -1870,7 +1868,7 @@ export {
 	splitPropertyAndPath,
 	getHierarchicalPaths,
 	getSiblingPaths,
-	doesLastChangeTimeColumnNeedFormat,
+	doesUpdatedAtColumnNeedFormat,
 	computeDefaultTransformationFunction,
 	getTransformationFunctionParameter,
 	validateAndNormalizeFilterCondition,
