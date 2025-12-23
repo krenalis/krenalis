@@ -633,6 +633,11 @@
 	color: var(--sl-color-danger-500);
 	font-weight: 500;
 	font-size: 11px;
+	transition: color 0.3s;
+}
+
+.pipeline__transformation-output-property-required--selected {
+	color: var(--sl-color-neutral-500);
 }
 
 /* The output property must be disabled to avoid tab focus but it must not
@@ -996,6 +1001,13 @@ inherit the disabled style */
 	font-size: 12px;
 }
 
+.fullscreen-transformation__panel-schema-search {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background-color: var(--bg-gray);
+}
+
 .fullscreen-transformation__panel-schema-search::part(base) {
 	border-radius: 0;
 	border: 0;
@@ -1016,6 +1028,10 @@ inherit the disabled style */
 	border-bottom: 1px solid var(--border-primary);
 	font-size: 12px;
 	--thumb-size: 14px;
+	position: sticky;
+	top: 40px;
+	z-index: 2;
+	background-color: var(--bg-gray);
 }
 
 .fullscreen-transformation__panel-schema-show-only-selected::part(base) {
@@ -1082,6 +1098,11 @@ inherit the disabled style */
 	font-weight: 500;
 	font-size: 11px;
 	margin-left: 3px;
+	transition: color 0.3s;
+}
+
+.fullscreen-transformation__property-required--selected {
+	color: var(--sl-color-neutral-500);
 }
 
 .fullscreen-transformation__property-type span:first-child {
@@ -1280,6 +1301,10 @@ inherit the disabled style */
 	overflow: hidden;
 	padding: 0 30px;
 	gap: 9px;
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background-color: var(--bg-primary);
 }
 
 .fullscreen-transformation__samples-reload > sl-button::part(label) {

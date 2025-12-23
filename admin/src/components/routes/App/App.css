@@ -248,6 +248,10 @@ sl-drawer[placement='bottom']::part(panel) {
 	padding: 20px 30px 10px 30px;
 }
 
+sl-drawer::part(base) {
+	z-index: 1000;
+}
+
 /* TODO: why this doesn't work? */
 
 input::placeholder,
