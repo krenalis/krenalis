@@ -13,5 +13,5 @@ package testimages
 const (
 	ClickHouse = "clickhouse/clickhouse-server:25.8-alpine"
 	MySQL      = "mysql:9.5"
-	PostgreSQL = "postgres:18.1-alpine"
+	PostgreSQL = "postgres:18.1-alpine3.23"
 )

@@ -3,6 +3,11 @@ module github.com/meergo/meergo
 // Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 // Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 // Keep in sync with the version within "Dockerfile".
+// Note that the patch here is kept.
+
+// Note that the patch is pinned here due to how Go tools work. Elsewhere we
+// indicate the major and minor only, without pinning the patch.
+
 go 1.25.5
 
 require (
