@@ -49,6 +49,7 @@ import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import {
@@ -3356,21 +3357,22 @@ const TransformationProperty = ({
 		}
 	}
 
-	let typeName = '';
-	if (language === '') {
-		typeName = toMeergoStringType(property.type, property.nullable);
-	} else if (language === 'Python') {
-		typeName = toPythonType(
-			property.type,
-			pipeline.transformation.function.preserveJSON,
-			property.nullable || isImport,
-		);
-	} else {
-		typeName = toJavascriptType(
-			property.type,
-			pipeline.transformation.function.preserveJSON,
-			property.nullable || isImport,
-		);
+	const meergoTypeName = toMeergoStringType(property.type, property.nullable);
+	let languageTypeName: string | null = null;
+	if (transformationType === 'function' && language !== '') {
+		if (language === 'Python') {
+			languageTypeName = toPythonType(
+				property.type,
+				pipeline.transformation.function.preserveJSON,
+				property.nullable || isImport,
+			);
+		} else {
+			languageTypeName = toJavascriptType(
+				property.type,
+				pipeline.transformation.function.preserveJSON,
+				property.nullable || isImport,
+			);
+		}
 	}
 
 	return (
@@ -3408,50 +3410,63 @@ const TransformationProperty = ({
 					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
 					<div className='fullscreen-transformation__property-content'>
 						<div className='fullscreen-transformation__property-head'>
-							{isIdentifier && (
-								<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
-									<SlIcon
-										className='fullscreen-transformation__property-identifier-icon'
-										name='person-check'
-									/>
-								</SlTooltip>
-							)}
-							<span className='fullscreen-transformation__property-name-copy'>
-								{!isOutMatchingProperty && (
-									<SlCopyButton
-										className='fullscreen-transformation__property-copy'
-										value={parentName ? `${parentName}.${property.name}` : property.name}
-										copyLabel='Click to copy'
-										successLabel='✓ Copied'
-										errorLabel='Copying to clipboard is not supported by your browser'
+							<div className='fullscreen-transformation__property-head-main'>
+								{isIdentifier && (
+									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+										<SlIcon
+											className='fullscreen-transformation__property-identifier-icon'
+											name='person-check'
+										/>
+									</SlTooltip>
+								)}
+								<span className='fullscreen-transformation__property-name-copy'>
+									{!isOutMatchingProperty && (
+										<SlCopyButton
+											className='fullscreen-transformation__property-copy'
+											value={parentName ? `${parentName}.${property.name}` : property.name}
+											copyLabel='Click to copy'
+											successLabel='✓ Copied'
+											errorLabel='Copying to clipboard is not supported by your browser'
+											hoist={true}
+										/>
+									)}
+									<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+								</span>
+								<span className='fullscreen-transformation__property-type'>
+									<span>{meergoTypeName}</span>
+									{side === 'input' && property.readOptional && <span>- optional</span>}
+									{showRequired && (
+										<span className='fullscreen-transformation__property-required'>required</span>
+									)}
+								</span>
+								{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
+									<SlTooltip
+										content='You cannot select this property since it is already used as matching property'
 										hoist={true}
-									/>
+									>
+										<SlIcon
+											className='fullscreen-transformation__property-disabled-info'
+											name='info-circle'
+										/>
+									</SlTooltip>
 								)}
-								<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
-							</span>
-							<span className='fullscreen-transformation__property-type'>
-								<span>{typeName}</span>
-								{side === 'input' && property.readOptional && <span>- optional</span>}
-								{showRequired && (
-									<span className='fullscreen-transformation__property-required'>required</span>
+								{transformationType === 'function' && isOutMatchingProperty && isSelected && (
+									<div className='fullscreen-transformation__property-error'>
+										Ensure that this property is not returned by the transformation function, and then
+										deselect this
+									</div>
 								)}
-							</span>
-							{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
-								<SlTooltip
-									content='You cannot select this property since it is already used as matching property'
-									hoist={true}
-								>
-									<SlIcon
-										className='fullscreen-transformation__property-disabled-info'
-										name='info-circle'
-									/>
+							</div>
+							{languageTypeName && (
+								<SlTooltip content='Python return type' hoist={true}>
+									<SlBadge
+										className='fullscreen-transformation__property-language-type'
+										variant='neutral'
+										pill
+									>
+										{languageTypeName}
+									</SlBadge>
 								</SlTooltip>
-							)}
-							{transformationType === 'function' && isOutMatchingProperty && isSelected && (
-								<div className='fullscreen-transformation__property-error'>
-									Ensure that this property is not returned by the transformation function, and then
-									deselect this
-								</div>
 							)}
 						</div>
 						{property.description && (
