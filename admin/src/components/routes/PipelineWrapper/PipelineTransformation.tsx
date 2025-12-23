@@ -3359,6 +3359,7 @@ const TransformationProperty = ({
 
 	const meergoTypeName = toMeergoStringType(property.type, property.nullable);
 	let languageTypeName: string | null = null;
+	let languageTypeLabel = '';
 	if (transformationType === 'function' && language !== '') {
 		if (language === 'Python') {
 			languageTypeName = toPythonType(
@@ -3366,12 +3367,14 @@ const TransformationProperty = ({
 				pipeline.transformation.function.preserveJSON,
 				property.nullable || isImport,
 			);
+			languageTypeLabel = 'Python type';
 		} else {
 			languageTypeName = toJavascriptType(
 				property.type,
 				pipeline.transformation.function.preserveJSON,
 				property.nullable || isImport,
 			);
+			languageTypeLabel = 'JavaScript type';
 		}
 	}
 
@@ -3458,7 +3461,7 @@ const TransformationProperty = ({
 								)}
 							</div>
 							{languageTypeName && (
-								<SlTooltip content='Python return type' hoist={true}>
+								<SlTooltip content={languageTypeLabel} hoist={true}>
 									<SlBadge
 										className='fullscreen-transformation__property-language-type'
 										variant='neutral'

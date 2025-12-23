@@ -126,6 +126,15 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 				}), Description: "Address"},
 			}), Description: "Traits"},
 		}), nil
+	case "test":
+		return types.Object([]types.Property{
+			{Name: "traits", Type: types.Object([]types.Property{
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street1", Type: types.String(), Description: "Street", CreateRequired: true},
+					{Name: "street2", Type: types.String(), Description: "Street (second line)"},
+				}), Description: "Address", CreateRequired: true},
+			}), Description: "Traits", CreateRequired: true},
+		}), nil
 	case "send_generic_event":
 		return types.Object([]types.Property{
 			{Name: "properties", Type: types.JSON(), Description: "Properties"},
@@ -149,6 +158,11 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*connectors.EventType, er
 			ID:          "send_custom_event",
 			Name:        "Send custom event",
 			Description: "Send a custom event to Dummy",
+		},
+		{
+			ID:          "test",
+			Name:        "Test",
+			Description: "Test",
 		},
 		{
 			ID:          "send_identity",
