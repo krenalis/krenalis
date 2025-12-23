@@ -3,8 +3,6 @@
 # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 # Keep in sync with the version within "go.mod".
-
-# TODO: valutare come questo impatta anche altri punti con la versione di Go, e i commenti
 FROM golang:1.25-alpine3.23
 
 WORKDIR /meergo
