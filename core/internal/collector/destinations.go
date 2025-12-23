@@ -7,6 +7,7 @@ package collector
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -15,6 +16,7 @@ import (
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/tools/types"
@@ -112,11 +114,15 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 
 	connection := pipeline.Connection()
 	app := d.connections.Application(connection)
-	schema, err := app.Schema(ctx, state.TargetEvent, pipeline.EventType)
+	eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, pipeline.EventType)
 	if err != nil {
 		panic("TODO")
 	}
-	// TODO(marco): Check schema alignment.
+	createOnly := state.CreateOnly
+	err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, &createOnly)
+	if err != nil {
+		panic(fmt.Errorf("collector: schema of pipeline %d is not aligned with its event type schema: %s", pipeline.ID, err))
+	}
 
 	queue := &destinationPipelineQueue{
 		metrics: d.metrics,
@@ -154,7 +160,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 		}
 	}(connection.ID, pipeline.ID)
 
-	return newDestinationPipeline(pipeline, schema, d.provider, queue)
+	return newDestinationPipeline(pipeline, eventTypeSchema, d.provider, queue)
 }
 
 // onCreateConnection is called when a connection is created.
