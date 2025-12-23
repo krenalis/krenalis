@@ -31,7 +31,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* only Admin */
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
-		"GET    /":                                            api.Index,
+		"GET    /{$}":                                         api.Index,
 		"GET    /connections":                                 workspace.Connections,
 		"GET    /connections/auth-token":                      workspace.AuthToken,
 		"GET    /connections/auth-url":                        connector.AuthURL,

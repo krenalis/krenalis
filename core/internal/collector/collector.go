@@ -26,6 +26,7 @@ import (
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
 	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
 )
@@ -252,13 +253,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	}
 	connection, ok := c.connectionByKey(writeKey)
 	if !ok || connection.Strategy == nil {
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Header().Set("Cache-Control", "max-age=31536000")
-		w.WriteHeader(http.StatusNotFound)
-		// Do not modify the returned body, as it is used by the JavaScript SDK
-		// to present an appropriate error message in the console.
-		_, _ = io.WriteString(w, `error: invalid collect key`)
-		return nil
+		return errors.Unauthorized("event write key in the path is invalid")
 	}
 	strategy := string(*connection.Strategy)
 	w.Header().Set("Content-Type", "application/json")
@@ -298,16 +293,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if len(auth) > 1 {
 			return errors.BadRequest("request contains multiple Authorization headers")
 		}
-		token, ok := strings.CutPrefix(auth[0], "Bearer ")
-		if !ok || token == "" {
+		token, found := validation.ParseBearer(auth[0])
+		if !found {
 			return errors.BadRequest(`Authorization header is invalid; use "Authorization: Bearer <KEY>" with an API key or an event write key`)
 		}
 
-		if len(token) == 43 {
+		if token, found := strings.CutPrefix(token, "api_"); found {
 			// Authenticate with the API key in the header.
 			key, ok := c.state.AccessKeyByToken(token)
 			if !ok || key.Type != state.AccessKeyTypeAPI {
-				return errors.Unauthorized(`the API key in the Authorization header does not exist`)
+				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
 			if header, ok := r.Header["Meergo-Workspace"]; ok {
 				if len(header) > 1 {
@@ -346,7 +341,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			} else {
 				workspace, ok := c.state.Workspace(key.Workspace)
 				if !ok {
-					return errors.Unauthorized("the API key in the Authorization header does not exist")
+					return errors.Unauthorized("API key in the Authorization header is invalid")
 				}
 				connection, _ = workspace.Connection(id)
 			}
@@ -358,7 +353,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			// Authenticate with the event write key in the header.
 			connection, _ = c.connectionByKey(token)
 			if connection == nil {
-				return errors.Unauthorized("the event write key in the Authorization header does not exist")
+				return errors.Unauthorized("event write key in the Authorization header is not valid")
 			}
 			usingWriteKey = true
 		}
@@ -480,9 +475,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Send a successful response to the client.
 	meergoMetrics.Increment("Collector.writeOK.calls", 1)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", "21")
-	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+	w.Header().Set("Content-Type", "text/plain")
 
 	return nil
 }
