@@ -693,20 +693,8 @@ const transformInPipelineToSet = async (
 			const property = pipeline.transformation.mapping[p];
 			const isFirstLevel = property.indentation === 0;
 			if (property.value === '') {
-				const isRequired = isMappingRequired(p, pipeline, pipelineType);
-
-				// The property is already automatically mapped if it is used as
-				// the out matching property or if one of its children or
-				// parents are mapped.
-				const isMatching = pipeline.matching != null && pipeline.matching.out === p;
-				const children = paths.filter((pa) => pa.startsWith(`${p}.`));
-				const hasMappedChild =
-					children.findIndex((pa) => pipeline.transformation.mapping[pa].value !== '') !== -1;
-				const parents = paths.filter((pa) => p.startsWith(`${pa}.`));
-				const hasMappedParent =
-					parents.findIndex((pa) => pipeline.transformation.mapping[pa].value !== '') !== -1;
-
-				if (isRequired && !isMatching && !hasMappedChild && !hasMappedParent) {
+				const { isRequired, isSelected } = checkMapping(p, pipeline, pipelineType);
+				if (isRequired && !isSelected) {
 					throw new Error(`Property "${p}" is required. Indicate an expression for this property.`);
 				}
 				continue;
@@ -792,21 +780,10 @@ const transformInPipelineToSet = async (
 
 		const outputSchemaPaths = Object.keys(flattenedOutputSchema);
 		for (const p of outputSchemaPaths) {
-			const isSelected = outPaths.includes(p);
-			const isRequired = isPathRequired(p, pipeline, pipelineType, 'output', outPaths);
-
-			// The property is already automatically selected if it is used as
-			// the out matching property or if one of its children or parents
-			// are selected.
-			const isMatching = pipeline.matching != null && pipeline.matching.out === p;
-			const children = outputSchemaPaths.filter((pa: string) => pa.startsWith(`${p}.`));
-			const hasSelectedChild = children.findIndex((pa: string) => outPaths.includes(pa)) !== -1;
-			const hasSelectedParent = outPaths.findIndex((pa) => p.startsWith(`${pa}.`)) !== -1;
-
-			if (isRequired && !isSelected && !isMatching && !hasSelectedChild && !hasSelectedParent) {
+			const { isRequired, isSelected } = checkFunctionPath(p, pipeline, pipelineType, 'output', outPaths);
+			if (isRequired && !isSelected) {
 				throw new Error(`Property "${p}" is required and you must pass it in the transformation function`);
 			}
-
 			continue;
 		}
 
@@ -1358,8 +1335,14 @@ const addPropertyToSchema = (
 	}
 };
 
-// isMappingRequired returns whether the user must pass a value for a specific
-// property in the mappings (the mapping is required).
+interface TransformationPropertyInfo {
+	isRequired: boolean;
+	isSelected: boolean;
+}
+
+// checkMapping checks whether the user must select a value for a specific
+// property in the mappings (the mapping is required). Additionally it returns
+// whether the property is selected.
 //
 // A property is required if it is the table key, or if it is required for
 // create/update (based on export mode and pipeline target) and one of the
@@ -1373,14 +1356,17 @@ const addPropertyToSchema = (
 // This algorithm is based on the principle, imposed by Meergo, that if you pass
 // a value for an object property, then you must also pass a value for each of
 // its sub-properties that are created/update required.
-const isMappingRequired = (
+const checkMapping = (
 	path: string,
 	pipeline: TransformedPipeline,
 	pipelineType: TransformedPipelineType,
-): boolean => {
+): TransformationPropertyInfo => {
 	const property = pipeline.transformation.mapping[path];
 	if (property == null) {
-		return false;
+		return {
+			isRequired: false,
+			isSelected: false,
+		};
 	}
 
 	const paths = Object.keys(pipeline.transformation.mapping);
@@ -1401,57 +1387,76 @@ const isMappingRequired = (
 	const isFirstLevel = property.indentation === 0;
 	const isTableKey = !!pipeline.tableKey && pipeline.tableKey === path;
 
+	let isRequired = false;
 	if (!hasRequired) {
-		return isTableKey;
-	}
-
-	if (isFirstLevel) {
-		return true;
-	}
-
-	// A selected property is a property that is mapped, either explicitly (e.g.
-	// when the user has set a value in its mapping) or implicitly (e.g. when
-	// one of its descendants is explicitly mapped).
-	let closestSelectedParent: string;
-	for (const parent of reversedParents) {
-		const isMapped = pipeline.transformation.mapping[parent].value !== '';
-		if (isMapped) {
-			closestSelectedParent = parent;
-			break;
+		if (isTableKey) {
+			isRequired = true;
 		}
-		const children = paths.filter((key) => key.startsWith(`${parent}.`));
-		const hasMappedChild = children.findIndex((pa) => pipeline.transformation.mapping[pa].value !== '') !== -1;
-		if (hasMappedChild) {
-			closestSelectedParent = parent;
-			break;
-		}
-	}
+	} else {
+		if (isFirstLevel) {
+			isRequired = true;
+		} else {
+			// A selected property is a property that is mapped, either explicitly (e.g.
+			// when the user has set a value in its mapping) or implicitly (e.g. when
+			// one of its descendants is explicitly mapped).
+			let closestSelectedParent: string;
+			for (const parent of reversedParents) {
+				const isMapped = pipeline.transformation.mapping[parent].value !== '';
+				if (isMapped) {
+					closestSelectedParent = parent;
+					break;
+				}
+				const children = paths.filter((key) => key.startsWith(`${parent}.`));
+				const hasMappedChild =
+					children.findIndex((pa) => pipeline.transformation.mapping[pa].value !== '') !== -1;
+				if (hasMappedChild) {
+					closestSelectedParent = parent;
+					break;
+				}
+			}
 
-	if (closestSelectedParent != null) {
-		const i = reversedParents.findIndex((parent) => parent === closestSelectedParent);
-		const intermediateParents = reversedParents.slice(0, i);
-		let areIntermediateRequired = true;
-		for (const parent of intermediateParents) {
-			const p = pipeline.transformation.mapping[parent].full;
-			const hasRequired =
-				(pipelineType.target === 'Event' && (p.createRequired || p.updateRequired)) ||
-				(pipeline.exportMode != null &&
-					((p.createRequired && pipeline.exportMode.includes('Create')) ||
-						(p.updateRequired && pipeline.exportMode.includes('Update'))));
-			if (!hasRequired) {
-				areIntermediateRequired = false;
-				break;
+			if (closestSelectedParent != null) {
+				const i = reversedParents.findIndex((parent) => parent === closestSelectedParent);
+				const intermediateParents = reversedParents.slice(0, i);
+				let areIntermediateRequired = true;
+				for (const parent of intermediateParents) {
+					const p = pipeline.transformation.mapping[parent].full;
+					const hasRequired =
+						(pipelineType.target === 'Event' && (p.createRequired || p.updateRequired)) ||
+						(pipeline.exportMode != null &&
+							((p.createRequired && pipeline.exportMode.includes('Create')) ||
+								(p.updateRequired && pipeline.exportMode.includes('Update'))));
+					if (!hasRequired) {
+						areIntermediateRequired = false;
+						break;
+					}
+				}
+
+				isRequired = areIntermediateRequired;
 			}
 		}
-
-		return areIntermediateRequired;
 	}
 
-	return false;
+	const isMapped = pipeline.transformation.mapping[path].value !== '';
+
+	// The property is already automatically selected if it is used as the out
+	// matching property or if one of its children or parents are mapped.
+	const isMatching = pipeline.matching != null && pipeline.matching.out === path;
+	const children = paths.filter((pa) => pa.startsWith(`${path}.`));
+	const hasMappedChild = children.findIndex((pa) => pipeline.transformation.mapping[pa].value !== '') !== -1;
+	const hasMappedParent = parents.findIndex((pa) => pipeline.transformation.mapping[pa].value !== '') !== -1;
+
+	const isSelected = isMapped || isMatching || hasMappedChild || hasMappedParent;
+
+	return {
+		isRequired,
+		isSelected,
+	};
 };
 
 // isPathRequired returns whether the user must select a specific path for the
-// transformation function (the path is required).
+// transformation function (the path is required). Additionally it returns
+// whether the property is selected.
 //
 // A path is required if it is the path of the table key, or if it is the path
 // of a property that is required for create/update (based on export mode and
@@ -1465,19 +1470,22 @@ const isMappingRequired = (
 // This algorithm is based on the principle, imposed by Meergo, that if you pass
 // a value for an object property, then you must also pass a value for each of
 // its sub-properties that are created/update required.
-const isPathRequired = (
+const checkFunctionPath = (
 	path: string,
 	pipeline: TransformedPipeline,
 	pipelineType: TransformedPipelineType,
 	role: 'input' | 'output',
 	selectedPaths: string[],
-): boolean => {
+): TransformationPropertyInfo => {
 	const flatSchema =
 		role === 'input' ? flattenSchema(pipelineType.inputSchema) : flattenSchema(pipelineType.outputSchema);
 
 	const property = flatSchema[path];
 	if (property == null) {
-		return false;
+		return {
+			isRequired: false,
+			isSelected: false,
+		};
 	}
 
 	const paths = Object.keys(flatSchema);
@@ -1498,54 +1506,72 @@ const isPathRequired = (
 	const isFirstLevel = property.indentation === 0;
 	const isTableKey = !!pipeline.tableKey && pipeline.tableKey === path;
 
+	let isRequired = false;
 	if (!hasRequired) {
-		return isTableKey;
-	}
-
-	if (isFirstLevel) {
-		return true;
-	}
-
-	// A selected property is a property that is selected, either explicitly
-	// (e.g. when the user has flagged its checkbox in the full mode of the
-	// transformation) or implicitly (e.g. when one of its descendants is
-	// flagged).
-	let closestSelectedParent: string;
-	for (const parent of reversedParents) {
-		const isSelected = selectedPaths.includes(parent);
-		if (isSelected) {
-			closestSelectedParent = parent;
-			break;
+		if (isTableKey) {
+			isRequired = true;
 		}
-		const children = paths.filter((key) => key.startsWith(`${parent}.`));
-		const hasSelectedChild = children.findIndex((pa) => selectedPaths.includes(pa)) !== -1;
-		if (hasSelectedChild) {
-			closestSelectedParent = parent;
-			break;
-		}
-	}
+	} else {
+		if (isFirstLevel) {
+			isRequired = true;
+		} else {
+			// A selected property is a property that is selected, either explicitly
+			// (e.g. when the user has flagged its checkbox in the full mode of the
+			// transformation) or implicitly (e.g. when one of its descendants is
+			// flagged).
+			let closestSelectedParent: string;
+			for (const parent of reversedParents) {
+				const isSelected = selectedPaths.includes(parent);
+				if (isSelected) {
+					closestSelectedParent = parent;
+					break;
+				}
+				const children = paths.filter((key) => key.startsWith(`${parent}.`));
+				const hasSelectedChild = children.findIndex((pa) => selectedPaths.includes(pa)) !== -1;
+				if (hasSelectedChild) {
+					closestSelectedParent = parent;
+					break;
+				}
+			}
 
-	if (closestSelectedParent != null) {
-		const i = reversedParents.findIndex((parent) => parent === closestSelectedParent);
-		const intermediateParents = reversedParents.slice(0, i);
-		let areIntermediateRequired = true;
-		for (const parent of intermediateParents) {
-			const p = flatSchema[parent].full;
-			const hasRequired =
-				(pipelineType.target === 'Event' && (p.createRequired || p.updateRequired)) ||
-				(pipeline.exportMode != null &&
-					((p.createRequired && pipeline.exportMode.includes('Create')) ||
-						(p.updateRequired && pipeline.exportMode.includes('Update'))));
-			if (!hasRequired) {
-				areIntermediateRequired = false;
-				break;
+			if (closestSelectedParent != null) {
+				const i = reversedParents.findIndex((parent) => parent === closestSelectedParent);
+				const intermediateParents = reversedParents.slice(0, i);
+				let areIntermediateRequired = true;
+				for (const parent of intermediateParents) {
+					const p = flatSchema[parent].full;
+					const hasRequired =
+						(pipelineType.target === 'Event' && (p.createRequired || p.updateRequired)) ||
+						(pipeline.exportMode != null &&
+							((p.createRequired && pipeline.exportMode.includes('Create')) ||
+								(p.updateRequired && pipeline.exportMode.includes('Update'))));
+					if (!hasRequired) {
+						areIntermediateRequired = false;
+						break;
+					}
+				}
+
+				isRequired = areIntermediateRequired;
 			}
 		}
-
-		return areIntermediateRequired;
 	}
 
-	return false;
+	const isFlagged = selectedPaths.includes(path);
+
+	// The property is already automatically selected if it is used as
+	// the out matching property or if one of its children or parents
+	// are flagged.
+	const isMatching = pipeline.matching != null && pipeline.matching.out === path;
+	const children = paths.filter((pa: string) => pa.startsWith(`${path}.`));
+	const hasFlaggedChild = children.findIndex((pa: string) => selectedPaths.includes(pa)) !== -1;
+	const hasFlaggedParent = selectedPaths.findIndex((pa) => path.startsWith(`${pa}.`)) !== -1;
+
+	const isSelected = isFlagged || isMatching || hasFlaggedChild || hasFlaggedParent;
+
+	return {
+		isRequired,
+		isSelected,
+	};
 };
 
 function sortPropertiesByOriginalSchema(schema: ObjectType, original: ObjectType): ObjectType {
@@ -1851,8 +1877,8 @@ export {
 	transformPipelineType,
 	transformPipeline,
 	transformInPipelineToSet,
-	isMappingRequired,
-	isPathRequired,
+	checkMapping,
+	checkFunctionPath,
 	getCompatibleFilterOperators,
 	isUnaryOperator,
 	isBetweenOperator,

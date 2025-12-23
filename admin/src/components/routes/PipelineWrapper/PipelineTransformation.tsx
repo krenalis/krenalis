@@ -23,8 +23,8 @@ import {
 	splitPropertyAndPath,
 	transformInPipelineToSet,
 	validateAndNormalizeFilterCondition,
-	isMappingRequired,
-	isPathRequired,
+	checkMapping,
+	checkFunctionPath,
 } from '../../../lib/core/pipeline';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Pipeline.constants';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -909,7 +909,7 @@ const TransformationBox = ({
 				}
 			}
 
-			let showRequired = isMappingRequired(path, pipeline, pipelineType);
+			let { isRequired, isSelected } = checkMapping(path, pipeline, pipelineType);
 
 			const typ = property.full.type;
 			const isEnum = typ.kind === 'string' && (typ as StringType).values != null;
@@ -941,8 +941,9 @@ const TransformationBox = ({
 						automaticMapping={automaticMapping}
 						isFullscreenTransformationOpen={isFullscreenTransformationOpen}
 						isDisabled={isDisabled}
+						isSelected={isSelected}
 						indentation={pipeline.transformation.mapping![path].indentation!}
-						showRequired={showRequired}
+						showRequired={isRequired}
 						propertiesToHide={propertiesToHide}
 					/>,
 				);
@@ -1021,8 +1022,12 @@ const TransformationBox = ({
 									</span>
 									<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 								</PropertyTooltip>
-								{showRequired && (
-									<span className='pipeline__transformation-output-property-required'>required</span>
+								{isRequired && (
+									<span
+										className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+									>
+										required
+									</span>
 								)}
 							</div>
 							{property.full.description && (
@@ -2483,6 +2488,7 @@ interface MapMappingProps {
 	automaticMapping: string | undefined;
 	isFullscreenTransformationOpen: boolean;
 	isDisabled: boolean;
+	isSelected: boolean;
 	indentation: number;
 	showRequired: boolean;
 	propertiesToHide?: string[] | null;
@@ -2511,6 +2517,7 @@ const MapMapping = ({
 	automaticMapping,
 	isFullscreenTransformationOpen,
 	isDisabled,
+	isSelected,
 	indentation,
 	showRequired,
 	propertiesToHide,
@@ -2866,7 +2873,11 @@ const MapMapping = ({
 						<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 					</PropertyTooltip>
 					{showRequired && (
-						<span className='pipeline__transformation-output-property-required'>required</span>
+						<span
+							className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+						>
+							required
+						</span>
 					)}
 				</div>
 				{property.full.description && (
@@ -3225,11 +3236,11 @@ const TransformationProperty = ({
 
 	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 	const isIdentifier = isImport && workspace.identifiers.includes(path) && side === 'output';
-	const isSelected = selectedPaths.includes(path);
+	const isFlagged = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
 	const isSelectDisabled =
-		transformationType === 'function' && ((isOutMatchingProperty && !isSelected) || hasSelectedParent);
+		transformationType === 'function' && ((isOutMatchingProperty && !isFlagged) || hasSelectedParent);
 
 	const onWrapperClick = (e: any) => {
 		if (isSelectDisabled) {
@@ -3256,12 +3267,10 @@ const TransformationProperty = ({
 		return null;
 	}
 
-	let showRequired = false;
-	if (transformationType === 'function') {
-		showRequired = isPathRequired(path, pipeline, pipelineType, side, selectedPaths);
-	} else {
-		showRequired = isMappingRequired(path, pipeline, pipelineType);
-	}
+	const { isRequired, isSelected } =
+		transformationType === 'function'
+			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
+			: checkMapping(path, pipeline, pipelineType);
 
 	let typeName = '';
 	if (language === '') {
@@ -3282,7 +3291,7 @@ const TransformationProperty = ({
 
 	return (
 		<div
-			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
+			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
 			style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
 			onClick={transformationType === 'function' ? onWrapperClick : null}
 		>
@@ -3303,8 +3312,8 @@ const TransformationProperty = ({
 				) : (
 					<SlCheckbox
 						className='fullscreen-transformation__property-check'
-						checked={isSelected || hasSelectedParent}
-						indeterminate={hasSelectedChildren && !isSelected}
+						checked={isFlagged || hasSelectedParent}
+						indeterminate={hasSelectedChildren && !isFlagged}
 						disabled={isSelectDisabled}
 						onSlChange={() => onChangeSelectedPath(path)}
 						size='small'
@@ -3333,8 +3342,12 @@ const TransformationProperty = ({
 								<span className='fullscreen-transformation__property-type'>
 									<span>{typeName}</span>
 									{side === 'input' && property.readOptional && <span>- optional</span>}
-									{showRequired && (
-										<span className='fullscreen-transformation__property-required'>required</span>
+									{isRequired && (
+										<span
+											className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+										>
+											required
+										</span>
 									)}
 								</span>
 							</PropertyTooltip>
@@ -3348,7 +3361,7 @@ const TransformationProperty = ({
 									hoist={true}
 								/>
 							)}
-							{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
+							{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
 								<SlTooltip
 									content='You cannot select this property since it is already used as matching property'
 									hoist={true}
@@ -3359,7 +3372,7 @@ const TransformationProperty = ({
 									/>
 								</SlTooltip>
 							)}
-							{transformationType === 'function' && isOutMatchingProperty && isSelected && (
+							{transformationType === 'function' && isOutMatchingProperty && isFlagged && (
 								<div className='fullscreen-transformation__property-error'>
 									Ensure that this property is not returned by the transformation function, and then
 									deselect this
