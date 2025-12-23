@@ -633,6 +633,11 @@
 	color: var(--sl-color-danger-500);
 	font-weight: 500;
 	font-size: 11px;
+	transition: color 0.3s;
+}
+
+.pipeline__transformation-output-property-required--selected {
+	color: var(--sl-color-neutral-500);
 }
 
 /* The output property must be disabled to avoid tab focus but it must not
@@ -1082,6 +1087,11 @@ inherit the disabled style */
 	font-weight: 500;
 	font-size: 11px;
 	margin-left: 3px;
+	transition: color 0.3s;
+}
+
+.fullscreen-transformation__property-required--selected {
+	color: var(--sl-color-neutral-500);
 }
 
 .fullscreen-transformation__property-type span:first-child {
