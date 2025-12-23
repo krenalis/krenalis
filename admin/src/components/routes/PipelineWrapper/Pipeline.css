@@ -522,7 +522,6 @@
 }
 
 .pipeline__transformation-output-property-description {
-	margin-left: -4px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
