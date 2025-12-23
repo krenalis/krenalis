@@ -3246,7 +3246,8 @@ const TransformationProperty = ({
 		const isCopy = e.target.closest('.fullscreen-transformation__property-copy') != null;
 		const isCaret = e.target.closest('.fullscreen-transformation__property-caret') != null;
 		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
-		if (isCopy || isCaret || isCheckbox) {
+		const isLanguageBadge = e.target.closest('.fullscreen-transformation__property-language-type') != null;
+		if (isCopy || isCaret || isCheckbox || isLanguageBadge) {
 			e.stopPropagation();
 			return;
 		}
