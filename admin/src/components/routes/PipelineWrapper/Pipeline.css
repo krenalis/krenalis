@@ -512,7 +512,7 @@
 .pipeline__transformation-output-property-type,
 .pipeline__transformation-output-property-description {
 	color: var(--sl-color-neutral-600);
-	font-size: 11px;
+	font-size: 12px;
 	margin-right: 5px;
 }
 
@@ -525,6 +525,7 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	line-height: 1.8;
 }
 
 .pipeline__transformation-output-property--map > sl-input {
@@ -1042,6 +1043,8 @@ inherit the disabled style */
 	user-select: none;
 	padding-left: var(--property-indentation);
 	overflow: hidden;
+	flex: 1;
+	min-width: 0;
 }
 
 .fullscreen-transformation__property-check::part(base) {
@@ -1067,6 +1070,17 @@ inherit the disabled style */
 	font-weight: 500;
 }
 
+.fullscreen-transformation__property-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	column-gap: 8px;
+	align-items: start;
+}
+
+.fullscreen-transformation__property-head-main {
+	min-width: 0;
+}
+
 .fullscreen-transformation__property-type {
 	font-size: 11px;
 	margin-right: 5px;
@@ -1074,6 +1088,21 @@ inherit the disabled style */
 
 .fullscreen-transformation__property-type > * {
 	color: var(--sl-color-neutral-600);
+}
+
+.fullscreen-transformation__property-language-type {
+	justify-self: end;
+	margin-right: 2em;
+}
+
+.fullscreen-transformation__property-language-type::part(base) {
+	font-size: 11px;
+	font-family: var(--monospace-fonts);
+	white-space: nowrap;
+	padding: 4px 8px;
+	background-color: #f2f0f4;
+	color: #3c3741;
+	border-color: transparent;
 }
 
 .fullscreen-transformation__property-required {
@@ -1151,10 +1180,11 @@ inherit the disabled style */
 
 .fullscreen-transformation__property-description {
 	color: var(--sl-color-neutral-600);
-	font-size: 11px;
+	font-size: 12px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	line-height: 1.8;
 }
 
 .fullscreen-transformation__property-wrapper--is-out-matching > sl-checkbox {
@@ -1164,6 +1194,7 @@ inherit the disabled style */
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-identifier-icon,
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-name-text,
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-type,
+.fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-language-type,
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-disabled-info,
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-description {
 	opacity: 0.6;
