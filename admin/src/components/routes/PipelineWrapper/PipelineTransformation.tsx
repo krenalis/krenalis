@@ -3433,7 +3433,9 @@ const TransformationProperty = ({
 											hoist={true}
 										/>
 									)}
-									<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+									<span className='fullscreen-transformation__property-name-text'>
+										{property.name}
+									</span>
 								</span>
 								<span className='fullscreen-transformation__property-type'>
 									<span>{meergoTypeName}</span>
@@ -3455,8 +3457,8 @@ const TransformationProperty = ({
 								)}
 								{transformationType === 'function' && isOutMatchingProperty && isSelected && (
 									<div className='fullscreen-transformation__property-error'>
-										Ensure that this property is not returned by the transformation function, and then
-										deselect this
+										Ensure that this property is not returned by the transformation function, and
+										then deselect this
 									</div>
 								)}
 							</div>
