@@ -588,6 +588,8 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
+
 	if res.StatusCode == 200 {
 		return req, nil
 	}

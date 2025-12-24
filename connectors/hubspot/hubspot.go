@@ -413,10 +413,7 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, bb *connectors
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
+	defer res.Body.Close()
 	switch res.StatusCode {
 	case 200, 201, 207:
 	default:

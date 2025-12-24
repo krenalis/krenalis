@@ -259,14 +259,15 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 		body, _ := io.ReadAll(req.Body)
 		req.Body, _ = req.GetBody()
 		// Do the request.
-		resp, err := ga.env.HTTPClient.Do(req)
+		res, err := ga.env.HTTPClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
+		defer res.Body.Close()
 		var validationResponse struct {
 			ValidationMessages []json.Value `json:"validationMessages"`
 		}
-		err = json.NewDecoder(resp.Body).Decode(&validationResponse)
+		err = json.NewDecoder(res.Body).Decode(&validationResponse)
 		if err != nil {
 			return nil, err
 		}
@@ -307,6 +308,8 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 	if err != nil {
 		return nil, err
 	}
+	_ = res.Body.Close()
+
 	if res.StatusCode != 204 {
 		return nil, fmt.Errorf("Google Analytics responded with error code %d", res.StatusCode)
 	}

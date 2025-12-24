@@ -478,6 +478,7 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events connectors.Events, pr
 	if err != nil {
 		return nil, err
 	}
+	_ = res.Body.Close()
 	switch res.StatusCode {
 	case 200, 201, 202, 204:
 	default:
