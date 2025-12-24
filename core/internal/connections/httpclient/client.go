@@ -306,6 +306,8 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		case connectors.PermanentFailure:
 			return res, nil
 		case connectors.NetFailure:
+			_, _ = io.Copy(io.Discard, res.Body)
+			_ = res.Body.Close()
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
