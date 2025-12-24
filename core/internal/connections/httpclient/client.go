@@ -174,7 +174,11 @@ func (c *Client) ClientSecret() (string, error) {
 //
 // An empty header value is considered idempotent but is not sent.
 //
-// It always closes the request body, even if an error occurs.
+// It always closes the request body, even if an error occurs. It is the
+// caller's responsibility to close the response body; however, it is not
+// necessary to drain it, as Close drains the body (reading until EOF, or up to
+// a fixed limit) before closing it.
+//
 // It does not follow redirects.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.do(req, false)
@@ -273,7 +277,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		if err != nil {
 			limiter.OnFailure(duration, connectors.NetFailure, 0)
 			if !retriable {
-				return res, err
+				return nil, err
 			}
 			if !netRetries {
 				retries = 0
@@ -288,6 +292,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			retries++
 			continue
 		}
+		res.Body = drainReadCloser{res.Body}
 
 		if status := res.StatusCode; status == 200 || status == 201 || status == 204 {
 			limiter.OnSuccess(duration)
@@ -306,7 +311,6 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		case connectors.PermanentFailure:
 			return res, nil
 		case connectors.NetFailure:
-			_, _ = io.Copy(io.Discard, res.Body)
 			_ = res.Body.Close()
 			select {
 			case <-ctx.Done():
@@ -328,7 +332,6 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		}
 
 		if hasBody {
-			_, _ = io.Copy(io.Discard, res.Body)
 			_ = res.Body.Close()
 			body, err := req.GetBody()
 			if err != nil {
@@ -414,16 +417,13 @@ func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := c.do(req, true)
+	res, err := c.do(req, true)
 	if err != nil {
 		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: %s", auth.TokenURL, err)
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode != 200 {
-		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: server responded with status %d", auth.TokenURL, resp.StatusCode)
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: server responded with status %d", auth.TokenURL, res.StatusCode)
 	}
 
 	tokens := struct {
@@ -432,7 +432,7 @@ func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code
 		ExpiresIn    *int   `json:"expires_in"`
 		RefreshToken string `json:"refresh_token"`
 	}{}
-	err = json.Decode(resp.Body, &tokens)
+	err = json.Decode(res.Body, &tokens)
 	if err != nil {
 		return "", "", time.Time{}, fmt.Errorf("cannot decode response from %s: %s", auth.TokenURL, err)
 	}
@@ -440,7 +440,7 @@ func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code
 	// TODO(carlo): compute the token type to use
 
 	var expiration time.Time
-	if date := resp.Header.Get("date"); date != "" {
+	if date := res.Header.Get("date"); date != "" {
 		expiration, _ = time.Parse(time.RFC1123, date)
 	}
 	expiration = expiration.UTC()
@@ -464,6 +464,18 @@ func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code
 	expiration = expiration.Add(time.Duration(expiresIn) * time.Second)
 
 	return tokens.AccessToken, tokens.RefreshToken, expiration, nil
+}
+
+// drainReadCloser wraps an io.ReadCloser and ensures that the underlying reader
+// is drained (read until EOF, or up to a fixed limit) before it is closed.
+type drainReadCloser struct {
+	io.ReadCloser
+}
+
+func (d drainReadCloser) Close() error {
+	const maxDrain = 32 << 10 // 32 KiB
+	_, _ = io.Copy(io.Discard, io.LimitReader(d.ReadCloser, maxDrain))
+	return d.ReadCloser.Close()
 }
 
 // retryStrategy determines the failure reason and how long to wait before
