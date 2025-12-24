@@ -317,6 +317,8 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
+//   - SchemaNotAligned, if the output schema is not aligned with the event type
+//     schema.
 //   - TargetExist, if a pipeline already exists for a target for the
 //     connection.
 //   - UnsupportedLanguage, if the transformation language is not supported.
@@ -384,6 +386,21 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return 0, err
+	}
+
+	// Only for destination event pipeline checks that the out schema ia aligned with the event type's schema.
+	// See issue https://github.com/meergo/meergo/issues/2086.
+	if eventType != "" {
+		app := this.application()
+		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
+		if err != nil {
+			return 0, err
+		}
+		createOnly := state.CreateOnly
+		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, &createOnly)
+		if err != nil {
+			return 0, errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
+		}
 	}
 
 	// Determine the input schema.
@@ -1582,7 +1599,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		} else {
 			switch err.(type) {
 			case *schemas.Error:
-				err = errors.Unprocessable(SchemaNotAligned, "output schema is not compatible with the event type's schema: %w", err)
+				err = errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type's schema: %w", err)
 			case *connections.InvalidEventError:
 				err = errors.Unprocessable(InvalidEvent, "event is invalid: %w", err)
 			case *connections.UnavailableError:
