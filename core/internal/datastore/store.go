@@ -41,15 +41,6 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
-// AckEvent represents an ack event.
-type AckEvent struct {
-	Pipeline int
-}
-
-// EventWriterAckFunc is the function called when events have been written to
-// the data warehouse.
-type EventWriterAckFunc func(events []AckEvent, err error)
-
 // EventIdentityWriterAckFunc is the function called when a batch of user
 // identities from events have been written to the data warehouse.
 type EventIdentityWriterAckFunc func(pipeline int, ids []string, err error)
@@ -321,9 +312,9 @@ func (store *Store) NewEventIdentityWriter(pipelineID int, ack EventIdentityWrit
 }
 
 // NewEventWriter returns a new writer to write events.
-func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
+func (store *Store) NewEventWriter() *EventWriter {
 	store.mustBeOpen()
-	return newEventWriter(store, ack)
+	return newEventWriter(store)
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema

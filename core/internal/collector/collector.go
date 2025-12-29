@@ -91,7 +91,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *conne
 	for _, ws := range st.Workspaces() {
 		c.observers.Store(ws.ID, newObserver())
 		store := ds.Store(ws.ID)
-		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
+		c.eventWriters.Store(ws.ID, store.NewEventWriter())
 	}
 	for _, pipeline := range st.Pipelines() {
 		// Create an identity writer for each active SDK pipeline.
@@ -209,18 +209,6 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 		return conn, true
 	}
 	return nil, false
-}
-
-// eventAck acknowledges when an event is written to the data warehouse.
-func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
-	meergoMetrics.Increment("Collector.eventAck.calls", 1)
-	for _, event := range evs {
-		if err != nil {
-			c.metrics.FinalizeFailed(event.Pipeline, 1, err.Error())
-			return
-		}
-		c.metrics.FinalizePassed(event.Pipeline, 1)
-	}
 }
 
 // importEventsPipeline returns the pipeline of the source connection that
@@ -497,7 +485,7 @@ func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
 	c.observers.Store(n.ID, newObserver())
 	store := c.datastore.Store(n.ID)
-	c.eventWriters.Store(n.ID, store.NewEventWriter(c.eventAck))
+	c.eventWriters.Store(n.ID, store.NewEventWriter())
 }
 
 // onDeleteConnection is called when a connection is deleted.

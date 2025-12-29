@@ -283,7 +283,7 @@ func New(conf *Config) (*Core, error) {
 	core.metrics = coremetrics.New(db, core.state)
 
 	// Init the datastore.
-	core.datastore = datastore.New(core.state)
+	core.datastore = datastore.New(core.state, core.metrics)
 
 	// Init the connections.
 	core.connections = connections.New(core.state)

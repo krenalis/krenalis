@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/tools/json"
@@ -36,17 +37,19 @@ func (err ConnectionFailed) Error() string {
 }
 
 type Datastore struct {
-	state  *state.State
-	mu     sync.Mutex // for the store field
-	store  map[int]*Store
-	closed atomic.Bool
+	state   *state.State
+	mu      sync.Mutex // for the store field
+	store   map[int]*Store
+	metrics *metrics.Collector
+	closed  atomic.Bool
 }
 
 // New returns a *Datastore instance.
-func New(st *state.State) *Datastore {
+func New(st *state.State, metrics *metrics.Collector) *Datastore {
 	ds := &Datastore{
-		state: st,
-		store: map[int]*Store{},
+		state:   st,
+		store:   map[int]*Store{},
+		metrics: metrics,
 	}
 	st.Freeze()
 	ds.state.AddListener(ds.onCreatePipeline)
