@@ -25,17 +25,16 @@ type EventIdentityWriter struct {
 	store      *Store
 	pipeline   int
 	connection int
-	ack        EventIdentityWriterAckFunc
 	columns    []warehouses.Column
 
-	mu        sync.Mutex
-	pipelines map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
-	aligned   bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
-	flatter   *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
-	index     map[identityKey]int
-	rows      []map[string]any
-	ackIDs    []string
-	timer     *time.Timer
+	mu           sync.Mutex
+	pipelines    map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
+	aligned      bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
+	flatter      *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
+	index        map[identityKey]int
+	rows         []map[string]any
+	metricsCount int
+	timer        *time.Timer
 
 	close struct {
 		ctx    context.Context
@@ -50,14 +49,13 @@ type EventIdentityWriter struct {
 // importing identities from events.
 //
 // It must be called on a frozen state.
-func newEventIdentityWriter(store *Store, pipelineID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
+func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 
 	// Initialize the EventIdentityWriter.
 	iw := &EventIdentityWriter{
 		store:     store,
 		pipeline:  pipelineID,
 		index:     map[identityKey]int{},
-		ack:       ack,
 		pipelines: map[int]struct{}{},
 	}
 
@@ -146,17 +144,10 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 // attributes must comply with it. It returns immediately, deferring the
 // validation of the attributes and the actual write operation to a later time.
 //
-// On error, it calls the ack function with:
-//   - the ErrInspectionMode error if the data warehouse is in inspection mode.
-//   - the ErrMaintenanceMode error if the data warehouse is in maintenance
-//     mode.
-//   - a *schemas.Error value, if the pipeline output schema is not aligned with
-//     the profile schema.
-//
 // If the pipeline of iw does not exist anymore, returns an error.
 //
 // It panics if called on a closed writer.
-func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
+func (iw *EventIdentityWriter) Write(identity Identity) error {
 	if iw.close.Load() {
 		panic("call Write on a closed identity writer")
 	}
@@ -203,7 +194,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 				"_connection":   iw.connection,
 				"_updated_at":   identity.UpdatedAt,
 			}
-			iw.appendRow(key, row, "")
+			iw.appendRow(key, row, false)
 		}
 	}
 
@@ -223,16 +214,17 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	}
 	row["_updated_at"] = identity.UpdatedAt
 
-	iw.appendRow(key, row, ackID)
+	iw.appendRow(key, row, true)
 
 	return nil
 }
 
-// appendRow appends a row to the rows or replaces an existing row with the same key.
-func (iw *EventIdentityWriter) appendRow(key identityKey, row map[string]any, ackID string) {
+// appendRow appends a row to the rows or replaces an existing row with the same
+// key.
+func (iw *EventIdentityWriter) appendRow(key identityKey, row map[string]any, includeInMetrics bool) {
 	iw.mu.Lock()
-	if ackID != "" {
-		iw.ackIDs = append(iw.ackIDs, ackID)
+	if includeInMetrics {
+		iw.metricsCount++
 	}
 	// If a row with the same key already exists, update that row rather than adding a duplicate.
 	if i, ok := iw.index[key]; ok {
@@ -264,20 +256,24 @@ func (iw *EventIdentityWriter) flush() {
 	}
 	rows := iw.rows
 	iw.rows = nil
-	ackIDs := iw.ackIDs
-	iw.ackIDs = nil
+	count := iw.metricsCount
+	iw.metricsCount = 0
 	clear(iw.index)
 	iw.timer = nil
 	iw.close.Go(func() {
 		ctx, done, err := iw.store.mc.StartOperation(iw.close.ctx, normalMode)
 		if err != nil {
 			// Warehouse mode is not normal: discard identities.
-			iw.ack(iw.pipeline, ackIDs, err)
+			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, count, err.Error())
 			return
 		}
 		defer done()
 		err = iw.store.warehouse().MergeIdentities(ctx, iw.columns, rows)
-		iw.ack(iw.pipeline, ackIDs, err)
+		if err != nil {
+			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, count, err.Error())
+			return
+		}
+		iw.store.ds.metrics.FinalizePassed(iw.pipeline, count)
 	})
 }
 

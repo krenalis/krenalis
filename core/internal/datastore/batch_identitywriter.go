@@ -52,17 +52,16 @@ type BatchIdentityWriter struct {
 	pipeline   int
 	connection int
 	run        int
-	ack        IdentityWriterAckFunc
 	flatter    *flatter
 	columns    []warehouses.Column
 	purge      bool
 	skipPurge  bool
 
-	mu     sync.Mutex
-	index  map[identityKey]int // Access using 'mu'.
-	rows   []map[string]any    // Access using 'mu'.
-	ackIDs []string            // Access using 'mu'.
-	timer  *time.Timer         // Access using 'mu'.
+	mu           sync.Mutex
+	index        map[identityKey]int // Access using 'mu'.
+	rows         []map[string]any    // Access using 'mu'.
+	metricsCount int
+	timer        *time.Timer // Access using 'mu'.
 
 	close struct {
 		ctx    context.Context
@@ -75,18 +74,11 @@ type BatchIdentityWriter struct {
 // newBatchIdentityWriter returns an identity writer for writing identities in
 // batch, relative to the given pipeline (which must be running) on the data
 // warehouse. purge reports whether identities should be purged from the data
-// warehouse after all identities have been written. The ack parameter is the
-// acknowledgment function.
+// warehouse after all identities have been written.
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-//
-// It panics if the ack function is nil.
-func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
-
-	if ack == nil {
-		panic("nil ack function")
-	}
+func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
 
 	connection := pipeline.Connection()
 	run, ok := pipeline.Run()
@@ -107,7 +99,6 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, 
 		run:        run.ID,
 		flatter:    newFlatter(pipeline.OutSchema, store.identityColumnByProperty()),
 		index:      map[identityKey]int{},
-		ack:        ack,
 		purge:      purge,
 	}
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
@@ -230,17 +221,12 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 		"_connection":   iw.connection,
 		"_run":          iw.run,
 	}
-	iw.appendRow(key, row, "")
+	iw.appendRow(key, row, false)
 }
 
 // Write writes an identity. If a valid profile schema has been provided, the
 // attributes must comply with it. It returns immediately, deferring the
 // validation of the attributes and the actual write operation to a later time.
-//
-// If property validation fails, the ack function is called with the error.
-//
-// When a batch of identities has been written to the data warehouse, the ack
-// function is called with a nil error.
 //
 // It panics if called on a closed writer.
 func (iw *BatchIdentityWriter) Write(identity Identity) {
@@ -256,14 +242,14 @@ func (iw *BatchIdentityWriter) Write(identity Identity) {
 	row["_connection"] = iw.connection
 	row["_updated_at"] = identity.UpdatedAt
 	row["_run"] = iw.run
-	iw.appendRow(key, row, "")
+	iw.appendRow(key, row, true)
 }
 
 // appendRow appends a row to the rows or replaces an existing row with the same key.
-func (iw *BatchIdentityWriter) appendRow(key identityKey, row map[string]any, ackID string) {
+func (iw *BatchIdentityWriter) appendRow(key identityKey, row map[string]any, includeInMetrics bool) {
 	iw.mu.Lock()
-	if _, ok := row["$purge"]; !ok {
-		iw.ackIDs = append(iw.ackIDs, ackID)
+	if includeInMetrics {
+		iw.metricsCount++
 	}
 	// If a row with the same key already exists, update that row rather than adding a duplicate.
 	if i, ok := iw.index[key]; ok {
@@ -295,12 +281,16 @@ func (iw *BatchIdentityWriter) flush() {
 	}
 	rows := iw.rows
 	iw.rows = nil
-	ackIDs := iw.ackIDs
-	iw.ackIDs = nil
+	count := iw.metricsCount
+	iw.metricsCount = 0
 	clear(iw.index)
 	iw.timer = nil
 	iw.close.Go(func() {
 		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
-		iw.ack(ackIDs, err)
+		if err != nil {
+			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, count, err.Error())
+			return
+		}
+		iw.store.ds.metrics.FinalizePassed(iw.pipeline, count)
 	})
 }

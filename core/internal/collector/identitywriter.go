@@ -42,7 +42,7 @@ func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provid
 	}
 	ws := pipeline.Connection().Workspace()
 	store := ds.Store(ws.ID)
-	iw.writer = store.NewEventIdentityWriter(pipeline.ID, iw.ack)
+	iw.writer = store.NewEventIdentityWriter(pipeline.ID)
 	if t := pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		iw.transformer, _ = transformers.New(pipeline, provider, nil)
 	}
@@ -115,15 +115,6 @@ func (iw *identityWriter) Write(event events.Event) error {
 	return nil
 }
 
-// ack acknowledges when identities are written to the data warehouse.
-func (iw *identityWriter) ack(pipeline int, ids []string, err error) {
-	if err != nil {
-		iw.metrics.FinalizeFailed(iw.pipeline, len(ids), err.Error())
-		return
-	}
-	iw.metrics.FinalizePassed(pipeline, len(ids))
-}
-
 func (iw *identityWriter) transformAndWrite(events []events.Event) {
 
 	meergoMetrics.Increment("Collector.IdentityWriter.transformAndWrite.calls", 1)
@@ -170,7 +161,7 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 			AnonymousID: event["anonymousId"].(string),
 			Attributes:  record.Attributes,
 			UpdatedAt:   event["timestamp"].(time.Time),
-		}, event["messageId"].(string))
+		})
 		_ = err // TODO(marco): handle the error
 	}
 
@@ -184,5 +175,5 @@ func (iw *identityWriter) writeDirect(event events.Event) error {
 		AnonymousID: event["anonymousId"].(string),
 		Attributes:  map[string]any{},
 		UpdatedAt:   event["timestamp"].(time.Time),
-	}, event["messageId"].(string))
+	})
 }
