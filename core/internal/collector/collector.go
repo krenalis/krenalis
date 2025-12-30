@@ -452,7 +452,22 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 		// Send the event to apps.
 		for _, id := range connection.LinkedConnections {
-			c.destinations.QueueEvent(id, event)
+			lc, ok := c.state.Connection(id)
+			if !ok {
+				continue
+			}
+			for _, pipeline := range lc.Pipelines() {
+				if pipeline.Target != state.TargetEvent || !pipeline.Enabled {
+					continue
+				}
+				c.metrics.ReceivePassed(pipeline.ID, 1)
+				if !filters.Applies(pipeline.Filter, event) {
+					c.metrics.FilterFailed(pipeline.ID, 1)
+					continue
+				}
+				c.metrics.FilterPassed(pipeline.ID, 1)
+				c.destinations.QueueEvent(pipeline, event)
+			}
 		}
 
 	}

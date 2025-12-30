@@ -14,11 +14,9 @@ import (
 
 	"github.com/meergo/meergo/core/internal/collector/sender"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -105,16 +103,9 @@ func (da *destinationPipeline) Discard(cause error) {
 
 // QueueEvent queues an event for the pipeline.
 //
-// If the event does not match the pipeline's filter, it is ignored.
 // If the pipeline has a transformation, the event is transformed before being
 // queued.
 func (da *destinationPipeline) QueueEvent(event events.Event) {
-	if !filters.Applies(da.filter, event) {
-		da.queue.metrics.FilterFailed(da.id, 1)
-		meergoMetrics.Increment("Collector.serveEvents.discarded_user_identities", 1)
-		return
-	}
-	da.queue.metrics.FilterPassed(da.id, 1)
 	se := da.queue.sender.CreateEvent(da.id, da.eventType, da.schema, event)
 	if da.transformer == nil {
 		da.queue.metrics.TransformationPassed(da.id, 1)
