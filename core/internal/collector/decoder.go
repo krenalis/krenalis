@@ -306,7 +306,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		}
 	}
 	if d.batch == nil {
-		// It is a single-event request. Reparse the entire request body
+		// It is a single-event request. Reparse the entire request body.
 		d.payload = bytes.NewBuffer(body)
 	} else {
 		// It is a batch-event request. Parse only the slice of events.

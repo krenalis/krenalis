@@ -18,7 +18,8 @@ import (
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/core/internal/metrics"
+	toolsMetrics "github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
@@ -41,10 +42,6 @@ type Ack struct {
 	Pipeline int
 	Event    string
 }
-
-// AcksFunc is a function invoked by the sender to report the result of event
-// delivery.
-type AcksFunc func(acks []Ack, err error)
 
 type Application interface {
 
@@ -101,12 +98,12 @@ type user struct {
 //  2. (Optional) Transform the event and set the Event.Properties field.
 //  3. Call the QueueEvent method.
 type Sender struct {
-	connector string   // application connector.
-	acks      AcksFunc // ack function.
+	connector string // application connector.
+	metrics   *metrics.Collector
 
-	metrics struct {
-		queueAvailable *metrics.GaugeFunc
-		queueWait      *metrics.HistogramBuf
+	toolsMetrics struct {
+		queueAvailable *toolsMetrics.GaugeFunc
+		queueWait      *toolsMetrics.HistogramBuf
 	}
 
 	mu                 sync.Mutex
@@ -121,6 +118,7 @@ type Sender struct {
 	timer              *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
 	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
 	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
+	sent               func(messageID string, err error)                         // function called in tests when an event is sent or discarded.
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed.
@@ -131,16 +129,14 @@ type Sender struct {
 	}
 }
 
-// New returns a new Sender. connector is the application's connector, waitTime
-// is the function used to estimate how long to wait before sending a batch of
-// events, sendEvents is the function that sends the events to the application,
-// and acks acknowledges both successes and failures.
-func New(app Application, acks AcksFunc) *Sender {
+// New returns a new Sender. app is the application instance, and metrics is the
+// metrics collector, or nil if no metrics are collected.
+func New(app Application, metrics *metrics.Collector) *Sender {
 	s := &Sender{
 		connector:       app.Connector(),
 		waitTime:        app.WaitTime,
 		sendEvents:      app.SendEvents,
-		acks:            acks,
+		metrics:         metrics,
 		events:          make([]*Event, 0, 1000),
 		users:           make(map[string]*user, 1000),
 		releasableUsers: make(map[*user]struct{}),
@@ -188,13 +184,13 @@ func New(app Application, acks AcksFunc) *Sender {
 	}()
 	// Set the metrics.
 	connection := strconv.Itoa(app.ID())
-	s.metrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
+	s.toolsMetrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
 		s.mu.Unlock()
 		return float64(a)
 	}, s.connector, connection)
-	s.metrics.queueWait = queueWaitMetric.Register(s.connector, connection)
+	s.toolsMetrics.queueWait = queueWaitMetric.Register(s.connector, connection)
 	return s
 }
 
@@ -255,8 +251,8 @@ func (s *Sender) Close(ctx context.Context) error {
 		s._assertAvailable(0)
 	}
 	trace("Writer.Close: iterators are terminated; writer is now closed\n")
-	s.metrics.queueAvailable.Unregister()
-	s.metrics.queueWait.Unregister()
+	s.toolsMetrics.queueAvailable.Unregister()
+	s.toolsMetrics.queueWait.Unregister()
 	return nil
 }
 
@@ -441,17 +437,18 @@ func (s *Sender) discard(err error) {
 	if s.iterator.numConsumed == 0 {
 		s.iterator.sameUser.user = nil
 	}
-	trace("Sender.discard: iterator %p; discard index %d, current %d\n", s.iterator, i, s.iterator.index)
+	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %d, message ID %q\n",
+		s.iterator, i, s.iterator.index, e.pipeline, e.Received.MessageID())
 	if asserts {
 		s._assertAvailable(s.available)
 	}
-	ack := Ack{
-		Pipeline: e.pipeline,
-		Event:    e.Received.MessageID(),
+	if s.sent != nil {
+		defer s.sent(e.Received.MessageID(), err)
 	}
-	trace("Sender.discard: send ack for iterator %p with ack %#v and error %#v\n", s.iterator, ack, err)
 	s.mu.Unlock()
-	s.acks([]Ack{ack}, err)
+	if s.metrics != nil {
+		s.metrics.FinalizeFailed(e.pipeline, 1, err.Error())
+	}
 }
 
 // postpone marks the most recently read event as unread. It is invoked when an
@@ -673,7 +670,11 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		}
 	}
 
-	var acksByError map[error][]Ack
+	type metricsKey struct {
+		pipeline int
+		err      error
+	}
+	var metricsCounts map[metricsKey]int
 
 	s.mu.Lock()
 	if s.iterator == iter {
@@ -687,7 +688,6 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		if asserts {
 			s._assertAvailable(s.available)
 		}
-		acksByError = make(map[error][]Ack)
 		var index int
 		for i := 0; i < len(s.events); i++ {
 			if s.events[i] == nil || s.events[i].iterator != iter {
@@ -695,17 +695,24 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			}
 			user := s.events[i].user
 			s.releasableUsers[user] = struct{}{}
-			ack := Ack{
-				Pipeline: s.events[i].pipeline,
-				Event:    s.events[i].Received.MessageID(),
-			}
-			var err error
+			err := errRequest
 			if errEvents != nil {
 				err = errEvents[index]
-			} else if errRequest != nil {
-				err = errRequest
 			}
-			acksByError[err] = append(acksByError[err], ack)
+			if s.metrics != nil {
+				key := metricsKey{
+					pipeline: s.events[i].pipeline,
+					err:      err,
+				}
+				if metricsCounts == nil {
+					metricsCounts = map[metricsKey]int{key: 1}
+				} else {
+					metricsCounts[key]++
+				}
+			}
+			if s.sent != nil {
+				defer s.sent(s.events[i].Received.MessageID(), err)
+			}
 			user.events--
 			s.events[i] = nil
 			index++
@@ -726,9 +733,13 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 	}
 	s.mu.Unlock()
 
-	for err, acks := range acksByError {
-		trace("Sender.send: send ack for iterator %p with acks %#v and error %#v\n", iter, acks, err)
-		s.acks(acks, err)
+	for key, count := range metricsCounts {
+		trace("Sender.send: collect metric for iterator %p with pipeline %d, count %d, and error %#v\n", iter, key.pipeline, count, key.err)
+		if key.err != nil {
+			s.metrics.FinalizeFailed(key.pipeline, count, key.err.Error())
+			continue
+		}
+		s.metrics.FinalizePassed(key.pipeline, count)
 	}
 
 	s.close.iterators.Done()
@@ -741,6 +752,14 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 func (s *Sender) setRateLimiterPattern(pattern string) {
 	s.mu.Lock()
 	s.rateLimiterPattern = pattern
+	s.mu.Unlock()
+}
+
+// setSentFunc updates the sent function that is called when an event is sent or
+// discarded. If nil, no function is called.
+func (s *Sender) setSentFunc(f func(messageID string, err error)) {
+	s.mu.Lock()
+	s.sent = f
 	s.mu.Unlock()
 }
 

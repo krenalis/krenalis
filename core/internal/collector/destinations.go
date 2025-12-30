@@ -75,7 +75,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 			continue
 		}
 		app := connections.Application(c)
-		sender := sender.New(app, d.sentAcks)
+		sender := sender.New(app, d.metrics)
 		pipelines := make([]*destinationPipeline, 0, 1)
 		// Keeps all pipelines active on the connection's events.
 		for _, p := range c.Pipelines() {
@@ -167,7 +167,7 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 		return
 	}
 	app := d.connections.Application(c)
-	d.senders[n.ID] = sender.New(app, d.sentAcks)
+	d.senders[n.ID] = sender.New(app, d.metrics)
 	pipelines := make([]*destinationPipeline, 0, 1)
 	d.mu.Lock()
 	d.pipelines[n.ID] = pipelines
@@ -382,16 +382,4 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 	d.mu.Lock()
 	pipelines[index] = &pipeline
 	d.mu.Unlock()
-}
-
-// sentAcks is the function passed to the sender, which calls it to acknowledge
-// the delivery of events (or report errors).
-func (d *destinations) sentAcks(acks []sender.Ack, err error) {
-	for _, ack := range acks {
-		if err != nil {
-			d.metrics.FinalizeFailed(ack.Pipeline, 1, err.Error())
-			continue
-		}
-		d.metrics.FinalizePassed(ack.Pipeline, 1)
-	}
 }
