@@ -256,11 +256,11 @@ func (s *Sender) Close(ctx context.Context) error {
 	return nil
 }
 
-// CreateEvent creates a new event with the given pipeline, type, schema, and
-// original event.
+// CreateEvent creates a new event with the given pipeline, type, schema,
+// and original event.
 //
-// The returned event must be passed to the QueueEvent method, optionally after
-// setting the Properties field.
+// The returned event must be passed to QueueEvent (optionally after setting
+// the Properties field) or to DiscardEvent if it should be discarded.
 func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event events.Event) *Event {
 	anonymousID, ok := event["anonymousId"].(string)
 	if !ok {

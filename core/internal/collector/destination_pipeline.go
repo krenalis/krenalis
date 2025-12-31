@@ -168,6 +168,9 @@ func (da *destinationPipeline) transform() {
 	// Transform the events.
 	err := da.transformer.Transform(da.queue.ctx, records)
 	if err != nil {
+		for i := 0; i < n; i++ {
+			da.queue.sender.DiscardEvent(events[i].senderEvent)
+		}
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
 			msg = err.Error()
@@ -183,6 +186,7 @@ func (da *destinationPipeline) transform() {
 
 	for i, record := range records {
 		if err := record.Err; err != nil {
+			da.queue.sender.DiscardEvent(events[i].senderEvent)
 			switch err.(type) {
 			case transformers.RecordTransformationError:
 				da.queue.metrics.TransformationFailed(da.id, 1, err.Error())
@@ -190,7 +194,6 @@ func (da *destinationPipeline) transform() {
 				da.queue.metrics.TransformationPassed(da.id, 1)
 				da.queue.metrics.OutputValidationFailed(da.id, 1, err.Error())
 			}
-			da.queue.sender.DiscardEvent(events[i].senderEvent)
 			continue
 		}
 		da.queue.metrics.TransformationPassed(da.id, 1)
