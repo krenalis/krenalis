@@ -57,10 +57,7 @@ func (ew *EventWriter) Close(ctx context.Context) {
 }
 
 // Write writes an event to the store.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-func (ew *EventWriter) Write(event events.Event, pipeline int) error {
+func (ew *EventWriter) Write(event events.Event, pipeline int) {
 
 	row := make([]any, 66)
 
@@ -228,7 +225,6 @@ func (ew *EventWriter) Write(event events.Event, pipeline int) error {
 	ew.pipelines = append(ew.pipelines, pipeline)
 	ew.mu.Unlock()
 
-	return nil
 }
 
 func (ew *EventWriter) flush() {

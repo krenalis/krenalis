@@ -416,14 +416,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !ok {
 				continue
 			}
-			err = ew.(*datastore.EventWriter).Write(event, pipeline.ID)
-			if err != nil {
-				c.metrics.FinalizeFailed(pipeline.ID, 1, err.Error())
-				if eventErr == nil {
-					eventErr = errServiceUnavailable
-				}
-				continue
-			}
+			ew.(*datastore.EventWriter).Write(event, pipeline.ID)
 		}
 
 		// Import the identities into the data warehouse.
