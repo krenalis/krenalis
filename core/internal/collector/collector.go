@@ -219,40 +219,6 @@ func (c *Collector) importEventsPipeline(connection *state.Connection) (*state.P
 	return nil, false
 }
 
-// serveSettings is called by the ServeHTTP method to serve a settings request.
-func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "GET")
-		w.Header().Set("Access-Control-Max-Age", "900")
-		w.Header().Set("Cache-Control", "public, max-age=900, immutable")
-		w.WriteHeader(204)
-		return nil
-	}
-	if r.Method != "GET" {
-		return errMethodNotAllowed
-	}
-	writeKey, _ := strings.CutPrefix(r.URL.Path, "/events/settings/")
-	if writeKey == "" || strings.Contains(writeKey, "/") {
-		return errNotFound
-	}
-	connection, ok := c.connectionByKey(writeKey)
-	if !ok || connection.Strategy == nil {
-		return errors.Unauthorized("event write key in the path is invalid")
-	}
-	strategy := string(*connection.Strategy)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
-	_ = json.Encode(w, map[string]any{
-		"strategy": strategy,
-		"integrations": map[string]any{
-			"Meergo": map[string]any{
-				"apiKey": writeKey,
-			},
-		},
-	})
-	return nil
-}
-
 // serveEvents is called by the ServeHTTP method to serve an events request.
 func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
@@ -472,6 +438,40 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// serveSettings is called by the ServeHTTP method to serve a settings request.
+func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "GET")
+		w.Header().Set("Access-Control-Max-Age", "900")
+		w.Header().Set("Cache-Control", "public, max-age=900, immutable")
+		w.WriteHeader(204)
+		return nil
+	}
+	if r.Method != "GET" {
+		return errMethodNotAllowed
+	}
+	writeKey, _ := strings.CutPrefix(r.URL.Path, "/events/settings/")
+	if writeKey == "" || strings.Contains(writeKey, "/") {
+		return errNotFound
+	}
+	connection, ok := c.connectionByKey(writeKey)
+	if !ok || connection.Strategy == nil {
+		return errors.Unauthorized("event write key in the path is invalid")
+	}
+	strategy := string(*connection.Strategy)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
+	_ = json.Encode(w, map[string]any{
+		"strategy": strategy,
+		"integrations": map[string]any{
+			"Meergo": map[string]any{
+				"apiKey": writeKey,
+			},
+		},
+	})
+	return nil
+}
+
 // onCreatePipeline is called when a pipeline is created.
 func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 	pipeline, _ := c.state.Pipeline(n.ID)
@@ -510,12 +510,6 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	}
 }
 
-// onDeleteWorkspace is called when a workspace is deleted.
-func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
-	c.observers.Delete(n.ID)
-	c.eventWriters.Delete(n.ID)
-}
-
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 	iw, ok := c.identityWriters.LoadAndDelete(n.ID)
@@ -524,6 +518,12 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 	}
 	_ = iw.(*identityWriter).Close(context.Background())
 	// TODO(marco): should the ongoing transformations be interrupted?
+}
+
+// onDeleteWorkspace is called when a workspace is deleted.
+func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
+	c.observers.Delete(n.ID)
+	c.eventWriters.Delete(n.ID)
 }
 
 // onSetPipelineStatus is called when the status of a pipeline is set.
