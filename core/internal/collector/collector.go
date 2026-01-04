@@ -200,15 +200,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // connectionByKey returns the SDK or webhook connection for the key and true
 // if found, or nil and false otherwise.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
-	conn, ok := c.state.ConnectionByKey(key)
-	if !ok || conn.Role != state.Source {
+	connection, ok := c.state.ConnectionByKey(key)
+	if !ok || connection.Role != state.Source {
 		return nil, false
 	}
-	t := conn.Connector().Type
-	if t == state.SDK || t == state.Webhook {
-		return conn, true
-	}
-	return nil, false
+	return connection, true
 }
 
 // importEventsPipeline returns the pipeline of the source connection that
