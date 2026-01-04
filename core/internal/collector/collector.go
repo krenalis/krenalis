@@ -207,18 +207,6 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	return connection, true
 }
 
-// importEventsPipeline returns the pipeline of the source connection that
-// imports events into the data warehouse, if there is one and if it is enabled;
-// otherwise, it returns nil and false.
-func (c *Collector) importEventsPipeline(connection *state.Connection) (*state.Pipeline, bool) {
-	for _, p := range connection.Pipelines() {
-		if p.Enabled && p.Target == state.TargetEvent {
-			return p, true
-		}
-	}
-	return nil, false
-}
-
 // serveEvents is called by the ServeHTTP method to serve an events request.
 func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
@@ -343,6 +331,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ws := connection.Workspace()
 	connector := connection.Connector()
+	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
 	var eventErr error
@@ -367,36 +356,39 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Store the events into the data warehouse.
-		if pipeline, ok := c.importEventsPipeline(connection); ok {
-			c.metrics.ReceivePassed(pipeline.ID, 1)
-			if !filters.Applies(pipeline.Filter, event) {
-				c.metrics.FilterFailed(pipeline.ID, 1)
+		for _, p := range pipelines {
+			if !p.Enabled || p.Target != state.TargetEvent {
 				continue
 			}
-			c.metrics.FilterPassed(pipeline.ID, 1)
+			c.metrics.ReceivePassed(p.ID, 1)
+			if !filters.Applies(p.Filter, event) {
+				c.metrics.FilterFailed(p.ID, 1)
+				continue
+			}
+			c.metrics.FilterPassed(p.ID, 1)
 			ew, ok := c.eventWriters.Load(ws.ID)
 			if !ok {
 				continue
 			}
-			ew.(*datastore.EventWriter).Write(event, pipeline.ID)
+			ew.(*datastore.EventWriter).Write(event, p.ID)
 		}
 
 		// Import the identities into the data warehouse.
-		for _, pipeline := range connection.Pipelines() {
-			if pipeline.Target != state.TargetUser || !pipeline.Enabled {
+		for _, p := range pipelines {
+			if !p.Enabled || p.Target != state.TargetUser {
 				continue
 			}
-			c.metrics.ReceivePassed(pipeline.ID, 1)
-			if !filters.Applies(pipeline.Filter, event) {
-				c.metrics.FilterFailed(pipeline.ID, 1)
+			c.metrics.ReceivePassed(p.ID, 1)
+			if !filters.Applies(p.Filter, event) {
+				c.metrics.FilterFailed(p.ID, 1)
 				meergoMetrics.Increment("Collector.serveEvents.discarded_identities", 1)
 				continue
 			}
-			c.metrics.FilterPassed(pipeline.ID, 1)
-			if w, ok := c.identityWriters.Load(pipeline.ID); ok {
+			c.metrics.FilterPassed(p.ID, 1)
+			if w, ok := c.identityWriters.Load(p.ID); ok {
 				err = w.(*identityWriter).Write(event)
 				if err != nil {
-					c.metrics.FinalizeFailed(pipeline.ID, 1, err.Error())
+					c.metrics.FinalizeFailed(p.ID, 1, err.Error())
 					if eventErr == nil {
 						eventErr = errServiceUnavailable
 					}
@@ -411,17 +403,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !ok {
 				continue
 			}
-			for _, pipeline := range lc.Pipelines() {
-				if pipeline.Target != state.TargetEvent || !pipeline.Enabled {
+			for _, p := range lc.Pipelines() {
+				if !p.Enabled || p.Target != state.TargetEvent {
 					continue
 				}
-				c.metrics.ReceivePassed(pipeline.ID, 1)
-				if !filters.Applies(pipeline.Filter, event) {
-					c.metrics.FilterFailed(pipeline.ID, 1)
+				c.metrics.ReceivePassed(p.ID, 1)
+				if !filters.Applies(p.Filter, event) {
+					c.metrics.FilterFailed(p.ID, 1)
 					continue
 				}
-				c.metrics.FilterPassed(pipeline.ID, 1)
-				c.destinations.QueueEvent(pipeline, event)
+				c.metrics.FilterPassed(p.ID, 1)
+				c.destinations.QueueEvent(p, event)
 			}
 		}
 
