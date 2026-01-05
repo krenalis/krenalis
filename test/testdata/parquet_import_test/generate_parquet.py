@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Elastic-2.0
 #
 #
-# Copyright (c) 2025 Open2b
+# Copyright (c) 2026 Open2b
 #
 
 from datetime import date, datetime, time, timezone
