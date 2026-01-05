@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file.
 
 // Package postgresql provides a connector for PostgreSQL.
-// (https://www.postgresql.org/docs/16/)
+// (https://www.postgresql.org/docs/18/)
 package postgresql
 
 import (
