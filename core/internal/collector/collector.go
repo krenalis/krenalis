@@ -34,6 +34,9 @@ import (
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
+// pipelineWorker represents a long-running pipeline event processor.
+type pipelineWorker func()
+
 // Errors handled by the HTTP server of the collector.
 var (
 	errMethodNotAllowed   = errors.New("method not allowed")
@@ -65,7 +68,7 @@ type Collector struct {
 	close            struct {
 		mu      sync.Mutex
 		closed  bool
-		cancels map[int]func()
+		cancels map[int]context.CancelFunc // maps pipeline IDs to their worker cancel functions
 	}
 }
 
@@ -87,7 +90,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 		functionProvider: provider,
 		destinations:     newDestinations(st, connections, provider, metrics),
 	}
-	c.close.cancels = map[int]func(){}
+	c.close.cancels = map[int]context.CancelFunc{}
 
 	if maxMindDBPath != "" {
 		var err error
@@ -110,16 +113,16 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	for _, ws := range st.Workspaces() {
 		c.addWorkspace(ws)
 	}
-	var starts []func()
+	var workers []pipelineWorker
 	for _, pipeline := range st.Pipelines() {
-		if start := c.startDispatcher(pipeline); start != nil {
-			starts = append(starts, start)
+		if worker := c.makePipelineWorker(pipeline); worker != nil {
+			workers = append(workers, worker)
 		}
 	}
 	st.Unfreeze()
 
-	for _, start := range starts {
-		go start()
+	for _, worker := range workers {
+		go worker()
 	}
 
 	return c, nil
@@ -225,7 +228,7 @@ func (c *Collector) addWorkspace(ws *state.Workspace) {
 //
 // It returns nil if the pipeline does not handle events or if the dispatcher
 // is already canceled.
-func (c *Collector) cancelDispatcher(pipeline *state.Pipeline) func() {
+func (c *Collector) cancelDispatcher(pipeline *state.Pipeline) pipelineWorker {
 	cancel, ok := c.close.cancels[pipeline.ID]
 	if !ok {
 		return nil
@@ -248,6 +251,50 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 		return nil, false
 	}
 	return connection, true
+}
+
+// makePipelineWorker returns a function meant to be run in its own goroutine.
+// The returned worker processes events for the given pipeline.
+//
+// It must be called with a frozen state.
+//
+// It returns nil if the pipeline does not handle events, is not enabled,
+// or if a worker for the pipeline is already running.
+func (c *Collector) makePipelineWorker(pipeline *state.Pipeline) pipelineWorker {
+	if !pipeline.Enabled {
+		return nil
+	}
+	connection := pipeline.Connection()
+	if connection.LinkedConnections == nil {
+		return nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	c.close.cancels[pipeline.ID] = cancel
+	switch pipeline.Target {
+	case state.TargetUser:
+		// Import the identity into the data warehouse.
+		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
+		c.identityWriters.Store(pipeline.ID, iw)
+		return func() {
+			c.processIdentityEvents(ctx, iw, pipeline.ID)
+		}
+	case state.TargetEvent:
+		// Store the event into the data warehouse.
+		if pipeline.EventType == "" {
+			ws := connection.Workspace()
+			ew, _ := c.eventWriters.Load(ws.ID)
+			return func() {
+				c.processWarehouseEvents(ctx, ew.(*datastore.EventWriter), pipeline.ID)
+			}
+		}
+		// Send the event to apps.
+		return func() {
+			c.processForwardedEvents(ctx, c.destinations, pipeline)
+		}
+	default:
+		panic("unreachable")
+	}
+
 }
 
 // serveEvents is called by the ServeHTTP method to serve an events request.
@@ -511,7 +558,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 // onCreatePipeline is called when a pipeline is created.
 func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 	pipeline, _ := c.state.Pipeline(n.ID)
-	if start := c.startDispatcher(pipeline); start != nil {
+	if start := c.makePipelineWorker(pipeline); start != nil {
 		go start()
 	}
 }
@@ -568,7 +615,7 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 func (c *Collector) onLinkConnection(n state.LinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
 	for _, pipeline := range connection.Pipelines() {
-		start := c.startDispatcher(pipeline)
+		start := c.makePipelineWorker(pipeline)
 		if start != nil {
 			go start()
 		}
@@ -579,7 +626,7 @@ func (c *Collector) onLinkConnection(n state.LinkConnection) {
 func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 	p, _ := c.state.Pipeline(n.ID)
 	if p.Enabled {
-		if start := c.startDispatcher(p); start != nil {
+		if start := c.makePipelineWorker(p); start != nil {
 			go start()
 		}
 		return
@@ -604,7 +651,7 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
 	if p.Enabled {
-		start := c.startDispatcher(p)
+		start := c.makePipelineWorker(p)
 		// The transformation might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
 			var transformer *transformers.Transformer
@@ -624,7 +671,34 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
 }
 
-func (c *Collector) sendEventsDispatcher(ctx context.Context, destinations *destinations, pipeline *state.Pipeline) {
+// processIdentityEvents reads events from the pipeline, extracts identities,
+// and persists them using the provided identity writer.
+//
+// It is called in its own goroutine and runs until the context is canceled.
+func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter, pipeline int) {
+	ch, err := c.stream.Consume(ctx, pipeline, 1000)
+	if err != nil {
+		panic(err)
+	}
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return
+		case event, ok := <-ch:
+			if !ok {
+				return
+			}
+			_ = w.Write(event)
+		}
+	}
+}
+
+// processForwardedEvents reads events from the pipeline and forwards them to
+// the configured destination pipelines.
+//
+// It is called in its own goroutine and runs until the context is canceled.
+func (c *Collector) processForwardedEvents(ctx context.Context, destinations *destinations, pipeline *state.Pipeline) {
 	ch, err := c.stream.Consume(ctx, pipeline.ID, 1000)
 	if err != nil {
 		panic(err)
@@ -643,51 +717,11 @@ func (c *Collector) sendEventsDispatcher(ctx context.Context, destinations *dest
 	}
 }
 
-// startDispatcher starts the pipeline's event dispatcher.
+// processWarehouseEvents processes events for the given pipeline and persists
+// them to the data warehouse using the provided event writer.
 //
-// It is called while the state is frozen and, when applicable, returns a
-// starter function intended to be run in its own goroutine to actually launch
-// the dispatcher.
-//
-// It returns nil if the pipeline does not handle events or if the dispatcher
-// is already running.
-func (c *Collector) startDispatcher(pipeline *state.Pipeline) func() {
-	if !pipeline.Enabled {
-		return nil
-	}
-	connection := pipeline.Connection()
-	if connection.LinkedConnections == nil {
-		return nil
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	c.close.cancels[pipeline.ID] = cancel
-	switch pipeline.Target {
-	case state.TargetUser:
-		// Import the identity into the data warehouse.
-		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
-		c.identityWriters.Store(pipeline.ID, iw)
-		return func() {
-			c.writeIdentitiesDispatcher(ctx, iw, pipeline.ID)
-		}
-	case state.TargetEvent:
-		// Store the event into the data warehouse.
-		if pipeline.EventType == "" {
-			ws := connection.Workspace()
-			ew, _ := c.eventWriters.Load(ws.ID)
-			return func() {
-				c.writeEventsDispatcher(ctx, ew.(*datastore.EventWriter), pipeline.ID)
-			}
-		}
-		// Send the event to apps.
-		return func() {
-			c.sendEventsDispatcher(ctx, c.destinations, pipeline)
-		}
-	default:
-		panic("unreachable")
-	}
-}
-
-func (c *Collector) writeEventsDispatcher(ctx context.Context, w *datastore.EventWriter, pipeline int) {
+// It is called in its own goroutine and runs until the context is canceled.
+func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.EventWriter, pipeline int) {
 	ch, err := c.stream.Consume(ctx, pipeline, 1000)
 	if err != nil {
 		panic(err)
@@ -702,25 +736,6 @@ func (c *Collector) writeEventsDispatcher(ctx context.Context, w *datastore.Even
 				return
 			}
 			w.Write(event, pipeline)
-		}
-	}
-}
-
-func (c *Collector) writeIdentitiesDispatcher(ctx context.Context, w *identityWriter, pipeline int) {
-	ch, err := c.stream.Consume(ctx, pipeline, 1000)
-	if err != nil {
-		panic(err)
-	}
-	done := ctx.Done()
-	for {
-		select {
-		case <-done:
-			return
-		case event, ok := <-ch:
-			if !ok {
-				return
-			}
-			_ = w.Write(event)
 		}
 	}
 }
