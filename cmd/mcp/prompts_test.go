@@ -5,6 +5,7 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +15,8 @@ import (
 func TestPromptsList(t *testing.T) {
 
 	mcpServer := NewMCPServer(nil)
+	defer mcpServer.Close(context.Background())
+
 	testServer := httptest.NewServer(mcpServer)
 
 	mcpClient, err := initMCPClient(t, testServer.Client(), testServer.URL)
