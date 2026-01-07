@@ -353,6 +353,18 @@ func New(conf *Config) (_ *Core, err error) {
 		}
 		core.mcp[ws.ID] = wh
 	}
+	defer func() {
+		if err != nil {
+			for _, mcp := range core.mcp {
+				if mcp != nil {
+					err := mcp.Close()
+					if err != nil {
+						slog.Warn("an error occurred closing the MCP warehouse connection", "err", err)
+					}
+				}
+			}
+		}
+	}()
 
 	// Listen to state changes.
 	core.state.Freeze()
@@ -513,16 +525,14 @@ func (core *Core) Close() {
 	// Close the pipeline cleaner.
 	core.pipelineCleaner.Close(context.Background())
 	// Close the MCP warehouse connections.
-	core.mcpMu.Lock()
 	for _, mcp := range core.mcp {
 		if mcp != nil {
 			err := mcp.Close()
 			if err != nil {
-				slog.Warn("cannot close MCP warehouse connection", "err", err)
+				slog.Warn("an error occurred closing the MCP warehouse connection", "err", err)
 			}
 		}
 	}
-	core.mcpMu.Unlock()
 	// Close event collector, metrics, datastore, and state.
 	core.collector.Close()
 	core.metrics.Close(context.Background())
@@ -1744,6 +1754,9 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 // to implement features for the MCP server.
 // platform is the warehouse platform and settings are the settings for
 // connecting to it.
+//
+// The caller must call Close on the returned instance to release any associated
+// resources when it is no longer needed.
 func getMCPWarehouseInstance(platform string, settings json.Value) (warehouses.Warehouse, error) {
 	wh, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
 	if err != nil {
