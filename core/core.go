@@ -158,7 +158,7 @@ type ExpressionToBeExtracted struct {
 }
 
 // New returns a *Core instance. It can only be called once.
-func New(conf *Config) (*Core, error) {
+func New(conf *Config) (_ *Core, err error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -179,6 +179,11 @@ func New(conf *Config) (*Core, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
+	defer func() {
+		if err != nil {
+			db.Close()
+		}
+	}()
 
 	// Ping the PostgreSQL connection to test if it works.
 	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -232,10 +237,17 @@ func New(conf *Config) (*Core, error) {
 
 	core := &Core{
 		db:              db,
-		dbPoolMetrics:   registerDBPoolMetrics(db),
 		memberEmailFrom: conf.MemberEmailFrom,
 		smtp:            smtp,
 	}
+
+	// Register metrics for monitoring the connection pool.
+	core.dbPoolMetrics = registerDBPoolMetrics(db)
+	defer func() {
+		if err != nil {
+			core.dbPoolMetrics.Unregister()
+		}
+	}()
 
 	// Create a function provider.
 	switch p := conf.FunctionProvider.(type) {
@@ -265,6 +277,11 @@ func New(conf *Config) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			core.state.Close()
+		}
+	}()
 
 	// Create a Cipher to encrypt and decrypt auth tokens.
 	core.authTokenCipher, err = core.state.NewCipher("core.authcode")
@@ -281,9 +298,19 @@ func New(conf *Config) (*Core, error) {
 
 	// Init the metrics.
 	core.metrics = coremetrics.New(db, core.state)
+	defer func() {
+		if err != nil {
+			core.metrics.Close(context.Background())
+		}
+	}()
 
 	// Init the datastore.
 	core.datastore = datastore.New(core.state, core.metrics)
+	defer func() {
+		if err != nil {
+			core.datastore.Close()
+		}
+	}()
 
 	// Init the connections.
 	core.connections = connections.New(core.state)
@@ -291,16 +318,29 @@ func New(conf *Config) (*Core, error) {
 	// Init the event collector.
 	core.collector, err = collector.New(db, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
-		core.datastore.Close()
-		core.state.Close()
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			core.collector.Close()
+		}
+	}()
 
 	// Create the pipeline cleaner.
 	core.pipelineCleaner = newPipelineCleaner(core, core.functionProvider)
+	defer func() {
+		if err != nil {
+			core.pipelineCleaner.Close(context.Background())
+		}
+	}()
 
 	// Create the pipeline scheduler.
 	core.pipelineScheduler = newPipelineScheduler(core)
+	defer func() {
+		if err != nil {
+			core.pipelineScheduler.Close()
+		}
+	}()
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 
