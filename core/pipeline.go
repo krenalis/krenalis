@@ -1508,9 +1508,8 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 }
 
 // transformationFunctionName returns the name of the transformation function
-// for a pipeline in the specified language.
-// If pipeline is 0, the returned name refers to a preview transformation
-// function.
+// for a pipeline. If pipeline is 0, the returned name refers to a preview
+// transformation function.
 func transformationFunctionName(pipeline int) string {
 	if pipeline == 0 {
 		return fmt.Sprintf("meergo_preview_%s", uuid.NewString())
