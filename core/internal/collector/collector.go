@@ -19,6 +19,7 @@ import (
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
@@ -425,6 +426,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	batch := c.stream.NewBatch()
 	var pipelineIDs []int
 
+	var observedEvents []events.Event
+
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
@@ -432,13 +435,14 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			continue
 		}
-		if observer != nil {
-			observer.addEvent(event)
-		}
 
 		_, duplicated := c.duplicated.LoadOrStore(event["messageId"].(string), nil)
 		if duplicated {
 			continue
+		}
+
+		if observer != nil {
+			observedEvents = append(observedEvents, event)
 		}
 
 		pipelineIDs = pipelineIDs[0:0]
@@ -510,6 +514,10 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	err = batch.Done(r.Context())
 	if err != nil {
 		return err
+	}
+
+	for _, event := range observedEvents {
+		observer.addEvent(event)
 	}
 
 	// Send a successful response to the client.
