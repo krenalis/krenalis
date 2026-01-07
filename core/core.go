@@ -359,7 +359,7 @@ func New(conf *Config) (_ *Core, err error) {
 				if mcp != nil {
 					err := mcp.Close()
 					if err != nil {
-						slog.Warn("an error occurred closing the MCP warehouse connection", "err", err)
+						slog.Warn("an error occurred closing the MCP warehouse connection", "error", err)
 					}
 				}
 			}
@@ -529,7 +529,7 @@ func (core *Core) Close() {
 		if mcp != nil {
 			err := mcp.Close()
 			if err != nil {
-				slog.Warn("an error occurred closing the MCP warehouse connection", "err", err)
+				slog.Warn("an error occurred closing the MCP warehouse connection", "error", err)
 			}
 		}
 	}
@@ -1153,7 +1153,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
 			if node != core.state.ID() {
@@ -1177,7 +1177,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					pingTime := time.Now().UTC()
 					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_runs SET ping_time = $1 WHERE id = $2", pingTime, id)
 					if err != nil && pingCtx.Err() == nil {
-						slog.Error("core: cannot update pipeline run ping time", "err", err)
+						slog.Error("core: cannot update pipeline run ping time", "error", err)
 					}
 				case <-pingCtx.Done():
 					return
@@ -1217,7 +1217,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
 			break
@@ -1255,7 +1255,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
 				} else {
-					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "err", err)
+					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "error", err)
 				}
 			}
 		}
@@ -1295,14 +1295,12 @@ func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema t
 		// In case of OperationError log it, then go on and send an
 		// EndAlterProfileSchema notification.
 		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("alter schema ended with an error", "err", err2)
+			slog.Error("alter schema ended with an error", "error", err2)
 			alterSchemaErr = err2
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("alter schema on warehouse returned an unknown error, "+
-			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
-			"err", err, "timeout", bo.WaitTime())
+		slog.Error("alter schema on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
 
 	}
 	nEnd := state.EndAlterProfileSchema{
@@ -1432,14 +1430,11 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 		// In case of OperationError log it, then go on and send an
 		// EndIdentityResolution notification.
 		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("identity resolution ended with an error", "err", err2)
+			slog.Error("identity resolution ended with an error", "error", err2)
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("identity resolution on warehouse returned an unknown error, "+
-			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
-			"err", err, "timeout", bo.WaitTime())
-
+		slog.Error("identity resolution on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
 	}
 	nEnd := state.EndIdentityResolution{
 		Workspace: workspace,
@@ -1498,7 +1493,7 @@ func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
 		go func(workspace int) {
 			err := wh.Close()
 			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 			}
 		}(n.ID)
 	}
@@ -1566,7 +1561,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 		go func(workspace int) {
 			err := prevWarehouse.Close()
 			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 			}
 		}(ws.ID)
 		return
@@ -1595,7 +1590,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	go func(workspace int) {
 		err := prevWarehouse.Close()
 		if err != nil {
-			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 		}
 	}(ws.ID)
 

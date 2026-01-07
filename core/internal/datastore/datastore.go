@@ -64,7 +64,7 @@ func New(st *state.State, metrics *metrics.Collector) *Datastore {
 	for _, ws := range st.Workspaces() {
 		store, err := newStore(ds, ws)
 		if err != nil {
-			slog.Error("core/datastore: cannot create a store", "err", err)
+			slog.Error("core/datastore: cannot create a store", "error", err)
 			continue
 		}
 		ds.store[ws.ID] = store
@@ -124,7 +124,7 @@ func (ds *Datastore) Close() {
 	for _, store := range ds.store {
 		err = store.close()
 		if err != nil {
-			slog.Warn("core/datastore: cannot close store", "err", err)
+			slog.Warn("core/datastore: cannot close store", "error", err)
 		}
 	}
 	ds.mu.Unlock()
@@ -250,7 +250,7 @@ func (ds *Datastore) onDeleteWorkspace(n state.DeleteWorkspace) {
 	}
 	err := store.close()
 	if err != nil {
-		slog.Warn("core/internal/datastore: cannot close store", "err", err)
+		slog.Warn("core/internal/datastore: cannot close store", "error", err)
 	}
 }
 
@@ -292,7 +292,7 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 		go func(workspace int) {
 			err := prevWarehouse.Close()
 			if err != nil {
-				slog.Error("core/datastore: error closing a warehouse", "workspace", workspace, "err", err)
+				slog.Error("core/datastore: error closing a warehouse", "workspace", workspace, "error", err)
 			}
 		}(ws.ID)
 	}

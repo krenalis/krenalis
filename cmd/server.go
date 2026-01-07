@@ -147,7 +147,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	defer func() {
 		err := mcpServer.Close(context.Background())
 		if err != nil {
-			slog.Warn("an error occurred closing the  MCP server", "err", err)
+			slog.Warn("an error occurred closing the  MCP server", "error", err)
 		}
 	}()
 
@@ -164,7 +164,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			if r := recover(); r != nil {
 
 				// Log the panic (and the stack trace) using slog.Error.
-				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1", "panic reason", r, "stacktrace", string(debug.Stack()))
+				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1", "reason", r, "stacktrace", string(debug.Stack()))
 
 				// Send the panic to Sentry.
 				if settings.SentryTelemetryLevel == telemetryLevelErrors || settings.SentryTelemetryLevel == telemetryLevelAll {
@@ -263,7 +263,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		if delay := settings.TerminationDelay; delay == 0 {
 			slog.Info("cmd: received termination signal, shutting down")
 		} else {
-			slog.Info(fmt.Sprintf("cmd: received termination signal. Waiting for %s before proceeding...", delay))
+			slog.Info("cmd: received termination signal; waiting for before proceeding", "delay", delay)
 			time.Sleep(delay)
 			slog.Info("cmd: initiating shutdown")
 		}

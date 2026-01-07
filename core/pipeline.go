@@ -964,7 +964,7 @@ func (this *Pipeline) endRun(err error) {
 				errorMessage = "run has been canceled"
 			} else {
 				errorMessage = "an internal error has occurred"
-				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "err", err)
+				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "error", err)
 			}
 		}
 		this.core.metrics.Failed(errorStep, this.pipeline.ID, 0, errorMessage)
@@ -1028,7 +1028,7 @@ func (this *Pipeline) endRun(err error) {
 				// The context has been canceled.
 				return
 			}
-			slog.Error(fmt.Sprintf("core: cannot end pipeline run, retrying after %s", bo.WaitTime()), "error", err)
+			slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 			continue
 		}
 		break

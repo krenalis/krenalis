@@ -199,7 +199,7 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 			return err
 		})
 		if err != nil {
-			slog.Error("core: an error occurred deleting discontinued functions", "err", err)
+			slog.Error("core: an error occurred deleting discontinued functions", "error", err)
 		}
 		timer.Reset(d)
 	}
@@ -396,7 +396,7 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 				return nil
 			})
 		if err != nil && ctx.Err() == nil {
-			slog.Error("core: cannot terminate orphaned pipeline runs", "err", err)
+			slog.Error("core: cannot terminate orphaned pipeline runs", "error", err)
 		}
 	}
 }

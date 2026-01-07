@@ -2370,7 +2370,7 @@ func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema,
 		go func() {
 			err := tp.provider.Delete(context.Background(), id)
 			if err != nil {
-				slog.Warn("core: cannot delete transformation function", "id", id, "err", err)
+				slog.Warn("core: cannot delete transformation function", "id", id, "error", err)
 			}
 		}()
 	}()

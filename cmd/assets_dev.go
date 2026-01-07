@@ -178,7 +178,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			data, err := os.ReadFile(filepath.Join(h.outDir, "monaco", name))
 			if err != nil {
-				slog.Error("cannot read Monaco asset file", "path", name, "err", err)
+				slog.Error("cannot read Monaco asset file", "path", name, "error", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
