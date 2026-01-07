@@ -144,6 +144,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	// Instantiate a new MCP (Model Context Protocol) server.
 	mcpServer := mcp.NewMCPServer(core)
+	defer func() {
+		err := mcpServer.Close(context.Background())
+		if err != nil {
+			slog.Warn("an error occurred closing the  MCP server", "err", err)
+		}
+	}()
 
 	// Instantiate the Prometheus handler.
 	var metricsHandler http.Handler

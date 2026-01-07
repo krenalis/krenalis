@@ -22,6 +22,9 @@ import (
 // An MCP server can be initialized with a nil Meergo core. In that case, only
 // operations that do not involve the core (eg. listing the tools, the prompts,
 // etc...) are supported; otherwise, a panic may occur. This is useful in tests.
+//
+// The caller must call Close on the returned instance to release any associated
+// resources when it is no longer needed.
 func NewMCPServer(core *core.Core) *MCPServer {
 
 	// Instantiate an MCP server.
@@ -43,6 +46,11 @@ func NewMCPServer(core *core.Core) *MCPServer {
 type MCPServer struct {
 	server *server.StreamableHTTPServer
 	core   *core.Core
+}
+
+// Close mcp.
+func (mcp *MCPServer) Close(ctx context.Context) error {
+	return mcp.server.Shutdown(ctx)
 }
 
 // ServeHTTP serves HTTP requests from MCP clients.
