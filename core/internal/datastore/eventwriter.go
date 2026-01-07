@@ -262,7 +262,7 @@ func (ew *EventWriter) flush() {
 			if ctx.Err() != nil {
 				return
 			}
-			slog.Error("core/datastore: cannot flush the event queue", "err", err)
+			slog.Error("core/datastore: cannot flush the event queue", "error", err)
 			select {
 			case <-time.After(time.Duration(rand.IntN(2000)) * time.Millisecond):
 			case <-ctx.Done():

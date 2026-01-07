@@ -221,7 +221,7 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 								if _, ok := err.(*errors.UnprocessableError); ok {
 									return
 								}
-								slog.Debug("core: cannot add run for pipeline", "pipeline", p.ID, "err", err)
+								slog.Debug("core: cannot add run for pipeline", "pipeline", p.ID, "error", err)
 							}
 						})
 					}

@@ -162,7 +162,7 @@ func (notifier *notifier) init(ctx context.Context) {
 		conn, err := notifier.db.Conn(ctx)
 		if err != nil {
 			if ctx.Err() == nil {
-				slog.Error(fmt.Sprintf("core/state: cannot acquire connection, try again after %s", bo.WaitTime()), "err", err)
+				slog.Error("core/state: cannot acquire connection; retrying", "retry_after", bo.WaitTime(), "error", err)
 			}
 			continue
 		}
@@ -172,7 +172,7 @@ func (notifier *notifier) init(ctx context.Context) {
 			_ = conn.Underlying().Close(ctx)
 			_ = conn.Close()
 			if ctx.Err() == nil {
-				slog.Error(fmt.Sprintf("core/state: cannot execute LISTEN, try again after %s", bo.WaitTime()), "err", err)
+				slog.Error("core/state: cannot execute LISTEN; retrying", "waiting_time", bo.WaitTime(), "error", err)
 			}
 			continue
 		}
@@ -212,14 +212,14 @@ func (notifier *notifier) init(ctx context.Context) {
 				_ = conn.Underlying().Close(ctx)
 				_ = conn.Close()
 				if ctx.Err() == nil {
-					slog.Error(fmt.Sprintf("core/state: cannot query notifications, try again after %s", bo.WaitTime()), "err", err)
+					slog.Error("core/state: cannot query notifications; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
 				continue
 			}
 		}
 		err = notifier.listen(ctx, conn)
 		if err != nil && ctx.Err() == nil {
-			slog.Error(fmt.Sprintf("core/state: cannot listen to notifications, try again after %s", bo.WaitTime()), "err", err)
+			slog.Error("core/state: cannot listen to notifications; retrying", "retry_after", bo.WaitTime(), "error", err)
 		}
 		// Close and release the connection.
 		_ = conn.Underlying().Close(ctx)

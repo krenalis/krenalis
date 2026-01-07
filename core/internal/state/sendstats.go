@@ -28,7 +28,7 @@ func (state *State) sendNotificationStats(client analytics.Client, organization 
 			Properties: analytics.NewProperties().Set("notification_name", n.Name),
 		})
 		if err != nil {
-			slog.Error("cannot enqueue Track event when sending stats to Meergo", "err", err)
+			slog.Error("cannot enqueue Track event when sending stats to Meergo", "error", err)
 		}
 	}()
 }

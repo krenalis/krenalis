@@ -964,7 +964,7 @@ func (this *Pipeline) endRun(err error) {
 				errorMessage = "run has been canceled"
 			} else {
 				errorMessage = "an internal error has occurred"
-				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "err", err)
+				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "error", err)
 			}
 		}
 		this.core.metrics.Failed(errorStep, this.pipeline.ID, 0, errorMessage)
@@ -1028,7 +1028,7 @@ func (this *Pipeline) endRun(err error) {
 				// The context has been canceled.
 				return
 			}
-			slog.Error(fmt.Sprintf("core: cannot end pipeline run, retrying after %s", bo.WaitTime()), "error", err)
+			slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 			continue
 		}
 		break
@@ -1508,9 +1508,8 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 }
 
 // transformationFunctionName returns the name of the transformation function
-// for a pipeline in the specified language.
-// If pipeline is 0, the returned name refers to a preview transformation
-// function.
+// for a pipeline. If pipeline is 0, the returned name refers to a preview
+// transformation function.
 func transformationFunctionName(pipeline int) string {
 	if pipeline == 0 {
 		return fmt.Sprintf("meergo_preview_%s", uuid.NewString())

@@ -547,7 +547,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	defer func() {
 		err := dw.Close()
 		if err != nil {
-			slog.Warn("cannot close data warehouse", "err", err)
+			slog.Warn("cannot close data warehouse", "error", err)
 		}
 	}()
 	// Even if rows is not read, it is assigned because it must be closed.
