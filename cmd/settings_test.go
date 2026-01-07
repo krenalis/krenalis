@@ -5,18 +5,23 @@
 package cmd
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/streams/nats"
 	"github.com/meergo/meergo/tools/dotenv"
 	"github.com/meergo/meergo/tools/validation"
+
+	"github.com/nats-io/nkeys"
 )
 
 func TestEnvLoading(t *testing.T) {
@@ -83,7 +88,7 @@ func TestParseSettings(t *testing.T) {
 		t.Helper()
 		f, err := os.CreateTemp(t.TempDir(), prefix)
 		if err != nil {
-			t.Fatalf("failed to create temp file: %v", err)
+			t.Fatalf("cannot create temp file: %v", err)
 		}
 		_ = f.Close()
 		return f.Name()
@@ -735,6 +740,389 @@ func TestParseSettings(t *testing.T) {
 		}
 		if s.DB.MaxConnections != 64 {
 			t.Errorf("expected 64, got %d", s.DB.MaxConnections)
+		}
+	})
+
+	t.Run("NATS URL parsing", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			env     string
+			want    []string
+			wantErr string
+		}{
+			{
+				name: "default when unset",
+				env:  "",
+				want: []string{"nats://127.0.0.1:4222"},
+			},
+			{
+				name: "single NATS URL",
+				env:  "nats://nats.example.com:4222",
+				want: []string{"nats://nats.example.com:4222"},
+			},
+			{
+				name: "scheme-less URL accepted",
+				env:  "n1:4222",
+				want: []string{"n1:4222"},
+			},
+			{
+				name: "multiple non-websocket URLs",
+				env:  "nats://n1:4222, n2:4223",
+				want: []string{"nats://n1:4222", "n2:4223"},
+			},
+			{
+				name:    "invalid scheme rejected",
+				env:     "http://nats.example.com:4222",
+				wantErr: "MEERGO_NATS_URL scheme http is not allowed. Allowed schemes are nats, tls, ws, and wss",
+			},
+			{
+				name:    "invalid URL rejected",
+				env:     "nats://[::1",
+				wantErr: "MEERGO_NATS_URL contains an invalid URL: \"nats://[::1\"",
+			},
+			{
+				name:    "mixed websocket and non-websocket rejected",
+				env:     "ws://n2:443, n1:4222",
+				wantErr: "MEERGO_NATS_URL contains both websocket and non-websocket URLs",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				t.Setenv("MEERGO_NATS_URL", tc.env)
+				s, err := parseEnvSettings()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if !slices.Equal(s.NATS.Servers, tc.want) {
+					t.Fatalf("expected %#v, got %#v", tc.want, s.NATS.Servers)
+				}
+			})
+		}
+	})
+
+	t.Run("NATS auth parsing", func(t *testing.T) {
+		userKP, err := nkeys.CreateUser()
+		if err != nil {
+			t.Fatalf("cannot create user NKey: %v", err)
+		}
+		userSeed, err := userKP.Seed()
+		if err != nil {
+			t.Fatalf("cannot get user seed: %v", err)
+		}
+		_, userSeedBytes, err := nkeys.DecodeSeed(userSeed)
+		if err != nil {
+			t.Fatalf("cannot decode user seed: %v", err)
+		}
+		accountKP, err := nkeys.CreateAccount()
+		if err != nil {
+			t.Fatalf("cannot create account NKey: %v", err)
+		}
+		accountSeed, err := accountKP.Seed()
+		if err != nil {
+			t.Fatalf("cannot get account seed: %v", err)
+		}
+
+		cases := []struct {
+			name      string
+			envUser   string
+			envPass   string
+			envToken  string
+			envNKey   string
+			wantUser  string
+			wantPass  string
+			wantToken string
+			wantNKey  ed25519.PrivateKey
+			wantErr   string
+		}{
+			{
+				name:     "user and password set",
+				envUser:  "nats-user",
+				envPass:  "nats-pass",
+				wantUser: "nats-user",
+				wantPass: "nats-pass",
+			},
+			{
+				name: "no auth set",
+			},
+			{
+				name:      "multiple auth values set",
+				envUser:   "nats-user",
+				envPass:   "nats-pass",
+				envToken:  "nats-token",
+				envNKey:   string(userSeed),
+				wantUser:  "nats-user",
+				wantPass:  "nats-pass",
+				wantToken: "nats-token",
+				wantNKey:  ed25519.NewKeyFromSeed(userSeedBytes),
+			},
+			{
+				name:    "password without user rejected",
+				envPass: "nats-pass",
+				wantErr: "MEERGO_NATS_USER must be set if MEERGO_NATS_PASSWORD is provided",
+			},
+			{
+				name:      "token set",
+				envToken:  "nats-token",
+				wantToken: "nats-token",
+			},
+			{
+				name:     "valid user NKey accepted",
+				envNKey:  string(userSeed),
+				wantNKey: ed25519.NewKeyFromSeed(userSeedBytes),
+			},
+			{
+				name:    "non-user NKey rejected",
+				envNKey: string(accountSeed),
+				wantErr: "MEERGO_NATS_NKEY value is not a user NKey",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				if tc.envUser != "" {
+					t.Setenv("MEERGO_NATS_USER", tc.envUser)
+				}
+				if tc.envPass != "" {
+					t.Setenv("MEERGO_NATS_PASSWORD", tc.envPass)
+				}
+				if tc.envToken != "" {
+					t.Setenv("MEERGO_NATS_TOKEN", tc.envToken)
+				}
+				if tc.envNKey != "" {
+					t.Setenv("MEERGO_NATS_NKEY", tc.envNKey)
+				}
+				s, err := parseEnvSettings()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if s.NATS.User != tc.wantUser {
+					t.Fatalf("expected %q, got %q", tc.wantUser, s.NATS.User)
+				}
+				if s.NATS.Password != tc.wantPass {
+					t.Fatalf("expected %q, got %q", tc.wantPass, s.NATS.Password)
+				}
+				if s.NATS.Token != tc.wantToken {
+					t.Fatalf("expected %q, got %q", tc.wantToken, s.NATS.Token)
+				}
+				if len(tc.wantNKey) == 0 {
+					if len(s.NATS.NKey) != 0 {
+						t.Fatalf("expected empty NKey, got %x", s.NATS.NKey)
+					}
+				} else if !slices.Equal(s.NATS.NKey, tc.wantNKey) {
+					t.Fatalf("expected %x, got %x", tc.wantNKey, s.NATS.NKey)
+				}
+			})
+		}
+	})
+
+	t.Run("NATS storage parsing", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			env     string
+			want    nats.StorageType
+			wantErr string
+		}{
+			{
+				name: "default when unset",
+				env:  "",
+				want: nats.FileStorage,
+			},
+			{
+				name: "file storage",
+				env:  "file",
+				want: nats.FileStorage,
+			},
+			{
+				name: "memory storage",
+				env:  "memory",
+				want: nats.MemoryStorage,
+			},
+			{
+				name:    "invalid storage rejected",
+				env:     "s3",
+				wantErr: "MEERGO_NATS_STORAGE value \"s3\" is not supported; expected file or memory",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				if tc.env != "" {
+					t.Setenv("MEERGO_NATS_STORAGE", tc.env)
+				}
+				s, err := parseEnvSettings()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if s.NATS.Storage != tc.want {
+					t.Fatalf("expected %v, got %v", tc.want, s.NATS.Storage)
+				}
+			})
+		}
+	})
+
+	t.Run("NATS replicas parsing", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			env     string
+			want    int
+			wantErr string
+		}{
+			{
+				name: "default when unset",
+				env:  "",
+				want: 1,
+			},
+			{
+				name: "replicas 1",
+				env:  "1",
+				want: 1,
+			},
+			{
+				name: "replicas 2",
+				env:  "2",
+				want: 2,
+			},
+			{
+				name: "replicas 3",
+				env:  "3",
+				want: 3,
+			},
+			{
+				name: "replicas 4",
+				env:  "4",
+				want: 4,
+			},
+			{
+				name: "replicas 5",
+				env:  "5",
+				want: 5,
+			},
+			{
+				name:    "replicas 0 rejected",
+				env:     "0",
+				wantErr: "MEERGO_NATS_REPLICAS value \"0\" is not supported; expected 1, 2, 3, 4, or 5",
+			},
+			{
+				name:    "replicas 6 rejected",
+				env:     "6",
+				wantErr: "MEERGO_NATS_REPLICAS value \"6\" is not supported; expected 1, 2, 3, 4, or 5",
+			},
+			{
+				name:    "replicas text rejected",
+				env:     "two",
+				wantErr: "MEERGO_NATS_REPLICAS value \"two\" is not supported; expected 1, 2, 3, 4, or 5",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				if tc.env != "" {
+					t.Setenv("MEERGO_NATS_REPLICAS", tc.env)
+				}
+				s, err := parseEnvSettings()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if s.NATS.Replicas != tc.want {
+					t.Fatalf("expected %d, got %d", tc.want, s.NATS.Replicas)
+				}
+			})
+		}
+	})
+
+	t.Run("NATS compression parsing", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			env     string
+			want    nats.StoreCompression
+			wantErr string
+		}{
+			{
+				name: "default when unset",
+				env:  "",
+				want: nats.NoCompression,
+			},
+			{
+				name: "s2 compression",
+				env:  "s2",
+				want: nats.S2Compression,
+			},
+			{
+				name: "s2 compression uppercase",
+				env:  "S2",
+				want: nats.S2Compression,
+			},
+			{
+				name:    "invalid compression rejected",
+				env:     "gzip",
+				wantErr: "MEERGO_NATS_COMPRESSION value \"gzip\" is not supported; expected s2",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				if tc.env != "" {
+					t.Setenv("MEERGO_NATS_COMPRESSION", tc.env)
+				}
+				s, err := parseEnvSettings()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if s.NATS.Compression != tc.want {
+					t.Fatalf("expected %v, got %v", tc.want, s.NATS.Compression)
+				}
+			})
 		}
 	})
 

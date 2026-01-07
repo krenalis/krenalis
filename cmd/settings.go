@@ -5,8 +5,10 @@
 package cmd
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/streams/nats"
 	"github.com/meergo/meergo/tools/validation"
 )
 
@@ -231,6 +234,85 @@ func parseEnvSettings() (*Settings, error) {
 			return nil, fmt.Errorf("MEERGO_DB_MAX_CONNECTIONS must be >= 2, got %d", maxConn)
 		}
 		settings.DB.MaxConnections = int32(maxConn)
+	}
+
+	if s := envVars.Get("MEERGO_NATS_URL"); s == "" {
+		settings.NATS.Servers = []string{"nats://127.0.0.1:4222"}
+	} else {
+		var hasWS bool
+		var hasNonWS bool
+		settings.NATS.Servers = []string{}
+		for entry := range strings.SplitSeq(s, ",") {
+			entry = strings.TrimSpace(entry)
+			if entry == "" {
+				continue
+			}
+			if strings.Contains(entry, "://") {
+				u, err := url.Parse(entry)
+				if err != nil {
+					return nil, fmt.Errorf("MEERGO_NATS_URL contains an invalid URL: %q", entry)
+				}
+				switch u.Scheme {
+				case "nats", "tls":
+					hasNonWS = true
+				case "ws", "wss":
+					hasWS = true
+				default:
+					return nil, fmt.Errorf("MEERGO_NATS_URL scheme %s is not allowed. Allowed schemes are nats, tls, ws, and wss", u.Scheme)
+				}
+			} else {
+				if _, err := url.Parse("nats://" + entry); err != nil {
+					return nil, fmt.Errorf("MEERGO_NATS_URL contains an invalid URL: %q", entry)
+				}
+				hasNonWS = true
+			}
+			if hasWS && hasNonWS {
+				return nil, fmt.Errorf("MEERGO_NATS_URL contains both websocket and non-websocket URLs")
+			}
+			settings.NATS.Servers = append(settings.NATS.Servers, entry)
+		}
+		if len(settings.NATS.Servers) == 0 {
+			return nil, fmt.Errorf("MEERGO_NATS_URL does not contain URLs")
+		}
+	}
+	settings.NATS.User = envVars.Get("MEERGO_NATS_USER")
+	if pw := envVars.Get("MEERGO_NATS_PASSWORD"); pw != "" {
+		if settings.NATS.User == "" {
+			return nil, fmt.Errorf("MEERGO_NATS_USER must be set if MEERGO_NATS_PASSWORD is provided")
+		}
+		settings.NATS.Password = pw
+	}
+	settings.NATS.Token = envVars.Get("MEERGO_NATS_TOKEN")
+	if nkey := envVars.Get("MEERGO_NATS_NKEY"); nkey != "" {
+		prefix, seed, err := nats.DecodeSeed([]byte(nkey))
+		if err != nil || prefix != nats.PrefixByteUser || len(seed) != ed25519.SeedSize {
+			return nil, fmt.Errorf("MEERGO_NATS_NKEY value is not a user NKey")
+		}
+		settings.NATS.NKey = ed25519.NewKeyFromSeed(seed)
+	}
+	switch storage := envVars.Get("MEERGO_NATS_STORAGE"); strings.ToLower(storage) {
+	case "", "file":
+		settings.NATS.Storage = nats.FileStorage
+	case "memory":
+		settings.NATS.Storage = nats.MemoryStorage
+	default:
+		return nil, fmt.Errorf("MEERGO_NATS_STORAGE value %q is not supported; expected file or memory", storage)
+	}
+	switch replicas := envVars.Get("MEERGO_NATS_REPLICAS"); replicas {
+	case "", "1":
+		settings.NATS.Replicas = 1
+	case "2", "3", "4", "5":
+		settings.NATS.Replicas = int(replicas[0] - '0')
+	default:
+		return nil, fmt.Errorf("MEERGO_NATS_REPLICAS value %q is not supported; expected 1, 2, 3, 4, or 5", replicas)
+	}
+	switch compression := envVars.Get("MEERGO_NATS_COMPRESSION"); strings.ToLower(compression) {
+	case "":
+		settings.NATS.Compression = nats.NoCompression
+	case "s2":
+		settings.NATS.Compression = nats.S2Compression
+	default:
+		return nil, fmt.Errorf("MEERGO_NATS_COMPRESSION value %q is not supported; expected s2", compression)
 	}
 
 	settings.MemberEmailVerificationRequired, err = boolEnvVar(envVars.Get("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED"), true)

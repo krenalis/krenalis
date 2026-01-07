@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
@@ -22,6 +21,7 @@ import (
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
@@ -51,6 +51,7 @@ type ValidationError interface {
 // apps.
 type Collector struct {
 	db               *db.DB
+	stream           streams.Stream
 	state            *state.State
 	datastore        *datastore.Datastore
 	metrics          *metrics.Collector
@@ -61,7 +62,11 @@ type Collector struct {
 	eventWriters     sync.Map      // a map from workspace identifier to a *datastore.EventWriter value
 	destinations     *destinations // destination connections used to send events
 	identityWriters  sync.Map      // a map from pipeline identifier to a *identityWriter value
-	closed           atomic.Bool
+	close            struct {
+		mu      sync.Mutex
+		closed  bool
+		cancels map[int]func()
+	}
 }
 
 // New returns a new collector.
@@ -70,43 +75,19 @@ type Collector struct {
 // events with geolocation information; if not provided, the database file is
 // not opened and the geolocation information are not automatically added by
 // Meergo.
-func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
+func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
 	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
+
 	var c = &Collector{
 		db:               db,
+		stream:           stream,
 		state:            st,
 		datastore:        ds,
 		metrics:          metrics,
 		functionProvider: provider,
 		destinations:     newDestinations(st, connections, provider, metrics),
 	}
-	st.Freeze()
-	st.AddListener(c.onCreatePipeline)
-	st.AddListener(c.onCreateWorkspace)
-	st.AddListener(c.onDeleteConnection)
-	st.AddListener(c.onDeletePipeline)
-	st.AddListener(c.onDeleteWorkspace)
-	st.AddListener(c.onSetPipelineStatus)
-	st.AddListener(c.onUpdatePipeline)
-	for _, ws := range st.Workspaces() {
-		c.observers.Store(ws.ID, newObserver())
-		store := ds.Store(ws.ID)
-		c.eventWriters.Store(ws.ID, store.NewEventWriter())
-	}
-	for _, pipeline := range st.Pipelines() {
-		// Create an identity writer for each active SDK pipeline.
-		if pipeline.Target == state.TargetUser {
-			if !pipeline.Enabled {
-				continue
-			}
-			if t := pipeline.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
-				continue
-			}
-			iw := newIdentityWriter(c.datastore, pipeline, provider, metrics)
-			c.identityWriters.Store(pipeline.ID, iw)
-		}
-	}
-	st.Unfreeze()
+	c.close.cancels = map[int]func(){}
 
 	if maxMindDBPath != "" {
 		var err error
@@ -116,6 +97,31 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *conne
 		}
 	}
 
+	st.Freeze()
+	st.AddListener(c.onCreatePipeline)
+	st.AddListener(c.onCreateWorkspace)
+	st.AddListener(c.onDeleteConnection)
+	st.AddListener(c.onDeletePipeline)
+	st.AddListener(c.onDeleteWorkspace)
+	st.AddListener(c.onLinkConnection)
+	st.AddListener(c.onSetPipelineStatus)
+	st.AddListener(c.onUnlinkConnection)
+	st.AddListener(c.onUpdatePipeline)
+	for _, ws := range st.Workspaces() {
+		c.addWorkspace(ws)
+	}
+	var starts []func()
+	for _, pipeline := range st.Pipelines() {
+		if start := c.startDispatcher(pipeline); start != nil {
+			starts = append(starts, start)
+		}
+	}
+	st.Unfreeze()
+
+	for _, start := range starts {
+		go start()
+	}
+
 	return c, nil
 }
 
@@ -123,9 +129,17 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *conne
 // collector's methods should be in progress and no other shall be made.
 // It panics if it has already been called.
 func (c *Collector) Close() {
-	if c.closed.Swap(true) {
+	c.close.mu.Lock()
+	if c.close.closed {
+		c.close.mu.Unlock()
 		panic("core/events/collector already closed")
 	}
+	for _, cancel := range c.close.cancels {
+		cancel()
+	}
+	c.close.cancels = nil
+	c.close.mu.Unlock()
+	return
 }
 
 // Observer returns the observer for the given workspace, or nil if the
@@ -194,6 +208,35 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
+	}
+}
+
+func (c *Collector) addWorkspace(ws *state.Workspace) {
+	c.observers.Store(ws.ID, newObserver())
+	store := c.datastore.Store(ws.ID)
+	c.eventWriters.Store(ws.ID, store.NewEventWriter())
+}
+
+// cancelDispatcher cancels the pipeline's event dispatcher.
+//
+// It is called while the state is frozen and, when applicable, returns a
+// canceler function intended to be run in its own goroutine to signal the
+// dispatcher to exit.
+//
+// It returns nil if the pipeline does not handle events or if the dispatcher
+// is already canceled.
+func (c *Collector) cancelDispatcher(pipeline *state.Pipeline) func() {
+	cancel, ok := c.close.cancels[pipeline.ID]
+	if !ok {
+		return nil
+	}
+	cancel()
+	if pipeline.Target != state.TargetUser {
+		return nil
+	}
+	iw, _ := c.identityWriters.LoadAndDelete(pipeline.ID)
+	return func() {
+		_ = iw.(*identityWriter).Close(context.Background())
 	}
 }
 
@@ -334,16 +377,14 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
-	var eventErr error
+	batch := c.stream.NewBatch()
+	var pipelineIDs []int
 
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
 		meergoMetrics.Increment("Collector.serveEvents.decoded_events", 1)
 		if err != nil {
-			if eventErr == nil {
-				eventErr = err
-			}
 			continue
 		}
 		if observer != nil {
@@ -354,6 +395,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if duplicated {
 			continue
 		}
+
+		pipelineIDs = pipelineIDs[0:0]
 
 		// Store the events into the data warehouse.
 		for _, p := range pipelines {
@@ -366,11 +409,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
-			ew, ok := c.eventWriters.Load(ws.ID)
-			if !ok {
-				continue
+			if _, ok := c.eventWriters.Load(ws.ID); ok {
+				pipelineIDs = append(pipelineIDs, p.ID)
 			}
-			ew.(*datastore.EventWriter).Write(event, p.ID)
 		}
 
 		// Import the identities into the data warehouse.
@@ -381,19 +422,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			c.metrics.ReceivePassed(p.ID, 1)
 			if !filters.Applies(p.Filter, event) {
 				c.metrics.FilterFailed(p.ID, 1)
-				meergoMetrics.Increment("Collector.serveEvents.discarded_identities", 1)
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
-			if w, ok := c.identityWriters.Load(p.ID); ok {
-				err = w.(*identityWriter).Write(event)
-				if err != nil {
-					c.metrics.FinalizeFailed(p.ID, 1, err.Error())
-					if eventErr == nil {
-						eventErr = errServiceUnavailable
-					}
-					continue
-				}
+			if _, ok := c.identityWriters.Load(p.ID); ok {
+				pipelineIDs = append(pipelineIDs, p.ID)
 			}
 		}
 
@@ -413,14 +446,25 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.FilterPassed(p.ID, 1)
-				c.destinations.QueueEvent(p, event)
+				pipelineIDs = append(pipelineIDs, p.ID)
 			}
+		}
+
+		if len(pipelineIDs) == 0 {
+			continue
+		}
+
+		// Publish the event.
+		err = batch.Publish(pipelineIDs, event)
+		if err != nil {
+			return err
 		}
 
 	}
 
-	if eventErr != nil {
-		return eventErr
+	err = batch.Done(r.Context())
+	if err != nil {
+		return err
 	}
 
 	// Send a successful response to the client.
@@ -467,14 +511,9 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 // onCreatePipeline is called when a pipeline is created.
 func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 	pipeline, _ := c.state.Pipeline(n.ID)
-	if pipeline.Target != state.TargetUser || !pipeline.Enabled {
-		return
+	if start := c.startDispatcher(pipeline); start != nil {
+		go start()
 	}
-	if t := pipeline.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
-		return
-	}
-	iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
-	c.identityWriters.Store(pipeline.ID, iw)
 }
 
 // onCreateWorkspace is called when a workspace is created.
@@ -487,83 +526,201 @@ func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
-	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
+	if connection.LinkedConnections == nil {
 		return
 	}
 	for _, pipeline := range connection.Pipelines() {
-		if pipeline.Target != state.TargetUser || !pipeline.Enabled {
-			continue
+		cancel := c.cancelDispatcher(pipeline)
+		if cancel != nil {
+			go cancel()
 		}
-		iw, ok := c.identityWriters.LoadAndDelete(pipeline.ID)
-		if !ok {
-			continue
-		}
-		_ = iw.(*identityWriter).Close(context.Background())
 	}
 }
 
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
-	iw, ok := c.identityWriters.LoadAndDelete(n.ID)
-	if !ok {
-		return
+	cancel := c.cancelDispatcher(n.Pipeline())
+	if cancel != nil {
+		go cancel()
 	}
-	_ = iw.(*identityWriter).Close(context.Background())
 	// TODO(marco): should the ongoing transformations be interrupted?
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
-	c.observers.Delete(n.ID)
-	c.eventWriters.Delete(n.ID)
+	ws := n.Workspace()
+	c.observers.Delete(ws.ID)
+	c.eventWriters.Delete(ws.ID)
+	for _, connection := range ws.Connections() {
+		if connection.LinkedConnections == nil {
+			continue
+		}
+		for _, pipeline := range connection.Pipelines() {
+			cancel := c.cancelDispatcher(pipeline)
+			if cancel != nil {
+				go cancel()
+			}
+		}
+	}
+}
+
+// onLinkConnection is called when two unlinked connections are linked.
+func (c *Collector) onLinkConnection(n state.LinkConnection) {
+	connection, _ := c.state.Connection(n.Connections[1])
+	for _, pipeline := range connection.Pipelines() {
+		start := c.startDispatcher(pipeline)
+		if start != nil {
+			go start()
+		}
+	}
 }
 
 // onSetPipelineStatus is called when the status of a pipeline is set.
 func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
-	pipeline, _ := c.state.Pipeline(n.ID)
-	if pipeline.Target != state.TargetUser {
+	p, _ := c.state.Pipeline(n.ID)
+	if p.Enabled {
+		if start := c.startDispatcher(p); start != nil {
+			go start()
+		}
 		return
 	}
-	connection := pipeline.Connection()
-	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
-		return
+	if cancel := c.cancelDispatcher(p); cancel != nil {
+		go cancel()
 	}
-	if pipeline.Enabled {
-		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
-		c.identityWriters.Store(pipeline.ID, iw)
-		return
+}
+
+// onUnlinkConnection is called when two linked connections are unlinked.
+func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
+	connection, _ := c.state.Connection(n.Connections[1])
+	for _, pipeline := range connection.Pipelines() {
+		cancel := c.cancelDispatcher(pipeline)
+		if cancel != nil {
+			go cancel()
+		}
 	}
-	p, _ := c.identityWriters.LoadAndDelete(n.ID)
-	p.(*identityWriter).Close(context.Background())
 }
 
 // onUpdatePipeline is called when a pipeline is updated.
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
-	pipeline, _ := c.state.Pipeline(n.ID)
-	if pipeline.Target != state.TargetUser {
-		return
-	}
-	connection := pipeline.Connection()
-	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
-		return
-	}
-	if !pipeline.Enabled {
-		if iw, ok := c.identityWriters.LoadAndDelete(pipeline.ID); ok {
-			iw.(*identityWriter).Close(context.Background())
+	p, _ := c.state.Pipeline(n.ID)
+	if p.Enabled {
+		start := c.startDispatcher(p)
+		// The transformation might have changed.
+		if w, ok := c.identityWriters.Load(p.ID); ok {
+			var transformer *transformers.Transformer
+			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
+				transformer, _ = transformers.New(p, c.functionProvider, nil)
+			}
+			w.(*identityWriter).SetTransformer(transformer)
+		}
+		if start != nil {
+			go start()
 		}
 		return
 	}
-	w, ok := c.identityWriters.Load(pipeline.ID)
-	if !ok {
+	if cancel := c.cancelDispatcher(p); cancel != nil {
+		go cancel()
+	}
+	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
+}
+
+func (c *Collector) sendEventsDispatcher(ctx context.Context, destinations *destinations, pipeline *state.Pipeline) {
+	ch, err := c.stream.Consume(ctx, pipeline.ID, 1000)
+	if err != nil {
+		panic(err)
+	}
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return
+		case event, ok := <-ch:
+			if !ok {
+				return
+			}
+			destinations.QueueEvent(pipeline, event)
+		}
+	}
+}
+
+// startDispatcher starts the pipeline's event dispatcher.
+//
+// It is called while the state is frozen and, when applicable, returns a
+// starter function intended to be run in its own goroutine to actually launch
+// the dispatcher.
+//
+// It returns nil if the pipeline does not handle events or if the dispatcher
+// is already running.
+func (c *Collector) startDispatcher(pipeline *state.Pipeline) func() {
+	if !pipeline.Enabled {
+		return nil
+	}
+	connection := pipeline.Connection()
+	if connection.LinkedConnections == nil {
+		return nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	c.close.cancels[pipeline.ID] = cancel
+	switch pipeline.Target {
+	case state.TargetUser:
+		// Import the identity into the data warehouse.
 		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
 		c.identityWriters.Store(pipeline.ID, iw)
-		return
+		return func() {
+			c.writeIdentitiesDispatcher(ctx, iw, pipeline.ID)
+		}
+	case state.TargetEvent:
+		// Store the event into the data warehouse.
+		if pipeline.EventType == "" {
+			ws := connection.Workspace()
+			ew, _ := c.eventWriters.Load(ws.ID)
+			return func() {
+				c.writeEventsDispatcher(ctx, ew.(*datastore.EventWriter), pipeline.ID)
+			}
+		}
+		// Send the event to apps.
+		return func() {
+			c.sendEventsDispatcher(ctx, c.destinations, pipeline)
+		}
+	default:
+		panic("unreachable")
 	}
-	// The transformation might have changed.
-	var transformer *transformers.Transformer
-	if pipeline.Transformation.Mapping != nil || pipeline.Transformation.Function != nil {
-		transformer, _ = transformers.New(pipeline, c.functionProvider, nil)
+}
+
+func (c *Collector) writeEventsDispatcher(ctx context.Context, w *datastore.EventWriter, pipeline int) {
+	ch, err := c.stream.Consume(ctx, pipeline, 1000)
+	if err != nil {
+		panic(err)
 	}
-	w.(*identityWriter).SetTransformer(transformer)
-	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return
+		case event, ok := <-ch:
+			if !ok {
+				return
+			}
+			w.Write(event, pipeline)
+		}
+	}
+}
+
+func (c *Collector) writeIdentitiesDispatcher(ctx context.Context, w *identityWriter, pipeline int) {
+	ch, err := c.stream.Consume(ctx, pipeline, 1000)
+	if err != nil {
+		panic(err)
+	}
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return
+		case event, ok := <-ch:
+			if !ok {
+				return
+			}
+			_ = w.Write(event)
+		}
+	}
 }

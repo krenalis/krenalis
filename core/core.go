@@ -24,16 +24,18 @@ import (
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
-	dbpkg "github.com/meergo/meergo/core/internal/db"
+	idb "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
-	coremetrics "github.com/meergo/meergo/core/internal/metrics"
+	imetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
+	inats "github.com/meergo/meergo/core/internal/streams/nats"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/lambda"
 	"github.com/meergo/meergo/core/internal/transformers/local"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
+	"github.com/meergo/meergo/core/streams/nats"
 	"github.com/meergo/meergo/tools/backoff"
 	"github.com/meergo/meergo/tools/datacrypt"
 	"github.com/meergo/meergo/tools/errors"
@@ -47,12 +49,13 @@ import (
 )
 
 type Core struct {
-	db                *dbpkg.DB
+	db                *idb.DB
+	nc                *inats.Connection
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
 	connections       *connections.Connections
-	metrics           *coremetrics.Collector
+	metrics           *imetrics.Collector
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
 	authTokenCipher   *datacrypt.Cipher
@@ -80,6 +83,7 @@ var hasBeenCalled bool
 
 type Config struct {
 	DB                     DBConfig
+	NATS                   NATSConfig
 	FunctionProvider       any // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath          string
 	MemberEmailFrom        string
@@ -104,6 +108,11 @@ type DBConfig struct {
 	Database       string
 	Schema         string
 	MaxConnections int32 // values less than 2 are treated as 2.
+}
+
+type NATSConfig struct {
+	nats.ConnectionOptions
+	nats.StreamOptions
 }
 
 // OAuthCredentials represents the OAuth client credentials for a connector.
@@ -167,7 +176,7 @@ func New(conf *Config) (_ *Core, err error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
-	db, err := dbpkg.Open(&dbpkg.Options{
+	db, err := idb.Open(&idb.Options{
 		Host:           ps.Host,
 		Port:           ps.Port,
 		Username:       ps.Username,
@@ -205,7 +214,7 @@ func New(conf *Config) (_ *Core, err error) {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			// Initialize the PostgreSQL database in a transaction, so if it is
 			// fails, there is no need to manually empty the database.
-			err := db.Transaction(dbInitCtx, func(tx *dbpkg.Tx) error {
+			err := db.Transaction(dbInitCtx, func(tx *idb.Tx) error {
 				err := initdb.Initialize(dbInitCtx, tx)
 				if err != nil {
 					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
@@ -297,7 +306,7 @@ func New(conf *Config) (_ *Core, err error) {
 	}
 
 	// Init the metrics.
-	core.metrics = coremetrics.New(db, core.state)
+	core.metrics = imetrics.New(db, core.state)
 	defer func() {
 		if err != nil {
 			core.metrics.Close(context.Background())
@@ -315,8 +324,29 @@ func New(conf *Config) (_ *Core, err error) {
 	// Init the connections.
 	core.connections = connections.New(core.state)
 
+	// Connect to the NATS server.
+	core.nc, err = inats.Connect(conf.NATS.ConnectionOptions)
+	if err != nil {
+		return nil, fmt.Errorf("core: cannot connect to NATS server: %s", err)
+	}
+	defer func() {
+		if err != nil {
+			core.nc.Close()
+		}
+	}()
+
+	stream, err := core.nc.Stream(context.Background(), conf.NATS.StreamOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			_ = stream.Close()
+		}
+	}()
+
 	// Init the event collector.
-	core.collector, err = collector.New(db, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	core.collector, err = collector.New(db, stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +439,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
 		n := state.AcceptInvitation{}
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, organization, created_at FROM members WHERE invitation_token = $1", token).Scan(&n.Member, &n.Organization, &createdAt)
@@ -489,7 +519,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
@@ -540,6 +570,8 @@ func (core *Core) Close() {
 	core.state.Close()
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
+	// Close NATS connection.
+	core.nc.Close()
 	// Close PostgreSQL connections.
 	core.db.Close()
 }
@@ -1101,11 +1133,11 @@ func (core *Core) onExecutePipeline(n state.RunPipeline) {
 
 // pipelineError represents a pipeline error.
 type pipelineError struct {
-	step coremetrics.Step
+	step imetrics.Step
 	err  error
 }
 
-func newPipelineError(step coremetrics.Step, err error) *pipelineError {
+func newPipelineError(step imetrics.Step, err error) *pipelineError {
 	return &pipelineError{step, err}
 }
 
@@ -1187,7 +1219,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		timeSlot := coremetrics.TimeSlotFromTime(run.StartTime)
+		timeSlot := imetrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
@@ -1353,7 +1385,7 @@ Identifiers:
 		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
 	}
 	for {
-		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1449,7 +1481,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo = backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
 			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1645,7 +1677,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -1702,7 +1734,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)

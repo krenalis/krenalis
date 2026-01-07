@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/tools/metrics"
 )
 
@@ -20,6 +20,7 @@ type EventWriter struct {
 	mu        sync.Mutex // for 'rows' and 'pipelines' fields
 	rows      [][]any
 	pipelines []int
+	acks      []streams.Ack
 	close     struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
@@ -57,24 +58,24 @@ func (ew *EventWriter) Close(ctx context.Context) {
 }
 
 // Write writes an event to the store.
-func (ew *EventWriter) Write(event events.Event, pipeline int) {
+func (ew *EventWriter) Write(event streams.Event, pipeline int) {
 
 	row := make([]any, 66)
 
 	// connectionId
-	row[0] = event["connectionId"]
+	row[0] = event.Attributes["connectionId"]
 
 	// anonymousId
-	row[1] = event["anonymousId"]
+	row[1] = event.Attributes["anonymousId"]
 
 	// channel
-	row[2] = event["channel"]
+	row[2] = event.Attributes["channel"]
 
 	// category
-	row[3] = event["category"]
+	row[3] = event.Attributes["category"]
 
 	// context.
-	if eventContext, ok := event["context"].(map[string]any); ok {
+	if eventContext, ok := event.Attributes["context"].(map[string]any); ok {
 
 		// app
 		if app, ok := eventContext["app"].(map[string]any); ok {
@@ -183,46 +184,47 @@ func (ew *EventWriter) Write(event events.Event, pipeline int) {
 	}
 
 	// event
-	row[54] = event["event"]
+	row[54] = event.Attributes["event"]
 
 	// groupId
-	row[55] = event["groupId"]
+	row[55] = event.Attributes["groupId"]
 
 	// messageId
-	row[56] = event["messageId"]
+	row[56] = event.Attributes["messageId"]
 
 	// name
-	if eventContext, ok := event["context"].(map[string]any); ok {
+	if eventContext, ok := event.Attributes["context"].(map[string]any); ok {
 		row[57] = eventContext["name"]
 	}
 
 	// properties
-	row[58] = event["properties"]
+	row[58] = event.Attributes["properties"]
 
 	// receivedAt
-	row[59] = event["receivedAt"]
+	row[59] = event.Attributes["receivedAt"]
 
 	// sentAt
-	row[60] = event["sentAt"]
+	row[60] = event.Attributes["sentAt"]
 
 	// timestamp
-	row[61] = event["timestamp"]
+	row[61] = event.Attributes["timestamp"]
 
 	// traits
-	row[62] = event["traits"]
+	row[62] = event.Attributes["traits"]
 
 	// type
-	row[63] = event["type"]
+	row[63] = event.Attributes["type"]
 
 	// previousId
-	row[64] = event["previousId"]
+	row[64] = event.Attributes["previousId"]
 
 	// userId
-	row[65] = event["userId"]
+	row[65] = event.Attributes["userId"]
 
 	ew.mu.Lock()
 	ew.rows = append(ew.rows, row)
 	ew.pipelines = append(ew.pipelines, pipeline)
+	ew.acks = append(ew.acks, event.Ack)
 	ew.mu.Unlock()
 
 }
@@ -232,8 +234,8 @@ func (ew *EventWriter) flush() {
 	metrics.Increment("EventWriter.flush.calls", 1)
 
 	ew.mu.Lock()
-	rows, pipelines := ew.rows, ew.pipelines
-	ew.rows, ew.pipelines = nil, nil
+	rows, pipelines, acks := ew.rows, ew.pipelines, ew.acks
+	ew.rows, ew.pipelines, ew.acks = nil, nil, nil
 	ew.mu.Unlock()
 
 	if rows == nil {
@@ -243,6 +245,9 @@ func (ew *EventWriter) flush() {
 	ctx, done, err := ew.store.mc.StartOperation(ew.close.ctx, normalMode)
 	if err != nil {
 		// Warehouse mode is not normal: discard events.
+		for _, ack := range acks {
+			ack()
+		}
 		for i := range rows {
 			ew.store.ds.metrics.FinalizeFailed(pipelines[i], 1, err.Error())
 		}
@@ -264,6 +269,9 @@ func (ew *EventWriter) flush() {
 				return
 			}
 			continue
+		}
+		for _, ack := range acks {
+			ack()
 		}
 		for i := range rows {
 			ew.store.ds.metrics.FinalizePassed(pipelines[i], 1)

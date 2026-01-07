@@ -55,6 +55,7 @@ type Settings struct {
 		IdleTimeout       time.Duration
 	}
 	DB              core.DBConfig
+	NATS            core.NATSConfig
 	MaxMindDBPath   string
 	MemberEmailFrom string
 	SMTP            struct {
@@ -104,6 +105,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	config := core.Config{
 		DB:                   settings.DB,
+		NATS:                 settings.NATS,
 		MaxMindDBPath:        settings.MaxMindDBPath,
 		MemberEmailFrom:      settings.MemberEmailFrom,
 		SMTP:                 settings.SMTP,
@@ -126,6 +128,11 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		return err
 	}
 	defer core.Close()
+
+	// Destroy the NATS private key.
+	for i := range config.NATS.NKey {
+		config.NATS.NKey[i] = 0
+	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
 	defer sentryErrorTunnel.Close()

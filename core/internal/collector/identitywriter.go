@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/core/internal/transformers"
 	meergoMetrics "github.com/meergo/meergo/tools/metrics"
 )
@@ -28,7 +28,7 @@ type identityWriter struct {
 	metrics     *metrics.Collector
 	mu          sync.Mutex                // for transformer, identities, and timer
 	transformer *transformers.Transformer // protected by mu
-	identities  []events.Event            // protected by mu
+	events      []streams.Event           // protected by mu
 	timer       *time.Timer               // protected by mu
 }
 
@@ -71,7 +71,7 @@ func (iw *identityWriter) SetTransformer(transformer *transformers.Transformer) 
 }
 
 // Write writes the identity of the provided event into the data warehouse.
-func (iw *identityWriter) Write(event events.Event) error {
+func (iw *identityWriter) Write(event streams.Event) error {
 
 	meergoMetrics.Increment("Collector.IdentityWriter.Write.calls", 1)
 
@@ -83,27 +83,26 @@ func (iw *identityWriter) Write(event events.Event) error {
 		return iw.writeDirect(event)
 	}
 
-	var batch []events.Event
-
-	if iw.identities == nil {
+	if iw.events == nil {
 		// Set the timer.
 		iw.timer = time.AfterFunc(maxQueuedEventIdentityTime, func() {
 			iw.mu.Lock()
-			if iw.identities == nil {
+			if iw.events == nil {
 				iw.mu.Unlock()
 				return
 			}
-			identities := iw.identities
-			iw.identities = nil
+			batch := iw.events
+			iw.events = nil
 			iw.timer = nil
 			iw.mu.Unlock()
-			iw.transformAndWrite(identities)
+			iw.transformAndWrite(batch)
 		})
 	}
-	iw.identities = append(iw.identities, event)
-	if len(iw.identities) == maxQueuedIdentities {
-		batch = iw.identities
-		iw.identities = nil
+	iw.events = append(iw.events, event)
+	var batch []streams.Event
+	if len(iw.events) == maxQueuedIdentities {
+		batch = iw.events
+		iw.events = nil
 	}
 	iw.mu.Unlock()
 
@@ -115,14 +114,14 @@ func (iw *identityWriter) Write(event events.Event) error {
 	return nil
 }
 
-func (iw *identityWriter) transformAndWrite(events []events.Event) {
+func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 
 	meergoMetrics.Increment("Collector.IdentityWriter.transformAndWrite.calls", 1)
 	meergoMetrics.Increment("Collector.IdentityWriter.transformAndWrite.passed_identities", len(events))
 
 	records := make([]transformers.Record, len(events))
-	for i, identity := range events {
-		records[i].Attributes = identity
+	for i, event := range events {
+		records[i].Attributes = event.Attributes
 	}
 
 	iw.mu.Lock()
@@ -132,6 +131,9 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 	ctx := context.Background()
 	err := transformer.Transform(ctx, records)
 	if err != nil {
+		for _, event := range events {
+			event.Ack()
+		}
 		if err2, ok := err.(transformers.FunctionExecError); ok {
 			iw.metrics.TransformationFailed(iw.pipeline, len(records), err2.Error())
 		} else {
@@ -149,31 +151,32 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 				iw.metrics.TransformationPassed(iw.pipeline, 1)
 				iw.metrics.OutputValidationFailed(iw.pipeline, 1, err.Error())
 			}
+			events[i].Ack()
 			continue
 		}
 		iw.metrics.TransformationPassed(iw.pipeline, 1)
 		iw.metrics.OutputValidationPassed(iw.pipeline, 1)
 		event := events[i]
-		id, _ := event["userId"].(string)
+		id, _ := event.Attributes["userId"].(string)
 		// Write the identity on the data warehouse.
 		err = iw.writer.Write(datastore.Identity{
 			ID:          id,
-			AnonymousID: event["anonymousId"].(string),
+			AnonymousID: event.Attributes["anonymousId"].(string),
 			Attributes:  record.Attributes,
-			UpdatedAt:   event["timestamp"].(time.Time),
-		})
+			UpdatedAt:   event.Attributes["timestamp"].(time.Time),
+		}, event.Ack)
 		_ = err // TODO(marco): handle the error
 	}
 
 }
 
 // writeDirect writes the identity without performing any transformation.
-func (iw *identityWriter) writeDirect(event events.Event) error {
-	id, _ := event["userId"].(string)
+func (iw *identityWriter) writeDirect(event streams.Event) error {
+	id, _ := event.Attributes["userId"].(string)
 	return iw.writer.Write(datastore.Identity{
 		ID:          id,
-		AnonymousID: event["anonymousId"].(string),
+		AnonymousID: event.Attributes["anonymousId"].(string),
 		Attributes:  map[string]any{},
-		UpdatedAt:   event["timestamp"].(time.Time),
-	})
+		UpdatedAt:   event.Attributes["timestamp"].(time.Time),
+	}, event.Ack)
 }
