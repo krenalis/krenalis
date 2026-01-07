@@ -79,7 +79,8 @@ type Core struct {
 	mcpMu sync.Mutex
 }
 
-var hasBeenCalled bool
+// coreActive is true while a Core instance is active.
+var coreActive atomic.Bool
 
 type Config struct {
 	DB                     DBConfig
@@ -166,13 +167,18 @@ type ExpressionToBeExtracted struct {
 	Type  types.Type `json:"type"`
 }
 
-// New returns a *Core instance. It can only be called once.
+// New returns a *Core instance.
+// If another Core instance is active, it returns an error.
 func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
-	if hasBeenCalled {
-		return nil, errors.New("core.New has already been called")
+	if !coreActive.CompareAndSwap(false, true) {
+		return nil, errors.New("core.New called while a Core instance is active")
 	}
-	hasBeenCalled = true
+	defer func() {
+		if err != nil {
+			coreActive.Store(false)
+		}
+	}()
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
@@ -573,6 +579,7 @@ func (core *Core) Close() {
 	core.nc.Close()
 	// Close PostgreSQL connections.
 	core.db.Close()
+	coreActive.Store(false)
 }
 
 // Connector returns the connector with the provided code.
