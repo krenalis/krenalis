@@ -121,7 +121,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
-	core, err := core.New(&config)
+	core, err := core.New(ctx, &config)
 	if err != nil {
 		return err
 	}

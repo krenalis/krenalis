@@ -158,7 +158,7 @@ type ExpressionToBeExtracted struct {
 }
 
 // New returns a *Core instance. It can only be called once.
-func New(conf *Config) (_ *Core, err error) {
+func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -186,7 +186,7 @@ func New(conf *Config) (_ *Core, err error) {
 	}()
 
 	// Ping the PostgreSQL connection to test if it works.
-	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	err = db.Ping(pingCtx)
 	if err != nil {
@@ -195,9 +195,8 @@ func New(conf *Config) (_ *Core, err error) {
 
 	// Initializes the PostgreSQL database if it is empty and the option to
 	// initialize it is provided.
-	dbInitCtx := context.Background()
 	if conf.DatabaseInitialization.InitIfEmpty {
-		isEmpty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
+		isEmpty, err := initdb.DatabaseIsEmpty(ctx, db)
 		if err != nil {
 			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 		}
@@ -205,8 +204,8 @@ func New(conf *Config) (_ *Core, err error) {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			// Initialize the PostgreSQL database in a transaction, so if it is
 			// fails, there is no need to manually empty the database.
-			err := db.Transaction(dbInitCtx, func(tx *dbpkg.Tx) error {
-				err := initdb.Initialize(dbInitCtx, tx)
+			err := db.Transaction(ctx, func(tx *dbpkg.Tx) error {
+				err := initdb.Initialize(ctx, tx)
 				if err != nil {
 					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 				}
@@ -214,7 +213,7 @@ func New(conf *Config) (_ *Core, err error) {
 				// Also initialize the Docker member, if requested.
 				if conf.DatabaseInitialization.InitDockerMember {
 					slog.Info("initializing Docker member...")
-					err := initdb.InitializeDockerMember(dbInitCtx, tx)
+					err := initdb.InitializeDockerMember(ctx, tx)
 					if err != nil {
 						return fmt.Errorf("cannot initialize the Docker member: %s", err)
 					}
