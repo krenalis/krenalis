@@ -388,7 +388,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return 0, err
 	}
 
-	// Only for destination event pipeline checks that the out schema ia aligned with the event type's schema.
+	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
 	// See issue https://github.com/meergo/meergo/issues/2086.
 	if eventType != "" {
 		app := this.application()

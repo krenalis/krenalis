@@ -670,7 +670,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		return err
 	}
 
-	// Only for destination event pipeline checks that the out schema ia aligned with the event type's schema.
+	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
 	// See issue https://github.com/meergo/meergo/issues/2086.
 	if this.pipeline.EventType != "" {
 		app := this.application()
