@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
@@ -66,8 +67,7 @@ type Collector struct {
 	destinations     *destinations // destination connections used to send events
 	identityWriters  sync.Map      // a map from pipeline identifier to a *identityWriter value
 	close            struct {
-		mu      sync.Mutex
-		closed  bool
+		closed  atomic.Bool
 		cancels map[int]context.CancelFunc // maps pipeline IDs to their worker cancel functions
 	}
 }
@@ -130,18 +130,16 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 
 // Close closes the collector. When Close is called, no other calls to
 // collector's methods should be in progress and no other shall be made.
-// It panics if it has already been called.
+// It panics if it has already been closed.
 func (c *Collector) Close() {
-	c.close.mu.Lock()
-	if c.close.closed {
-		c.close.mu.Unlock()
+	if c.close.closed.Load() {
 		panic("core/events/collector already closed")
 	}
+	c.close.closed.Store(true)
 	for _, cancel := range c.close.cancels {
 		cancel()
 	}
 	c.close.cancels = nil
-	c.close.mu.Unlock()
 	return
 }
 
