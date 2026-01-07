@@ -51,6 +51,10 @@ services:
       MEERGO_DB_DATABASE: meergo
       MEERGO_DB_SCHEMA:
 
+      MEERGO_NATS_URL: nats://nats:4222
+      MEERGO_NATS_USER: ruser
+      MEERGO_NATS_PASSWORD: T0pS3cr3t
+
       # These settings configure Meergo to run optimally within Docker, so it is
       # not recommended that you change them.
       MEERGO_HTTP_HOST: meergo
@@ -123,7 +127,14 @@ services:
       retries: 5
     volumes:
       - warehouse:/var/lib/postgresql/data
+  
+  nats:
+    image: nats:2.12-alpine3.22
+    command: --jetstream --store_dir /var/lib/nats/jetstream_storage
+    volumes:
+      - jetstream_storage:/var/lib/nats/jetstream_storage
 
 volumes:
   db:
   warehouse:
+  jetstream_storage:
