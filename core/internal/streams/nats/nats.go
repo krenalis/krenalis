@@ -64,7 +64,7 @@ func Connect(conf ConnectionOptions) (conn *Connection, err error) {
 		Token:    conf.Token,
 
 		AllowReconnect:     true,
-		MaxReconnect:       nats.DefaultMaxReconnect,
+		MaxReconnect:       -1, // reconnects indefinitely
 		ReconnectWait:      nats.DefaultReconnectWait,
 		ReconnectJitter:    nats.DefaultReconnectJitter,
 		ReconnectJitterTLS: nats.DefaultReconnectJitterTLS,
