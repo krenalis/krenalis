@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
@@ -207,7 +207,7 @@ func Test_Sender(t *testing.T) {
 				if !valid {
 					typ = "Invalid"
 				}
-				event := s.CreateEvent(1, typ, types.Type{}, events.Event{"anonymousId": anonymousId, "messageId": messageId})
+				event := s.CreateEvent(1, typ, types.Type{}, streams.Event{Attributes: map[string]any{"anonymousId": anonymousId, "messageId": messageId}})
 				userByEvent[messageId] = anonymousId
 				if valid {
 					if ids, ok := validEventsByUser[anonymousId]; ok {
