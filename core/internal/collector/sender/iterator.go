@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -137,7 +137,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 			ok = yield(&e.Event)
 			if !it.postponed {
 				wait := time.Since(e.EnqueuedAt).Seconds()
-				it.sender.metrics.queueWait.Observe(wait)
+				it.sender.toolsMetrics.queueWait.Observe(wait)
 			}
 			if !ok {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
@@ -145,7 +145,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 			}
 			it.firstEvent = false
 		}
-		it.sender.metrics.queueWait.Consolidate()
+		it.sender.toolsMetrics.queueWait.Consolidate()
 		it.iterating = false
 		it.firstEvent = false
 		it.sender.complete()

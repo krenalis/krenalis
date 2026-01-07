@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -306,7 +306,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		}
 	}
 	if d.batch == nil {
-		// It is a single-event request. Reparse the entire request body
+		// It is a single-event request. Reparse the entire request body.
 		d.payload = bytes.NewBuffer(body)
 	} else {
 		// It is a batch-event request. Parse only the slice of events.

@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -17,7 +17,6 @@ import (
 
 type EventWriter struct {
 	store     *Store
-	ack       EventWriterAckFunc
 	mu        sync.Mutex // for 'rows' and 'pipelines' fields
 	rows      [][]any
 	pipelines []int
@@ -27,10 +26,9 @@ type EventWriter struct {
 	}
 }
 
-func newEventWriter(store *Store, ack EventWriterAckFunc) *EventWriter {
+func newEventWriter(store *Store) *EventWriter {
 	ew := &EventWriter{
 		store: store,
-		ack:   ack,
 	}
 	ew.close.ctx, ew.close.cancelCtx = context.WithCancel(context.Background())
 	go func() {
@@ -59,10 +57,7 @@ func (ew *EventWriter) Close(ctx context.Context) {
 }
 
 // Write writes an event to the store.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-func (ew *EventWriter) Write(event events.Event, pipeline int) error {
+func (ew *EventWriter) Write(event events.Event, pipeline int) {
 
 	row := make([]any, 66)
 
@@ -230,7 +225,6 @@ func (ew *EventWriter) Write(event events.Event, pipeline int) error {
 	ew.pipelines = append(ew.pipelines, pipeline)
 	ew.mu.Unlock()
 
-	return nil
 }
 
 func (ew *EventWriter) flush() {
@@ -249,13 +243,8 @@ func (ew *EventWriter) flush() {
 	ctx, done, err := ew.store.mc.StartOperation(ew.close.ctx, normalMode)
 	if err != nil {
 		// Warehouse mode is not normal: discard events.
-		if ew.ack != nil {
-			events := make([]AckEvent, len(rows))
-			for i := range rows {
-				events[i].Pipeline = pipelines[i]
-			}
-			metrics.Increment("EventWriter.ack_sents", 1)
-			ew.ack(events, err)
+		for i := range rows {
+			ew.store.ds.metrics.FinalizeFailed(pipelines[i], 1, err.Error())
 		}
 		return
 	}
@@ -276,13 +265,8 @@ func (ew *EventWriter) flush() {
 			}
 			continue
 		}
-		if ew.ack != nil {
-			events := make([]AckEvent, len(rows))
-			for i := range rows {
-				events[i].Pipeline = pipelines[i]
-			}
-			metrics.Increment("EventWriter.ack_sents", 1)
-			ew.ack(events, nil)
+		for i := range rows {
+			ew.store.ds.metrics.FinalizePassed(pipelines[i], 1)
 		}
 		return
 	}

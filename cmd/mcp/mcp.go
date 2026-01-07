@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -11,6 +11,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/tools/errors"
+	"github.com/meergo/meergo/tools/validation"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -87,7 +88,7 @@ func mcpTokenFromRequest(r *http.Request) (string, error) {
 	if len(auth) > 1 {
 		return "", errors.BadRequest("request contains multiple Authorization headers")
 	}
-	token, found := parseBearer(auth[0])
+	token, found := validation.ParseBearer(auth[0])
 	if !found {
 		return "", errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_MCP_KEY>'.")
 	}
@@ -105,23 +106,4 @@ func meergoCoreFromCtx(ctx context.Context) (*core.Core, error) {
 		return nil, errors.New("meergo core not found in context")
 	}
 	return core, nil
-}
-
-// parseBearer extracts a Bearer token from an Authorization header. It reports
-// whether the header uses the Bearer scheme and contains a non-empty token.
-// Keep this in sync with the function of the same name in the "cmd" package.
-func parseBearer(header string) (string, bool) {
-	const scheme = "Bearer"
-	if len(header) < len(scheme) || !strings.EqualFold(header[:len(scheme)], scheme) {
-		return "", false
-	}
-	token := header[len(scheme):]
-	if token == "" || (token[0] != ' ' && token[0] != '\t') {
-		return "", false
-	}
-	token = strings.TrimLeft(token, " \t")
-	if token == "" {
-		return "", false
-	}
-	return token, true
 }

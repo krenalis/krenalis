@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -14,11 +14,9 @@ import (
 
 	"github.com/meergo/meergo/core/internal/collector/sender"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -105,16 +103,9 @@ func (da *destinationPipeline) Discard(cause error) {
 
 // QueueEvent queues an event for the pipeline.
 //
-// If the event does not match the pipeline's filter, it is ignored.
 // If the pipeline has a transformation, the event is transformed before being
 // queued.
 func (da *destinationPipeline) QueueEvent(event events.Event) {
-	if !filters.Applies(da.filter, event) {
-		da.queue.metrics.FilterFailed(da.id, 1)
-		meergoMetrics.Increment("Collector.serveEvents.discarded_user_identities", 1)
-		return
-	}
-	da.queue.metrics.FilterPassed(da.id, 1)
 	se := da.queue.sender.CreateEvent(da.id, da.eventType, da.schema, event)
 	if da.transformer == nil {
 		da.queue.metrics.TransformationPassed(da.id, 1)
@@ -177,6 +168,9 @@ func (da *destinationPipeline) transform() {
 	// Transform the events.
 	err := da.transformer.Transform(da.queue.ctx, records)
 	if err != nil {
+		for i := 0; i < n; i++ {
+			da.queue.sender.DiscardEvent(events[i].senderEvent)
+		}
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
 			msg = err.Error()
@@ -192,6 +186,7 @@ func (da *destinationPipeline) transform() {
 
 	for i, record := range records {
 		if err := record.Err; err != nil {
+			da.queue.sender.DiscardEvent(events[i].senderEvent)
 			switch err.(type) {
 			case transformers.RecordTransformationError:
 				da.queue.metrics.TransformationFailed(da.id, 1, err.Error())
@@ -199,7 +194,6 @@ func (da *destinationPipeline) transform() {
 				da.queue.metrics.TransformationPassed(da.id, 1)
 				da.queue.metrics.OutputValidationFailed(da.id, 1, err.Error())
 			}
-			da.queue.sender.DiscardEvent(events[i].senderEvent)
 			continue
 		}
 		da.queue.metrics.TransformationPassed(da.id, 1)

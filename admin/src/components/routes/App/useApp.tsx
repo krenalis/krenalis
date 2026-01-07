@@ -62,13 +62,19 @@ const useApp = (
 
 	useEffect(() => {
 		const loadAppState = async () => {
+			const stopLoading = () => {
+				setTimeout(() => {
+					setIsLoadingState(false);
+				}, 300);
+			};
+
 			// Retrieve the public metadata.
 			let publicMetadata: PublicMetadata;
 			try {
 				publicMetadata = await api.publicMetadata();
 			} catch (err) {
 				handleError(err);
-				setIsLoadingState(false);
+				stopLoading();
 				return;
 			}
 
@@ -125,13 +131,32 @@ const useApp = (
 				Sentry.setTag('meergo_installation_id', publicMetadata.installationID);
 			}
 
+			// Check the current workspace.
+			let workspaceID = selectedWorkspace;
+			if (workspaceID !== 0) {
+				try {
+					await api.workspaces.get();
+				} catch (err) {
+					if (err instanceof NotFoundError) {
+						// The workspace has been deleted.
+						setSelectedWorkspace(0);
+						api = new API(window.location.origin, 0);
+						workspaceID = 0;
+					} else {
+						handleError(err);
+						stopLoading();
+						return;
+					}
+				}
+			}
+
 			// get the workspaces list.
 			let ws: Workspace[];
 			try {
 				ws = await api.workspaces.list();
 			} catch (err) {
 				handleError(err);
-				setIsLoadingState(false);
+				stopLoading();
 				return;
 			}
 			setWorkspaces(ws);
@@ -141,12 +166,14 @@ const useApp = (
 			setIsLoggedIn(true);
 
 			const isDeleted = workspaces != null && ws.length < workspaces.length;
-			if (selectedWorkspace === 0) {
+			if (workspaceID === 0) {
 				if (ws.length === 1 && !isDeleted) {
 					// the user has only one workspace, so it can be
 					// automatically selected.
-					setSelectedWorkspace(ws[0].id);
-					api = new API(window.location.origin, ws[0].id);
+					const id = ws[0].id;
+					setSelectedWorkspace(id);
+					api = new API(window.location.origin, id);
+					workspaceID = id;
 				} else {
 					if (ws.length === 0) {
 						// the user must create a workspace.
@@ -155,7 +182,7 @@ const useApp = (
 						// the user must choose a workspace.
 						redirect('workspaces');
 					}
-					setIsLoadingState(false);
+					stopLoading();
 					return;
 				}
 			}
@@ -224,9 +251,9 @@ const useApp = (
 				if (err instanceof NotFoundError) {
 					// the workspace saved in the local storage doesn't exist
 					// anymore.
-					localStorage.removeItem(WORKSPACE_ID_KEY);
+					setSelectedWorkspace(0);
 					redirect('workspaces');
-					setIsLoadingState(false);
+					stopLoading();
 					return;
 				}
 				handleError(err);
@@ -268,7 +295,7 @@ const useApp = (
 			try {
 				warehouseResponse = await api.workspaces.warehouse();
 			} catch (err) {
-				setTimeout(() => setIsLoadingState(false), 300);
+				stopLoading();
 				setWarehouse(null);
 				handleError(err);
 				return;
@@ -278,7 +305,7 @@ const useApp = (
 				settings: warehouseResponse.settings,
 			});
 
-			setTimeout(() => setIsLoadingState(false), 300);
+			stopLoading();
 		};
 
 		if (!isLoadingState) {

@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -283,7 +283,7 @@ func New(conf *Config) (*Core, error) {
 	core.metrics = coremetrics.New(db, core.state)
 
 	// Init the datastore.
-	core.datastore = datastore.New(core.state)
+	core.datastore = datastore.New(core.state, core.metrics)
 
 	// Init the connections.
 	core.connections = connections.New(core.state)

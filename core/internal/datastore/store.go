@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -40,23 +40,6 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // ErrMaintenanceMode is returned by Store methods when they cannot execute due
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
-
-// AckEvent represents an ack event.
-type AckEvent struct {
-	Pipeline int
-}
-
-// EventWriterAckFunc is the function called when events have been written to
-// the data warehouse.
-type EventWriterAckFunc func(events []AckEvent, err error)
-
-// EventIdentityWriterAckFunc is the function called when a batch of user
-// identities from events have been written to the data warehouse.
-type EventIdentityWriterAckFunc func(pipeline int, ids []string, err error)
-
-// IdentityWriterAckFunc is the function called when a batch of identities has
-// been written to the data warehouse.
-type IdentityWriterAckFunc func(ids []string, err error)
 
 // destinationsProfilesTable represents the meergo_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
@@ -298,16 +281,13 @@ func (store *Store) Mode() state.WarehouseMode {
 // NewBatchIdentityWriter returns an identity writer for writing identities in
 // batch, relative to the given pipeline (which must be running) on the data
 // warehouse. purge reports whether identities should be purged from the data
-// warehouse after all identities have been written. The ack parameter is the
-// acknowledgment function.
+// warehouse after all identities have been written.
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-//
-// It panics if the ack function is nil.
-func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
-	return newBatchIdentityWriter(store, pipeline, purge, ack)
+	return newBatchIdentityWriter(store, pipeline, purge)
 }
 
 // NewEventIdentityWriter returns an identity writer for writing identities,
@@ -315,15 +295,15 @@ func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool,
 // identities from events.
 //
 // It must be called on a frozen state.
-func (store *Store) NewEventIdentityWriter(pipelineID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
+func (store *Store) NewEventIdentityWriter(pipelineID int) *EventIdentityWriter {
 	store.mustBeOpen()
-	return newEventIdentityWriter(store, pipelineID, ack)
+	return newEventIdentityWriter(store, pipelineID)
 }
 
 // NewEventWriter returns a new writer to write events.
-func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
+func (store *Store) NewEventWriter() *EventWriter {
 	store.mustBeOpen()
-	return newEventWriter(store, ack)
+	return newEventWriter(store)
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema

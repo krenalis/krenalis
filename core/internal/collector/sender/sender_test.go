@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -64,14 +64,14 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	}
 
 	t.Run("PostponeOutsideIteration", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		expectPanic(func() { it.Postpone() })
 	})
 
 	t.Run("PostponeFirstEvent", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -80,7 +80,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PostponeDiscardedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -89,7 +89,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardDiscardedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -98,7 +98,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardPostponedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -107,7 +107,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -115,7 +115,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("AllAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -123,7 +123,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("FirstAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -131,7 +131,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("SameUserAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, func([]Ack, error) {})
+		s := New(nopApplication{}, nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -171,7 +171,8 @@ func Test_Sender(t *testing.T) {
 			rng := rand.New(src)
 
 			app := newApplication(t, test.seed)
-			s := New(app, app.ack)
+			s := New(app, nil)
+			s.setSentFunc(app.sent)
 
 			ctx := context.Background()
 
@@ -271,25 +272,24 @@ func Test_Sender(t *testing.T) {
 				}
 			}
 
-			// Check that all acks have been received.
-			for i, ack := range app.Acks() {
-				for _, id := range ack.ids {
-					if r, ok := receivedAck[id]; !ok {
-						t.Fatalf("ack %d/%d: unexpected ID %q", i+1, test.num, id)
-					} else if r {
-						t.Fatalf("ack %d/%d: ID %q has already been received", i+1, test.num, id)
-					}
-					if ack.err == nil {
-						if !isValid[id] {
-							t.Fatalf("ack %d/%d: expected error for ID %q, got none", i+1, test.num, id)
-						}
-					} else {
-						if isValid[id] {
-							t.Fatalf("ack %d/%d: expected no error for ID %q, got an error", i+1, test.num, id)
-						}
-					}
-					receivedAck[id] = true
+			// Check that all sends were completed.
+			for i, send := range app.Sends() {
+				id := send.messageID
+				if r, ok := receivedAck[id]; !ok {
+					t.Fatalf("ack %d/%d: unexpected ID %q", i+1, test.num, id)
+				} else if r {
+					t.Fatalf("ack %d/%d: ID %q has already been received", i+1, test.num, id)
 				}
+				if send.err == nil {
+					if !isValid[id] {
+						t.Fatalf("ack %d/%d: expected error for ID %q, got none", i+1, test.num, id)
+					}
+				} else {
+					if isValid[id] {
+						t.Fatalf("ack %d/%d: expected no error for ID %q, got an error", i+1, test.num, id)
+					}
+				}
+				receivedAck[id] = true
 			}
 			for id, r := range receivedAck {
 				if !r {
@@ -306,9 +306,9 @@ func Test_Sender(t *testing.T) {
 
 }
 
-type ack struct {
-	ids []string
-	err error
+type send struct {
+	messageID string
+	err       error
 }
 
 type application struct {
@@ -319,23 +319,23 @@ type application struct {
 	iteration uint64
 	n         int      // protected by mu
 	consumed  []string // ids of the consumed events; protected by mu
-	acks      []ack    // protected by mu
+	sends     []send   // protected by mu
 }
 
 func newApplication(t *testing.T, seed uint64) *application {
 	app := application{
-		t:    t,
-		seed: seed,
-		acks: []ack{},
+		t:     t,
+		seed:  seed,
+		sends: []send{},
 	}
 	return &app
 }
 
-func (app *application) Acks() []ack {
+func (app *application) Sends() []send {
 	app.mu.Lock()
-	acks := slices.Clone(app.acks)
+	sends := slices.Clone(app.sends)
 	app.mu.Unlock()
-	return acks
+	return sends
 }
 
 func (app *application) ID() int {
@@ -445,18 +445,14 @@ func (app *application) SendEvents(ctx context.Context, events connectors.Events
 	return nil
 }
 
-func (app *application) ack(acks []Ack, err error) {
+func (app *application) sent(messageID string, err error) {
 	app.t.Helper()
-	if len(acks) == 0 {
-		app.t.Fatalf("ack: expected at least one ack, got none")
-	}
-	ids := make([]string, len(acks))
-	for i, ack := range acks {
-		ids[i] = ack.Event
+	if messageID == "" {
+		app.t.Fatalf("sent: message ID is empty")
 	}
 	app.mu.Lock()
-	app.acks = append(app.acks, ack{ids: ids, err: err})
-	app.n += len(ids)
+	app.sends = append(app.sends, send{messageID: messageID, err: err})
+	app.n += 1
 	app.mu.Unlock()
 }
 

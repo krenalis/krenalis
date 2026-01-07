@@ -23,6 +23,8 @@ import {
 	transformInPipelineToSet,
 	validateAndNormalizeFilterCondition,
 	computeDefaultTransformationFunction,
+	checkMapping,
+	checkFunctionPath,
 } from '../../../lib/core/pipeline';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Section from '../../base/Section/Section';
@@ -48,6 +50,7 @@ import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import {
@@ -59,19 +62,13 @@ import {
 	TransformationLanguagesResponse,
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
-import Type, { ArrayType, MapType, ObjectType, Property, StringType } from '../../../lib/api/types/types';
+import { ArrayType, MapType, ObjectType, Property, StringType } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import {
-	PipelineToSet,
-	ExportMode,
-	Filter,
-	TransformationFunction,
-	TransformationPurpose,
-} from '../../../lib/api/types/pipeline';
+import { PipelineToSet, Filter, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/pipeline';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
@@ -824,27 +821,27 @@ const TransformationBox = ({
 			const isIdentifier = isImport && workspace.identifiers.includes(path);
 			const isOutMatchingProperty = !!pipeline.matching?.out && pipeline.matching.out === path;
 			const showMatchingIn = isOutMatchingProperty && property.value === '';
-			const isTableKey = !!pipeline.tableKey && pipeline.tableKey === path;
 			let isDisabled =
 				isTransformationDisabled ||
 				property.disabled === true ||
 				(isOutMatchingProperty && property.value === '');
 
-			const keys = Object.keys(pipeline.transformation.mapping);
+			const paths = Object.keys(pipeline.transformation.mapping);
 
 			const children: string[] = [];
-			for (const key of keys) {
-				if (key.startsWith(`${path}.`)) {
-					children.push(key);
+			for (const p of paths) {
+				if (p.startsWith(`${path}.`)) {
+					children.push(p);
 				}
 			}
 
 			const parents: string[] = [];
-			for (const key of keys) {
-				if (path.startsWith(`${key}.`)) {
-					parents.push(key);
+			for (const p of paths) {
+				if (path.startsWith(`${p}.`)) {
+					parents.push(p);
 				}
 			}
+			const reversedParents = structuredClone(parents).reverse();
 
 			let isOutMatchingInHierarchy = false;
 			if (!!pipeline.matching?.out) {
@@ -861,7 +858,7 @@ const TransformationBox = ({
 			}
 
 			let closestMappedParent: string;
-			for (const parent of [...parents].reverse()) {
+			for (const parent of reversedParents) {
 				const isMapped =
 					pipeline.transformation.mapping[parent].value !== '' &&
 					pipeline.transformation.mapping[parent].error === '';
@@ -894,46 +891,7 @@ const TransformationBox = ({
 				}
 			}
 
-			const hasRequired =
-				isTableKey ||
-				(pipelineType.target === 'Event' && (property.createRequired || property.updateRequired)) ||
-				(pipeline.exportMode != null &&
-					((property.createRequired && pipeline.exportMode.includes('Create')) ||
-						(property.updateRequired && pipeline.exportMode.includes('Update'))));
-
-			let showRequired = false;
-			if (hasRequired) {
-				const isFirstLevel = property.indentation === 0;
-				if (isFirstLevel || isTableKey) {
-					showRequired = true;
-				} else {
-					if (property.value !== '') {
-						showRequired = true;
-					} else {
-						const hasMappedParent = closestMappedParent != null;
-						if (hasMappedParent) {
-							showRequired = true;
-						} else {
-							const siblings: string[] = [];
-							for (const key of keys) {
-								const prop = pipeline.transformation.mapping[key];
-								if (
-									prop.root === property.root &&
-									prop.indentation === property.indentation &&
-									key !== path
-								) {
-									siblings.push(key);
-								}
-							}
-							const hasMappedSiblings =
-								siblings.findIndex((k) => pipeline.transformation.mapping[k].value !== '') !== -1;
-							if (hasMappedSiblings) {
-								showRequired = true;
-							}
-						}
-					}
-				}
-			}
+			let { isRequired, isSelected } = checkMapping(path, pipeline, pipelineType);
 
 			const typ = property.full.type;
 			const isEnum = typ.kind === 'string' && (typ as StringType).values != null;
@@ -965,8 +923,9 @@ const TransformationBox = ({
 						automaticMapping={automaticMapping}
 						isFullscreenTransformationOpen={isFullscreenTransformationOpen}
 						isDisabled={isDisabled}
+						isSelected={isSelected}
 						indentation={pipeline.transformation.mapping![path].indentation!}
-						showRequired={showRequired}
+						showRequired={isRequired}
 						propertiesToHide={propertiesToHide}
 					/>,
 				);
@@ -1034,19 +993,26 @@ const TransformationBox = ({
 							}
 						>
 							<div className='pipeline__transformation-output-property-head'>
-								<PropertyTooltip
-									propertyName={path}
-									description={property.full.description}
-									typeName={typeName}
-									type={property.full.type}
-								>
+								<span className='pipeline__transformation-output-property-name-copy'>
+									<SlCopyButton
+										className='pipeline__transformation-output-property-copy'
+										value={property.full.name}
+										copyLabel='Click to copy'
+										successLabel='✓ Copied'
+										errorLabel='Copying to clipboard is not supported by your browser'
+										hoist={true}
+									/>
 									<span className='pipeline__transformation-output-property-key'>
 										{property.full.name}
 									</span>
-									<span className='pipeline__transformation-output-property-type'>{typeName}</span>
-								</PropertyTooltip>
-								{showRequired && (
-									<span className='pipeline__transformation-output-property-required'>required</span>
+								</span>
+								<span className='pipeline__transformation-output-property-type'>{typeName}</span>
+								{isRequired && (
+									<span
+										className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+									>
+										required
+									</span>
 								)}
 							</div>
 							{property.full.description && (
@@ -2018,12 +1984,10 @@ const FullscreenTransformation = ({
 								nesting={1}
 								side='input'
 								transformationType={transformationType}
-								exportMode={pipeline.exportMode}
 								searchTerm={inSearchTerm}
 								flatSchema={flatInputSchema}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
-								tableKey={pipeline.tableKey}
 							/>
 						);
 					} else {
@@ -2034,11 +1998,9 @@ const FullscreenTransformation = ({
 								property={p}
 								side='input'
 								transformationType={transformationType}
-								exportMode={pipeline.exportMode}
 								searchTerm={inSearchTerm}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
-								tableKey={pipeline.tableKey}
 							/>
 						);
 					}
@@ -2430,12 +2392,10 @@ const FullscreenTransformation = ({
 													nesting={1}
 													side='output'
 													transformationType={transformationType}
-													exportMode={pipeline.exportMode}
 													searchTerm={outSearchTerm}
 													flatSchema={flatOutputSchema}
 													selectedPaths={selectedOutPaths}
 													onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
-													tableKey={pipeline.tableKey}
 												/>
 											);
 										} else {
@@ -2446,14 +2406,12 @@ const FullscreenTransformation = ({
 													language={selectedLanguage}
 													side='output'
 													transformationType={transformationType}
-													exportMode={pipeline.exportMode}
 													searchTerm={outSearchTerm}
 													selectedPaths={selectedOutPaths}
 													onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
 													isOutMatchingProperty={
 														pipeline.matching?.out && pipeline.matching.out === p.name
 													}
-													tableKey={pipeline.tableKey}
 												/>
 											);
 										}
@@ -2515,6 +2473,7 @@ interface MapMappingProps {
 	automaticMapping: string | undefined;
 	isFullscreenTransformationOpen: boolean;
 	isDisabled: boolean;
+	isSelected: boolean;
 	indentation: number;
 	showRequired: boolean;
 	propertiesToHide?: string[] | null;
@@ -2543,6 +2502,7 @@ const MapMapping = ({
 	automaticMapping,
 	isFullscreenTransformationOpen,
 	isDisabled,
+	isSelected,
 	indentation,
 	showRequired,
 	propertiesToHide,
@@ -2888,17 +2848,24 @@ const MapMapping = ({
 				}
 			>
 				<div className='pipeline__transformation-output-property-head'>
-					<PropertyTooltip
-						propertyName={propertyPath}
-						description={property.full.description}
-						typeName={typeName}
-						type={property.full.type}
-					>
+					<span className='pipeline__transformation-output-property-name-copy'>
+						<SlCopyButton
+							className='pipeline__transformation-output-property-copy'
+							value={property.full.name}
+							copyLabel='Click to copy'
+							successLabel='✓ Copied'
+							errorLabel='Copying to clipboard is not supported by your browser'
+							hoist={true}
+						/>
 						<span className='pipeline__transformation-output-property-key'>{property.full.name}</span>
-						<span className='pipeline__transformation-output-property-type'>{typeName}</span>
-					</PropertyTooltip>
+					</span>
+					<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 					{showRequired && (
-						<span className='pipeline__transformation-output-property-required'>required</span>
+						<span
+							className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+						>
+							required
+						</span>
 					)}
 				</div>
 				{property.full.description && (
@@ -2959,17 +2926,7 @@ const MapMapping = ({
 									onUpdatePair(i, 'key', e.target.value);
 								}}
 							/>{' '}
-							"
-							<PropertyTooltip
-								propertyName={''}
-								description={property.full.description}
-								typeName={elementType.kind}
-								type={elementType}
-							>
-								<span className='pipeline__transformation-output-property-type'>
-									{elementType.kind}
-								</span>
-							</PropertyTooltip>
+							"<span className='pipeline__transformation-output-property-type'>{elementType.kind}</span>
 							<SlTooltip content='Add key' hoist={true}>
 								<SlButton
 									className='pipeline__transformation-output-property-add'
@@ -3046,12 +3003,10 @@ interface TransformationNestedPropertiesProps {
 	parentName?: string;
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
-	exportMode: ExportMode;
 	searchTerm: string;
 	flatSchema: TransformedMapping;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
-	tableKey: string | null;
 }
 
 const TransformationNestedProperties = ({
@@ -3061,12 +3016,10 @@ const TransformationNestedProperties = ({
 	parentName,
 	side,
 	transformationType,
-	exportMode,
 	searchTerm,
 	flatSchema,
 	selectedPaths,
 	onChangeSelectedPath,
-	tableKey,
 }: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -3165,13 +3118,11 @@ const TransformationNestedProperties = ({
 				parentName={parentName}
 				side={side}
 				transformationType={transformationType}
-				exportMode={exportMode}
 				selectedPaths={selectedPaths}
 				showCaret={hasSearchedChildren}
 				onChangeSelectedPath={onChangeSelectedPath}
 				isExpanded={isExpanded || showSearchedChildren}
 				setIsExpanded={setIsExpanded}
-				tableKey={tableKey}
 				hideCheckbox={hideCheckbox}
 			/>
 			<div
@@ -3190,12 +3141,10 @@ const TransformationNestedProperties = ({
 									parentName={path}
 									side={side}
 									transformationType={transformationType}
-									exportMode={exportMode}
 									searchTerm={searchTerm}
 									flatSchema={flatSchema}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
-									tableKey={tableKey}
 								/>
 							);
 						} else {
@@ -3207,11 +3156,9 @@ const TransformationNestedProperties = ({
 									parentName={path}
 									side={side}
 									transformationType={transformationType}
-									exportMode={exportMode}
 									searchTerm={searchTerm}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
-									tableKey={tableKey}
 									hideCheckbox={
 										property.type.kind === 'array' || property.type.kind === 'map' || hideCheckbox
 									}
@@ -3231,7 +3178,6 @@ interface TransformationPropertyProps {
 	parentName?: string;
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
-	exportMode: ExportMode;
 	searchTerm?: string;
 	showCaret?: boolean;
 	selectedPaths: string[];
@@ -3239,7 +3185,6 @@ interface TransformationPropertyProps {
 	isExpanded?: boolean;
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 	isOutMatchingProperty?: boolean;
-	tableKey: string | null;
 	hideCheckbox?: boolean;
 }
 
@@ -3250,7 +3195,6 @@ const TransformationProperty = ({
 	parentName,
 	side,
 	transformationType,
-	exportMode,
 	searchTerm,
 	showCaret = true,
 	selectedPaths,
@@ -3258,7 +3202,6 @@ const TransformationProperty = ({
 	isExpanded,
 	setIsExpanded,
 	isOutMatchingProperty,
-	tableKey,
 	hideCheckbox = false,
 }: TransformationPropertyProps) => {
 	const { connection } = useContext(ConnectionContext);
@@ -3273,14 +3216,13 @@ const TransformationProperty = ({
 
 	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 	const isIdentifier = isImport && workspace.identifiers.includes(path) && side === 'output';
-	const isSelected = selectedPaths.includes(path);
+	const isFlagged = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
-	const isTableKey = !!tableKey && tableKey === path;
 	let isAutoSelected = autoSelectedPaths.includes(path);
 	const isSelectDisabled =
 		transformationType === 'function' &&
-		((isOutMatchingProperty && !isSelected) || hasSelectedParent || isAutoSelected);
+		((isOutMatchingProperty && !isFlagged) || hasSelectedParent || isAutoSelected);
 
 	const onClick = (e: any) => {
 		if (isSelectDisabled) {
@@ -3288,7 +3230,8 @@ const TransformationProperty = ({
 		}
 		const isCopy = e.target.closest('.fullscreen-transformation__property-copy') != null;
 		const isCaret = e.target.closest('.fullscreen-transformation__property-caret') != null;
-		if (isCopy || isCaret) {
+		const isLanguageBadge = e.target.closest('.fullscreen-transformation__property-language-type') != null;
+		if (isCopy || isCaret || isLanguageBadge) {
 			e.stopPropagation();
 			return;
 		}
@@ -3323,64 +3266,35 @@ const TransformationProperty = ({
 		return null;
 	}
 
-	const hasRequired =
-		isTableKey ||
-		(pipelineType.target === 'Event' && (property.createRequired || property.updateRequired)) ||
-		(exportMode != null &&
-			((property.createRequired && exportMode.includes('Create')) ||
-				(property.updateRequired && exportMode.includes('Update'))));
+	const { isRequired, isSelected } =
+		transformationType === 'function'
+			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
+			: checkMapping(path, pipeline, pipelineType);
 
-	let showRequired = false;
-	if (hasRequired) {
-		const isFirstLevel = parentName == null;
-		if (isFirstLevel || isTableKey) {
-			showRequired = true;
+	const meergoTypeName = toMeergoStringType(property.type, property.nullable);
+	let languageTypeName: string | null = null;
+	let languageTypeLabel = '';
+	if (transformationType === 'function' && language !== '') {
+		if (language === 'Python') {
+			languageTypeName = toPythonType(
+				property.type,
+				pipeline.transformation.function.preserveJSON,
+				property.nullable || isImport,
+			);
+			languageTypeLabel = 'Python type';
 		} else {
-			if (isSelected) {
-				showRequired = true;
-			} else {
-				if (hasSelectedParent) {
-					showRequired = true;
-				} else {
-					const selectedSiblings: string[] = [];
-					for (const path of selectedPaths) {
-						const hasSameParent = path.startsWith(`${parentName}.`);
-						if (hasSameParent) {
-							const suffix = path.slice(`${parentName}.`.length);
-							const isLowerLevel = suffix.includes('.');
-							if (!isLowerLevel) {
-								selectedSiblings.push(path);
-							}
-						}
-					}
-					if (selectedSiblings.length > 0) {
-						showRequired = true;
-					}
-				}
-			}
+			languageTypeName = toJavascriptType(
+				property.type,
+				pipeline.transformation.function.preserveJSON,
+				property.nullable || isImport,
+			);
+			languageTypeLabel = 'JavaScript type';
 		}
-	}
-
-	let typeName = '';
-	if (language === '') {
-		typeName = toMeergoStringType(property.type, property.nullable);
-	} else if (language === 'Python') {
-		typeName = toPythonType(
-			property.type,
-			pipeline.transformation.function.preserveJSON,
-			property.nullable || isImport,
-		);
-	} else {
-		typeName = toJavascriptType(
-			property.type,
-			pipeline.transformation.function.preserveJSON,
-			property.nullable || isImport,
-		);
 	}
 
 	return (
 		<div
-			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
+			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
 			style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
 			onClick={transformationType === 'function' ? onClick : null}
 		>
@@ -3401,8 +3315,8 @@ const TransformationProperty = ({
 				) : (
 					<SlCheckbox
 						className='fullscreen-transformation__property-check'
-						checked={isSelected || hasSelectedParent}
-						indeterminate={hasSelectedChildren && !isSelected}
+						checked={isFlagged || hasSelectedParent}
+						indeterminate={hasSelectedChildren && !isFlagged}
 						disabled={isSelectDisabled}
 						size='small'
 					/>
@@ -3412,55 +3326,69 @@ const TransformationProperty = ({
 					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
 					<div className='fullscreen-transformation__property-content'>
 						<div className='fullscreen-transformation__property-head'>
-							{isIdentifier && (
-								<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
-									<SlIcon
-										className='fullscreen-transformation__property-identifier-icon'
-										name='person-check'
-									/>
-								</SlTooltip>
-							)}
-							<PropertyTooltip
-								propertyName={path}
-								description={property.description}
-								typeName={typeName}
-								type={property.type}
-							>
-								<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+							<div className='fullscreen-transformation__property-head-main'>
+								{isIdentifier && (
+									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+										<SlIcon
+											className='fullscreen-transformation__property-identifier-icon'
+											name='person-check'
+										/>
+									</SlTooltip>
+								)}
+								<span className='fullscreen-transformation__property-name-copy'>
+									{!isOutMatchingProperty && (
+										<SlCopyButton
+											className='fullscreen-transformation__property-copy'
+											value={path}
+											copyLabel='Click to copy'
+											successLabel='✓ Copied'
+											errorLabel='Copying to clipboard is not supported by your browser'
+											hoist={true}
+										/>
+									)}
+									<span className='fullscreen-transformation__property-name-text'>
+										{property.name}
+									</span>
+								</span>
 								<span className='fullscreen-transformation__property-type'>
-									<span>{typeName}</span>
+									<span>{meergoTypeName}</span>
 									{side === 'input' && property.readOptional && <span>- optional</span>}
-									{showRequired && (
-										<span className='fullscreen-transformation__property-required'>required</span>
+									{isRequired && (
+										<span
+											className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+										>
+											required
+										</span>
 									)}
 								</span>
-							</PropertyTooltip>
-							{!isOutMatchingProperty && (
-								<SlCopyButton
-									className='fullscreen-transformation__property-copy'
-									value={parentName ? `${parentName}.${property.name}` : property.name}
-									copyLabel='Click to copy'
-									successLabel='✓ Copied'
-									errorLabel='Copying to clipboard is not supported by your browser'
-									hoist={true}
-								/>
-							)}
-							{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
-								<SlTooltip
-									content='You cannot select this property since it is already used as matching property'
-									hoist={true}
-								>
-									<SlIcon
-										className='fullscreen-transformation__property-disabled-info'
-										name='info-circle'
-									/>
+								{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
+									<SlTooltip
+										content='You cannot select this property since it is already used as matching property'
+										hoist={true}
+									>
+										<SlIcon
+											className='fullscreen-transformation__property-disabled-info'
+											name='info-circle'
+										/>
+									</SlTooltip>
+								)}
+								{transformationType === 'function' && isOutMatchingProperty && isFlagged && (
+									<div className='fullscreen-transformation__property-error'>
+										Ensure that this property is not returned by the transformation function, and
+										then deselect this
+									</div>
+								)}
+							</div>
+							{languageTypeName && (
+								<SlTooltip content={languageTypeLabel} hoist={true}>
+									<SlBadge
+										className='fullscreen-transformation__property-language-type'
+										variant='neutral'
+										pill
+									>
+										{languageTypeName}
+									</SlBadge>
 								</SlTooltip>
-							)}
-							{transformationType === 'function' && isOutMatchingProperty && isSelected && (
-								<div className='fullscreen-transformation__property-error'>
-									Ensure that this property is not returned by the transformation function, and then
-									deselect this
-								</div>
 							)}
 						</div>
 						{property.description && (
@@ -3472,30 +3400,6 @@ const TransformationProperty = ({
 				</div>
 			</div>
 		</div>
-	);
-};
-
-interface TypeTooltipProps {
-	propertyName: string;
-	description: string | null;
-	typeName: string;
-	type: Type;
-	children: ReactNode;
-}
-
-const PropertyTooltip = ({ propertyName, description, typeName, type, children }: TypeTooltipProps) => {
-	return (
-		<SlTooltip className='type-tooltip' placement='top-start' distance={5} hoist={true}>
-			<div slot='content'>
-				<div className='type-tooltip__title'>
-					<span className='type-tooltip__property-name'>{propertyName}</span>{' '}
-					<span className='type-tooltip__type-name'>{typeName}</span>
-				</div>
-				{description && <div className='type-tooltip__description'>{description}</div>}
-				{typeDescription(type)}
-			</div>
-			{children}
-		</SlTooltip>
 	);
 };
 
@@ -3563,50 +3467,6 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 
 	const isVerticallyVisible = elementTop >= containerTop && elementBottom <= containerBottom;
 	return isVerticallyVisible;
-}
-
-function typeDescription(type: Type): ReactNode[] {
-	let elements: ReactNode[] = [];
-	if (type.kind === 'int' || type.kind === 'float') {
-		if (type.minimum != null) {
-			elements.push(<div>Minimum: {type.minimum}</div>);
-		}
-		if (type.maximum != null) {
-			elements.push(<div>Maximum: {type.maximum}</div>);
-		}
-		if (type.kind === 'float' && type.real != null) {
-			elements.push(<div>Real: {type.real}</div>);
-		}
-	} else if (type.kind === 'decimal') {
-		elements.push(<div>Precision: {type.precision}</div>);
-		elements.push(<div>Scale: {type.scale != null ? type.scale : 0}</div>);
-		if (type.minimum != null) {
-			elements.push(<div>Minimum: {type.minimum}</div>);
-		}
-		if (type.maximum != null) {
-			elements.push(<div>Maximum: {type.maximum}</div>);
-		}
-	} else if (type.kind === 'year') {
-		elements.push(<div>Minimum: 1</div>);
-		elements.push(<div>Maximum: 9999</div>);
-	} else if (type.kind === 'string') {
-		if (type.values != null) {
-			elements.push(<div>Values: {type.values.join(', ')}</div>);
-		}
-		if (type.pattern != null) {
-			elements.push(<div>Regular expression: {type.pattern}</div>);
-		}
-		if (type.maxBytes != null) {
-			elements.push(<div>Max bytes: {type.maxBytes}</div>);
-		}
-		if (type.maxLength != null) {
-			elements.push(<div>Max characters: {type.maxLength}</div>);
-		}
-	} else if (type.kind === 'array' || type.kind === 'map') {
-		const elementTypeDescription = typeDescription(type.elementType);
-		elements = [...elements, ...elementTypeDescription.slice(1)];
-	}
-	return elements;
 }
 
 function removeQuotes(v: any | null) {

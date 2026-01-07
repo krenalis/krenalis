@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
@@ -588,6 +588,8 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
+
 	if res.StatusCode == 200 {
 		return req, nil
 	}

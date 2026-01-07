@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
@@ -547,6 +547,7 @@ func (ky *Klaviyo) call(ctx context.Context, method, url string, bb *connectors.
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != expectedStatus {
 		kErr := &klaviyoError{statusCode: res.StatusCode}
@@ -715,6 +716,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events connectors.Events, pre
 	if err != nil {
 		return nil, err
 	}
+	_ = res.Body.Close()
 
 	if res.StatusCode != 202 {
 		return nil, fmt.Errorf("Klaviyo's server returned a %d error", res.StatusCode)

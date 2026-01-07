@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -87,13 +87,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge, func(ids []string, err error) {
-		if err != nil {
-			this.core.metrics.FinalizeFailed(pipeline.ID, len(ids), err.Error())
-			return
-		}
-		this.core.metrics.FinalizePassed(pipeline.ID, len(ids))
-	})
+	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge)
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.FinalizeStep, err)

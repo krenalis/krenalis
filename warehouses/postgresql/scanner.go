@@ -1,10 +1,11 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
 package postgresql
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -173,8 +174,8 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		}
 		return v, nil
 	case types.MapKind:
-		if v, ok := v.(string); ok {
-			if v, err := types.Decode[map[string]any](strings.NewReader(v), typ); err == nil {
+		if v, ok := v.([]byte); ok {
+			if v, err := types.Decode[map[string]any](bytes.NewReader(v), typ); err == nil {
 				return v, nil
 			}
 		}

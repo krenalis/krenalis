@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
@@ -315,10 +315,8 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, bb *connect
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
+	defer res.Body.Close()
+
 	if res.StatusCode != expectedStatus {
 		var errorResponse stripeErrorResponse
 		err := json.Decode(res.Body, &errorResponse)

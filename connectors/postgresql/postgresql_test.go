@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
@@ -62,8 +62,8 @@ func Test_Merge_Query(t *testing.T) {
 		{"boolean", true, types.Boolean(), true},
 		{"inet", "127.0.0.1/32", types.IP(), "127.0.0.1/32"},
 		{"uuid", "4d92d698-687d-4447-b34f-6b29d74a9730", types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
-		{"json", `{"foo":"boo"}`, types.JSON(), json.Value(`{"foo":"boo"}`)},
-		{"jsonb", `{"foo": "boo"}`, types.JSON(), json.Value(`{"foo":"boo"}`)},
+		{"json", []byte(`{"foo":"boo"}`), types.JSON(), json.Value(`{"foo":"boo"}`)},
+		{"jsonb", []byte(`{"foo": "boo"}`), types.JSON(), json.Value(`{"foo":"boo"}`)},
 	}
 
 	table := connectors.Table{

@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
@@ -439,58 +439,55 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 		ErroredOperations int    `json:"errored_operations"`
 		ResponseBodyURL   string `json:"response_body_url"`
 	}
-	var res batchResponse
-	err := mc.call(ctx, "POST", "/batches", nil, bb, 200, &res)
+	var batchRes batchResponse
+	err := mc.call(ctx, "POST", "/batches", nil, bb, 200, &batchRes)
 	if err != nil {
 		return err
 	}
-	if res.Status == "finished" && res.ErroredOperations == 0 {
+	if batchRes.Status == "finished" && batchRes.ErroredOperations == 0 {
 		return nil
 	}
 
 	// The batch operation is not finished or some operations are failed.
-	if res.Status != "finished" {
+	if batchRes.Status != "finished" {
 		bo := backoff.New(100)
 		bo.SetCap(1 * time.Minute)
-		batchID := res.ID
+		batchID := batchRes.ID
 		if batchID == "" {
 			return errors.New("server does not returned the batch identifier")
 		}
 		statusPath := "/batches/" + url.PathEscape(batchID)
-		for res.Status != "finished" && bo.Next(ctx) {
-			err = mc.call(ctx, "GET", statusPath, nil, nil, 200, &res)
+		for batchRes.Status != "finished" && bo.Next(ctx) {
+			err = mc.call(ctx, "GET", statusPath, nil, nil, 200, &batchRes)
 			if err != nil {
 				return err
 			}
 		}
-		if res.Status != "finished" {
+		if batchRes.Status != "finished" {
 			return errors.New("server does not responded in time to batch operation")
 		}
 	}
 
 	// The batch operation has completed; check the status of each operation if errors occurred.
-	if res.ErroredOperations == 0 {
+	if batchRes.ErroredOperations == 0 {
 		return nil
 	}
 
 	// At least one operation failed. Read the results for all operations.
-	if _, err := url.Parse(res.ResponseBodyURL); err != nil {
+	if _, err := url.Parse(batchRes.ResponseBodyURL); err != nil {
 		return errors.New("server returned an invalid response body URL")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", res.ResponseBodyURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", batchRes.ResponseBodyURL, nil)
 	if err != nil {
 		return err
 	}
-	r, err := mc.env.HTTPClient.Do(req)
+	res, err := mc.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, r.Body)
-		_ = r.Body.Close()
-	}()
-	if r.StatusCode != 200 {
-		return fmt.Errorf("Mailchimp returned a %d status code while retrieving the results file", r.StatusCode)
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return fmt.Errorf("Mailchimp returned a %d status code while retrieving the results file", res.StatusCode)
 	}
 
 	// recordsErr is the error that will be returned containing all the operation errors.
@@ -512,7 +509,7 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 	}
 
 	// Parse the response.
-	gzResults, err := gzip.NewReader(r.Body)
+	gzResults, err := gzip.NewReader(res.Body)
 	if err != nil {
 		return fmt.Errorf("could not read Mailchimp's results file: %q", err)
 	}
@@ -665,10 +662,7 @@ func (mc *Mailchimp) call(ctx context.Context, method, path string, params url.V
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
+	defer res.Body.Close()
 
 	if res.StatusCode != expectedStatus {
 		mcErr := &mailchimpError{Status: res.StatusCode}
@@ -768,10 +762,7 @@ func (mc *Mailchimp) metadata(ctx context.Context) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
+	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		return "", "", fmt.Errorf("fetching metadata, Mailchimp returned a %d status code", res.StatusCode)
 	}

@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -31,7 +31,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* only Admin */
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
-		"GET    /":                                            api.Index,
+		"GET    /{$}":                                         api.Index,
 		"GET    /connections":                                 workspace.Connections,
 		"GET    /connections/auth-token":                      workspace.AuthToken,
 		"GET    /connections/auth-url":                        connector.AuthURL,

@@ -7,7 +7,7 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 	let headers = {
 		'Content-Type': 'application/json',
 	};
-	if (workspaceID) {
+	if (workspaceID != null && workspaceID !== 0) {
 		headers['Meergo-Workspace'] = workspaceID;
 	}
 	const request: RequestInit = {

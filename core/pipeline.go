@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -634,6 +634,8 @@ func (this *Pipeline) SetStatus(ctx context.Context, enabled bool) error {
 //
 //   - FormatNotExist, if the format does not exist.
 //   - InvalidSettings, if the settings are not valid.
+//   - SchemaNotAligned, if the output schema is not aligned with the event type
+//     schema.
 //   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error {
 
@@ -666,6 +668,21 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return err
+	}
+
+	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
+	// See issue https://github.com/meergo/meergo/issues/2086.
+	if this.pipeline.EventType != "" {
+		app := this.application()
+		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, this.pipeline.EventType)
+		if err != nil {
+			return err
+		}
+		createOnly := state.CreateOnly
+		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, &createOnly)
+		if err != nil {
+			return errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
+		}
 	}
 
 	// Determine the input schema.

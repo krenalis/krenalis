@@ -7,11 +7,6 @@
 	margin-bottom: 10px;
 }
 
-.connector-alternative-fieldsets sl-select {
-	position: relative;
-	z-index: 10;
-}
-
 .connector-alternative-fieldsets__help-text {
 	font-size: 15px;
 	opacity: 0.5;

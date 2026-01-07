@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -26,6 +26,7 @@ import (
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
 	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
 )
@@ -90,7 +91,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *conne
 	for _, ws := range st.Workspaces() {
 		c.observers.Store(ws.ID, newObserver())
 		store := ds.Store(ws.ID)
-		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
+		c.eventWriters.Store(ws.ID, store.NewEventWriter())
 	}
 	for _, pipeline := range st.Pipelines() {
 		// Create an identity writer for each active SDK pipeline.
@@ -199,79 +200,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // connectionByKey returns the SDK or webhook connection for the key and true
 // if found, or nil and false otherwise.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
-	conn, ok := c.state.ConnectionByKey(key)
-	if !ok || conn.Role != state.Source {
+	connection, ok := c.state.ConnectionByKey(key)
+	if !ok || connection.Role != state.Source {
 		return nil, false
 	}
-	t := conn.Connector().Type
-	if t == state.SDK || t == state.Webhook {
-		return conn, true
-	}
-	return nil, false
-}
-
-// eventAck acknowledges when an event is written to the data warehouse.
-func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
-	meergoMetrics.Increment("Collector.eventAck.calls", 1)
-	for _, event := range evs {
-		if err != nil {
-			c.metrics.FinalizeFailed(event.Pipeline, 1, err.Error())
-			return
-		}
-		c.metrics.FinalizePassed(event.Pipeline, 1)
-	}
-}
-
-// importEventsPipeline returns the pipeline of the source connection that
-// imports events into the data warehouse, if there is one and if it is enabled;
-// otherwise, it returns nil and false.
-func (c *Collector) importEventsPipeline(connection *state.Connection) (*state.Pipeline, bool) {
-	for _, p := range connection.Pipelines() {
-		if p.Enabled && p.Target == state.TargetEvent {
-			return p, true
-		}
-	}
-	return nil, false
-}
-
-// serveSettings is called by the ServeHTTP method to serve a settings request.
-func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "GET")
-		w.Header().Set("Access-Control-Max-Age", "900")
-		w.Header().Set("Cache-Control", "public, max-age=900, immutable")
-		w.WriteHeader(204)
-		return nil
-	}
-	if r.Method != "GET" {
-		return errMethodNotAllowed
-	}
-	writeKey, _ := strings.CutPrefix(r.URL.Path, "/events/settings/")
-	if writeKey == "" || strings.Contains(writeKey, "/") {
-		return errNotFound
-	}
-	connection, ok := c.connectionByKey(writeKey)
-	if !ok || connection.Strategy == nil {
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		w.Header().Set("Cache-Control", "max-age=31536000")
-		w.WriteHeader(http.StatusNotFound)
-		// Do not modify the returned body, as it is used by the JavaScript SDK
-		// to present an appropriate error message in the console.
-		_, _ = io.WriteString(w, `error: invalid collect key`)
-		return nil
-	}
-	strategy := string(*connection.Strategy)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
-	_ = json.Encode(w, map[string]any{
-		"strategy": strategy,
-		"integrations": map[string]any{
-			"Meergo": map[string]any{
-				"apiKey": writeKey,
-			},
-		},
-	})
-	return nil
+	return connection, true
 }
 
 // serveEvents is called by the ServeHTTP method to serve an events request.
@@ -298,16 +231,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if len(auth) > 1 {
 			return errors.BadRequest("request contains multiple Authorization headers")
 		}
-		token, ok := strings.CutPrefix(auth[0], "Bearer ")
-		if !ok || token == "" {
+		token, found := validation.ParseBearer(auth[0])
+		if !found {
 			return errors.BadRequest(`Authorization header is invalid; use "Authorization: Bearer <KEY>" with an API key or an event write key`)
 		}
 
-		if len(token) == 43 {
+		if token, found := strings.CutPrefix(token, "api_"); found {
 			// Authenticate with the API key in the header.
 			key, ok := c.state.AccessKeyByToken(token)
 			if !ok || key.Type != state.AccessKeyTypeAPI {
-				return errors.Unauthorized(`the API key in the Authorization header does not exist`)
+				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
 			if header, ok := r.Header["Meergo-Workspace"]; ok {
 				if len(header) > 1 {
@@ -346,7 +279,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			} else {
 				workspace, ok := c.state.Workspace(key.Workspace)
 				if !ok {
-					return errors.Unauthorized("the API key in the Authorization header does not exist")
+					return errors.Unauthorized("API key in the Authorization header is invalid")
 				}
 				connection, _ = workspace.Connection(id)
 			}
@@ -358,7 +291,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			// Authenticate with the event write key in the header.
 			connection, _ = c.connectionByKey(token)
 			if connection == nil {
-				return errors.Unauthorized("the event write key in the Authorization header does not exist")
+				return errors.Unauthorized("event write key in the Authorization header is not valid")
 			}
 			usingWriteKey = true
 		}
@@ -398,6 +331,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ws := connection.Workspace()
 	connector := connection.Connector()
+	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
 	var eventErr error
@@ -422,43 +356,39 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Store the events into the data warehouse.
-		if pipeline, ok := c.importEventsPipeline(connection); ok {
-			c.metrics.ReceivePassed(pipeline.ID, 1)
-			if !filters.Applies(pipeline.Filter, event) {
-				c.metrics.FilterFailed(pipeline.ID, 1)
+		for _, p := range pipelines {
+			if !p.Enabled || p.Target != state.TargetEvent {
 				continue
 			}
-			c.metrics.FilterPassed(pipeline.ID, 1)
+			c.metrics.ReceivePassed(p.ID, 1)
+			if !filters.Applies(p.Filter, event) {
+				c.metrics.FilterFailed(p.ID, 1)
+				continue
+			}
+			c.metrics.FilterPassed(p.ID, 1)
 			ew, ok := c.eventWriters.Load(ws.ID)
 			if !ok {
 				continue
 			}
-			err = ew.(*datastore.EventWriter).Write(event, pipeline.ID)
-			if err != nil {
-				c.metrics.FinalizeFailed(pipeline.ID, 1, err.Error())
-				if eventErr == nil {
-					eventErr = errServiceUnavailable
-				}
-				continue
-			}
+			ew.(*datastore.EventWriter).Write(event, p.ID)
 		}
 
 		// Import the identities into the data warehouse.
-		for _, pipeline := range connection.Pipelines() {
-			if pipeline.Target != state.TargetUser || !pipeline.Enabled {
+		for _, p := range pipelines {
+			if !p.Enabled || p.Target != state.TargetUser {
 				continue
 			}
-			c.metrics.ReceivePassed(pipeline.ID, 1)
-			if !filters.Applies(pipeline.Filter, event) {
-				c.metrics.FilterFailed(pipeline.ID, 1)
+			c.metrics.ReceivePassed(p.ID, 1)
+			if !filters.Applies(p.Filter, event) {
+				c.metrics.FilterFailed(p.ID, 1)
 				meergoMetrics.Increment("Collector.serveEvents.discarded_identities", 1)
 				continue
 			}
-			c.metrics.FilterPassed(pipeline.ID, 1)
-			if w, ok := c.identityWriters.Load(pipeline.ID); ok {
+			c.metrics.FilterPassed(p.ID, 1)
+			if w, ok := c.identityWriters.Load(p.ID); ok {
 				err = w.(*identityWriter).Write(event)
 				if err != nil {
-					c.metrics.FinalizeFailed(pipeline.ID, 1, err.Error())
+					c.metrics.FinalizeFailed(p.ID, 1, err.Error())
 					if eventErr == nil {
 						eventErr = errServiceUnavailable
 					}
@@ -469,7 +399,22 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 		// Send the event to apps.
 		for _, id := range connection.LinkedConnections {
-			c.destinations.QueueEvent(id, event)
+			lc, ok := c.state.Connection(id)
+			if !ok {
+				continue
+			}
+			for _, p := range lc.Pipelines() {
+				if !p.Enabled || p.Target != state.TargetEvent {
+					continue
+				}
+				c.metrics.ReceivePassed(p.ID, 1)
+				if !filters.Applies(p.Filter, event) {
+					c.metrics.FilterFailed(p.ID, 1)
+					continue
+				}
+				c.metrics.FilterPassed(p.ID, 1)
+				c.destinations.QueueEvent(p, event)
+			}
 		}
 
 	}
@@ -480,10 +425,42 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Send a successful response to the client.
 	meergoMetrics.Increment("Collector.writeOK.calls", 1)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", "21")
-	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
+	w.Header().Set("Content-Type", "text/plain")
 
+	return nil
+}
+
+// serveSettings is called by the ServeHTTP method to serve a settings request.
+func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "GET")
+		w.Header().Set("Access-Control-Max-Age", "900")
+		w.Header().Set("Cache-Control", "public, max-age=900, immutable")
+		w.WriteHeader(204)
+		return nil
+	}
+	if r.Method != "GET" {
+		return errMethodNotAllowed
+	}
+	writeKey, _ := strings.CutPrefix(r.URL.Path, "/events/settings/")
+	if writeKey == "" || strings.Contains(writeKey, "/") {
+		return errNotFound
+	}
+	connection, ok := c.connectionByKey(writeKey)
+	if !ok || connection.Strategy == nil {
+		return errors.Unauthorized("event write key in the path is invalid")
+	}
+	strategy := string(*connection.Strategy)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
+	_ = json.Encode(w, map[string]any{
+		"strategy": strategy,
+		"integrations": map[string]any{
+			"Meergo": map[string]any{
+				"apiKey": writeKey,
+			},
+		},
+	})
 	return nil
 }
 
@@ -504,7 +481,7 @@ func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
 	c.observers.Store(n.ID, newObserver())
 	store := c.datastore.Store(n.ID)
-	c.eventWriters.Store(n.ID, store.NewEventWriter(c.eventAck))
+	c.eventWriters.Store(n.ID, store.NewEventWriter())
 }
 
 // onDeleteConnection is called when a connection is deleted.
@@ -525,12 +502,6 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	}
 }
 
-// onDeleteWorkspace is called when a workspace is deleted.
-func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
-	c.observers.Delete(n.ID)
-	c.eventWriters.Delete(n.ID)
-}
-
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 	iw, ok := c.identityWriters.LoadAndDelete(n.ID)
@@ -539,6 +510,12 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 	}
 	_ = iw.(*identityWriter).Close(context.Background())
 	// TODO(marco): should the ongoing transformations be interrupted?
+}
+
+// onDeleteWorkspace is called when a workspace is deleted.
+func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
+	c.observers.Delete(n.ID)
+	c.eventWriters.Delete(n.ID)
 }
 
 // onSetPipelineStatus is called when the status of a pipeline is set.

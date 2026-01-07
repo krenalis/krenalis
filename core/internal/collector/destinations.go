@@ -1,4 +1,4 @@
-// Copyright 2025 Open2b. All rights reserved.
+// Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
@@ -75,7 +75,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 			continue
 		}
 		app := connections.Application(c)
-		sender := sender.New(app, d.sentAcks)
+		sender := sender.New(app, d.metrics)
 		pipelines := make([]*destinationPipeline, 0, 1)
 		// Keeps all pipelines active on the connection's events.
 		for _, p := range c.Pipelines() {
@@ -94,12 +94,17 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 }
 
 // QueueEvent queues the given event to be sent on the specified destination
-// connection.
-func (d *destinations) QueueEvent(connection int, event events.Event) {
+// pipeline.
+func (d *destinations) QueueEvent(pipeline *state.Pipeline, event events.Event) {
+	connection := pipeline.Connection()
 	d.mu.Lock()
-	for _, pipeline := range d.pipelines[connection] {
-		d.metrics.ReceivePassed(pipeline.id, 1)
-		pipeline.QueueEvent(event)
+	if pipelines, ok := d.pipelines[connection.ID]; ok {
+		for _, p := range pipelines {
+			if p.id == pipeline.ID {
+				p.QueueEvent(event)
+				break
+			}
+		}
 	}
 	d.mu.Unlock()
 }
@@ -112,11 +117,10 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 
 	connection := pipeline.Connection()
 	app := d.connections.Application(connection)
-	schema, err := app.Schema(ctx, state.TargetEvent, pipeline.EventType)
+	eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, pipeline.EventType)
 	if err != nil {
 		panic("TODO")
 	}
-	// TODO(marco): Check schema alignment.
 
 	queue := &destinationPipelineQueue{
 		metrics: d.metrics,
@@ -154,7 +158,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 		}
 	}(connection.ID, pipeline.ID)
 
-	return newDestinationPipeline(pipeline, schema, d.provider, queue)
+	return newDestinationPipeline(pipeline, eventTypeSchema, d.provider, queue)
 }
 
 // onCreateConnection is called when a connection is created.
@@ -168,7 +172,7 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 		return
 	}
 	app := d.connections.Application(c)
-	d.senders[n.ID] = sender.New(app, d.sentAcks)
+	d.senders[n.ID] = sender.New(app, d.metrics)
 	pipelines := make([]*destinationPipeline, 0, 1)
 	d.mu.Lock()
 	d.pipelines[n.ID] = pipelines
@@ -383,16 +387,4 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 	d.mu.Lock()
 	pipelines[index] = &pipeline
 	d.mu.Unlock()
-}
-
-// sentAcks is the function passed to the sender, which calls it to acknowledge
-// the delivery of events (or report errors).
-func (d *destinations) sentAcks(acks []sender.Ack, err error) {
-	for _, ack := range acks {
-		if err != nil {
-			d.metrics.FinalizeFailed(ack.Pipeline, 1, err.Error())
-			continue
-		}
-		d.metrics.FinalizePassed(ack.Pipeline, 1)
-	}
 }
