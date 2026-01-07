@@ -312,10 +312,10 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			const p = { ...prev };
 			p.transformation.function = {
 				source: source,
-				language: selectedLanguage,
+				language: p.transformation.function.language,
 				preserveJSON: p.transformation.function.preserveJSON,
-				inPaths: [],
-				outPaths: [],
+				inPaths: p.transformation.function.inPaths,
+				outPaths: p.transformation.function.outPaths,
 			};
 			return p;
 		});
