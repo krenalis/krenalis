@@ -1075,6 +1075,7 @@ func TestParseSettings(t *testing.T) {
 		cases := []struct {
 			name    string
 			env     string
+			storage string
 			want    nats.StoreCompression
 			wantErr string
 		}{
@@ -1084,14 +1085,21 @@ func TestParseSettings(t *testing.T) {
 				want: nats.NoCompression,
 			},
 			{
-				name: "s2 compression",
-				env:  "s2",
-				want: nats.S2Compression,
+				name:    "compression allowed with file storage",
+				env:     "s2",
+				storage: "file",
+				want:    nats.S2Compression,
 			},
 			{
 				name: "s2 compression uppercase",
 				env:  "S2",
 				want: nats.S2Compression,
+			},
+			{
+				name:    "compression with memory storage rejected",
+				env:     "s2",
+				storage: "memory",
+				wantErr: "MEERGO_NATS_COMPRESSION can be set only when using file storage",
 			},
 			{
 				name:    "invalid compression rejected",
@@ -1105,6 +1113,9 @@ func TestParseSettings(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
 					t.Setenv("MEERGO_NATS_COMPRESSION", tc.env)
+				}
+				if tc.storage != "" {
+					t.Setenv("MEERGO_NATS_STORAGE", tc.storage)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {

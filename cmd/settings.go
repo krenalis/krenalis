@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -313,6 +314,9 @@ func parseEnvSettings() (*Settings, error) {
 		settings.NATS.Compression = nats.S2Compression
 	default:
 		return nil, fmt.Errorf("MEERGO_NATS_COMPRESSION value %q is not supported; expected s2", compression)
+	}
+	if settings.NATS.Compression != nats.NoCompression && settings.NATS.Storage != nats.FileStorage {
+		return nil, errors.New("MEERGO_NATS_COMPRESSION can be set only when using file storage")
 	}
 
 	settings.MemberEmailVerificationRequired, err = boolEnvVar(envVars.Get("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED"), true)
