@@ -49,6 +49,7 @@ services:
       MEERGO_DB_DATABASE: meergo
       MEERGO_DB_SCHEMA:
 
+      # NATS.
       MEERGO_NATS_URL: nats://nats:4222
       MEERGO_NATS_USER: ruser
       MEERGO_NATS_PASSWORD: T0pS3cr3t
