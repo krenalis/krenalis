@@ -178,7 +178,7 @@ func (da *destinationPipeline) transform() {
 			msg = context.Cause(da.queue.ctx).Error()
 		} else {
 			msg = "an internal error has occurred"
-			slog.Error("core/events/collector: cannot transform events", "pipeline", da.id, "err", err)
+			slog.Error("core/events/collector: cannot transform events", "pipeline", da.id, "error", err)
 		}
 		da.queue.metrics.TransformationFailed(da.id, n, msg)
 		return

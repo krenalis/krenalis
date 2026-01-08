@@ -76,7 +76,8 @@ type Core struct {
 	mcpMu sync.Mutex
 }
 
-var hasBeenCalled bool
+// coreActive is true while a Core instance is active.
+var coreActive atomic.Bool
 
 type Config struct {
 	DB                     DBConfig
@@ -157,13 +158,18 @@ type ExpressionToBeExtracted struct {
 	Type  types.Type `json:"type"`
 }
 
-// New returns a *Core instance. It can only be called once.
-func New(conf *Config) (_ *Core, err error) {
+// New returns a *Core instance.
+// If another Core instance is active, it returns an error.
+func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
-	if hasBeenCalled {
-		return nil, errors.New("core.New has already been called")
+	if !coreActive.CompareAndSwap(false, true) {
+		return nil, errors.New("core.New called while a Core instance is active")
 	}
-	hasBeenCalled = true
+	defer func() {
+		if err != nil {
+			coreActive.Store(false)
+		}
+	}()
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
@@ -186,7 +192,7 @@ func New(conf *Config) (_ *Core, err error) {
 	}()
 
 	// Ping the PostgreSQL connection to test if it works.
-	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	err = db.Ping(pingCtx)
 	if err != nil {
@@ -195,9 +201,8 @@ func New(conf *Config) (_ *Core, err error) {
 
 	// Initializes the PostgreSQL database if it is empty and the option to
 	// initialize it is provided.
-	dbInitCtx := context.Background()
 	if conf.DatabaseInitialization.InitIfEmpty {
-		isEmpty, err := initdb.DatabaseIsEmpty(dbInitCtx, db)
+		isEmpty, err := initdb.DatabaseIsEmpty(ctx, db)
 		if err != nil {
 			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 		}
@@ -205,8 +210,8 @@ func New(conf *Config) (_ *Core, err error) {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			// Initialize the PostgreSQL database in a transaction, so if it is
 			// fails, there is no need to manually empty the database.
-			err := db.Transaction(dbInitCtx, func(tx *dbpkg.Tx) error {
-				err := initdb.Initialize(dbInitCtx, tx)
+			err := db.Transaction(ctx, func(tx *dbpkg.Tx) error {
+				err := initdb.Initialize(ctx, tx)
 				if err != nil {
 					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 				}
@@ -214,7 +219,7 @@ func New(conf *Config) (_ *Core, err error) {
 				// Also initialize the Docker member, if requested.
 				if conf.DatabaseInitialization.InitDockerMember {
 					slog.Info("initializing Docker member...")
-					err := initdb.InitializeDockerMember(dbInitCtx, tx)
+					err := initdb.InitializeDockerMember(ctx, tx)
 					if err != nil {
 						return fmt.Errorf("cannot initialize the Docker member: %s", err)
 					}
@@ -359,7 +364,7 @@ func New(conf *Config) (_ *Core, err error) {
 				if mcp != nil {
 					err := mcp.Close()
 					if err != nil {
-						slog.Warn("an error occurred closing the MCP warehouse connection", "err", err)
+						slog.Warn("an error occurred closing the MCP warehouse connection", "error", err)
 					}
 				}
 			}
@@ -529,7 +534,7 @@ func (core *Core) Close() {
 		if mcp != nil {
 			err := mcp.Close()
 			if err != nil {
-				slog.Warn("an error occurred closing the MCP warehouse connection", "err", err)
+				slog.Warn("an error occurred closing the MCP warehouse connection", "error", err)
 			}
 		}
 	}
@@ -542,6 +547,7 @@ func (core *Core) Close() {
 	core.dbPoolMetrics.Unregister()
 	// Close PostgreSQL connections.
 	core.db.Close()
+	coreActive.Store(false)
 }
 
 // Connector returns the connector with the provided code.
@@ -1153,7 +1159,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
 			if node != core.state.ID() {
@@ -1177,7 +1183,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					pingTime := time.Now().UTC()
 					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_runs SET ping_time = $1 WHERE id = $2", pingTime, id)
 					if err != nil && pingCtx.Err() == nil {
-						slog.Error("core: cannot update pipeline run ping time", "err", err)
+						slog.Error("core: cannot update pipeline run ping time", "error", err)
 					}
 				case <-pingCtx.Done():
 					return
@@ -1217,7 +1223,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					// The context has been canceled.
 					break
 				}
-				slog.Error(fmt.Sprintf("core: cannot start pipeline run, retrying after %s", bo.WaitTime()), "error", err)
+				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
 			break
@@ -1255,7 +1261,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
 				} else {
-					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "err", err)
+					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "error", err)
 				}
 			}
 		}
@@ -1295,14 +1301,12 @@ func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema t
 		// In case of OperationError log it, then go on and send an
 		// EndAlterProfileSchema notification.
 		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("alter schema ended with an error", "err", err2)
+			slog.Error("alter schema ended with an error", "error", err2)
 			alterSchemaErr = err2
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("alter schema on warehouse returned an unknown error, "+
-			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
-			"err", err, "timeout", bo.WaitTime())
+		slog.Error("alter schema on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
 
 	}
 	nEnd := state.EndAlterProfileSchema{
@@ -1432,14 +1436,11 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 		// In case of OperationError log it, then go on and send an
 		// EndIdentityResolution notification.
 		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("identity resolution ended with an error", "err", err2)
+			slog.Error("identity resolution ended with an error", "error", err2)
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("identity resolution on warehouse returned an unknown error, "+
-			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
-			"err", err, "timeout", bo.WaitTime())
-
+		slog.Error("identity resolution on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
 	}
 	nEnd := state.EndIdentityResolution{
 		Workspace: workspace,
@@ -1498,7 +1499,7 @@ func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
 		go func(workspace int) {
 			err := wh.Close()
 			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 			}
 		}(n.ID)
 	}
@@ -1566,7 +1567,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 		go func(workspace int) {
 			err := prevWarehouse.Close()
 			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 			}
 		}(ws.ID)
 		return
@@ -1595,7 +1596,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	go func(workspace int) {
 		err := prevWarehouse.Close()
 		if err != nil {
-			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 		}
 	}(ws.ID)
 

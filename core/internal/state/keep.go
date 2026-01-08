@@ -35,7 +35,7 @@ func (state *State) keep() {
 		defer func() {
 			err := client.Close()
 			if err != nil {
-				slog.Error("error while closing analytics.Client", "err", err)
+				slog.Error("error while closing analytics.Client", "error", err)
 			}
 		}()
 	}
@@ -156,7 +156,7 @@ func (state *State) keep() {
 func decodeNotification(n notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
-		slog.Error("core/state: cannot unmarshal notification", "id", n.ID, "name", n.Name, "err", err)
+		slog.Error("core/state: cannot unmarshal notification", "id", n.ID, "name", n.Name, "error", err)
 		return false
 	}
 	return true

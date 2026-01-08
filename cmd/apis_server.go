@@ -113,7 +113,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 					_ = err.WriteTo(w)
 					return
 				}
-				slog.Error("cmd: error occurred serving Core", "err", err)
+				slog.Error("cmd: error occurred serving Core", "error", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -150,7 +150,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = err.WriteTo(w)
 				return
 			}
-			slog.Error("cmd: error occurred serving Core", "err", err)
+			slog.Error("cmd: error occurred serving Core", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}

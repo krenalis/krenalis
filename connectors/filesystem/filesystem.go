@@ -176,7 +176,7 @@ func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, cont
 		err := os.Remove(tmpPath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			err = rewritePathError(err)
-			slog.Warn("connectors/filesystem: cannot remove temporary file created by File System", "err", err)
+			slog.Warn("connectors/filesystem: cannot remove temporary file created by File System", "error", err)
 			return
 		}
 	}()

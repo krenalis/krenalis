@@ -322,7 +322,7 @@ WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
 			break
 		}
 		if msg := err.Error(); msg != loggedMsg {
-			slog.Error("core/metrics: failed to aggregate the metrics on pipeline", "err", msg)
+			slog.Error("core/metrics: failed to aggregate the metrics on pipeline", "error", msg)
 			loggedMsg = msg
 		}
 	}
@@ -465,7 +465,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 				break
 			}
 			if msg := err.Error(); msg != loggedMsg {
-				slog.Error("core/metrics: failed to store the metrics on pipeline", "err", msg)
+				slog.Error("core/metrics: failed to store the metrics on pipeline", "error", msg)
 			}
 		}
 
@@ -508,7 +508,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			break
 		}
 		if msg := err.Error(); msg != loggedMsg {
-			slog.Error("core/metrics: failed to store the errors on pipeline", "err", msg)
+			slog.Error("core/metrics: failed to store the errors on pipeline", "error", msg)
 		}
 	}
 }

@@ -109,7 +109,7 @@ func Main(assets fs.FS) {
 		})
 		if err != nil {
 			// Failing to initialize Sentry shouldn't stop Meergo from starting.
-			slog.Warn("meergo: failed to init Sentry", "err", err)
+			slog.Warn("meergo: failed to init Sentry", "error", err)
 		} else {
 			defer sentry.Flush(2 * time.Second)
 		}
@@ -125,7 +125,7 @@ func Main(assets fs.FS) {
 
 	err = Run(ctx, settings, assets, initDBIfEmpty, initDockerMember)
 	if err != nil {
-		slog.Error("meergo: error occurred running server", "err", err)
+		slog.Error("meergo: error occurred running server", "error", err)
 		fatal(1, err.Error())
 	}
 }
