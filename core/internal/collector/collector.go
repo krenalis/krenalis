@@ -201,7 +201,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case errPayloadTooLarge:
 			http.Error(w, "Request Entity Too Large", http.StatusRequestEntityTooLarge)
 		case errReadBody:
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			// connection already broken, cannot reply to the client
 		default:
 			if serveSettings {
 				slog.Error("core/events/collector: an error occurred serving the settings", "error", err)
