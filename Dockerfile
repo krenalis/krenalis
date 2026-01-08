@@ -46,6 +46,21 @@ RUN apk add doas shadow
 # run Meergo.
 RUN useradd meergouser -m
 
+# Create a directory that can be mounted to contain the transformation
+# functions.
+#
+# It's necessary to create it here, in the Dockerfile, for permissions reasons:
+# otherwise, if it's created later (e.g., by Docker Compose), it will be created
+# for the 'root' user, but since this container's user will be switched to
+# 'meergouser', it won't have sufficient privileges to write to it. Therefore,
+# we'll create it here, with the correct privileges already in place.
+#
+# This part should be simplified (i.e. removed) when we will implement
+# https://github.com/meergo/meergo/issues/1962.
+#
+RUN mkdir -p /var/meergo/transformation-functions
+RUN chown meergouser:meergouser /var/meergo/transformation-functions
+
 # Create an user 'transformeruser' which will be used to run transformation
 # functions executables.
 RUN useradd transformeruser
