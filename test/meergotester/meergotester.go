@@ -199,6 +199,22 @@ func (c *Meergo) Start() {
 		c.stopNATSContainer = func() error {
 			return testcontainers.TerminateContainer(natsContainer)
 		}
+		natsHost, err := natsContainer.Host(ctx)
+		if err != nil {
+			panic(err)
+		}
+		natsPort, err := natsContainer.MappedPort(ctx, "4222/tcp")
+		if err != nil {
+			panic(err)
+		}
+		testsSettingsMu.Lock()
+		testsSettings.NATS = &NATSSettings{
+			URL:      natsHost,
+			Port:     natsPort.Int(),
+			User:     "", // empty user.
+			Password: "", // empty password.
+		}
+		testsSettingsMu.Unlock()
 		containersStarted.Done()
 	}()
 
@@ -330,9 +346,9 @@ func (c *Meergo) Start() {
 			"MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
 			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
-			"MEERGO_NATS_URL=nats://nats:4222",
-			"MEERGO_NATS_USER=ruser",
-			"MEERGO_NATS_PASSWORD=T0pS3cr3t",
+			fmt.Sprintf("MEERGO_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
+			"MEERGO_NATS_USER=" + testsSettings.NATS.User,
+			"MEERGO_NATS_PASSWORD=" + testsSettings.NATS.Password,
 		}...)
 		if !meergoAlreadyBuilt {
 			buildMeergo(c.t, c.repo, meergoDir)
@@ -366,9 +382,9 @@ func (c *Meergo) Start() {
 		setts.DB.Password = testsSettings.Database.Password
 		setts.DB.Database = testsSettings.Database.Database
 		setts.DB.Schema = testsSettings.Database.Schema
-		setts.NATS.Servers = []string{"nats://nats:4222"}
-		setts.NATS.User = "ruser"
-		setts.NATS.Password = "T0pS3cr3t"
+		setts.NATS.Servers = []string{fmt.Sprintf("nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port)}
+		setts.NATS.User = testsSettings.NATS.User
+		setts.NATS.Password = testsSettings.NATS.Password
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = c.transformationsTempDir
 		err := os.Setenv("MEERGO_CONNECTOR_FILESYSTEM_ROOT", c.fileSystemRoot)
