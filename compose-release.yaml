@@ -126,3 +126,4 @@ services:
 volumes:
   db:
   warehouse:
+  transformation-functions:
