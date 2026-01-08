@@ -2058,7 +2058,6 @@ export {
 	getSiblingPaths,
 	doesUpdatedAtColumnNeedFormat,
 	computeDefaultTransformationFunction,
-	getTransformationFunctionParameter,
 	validateAndNormalizeFilterCondition,
 	validateMatching,
 	propertyTypesAreEqual,

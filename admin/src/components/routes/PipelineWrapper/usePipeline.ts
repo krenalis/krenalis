@@ -8,6 +8,7 @@ import {
 	transformPipeline,
 	transformInPipelineToSet,
 	flattenSchema,
+	checkFunctionPath,
 } from '../../../lib/core/pipeline';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getPipelineTypeFromConnection } from '../../../lib/core/connection';
@@ -87,44 +88,57 @@ const usePipeline = (
 	}, [pipelineType?.outputSchema]);
 
 	const computeAutoSelectedPaths = (prefix: string, updateCheckboxes?: boolean) => {
+		// Compute the automatically selected out paths. These are required
+		// paths that must be used in the transformation function. They are
+		// flagged automatically, disabled to prevent de-selection, and
+		// pre-populated with zero values in the transformation function.
 		const flatOut = flattenSchema(pipelineType.outputSchema);
 		let paths = Object.keys(flatOut);
 		if (prefix !== '') {
+			// Compute the auto selected paths within a specific subtree.
 			paths = paths.filter((pa) => pa === prefix || pa.startsWith(`${prefix}.`));
 		}
 
 		const isEventSend = connection.isDestination && pipelineType.target.includes('Event');
 		if (isEventSend) {
-			// Automatically compute the selected out paths based on the
-			// required properties. These properties will also be pre-populated
-			// in the function editor.
-			let selected = [];
+			let autoSelected = [];
 			for (const path of paths) {
-				const p = flatOut[path];
-				let isAutoSelected = false;
-				if (p.createRequired) {
-					const firstPathFragment = path.split('.')[0];
-					const hasRequiredFirstLevelParent =
-						paths.findIndex((pa) => pa === firstPathFragment && flatOut[pa].createRequired) !== -1;
-					const hasRequiredChild =
-						paths.findIndex((pa) => pa.startsWith(`${path}.`) && flatOut[pa].createRequired) !== -1;
-					const isFirstLevel = !path.includes('.');
-					isAutoSelected = !hasRequiredChild && (isFirstLevel || hasRequiredFirstLevelParent);
-				}
-				if (isAutoSelected) {
-					selected.push(path);
+				const { isRequired } = checkFunctionPath(path, pipeline, pipelineType, 'output', selectedOutPaths);
+				const hasRequiredChild =
+					paths.findIndex((pa) => {
+						const isChild = pa.startsWith(`${path}.`);
+						if (!isChild) {
+							return false;
+						}
+						const { isRequired } = checkFunctionPath(
+							pa,
+							pipeline,
+							pipelineType,
+							'output',
+							selectedOutPaths,
+						);
+						return isRequired;
+					}) !== -1;
+				if (isRequired && !hasRequiredChild) {
+					// The path is automatically selected.
+					autoSelected.push(path);
 				}
 			}
 
-			if (prefix !== '') {
-				const filtered = [...selectedOutPaths].filter((pa) => pa !== prefix && !pa.startsWith(`${prefix}.`));
-				const merged = [...filtered, ...selected];
-				selected = merged;
-			}
+			setAutoSelectedPaths(autoSelected);
 
-			setAutoSelectedPaths(selected);
 			if (updateCheckboxes) {
-				setSelectedOutPaths(selected);
+				// Also update the selected paths.
+				let toSelect = [...autoSelected];
+				if (prefix !== '') {
+					// Merge with the already selected paths outside the
+					// subtree.
+					const alreadySelected = [...selectedOutPaths].filter(
+						(pa) => pa !== prefix && !pa.startsWith(`${prefix}.`),
+					);
+					toSelect = [...alreadySelected, ...toSelect];
+				}
+				setSelectedOutPaths(toSelect);
 			}
 		}
 	};

@@ -3241,7 +3241,7 @@ const TransformationProperty = ({
 		}
 		let isEventSend = connection.isDestination && pipelineType.target.includes('Event');
 		const isObject = property.type.kind === 'object';
-		if (isEventSend && side === 'output' && isObject && isSelected) {
+		if (isEventSend && side === 'output' && isObject && isFlagged) {
 			const hasAutoSelectedChild = autoSelectedPaths.findIndex((pa) => pa.startsWith(`${path}.`)) !== -1;
 			if (hasAutoSelectedChild) {
 				// Instead of deselecting the entire property hierarchy,
