@@ -211,8 +211,8 @@ func (c *Meergo) Start() {
 		testsSettings.NATS = &NATSSettings{
 			URL:      natsHost,
 			Port:     natsPort.Int(),
-			User:     "", // empty user.
-			Password: "", // empty password.
+			User:     natsContainer.User,
+			Password: natsContainer.Password,
 		}
 		testsSettingsMu.Unlock()
 		containersStarted.Done()
