@@ -33,8 +33,8 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var errPayloadTooLarge = errors.BadRequest("body too large")
-var errReadBody = errors.BadRequest("failed to read body")
+var errPayloadTooLarge = errors.New("body too large")
+var errReadBody = errors.New("failed to read body")
 
 var (
 	ip0  = netip.AddrFrom4([4]byte{})                   // 0.0.0.0
