@@ -94,10 +94,6 @@ const usePipeline = (
 		// pre-populated with zero values in the transformation function.
 		const flatOut = flattenSchema(pipelineType.outputSchema);
 		let paths = Object.keys(flatOut);
-		if (prefix !== '') {
-			// Compute the auto selected paths within a specific subtree.
-			paths = paths.filter((pa) => pa === prefix || pa.startsWith(`${prefix}.`));
-		}
 
 		const isEventSend = connection.isDestination && pipelineType.target.includes('Event');
 		if (isEventSend) {
@@ -136,7 +132,10 @@ const usePipeline = (
 					const alreadySelected = [...selectedOutPaths].filter(
 						(pa) => pa !== prefix && !pa.startsWith(`${prefix}.`),
 					);
-					toSelect = [...alreadySelected, ...toSelect];
+					// Remove duplicates between the auto selected and already
+					// selected arrays (all auto selected properties outside the
+					// subtree are also already selected).
+					toSelect = [...new Set([].concat(toSelect).concat(alreadySelected))];
 				}
 				setSelectedOutPaths(toSelect);
 			}
