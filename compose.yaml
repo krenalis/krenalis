@@ -64,7 +64,7 @@ services:
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
-      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/storage
+      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
       MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
 
       # This configures the File System connector to access the mounted directory
@@ -95,6 +95,7 @@ services:
     # settings to point to the mount point.
     volumes:
       - ./storage:/var/meergo/storage
+      - transformation-functions:/var/meergo/transformation-functions
     depends_on:
       db:
         condition: service_healthy
@@ -146,3 +147,4 @@ volumes:
   db:
   warehouse:
   jetstream_storage:
+  transformation-functions:
