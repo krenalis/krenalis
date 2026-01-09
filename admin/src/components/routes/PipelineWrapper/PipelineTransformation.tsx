@@ -3292,6 +3292,16 @@ const TransformationProperty = ({
 		}
 	}
 
+	const checkbox = (
+		<SlCheckbox
+			className='fullscreen-transformation__property-check'
+			checked={isFlagged || hasSelectedParent}
+			indeterminate={hasSelectedChildren && !isFlagged}
+			disabled={isSelectDisabled}
+			size='small'
+		/>
+	);
+
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
@@ -3312,14 +3322,10 @@ const TransformationProperty = ({
 			{transformationType === 'function' &&
 				(hideCheckbox ? (
 					<div className='fullscreen-transformation__property-check-empty' />
+				) : isAutoSelected ? (
+					<SlTooltip content='Must be selected as the property is required'>{checkbox}</SlTooltip>
 				) : (
-					<SlCheckbox
-						className='fullscreen-transformation__property-check'
-						checked={isFlagged || hasSelectedParent}
-						indeterminate={hasSelectedChildren && !isFlagged}
-						disabled={isSelectDisabled}
-						size='small'
-					/>
+					checkbox
 				))}
 			<div className='fullscreen-transformation__property'>
 				<div className='fullscreen-transformation__property-name'>
