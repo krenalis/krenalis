@@ -134,12 +134,11 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 
 // Close closes the collector. When Close is called, no other calls to
 // collector's methods should be in progress and no other shall be made.
-// It panics if it has already been closed.
+// It panics if it has already been called.
 func (c *Collector) Close() {
-	if c.closed.Load() {
+	if c.closed.Swap(true) {
 		panic("core/events/collector already closed")
 	}
-	c.closed.Store(true)
 	for _, cancel := range c.workers.cancels {
 		cancel()
 	}
