@@ -226,15 +226,14 @@ func (c *Collector) addWorkspace(id int) {
 	c.eventWriters.Store(id, store.NewEventWriter())
 }
 
-// cancelDispatcher cancels the pipeline's event dispatcher.
+// cancelWorker cancels the event worker for the given pipeline.
 //
-// It is called while the state is frozen and, when applicable, returns a
-// canceler function intended to be run in its own goroutine to signal the
-// dispatcher to exit.
+// It is called while the state is frozen and may return a cancel function
+// to be executed in its own goroutine.
 //
-// It returns nil if the pipeline does not handle events or if the dispatcher
-// is already canceled.
-func (c *Collector) cancelDispatcher(pipeline *state.Pipeline) pipelineWorker {
+// It returns nil if the pipeline does not handle events or the worker is
+// already canceled.
+func (c *Collector) cancelWorker(pipeline *state.Pipeline) pipelineWorker {
 	cancel, ok := c.workers.cancels[pipeline.ID]
 	if !ok {
 		return nil
@@ -609,7 +608,7 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 		return
 	}
 	for _, pipeline := range connection.Pipelines() {
-		cancel := c.cancelDispatcher(pipeline)
+		cancel := c.cancelWorker(pipeline)
 		if cancel != nil {
 			go cancel()
 		}
@@ -618,7 +617,7 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
-	cancel := c.cancelDispatcher(n.Pipeline())
+	cancel := c.cancelWorker(n.Pipeline())
 	if cancel != nil {
 		go cancel()
 	}
@@ -635,7 +634,7 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 			continue
 		}
 		for _, pipeline := range connection.Pipelines() {
-			cancel := c.cancelDispatcher(pipeline)
+			cancel := c.cancelWorker(pipeline)
 			if cancel != nil {
 				go cancel()
 			}
@@ -663,7 +662,7 @@ func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 		}
 		return
 	}
-	if cancel := c.cancelDispatcher(p); cancel != nil {
+	if cancel := c.cancelWorker(p); cancel != nil {
 		go cancel()
 	}
 }
@@ -672,7 +671,7 @@ func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
 	for _, pipeline := range connection.Pipelines() {
-		cancel := c.cancelDispatcher(pipeline)
+		cancel := c.cancelWorker(pipeline)
 		if cancel != nil {
 			go cancel()
 		}
@@ -697,7 +696,7 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		}
 		return
 	}
-	if cancel := c.cancelDispatcher(p); cancel != nil {
+	if cancel := c.cancelWorker(p); cancel != nil {
 		go cancel()
 	}
 	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
