@@ -115,7 +115,7 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onUnlinkConnection)
 	st.AddListener(c.onUpdatePipeline)
 	for _, ws := range st.Workspaces() {
-		c.addWorkspace(ws)
+		c.addWorkspace(ws.ID)
 	}
 	var workers []pipelineWorker
 	for _, pipeline := range st.Pipelines() {
@@ -218,10 +218,12 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *Collector) addWorkspace(ws *state.Workspace) {
-	c.observers.Store(ws.ID, newObserver())
-	store := c.datastore.Store(ws.ID)
-	c.eventWriters.Store(ws.ID, store.NewEventWriter())
+// addWorkspace adds a workspace to the collector.
+// It is called from New and onCreateWorkspace.
+func (c *Collector) addWorkspace(id int) {
+	c.observers.Store(id, newObserver())
+	store := c.datastore.Store(id)
+	c.eventWriters.Store(id, store.NewEventWriter())
 }
 
 // cancelDispatcher cancels the pipeline's event dispatcher.
@@ -597,9 +599,7 @@ func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 
 // onCreateWorkspace is called when a workspace is created.
 func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
-	c.observers.Store(n.ID, newObserver())
-	store := c.datastore.Store(n.ID)
-	c.eventWriters.Store(n.ID, store.NewEventWriter())
+	c.addWorkspace(n.ID)
 }
 
 // onDeleteConnection is called when a connection is deleted.
