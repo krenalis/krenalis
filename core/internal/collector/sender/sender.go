@@ -736,6 +736,10 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 	s.close.iterators.Done()
 	s.compact()
 
+	for _, ack := range acks {
+		ack()
+	}
+
 	for key, count := range metricsCounts {
 		trace("Sender.send: collect metric for iterator %p with pipeline %d, count %d, and error %#v\n", iter, key.pipeline, count, key.err)
 		if key.err != nil {
@@ -743,10 +747,6 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			continue
 		}
 		s.metrics.FinalizePassed(key.pipeline, count)
-	}
-
-	for _, ack := range acks {
-		ack()
 	}
 
 }
