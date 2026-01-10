@@ -19,7 +19,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/streams/nats"
+	"github.com/meergo/meergo/core/natsopts"
 	"github.com/meergo/meergo/tools/validation"
 )
 
@@ -285,17 +285,17 @@ func parseEnvSettings() (*Settings, error) {
 	}
 	settings.NATS.Token = envVars.Get("MEERGO_NATS_TOKEN")
 	if nkey := envVars.Get("MEERGO_NATS_NKEY"); nkey != "" {
-		prefix, seed, err := nats.DecodeSeed([]byte(nkey))
-		if err != nil || prefix != nats.PrefixByteUser || len(seed) != ed25519.SeedSize {
+		prefix, seed, err := natsopts.DecodeSeed([]byte(nkey))
+		if err != nil || prefix != natsopts.PrefixByteUser || len(seed) != ed25519.SeedSize {
 			return nil, fmt.Errorf("MEERGO_NATS_NKEY value is not a user NKey")
 		}
 		settings.NATS.NKey = ed25519.NewKeyFromSeed(seed)
 	}
 	switch storage := envVars.Get("MEERGO_NATS_STORAGE"); strings.ToLower(storage) {
 	case "", "file":
-		settings.NATS.Storage = nats.FileStorage
+		settings.NATS.Storage = natsopts.FileStorage
 	case "memory":
-		settings.NATS.Storage = nats.MemoryStorage
+		settings.NATS.Storage = natsopts.MemoryStorage
 	default:
 		return nil, fmt.Errorf("MEERGO_NATS_STORAGE value %q is not supported; expected file or memory", storage)
 	}
@@ -309,13 +309,13 @@ func parseEnvSettings() (*Settings, error) {
 	}
 	switch compression := envVars.Get("MEERGO_NATS_COMPRESSION"); strings.ToLower(compression) {
 	case "":
-		settings.NATS.Compression = nats.NoCompression
+		settings.NATS.Compression = natsopts.NoCompression
 	case "s2":
-		settings.NATS.Compression = nats.S2Compression
+		settings.NATS.Compression = natsopts.S2Compression
 	default:
 		return nil, fmt.Errorf("MEERGO_NATS_COMPRESSION value %q is not supported; expected s2", compression)
 	}
-	if settings.NATS.Compression != nats.NoCompression && settings.NATS.Storage != nats.FileStorage {
+	if settings.NATS.Compression != natsopts.NoCompression && settings.NATS.Storage != natsopts.FileStorage {
 		return nil, errors.New("MEERGO_NATS_COMPRESSION can be set only when using file storage")
 	}
 

@@ -6,34 +6,67 @@ package streams
 
 import "context"
 
-// Stream is a transport-agnostic interface for event streams.
-type Stream interface {
-	Consumer
-	Publisher
+// Connection represents a connection to an event stream.
+type Connection interface {
+
+	// Close closes the connection. When Close is called, no other calls to
+	// Connection's methods should be in progress and no other shall be made.
 	Close() error
-}
 
-// Event represents a transport-agnostic event.
-type Event struct {
-	Attributes map[string]any
-	Ack        Ack
-}
+	// Stream returns the stream. It waits until the stream has been created.
+	// It returns an error only if ctx is canceled or if c has been closed.
+	Stream(context.Context) (Stream, error)
 
-// Ack acknowledges an event; errors are handled internally by the transport.
-type Ack func()
+	// WaitUp blocks until the connection is up and the stream is available.
+	// It returns false if the context is canceled, the connection is closed,
+	// or the connection remains down for too long.
+	WaitUp(context.Context) bool
+}
 
 // Consumer receives events for a pipeline.
 type Consumer interface {
-	Consume(ctx context.Context, pipeline, size int) (<-chan Event, error)
+
+	// Close closes the consumer and closes the events channel.
+	Close()
+
+	// Events returns the channel of events.
+	Events() <-chan Event
 }
 
-// Batch publishes events and waits for completion.
-type Batch interface {
+// BatchPublisher publishes events in batches.
+type BatchPublisher interface {
+
+	// Publish adds an event to the current batch for the given pipelines with the
+	// provided attributes.
 	Publish(pipelines []int, attributes map[string]any) error
+
+	// Done publishes all buffered events.
+	//
+	// If Done returns nil, all events in the batch have been successfully
+	// published. If Done returns an error, no guarantees are made about whether
+	// or how many events have been published.
+	//
+	// After Done returns, the BatchPublisher must not be reused.
 	Done(ctx context.Context) error
 }
 
-// Publisher creates publish batches.
-type Publisher interface {
-	NewBatch() Batch
+// Stream is an interface for event streams.
+type Stream interface {
+
+	// Batch returns a batch publisher for the stream.
+	Batch() BatchPublisher
+
+	// Consume returns a buffered channel of the given size that streams events for
+	// the specified pipeline. Events belonging to the same shard are sent on the
+	// channel in order, ensuring per-user ordering is preserved.
+	Consume(pipeline, size int) Consumer
+}
+
+// Ack acknowledges an event.
+type Ack func()
+
+// Event represents an event read from the stream.
+type Event struct {
+	Attributes map[string]any
+	Ack        Ack
 }

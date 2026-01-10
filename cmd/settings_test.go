@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/streams/nats"
+	"github.com/meergo/meergo/core/natsopts"
 	"github.com/meergo/meergo/tools/dotenv"
 	"github.com/meergo/meergo/tools/validation"
 
@@ -940,23 +940,23 @@ func TestParseSettings(t *testing.T) {
 		cases := []struct {
 			name    string
 			env     string
-			want    nats.StorageType
+			want    natsopts.StorageType
 			wantErr string
 		}{
 			{
 				name: "default when unset",
 				env:  "",
-				want: nats.FileStorage,
+				want: natsopts.FileStorage,
 			},
 			{
 				name: "file storage",
 				env:  "file",
-				want: nats.FileStorage,
+				want: natsopts.FileStorage,
 			},
 			{
 				name: "memory storage",
 				env:  "memory",
-				want: nats.MemoryStorage,
+				want: natsopts.MemoryStorage,
 			},
 			{
 				name:    "invalid storage rejected",
@@ -1076,24 +1076,24 @@ func TestParseSettings(t *testing.T) {
 			name    string
 			env     string
 			storage string
-			want    nats.StoreCompression
+			want    natsopts.StoreCompression
 			wantErr string
 		}{
 			{
 				name: "default when unset",
 				env:  "",
-				want: nats.NoCompression,
+				want: natsopts.NoCompression,
 			},
 			{
 				name:    "compression allowed with file storage",
 				env:     "s2",
 				storage: "file",
-				want:    nats.S2Compression,
+				want:    natsopts.S2Compression,
 			},
 			{
 				name: "s2 compression uppercase",
 				env:  "S2",
-				want: nats.S2Compression,
+				want: natsopts.S2Compression,
 			},
 			{
 				name:    "compression with memory storage rejected",

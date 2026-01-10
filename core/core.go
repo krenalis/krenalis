@@ -29,13 +29,14 @@ import (
 	imetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
-	inats "github.com/meergo/meergo/core/internal/streams/nats"
+	"github.com/meergo/meergo/core/internal/streams"
+	"github.com/meergo/meergo/core/internal/streams/nats"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/lambda"
 	"github.com/meergo/meergo/core/internal/transformers/local"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/streams/nats"
+	"github.com/meergo/meergo/core/natsopts"
 	"github.com/meergo/meergo/tools/backoff"
 	"github.com/meergo/meergo/tools/datacrypt"
 	"github.com/meergo/meergo/tools/errors"
@@ -50,7 +51,7 @@ import (
 
 type Core struct {
 	db                *idb.DB
-	nc                *inats.Connection
+	sc                streams.Connection
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
@@ -112,8 +113,7 @@ type DBConfig struct {
 }
 
 type NATSConfig struct {
-	nats.ConnectionOptions
-	nats.StreamOptions
+	natsopts.Options
 }
 
 // OAuthCredentials represents the OAuth client credentials for a connector.
@@ -330,28 +330,18 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.connections = connections.New(core.state)
 
 	// Connect to the NATS server.
-	core.nc, err = inats.Connect(conf.NATS.ConnectionOptions)
+	core.sc, err = nats.Connect(conf.NATS.Options)
 	if err != nil {
 		return nil, fmt.Errorf("core: cannot connect to NATS server: %s", err)
 	}
 	defer func() {
 		if err != nil {
-			core.nc.Close()
-		}
-	}()
-
-	stream, err := core.nc.Stream(context.Background(), conf.NATS.StreamOptions)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			_ = stream.Close()
+			_ = core.sc.Close()
 		}
 	}()
 
 	// Init the event collector.
-	core.collector, err = collector.New(db, stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	core.collector, err = collector.New(db, core.sc, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -576,7 +566,7 @@ func (core *Core) Close() {
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
 	// Close NATS connection.
-	core.nc.Close()
+	_ = core.sc.Close()
 	// Close PostgreSQL connections.
 	core.db.Close()
 	coreActive.Store(false)

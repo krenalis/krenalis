@@ -33,6 +33,8 @@ import (
 	"github.com/oschwald/maxminddb-golang/v2"
 )
 
+var errNoStreamConnection = errors.New("no stream connection")
+
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
@@ -56,7 +58,7 @@ type ValidationError interface {
 // apps.
 type Collector struct {
 	db               *db.DB
-	stream           streams.Stream
+	sc               streams.Connection
 	state            *state.State
 	datastore        *datastore.Datastore
 	metrics          *metrics.Collector
@@ -79,12 +81,12 @@ type Collector struct {
 // events with geolocation information; if not provided, the database file is
 // not opened and the geolocation information are not automatically added by
 // Meergo.
-func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
+func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
 	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
 
 	var c = &Collector{
 		db:               db,
-		stream:           stream,
+		sc:               sc,
 		state:            st,
 		datastore:        ds,
 		metrics:          metrics,
@@ -198,6 +200,8 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Allow", "POST, OPTIONS")
 			}
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		case errNoStreamConnection:
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		case errPayloadTooLarge:
 			http.Error(w, "Request Entity Too Large", http.StatusRequestEntityTooLarge)
 		case errReadBody:
@@ -307,6 +311,10 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
 		w.WriteHeader(204)
 		return nil
+	}
+
+	if !c.sc.WaitUp(r.Context()) {
+		return errNoStreamConnection
 	}
 
 	var err error
@@ -423,7 +431,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
-	batch := c.stream.NewBatch()
+	stream, err := c.sc.Stream(r.Context())
+	if err != nil {
+		return errNoStreamConnection
+	}
+	batch := stream.Batch()
 	var pipelineIDs []int
 
 	var observedEvents []events.Event
@@ -682,16 +694,19 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 //
 // It is called in its own goroutine and runs until the context is canceled.
 func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter, pipeline int) {
-	ch, err := c.stream.Consume(ctx, pipeline, 1000)
+	stream, err := c.sc.Stream(ctx)
 	if err != nil {
-		panic(err)
+		return // ctx has been canceled or c.sc has been closed.
 	}
+	consumer := stream.Consume(pipeline, 1000)
+	events := consumer.Events()
 	done := ctx.Done()
 	for {
 		select {
 		case <-done:
+			consumer.Close()
 			return
-		case event, ok := <-ch:
+		case event, ok := <-events:
 			if !ok {
 				return
 			}
@@ -705,16 +720,19 @@ func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter
 //
 // It is called in its own goroutine and runs until the context is canceled.
 func (c *Collector) processForwardedEvents(ctx context.Context, destinations *destinations, pipeline *state.Pipeline) {
-	ch, err := c.stream.Consume(ctx, pipeline.ID, 1000)
+	stream, err := c.sc.Stream(ctx)
 	if err != nil {
-		panic(err)
+		return // ctx has been canceled or c.sc has been closed.
 	}
+	consumer := stream.Consume(pipeline.ID, 1000)
+	events := consumer.Events()
 	done := ctx.Done()
 	for {
 		select {
 		case <-done:
+			consumer.Close()
 			return
-		case event, ok := <-ch:
+		case event, ok := <-events:
 			if !ok {
 				return
 			}
@@ -728,16 +746,19 @@ func (c *Collector) processForwardedEvents(ctx context.Context, destinations *de
 //
 // It is called in its own goroutine and runs until the context is canceled.
 func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.EventWriter, pipeline int) {
-	ch, err := c.stream.Consume(ctx, pipeline, 1000)
+	stream, err := c.sc.Stream(ctx)
 	if err != nil {
-		panic(err)
+		return // ctx has been canceled or c.sc has been closed.
 	}
+	consumer := stream.Consume(pipeline, 1000)
+	events := consumer.Events()
 	done := ctx.Done()
 	for {
 		select {
 		case <-done:
+			consumer.Close()
 			return
-		case event, ok := <-ch:
+		case event, ok := <-events:
 			if !ok {
 				return
 			}

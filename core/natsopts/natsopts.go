@@ -5,7 +5,7 @@
 // Package nats defines the configuration keys and identifiers used to configure
 // NATS within the core package. These names are also imported by
 // core/internal/stream/nats to ensure consistent usage across packages.
-package nats
+package natsopts
 
 import (
 	"crypto/ed25519"
@@ -14,12 +14,19 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-type ConnectionOptions struct {
+type Options struct {
+
+	// Connection options.
 	Servers  []string
 	NKey     ed25519.PrivateKey
 	Token    string
 	User     string
 	Password string
+
+	// Stream options.
+	Replicas    int // 0-5
+	Storage     StorageType
+	Compression StoreCompression
 }
 
 type StorageType = jetstream.StorageType
@@ -35,12 +42,6 @@ const (
 	NoCompression = jetstream.NoCompression
 	S2Compression = jetstream.S2Compression
 )
-
-type StreamOptions struct {
-	Replicas    int // 0-5
-	Storage     StorageType
-	Compression StoreCompression
-}
 
 type PrefixByte = nkeys.PrefixByte
 
