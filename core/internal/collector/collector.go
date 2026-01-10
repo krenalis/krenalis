@@ -69,10 +69,11 @@ type Collector struct {
 	eventWriters     sync.Map      // a map from workspace identifier to a *datastore.EventWriter value
 	destinations     *destinations // destination connections used to send events
 	identityWriters  sync.Map      // a map from pipeline identifier to a *identityWriter value
-	close            struct {
-		closed  atomic.Bool
-		cancels map[int]context.CancelFunc // maps pipeline IDs to their worker cancel functions
+	workers          struct {
+		cancels        map[int]context.CancelFunc // maps pipeline IDs to their worker cancel functions
+		sync.WaitGroup                            // wait group used to wait for all workers to exit
 	}
+	closed atomic.Bool
 }
 
 // New returns a new collector.
@@ -93,7 +94,7 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 		functionProvider: provider,
 		destinations:     newDestinations(st, connections, provider, metrics),
 	}
-	c.close.cancels = map[int]context.CancelFunc{}
+	c.workers.cancels = map[int]context.CancelFunc{}
 
 	if maxMindDBPath != "" {
 		var err error
@@ -125,7 +126,7 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 	st.Unfreeze()
 
 	for _, worker := range workers {
-		go worker()
+		c.workers.Go(worker)
 	}
 
 	return c, nil
@@ -135,14 +136,15 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 // collector's methods should be in progress and no other shall be made.
 // It panics if it has already been closed.
 func (c *Collector) Close() {
-	if c.close.closed.Load() {
+	if c.closed.Load() {
 		panic("core/events/collector already closed")
 	}
-	c.close.closed.Store(true)
-	for _, cancel := range c.close.cancels {
+	c.closed.Store(true)
+	for _, cancel := range c.workers.cancels {
 		cancel()
 	}
-	c.close.cancels = nil
+	c.workers.cancels = nil
+	c.workers.Wait()
 	return
 }
 
@@ -232,7 +234,7 @@ func (c *Collector) addWorkspace(ws *state.Workspace) {
 // It returns nil if the pipeline does not handle events or if the dispatcher
 // is already canceled.
 func (c *Collector) cancelDispatcher(pipeline *state.Pipeline) pipelineWorker {
-	cancel, ok := c.close.cancels[pipeline.ID]
+	cancel, ok := c.workers.cancels[pipeline.ID]
 	if !ok {
 		return nil
 	}
@@ -272,7 +274,7 @@ func (c *Collector) makePipelineWorker(pipeline *state.Pipeline) pipelineWorker 
 		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	c.close.cancels[pipeline.ID] = cancel
+	c.workers.cancels[pipeline.ID] = cancel
 	switch pipeline.Target {
 	case state.TargetUser:
 		// Import the identity into the data warehouse.
