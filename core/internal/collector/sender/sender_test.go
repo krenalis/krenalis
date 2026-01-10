@@ -140,6 +140,9 @@ func Test_iterator_invalidUsage(t *testing.T) {
 
 }
 
+// nopAck is a no-op streams.Ack implementation.
+func nopAck() {}
+
 func Test_Sender(t *testing.T) {
 
 	tests := []struct {
@@ -207,7 +210,10 @@ func Test_Sender(t *testing.T) {
 				if !valid {
 					typ = "Invalid"
 				}
-				event := s.CreateEvent(1, typ, types.Type{}, streams.Event{Attributes: map[string]any{"anonymousId": anonymousId, "messageId": messageId}})
+				event := s.CreateEvent(1, typ, types.Type{}, streams.Event{
+					Attributes: map[string]any{"anonymousId": anonymousId, "messageId": messageId},
+					Ack:        nopAck,
+				})
 				userByEvent[messageId] = anonymousId
 				if valid {
 					if ids, ok := validEventsByUser[anonymousId]; ok {
