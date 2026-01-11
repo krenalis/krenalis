@@ -96,14 +96,6 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 	}
 	c.workers.cancels = map[int]context.CancelFunc{}
 
-	if maxMindDBPath != "" {
-		var err error
-		c.maxmindDB, err = maxminddb.Open(maxMindDBPath)
-		if err != nil {
-			return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxMindDBPath, err)
-		}
-	}
-
 	st.Freeze()
 	st.AddListener(c.onCreatePipeline)
 	st.AddListener(c.onCreateWorkspace)
@@ -127,6 +119,14 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 
 	for _, worker := range workers {
 		worker()
+	}
+
+	if maxMindDBPath != "" {
+		var err error
+		c.maxmindDB, err = maxminddb.Open(maxMindDBPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxMindDBPath, err)
+		}
 	}
 
 	return c, nil
