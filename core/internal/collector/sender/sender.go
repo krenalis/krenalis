@@ -497,7 +497,7 @@ func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
 			}
 			u.expectedSeq++
 			// Append the event to the ready queue unless it has been discarded.
-			if u.waiting[last] != nil {
+			if u.waiting[last].user != nil {
 				s.appendToReadyQueue(u.waiting[last])
 			}
 			u.waiting[last] = nil

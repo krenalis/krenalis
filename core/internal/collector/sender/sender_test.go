@@ -168,6 +168,52 @@ func Test_iterator_invalidUsage(t *testing.T) {
 
 }
 
+// Test_Sender_DiscardedOutOfOrderEvent verifies that discarding an out-of-order
+// event does not prevent delivering the next event exactly once.
+func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
+
+	var consumed bool
+
+	app := newTestApplication()
+	app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+		for event := range events.All() {
+			if consumed || event.Received.MessageID() != "msg-0" {
+				t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+			}
+			consumed = true
+		}
+		return nil
+	}
+	s := New(app, nil)
+
+	event0 := s.CreateEvent(1, "Valid", types.Type{}, events.Event{
+		"anonymousId": "user-1",
+		"messageId":   "msg-0",
+	})
+	event1 := s.CreateEvent(1, "Valid", types.Type{}, events.Event{
+		"anonymousId": "user-1",
+		"messageId":   "msg-1",
+	})
+
+	s.DiscardEvent(event1)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("QueueEvent panicked: %v", r)
+		}
+	}()
+	s.QueueEvent(event0)
+
+	err := s.Close(t.Context())
+	if err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	if !consumed {
+		t.Fatalf("event was not consumed")
+	}
+
+}
+
 // Test_Sender_RetryAfterSendEventsErrorWithoutIteration verifies that a send
 // error without iteration is retried and then consumes the events.
 func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
