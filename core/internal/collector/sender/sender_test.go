@@ -168,6 +168,45 @@ func Test_iterator_invalidUsage(t *testing.T) {
 
 }
 
+// Test_Sender_RetryAfterSendEventsErrorWithoutIteration verifies that a send
+// error without iteration is retried and then consumes the events.
+func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
+
+	var called bool
+	var consumed bool
+
+	app := newTestApplication()
+	app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+		if !called {
+			called = true
+			return errors.New("an error occurred")
+		}
+		for event := range events.All() {
+			if consumed || event.Received.MessageID() != "msg-0" {
+				t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+			}
+			consumed = true
+		}
+		return nil
+	}
+	s := New(app, nil)
+
+	event := s.CreateEvent(1, "Valid", types.Type{}, events.Event{
+		"anonymousId": "user-1",
+		"messageId":   "msg-0",
+	})
+	s.QueueEvent(event)
+
+	err := s.Close(t.Context())
+	if err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	if !consumed {
+		t.Fatalf("event was not consumed")
+	}
+
+}
+
 func Test_Sender(t *testing.T) {
 
 	tests := []struct {

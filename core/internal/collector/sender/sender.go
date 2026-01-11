@@ -730,8 +730,8 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		if asserts {
 			s._assertAvailable(s.available)
 		}
+		s.mu.Unlock()
 	}
-	s.mu.Unlock()
 
 	for key, count := range metricsCounts {
 		trace("Sender.send: collect metric for iterator %p with pipeline %d, count %d, and error %#v\n", iter, key.pipeline, count, key.err)
