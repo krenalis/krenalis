@@ -697,6 +697,7 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 			c.workers.Go(func() {
 				c.processWarehouseEvents(ctx, ew.(*datastore.EventWriter), pipeline.ID)
 			})
+			return
 		}
 		// Send the event to apps.
 		c.workers.Go(func() {
