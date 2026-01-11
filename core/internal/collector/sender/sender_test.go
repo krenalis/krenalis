@@ -24,6 +24,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// uuidDeterministicNS defines the namespace used to generate deterministic UUIDv5 values.
+var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
+
 // testApplication is a configurable Application implementation for tests.
 // It defaults to no-op behavior when hooks are not provided.
 type testApplication struct {
