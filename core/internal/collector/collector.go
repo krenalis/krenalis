@@ -109,17 +109,10 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 	for _, ws := range st.Workspaces() {
 		c.addWorkspace(ws.ID)
 	}
-	var workers []pipelineWorker
 	for _, pipeline := range st.Pipelines() {
-		if worker := c.makePipelineWorker(pipeline); worker != nil {
-			workers = append(workers, worker)
-		}
+		c.startPipelineWorker(pipeline)
 	}
 	st.Unfreeze()
-
-	for _, worker := range workers {
-		worker()
-	}
 
 	if maxMindDBPath != "" {
 		var err error
@@ -226,26 +219,26 @@ func (c *Collector) addWorkspace(id int) {
 	c.eventWriters.Store(id, store.NewEventWriter())
 }
 
-// cancelWorker cancels the event worker for the given pipeline.
+// stopPipelineWorker stops the event worker for the given pipeline.
 //
-// It is called while the state is frozen and may return a cancel function
-// to be executed in its own goroutine.
+// It is called while the state is frozen and cancels the worker, if running.
+// The cancellation is performed asynchronously in its own goroutine.
 //
-// It returns nil if the pipeline does not handle events or the worker is
-// already canceled.
-func (c *Collector) cancelWorker(pipeline *state.Pipeline) pipelineWorker {
+// It does nothing if the pipeline does not handle events or the worker
+// has already been canceled.
+func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 	cancel, ok := c.workers.cancels[pipeline.ID]
 	if !ok {
-		return nil
+		return
 	}
 	cancel()
 	if pipeline.Target != state.TargetUser {
-		return nil
+		return
 	}
 	iw, _ := c.identityWriters.LoadAndDelete(pipeline.ID)
-	return func() {
+	go func() {
 		_ = iw.(*identityWriter).Close(context.Background())
-	}
+	}()
 }
 
 // connectionByKey returns the SDK or webhook connection for the key and true
@@ -258,20 +251,18 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	return connection, true
 }
 
-// makePipelineWorker returns a function that runs a worker in its own goroutine
-// to process events for the given pipeline.
+// startPipelineWorker starts an event worker in its own goroutine
+// for the given pipeline. It must be called with the state frozen.
 //
-// It must be called with the state frozen.
-//
-// It returns nil if the pipeline does not handle events, is not enabled,
+// It does nothing if the pipeline does not handle events, is not enabled,
 // or if a worker for the pipeline is already running.
-func (c *Collector) makePipelineWorker(pipeline *state.Pipeline) pipelineWorker {
+func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 	if !pipeline.Enabled {
-		return nil
+		return
 	}
 	connection := pipeline.Connection()
 	if connection.LinkedConnections == nil {
-		return nil
+		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c.workers.cancels[pipeline.ID] = cancel
@@ -280,28 +271,22 @@ func (c *Collector) makePipelineWorker(pipeline *state.Pipeline) pipelineWorker 
 		// Import the identity into the data warehouse.
 		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
 		c.identityWriters.Store(pipeline.ID, iw)
-		return func() {
-			c.workers.Go(func() {
-				c.processIdentityEvents(ctx, iw, pipeline.ID)
-			})
-		}
+		c.workers.Go(func() {
+			c.processIdentityEvents(ctx, iw, pipeline.ID)
+		})
 	case state.TargetEvent:
 		// Store the event into the data warehouse.
 		if pipeline.EventType == "" {
 			ws := connection.Workspace()
 			ew, _ := c.eventWriters.Load(ws.ID)
-			return func() {
-				c.workers.Go(func() {
-					c.processWarehouseEvents(ctx, ew.(*datastore.EventWriter), pipeline.ID)
-				})
-			}
-		}
-		// Send the event to apps.
-		return func() {
 			c.workers.Go(func() {
-				c.processForwardedEvents(ctx, c.destinations, pipeline)
+				c.processWarehouseEvents(ctx, ew.(*datastore.EventWriter), pipeline.ID)
 			})
 		}
+		// Send the event to apps.
+		c.workers.Go(func() {
+			c.processForwardedEvents(ctx, c.destinations, pipeline)
+		})
 	default:
 		panic("unreachable")
 	}
@@ -588,9 +573,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 // onCreatePipeline is called when a pipeline is created.
 func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 	pipeline, _ := c.state.Pipeline(n.ID)
-	if worker := c.makePipelineWorker(pipeline); worker != nil {
-		worker()
-	}
+	c.startPipelineWorker(pipeline)
 }
 
 // onCreateWorkspace is called when a workspace is created.
@@ -605,19 +588,13 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 		return
 	}
 	for _, pipeline := range connection.Pipelines() {
-		cancel := c.cancelWorker(pipeline)
-		if cancel != nil {
-			go cancel()
-		}
+		c.stopPipelineWorker(pipeline)
 	}
 }
 
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
-	cancel := c.cancelWorker(n.Pipeline())
-	if cancel != nil {
-		go cancel()
-	}
+	c.stopPipelineWorker(n.Pipeline())
 	// TODO(marco): should the ongoing transformations be interrupted?
 }
 
@@ -631,10 +608,7 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 			continue
 		}
 		for _, pipeline := range connection.Pipelines() {
-			cancel := c.cancelWorker(pipeline)
-			if cancel != nil {
-				go cancel()
-			}
+			c.stopPipelineWorker(pipeline)
 		}
 	}
 }
@@ -643,9 +617,7 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 func (c *Collector) onLinkConnection(n state.LinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
 	for _, pipeline := range connection.Pipelines() {
-		if worker := c.makePipelineWorker(pipeline); worker != nil {
-			worker()
-		}
+		c.startPipelineWorker(pipeline)
 	}
 }
 
@@ -653,24 +625,17 @@ func (c *Collector) onLinkConnection(n state.LinkConnection) {
 func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 	p, _ := c.state.Pipeline(n.ID)
 	if p.Enabled {
-		if worker := c.makePipelineWorker(p); worker != nil {
-			worker()
-		}
+		c.startPipelineWorker(p)
 		return
 	}
-	if cancel := c.cancelWorker(p); cancel != nil {
-		cancel()
-	}
+	c.stopPipelineWorker(p)
 }
 
 // onUnlinkConnection is called when two linked connections are unlinked.
 func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
 	for _, pipeline := range connection.Pipelines() {
-		cancel := c.cancelWorker(pipeline)
-		if cancel != nil {
-			go cancel()
-		}
+		c.stopPipelineWorker(pipeline)
 	}
 }
 
@@ -678,7 +643,6 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
 	if p.Enabled {
-		worker := c.makePipelineWorker(p)
 		// The transformation might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
 			var transformer *transformers.Transformer
@@ -687,14 +651,10 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 			}
 			w.(*identityWriter).SetTransformer(transformer)
 		}
-		if worker != nil {
-			worker()
-		}
+		c.startPipelineWorker(p)
 		return
 	}
-	if cancel := c.cancelWorker(p); cancel != nil {
-		go cancel()
-	}
+	c.stopPipelineWorker(p)
 	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
 }
 
