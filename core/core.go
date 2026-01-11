@@ -24,9 +24,9 @@ import (
 	"github.com/meergo/meergo/core/internal/collector"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
-	idb "github.com/meergo/meergo/core/internal/db"
+	dbpkg "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
-	imetrics "github.com/meergo/meergo/core/internal/metrics"
+	coremetrics "github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/streams"
@@ -50,13 +50,13 @@ import (
 )
 
 type Core struct {
-	db                *idb.DB
+	db                *dbpkg.DB
 	sc                streams.Connection
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
 	connections       *connections.Connections
-	metrics           *imetrics.Collector
+	metrics           *coremetrics.Collector
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
 	authTokenCipher   *datacrypt.Cipher
@@ -182,7 +182,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB
-	db, err := idb.Open(&idb.Options{
+	db, err := dbpkg.Open(&dbpkg.Options{
 		Host:           ps.Host,
 		Port:           ps.Port,
 		Username:       ps.Username,
@@ -219,7 +219,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 			// Initialize the PostgreSQL database in a transaction, so if it is
 			// fails, there is no need to manually empty the database.
-			err := db.Transaction(ctx, func(tx *idb.Tx) error {
+			err := db.Transaction(ctx, func(tx *dbpkg.Tx) error {
 				err := initdb.Initialize(ctx, tx)
 				if err != nil {
 					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
@@ -311,7 +311,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	// Init the metrics.
-	core.metrics = imetrics.New(db, core.state)
+	core.metrics = coremetrics.New(db, core.state)
 	defer func() {
 		if err != nil {
 			core.metrics.Close(context.Background())
@@ -434,7 +434,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		n := state.AcceptInvitation{}
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, organization, created_at FROM members WHERE invitation_token = $1", token).Scan(&n.Member, &n.Organization, &createdAt)
@@ -514,7 +514,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
@@ -1129,11 +1129,11 @@ func (core *Core) onExecutePipeline(n state.RunPipeline) {
 
 // pipelineError represents a pipeline error.
 type pipelineError struct {
-	step imetrics.Step
+	step coremetrics.Step
 	err  error
 }
 
-func newPipelineError(step imetrics.Step, err error) *pipelineError {
+func newPipelineError(step coremetrics.Step, err error) *pipelineError {
 	return &pipelineError{step, err}
 }
 
@@ -1215,7 +1215,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		timeSlot := imetrics.TimeSlotFromTime(run.StartTime)
+		timeSlot := coremetrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
@@ -1379,7 +1379,7 @@ Identifiers:
 		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
 	}
 	for {
-		err := core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1472,7 +1472,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo = backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1668,7 +1668,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -1725,7 +1725,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *idb.Tx) (any, error) {
+	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
