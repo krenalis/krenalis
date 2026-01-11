@@ -284,9 +284,9 @@ func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 	p, _ := c.state.Pipeline(n.ID)
 	if p.Enabled {
 		c.startPipelineWorker(p)
-		return
+	} else {
+		c.stopPipelineWorker(p)
 	}
-	c.stopPipelineWorker(p)
 }
 
 // onUnlinkConnection is called when two linked connections are unlinked.
@@ -300,20 +300,20 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 // onUpdatePipeline is called when a pipeline is updated.
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
-	if p.Enabled {
-		// The transformation might have changed.
-		if w, ok := c.identityWriters.Load(p.ID); ok {
-			var transformer *transformers.Transformer
-			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
-				transformer, _ = transformers.New(p, c.functionProvider, nil)
-			}
-			w.(*identityWriter).SetTransformer(transformer)
-		}
-		c.startPipelineWorker(p)
+	if !p.Enabled {
+		c.stopPipelineWorker(p)
+		// TODO(marco): how does changing the warehouse mode affect the source pipeline?
 		return
 	}
-	c.stopPipelineWorker(p)
-	// TODO(marco): how does changing the warehouse mode affect the source pipeline?
+	// The transformation might have changed.
+	if w, ok := c.identityWriters.Load(p.ID); ok {
+		var transformer *transformers.Transformer
+		if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
+			transformer, _ = transformers.New(p, c.functionProvider, nil)
+		}
+		w.(*identityWriter).SetTransformer(transformer)
+	}
+	c.startPipelineWorker(p)
 }
 
 // processIdentityEvents reads events from the pipeline, extracts identities,
@@ -671,17 +671,21 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-// startPipelineWorker starts an event worker in its own goroutine
-// for the given pipeline. It must be called with the state frozen.
-//
-// It does nothing if the pipeline does not handle events, is not enabled,
-// or if a worker for the pipeline is already running.
+// startPipelineWorker evaluates whether an event worker should be started
+// for the given pipeline and starts it if needed. It must be called with
+// the state frozen.
 func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 	if !pipeline.Enabled {
 		return
 	}
+	if _, ok := c.workers.cancels[pipeline.ID]; ok {
+		return
+	}
 	connection := pipeline.Connection()
 	if connection.LinkedConnections == nil {
+		return
+	}
+	if connection.Role == state.Destination && len(connection.LinkedConnections) == 0 {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -713,24 +717,33 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 
 }
 
-// stopPipelineWorker stops the event worker for the given pipeline.
+// stopPipelineWorker evaluates whether the event worker for the given pipeline
+// should be stopped and cancels it if needed.
 //
-// It is called while the state is frozen and cancels the worker, if running.
-// The cancellation is performed asynchronously in its own goroutine.
-//
-// It does nothing if the pipeline does not handle events or the worker
-// has already been canceled.
+// It must be called with the state frozen. Cancellation is performed
+// asynchronously in its own goroutine.
 func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 	cancel, ok := c.workers.cancels[pipeline.ID]
 	if !ok {
 		return
 	}
-	cancel()
-	if pipeline.Target != state.TargetUser {
-		return
+	stop := func() {
+		cancel()
+		if pipeline.Target == state.TargetUser {
+			iw, _ := c.identityWriters.LoadAndDelete(pipeline.ID)
+			go func() {
+				_ = iw.(*identityWriter).Close(context.Background())
+			}()
+		}
 	}
-	iw, _ := c.identityWriters.LoadAndDelete(pipeline.ID)
-	go func() {
-		_ = iw.(*identityWriter).Close(context.Background())
-	}()
+	if !pipeline.Enabled {
+		stop()
+	}
+	connection := pipeline.Connection()
+	if connection.Role == state.Destination && len(connection.LinkedConnections) == 0 {
+		stop()
+	}
+	if _, ok := c.state.Pipeline(pipeline.ID); !ok {
+		stop()
+	}
 }
