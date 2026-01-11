@@ -24,20 +24,48 @@ import (
 	"github.com/google/uuid"
 )
 
-// nopApplication is a no-op application that returns zero wait time and skips
-// sending events.
-type nopApplication struct{}
-
-func (nopApplication) ID() int { return 1 }
-
-func (nopApplication) Connector() string { return "nop" }
-
-func (nopApplication) WaitTime(string) (time.Duration, error) {
-	return 0, nil
+// testApplication is a configurable Application implementation for tests.
+// It defaults to no-op behavior when hooks are not provided.
+type testApplication struct {
+	IDValue        int
+	ConnectorValue string
+	WaitTimeFunc   func(string) (time.Duration, error)
+	SendEventsFunc func(context.Context, connectors.Events) error
 }
 
-func (nopApplication) SendEvents(context.Context, connectors.Events) error {
-	return nil
+func newTestApplication() *testApplication {
+	return &testApplication{
+		IDValue:        1,
+		ConnectorValue: "nop",
+	}
+}
+
+func (a *testApplication) ID() int {
+	if a.IDValue == 0 {
+		return 1
+	}
+	return a.IDValue
+}
+
+func (a *testApplication) Connector() string {
+	if a.ConnectorValue == "" {
+		return "nop"
+	}
+	return a.ConnectorValue
+}
+
+func (a *testApplication) WaitTime(pattern string) (time.Duration, error) {
+	if a.WaitTimeFunc == nil {
+		return 0, nil
+	}
+	return a.WaitTimeFunc(pattern)
+}
+
+func (a *testApplication) SendEvents(ctx context.Context, events connectors.Events) error {
+	if a.SendEventsFunc == nil {
+		return nil
+	}
+	return a.SendEventsFunc(ctx, events)
 }
 
 func Test_newStoppedTimer(t *testing.T) {
@@ -64,14 +92,14 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	}
 
 	t.Run("PostponeOutsideIteration", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		expectPanic(func() { it.Postpone() })
 	})
 
 	t.Run("PostponeFirstEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -80,7 +108,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PostponeDiscardedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -89,7 +117,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardDiscardedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -98,7 +126,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardPostponedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -107,7 +135,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -115,7 +143,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("AllAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -123,7 +151,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("FirstAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -131,7 +159,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("SameUserAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -142,6 +170,100 @@ func Test_iterator_invalidUsage(t *testing.T) {
 
 // nopAck is a no-op streams.Ack implementation.
 func nopAck() {}
+
+// Test_Sender_DiscardedOutOfOrderEvent verifies that discarding an out-of-order
+// event does not prevent delivering the next event exactly once.
+func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
+
+	var consumed bool
+
+	app := newTestApplication()
+	app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+		for event := range events.All() {
+			if consumed || event.Received.MessageID() != "msg-0" {
+				t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+			}
+			consumed = true
+		}
+		return nil
+	}
+	s := New(app, nil)
+
+	event0 := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-0",
+		},
+		Ack: nopAck,
+	})
+	event1 := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-1",
+		},
+		Ack: nopAck,
+	})
+
+	s.DiscardEvent(event1)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("QueueEvent panicked: %v", r)
+		}
+	}()
+	s.QueueEvent(event0)
+
+	err := s.Close(t.Context())
+	if err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	if !consumed {
+		t.Fatalf("event was not consumed")
+	}
+
+}
+
+// Test_Sender_RetryAfterSendEventsErrorWithoutIteration verifies that a send
+// error without iteration is retried and then consumes the events.
+func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
+
+	var called bool
+	var consumed bool
+
+	app := newTestApplication()
+	app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+		if !called {
+			called = true
+			return errors.New("an error occurred")
+		}
+		for event := range events.All() {
+			if consumed || event.Received.MessageID() != "msg-0" {
+				t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+			}
+			consumed = true
+		}
+		return nil
+	}
+	s := New(app, nil)
+
+	event := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-0",
+		},
+		Ack: nopAck,
+	})
+	s.QueueEvent(event)
+
+	err := s.Close(t.Context())
+	if err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	if !consumed {
+		t.Fatalf("event was not consumed")
+	}
+
+}
 
 func Test_Sender(t *testing.T) {
 
