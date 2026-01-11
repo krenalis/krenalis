@@ -97,6 +97,7 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 	c.workers.cancels = map[int]context.CancelFunc{}
 
 	st.Freeze()
+	st.AddListener(c.onCreateConnection)
 	st.AddListener(c.onCreatePipeline)
 	st.AddListener(c.onCreateWorkspace)
 	st.AddListener(c.onDeleteConnection)
@@ -226,6 +227,20 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 		return nil, false
 	}
 	return connection, true
+}
+
+// onCreateConnection is called when a connection is created.
+func (c *Collector) onCreateConnection(n state.CreateConnection) {
+	connection, _ := c.state.Connection(n.ID)
+	if !(connection.Role == state.Source && len(connection.LinkedConnections) > 0) {
+		return
+	}
+	for _, id := range connection.LinkedConnections {
+		connection, _ := c.state.Connection(id)
+		for _, pipeline := range connection.Pipelines() {
+			c.startPipelineWorker(pipeline)
+		}
+	}
 }
 
 // onCreatePipeline is called when a pipeline is created.
