@@ -330,14 +330,11 @@ func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter
 	done := ctx.Done()
 	for {
 		select {
+		case event := <-events:
+			_ = w.Write(event)
 		case <-done:
 			consumer.Close()
 			return
-		case event, ok := <-events:
-			if !ok {
-				return
-			}
-			_ = w.Write(event)
 		}
 	}
 }
@@ -356,14 +353,11 @@ func (c *Collector) processForwardedEvents(ctx context.Context, destinations *de
 	done := ctx.Done()
 	for {
 		select {
+		case event := <-events:
+			destinations.QueueEvent(pipeline, event)
 		case <-done:
 			consumer.Close()
 			return
-		case event, ok := <-events:
-			if !ok {
-				return
-			}
-			destinations.QueueEvent(pipeline, event)
 		}
 	}
 }
@@ -382,14 +376,11 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.Eve
 	done := ctx.Done()
 	for {
 		select {
+		case event := <-events:
+			w.Write(event, pipeline)
 		case <-done:
 			consumer.Close()
 			return
-		case event, ok := <-events:
-			if !ok {
-				return
-			}
-			w.Write(event, pipeline)
 		}
 	}
 }
