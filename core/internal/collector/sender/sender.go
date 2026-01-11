@@ -21,17 +21,12 @@ import (
 	"github.com/meergo/meergo/core/internal/metrics"
 	toolsMetrics "github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
-
-	"github.com/google/uuid"
 )
 
 const asserts = false // enable during development for assertions
 const traces = false  // set to true to trace execution flow
 
 var tracesMu sync.Mutex
-
-// uuidDeterministicNS defines the namespace used to generate deterministic UUIDv5 values.
-var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
 // postponeMarker is assigned to a user when an iterator postpones one of its
 // events. It prevents further events from that user being consumed by another
