@@ -325,9 +325,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	// WaitUp returns false if the request context is canceled or if the stream
 	// remains unavailable beyond a short, predefined timeout.
 	//
-	// c.sc may be nil in tests; in that case, execution proceeds, but
-	// publishing events to the stream will return errNoStreamConnection.
-	if c.sc != nil && !c.sc.WaitUp(r.Context()) {
+	if !c.sc.WaitUp(r.Context()) {
 		return errNoStreamConnection
 	}
 
@@ -445,14 +443,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
-	var batch streams.BatchPublisher
-	if c.sc != nil {
-		stream, err := c.sc.Stream(r.Context())
-		if err != nil {
-			return errNoStreamConnection
-		}
-		batch = stream.Batch()
+	stream, err := c.sc.Stream(r.Context())
+	if err != nil {
+		return errNoStreamConnection
 	}
+	batch := stream.Batch()
 	var pipelineIDs []int
 
 	var observedEvents []events.Event
@@ -538,10 +533,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 
-	}
-
-	if batch == nil {
-		return errNoStreamConnection
 	}
 
 	err = batch.Done(r.Context())
