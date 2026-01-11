@@ -33,11 +33,6 @@ var tracesMu sync.Mutex
 // iterator until the postponed event is processed, preserving event order.
 var postponeMarker = new(iterator)
 
-type Ack struct {
-	Pipeline int
-	Event    string
-}
-
 type Application interface {
 
 	// ID returns the ID of the connection.
