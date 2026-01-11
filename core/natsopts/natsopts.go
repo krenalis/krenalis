@@ -2,9 +2,8 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package nats defines the configuration keys and identifiers used to configure
-// NATS within the core package. These names are also imported by
-// core/internal/stream/nats to ensure consistent usage across packages.
+// Package natsopts defines the configuration keys and identifiers used to
+// configure NATS within the core package.
 package natsopts
 
 import (
