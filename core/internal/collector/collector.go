@@ -135,7 +135,6 @@ func (c *Collector) Close() {
 	for _, cancel := range c.workers.cancels {
 		cancel()
 	}
-	c.workers.cancels = nil
 	c.workers.Wait()
 	return
 }
