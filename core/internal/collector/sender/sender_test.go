@@ -24,20 +24,48 @@ import (
 	"github.com/google/uuid"
 )
 
-// nopApplication is a no-op application that returns zero wait time and skips
-// sending events.
-type nopApplication struct{}
-
-func (nopApplication) ID() int { return 1 }
-
-func (nopApplication) Connector() string { return "nop" }
-
-func (nopApplication) WaitTime(string) (time.Duration, error) {
-	return 0, nil
+// testApplication is a configurable Application implementation for tests.
+// It defaults to no-op behavior when hooks are not provided.
+type testApplication struct {
+	IDValue        int
+	ConnectorValue string
+	WaitTimeFunc   func(string) (time.Duration, error)
+	SendEventsFunc func(context.Context, connectors.Events) error
 }
 
-func (nopApplication) SendEvents(context.Context, connectors.Events) error {
-	return nil
+func newTestApplication() *testApplication {
+	return &testApplication{
+		IDValue:        1,
+		ConnectorValue: "nop",
+	}
+}
+
+func (a *testApplication) ID() int {
+	if a.IDValue == 0 {
+		return 1
+	}
+	return a.IDValue
+}
+
+func (a *testApplication) Connector() string {
+	if a.ConnectorValue == "" {
+		return "nop"
+	}
+	return a.ConnectorValue
+}
+
+func (a *testApplication) WaitTime(pattern string) (time.Duration, error) {
+	if a.WaitTimeFunc == nil {
+		return 0, nil
+	}
+	return a.WaitTimeFunc(pattern)
+}
+
+func (a *testApplication) SendEvents(ctx context.Context, events connectors.Events) error {
+	if a.SendEventsFunc == nil {
+		return nil
+	}
+	return a.SendEventsFunc(ctx, events)
 }
 
 func Test_newStoppedTimer(t *testing.T) {
@@ -64,14 +92,14 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	}
 
 	t.Run("PostponeOutsideIteration", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		expectPanic(func() { it.Postpone() })
 	})
 
 	t.Run("PostponeFirstEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -80,7 +108,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PostponeDiscardedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -89,7 +117,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardDiscardedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -98,7 +126,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardPostponedEvent", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -107,7 +135,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -115,7 +143,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("AllAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -123,7 +151,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("FirstAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -131,7 +159,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("SameUserAfterConsumed", func(t *testing.T) {
-		s := New(nopApplication{}, nil)
+		s := New(newTestApplication(), nil)
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
