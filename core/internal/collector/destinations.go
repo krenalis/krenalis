@@ -139,6 +139,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 				d.mu.Lock()
 				pipelines, ok := d.pipelines[connection]
 				if !ok {
+					d.mu.Unlock()
 					continue
 				}
 				for _, dp = range pipelines {
