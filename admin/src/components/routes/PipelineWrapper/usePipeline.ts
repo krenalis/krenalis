@@ -44,7 +44,6 @@ const usePipeline = (
 	const [selectedOutPaths, setSelectedOutPaths] = useState<string[]>([]);
 	const [issues, setIssues] = useState<string[]>([]);
 	const [showIssues, setShowIssues] = useState<boolean>(true);
-	const [autoSelectedPaths, setAutoSelectedPaths] = useState<string[]>([]);
 
 	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -81,17 +80,17 @@ const usePipeline = (
 	}, [pipelineType?.inputSchema, pipelineType?.outputSchema]);
 
 	useEffect(() => {
-		if (isLoading || pipelineType.outputSchema == null) {
+		if (isLoading || pipelineType.outputSchema == null || isEditing) {
 			return;
 		}
-		computeAutoSelectedPaths('', !isEditing);
+		computeAutoSelectedPaths();
 	}, [pipelineType?.outputSchema]);
 
-	const computeAutoSelectedPaths = (prefix: string, updateCheckboxes?: boolean) => {
+	const computeAutoSelectedPaths = () => {
 		// Compute the automatically selected out paths. These are required
 		// paths that must be used in the transformation function. They are
-		// flagged automatically, disabled to prevent de-selection, and
-		// pre-populated with zero values in the transformation function.
+		// flagged automatically, and pre-populated with zero values in the
+		// transformation function.
 		const flatOut = flattenSchema(pipelineType.outputSchema);
 		let paths = Object.keys(flatOut);
 
@@ -117,28 +116,25 @@ const usePipeline = (
 					}) !== -1;
 				if (isRequired && !hasRequiredChild) {
 					// The path is automatically selected.
-					autoSelected.push(path);
+					const property = flatOut[path];
+					const isObject = property.type === 'object';
+					if (isObject) {
+						// Auto select all children leafs.
+						const childrenLeafs = paths.filter((p) => {
+							const isChildren = p.startsWith(`${path}.`);
+							const isLeaf = flatOut[p].type !== 'object';
+							return isChildren && isLeaf;
+						});
+						for (const c of childrenLeafs) {
+							autoSelected.push(c);
+						}
+					} else {
+						// Auto select the property.
+						autoSelected.push(path);
+					}
 				}
 			}
-
-			setAutoSelectedPaths(autoSelected);
-
-			if (updateCheckboxes) {
-				// Also update the selected paths.
-				let toSelect = [...autoSelected];
-				if (prefix !== '') {
-					// Merge with the already selected paths outside the
-					// subtree.
-					const alreadySelected = [...selectedOutPaths].filter(
-						(pa) => pa !== prefix && !pa.startsWith(`${prefix}.`),
-					);
-					// Remove duplicates between the auto selected and already
-					// selected arrays (all auto selected properties outside the
-					// subtree are also already selected).
-					toSelect = [...new Set([].concat(toSelect).concat(alreadySelected))];
-				}
-				setSelectedOutPaths(toSelect);
-			}
+			setSelectedOutPaths(autoSelected);
 		}
 	};
 
@@ -470,7 +466,6 @@ const usePipeline = (
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
-		autoSelectedPaths,
 		computeAutoSelectedPaths,
 		issues,
 		setIssues,

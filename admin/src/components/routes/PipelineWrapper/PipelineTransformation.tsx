@@ -763,7 +763,7 @@ const TransformationBox = ({
 			setPipeline(p);
 			setSelectedInPaths([]);
 			setSelectedOutPaths([]);
-			computeAutoSelectedPaths('', true);
+			computeAutoSelectedPaths();
 		}, delay);
 	};
 
@@ -1614,46 +1614,83 @@ const FullscreenTransformation = ({
 	};
 
 	const onChangeSelectedPath = (side: 'in' | 'out', path: string) => {
-		let paths: string[];
+		let selectedPaths: string[];
 		let schema: TransformedMapping;
 		if (side === 'in') {
-			paths = selectedInPaths;
+			selectedPaths = [...selectedInPaths];
 			schema = flatInputSchema;
 		} else {
-			paths = selectedOutPaths;
+			selectedPaths = [...selectedOutPaths];
 			schema = flatOutputSchema;
 		}
 
-		const keys = Object.keys(schema);
-		const children = keys.filter((k) => k.startsWith(`${path}.`));
+		const paths = Object.keys(schema);
+		const property = schema[path];
+		const isObject = property.type === 'object';
 
-		const isSelected = paths.includes(path);
-		let p: string[] = [];
-		if (isSelected) {
-			// Remove the property from the selected list.
-			for (const s of paths) {
-				if (s !== path) {
-					p.push(s);
+		let childrenLeafs = [];
+		if (isObject) {
+			childrenLeafs = paths.filter((p) => {
+				const isChildren = p.startsWith(`${path}.`);
+				const isLeaf = schema[p].type !== 'object';
+				return isChildren && isLeaf;
+			});
+		}
+
+		let wasSelected = false;
+		if (isObject) {
+			// The property was selected if all its children leafs were
+			// selected.
+			let wereLeafsSelected = true;
+			for (const leaf of childrenLeafs) {
+				if (!selectedPaths.includes(leaf)) {
+					wereLeafsSelected = false;
+					break;
+				}
+			}
+			wasSelected = wereLeafsSelected;
+		} else {
+			wasSelected = selectedPaths.includes(path);
+		}
+
+		let selected: string[] = [];
+		if (wasSelected) {
+			if (isObject) {
+				// Deselect all children leafs.
+				for (const p of selectedPaths) {
+					if (!childrenLeafs.includes(p)) {
+						selected.push(p);
+					}
+				}
+			} else {
+				// Deselect the property.
+				for (const p of selectedPaths) {
+					if (p !== path) {
+						selected.push(p);
+					}
 				}
 			}
 		} else {
-			p = [];
-			p.push(path);
-
-			// Remove any child properties that were previously selected
-			// since only the parent property will be sent to the
-			// server.
-			for (const s of paths) {
-				if (!children.includes(s)) {
-					p.push(s);
+			selected = selectedPaths;
+			if (isObject) {
+				// Select all children leafs (the ones that are not already
+				// selected).
+				for (const c of childrenLeafs) {
+					const isAlreadySelected = selected.includes(c);
+					if (!isAlreadySelected) {
+						selected.push(c);
+					}
 				}
+			} else {
+				// Select the property.
+				selected.push(path);
 			}
 		}
 
 		if (side == 'in') {
-			setSelectedInPaths(p);
+			setSelectedInPaths(selected);
 		} else {
-			setSelectedOutPaths(p);
+			setSelectedOutPaths(selected);
 		}
 	};
 
@@ -1999,6 +2036,7 @@ const FullscreenTransformation = ({
 								side='input'
 								transformationType={transformationType}
 								searchTerm={inSearchTerm}
+								flatSchema={flatInputSchema}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
 							/>
@@ -2407,6 +2445,7 @@ const FullscreenTransformation = ({
 													side='output'
 													transformationType={transformationType}
 													searchTerm={outSearchTerm}
+													flatSchema={flatOutputSchema}
 													selectedPaths={selectedOutPaths}
 													onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
 													isOutMatchingProperty={
@@ -3118,6 +3157,7 @@ const TransformationNestedProperties = ({
 				parentName={parentName}
 				side={side}
 				transformationType={transformationType}
+				flatSchema={flatSchema}
 				selectedPaths={selectedPaths}
 				showCaret={hasSearchedChildren}
 				onChangeSelectedPath={onChangeSelectedPath}
@@ -3157,6 +3197,7 @@ const TransformationNestedProperties = ({
 									side={side}
 									transformationType={transformationType}
 									searchTerm={searchTerm}
+									flatSchema={flatSchema}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
 									hideCheckbox={
@@ -3180,6 +3221,7 @@ interface TransformationPropertyProps {
 	transformationType: 'mappings' | 'function' | '';
 	searchTerm?: string;
 	showCaret?: boolean;
+	flatSchema: TransformedMapping;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
 	isExpanded?: boolean;
@@ -3197,6 +3239,7 @@ const TransformationProperty = ({
 	transformationType,
 	searchTerm,
 	showCaret = true,
+	flatSchema,
 	selectedPaths,
 	onChangeSelectedPath,
 	isExpanded,
@@ -3204,10 +3247,8 @@ const TransformationProperty = ({
 	isOutMatchingProperty,
 	hideCheckbox = false,
 }: TransformationPropertyProps) => {
-	const { connection } = useContext(ConnectionContext);
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
-	const { isImport, pipelineType, pipeline, autoSelectedPaths, computeAutoSelectedPaths } =
-		useContext(PipelineContext);
+	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
 
 	let path = property.name;
 	if (parentName) {
@@ -3218,11 +3259,24 @@ const TransformationProperty = ({
 	const isIdentifier = isImport && workspace.identifiers.includes(path) && side === 'output';
 	const isFlagged = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
-	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
-	let isAutoSelected = autoSelectedPaths.includes(path);
-	const isSelectDisabled =
-		transformationType === 'function' &&
-		((isOutMatchingProperty && !isFlagged) || hasSelectedParent || isAutoSelected);
+	const isSelectDisabled = transformationType === 'function' && isOutMatchingProperty && !isFlagged;
+
+	const isObject = property.type.kind === 'object';
+	let areAllChildrenLeafsSelected = false;
+	if (isObject) {
+		const keys = Object.keys(flatSchema);
+		const childrenLeafs = keys.filter((p) => {
+			const isChildren = p.startsWith(`${path}.`);
+			const isLeaf = flatSchema[p].type !== 'object';
+			return isChildren && isLeaf;
+		});
+		areAllChildrenLeafsSelected = true;
+		for (const c of childrenLeafs) {
+			if (!selectedPaths.includes(c)) {
+				areAllChildrenLeafsSelected = false;
+			}
+		}
+	}
 
 	const onClick = (e: any) => {
 		if (isSelectDisabled) {
@@ -3238,19 +3292,6 @@ const TransformationProperty = ({
 		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
 		if (isCheckbox) {
 			e.preventDefault();
-		}
-		let isEventSend = connection.isDestination && pipelineType.target.includes('Event');
-		const isObject = property.type.kind === 'object';
-		if (isEventSend && side === 'output' && isObject && isFlagged) {
-			const hasAutoSelectedChild = autoSelectedPaths.findIndex((pa) => pa.startsWith(`${path}.`)) !== -1;
-			if (hasAutoSelectedChild) {
-				// Instead of deselecting the entire property hierarchy,
-				// re-compute the automatically selected leaf properties, if
-				// any.
-				const firstPathFragment = path.split('.')[0];
-				computeAutoSelectedPaths(firstPathFragment, true);
-				return;
-			}
 		}
 		onChangeSelectedPath(path);
 	};
@@ -3292,16 +3333,6 @@ const TransformationProperty = ({
 		}
 	}
 
-	const checkbox = (
-		<SlCheckbox
-			className='fullscreen-transformation__property-check'
-			checked={isFlagged || hasSelectedParent}
-			indeterminate={hasSelectedChildren && !isFlagged}
-			disabled={isSelectDisabled}
-			size='small'
-		/>
-	);
-
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
@@ -3322,10 +3353,14 @@ const TransformationProperty = ({
 			{transformationType === 'function' &&
 				(hideCheckbox ? (
 					<div className='fullscreen-transformation__property-check-empty' />
-				) : isAutoSelected ? (
-					<SlTooltip content='Must be selected as the property is required'>{checkbox}</SlTooltip>
 				) : (
-					checkbox
+					<SlCheckbox
+						className='fullscreen-transformation__property-check'
+						checked={isFlagged || areAllChildrenLeafsSelected}
+						indeterminate={hasSelectedChildren && !areAllChildrenLeafsSelected}
+						disabled={isSelectDisabled}
+						size='small'
+					/>
 				))}
 			<div className='fullscreen-transformation__property'>
 				<div className='fullscreen-transformation__property-name'>
