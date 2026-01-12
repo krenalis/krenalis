@@ -275,7 +275,7 @@ func (c *connection) WaitUp(ctx context.Context) bool {
 	}
 	c.mu.RLock()
 	wait := c.up.wait
-	c.mu.Unlock()
+	c.mu.RUnlock()
 	if wait == nil {
 		return false
 	}
