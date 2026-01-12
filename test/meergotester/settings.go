@@ -19,6 +19,7 @@ import (
 type TestsSettings struct {
 	HTTP              *HTTPSettings
 	Database          *DBSettings
+	NATS              *NATSSettings
 	PythonExecutable  string
 	WarehousePlatform string
 	Warehouse         *DBSettings
@@ -27,6 +28,13 @@ type TestsSettings struct {
 type HTTPSettings struct {
 	Host string
 	Port int
+}
+
+type NATSSettings struct {
+	URL      string
+	Port     int
+	User     string
+	Password string
 }
 
 type DBSettings struct {

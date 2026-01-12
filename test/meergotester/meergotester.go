@@ -33,6 +33,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/nats"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -61,6 +62,7 @@ type Meergo struct {
 	transformationsTempDir string
 	httpClient             *http.Client
 	ws                     int
+	stopNATSContainer      func() error
 	stopPostgresContainer  func() error
 	stopWarehouseContainer func() error
 
@@ -186,7 +188,35 @@ func (c *Meergo) Start() {
 	}()
 
 	containersStarted := sync.WaitGroup{}
-	containersStarted.Add(2)
+	containersStarted.Add(3) // NATS + PostgreSQL (db) + PostgreSQL (warehouse).
+
+	// Start the NATS container.
+	go func() {
+		natsContainer, err := nats.Run(context.Background(), testimages.NATS)
+		if err != nil {
+			panic(fmt.Sprintf("cannot start the NATS container: %s", err))
+		}
+		c.stopNATSContainer = func() error {
+			return testcontainers.TerminateContainer(natsContainer)
+		}
+		natsHost, err := natsContainer.Host(ctx)
+		if err != nil {
+			panic(err)
+		}
+		natsPort, err := natsContainer.MappedPort(ctx, "4222/tcp")
+		if err != nil {
+			panic(err)
+		}
+		testsSettingsMu.Lock()
+		testsSettings.NATS = &NATSSettings{
+			URL:      natsHost,
+			Port:     natsPort.Int(),
+			User:     natsContainer.User,
+			Password: natsContainer.Password,
+		}
+		testsSettingsMu.Unlock()
+		containersStarted.Done()
+	}()
 
 	// Start the PostgreSQL container and set the global test settings.
 	go func() {
@@ -316,6 +346,9 @@ func (c *Meergo) Start() {
 			"MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
 			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
+			fmt.Sprintf("MEERGO_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
+			"MEERGO_NATS_USER=" + testsSettings.NATS.User,
+			"MEERGO_NATS_PASSWORD=" + testsSettings.NATS.Password,
 		}...)
 		if !meergoAlreadyBuilt {
 			buildMeergo(c.t, c.repo, meergoDir)
@@ -349,6 +382,9 @@ func (c *Meergo) Start() {
 		setts.DB.Password = testsSettings.Database.Password
 		setts.DB.Database = testsSettings.Database.Database
 		setts.DB.Schema = testsSettings.Database.Schema
+		setts.NATS.Servers = []string{fmt.Sprintf("nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port)}
+		setts.NATS.User = testsSettings.NATS.User
+		setts.NATS.Password = testsSettings.NATS.Password
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = c.transformationsTempDir
 		err := os.Setenv("MEERGO_CONNECTOR_FILESYSTEM_ROOT", c.fileSystemRoot)
@@ -471,6 +507,12 @@ func (c *Meergo) Stop() {
 	if err != nil {
 		log.Printf("cannot remove transformations temporary directory: %s", err)
 		return
+	}
+	if c.stopNATSContainer != nil {
+		err := c.stopNATSContainer()
+		if err != nil {
+			log.Printf("cannot stop NATS container: %s", err)
+		}
 	}
 	if c.stopPostgresContainer != nil {
 		err := c.stopPostgresContainer()

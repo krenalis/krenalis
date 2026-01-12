@@ -13,9 +13,9 @@ import (
 
 	"github.com/meergo/meergo/core/internal/collector/sender"
 	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/tools/types"
 )
@@ -95,7 +95,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 
 // QueueEvent queues the given event to be sent on the specified destination
 // pipeline.
-func (d *destinations) QueueEvent(pipeline *state.Pipeline, event events.Event) {
+func (d *destinations) QueueEvent(pipeline *state.Pipeline, event streams.Event) {
 	connection := pipeline.Connection()
 	d.mu.Lock()
 	if pipelines, ok := d.pipelines[connection.ID]; ok {

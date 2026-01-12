@@ -975,6 +975,7 @@ func (state *State) linkConnection(n notification) uuid.UUID {
 	c := state.replaceConnection(e.Connections[1], func(c *Connection) {
 		c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[0])
 	})
+	dispatchNotification(state, e)
 	return c.organization.ID
 }
 
@@ -1259,6 +1260,7 @@ func (state *State) unlinkConnection(n notification) uuid.UUID {
 	c := state.replaceConnection(e.Connections[1], func(c *Connection) {
 		c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[0])
 	})
+	dispatchNotification(state, e)
 	return c.organization.ID
 }
 

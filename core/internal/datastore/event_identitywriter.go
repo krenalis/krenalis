@@ -12,6 +12,7 @@ import (
 
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
@@ -27,14 +28,14 @@ type EventIdentityWriter struct {
 	connection int
 	columns    []warehouses.Column
 
-	mu           sync.Mutex
-	pipelines    map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
-	aligned      bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
-	flatter      *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
-	index        map[identityKey]int
-	rows         []map[string]any
-	metricsCount int
-	timer        *time.Timer
+	mu        sync.Mutex
+	pipelines map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
+	aligned   bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
+	flatter   *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
+	index     map[identityKey]int
+	rows      []map[string]any
+	acks      []streams.Ack
+	timer     *time.Timer
 
 	close struct {
 		ctx    context.Context
@@ -149,7 +150,7 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 // If the pipeline of iw does not exist anymore, returns an error.
 //
 // It panics if called on a closed writer.
-func (iw *EventIdentityWriter) Write(identity Identity) error {
+func (iw *EventIdentityWriter) Write(identity Identity, ack streams.Ack) error {
 	if iw.close.Load() {
 		panic("call Write on a closed identity writer")
 	}
@@ -196,7 +197,7 @@ func (iw *EventIdentityWriter) Write(identity Identity) error {
 				"_connection":   iw.connection,
 				"_updated_at":   identity.UpdatedAt,
 			}
-			iw.appendRow(key, row, false)
+			iw.appendRow(key, row, nil)
 		}
 	}
 
@@ -216,17 +217,17 @@ func (iw *EventIdentityWriter) Write(identity Identity) error {
 	}
 	row["_updated_at"] = identity.UpdatedAt
 
-	iw.appendRow(key, row, true)
+	iw.appendRow(key, row, ack)
 
 	return nil
 }
 
 // appendRow appends a row to the rows or replaces an existing row with the same
 // key.
-func (iw *EventIdentityWriter) appendRow(key identityKey, row map[string]any, includeInMetrics bool) {
+func (iw *EventIdentityWriter) appendRow(key identityKey, row map[string]any, ack streams.Ack) {
 	iw.mu.Lock()
-	if includeInMetrics {
-		iw.metricsCount++
+	if ack != nil {
+		iw.acks = append(iw.acks, ack)
 	}
 	// If a row with the same key already exists, update that row rather than adding a duplicate.
 	if i, ok := iw.index[key]; ok {
@@ -258,24 +259,29 @@ func (iw *EventIdentityWriter) flush() {
 	}
 	rows := iw.rows
 	iw.rows = nil
-	count := iw.metricsCount
-	iw.metricsCount = 0
+	acks := iw.acks
+	iw.acks = nil
 	clear(iw.index)
 	iw.timer = nil
 	iw.close.Go(func() {
+		defer func() {
+			for _, ack := range acks {
+				ack()
+			}
+		}()
 		ctx, done, err := iw.store.mc.StartOperation(iw.close.ctx, normalMode)
 		if err != nil {
 			// Warehouse mode is not normal: discard identities.
-			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, count, err.Error())
+			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, len(acks), err.Error())
 			return
 		}
 		defer done()
 		err = iw.store.warehouse().MergeIdentities(ctx, iw.columns, rows)
 		if err != nil {
-			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, count, err.Error())
+			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, len(acks), err.Error())
 			return
 		}
-		iw.store.ds.metrics.FinalizePassed(iw.pipeline, count)
+		iw.store.ds.metrics.FinalizePassed(iw.pipeline, len(acks))
 	})
 }
 

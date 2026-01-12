@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/internal/collector/sender"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/tools/types"
 )
@@ -51,7 +51,7 @@ type destinationPipeline struct {
 
 // queuedEvent represents a queued event.
 type queuedEvent struct {
-	eventsEvent events.Event
+	streamEvent streams.Event
 	senderEvent *sender.Event
 }
 
@@ -105,7 +105,7 @@ func (da *destinationPipeline) Discard(cause error) {
 //
 // If the pipeline has a transformation, the event is transformed before being
 // queued.
-func (da *destinationPipeline) QueueEvent(event events.Event) {
+func (da *destinationPipeline) QueueEvent(event streams.Event) {
 	se := da.queue.sender.CreateEvent(da.id, da.eventType, da.schema, event)
 	if da.transformer == nil {
 		da.queue.metrics.TransformationPassed(da.id, 1)
@@ -114,7 +114,7 @@ func (da *destinationPipeline) QueueEvent(event events.Event) {
 		return
 	}
 	da.queue.mu.Lock()
-	da.queue.events = append(da.queue.events, queuedEvent{eventsEvent: event, senderEvent: se})
+	da.queue.events = append(da.queue.events, queuedEvent{streamEvent: event, senderEvent: se})
 	n := len(da.queue.events)
 	if n == 1 || n == minQueuedEventSize {
 		da.queue.resetTimerLocked()
@@ -162,7 +162,7 @@ func (da *destinationPipeline) transform() {
 	records := make([]transformers.Record, n)
 	for i := 0; i < n; i++ {
 		records[i].Purpose = transformers.Create
-		records[i].Attributes = events[i].eventsEvent
+		records[i].Attributes = events[i].streamEvent.Attributes
 	}
 
 	// Transform the events.
@@ -170,6 +170,7 @@ func (da *destinationPipeline) transform() {
 	if err != nil {
 		for i := 0; i < n; i++ {
 			da.queue.sender.DiscardEvent(events[i].senderEvent)
+			events[i].streamEvent.Ack()
 		}
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
@@ -187,6 +188,7 @@ func (da *destinationPipeline) transform() {
 	for i, record := range records {
 		if err := record.Err; err != nil {
 			da.queue.sender.DiscardEvent(events[i].senderEvent)
+			events[i].streamEvent.Ack()
 			switch err.(type) {
 			case transformers.RecordTransformationError:
 				da.queue.metrics.TransformationFailed(da.id, 1, err.Error())

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/meergo/meergo/core/internal/streams/streamstest"
 )
 
 type repeatReader struct {
@@ -23,7 +25,12 @@ func (r repeatReader) Read(p []byte) (int, error) {
 }
 
 func TestCollectorReturnsRequestEntityTooLarge(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{
+		sc: &streamstest.Connection{
+			StreamValue: &streamstest.Stream{},
+			WaitUpValue: true,
+		},
+	}
 	body := io.LimitReader(repeatReader{b: 'a'}, int64(maxRequestSize+1))
 	req := httptest.NewRequest(http.MethodPost, "/events", body)
 	req.Header.Set("Content-Type", "application/json")

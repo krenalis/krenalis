@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/tools/types"
 
 	"github.com/google/uuid"
@@ -171,6 +171,9 @@ func Test_iterator_invalidUsage(t *testing.T) {
 
 }
 
+// nopAck is a no-op streams.Ack implementation.
+func nopAck() {}
+
 // Test_Sender_DiscardedOutOfOrderEvent verifies that discarding an out-of-order
 // event does not prevent delivering the next event exactly once.
 func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
@@ -189,13 +192,19 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 	}
 	s := New(app, nil)
 
-	event0 := s.CreateEvent(1, "Valid", types.Type{}, events.Event{
-		"anonymousId": "user-1",
-		"messageId":   "msg-0",
+	event0 := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-0",
+		},
+		Ack: nopAck,
 	})
-	event1 := s.CreateEvent(1, "Valid", types.Type{}, events.Event{
-		"anonymousId": "user-1",
-		"messageId":   "msg-1",
+	event1 := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-1",
+		},
+		Ack: nopAck,
 	})
 
 	s.DiscardEvent(event1)
@@ -240,9 +249,12 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 	}
 	s := New(app, nil)
 
-	event := s.CreateEvent(1, "Valid", types.Type{}, events.Event{
-		"anonymousId": "user-1",
-		"messageId":   "msg-0",
+	event := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-0",
+		},
+		Ack: nopAck,
 	})
 	s.QueueEvent(event)
 
@@ -323,7 +335,10 @@ func Test_Sender(t *testing.T) {
 				if !valid {
 					typ = "Invalid"
 				}
-				event := s.CreateEvent(1, typ, types.Type{}, events.Event{"anonymousId": anonymousId, "messageId": messageId})
+				event := s.CreateEvent(1, typ, types.Type{}, streams.Event{
+					Attributes: map[string]any{"anonymousId": anonymousId, "messageId": messageId},
+					Ack:        nopAck,
+				})
 				userByEvent[messageId] = anonymousId
 				if valid {
 					if ids, ok := validEventsByUser[anonymousId]; ok {

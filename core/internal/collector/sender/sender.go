@@ -17,8 +17,8 @@ import (
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/streams"
 	toolsMetrics "github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 )
@@ -59,13 +59,14 @@ const maxQueueDelay = 200 * time.Millisecond
 
 // Event represents a message to be delivered to an application.
 type Event struct {
-	connectors.Event           // original event.
-	CreatedAt        time.Time // time at which the event was created.
-	EnqueuedAt       time.Time // time at which the event was enqueued.
-	pipeline         int       // pipeline ID.
-	user             *user     // associated user; nil if the event was discarded.
-	sequence         int       // sequence number; access is synchronized via Sender.mu.
-	iterator         *iterator // iterator that consumed the event; nil if it hasn't been consumed.
+	connectors.Event             // original event.
+	CreatedAt        time.Time   // time at which the event was created.
+	EnqueuedAt       time.Time   // time at which the event was enqueued.
+	pipeline         int         // pipeline ID.
+	user             *user       // associated user; nil if the event was discarded.
+	sequence         int         // sequence number; access is synchronized via Sender.mu.
+	iterator         *iterator   // iterator that consumed the event; nil if it hasn't been consumed.
+	ack              streams.Ack // event ack.
 }
 
 // user represents the state of a user related to event processing.
@@ -251,8 +252,8 @@ func (s *Sender) Close(ctx context.Context) error {
 //
 // The returned event must be passed to QueueEvent (optionally after setting
 // the Properties field) or to DiscardEvent if it should be discarded.
-func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event events.Event) *Event {
-	anonymousID, ok := event["anonymousId"].(string)
+func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event streams.Event) *Event {
+	anonymousID, ok := event.Attributes["anonymousId"].(string)
 	if !ok {
 		panic("core/events/connector/sender: missing anonymousId")
 	}
@@ -267,7 +268,7 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 	s.mu.Unlock()
 	ev := &Event{
 		Event: connectors.Event{
-			Received: connections.ReceivedEvent(event),
+			Received: connections.ReceivedEvent(event.Attributes),
 			Type: connectors.EventTypeInfo{
 				ID:     typ,
 				Schema: schema,
@@ -278,6 +279,7 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 		pipeline:  pipeline,
 		user:      u,
 		sequence:  seq,
+		ack:       event.Ack,
 	}
 	return ev
 }
@@ -660,6 +662,8 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		}
 	}
 
+	var acks []streams.Ack
+
 	type metricsKey struct {
 		pipeline int
 		err      error
@@ -704,6 +708,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 				defer s.sent(s.events[i].Received.MessageID(), err)
 			}
 			user.events--
+			acks = append(acks, s.events[i].ack)
 			s.events[i] = nil
 			index++
 		}
@@ -723,6 +728,13 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		s.mu.Unlock()
 	}
 
+	s.close.iterators.Done()
+	s.compact()
+
+	for _, ack := range acks {
+		ack()
+	}
+
 	for key, count := range metricsCounts {
 		trace("Sender.send: collect metric for iterator %p with pipeline %d, count %d, and error %#v\n", iter, key.pipeline, count, key.err)
 		if key.err != nil {
@@ -732,8 +744,6 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		s.metrics.FinalizePassed(key.pipeline, count)
 	}
 
-	s.close.iterators.Done()
-	s.compact()
 }
 
 // setRateLimiterPattern updates the rate limiter pattern.
