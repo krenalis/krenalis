@@ -3366,60 +3366,69 @@ const TransformationProperty = ({
 				<div className='fullscreen-transformation__property-name'>
 					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
 					<div className='fullscreen-transformation__property-content'>
-						<div className='fullscreen-transformation__property-head'>
-							<div className='fullscreen-transformation__property-head-main'>
-								{isIdentifier && (
-									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
-										<SlIcon
-											className='fullscreen-transformation__property-identifier-icon'
-											name='person-check'
-										/>
-									</SlTooltip>
-								)}
-								<span className='fullscreen-transformation__property-name-copy'>
-									{!isOutMatchingProperty && (
-										<SlCopyButton
-											className='fullscreen-transformation__property-copy'
-											value={path}
-											copyLabel='Click to copy'
-											successLabel='✓ Copied'
-											errorLabel='Copying to clipboard is not supported by your browser'
-											hoist={true}
-										/>
+						<div className='fullscreen-transformation__property-left-column'>
+							<div className='fullscreen-transformation__property-head'>
+								<div className='fullscreen-transformation__property-head-main'>
+									{isIdentifier && (
+										<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+											<SlIcon
+												className='fullscreen-transformation__property-identifier-icon'
+												name='person-check'
+											/>
+										</SlTooltip>
 									)}
-									<span className='fullscreen-transformation__property-name-text'>
-										{property.name}
-									</span>
-								</span>
-								<span className='fullscreen-transformation__property-type'>
-									<span>{meergoTypeName}</span>
-									{side === 'input' && property.readOptional && <span>- optional</span>}
-									{isRequired && (
-										<span
-											className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
-										>
-											required
+									<span className='fullscreen-transformation__property-name-copy'>
+										{!isOutMatchingProperty && (
+											<SlCopyButton
+												className='fullscreen-transformation__property-copy'
+												value={path}
+												copyLabel='Click to copy'
+												successLabel='✓ Copied'
+												errorLabel='Copying to clipboard is not supported by your browser'
+												hoist={true}
+											/>
+										)}
+										<span className='fullscreen-transformation__property-name-text'>
+											{property.name}
 										</span>
+									</span>
+									<span className='fullscreen-transformation__property-type'>
+										<span>{meergoTypeName}</span>
+										{side === 'input' && property.readOptional && <span>- optional</span>}
+										{isRequired && (
+											<span
+												className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+											>
+												required
+											</span>
+										)}
+									</span>
+									{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
+										<SlTooltip
+											content='You cannot select this property since it is already used as matching property'
+											hoist={true}
+										>
+											<SlIcon
+												className='fullscreen-transformation__property-disabled-info'
+												name='info-circle'
+											/>
+										</SlTooltip>
 									)}
-								</span>
-								{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
-									<SlTooltip
-										content='You cannot select this property since it is already used as matching property'
-										hoist={true}
-									>
-										<SlIcon
-											className='fullscreen-transformation__property-disabled-info'
-											name='info-circle'
-										/>
-									</SlTooltip>
-								)}
-								{transformationType === 'function' && isOutMatchingProperty && isFlagged && (
-									<div className='fullscreen-transformation__property-error'>
-										Ensure that this property is not returned by the transformation function, and
-										then deselect this
-									</div>
-								)}
+									{transformationType === 'function' && isOutMatchingProperty && isFlagged && (
+										<div className='fullscreen-transformation__property-error'>
+											Ensure that this property is not returned by the transformation function,
+											and then deselect this
+										</div>
+									)}
+								</div>
 							</div>
+							{property.description && (
+								<div className='fullscreen-transformation__property-description'>
+									{property.description}
+								</div>
+							)}
+						</div>
+						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (
 								<SlTooltip content={languageTypeLabel} hoist={true}>
 									<SlBadge
@@ -3432,11 +3441,6 @@ const TransformationProperty = ({
 								</SlTooltip>
 							)}
 						</div>
-						{property.description && (
-							<div className='fullscreen-transformation__property-description'>
-								{property.description}
-							</div>
-						)}
 					</div>
 				</div>
 			</div>
