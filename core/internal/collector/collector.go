@@ -345,7 +345,10 @@ func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter
 	done := ctx.Done()
 	for {
 		select {
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				panic("consumer channel was closed before the worker terminated")
+			}
 			_ = w.Write(event)
 		case <-done:
 			consumer.Close()
@@ -368,7 +371,10 @@ func (c *Collector) processForwardedEvents(ctx context.Context, destinations *de
 	done := ctx.Done()
 	for {
 		select {
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				panic("consumer channel was closed before the worker terminated")
+			}
 			destinations.QueueEvent(pipeline, event)
 		case <-done:
 			consumer.Close()
@@ -391,7 +397,10 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.Eve
 	done := ctx.Done()
 	for {
 		select {
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				panic("consumer channel was closed before the worker terminated")
+			}
 			w.Write(event, pipeline)
 		case <-done:
 			consumer.Close()
