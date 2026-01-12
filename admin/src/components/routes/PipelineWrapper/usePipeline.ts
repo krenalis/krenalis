@@ -8,6 +8,7 @@ import {
 	transformPipeline,
 	transformInPipelineToSet,
 	flattenSchema,
+	checkFunctionPath,
 } from '../../../lib/core/pipeline';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getPipelineTypeFromConnection } from '../../../lib/core/connection';
@@ -31,6 +32,7 @@ const usePipeline = (
 	const [pipeline, setPipeline] = useState<TransformedPipeline>();
 	const [settings, setSettings] = useState<ConnectorSettings>();
 	const [pipelineType, setPipelineType] = useState<TransformedPipelineType>();
+	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
 	const [isFileConnectorLoading, setIsFileConnectorLoading] = useState<boolean>(
@@ -51,7 +53,7 @@ const usePipeline = (
 
 	useEffect(() => {
 		// Filter out the selected properties that are no longer in the
-		// schemas.
+		// schemas, when they change.
 		if (isLoading) {
 			return;
 		}
@@ -75,7 +77,66 @@ const usePipeline = (
 			}
 			setSelectedOutPaths(outPaths);
 		}
-	}, [pipelineType]);
+	}, [pipelineType?.inputSchema, pipelineType?.outputSchema]);
+
+	useEffect(() => {
+		if (isLoading || pipelineType.outputSchema == null || isEditing) {
+			return;
+		}
+		computeAutoSelectedPaths();
+	}, [pipelineType?.outputSchema]);
+
+	const computeAutoSelectedPaths = () => {
+		// Compute the automatically selected out paths. These are required
+		// paths that must be used in the transformation function. They are
+		// flagged automatically, and pre-populated with zero values in the
+		// transformation function.
+		const flatOut = flattenSchema(pipelineType.outputSchema);
+		let paths = Object.keys(flatOut);
+
+		const isEventSend = connection.isDestination && pipelineType.target.includes('Event');
+		if (isEventSend) {
+			let autoSelected = [];
+			for (const path of paths) {
+				const { isRequired } = checkFunctionPath(path, pipeline, pipelineType, 'output', selectedOutPaths);
+				const hasRequiredChild =
+					paths.findIndex((pa) => {
+						const isChild = pa.startsWith(`${path}.`);
+						if (!isChild) {
+							return false;
+						}
+						const { isRequired } = checkFunctionPath(
+							pa,
+							pipeline,
+							pipelineType,
+							'output',
+							selectedOutPaths,
+						);
+						return isRequired;
+					}) !== -1;
+				if (isRequired && !hasRequiredChild) {
+					// The path is automatically selected.
+					const property = flatOut[path];
+					const isObject = property.type === 'object';
+					if (isObject) {
+						// Auto select all children leafs.
+						const childrenLeafs = paths.filter((p) => {
+							const isChildren = p.startsWith(`${path}.`);
+							const isLeaf = flatOut[p].type !== 'object';
+							return isChildren && isLeaf;
+						});
+						for (const c of childrenLeafs) {
+							autoSelected.push(c);
+						}
+					} else {
+						// Auto select the property.
+						autoSelected.push(path);
+					}
+				}
+			}
+			setSelectedOutPaths(autoSelected);
+		}
+	};
 
 	useEffect(() => {
 		const handleException = (err: Error | string) => {
@@ -388,6 +449,8 @@ const usePipeline = (
 		isLoading,
 		pipelineType,
 		setPipelineType,
+		transformationType,
+		setTransformationType,
 		setPipeline,
 		savePipeline,
 		setIsFileChanged,
@@ -403,6 +466,7 @@ const usePipeline = (
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		computeAutoSelectedPaths,
 		issues,
 		setIssues,
 		showIssues,

@@ -17,16 +17,15 @@ import {
 	TransformedProperty,
 	doesUpdatedAtColumnNeedFormat,
 	flattenSchema,
-	getTransformationFunctionParameterName,
 	isRecursiveType,
 	propertyTypesAreEqual,
 	splitPropertyAndPath,
 	transformInPipelineToSet,
 	validateAndNormalizeFilterCondition,
+	computeDefaultTransformationFunction,
 	checkMapping,
 	checkFunctionPath,
 } from '../../../lib/core/pipeline';
-import { RAW_TRANSFORMATION_FUNCTIONS } from './Pipeline.constants';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Section from '../../base/Section/Section';
 import EditorWrapper from '../../base/EditorWrapper/EditorWrapper';
@@ -202,28 +201,6 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			body.style.overflow = 'auto';
 		}
 	}, [isFullscreenTransformationOpen]);
-
-	useEffect(() => {
-		if (selectedLanguage == '') {
-			return;
-		}
-		const p = { ...pipeline };
-		const isTransformationUndefined = p.transformation.function == null;
-		const isLanguageChanged = !isTransformationUndefined && p.transformation.function.language !== selectedLanguage;
-		if (isTransformationUndefined || isLanguageChanged) {
-			p.transformation.function = {
-				source: RAW_TRANSFORMATION_FUNCTIONS[selectedLanguage].replace(
-					'$parameterName',
-					getTransformationFunctionParameterName(connection, pipelineType),
-				),
-				language: selectedLanguage,
-				preserveJSON: false,
-				inPaths: [],
-				outPaths: [],
-			};
-			setPipeline(p);
-		}
-	}, [selectedLanguage]);
 
 	const flatInputSchema = useMemo<TransformedMapping>(() => {
 		return flattenSchema(pipelineType.inputSchema);
@@ -723,7 +700,8 @@ const TransformationBox = ({
 
 	const { handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
-	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport } = useContext(pipelineContext);
+	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport, computeAutoSelectedPaths } =
+		useContext(pipelineContext);
 
 	useEffect(() => {
 		if (transformationType === 'mappings') {
@@ -768,9 +746,11 @@ const TransformationBox = ({
 			} else {
 				p.transformation.mapping = null;
 				p.transformation.function = {
-					source: RAW_TRANSFORMATION_FUNCTIONS[pendingTransformationType.current].replace(
-						'$parameterName',
-						getTransformationFunctionParameterName(connection, pipelineType),
+					source: computeDefaultTransformationFunction(
+						pipelineType.outputSchema,
+						pendingTransformationType.current,
+						connection,
+						pipelineType,
 					),
 					language: pendingTransformationType.current,
 					preserveJSON: false,
@@ -783,6 +763,7 @@ const TransformationBox = ({
 			setPipeline(p);
 			setSelectedInPaths([]);
 			setSelectedOutPaths([]);
+			computeAutoSelectedPaths();
 		}, delay);
 	};
 
@@ -1633,46 +1614,83 @@ const FullscreenTransformation = ({
 	};
 
 	const onChangeSelectedPath = (side: 'in' | 'out', path: string) => {
-		let paths: string[];
+		let selectedPaths: string[];
 		let schema: TransformedMapping;
 		if (side === 'in') {
-			paths = selectedInPaths;
+			selectedPaths = [...selectedInPaths];
 			schema = flatInputSchema;
 		} else {
-			paths = selectedOutPaths;
+			selectedPaths = [...selectedOutPaths];
 			schema = flatOutputSchema;
 		}
 
-		const keys = Object.keys(schema);
-		const children = keys.filter((k) => k.startsWith(`${path}.`));
+		const paths = Object.keys(schema);
+		const property = schema[path];
+		const isObject = property.type === 'object';
 
-		const isSelected = paths.includes(path);
-		let p: string[] = [];
-		if (isSelected) {
-			// Remove the property from the selected list.
-			for (const s of paths) {
-				if (s !== path) {
-					p.push(s);
+		let childrenLeafs = [];
+		if (isObject) {
+			childrenLeafs = paths.filter((p) => {
+				const isChildren = p.startsWith(`${path}.`);
+				const isLeaf = schema[p].type !== 'object';
+				return isChildren && isLeaf;
+			});
+		}
+
+		let wasSelected = false;
+		if (isObject) {
+			// The property was selected if all its children leafs were
+			// selected.
+			let wereLeafsSelected = true;
+			for (const leaf of childrenLeafs) {
+				if (!selectedPaths.includes(leaf)) {
+					wereLeafsSelected = false;
+					break;
+				}
+			}
+			wasSelected = wereLeafsSelected;
+		} else {
+			wasSelected = selectedPaths.includes(path);
+		}
+
+		let selected: string[] = [];
+		if (wasSelected) {
+			if (isObject) {
+				// Deselect all children leafs.
+				for (const p of selectedPaths) {
+					if (!childrenLeafs.includes(p)) {
+						selected.push(p);
+					}
+				}
+			} else {
+				// Deselect the property.
+				for (const p of selectedPaths) {
+					if (p !== path) {
+						selected.push(p);
+					}
 				}
 			}
 		} else {
-			p = [];
-			p.push(path);
-
-			// Remove any child properties that were previously selected
-			// since only the parent property will be sent to the
-			// server.
-			for (const s of paths) {
-				if (!children.includes(s)) {
-					p.push(s);
+			selected = selectedPaths;
+			if (isObject) {
+				// Select all children leafs (the ones that are not already
+				// selected).
+				for (const c of childrenLeafs) {
+					const isAlreadySelected = selected.includes(c);
+					if (!isAlreadySelected) {
+						selected.push(c);
+					}
 				}
+			} else {
+				// Select the property.
+				selected.push(path);
 			}
 		}
 
 		if (side == 'in') {
-			setSelectedInPaths(p);
+			setSelectedInPaths(selected);
 		} else {
-			setSelectedOutPaths(p);
+			setSelectedOutPaths(selected);
 		}
 	};
 
@@ -2018,6 +2036,7 @@ const FullscreenTransformation = ({
 								side='input'
 								transformationType={transformationType}
 								searchTerm={inSearchTerm}
+								flatSchema={flatInputSchema}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
 							/>
@@ -2426,6 +2445,7 @@ const FullscreenTransformation = ({
 													side='output'
 													transformationType={transformationType}
 													searchTerm={outSearchTerm}
+													flatSchema={flatOutputSchema}
 													selectedPaths={selectedOutPaths}
 													onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
 													isOutMatchingProperty={
@@ -3137,6 +3157,7 @@ const TransformationNestedProperties = ({
 				parentName={parentName}
 				side={side}
 				transformationType={transformationType}
+				flatSchema={flatSchema}
 				selectedPaths={selectedPaths}
 				showCaret={hasSearchedChildren}
 				onChangeSelectedPath={onChangeSelectedPath}
@@ -3176,6 +3197,7 @@ const TransformationNestedProperties = ({
 									side={side}
 									transformationType={transformationType}
 									searchTerm={searchTerm}
+									flatSchema={flatSchema}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
 									hideCheckbox={
@@ -3199,6 +3221,7 @@ interface TransformationPropertyProps {
 	transformationType: 'mappings' | 'function' | '';
 	searchTerm?: string;
 	showCaret?: boolean;
+	flatSchema: TransformedMapping;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
 	isExpanded?: boolean;
@@ -3216,6 +3239,7 @@ const TransformationProperty = ({
 	transformationType,
 	searchTerm,
 	showCaret = true,
+	flatSchema,
 	selectedPaths,
 	onChangeSelectedPath,
 	isExpanded,
@@ -3235,21 +3259,39 @@ const TransformationProperty = ({
 	const isIdentifier = isImport && workspace.identifiers.includes(path) && side === 'output';
 	const isFlagged = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
-	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
-	const isSelectDisabled =
-		transformationType === 'function' && ((isOutMatchingProperty && !isFlagged) || hasSelectedParent);
+	const isSelectDisabled = transformationType === 'function' && isOutMatchingProperty && !isFlagged;
 
-	const onWrapperClick = (e: any) => {
+	const isObject = property.type.kind === 'object';
+	let areAllChildrenLeafsSelected = false;
+	if (isObject) {
+		const keys = Object.keys(flatSchema);
+		const childrenLeafs = keys.filter((p) => {
+			const isChildren = p.startsWith(`${path}.`);
+			const isLeaf = flatSchema[p].type !== 'object';
+			return isChildren && isLeaf;
+		});
+		areAllChildrenLeafsSelected = true;
+		for (const c of childrenLeafs) {
+			if (!selectedPaths.includes(c)) {
+				areAllChildrenLeafsSelected = false;
+			}
+		}
+	}
+
+	const onClick = (e: any) => {
 		if (isSelectDisabled) {
 			return;
 		}
 		const isCopy = e.target.closest('.fullscreen-transformation__property-copy') != null;
 		const isCaret = e.target.closest('.fullscreen-transformation__property-caret') != null;
-		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
 		const isLanguageBadge = e.target.closest('.fullscreen-transformation__property-language-type') != null;
-		if (isCopy || isCaret || isCheckbox || isLanguageBadge) {
+		if (isCopy || isCaret || isLanguageBadge) {
 			e.stopPropagation();
 			return;
+		}
+		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
+		if (isCheckbox) {
+			e.preventDefault();
 		}
 		onChangeSelectedPath(path);
 	};
@@ -3295,7 +3337,7 @@ const TransformationProperty = ({
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
 			style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
-			onClick={transformationType === 'function' ? onWrapperClick : null}
+			onClick={transformationType === 'function' ? onClick : null}
 		>
 			<div className='fullscreen-transformation__property-padding'>
 				{isParent && showCaret && (
@@ -3314,10 +3356,9 @@ const TransformationProperty = ({
 				) : (
 					<SlCheckbox
 						className='fullscreen-transformation__property-check'
-						checked={isFlagged || hasSelectedParent}
-						indeterminate={hasSelectedChildren && !isFlagged}
+						checked={isFlagged || areAllChildrenLeafsSelected}
+						indeterminate={hasSelectedChildren && !areAllChildrenLeafsSelected}
 						disabled={isSelectDisabled}
-						onSlChange={() => onChangeSelectedPath(path)}
 						size='small'
 					/>
 				))}

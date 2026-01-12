@@ -35,6 +35,7 @@ interface PipelineContext {
 	setSelectedInPaths: React.Dispatch<React.SetStateAction<string[]>>;
 	selectedOutPaths: string[];
 	setSelectedOutPaths: React.Dispatch<React.SetStateAction<string[]>>;
+	computeAutoSelectedPaths: () => void;
 	issues: string[];
 	setIssues: React.Dispatch<React.SetStateAction<string[]>>;
 	showIssues: boolean;
