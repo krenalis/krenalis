@@ -555,7 +555,9 @@ func (batch *batch) Done(ctx context.Context) error {
 	for _, ack := range batch.acks {
 		select {
 		case err := <-ack.Err():
-			return err
+			if err != nil {
+				return err
+			}
 		default:
 		}
 	}
