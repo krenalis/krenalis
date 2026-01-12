@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from 'react';
+import React, { useState, ReactNode, useEffect } from 'react';
 import './Fullscreen.css';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -12,6 +12,15 @@ interface FullscreenProps {
 
 const Fullscreen = ({ onClose, isLoading, className, children }: FullscreenProps) => {
 	const [isOpen, setIsOpen] = useState(true);
+
+	useEffect(() => {
+		const html = document.querySelector('html');
+		if (isOpen) {
+			html.style.overflow = 'hidden';
+		} else {
+			html.style.overflow = 'auto';
+		}
+	}, [isOpen]);
 
 	const onAnimationEnd = () => {
 		if (!isOpen) {

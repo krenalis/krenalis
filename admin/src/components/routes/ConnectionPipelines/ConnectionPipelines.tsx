@@ -59,9 +59,11 @@ const ConnectionPipelines = () => {
 		} else {
 			name = pipelineType.target.toLowerCase();
 		}
-		const newLocation = `connections/${connection.id}/pipelines/add/${name}`;
 		setIsPipelineTypesDialogOpen(false);
-		redirect(newLocation);
+		const newLocation = `connections/${connection.id}/pipelines/add/${name}`;
+		setTimeout(() => {
+			redirect(newLocation);
+		}, 150);
 	};
 
 	const onSelectPipeline = (pipeline: Pipeline) => {

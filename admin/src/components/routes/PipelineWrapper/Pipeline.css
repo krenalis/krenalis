@@ -164,6 +164,7 @@
 
 	.fullscreen-transformation {
 		top: 100px !important;
+		height: calc(100% - 100px) !important;
 	}
 }
 
