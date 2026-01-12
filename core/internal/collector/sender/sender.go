@@ -21,8 +21,6 @@ import (
 	"github.com/meergo/meergo/core/internal/metrics"
 	toolsMetrics "github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
-
-	"github.com/google/uuid"
 )
 
 const asserts = false // enable during development for assertions
@@ -30,18 +28,10 @@ const traces = false  // set to true to trace execution flow
 
 var tracesMu sync.Mutex
 
-// uuidDeterministicNS defines the namespace used to generate deterministic UUIDv5 values.
-var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
-
 // postponeMarker is assigned to a user when an iterator postpones one of its
 // events. It prevents further events from that user being consumed by another
 // iterator until the postponed event is processed, preserving event order.
 var postponeMarker = new(iterator)
-
-type Ack struct {
-	Pipeline int
-	Event    string
-}
 
 type Application interface {
 
@@ -497,7 +487,7 @@ func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
 			}
 			u.expectedSeq++
 			// Append the event to the ready queue unless it has been discarded.
-			if u.waiting[last] != nil {
+			if u.waiting[last].user != nil {
 				s.appendToReadyQueue(u.waiting[last])
 			}
 			u.waiting[last] = nil
@@ -730,8 +720,8 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		if asserts {
 			s._assertAvailable(s.available)
 		}
+		s.mu.Unlock()
 	}
-	s.mu.Unlock()
 
 	for key, count := range metricsCounts {
 		trace("Sender.send: collect metric for iterator %p with pipeline %d, count %d, and error %#v\n", iter, key.pipeline, count, key.err)

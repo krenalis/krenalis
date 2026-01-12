@@ -33,8 +33,8 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var errPayloadTooLarge = errors.BadRequest("body too large")
-var errReadBody = errors.BadRequest("failed to read body")
+var errPayloadTooLarge = errors.New("body too large")
+var errReadBody = errors.New("failed to read body")
 
 var (
 	ip0  = netip.AddrFrom4([4]byte{})                   // 0.0.0.0
@@ -1115,8 +1115,8 @@ func (d *decoder) parseRemoteAddr(s string) error {
 	return nil
 }
 
-// errRead checks if the provided error is a *jsontext.SyntacticError. If it is,
-// returns *errors.BadRequestError; otherwise, it returns errReadBody.
+// errRead checks whether the provided error is a JSON parsing error. If it is,
+// it returns *errors.BadRequestError; otherwise, it returns errReadBody.
 func errRead(err error) error {
 	if _, ok := err.(*json.SyntaxError); ok {
 		return errors.BadRequest("error parsing the request body as JSON: %s", err)

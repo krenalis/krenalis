@@ -5,7 +5,7 @@
 
 services:
   meergo:
-    image: meergocdp/meergo:v0.19.0
+    image: meergocdp/meergo:v0.20.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
@@ -57,7 +57,7 @@ services:
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
-      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/storage
+      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
       MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
 
       # This configures the File System connector to access the mounted directory
@@ -88,6 +88,7 @@ services:
     # settings to point to the mount point.
     volumes:
       - ./storage:/var/meergo/storage
+      - transformation-functions:/var/meergo/transformation-functions
     depends_on:
       db:
         condition: service_healthy
@@ -125,3 +126,4 @@ services:
 volumes:
   db:
   warehouse:
+  transformation-functions:

@@ -136,7 +136,7 @@ func TestEvents(t *testing.T) {
 	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 	const expectedProfilesTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedProfilesTotal != total {
-		t.Fatalf("expected %d peofiles, got %d", expectedProfilesTotal, total)
+		t.Fatalf("expected %d profiles, got %d", expectedProfilesTotal, total)
 	}
 	var mpid uuid.UUID
 	for _, profile := range profiles {

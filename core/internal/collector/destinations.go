@@ -139,6 +139,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 				d.mu.Lock()
 				pipelines, ok := d.pipelines[connection]
 				if !ok {
+					d.mu.Unlock()
 					continue
 				}
 				for _, dp = range pipelines {
@@ -208,7 +209,7 @@ func (d *destinations) onDeleteConnection(n state.DeleteConnection) {
 		return
 	}
 	delete(d.senders, c.ID)
-	pipelines := d.pipelines[c.ID]
+	pipelines := d.pipelines[c.ID] // No lock needed for reads while the state is frozen.
 	d.mu.Lock()
 	delete(d.pipelines, c.ID)
 	d.mu.Unlock()
@@ -231,7 +232,7 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 	}
 	var i int
 	var dp *destinationPipeline
-	pipelines := d.pipelines[c.ID]
+	pipelines := d.pipelines[c.ID] // No lock needed for reads while the state is frozen.
 	for i, dp = range pipelines {
 		if dp.id == p.ID {
 			break
@@ -259,7 +260,7 @@ func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
 			continue
 		}
 		delete(d.senders, c.ID)
-		pipelines = append(pipelines, d.pipelines[c.ID]...)
+		pipelines = append(pipelines, d.pipelines[c.ID]...) // No lock needed for reads while the state is frozen.
 		d.mu.Lock()
 		delete(d.pipelines, c.ID)
 		d.mu.Unlock()
@@ -295,7 +296,7 @@ func (d *destinations) onSetPipelineStatus(n state.SetPipelineStatus) {
 	if c.Role != state.Destination {
 		return
 	}
-	pipelines := d.pipelines[c.ID]
+	pipelines := d.pipelines[c.ID] // No lock needed for reads while the state is frozen.
 	if n.Enabled {
 		// Add the pipeline.
 		pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
@@ -332,7 +333,7 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 	if c.Role != state.Destination {
 		return
 	}
-	pipelines := d.pipelines[c.ID]
+	pipelines := d.pipelines[c.ID] // No lock needed for reads while the state is frozen.
 	var current *destinationPipeline
 	var index int
 	for i, dp := range pipelines {
