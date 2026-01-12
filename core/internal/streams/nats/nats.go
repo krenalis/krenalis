@@ -425,7 +425,7 @@ type stream struct {
 
 // Batch returns a batch publisher for the stream.
 func (s *stream) Batch() streams.BatchPublisher {
-	return &batch{conn: s.c, acks: make([]jetstream.PubAckFuture, 0, 1)}
+	return &batch{conn: s.c, futures: make([]jetstream.PubAckFuture, 0, 1)}
 }
 
 // Consume returns a buffered channel of the given size that streams events for
@@ -534,8 +534,8 @@ func (c *consumer) Events() <-chan streams.Event {
 
 // batch implements the streams.Batch interface.
 type batch struct {
-	conn *connection
-	acks []jetstream.PubAckFuture
+	conn    *connection
+	futures []jetstream.PubAckFuture
 }
 
 // Done publishes all buffered events.
@@ -546,19 +546,15 @@ type batch struct {
 //
 // After Done returns, the BatchPublisher must not be reused.
 func (batch *batch) Done(ctx context.Context) error {
-	select {
-	case <-batch.conn.js.jetStream.PublishAsyncComplete():
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	// TODO(marco): ack.Err() creates a new channel for every call. Use jetstream.WithPublishAsyncErrHandler instead.
-	for _, ack := range batch.acks {
+	// TODO(marco): future.Ok() and future.Err() creates new channels for every call. Use jetstream.WithPublishAsyncErrHandler instead.
+	for _, future := range batch.futures {
 		select {
-		case err := <-ack.Err():
-			if err != nil {
-				return err
-			}
-		default:
+		case <-future.Ok():
+			// ok
+		case err := <-future.Err():
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 	return nil
@@ -573,14 +569,14 @@ func (batch *batch) Publish(pipelines []int, event map[string]any) error {
 		return err
 	}
 	for _, pipeline := range pipelines {
-		ack, err := batch.conn.js.jetStream.PublishMsgAsync(&nats.Msg{
+		future, err := batch.conn.js.jetStream.PublishMsgAsync(&nats.Msg{
 			Subject: "events.v1." + strconv.Itoa(pipeline) + "." + strconv.Itoa(shard),
 			Data:    data,
 		})
 		if err != nil {
 			return err
 		}
-		batch.acks = append(batch.acks, ack)
+		batch.futures = append(batch.futures, future)
 	}
 	return nil
 }
