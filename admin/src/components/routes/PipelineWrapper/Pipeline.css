@@ -1567,6 +1567,12 @@ inherit the disabled style */
 	font-family: var(--monospace-fonts);
 }
 
+.fullscreen-transformation__output-success,
+.fullscreen-transformation__output-error {
+	overflow-x: auto;
+	padding-bottom: 10px;
+}
+
 .fullscreen-transformation__output-error {
 	white-space: pre-wrap;
 	font-family: var(--monospace-fonts);
