@@ -745,6 +745,7 @@ func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 	}
 	stop := func() {
 		cancel()
+		delete(c.workers.cancels, pipeline.ID)
 		if pipeline.Target == state.TargetUser {
 			iw, _ := c.identityWriters.LoadAndDelete(pipeline.ID)
 			go func() {
@@ -754,10 +755,12 @@ func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 	}
 	if !pipeline.Enabled {
 		stop()
+		return
 	}
 	connection := pipeline.Connection()
 	if connection.Role == state.Destination && len(connection.LinkedConnections) == 0 {
 		stop()
+		return
 	}
 	if _, ok := c.state.Pipeline(pipeline.ID); !ok {
 		stop()
