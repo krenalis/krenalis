@@ -3248,8 +3248,21 @@ const TransformationProperty = ({
 	isOutMatchingProperty,
 	hideCheckbox = false,
 }: TransformationPropertyProps) => {
+	const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(false);
+
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
+
+	const descriptionRef = useRef(null);
+
+	useEffect(() => {
+		if (descriptionRef.current == null) {
+			return;
+		}
+		const el = descriptionRef.current;
+		const hasEllipsis = el.scrollWidth > el.clientWidth;
+		setShowDescriptionTooltip(hasEllipsis);
+	}, [descriptionRef.current]);
 
 	let path = property.name;
 	if (parentName) {
@@ -3332,6 +3345,15 @@ const TransformationProperty = ({
 			);
 			languageTypeLabel = 'JavaScript type';
 		}
+	}
+
+	let description = null;
+	if (property.description) {
+		description = (
+			<div className='fullscreen-transformation__property-description' ref={descriptionRef}>
+				{property.description}
+			</div>
+		);
 	}
 
 	return (
@@ -3423,11 +3445,14 @@ const TransformationProperty = ({
 									)}
 								</div>
 							</div>
-							{property.description && (
-								<div className='fullscreen-transformation__property-description'>
-									{property.description}
-								</div>
-							)}
+							{description != null &&
+								(showDescriptionTooltip ? (
+									<SlTooltip content={property.description} hoist={true}>
+										{description}
+									</SlTooltip>
+								) : (
+									description
+								))}
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (

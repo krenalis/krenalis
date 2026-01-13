@@ -30,12 +30,13 @@
 
 .section--annotated .section__heading {
 	width: 20%;
-	min-width: 20%;
+	min-width: 0;
 }
 
 .section--annotated .section__content {
 	margin-top: 0;
 	width: 80%;
+	min-width: 0;
 }
 
 @media (max-width: 1200px) {
