@@ -1001,6 +1001,7 @@ const TransformationBox = ({
 										successLabel='✓ Copied'
 										errorLabel='Copying to clipboard is not supported by your browser'
 										hoist={true}
+										tabIndex={-1}
 									/>
 									<span className='pipeline__transformation-output-property-key'>
 										{property.full.name}
