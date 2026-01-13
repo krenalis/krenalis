@@ -2301,7 +2301,7 @@ const FullscreenTransformation = ({
 	const outputSchemaTabLabel = isAppEventsExport ? 'Parameters' : 'Schema';
 	return (
 		<div
-			className={`fullscreen-transformation${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
+			className={`fullscreen-transformation${' fullscreen-transformation--' + transformationType}${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
 		>
 			<SlSplitPanel style={{ '--min': '70%', '--max': 'calc(100% - 10px)' } as React.CSSProperties}>
 				<div className='fullscreen-transformation__left-panel' slot='start'>
