@@ -343,6 +343,7 @@ func (c *Meergo) Start() {
 			"MEERGO_DB_PASSWORD=" + testsSettings.Database.Password,
 			"MEERGO_DB_DATABASE=" + testsSettings.Database.Database,
 			"MEERGO_DB_SCHEMA=" + testsSettings.Database.Schema,
+			"MEERGO_TRANSFORMERS_PROVIDER=local",
 			"MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
 			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,

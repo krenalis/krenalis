@@ -349,25 +349,27 @@ func parseEnvSettings() (*Settings, error) {
 		settings.MaxMindDBPath = path
 	}
 
-	settings.Transformers.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
-	settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
-	settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_REGION")
-	settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ROLE")
-	settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
-	settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")
-	settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME")
-	settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER")
-
-	settings.Transformers.Local.NodeJSExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE")
-	settings.Transformers.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")
-	settings.Transformers.Local.FunctionsDir = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR")
-	if (settings.Transformers.Local.NodeJSExecutable != "" || settings.Transformers.Local.PythonExecutable != "") &&
-		(settings.Transformers.Lambda.NodeJS.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "") {
-		return nil, fmt.Errorf("invalid configuration: cannot set both Lambda and local transformers")
+	switch strings.ToLower(envVars.Get("MEERGO_TRANSFORMERS_PROVIDER")) {
+	case "":
+	case "local":
+		settings.Transformers.Local.NodeJSExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE")
+		settings.Transformers.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")
+		settings.Transformers.Local.FunctionsDir = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR")
+		settings.Transformers.Local.SudoUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER")
+		settings.Transformers.Local.DoasUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_DOAS_USER")
+	case "aws-lambda":
+		settings.Transformers.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
+		settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
+		settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_REGION")
+		settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ROLE")
+		settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
+		settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")
+		settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME")
+		settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER")
+	default:
+		return nil, fmt.Errorf("invalid MEERGO_TRANSFORMERS_PROVIDER: want one of local or aws-lambda")
 	}
-	settings.Transformers.Local.SudoUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER")
-	settings.Transformers.Local.DoasUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_DOAS_USER")
-	if settings.Transformers.Local.SudoUser != "" && settings.Transformers.Local.DoasUser != "" {
+	if envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER") != "" && envVars.Get("MEERGO_TRANSFORMERS_LOCAL_DOAS_USER") != "" {
 		return nil, fmt.Errorf("cannot specify a value for both MEERGO_TRANSFORMERS_LOCAL_SUDO_USER" +
 			" and MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: you must specify one of the two, or neither")
 	}

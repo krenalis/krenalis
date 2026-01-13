@@ -73,10 +73,12 @@ services:
 
       # AWS Lambda transformer.
       #
-      # Comment out the local transformer settings (defined above) and set the
+      # Set MEERGO_TRANSFORMERS_PROVIDER to aws-lambda and
+      # comment out the local transformer settings (defined above) and set the
       # values of these variables here to use the AWS Lambda transformer with
       # Meergo.
       # See the Meergo documentation about transformers for more details.
+      MEERGO_TRANSFORMERS_PROVIDER: local
       MEERGO_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_REGION:

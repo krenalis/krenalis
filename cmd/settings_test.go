@@ -1298,15 +1298,14 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("transformers conflict between local and Lambda", func(t *testing.T) {
+	t.Run("transformers provider invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE", "/usr/bin/node")
-		t.Setenv("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME", "nodejs18.x")
+		t.Setenv("MEERGO_TRANSFORMERS_PROVIDER", "unsupported")
 		_, err := parseEnvSettings()
 		if err == nil {
-			t.Fatalf("expected error for conflicting transformers, got nil")
+			t.Fatalf("expected error for invalid transformers provider, got nil")
 		}
-		want := "invalid configuration: cannot set both Lambda and local transformers"
+		want := "invalid MEERGO_TRANSFORMERS_PROVIDER: want one of local or aws-lambda"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1314,6 +1313,7 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("transformers local-only accepted", func(t *testing.T) {
 		setBaseline(t)
+		t.Setenv("MEERGO_TRANSFORMERS_PROVIDER", "local")
 		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE", "/usr/bin/node")
 		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for local-only transformers, got %v", err)
@@ -1322,6 +1322,7 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("transformers Lambda-only accepted", func(t *testing.T) {
 		setBaseline(t)
+		t.Setenv("MEERGO_TRANSFORMERS_PROVIDER", "aws-lambda")
 		t.Setenv("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME", "nodejs18.x")
 		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for Lambda-only transformers, got %v", err)
