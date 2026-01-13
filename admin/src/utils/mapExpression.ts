@@ -390,7 +390,10 @@ const mapExpressionArguments = (expr: string): Map<string, string> | null => {
 
 // buildMapExpression builds a map(...) string from an argument list.
 const buildMapExpression = (args: Map<string, string>): string => {
-	const serialized = Array.from(args.entries()).map(([k, v]) => JSON.stringify(k) + ',' + v);
+	const serialized = Array.from(args.entries())
+		.filter(([k, v]) => k.trim() !== '' || v.trim() !== '')
+		.map(([k, v]) => JSON.stringify(k) + ',' + v);
+
 	return `map(${serialized.join(',')})`;
 };
 
@@ -441,6 +444,11 @@ function runTests(): void {
 	console.assert(parseMapExpression('value["key"', 8) === null);
 	console.assert(buildMapExpression(m) === 'map("k1",foo,"k2",if(a,b,c) \'boo\',"k3",map("k", "v"))');
 }
+
+// Uncomment to run the tests in the browser console. No output in the console
+// means all assertions passed.
+//
+// runTests();
 
 export { parseMapExpression, mapExpressionArguments, buildMapExpression };
 export type { ExpressionFragment };
