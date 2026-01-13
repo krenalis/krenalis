@@ -1362,7 +1362,7 @@ const checkMapping = (
 	pipeline: TransformedPipeline,
 	pipelineType: TransformedPipelineType,
 ): TransformationPropertyInfo => {
-	const property = pipeline.transformation.mapping[path];
+	const property = pipeline.transformation?.mapping?.[path];
 	if (property == null) {
 		return {
 			isRequired: false,

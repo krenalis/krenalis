@@ -235,7 +235,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			}
 			setPipeline(p);
 		};
-		if (flatInputSchema != null && transformationType === 'mappings') {
+		if (flatInputSchema != null && transformationType === 'mappings' && pipeline.transformation?.mapping != null) {
 			validateExpressions();
 		}
 	}, [flatInputSchema, transformationType]);
