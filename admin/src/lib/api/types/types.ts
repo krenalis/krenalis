@@ -88,12 +88,10 @@ interface DecimalType {
 
 interface DateTimeType {
 	kind: 'datetime';
-	layout?: string;
 }
 
 interface DateType {
 	kind: 'date';
-	layout?: string;
 }
 
 interface TimeType {
@@ -110,7 +108,6 @@ interface UUIDType {
 
 interface JSONType {
 	kind: 'json';
-	maxLength?: number;
 }
 
 interface IPType {
@@ -122,7 +119,7 @@ interface ArrayType {
 	minElements?: number;
 	maxElements?: number;
 	uniqueElements?: boolean;
-	elementType?: Type;
+	elementType: Type;
 }
 
 interface ObjectType {
@@ -132,7 +129,7 @@ interface ObjectType {
 
 interface MapType {
 	kind: 'map';
-	elementType?: Type;
+	elementType: Type;
 }
 
 export default Type;

@@ -501,7 +501,6 @@
 	margin-left: var(--mapping-indentation);
 	position: relative;
 	font-size: 14px;
-	white-space: nowrap;
 	line-height: 0.8;
 	top: 2px;
 }
@@ -623,7 +622,7 @@
 }
 
 .pipeline__transformation-output-property-required--selected {
-	color: var(--sl-color-neutral-500);
+	color: var(--sl-color-neutral-700);
 }
 
 /* The output property must be disabled to avoid tab focus but it must not
@@ -1074,6 +1073,11 @@ inherit the disabled style */
 	min-width: 0;
 }
 
+.fullscreen-transformation__property-left-column {
+	max-width: 350px;
+	min-width: 80%;
+}
+
 .fullscreen-transformation__property-name {
 	font-family: var(--monospace-fonts);
 	overflow-wrap: anywhere;
@@ -1123,7 +1127,7 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-required--selected {
-	color: var(--sl-color-neutral-500);
+	color: var(--sl-color-neutral-700);
 }
 
 .fullscreen-transformation__property-type span:first-child {

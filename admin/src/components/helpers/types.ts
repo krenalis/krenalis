@@ -1,20 +1,63 @@
-import Type, { StringType } from '../../lib/api/types/types';
+import Type from '../../lib/api/types/types';
 
 function toMeergoStringType(type: Type, nullable?: boolean) {
 	let t: string;
 
-	if (type.kind === 'int') {
+	if (type.kind === 'string') {
+		t = `${type.kind}`;
+		if (type.values != null) {
+			t += ' (' + type.values.map((e) => '"' + e + '"').join(', ') + ')';
+		}
+		if (type.pattern != null) {
+			t += `, must match /${type.pattern}/`;
+		}
+		if (type.maxBytes != null) {
+			t += `, max ${type.maxBytes} bytes`;
+		}
+		if (type.maxLength != null) {
+			t += `, max ${type.maxLength} chars`;
+		}
+	} else if (type.kind === 'int') {
 		const label = type.unsigned ? 'unsigned int' : 'int';
 		t = `${label}(${type.bitSize})`;
+		if (type.minimum != null) {
+			t += `, min ${type.minimum}`;
+		}
+		if (type.maximum != null) {
+			t += `, max ${type.maximum}`;
+		}
 	} else if (type.kind === 'float') {
 		t = `${type.kind}(${type.bitSize})`;
+		if (type.real != null && type.real) {
+			t += ', real';
+		}
+		if (type.minimum != null) {
+			t += `, min ${type.minimum}`;
+		}
+		if (type.maximum != null) {
+			t += `, max ${type.maximum}`;
+		}
 	} else if (type.kind === 'decimal') {
-		t = `decimal(${type.precision}, ${type.scale || 0})`;
-	} else if (type.kind === 'array' || type.kind === 'map') {
+		t = `decimal(${type.precision},${type.scale || 0})`;
+		if (type.minimum != null) {
+			t += `, min ${type.minimum}`;
+		}
+		if (type.maximum != null) {
+			t += `, max ${type.maximum}`;
+		}
+	} else if (type.kind === 'array') {
 		t = `${type.kind} of ${toMeergoStringType(type.elementType)}`;
-	} else if ('values' in type) {
-		const typ = type as StringType;
-		t = type.kind + ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
+		if (type.minElements != null) {
+			t += `, min ${type.minElements} elements`;
+		}
+		if (type.maxElements != null) {
+			t += `, max ${type.maxElements} elements`;
+		}
+		if (type.uniqueElements != null && type.uniqueElements) {
+			t += `, unique elements`;
+		}
+	} else if (type.kind === 'map') {
+		t = `${type.kind} of ${toMeergoStringType(type.elementType)}`;
 	} else {
 		t = type.kind;
 	}
