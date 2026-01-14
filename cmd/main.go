@@ -125,7 +125,6 @@ func Main(assets fs.FS) {
 
 	err = Run(ctx, settings, assets, initDBIfEmpty, initDockerMember)
 	if err != nil {
-		slog.Error("meergo: error occurred running server", "error", err)
 		fatal(1, err.Error())
 	}
 }
