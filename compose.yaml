@@ -13,7 +13,6 @@ services:
     ports:
       - 2022:2022
     environment:
-
       # For information on how to configure these environment variables and
       # enable additional features, see:
       # https://www.meergo.com/docs/configuration/docker-compose-file.
@@ -43,9 +42,6 @@ services:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER:
 
-      # Telemetry.
-      MEERGO_TELEMETRY_LEVEL:
-
       # OAuth for HubSpot.
       MEERGO_OAUTH_HUBSPOT_CLIENT_ID:
       MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET:
@@ -53,6 +49,9 @@ services:
       # OAuth for Mailchimp.
       MEERGO_OAUTH_MAILCHIMP_CLIENT_ID:
       MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET:
+
+      # Telemetry.
+      MEERGO_TELEMETRY_LEVEL:
 
       # DO NOT CHANGE THESE SETTINGS unless you know what you are doing.
       MEERGO_DB_HOST: db
