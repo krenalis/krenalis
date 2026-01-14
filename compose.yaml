@@ -13,73 +13,25 @@ services:
     ports:
       - 2022:2022
     environment:
-      # Sets the telemetry level in Meergo. You can set this to "none" to
-      # completely disable telemetry. Default is "all". See the environment
-      # variables documentation for more details.
-      MEERGO_TELEMETRY_LEVEL:
+      # For information on how to configure these environment variables and
+      # enable additional features, see:
+      # https://www.meergo.com/docs/configuration/docker-compose-file.
 
-      # List of base URLs (comma-separated) from which Meergo retrieves external
-      # assets (as icons) related to connector and data warehouse brands.
-      MEERGO_EXTERNAL_ASSETS_URLS: https://assets.meergo.com/
-
-      # HubSpot.
-      # Set these environment variables to connect to your HubSpot app when
-      # running Meergo with Docker Compose. Otherwise, they can be left blank.
-      MEERGO_OAUTH_HUBSPOT_CLIENT_ID:
-      MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET:
-
-      # Mailchimp.
-      # Set these environment variables to connect to your Mailchimp app when
-      # running Meergo with Docker Compose. Otherwise, they can be left blank.
-      MEERGO_OAUTH_MAILCHIMP_CLIENT_ID:
-      MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET:
-
-      # This Docker Compose file is set up so that Meergo connects to the
-      # PostgreSQL database started via Docker Compose, which has already been
-      # initialized to work with Meergo. However, if you would like to use any
-      # other PostgreSQL instance (pre-initialized with the Meergo database),
-      # you can refer to it here. In case that such instance runs locally, you
-      # can refer to its host with 'host.docker.internal'.
-      #
-      # Note that these settings are not related to the data warehouse, where
-      # user data and events are stored, which is instead configured using the
-      # Meergo Admin console when creating a new workspace.
-      MEERGO_DB_HOST: db
-      MEERGO_DB_PORT: 5432
-      MEERGO_DB_USERNAME: meergo
-      MEERGO_DB_PASSWORD: meergo
-      MEERGO_DB_DATABASE: meergo
-      MEERGO_DB_SCHEMA:
-
-      # NATS.
-      MEERGO_NATS_URL: nats://nats:4222
-      MEERGO_NATS_USER: ruser
-      MEERGO_NATS_PASSWORD: T0pS3cr3t
-
-      # These settings configure Meergo to run optimally within Docker, so it is
-      # not recommended that you change them.
-      MEERGO_HTTP_HOST: meergo
-      MEERGO_HTTP_PORT: 2022
+      # Exposing Meergo externally.
       MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:2022/
+
+      # Email invitations and password recovery.
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
-      MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
-      MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
-      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
-      MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
+      MEERGO_MEMBER_EMAIL_FROM:
+      MEERGO_SMTP_HOST:
+      MEERGO_SMTP_PORT:
+      MEERGO_SMTP_USERNAME:
+      MEERGO_SMTP_PASSWORD:
 
-      # This configures the File System connector to access the mounted directory
-      # via Docker. If you change these settings, also change the volumes
-      # settings.
-      MEERGO_CONNECTOR_FILESYSTEM_ROOT: /var/meergo/storage
-      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
+      # Event geolocation enrichment.
+      MEERGO_MAXMIND_DB_PATH:
 
-      # AWS Lambda transformer.
-      #
-      # Set MEERGO_TRANSFORMERS_PROVIDER to aws-lambda and
-      # comment out the local transformer settings (defined above) and set the
-      # values of these variables here to use the AWS Lambda transformer with
-      # Meergo.
-      # See the Meergo documentation about transformers for more details.
+      # Transformations with AWS Lambda.
       MEERGO_TRANSFORMERS_PROVIDER: local
       MEERGO_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY:
@@ -90,11 +42,35 @@ services:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME:
       MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER:
 
-      # Enable the /metrics endpoint for Prometheus monitoring.
-      MEERGO_METRICS_ENABLED: true
+      # OAuth for HubSpot.
+      MEERGO_OAUTH_HUBSPOT_CLIENT_ID:
+      MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET:
 
-    # If you change the volumes settings, also change the File System env vars
-    # settings to point to the mount point.
+      # OAuth for Mailchimp.
+      MEERGO_OAUTH_MAILCHIMP_CLIENT_ID:
+      MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET:
+
+      # Telemetry.
+      MEERGO_TELEMETRY_LEVEL:
+
+      # DO NOT CHANGE THESE SETTINGS unless you know what you are doing.
+      MEERGO_HTTP_HOST: meergo
+      MEERGO_DB_HOST: db
+      MEERGO_DB_PORT: 5432
+      MEERGO_DB_USERNAME: meergo
+      MEERGO_DB_PASSWORD: meergo
+      MEERGO_DB_DATABASE: meergo
+      MEERGO_NATS_URL: nats://nats:4222
+      MEERGO_NATS_USER: ruser
+      MEERGO_NATS_PASSWORD: T0pS3cr3t
+      MEERGO_METRICS_ENABLED: true
+      MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
+      MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
+      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
+      MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
+      MEERGO_CONNECTOR_FILESYSTEM_ROOT: /var/meergo/storage
+      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
+
     volumes:
       - ./storage:/var/meergo/storage
       - transformation-functions:/var/meergo/transformation-functions
