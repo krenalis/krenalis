@@ -18,7 +18,7 @@ services:
       # https://www.meergo.com/docs/configuration/docker-compose-file.
 
       # Exposing Meergo externally.
-      MEERGO_HTTP_EXTERNAL_URL:
+      MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:2022/
 
       # Email invitations and password recovery.
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
@@ -54,6 +54,7 @@ services:
       MEERGO_TELEMETRY_LEVEL:
 
       # DO NOT CHANGE THESE SETTINGS unless you know what you are doing.
+      MEERGO_HTTP_HOST: meergo
       MEERGO_DB_HOST: db
       MEERGO_DB_PORT: 5432
       MEERGO_DB_USERNAME: meergo
