@@ -61,6 +61,7 @@ services:
       MEERGO_NATS_URL: nats://nats:4222
       MEERGO_NATS_USER: ruser
       MEERGO_NATS_PASSWORD: T0pS3cr3t
+      MEERGO_METRICS_ENABLED: true
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
@@ -68,19 +69,6 @@ services:
       MEERGO_CONNECTOR_FILESYSTEM_ROOT: /var/meergo/storage
       MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
 
-      # AWS Lambda transformer.
-      #
-      # Set MEERGO_TRANSFORMERS_PROVIDER to aws-lambda and
-      # comment out the local transformer settings (defined above) and set the
-      # values of these variables here to use the AWS Lambda transformer with
-      # Meergo.
-      # See the Meergo documentation about transformers for more details.
-
-      # Enable the /metrics endpoint for Prometheus monitoring.
-      MEERGO_METRICS_ENABLED: true
-
-    # If you change the volumes settings, also change the File System env vars
-    # settings to point to the mount point.
     volumes:
       - ./storage:/var/meergo/storage
       - transformation-functions:/var/meergo/transformation-functions
