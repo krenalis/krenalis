@@ -88,8 +88,6 @@ services:
         condition: service_healthy
       warehouse:
         condition: service_healthy
-      nats:
-        condition: service_healthy
 
   db:
     image: postgres:18.1-alpine3.23
@@ -121,12 +119,7 @@ services:
 
   nats:
     image: nats:2.12-alpine3.22
-    command: --jetstream --store_dir /var/lib/nats/jetstream_storage -m 8222
-    healthcheck:
-      test: wget http://localhost:8222/healthz
-      interval: 2s
-      timeout: 2s
-      retries: 5
+    command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
 
