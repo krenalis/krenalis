@@ -319,7 +319,10 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Init the datastore.
-	core.datastore = datastore.New(core.state, core.metrics)
+	core.datastore, err = datastore.New(core.state, core.metrics)
+	if err != nil {
+		return nil, fmt.Errorf("core: cannot init the datastore: %s", err)
+	}
 	defer func() {
 		if err != nil {
 			core.datastore.Close()

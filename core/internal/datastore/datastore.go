@@ -45,7 +45,7 @@ type Datastore struct {
 }
 
 // New returns a *Datastore instance.
-func New(st *state.State, metrics *metrics.Collector) *Datastore {
+func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 	ds := &Datastore{
 		state:   st,
 		store:   map[int]*Store{},
@@ -64,13 +64,13 @@ func New(st *state.State, metrics *metrics.Collector) *Datastore {
 	for _, ws := range st.Workspaces() {
 		store, err := newStore(ds, ws)
 		if err != nil {
-			slog.Error("core/datastore: cannot create a store", "error", err)
-			continue
+			st.Unfreeze()
+			return nil, fmt.Errorf("cannot create store for workspace %d: %s", ws.ID, err)
 		}
 		ds.store[ws.ID] = store
 	}
 	st.Unfreeze()
-	return ds
+	return ds, nil
 }
 
 // CanInitialize indicates whether the warehouse with the provided name and
