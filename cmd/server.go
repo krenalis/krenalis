@@ -256,7 +256,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			"%s"+
 			"├─ REST API: %s\n"+
 			"└─ Event ingestion endpoint: %s\n\n"+
-			"> Admin console: %s",
+			" > Admin console: %s\n\n",
 		addr,
 		metricsLine,
 		settings.HTTP.ExternalURL+"v1/",
