@@ -17,6 +17,7 @@ services:
 
       # Exposing Meergo externally.
       MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:2022/
+      MEERGO_METRICS_ENABLED: true
 
       # Email invitations and password recovery.
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
@@ -61,7 +62,6 @@ services:
       MEERGO_NATS_URL: nats://nats:4222
       MEERGO_NATS_USER: ruser
       MEERGO_NATS_PASSWORD: T0pS3cr3t
-      MEERGO_METRICS_ENABLED: true
       MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
