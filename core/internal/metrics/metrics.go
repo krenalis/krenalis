@@ -404,7 +404,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 	var hasErrors bool
 
 	c.buf.Reset()
-	c.buf.WriteString("WITH t AS (\n\tVALUES ")
+	c.buf.WriteString("WITH t(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5) AS (\n\tVALUES ")
 	i := 0
 	for pipeline, m := range metrics {
 		hasErrors = hasErrors || len(m.errors) > 0
@@ -440,7 +440,8 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 
 		c.buf.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
 			`(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
-			` SELECT * FROM t ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
+			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM pipelines p WHERE p.id = t.pipeline)` +
+			` ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
 			`passed_1 = m.passed_1 + EXCLUDED.passed_1, ` +
 			`passed_2 = m.passed_2 + EXCLUDED.passed_2, ` +
@@ -476,7 +477,8 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 	}
 
 	c.buf.Reset()
-	c.buf.WriteString("INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message) VALUES ")
+	c.buf.WriteString(`INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message)` +
+		` SELECT t.* FROM (VALUES `)
 	i = 0
 	for pipeline, m := range metrics {
 		for _, err := range m.errors {
@@ -497,6 +499,8 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			i++
 		}
 	}
+	c.buf.WriteString(`) AS t(pipeline, timeslot, step, count, message)` +
+		` JOIN pipelines p ON p.id = t.pipeline`)
 	query := c.buf.String()
 
 	var loggedMsg string
