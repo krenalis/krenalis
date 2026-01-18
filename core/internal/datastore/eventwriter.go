@@ -49,12 +49,8 @@ func newEventWriter(store *Store) *EventWriter {
 }
 
 // Close closes the event writer.
-func (ew *EventWriter) Close(ctx context.Context) {
-	stop := context.AfterFunc(ctx, func() {
-		ew.close.cancelCtx()
-	})
-	ew.flush()
-	stop()
+func (ew *EventWriter) Close() {
+	ew.close.cancelCtx()
 }
 
 // Write writes an event to the store.

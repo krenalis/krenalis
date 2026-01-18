@@ -137,7 +137,10 @@ func (c *Collector) Close() {
 		cancel()
 	}
 	c.workers.Wait()
-	return
+	c.eventWriters.Range(func(_, ew any) bool {
+		ew.(*datastore.EventWriter).Close()
+		return true
+	})
 }
 
 // Observer returns the observer for the given workspace, or nil if the
@@ -275,7 +278,6 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
 	c.observers.Delete(ws.ID)
-	c.eventWriters.Delete(ws.ID)
 	for _, connection := range ws.Connections() {
 		if connection.LinkedConnections == nil {
 			continue
@@ -284,6 +286,8 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 			c.stopPipelineWorker(pipeline)
 		}
 	}
+	ew, _ := c.eventWriters.LoadAndDelete(ws.ID)
+	ew.(*datastore.EventWriter).Close()
 }
 
 // onLinkConnection is called when two unlinked connections are linked.
