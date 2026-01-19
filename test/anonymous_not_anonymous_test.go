@@ -91,8 +91,6 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
 	})
 
-	c.RunIdentityResolution()
-
 	// Wait for the 2 identities to be imported successfully.
 	attempts := 0
 	var identities []meergotester.Identity
@@ -108,6 +106,8 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
+
+	c.RunIdentityResolution()
 
 	var pipeline1Found, pipeline2Found bool
 	for _, identity := range identities {
