@@ -85,13 +85,13 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 
 	// Start the flusher.
 	conf := flusherConf{
-		QueueSize:        8192,
-		BatchSize:        5000,
-		MaxBatchSize:     25000,
-		MinFlushInterval: 250 * time.Millisecond,
-		MaxFlushLatency:  10 * time.Second,
-		IdleFlushDelay:   750 * time.Millisecond,
-		RateAlpha:        0.4,
+		QueueSize:        32768,
+		BatchSize:        20000,
+		MaxBatchSize:     100000,
+		MinFlushInterval: 500 * time.Millisecond,
+		MaxFlushLatency:  15 * time.Second,
+		IdleFlushDelay:   2 * time.Second,
+		RateAlpha:        0.3,
 	}
 	identities := make(chan flusherRow[map[string]any], conf.QueueSize)
 	w.identities = identities
