@@ -117,7 +117,16 @@ services:
   prometheus:
     image: prom/prometheus
     volumes:
-      - prometheus-docker-compose.yml:/etc/prometheus/prometheus.yml
+      - ./docker-compose-monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./docker-compose-monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/
+      - ./docker-compose-monitoring/grafana/datasources:/etc/grafana/provisioning/datasources/
+      - ./docker-compose-monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
 
 volumes:
   db:
