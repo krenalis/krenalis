@@ -159,7 +159,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 		event := events[i]
 		id, _ := event.Attributes["userId"].(string)
 		// Write the identity on the data warehouse.
-		err = iw.writer.Write(datastore.Identity{
+		err = iw.writer.Write(ctx, datastore.Identity{
 			ID:          id,
 			AnonymousID: event.Attributes["anonymousId"].(string),
 			Attributes:  record.Attributes,
@@ -173,7 +173,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 // writeDirect writes the identity without performing any transformation.
 func (iw *identityWriter) writeDirect(event streams.Event) error {
 	id, _ := event.Attributes["userId"].(string)
-	return iw.writer.Write(datastore.Identity{
+	return iw.writer.Write(context.Background(), datastore.Identity{
 		ID:          id,
 		AnonymousID: event.Attributes["anonymousId"].(string),
 		Attributes:  map[string]any{},

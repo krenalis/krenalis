@@ -13,7 +13,6 @@ import (
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
@@ -27,22 +26,15 @@ type EventIdentityWriter struct {
 	pipeline   int
 	connection int
 	columns    []warehouses.Column
+	identities chan<- flusherRow[map[string]any]
+	flusher    *flusher[map[string]any]
 
 	mu        sync.Mutex
 	pipelines map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
 	aligned   bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
 	flatter   *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
-	index     map[identityKey]int
-	rows      []map[string]any
-	acks      []streams.Ack
-	timer     *time.Timer
 
-	close struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		atomic.Bool
-		sync.WaitGroup
-	}
+	closed atomic.Bool
 }
 
 // newEventIdentityWriter returns an identity writer for writing user
@@ -53,111 +45,84 @@ type EventIdentityWriter struct {
 func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 
 	// Initialize the EventIdentityWriter.
-	iw := &EventIdentityWriter{
+	w := &EventIdentityWriter{
 		store:     store,
 		pipeline:  pipelineID,
-		index:     map[identityKey]int{},
 		pipelines: map[int]struct{}{},
 	}
 
 	pipeline, _ := store.ds.state.Pipeline(pipelineID)
 	connection := pipeline.Connection()
-	iw.connection = connection.ID
+	w.connection = connection.ID
 	if pipeline.OutSchema.Valid() {
 		workspace := connection.Workspace()
 		err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
-			iw.aligned = true
-			iw.flatter = newFlatter(pipeline.OutSchema, store.identityColumnByProperty())
+			w.aligned = true
+			w.flatter = newFlatter(pipeline.OutSchema, store.identityColumnByProperty())
 		}
 	} else {
 		// The pipeline's out schema is invalid when importing identities from
 		// events without any transformation in the pipeline.
-		iw.aligned = true
+		w.aligned = true
 	}
 	for _, p := range connection.Pipelines() {
-		iw.pipelines[p.ID] = struct{}{}
+		w.pipelines[p.ID] = struct{}{}
 	}
 	store.mu.Lock()
-	store.eventIdentityWriters[pipeline.ID] = iw
+	store.eventIdentityWriters[pipeline.ID] = w
 	store.mu.Unlock()
 
-	iw.columns = make([]warehouses.Column, 7)
-	iw.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
-	iw.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
-	iw.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
-	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
-	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
-	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	iw.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
+	w.columns = make([]warehouses.Column, 7)
+	w.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	w.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
+	w.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
+	w.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	w.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
+	w.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
+	w.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
+	w.columns = appendColumnsFromProperties(w.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
-	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
+	// Start the flusher.
+	conf := flusherConf{
+		QueueSize:        8192,
+		BatchSize:        5000,
+		MaxBatchSize:     25000,
+		MinFlushInterval: 250 * time.Millisecond,
+		MaxFlushLatency:  10 * time.Second,
+		IdleFlushDelay:   750 * time.Millisecond,
+		RateAlpha:        0.4,
+	}
+	identities := make(chan flusherRow[map[string]any], conf.QueueSize)
+	w.identities = identities
+	w.flusher = newFlusher(store, identities, w.flush, conf)
 
-	return iw
+	return w
 }
 
-// Close closes the Writer, ensuring the completion of all pending or ongoing
-// write operations. In the event of a canceled context, it interrupts ongoing
-// writes, discards pending ones, and returns.
+// Close closes the EventWriter. It panics if it has been already closed.
 //
-// If the writer is already closed, it does nothing and returns immediately.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a
-// *datastore.UnavailableError error.
-//
-// TODO(Gianluca): if these errors returned from Close seem strange, it's
-// because we still need to discuss the issue
-// https://github.com/meergo/meergo/issues/1224 and understand precisely what
-// model we want to implement for the operations and compatible methods.
-//
-// It must be called on a frozen state.
-func (iw *EventIdentityWriter) Close(ctx context.Context) error {
-	if iw.close.Load() {
-		return nil
+// When Close is called, no other calls to EventWriter's methods should be in
+// progress and no other shall be made.
+func (w *EventIdentityWriter) Close(ctx context.Context) error {
+	if w.closed.Swap(true) {
+		panic("EventIdentityWriter already closed")
 	}
-	ctx, done, err := iw.store.mc.StartOperation(ctx, normalMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	// Mark as closed and return if it was already closed in the meantime.
-	if iw.close.Swap(true) {
-		return nil
-	}
-	iw.store.mu.Lock()
-	delete(iw.store.eventIdentityWriters, iw.pipeline)
-	iw.store.mu.Unlock()
-	// Cancel the flushes if the context is canceled.
-	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
-	defer stop()
-	// Wait for the flushes and method calls to terminate.
-	iw.close.Wait()
-	// Perform a final flush.
-	iw.mu.Lock()
-	iw.flush()
-	iw.mu.Unlock()
-	iw.close.Wait()
-	return nil
+	err := w.flusher.Close(ctx)
+	w.store.mu.Lock()
+	delete(w.store.eventIdentityWriters, w.pipeline)
+	w.store.mu.Unlock()
+	return err
 }
 
 // Write writes an identity. If a valid profile schema has been provided, the
 // attributes must comply with it. It returns immediately, deferring the
 // validation of the attributes and the actual write operation to a later time.
 //
-// If the pipeline of iw does not exist anymore, returns an error.
-//
-// It panics if called on a closed writer.
-func (iw *EventIdentityWriter) Write(identity Identity, ack streams.Ack) error {
-	if iw.close.Load() {
-		panic("call Write on a closed identity writer")
-	}
+// If the pipeline of w does not exist anymore, returns an error.
+func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack streams.Ack) error {
 
-	metrics.Increment("EventIdentityWriter.Write.calls", 1)
-
-	key := identityKey{pipeline: iw.pipeline}
+	key := identityKey{pipeline: w.pipeline}
 	if identity.ID == "" {
 		key.isAnonymous = true
 		key.identityID = identity.AnonymousID
@@ -165,11 +130,11 @@ func (iw *EventIdentityWriter) Write(identity Identity, ack streams.Ack) error {
 		key.identityID = identity.ID
 	}
 
-	iw.mu.Lock()
-	pipelines := iw.pipelines
-	aligned := iw.aligned
-	flatter := iw.flatter
-	iw.mu.Unlock()
+	w.mu.Lock()
+	pipelines := w.pipelines
+	aligned := w.aligned
+	flatter := w.flatter
+	w.mu.Unlock()
 
 	if pipelines == nil {
 		return ErrPipelineNotExist
@@ -194,10 +159,15 @@ func (iw *EventIdentityWriter) Write(identity Identity, ack streams.Ack) error {
 				"_pipeline":     key.pipeline,
 				"_is_anonymous": true,
 				"_identity_id":  key.identityID,
-				"_connection":   iw.connection,
+				"_connection":   w.connection,
 				"_updated_at":   identity.UpdatedAt,
 			}
-			iw.appendRow(key, row, nil)
+			select {
+			case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row}:
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 	}
 
@@ -211,121 +181,68 @@ func (iw *EventIdentityWriter) Write(identity Identity, ack streams.Ack) error {
 	row["_pipeline"] = key.pipeline
 	row["_is_anonymous"] = key.isAnonymous
 	row["_identity_id"] = key.identityID
-	row["_connection"] = iw.connection
+	row["_connection"] = w.connection
 	if !key.isAnonymous {
 		row["_anonymous_ids"] = []any{identity.AnonymousID}
 	}
 	row["_updated_at"] = identity.UpdatedAt
 
-	iw.appendRow(key, row, ack)
+	select {
+	case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row, ack: ack}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 
-	return nil
 }
 
-// appendRow appends a row to the rows or replaces an existing row with the same
-// key.
-func (iw *EventIdentityWriter) appendRow(key identityKey, row map[string]any, ack streams.Ack) {
-	iw.mu.Lock()
-	if ack != nil {
-		iw.acks = append(iw.acks, ack)
-	}
-	// If a row with the same key already exists, update that row rather than adding a duplicate.
-	if i, ok := iw.index[key]; ok {
-		iw.rows[i] = row
-		iw.mu.Unlock()
-		return
-	}
-	if len(iw.rows) == 0 {
-		iw.timer = time.AfterFunc(maxQueuedIdentityTime, func() {
-			iw.mu.Lock()
-			iw.flush()
-			iw.mu.Unlock()
-		})
-	}
-	iw.index[key] = len(iw.rows)
-	iw.rows = append(iw.rows, row)
-	if len(iw.rows) == maxQueuedIdentityRows {
-		iw.flush()
-	}
-	iw.mu.Unlock()
-}
-
-// flush flushes the rows, if any, into the data warehouse.
-// It must be called while holding the iw.mu mutex.
-func (iw *EventIdentityWriter) flush() {
-	metrics.Increment("EventIdentityWriter.flush.calls", 1)
-	if iw.rows == nil {
-		return
-	}
-	rows := iw.rows
-	iw.rows = nil
-	acks := iw.acks
-	iw.acks = nil
-	clear(iw.index)
-	iw.timer = nil
-	iw.close.Go(func() {
-		defer func() {
-			for _, ack := range acks {
-				ack()
-			}
-		}()
-		ctx, done, err := iw.store.mc.StartOperation(iw.close.ctx, normalMode)
-		if err != nil {
-			// Warehouse mode is not normal: discard identities.
-			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, len(acks), err.Error())
-			return
-		}
-		defer done()
-		err = iw.store.warehouse().MergeIdentities(ctx, iw.columns, rows)
-		if err != nil {
-			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, len(acks), err.Error())
-			return
-		}
-		iw.store.ds.metrics.FinalizePassed(iw.pipeline, len(acks))
-	})
+// flush writes the given identities.
+// It returns ctx.Err() on context cancellation.
+func (w *EventIdentityWriter) flush(ctx context.Context, identities []map[string]any) error {
+	return w.store.warehouse().MergeIdentities(ctx, w.columns, identities)
 }
 
 // onCreatePipeline is called when a pipeline of the connection of iw's pipeline
 // is created.
 //
 // The notification is propagated by the Store.onCreatePipeline method.
-func (iw *EventIdentityWriter) onCreatePipeline(n state.CreatePipeline) {
-	iw.mu.Lock()
-	if iw.pipelines != nil {
-		iw.pipelines[n.ID] = struct{}{}
+func (w *EventIdentityWriter) onCreatePipeline(n state.CreatePipeline) {
+	w.mu.Lock()
+	if w.pipelines != nil {
+		w.pipelines[n.ID] = struct{}{}
 	}
-	iw.mu.Unlock()
+	w.mu.Unlock()
 }
 
 // onDeleteConnection is called the connection of the iw's pipeline is deleted.
 //
 // The notification is propagated by the Store.onDeleteConnection method.
-func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
-	iw.mu.Lock()
-	iw.pipelines = nil
-	iw.mu.Unlock()
+func (w *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
+	w.mu.Lock()
+	w.pipelines = nil
+	w.mu.Unlock()
 }
 
 // onDeletePipeline is called when a pipeline of the connection of iw's pipeline
 // is deleted.
 //
 // The notification is propagated by the Store.onDeletePipeline method.
-func (iw *EventIdentityWriter) onDeletePipeline(n state.DeletePipeline) {
-	iw.mu.Lock()
-	if n.ID == iw.pipeline {
-		iw.pipelines = nil
+func (w *EventIdentityWriter) onDeletePipeline(n state.DeletePipeline) {
+	w.mu.Lock()
+	if n.ID == w.pipeline {
+		w.pipelines = nil
 	} else {
-		delete(iw.pipelines, n.ID)
+		delete(w.pipelines, n.ID)
 	}
-	iw.mu.Unlock()
+	w.mu.Unlock()
 }
 
 // onEndAlterProfileSchema is called when the alter of the profile schema of a
 // workspace ends.
 //
 // This notification is propagated by the Store.onEndAlterProfileSchema method.
-func (iw *EventIdentityWriter) onEndAlterProfileSchema(_ state.EndAlterProfileSchema) {
-	pipeline, ok := iw.store.ds.state.Pipeline(iw.pipeline)
+func (w *EventIdentityWriter) onEndAlterProfileSchema(_ state.EndAlterProfileSchema) {
+	pipeline, ok := w.store.ds.state.Pipeline(w.pipeline)
 	if !ok {
 		return
 	}
@@ -336,43 +253,43 @@ func (iw *EventIdentityWriter) onEndAlterProfileSchema(_ state.EndAlterProfileSc
 		err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			aligned = true
-			flatter = newFlatter(pipeline.OutSchema, iw.store.identityColumnByProperty())
+			flatter = newFlatter(pipeline.OutSchema, w.store.identityColumnByProperty())
 		}
 	} else {
 		// The pipeline's out schema is invalid when importing identities from
 		// events without any transformation in the pipeline.
 		aligned = true
 	}
-	iw.mu.Lock()
-	iw.aligned = aligned
-	iw.flatter = flatter
-	iw.mu.Unlock()
+	w.mu.Lock()
+	w.aligned = aligned
+	w.flatter = flatter
+	w.mu.Unlock()
 }
 
 // onUpdatePipeline is called when a pipeline of the connection of iw's pipeline
 // is updated.
 //
 // The notification is propagated by the Store.onUpdatePipeline method.
-func (iw *EventIdentityWriter) onUpdatePipeline(n state.UpdatePipeline) {
+func (w *EventIdentityWriter) onUpdatePipeline(n state.UpdatePipeline) {
 	var aligned bool
 	var flatter *flatter
 	if n.OutSchema.Valid() {
-		workspace, ok := iw.store.ds.state.Workspace(iw.store.workspace)
+		workspace, ok := w.store.ds.state.Workspace(w.store.workspace)
 		if !ok {
 			return
 		}
 		err := schemas.CheckAlignment(n.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			aligned = true
-			flatter = newFlatter(n.OutSchema, iw.store.identityColumnByProperty())
+			flatter = newFlatter(n.OutSchema, w.store.identityColumnByProperty())
 		}
 	} else {
 		// The pipeline's out schema is invalid when importing identities from
 		// events without any transformation in the pipeline.
 		aligned = true
 	}
-	iw.mu.Lock()
-	iw.aligned = aligned
-	iw.flatter = flatter
-	iw.mu.Unlock()
+	w.mu.Lock()
+	w.aligned = aligned
+	w.flatter = flatter
+	w.mu.Unlock()
 }
