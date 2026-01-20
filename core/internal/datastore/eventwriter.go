@@ -189,9 +189,7 @@ func (ew *EventWriter) Write(event streams.Event, pipeline int) {
 	row[56] = event.Attributes["messageId"]
 
 	// name
-	if eventContext, ok := event.Attributes["context"].(map[string]any); ok {
-		row[57] = eventContext["name"]
-	}
+	row[57] = event.Attributes["name"]
 
 	// properties
 	row[58] = event.Attributes["properties"]
