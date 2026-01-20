@@ -113,6 +113,21 @@ services:
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
+  
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./tools/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./tools/compose/grafana/provisioning:/etc/grafana/provisioning
+      - ./tools/compose/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./tools/compose/grafana/dashboards:/var/lib/grafana/dashboards
+    attach: false # set to 'true' to enable Grafana logging (note: it is very verbose)
 
 volumes:
   db:
