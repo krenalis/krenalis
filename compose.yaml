@@ -127,6 +127,7 @@ services:
       - ./docker-compose-monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/
       - ./docker-compose-monitoring/grafana/datasources:/etc/grafana/provisioning/datasources/
       - ./docker-compose-monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./docker-compose-monitoring/grafana/var-lib-dashboards:/var/lib/grafana/dashboards
 
 volumes:
   db:
