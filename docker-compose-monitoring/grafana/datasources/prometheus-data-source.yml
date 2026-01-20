@@ -13,4 +13,4 @@ datasources:
       prometheusVersion: 3.3.0
       cacheLevel: "Low"
       disableRecordingRules: false
-      timeInterval: 10s # Prometheus scrape interval
+      timeInterval: 10s
