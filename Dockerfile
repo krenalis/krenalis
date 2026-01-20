@@ -12,7 +12,7 @@ WORKDIR /meergo
 #
 # Adapted from https://hub.docker.com/_/golang.
 COPY go.mod go.sum ./
-RUN go mod download -x
+RUN go mod download
 
 # Note that this command copies all files present in the local repository,
 # including unversioned files, so a reproducible build can be achieved by
