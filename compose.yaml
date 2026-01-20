@@ -113,6 +113,11 @@ services:
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
+  
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - prometheus-docker-compose.yml:/etc/prometheus/prometheus.yml
 
 volumes:
   db:
