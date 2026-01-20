@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
@@ -21,8 +20,6 @@ import (
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
-
-const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued events the data warehouse
 
 // ErrDifferentWarehouse is an error indicating that the data warehouse being
 // attempted to connect to, during the change of the warehouse settings, is a
@@ -586,7 +583,6 @@ func (store *Store) UnsetIdentityProperties(ctx context.Context, pipeline int, p
 }
 
 // close closes the store.
-// It flushes the events and closes the data warehouse.
 // It panics if it has already been called.
 func (store *Store) close() error {
 	if store.closed.Swap(true) {

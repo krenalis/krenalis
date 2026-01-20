@@ -127,7 +127,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	if err != nil {
 		return err
 	}
-	defer core.Close()
+	defer core.Close(ctx)
 
 	// Destroy the NATS private key.
 	for i := range config.NATS.NKey {
