@@ -1,4 +1,4 @@
-# Docker Compose monitoring
+# Docker Compose monitoring tools
 
 This directory contains the files needed to monitor a running Meergo instance using Docker Compose (the development version, not the release version).
 
