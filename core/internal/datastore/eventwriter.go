@@ -155,8 +155,8 @@ func (ew *EventWriter) Write(event streams.Event, pipeline int) {
 
 		// referrer
 		if referrer, ok := eventContext["referrer"].(map[string]any); ok {
-			row[45] = referrer["name"]
-			row[46] = referrer["version"]
+			row[45] = referrer["id"]
+			row[46] = referrer["type"]
 		}
 
 		// screen
