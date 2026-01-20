@@ -127,6 +127,7 @@ services:
       - ./docker-compose-monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./docker-compose-monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
       - ./docker-compose-monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    attach: false # set to 'true' to enable Grafana logging (note: it is very verbose)
 
 volumes:
   db:
