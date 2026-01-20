@@ -129,7 +129,7 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 // Close closes the collector. When Close is called, no other calls to
 // collector's methods should be in progress and no other shall be made.
 // It panics if it has already been called.
-func (c *Collector) Close() {
+func (c *Collector) Close(ctx context.Context) {
 	if c.closed.Swap(true) {
 		panic("core/events/collector already closed")
 	}
@@ -138,7 +138,7 @@ func (c *Collector) Close() {
 	}
 	c.workers.Wait()
 	c.eventWriters.Range(func(_, ew any) bool {
-		ew.(*datastore.EventWriter).Close()
+		_ = ew.(*datastore.EventWriter).Close(ctx)
 		return true
 	})
 }
@@ -287,7 +287,10 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 		}
 	}
 	ew, _ := c.eventWriters.LoadAndDelete(ws.ID)
-	ew.(*datastore.EventWriter).Close()
+	// Close using a canceled context to abort any in-flight flush.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_ = ew.(*datastore.EventWriter).Close(ctx)
 }
 
 // onLinkConnection is called when two unlinked connections are linked.
@@ -405,7 +408,7 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.Eve
 			if !ok {
 				panic("consumer channel was closed before the worker terminated")
 			}
-			w.Write(event, pipeline)
+			_ = w.Write(ctx, event, pipeline)
 		case <-done:
 			consumer.Close()
 			return
