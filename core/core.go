@@ -350,7 +350,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 	defer func() {
 		if err != nil {
-			core.collector.Close()
+			core.collector.Close(context.Background())
 		}
 	}()
 
@@ -540,7 +540,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 // Close closes the Core. When Close is called, no other calls to Core's methods
 // should be in progress and no other shall be made.
 // It panics if it has already been called.
-func (core *Core) Close() {
+func (core *Core) Close(ctx context.Context) {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
@@ -562,7 +562,7 @@ func (core *Core) Close() {
 		}
 	}
 	// Close event collector, metrics, datastore, and state.
-	core.collector.Close()
+	core.collector.Close(ctx)
 	core.metrics.Close(context.Background())
 	core.datastore.Close()
 	core.state.Close()
