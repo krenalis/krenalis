@@ -1,9 +1,10 @@
 # TODO: document.
 
 include:
-  - compose-release.yaml
+  - compose.release.yaml
 
 services:
   meergo:
+    image: ""
     build:
       context: .
