@@ -3,6 +3,8 @@
 # ITSELF, which must be compiled and run separately as a process on the host
 # system.
 #
+# Running this Compose, you get:
+#
 # =============================================================================
 # Meergo PostgreSQL database
 # -----------------------------------------------------------------------------
@@ -27,20 +29,24 @@
 # NATS
 # -----------------------------------------------------------------------------
 #
-#     URL:                 nats://localhost:4222
-#     User:                ruser
-#     Password:            T0pS3cr3t
+#     URL:       nats://localhost:4222
+#     User:      ruser
+#     Password:  T0pS3cr3t
 #
 # =============================================================================
 # Prometheus
 # -----------------------------------------------------------------------------
 #
+#     Expected Meergo instance at:  http://localhost:2022
+#     Exposes metrics at:           http://localhost:9090
+#
 # =============================================================================
 # Grafana
 # -----------------------------------------------------------------------------
 #
-#     Panel:                         http://localhost:3000
-#     Dashboards:                    ./tools/compose/grafana/dashboards
+#     Panel:         http://localhost:3000
+#     Dashboards:    ./tools/compose/grafana/dashboards
+#     Data sources:  ./tools/compose/grafana/provisioning/datasources
 #
 # =============================================================================
 # Recommended env vars for your .env file:
@@ -49,6 +55,7 @@
 #     MEERGO_DB_DATABASE=meergo
 #     MEERGO_DB_PASSWORD=<your system username>
 #     MEERGO_DB_USERNAME=<your system username>
+#     MEERGO_DB_USERNAME_PORT=20000
 #     MEERGO_NATS_URL=nats://localhost:4222
 #     MEERGO_NATS_USER=ruser
 #     MEERGO_NATS_PASSWORD=T0pS3cr3t
