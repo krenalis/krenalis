@@ -1,16 +1,57 @@
-# TODO: document.
+# This Docker Compose is intended to run ONLY the INFRASTRUCTURE needed by
+# Meergo during development (database, NATS, monitoring, etc.), NOT MEERGO
+# ITSELF, which must be compiled and run separately as a process on the host
+# system.
+
+# Meergo DB
+#
+#     Username:                      <your system username>
+#     Password:                      no password set (auth method = trust)
+#     Port:                          22000
+#     Database:                      meergo
+#     Connecting from command line:  psql -h 127.0.0.1 -p 22000 meergo
+#
+# Meergo Warehouse
+#
+#     Username:                      <your system username>
+#     Password:                      no password set (auth method = trust)
+#     Port:                          22001
+#     Database:                      warehouse
+#     Connecting from command line:  psql -h 127.0.0.1 -p 22001 warehouse
+#
+# NATS instance ?
+# Prometheus
+#
+# Grafana
+#
+#     Panel:                         http://localhost:3000
+#     Dashboards:                    ./tools/compose/grafana/dashboards
+#
+# Recommended env vars for your .env file:
+#
+#     MEERGO_DB_DATABASE=meergo
+#     MEERGO_DB_PASSWORD=<your system username>
+#     MEERGO_DB_USERNAME=<your system username>
+#     MEERGO_NATS_URL=nats://localhost:4222
+#     MEERGO_NATS_USER=ruser
+#     MEERGO_NATS_PASSWORD=T0pS3cr3t
+
+name: meergo-dev
 
 services:
   db:
     image: postgres:18.1-alpine3.23
+    restart: always
+    ports:
+      - "22000:5432"
     environment:
-      POSTGRES_USER: meergo
-      POSTGRES_PASSWORD: meergo
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: ${USER}
       POSTGRES_DB: meergo
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meergo"]
+      test: ["CMD-SHELL", "pg_isready -U ${USER} meergo"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -18,11 +59,13 @@ services:
   warehouse:
     image: postgres:18.1-alpine3.23
     environment:
-      POSTGRES_USER: warehouse
-      POSTGRES_PASSWORD: warehouse
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: ${USER}
       POSTGRES_DB: warehouse
+    ports:
+      - "22001:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U warehouse"]
+      test: ["CMD-SHELL", "pg_isready -U ${USER} warehouse"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,12 +77,12 @@ services:
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
-  
+
   prometheus:
     image: prom/prometheus
     volumes:
       - ./tools/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    
+
   grafana:
     image: grafana/grafana
     ports:
