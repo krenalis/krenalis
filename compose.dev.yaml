@@ -2,32 +2,49 @@
 # Meergo during development (database, NATS, monitoring, etc.), NOT MEERGO
 # ITSELF, which must be compiled and run separately as a process on the host
 # system.
-
-# Meergo DB
 #
-#     Username:                      <your system username>
-#     Password:                      no password set (auth method = trust)
-#     Port:                          22000
-#     Database:                      meergo
-#     Connecting from command line:  psql -h 127.0.0.1 -p 22000 meergo
+# =============================================================================
+# Meergo PostgreSQL database
+# -----------------------------------------------------------------------------
 #
-# Meergo Warehouse
+#     Username:             <your system username>
+#     Password:             no password set (auth method = trust)
+#     Port:                 22000
+#     Database:             meergo
+#     Connecting from CLI:  psql -h 127.0.0.1 -p 22000 meergo
 #
-#     Username:                      <your system username>
-#     Password:                      no password set (auth method = trust)
-#     Port:                          22001
-#     Database:                      warehouse
-#     Connecting from command line:  psql -h 127.0.0.1 -p 22001 warehouse
+# =============================================================================
+# Meergo PostgreSQL warehouse
+# -----------------------------------------------------------------------------
 #
-# NATS instance ?
+#     Username:             <your system username>
+#     Password:             no password set (auth method = trust)
+#     Port:                 22001
+#     Database:             warehouse
+#     Connecting from CLI:  psql -h 127.0.0.1 -p 22001 warehouse
+#
+# =============================================================================
+# NATS
+# -----------------------------------------------------------------------------
+#
+#     URL:                 nats://localhost:4222
+#     User:                ruser
+#     Password:            T0pS3cr3t
+#
+# =============================================================================
 # Prometheus
+# -----------------------------------------------------------------------------
 #
+# =============================================================================
 # Grafana
+# -----------------------------------------------------------------------------
 #
 #     Panel:                         http://localhost:3000
 #     Dashboards:                    ./tools/compose/grafana/dashboards
 #
+# =============================================================================
 # Recommended env vars for your .env file:
+# -----------------------------------------------------------------------------
 #
 #     MEERGO_DB_DATABASE=meergo
 #     MEERGO_DB_PASSWORD=<your system username>
