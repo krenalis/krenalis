@@ -37,8 +37,9 @@
 # Prometheus
 # -----------------------------------------------------------------------------
 #
-#     Meergo must expose metrics at:  http://localhost:2022/metrics
-#     Exposes metrics at:             http://localhost:9090
+#     Scrapes metrics at:  http://localhost:2022/metrics
+#     Exposes:             http://localhost:9090
+#     Configuration:       ./tools/compose/prometheus/prometheus.yml
 #
 # =============================================================================
 # Grafana
