@@ -37,8 +37,8 @@
 # Prometheus
 # -----------------------------------------------------------------------------
 #
-#     Expected Meergo instance at:  http://localhost:2022
-#     Exposes metrics at:           http://localhost:9090
+#     Meergo must expose metrics at:  http://localhost:2022/metrics
+#     Exposes metrics at:             http://localhost:9090
 #
 # =============================================================================
 # Grafana
@@ -49,7 +49,7 @@
 #     Data sources:  ./tools/compose/grafana/provisioning/datasources
 #
 # =============================================================================
-# Recommended env vars for your .env file:
+# Recommended env vars in your Meergo .env file
 # -----------------------------------------------------------------------------
 #
 #     MEERGO_DB_DATABASE=meergo
@@ -75,7 +75,7 @@ services:
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USER} meergo"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${USER} meergo"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -89,7 +89,7 @@ services:
     ports:
       - "22001:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USER} warehouse"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${USER} warehouse"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -99,11 +99,15 @@ services:
   nats:
     image: nats:2.12-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
+    ports:
+      - 4222:4222
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
 
   prometheus:
     image: prom/prometheus
+    ports:
+      - 9090:9090
     volumes:
       - ./tools/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
