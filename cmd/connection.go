@@ -512,7 +512,11 @@ func (connection connection) EventWriteKeys(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return c.EventWriteKeys()
+	keys, err := c.EventWriteKeys()
+	if err != nil {
+		return nil, err
+	}
+	return map[string][]string{"keys": keys}, nil
 }
 
 // id authenticates the request and returns the connection identified by the

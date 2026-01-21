@@ -667,10 +667,12 @@ func (c *Meergo) WaitForRunsCompletionAllowFailed(conn int, runs ...int) {
 }
 
 func (c *Meergo) EventWriteKeys(conn int) []string {
-	var keys []string
+	var res struct {
+		Keys []string `json:"keys"`
+	}
 	path := fmt.Sprintf("/v1/connections/%d/event-write-keys", conn)
-	c.MustCall("GET", path, nil, &keys)
-	return keys
+	c.MustCall("GET", path, nil, &res)
+	return res.Keys
 }
 
 func (c *Meergo) Workspace() Workspace {
