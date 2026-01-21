@@ -371,11 +371,12 @@ class Connections {
 	};
 
 	eventWriteKeys = async (connection: number): Promise<string[]> => {
-		return await call(
+		const res = await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
 			http.GET,
 			this.workspaceID,
 		);
+		return res.keys;
 	};
 
 	createEventWriteKey = async (connection: number): Promise<string> => {

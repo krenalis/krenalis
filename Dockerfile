@@ -7,17 +7,25 @@ FROM golang:1.25-alpine3.23
 
 WORKDIR /meergo
 
-# Pre-copy/cache go.mod for pre-downloading dependencies and only re-downloading
-# them in subsequent builds if they change.
-#
-# Adapted from https://hub.docker.com/_/golang.
-COPY go.mod go.sum ./
-RUN go mod download
+# Copy the Admin files.
+RUN mkdir admin
+COPY admin/*.go admin
+COPY admin/package.json admin/package-lock.json admin/tsconfig.json admin
+COPY admin/src admin/src
+COPY admin/public admin/public/
+COPY admin/node_modules_vendor admin/node_modules_vendor/
+COPY admin/debugid admin/debugid/
 
-# Note that this command copies all files present in the local repository,
-# including unversioned files, so a reproducible build can be achieved by
-# checking out a new, freshly downloaded repository of Meergo.
-COPY ./ ./
+# Copy the Go files.
+COPY go.mod go.sum ./
+COPY vendor vendor
+COPY cmd cmd
+COPY connectors connectors
+COPY core core
+COPY tools tools
+COPY warehouses warehouses
+COPY *.go ./
+
 RUN go generate
 RUN go build -tags osusergo,netgo -trimpath
 
