@@ -102,12 +102,13 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 
 // Close closes the EventWriter. It panics if it has been already closed.
 //
-// When Close is called, no other calls to EventWriter's methods should be in
-// progress and no other shall be made.
+// When Close is called, no other calls to EventIdentityWriter's methods should
+// be in progress and no other shall be made.
 func (w *EventIdentityWriter) Close(ctx context.Context) error {
 	if w.closed.Swap(true) {
 		panic("EventIdentityWriter already closed")
 	}
+	// Close the flusher.
 	err := w.flusher.Close(ctx)
 	w.store.mu.Lock()
 	delete(w.store.eventIdentityWriters, w.pipeline)

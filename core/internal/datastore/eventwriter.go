@@ -222,6 +222,7 @@ func (w *EventWriter) Close(ctx context.Context) error {
 	if w.closed.Swap(true) {
 		panic("EventWriter already closed")
 	}
+	// Close the flusher.
 	return w.flusher.Close(ctx)
 }
 
