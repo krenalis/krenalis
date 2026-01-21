@@ -1,4 +1,4 @@
 scrape_configs:
   - job_name: "meergo"
     static_configs:
-      - targets: ["localhost:2022"]
+      - targets: ["host.docker.internal:2022"]

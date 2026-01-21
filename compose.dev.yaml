@@ -9,27 +9,27 @@
 # Meergo PostgreSQL database
 # -----------------------------------------------------------------------------
 #
-#     Username:             <your system username>
+#     Username:             meergo
 #     Password:             no password set (auth method = trust)
-#     Port:                 22000
+#     Port:                 5432
 #     Database:             meergo
-#     Connecting from CLI:  psql -h 127.0.0.1 -p 22000 meergo
+#     Connecting from CLI:  psql -h 127.0.0.2 -U meergo meergo
 #
 # =============================================================================
 # Meergo PostgreSQL warehouse
 # -----------------------------------------------------------------------------
 #
-#     Username:             <your system username>
+#     Username:             warehouse
 #     Password:             no password set (auth method = trust)
-#     Port:                 22001
+#     Port:                 5433
 #     Database:             warehouse
-#     Connecting from CLI:  psql -h 127.0.0.1 -p 22001 warehouse
+#     Connecting from CLI:  psql -h 127.0.0.2 -p 5433 -U warehouse warehouse
 #
 # =============================================================================
 # NATS
 # -----------------------------------------------------------------------------
 #
-#     URL:       nats://localhost:4222
+#     URL:       nats://127.0.0.2:4222
 #     User:      ruser
 #     Password:  T0pS3cr3t
 #
@@ -38,14 +38,14 @@
 # -----------------------------------------------------------------------------
 #
 #     Scrapes metrics at:  http://localhost:2022/metrics
-#     Exposes:             http://localhost:9090
+#     Exposes:             http://127.0.0.2:9090
 #     Configuration:       ./tools/compose/prometheus/prometheus.yml
 #
 # =============================================================================
 # Grafana
 # -----------------------------------------------------------------------------
 #
-#     Panel:         http://localhost:3000
+#     Panel:         http://127.0.0.2:3000
 #     Dashboards:    ./tools/compose/grafana/dashboards
 #     Data sources:  ./tools/compose/grafana/provisioning/datasources
 #
@@ -53,44 +53,45 @@
 # Recommended env vars in your Meergo .env file
 # -----------------------------------------------------------------------------
 #
+#     MEERGO_HTTP_HOST=0.0.0.0 # necessary for Prometheus (which must connect from a container)
+#     MEERGO_DB_HOST=127.0.0.2
 #     MEERGO_DB_DATABASE=meergo
-#     MEERGO_DB_PASSWORD=<your system username>
-#     MEERGO_DB_USERNAME=<your system username>
-#     MEERGO_DB_USERNAME_PORT=20000
-#     MEERGO_NATS_URL=nats://localhost:4222
+#     MEERGO_DB_PASSWORD=meergo
+#     MEERGO_DB_USERNAME=meergo
+#     MEERGO_NATS_URL=nats://127.0.0.2:4222
 #     MEERGO_NATS_USER=ruser
 #     MEERGO_NATS_PASSWORD=T0pS3cr3t
+#     MEERGO_METRICS_ENABLED=true
 
 name: meergo-dev
 
 services:
   db:
     image: postgres:18.1-alpine3.23
-    restart: always
     ports:
-      - "22000:5432"
+      - 127.0.0.2:5432:5432
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_USER: ${USER}
+      POSTGRES_USER: meergo
       POSTGRES_DB: meergo
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -U ${USER} meergo"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -U meergo meergo"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   warehouse:
     image: postgres:18.1-alpine3.23
+    ports:
+      - 127.0.0.2:5433:5432
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_USER: ${USER}
+      POSTGRES_USER: warehouse
       POSTGRES_DB: warehouse
-    ports:
-      - "22001:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -U ${USER} warehouse"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -U warehouse warehouse"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -101,21 +102,23 @@ services:
     image: nats:2.12-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     ports:
-      - 4222:4222
+      - 127.0.0.2:4222:4222
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
 
   prometheus:
     image: prom/prometheus
     ports:
-      - 9090:9090
+      - 127.0.0.2:9090:9090
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./tools/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
   grafana:
     image: grafana/grafana
     ports:
-      - 3000:3000
+      - 127.0.0.2:3000:3000
     volumes:
       - ./tools/compose/grafana/provisioning:/etc/grafana/provisioning
       - ./tools/compose/grafana/grafana.ini:/etc/grafana/grafana.ini
