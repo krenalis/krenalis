@@ -1,4 +1,7 @@
-# TODO: document.
+# This file is intended to be KEPT AS MINIMAL AS POSSIBLE, as its purpose is to
+# test a version as similar as possible to the one executed by
+# 'compose.release.yaml', with the only difference that here Meergo is compiled
+# directly from the repository instead of being retrieved from Docker Hub.
 
 include:
   - compose.release.yaml
