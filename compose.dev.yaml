@@ -38,14 +38,14 @@
 # -----------------------------------------------------------------------------
 #
 #     Scrapes metrics at:  http://localhost:2022/metrics
-#     Exposes:             http://127.0.0.2:9090
+#     Exposes:             http://127.0.0.1:9090
 #     Configuration:       ./tools/compose/prometheus/prometheus.yml
 #
 # =============================================================================
 # Grafana
 # -----------------------------------------------------------------------------
 #
-#     Panel:         http://127.0.0.2:3000
+#     Panel:         http://127.0.0.2:3000  (credentials: admin/admin)
 #     Dashboards:    ./tools/compose/grafana/dashboards
 #     Data sources:  ./tools/compose/grafana/provisioning/datasources
 #
@@ -109,7 +109,7 @@ services:
   prometheus:
     image: prom/prometheus
     ports:
-      - 127.0.0.2:9090:9090
+      - 9090:9090 # TODO: make it listen to 127.0.0.2? Then, how can Grafana connect to it?
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -119,6 +119,8 @@ services:
     image: grafana/grafana
     ports:
       - 127.0.0.2:3000:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./tools/compose/grafana/provisioning:/etc/grafana/provisioning
       - ./tools/compose/grafana/grafana.ini:/etc/grafana/grafana.ini
