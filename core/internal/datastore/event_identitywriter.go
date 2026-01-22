@@ -6,6 +6,7 @@ package datastore
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -53,9 +54,9 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 
 	pipeline, _ := store.ds.state.Pipeline(pipelineID)
 	connection := pipeline.Connection()
+	workspace := connection.Workspace()
 	w.connection = connection.ID
 	if pipeline.OutSchema.Valid() {
-		workspace := connection.Workspace()
 		err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			w.aligned = true
@@ -84,7 +85,7 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 	w.columns = appendColumnsFromProperties(w.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	// Start the flusher.
-	conf := flusherConf{
+	opts := flusherOptions{
 		QueueSize:        32768,
 		BatchSize:        20000,
 		MaxBatchSize:     100000,
@@ -93,9 +94,14 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 		IdleFlushDelay:   2 * time.Second,
 		RateAlpha:        0.3,
 	}
-	identities := make(chan flusherRow[map[string]any], conf.QueueSize)
-	w.identities = identities
-	w.flusher = newFlusher(store, identities, w.flush, conf)
+	workspaceID := workspace.ID
+	connectionID := connection.ID
+	w.flusher = newFlusher(store, opts, func(ctx context.Context, identities []map[string]any) error {
+		return store.warehouse().MergeIdentities(ctx, w.columns, identities)
+	}, func(err error) {
+		slog.Warn("cannot flush event identities to the data warehouse; retrying.", "workspace", workspaceID, "connection", connectionID, "pipeline", pipelineID, "error", err)
+	})
+	w.identities = w.flusher.Ch()
 
 	return w
 }
@@ -195,12 +201,6 @@ func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack 
 		return ctx.Err()
 	}
 
-}
-
-// flush writes the given identities.
-// It returns ctx.Err() on context cancellation.
-func (w *EventIdentityWriter) flush(ctx context.Context, identities []map[string]any) error {
-	return w.store.warehouse().MergeIdentities(ctx, w.columns, identities)
 }
 
 // onCreatePipeline is called when a pipeline of the connection of iw's pipeline

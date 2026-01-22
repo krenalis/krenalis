@@ -6,6 +6,7 @@ package datastore
 
 import (
 	"context"
+	"log/slog"
 	"sync/atomic"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 )
 
 type EventWriter struct {
-	store   *Store
 	events  chan<- flusherRow[[]any]
 	flusher *flusher[[]any]
 	closed  atomic.Bool
@@ -22,7 +22,7 @@ type EventWriter struct {
 // newEventWriter constructs and starts a EventWriter.
 // The returned EventWriter is ready to use.
 func newEventWriter(store *Store) *EventWriter {
-	conf := flusherConf{
+	opts := flusherOptions{
 		QueueSize:        8192,
 		BatchSize:        5000,
 		MaxBatchSize:     25000,
@@ -32,12 +32,14 @@ func newEventWriter(store *Store) *EventWriter {
 		RateAlpha:        0.4,
 	}
 
-	events := make(chan flusherRow[[]any], conf.QueueSize)
-	w := &EventWriter{
-		store:  store,
-		events: events,
-	}
-	w.flusher = newFlusher(store, events, w.flush, conf)
+	w := &EventWriter{}
+	workspaceID := store.workspace
+	w.flusher = newFlusher(store, opts, func(ctx context.Context, events [][]any) error {
+		return store.warehouse().Merge(ctx, eventsMergeTable, events, nil)
+	}, func(err error) {
+		slog.Warn("cannot flush events to the data warehouse; retrying.", "workspace", workspaceID, "error", err)
+	})
+	w.events = w.flusher.Ch()
 
 	return w
 }
@@ -224,10 +226,4 @@ func (w *EventWriter) Close(ctx context.Context) error {
 	}
 	// Close the flusher.
 	return w.flusher.Close(ctx)
-}
-
-// flush writes the given events.
-// It returns ctx.Err() on context cancellation.
-func (w *EventWriter) flush(ctx context.Context, events [][]any) error {
-	return w.store.warehouse().Merge(ctx, eventsMergeTable, events, nil)
 }

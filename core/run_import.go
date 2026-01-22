@@ -98,8 +98,8 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		}
 		return err
 	}
-	// Cancel the writer, or does nothing if it is already closed.
-	defer iw.Cancel(ctx)
+	// Stop the writer without draining the channel; no-op if already closed.
+	defer iw.Stop(ctx)
 
 	users := make([]connections.Record, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
@@ -110,7 +110,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	for user := range records.All(ctx) {
 
 		if user.Err != nil {
-			iw.Keep(user.ID)
+			_ = iw.Keep(ctx, user.ID)
 			if err, ok := user.Err.(connections.InputValidationError); ok {
 				this.core.metrics.ReceivePassed(pipeline.ID, 1)
 				this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
@@ -167,13 +167,13 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 						this.core.metrics.TransformationPassed(pipeline.ID, 1)
 						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
-					iw.Keep(user.ID)
+					_ = iw.Keep(ctx, user.ID)
 					continue
 				}
 				user.Attributes = record.Attributes
 				this.core.metrics.TransformationPassed(pipeline.ID, 1)
 				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
-				iw.Write(datastore.Identity{
+				_ = iw.Write(ctx, datastore.Identity{
 					ID:         user.ID,
 					Attributes: user.Attributes,
 					UpdatedAt:  user.UpdatedAt,

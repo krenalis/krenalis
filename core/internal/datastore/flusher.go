@@ -7,6 +7,7 @@ package datastore
 import (
 	"context"
 	"math"
+	"sync/atomic"
 	"time"
 
 	"github.com/meergo/meergo/core/internal/streams"
@@ -14,73 +15,93 @@ import (
 )
 
 type flusherRow[T any] struct {
-	key      any
-	pipeline int
-	row      T
-	ack      streams.Ack
+	pipeline int         // pipeline identifier; if 0, no metrics are recorded
+	key      any         // deduplication key; if nil, deduplication is disabled
+	row      T           // row to be flushed
+	ack      streams.Ack // ack callback; if nil, it is not invoked
 }
 
 type flusher[T any] struct {
-	store *Store
-	conf  flusherConf
-
-	rows <-chan flusherRow[T]
-
-	flush func(context.Context, []T) error
-
-	// stop and done are used to stop the loop and wait a flush termination.
-	stop chan struct{}
-	done chan struct{}
-
-	// flushCtx is canceled when any Close's ctx is canceled.
-	// This allows an in-flight flush to be interrupted by Close's ctx.
-	flushCtx    context.Context
-	cancelFlush context.CancelFunc
+	store    *Store
+	rows     chan flusherRow[T]
+	flush    func(context.Context, []T) error
+	logError func(err error)
+	close    struct {
+		atomic.Bool                    // true if Close or Stop has been called
+		stop        chan bool          // signals the loop to stop; the value indicates whether to drain
+		ctx         context.Context    // context passed to the flush function; canceled by close's cancel
+		cancel      context.CancelFunc // cancels an in-flight flush
+		done        chan struct{}      // closed once the loop has terminated
+	}
 }
 
-func newFlusher[T any](store *Store, rows <-chan flusherRow[T], flush func(context.Context, []T) error, conf flusherConf) *flusher[T] {
+func newFlusher[T any](store *Store, opts flusherOptions, flush func(context.Context, []T) error, logError func(err error)) *flusher[T] {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := &flusher[T]{
-		store:       store,
-		rows:        rows,
-		flush:       flush,
-		conf:        conf,
-		stop:        make(chan struct{}),
-		done:        make(chan struct{}),
-		flushCtx:    ctx,
-		cancelFlush: cancel,
+		store:    store,
+		rows:     make(chan flusherRow[T], opts.QueueSize),
+		flush:    flush,
+		logError: logError,
 	}
-	go f.loop()
+	f.close.stop = make(chan bool, 1)
+	f.close.done = make(chan struct{})
+	f.close.ctx = ctx
+	f.close.cancel = cancel
+	go f.loop(opts)
 	return f
 }
 
-// Close interrupts scheduling of any new flush and terminates the loop.
-// If a flush is in progress, Close waits for it to finish unless ctx is
-// canceled, in which case the in-flight flush context is canceled and Close
-// returns ctx.Err().
+// Ch returns the channel.
+func (f *flusher[T]) Ch() chan<- flusherRow[T] {
+	return f.rows
+}
+
+// Close closes the flusher and waits for all pending rows to be flushed.
+// If ctx is canceled or expires, the current flush is aborted and no
+// additional rows are flushed; Close returns ctx.Err().
+//
+// After Close is called, subsequent calls to Close or Stop do nothing.
 func (f *flusher[T]) Close(ctx context.Context) error {
-	close(f.stop)
+	return f.stop(ctx, true)
+}
+
+// Stop stops and closes the flusher, waiting only for any in-flight flush to
+// complete and not flushing any additional rows. If ctx is canceled or expires,
+// the current flush is aborted and Stop returns ctx.Err().
+//
+// After Stop is called, subsequent calls to Stop or Close do nothing.
+func (f *flusher[T]) Stop(ctx context.Context) error {
+	return f.stop(ctx, false)
+}
+
+// close closes the flusher.
+// If drain is true, all pending rows are flushed before returning.
+func (f *flusher[T]) stop(ctx context.Context, drain bool) error {
+	if f.close.Swap(true) {
+		return nil
+	}
+	// Signals the loop to stop.
+	f.close.stop <- drain
+	close(f.close.stop)
+	close(f.rows)
+	// Waits until the loop terminates or the context is canceled.
 	select {
-	case <-f.done:
-		f.cancelFlush() // ensure resources associated with the flush context are released
+	case <-f.close.done:
+		f.close.cancel() // ensure resources associated with the context are released
 		return nil
 	case <-ctx.Done():
-		f.cancelFlush() // abort an in-flight flush, if any
-		<-f.done
+		f.close.cancel() // abort an in-flight flush, if any
+		<-f.close.done
 		return ctx.Err()
 	}
 }
 
-func (f *flusher[T]) loop() {
-
-	defer close(f.done)
-
-	conf := f.conf
+func (f *flusher[T]) loop(opts flusherOptions) {
 
 	var (
-		dedup   = make(map[any]int, conf.BatchSize)
-		rows    = make([]T, 0, conf.BatchSize)
-		acks    = make([]streams.Ack, 0, conf.BatchSize)
+		dedup   = make(map[any]int, opts.BatchSize)
+		rows    = make([]T, 0, opts.BatchSize)
+		acks    = make([]streams.Ack, 0, opts.BatchSize)
 		metrics = make(map[int]int) // pipeline to count
 	)
 
@@ -95,22 +116,22 @@ func (f *flusher[T]) loop() {
 	//
 	// Reset: on each incoming row
 	// Stop:  when the rows are flushed
-	idleTimer := time.NewTimer(time.Hour) // <- conf.IdleFlushDelay (750ms)
+	idleTimer := time.NewTimer(time.Hour) // <- opts.IdleFlushDelay (750ms)
 
 	// adaptiveTimer schedules a flush while rows keep arriving (so idleTimer may not fire).
 	// It estimates how fast rows arrive (EWMA) and sets the timer to roughly when we should reach
-	// conf.BatchSize rows in the buffer (kept within [conf.MinFlushInterval, conf.MaxFlushLatency]
+	// opts.BatchSize rows in the buffer (kept within [opts.MinFlushInterval, opts.MaxFlushLatency]
 	// and not later than maxTimer).
 	//
 	// Reset: on each incoming row (after updating the rate estimate)
 	// Stop:  when the rows are flushed
 	adaptiveTimer := time.NewTimer(time.Hour)
 
-	// maxTimer guarantees the oldest buffered row waits at most conf.MaxFlushLatency.
+	// maxTimer guarantees the oldest buffered row waits at most opts.MaxFlushLatency.
 	//
 	// Reset: once the first row is buffered
 	// Stop:  when the rows are flushed
-	maxTimer := time.NewTimer(time.Hour) // <- conf.MaxFlushLatency (5s)
+	maxTimer := time.NewTimer(time.Hour) // <- opts.MaxFlushLatency (5s)
 
 	stopTimers := func() {
 		idleTimer.Stop()
@@ -118,15 +139,20 @@ func (f *flusher[T]) loop() {
 		maxTimer.Stop()
 	}
 
+	defer func() {
+		stopTimers()
+		close(f.close.done)
+	}()
+
 	// Since rows is empty, stop all timers.
 	stopTimers()
 
 	flush := func() {
 
 		stopTimers()
+		firstBuffered = time.Time{}
 
 		if len(rows) == 0 {
-			firstBuffered = time.Time{}
 			return
 		}
 
@@ -135,8 +161,8 @@ func (f *flusher[T]) loop() {
 		bo := backoff.New(1000)
 		bo.SetCap(10 * time.Second)
 
-		for bo.Next(f.flushCtx) {
-			ctx, done, err := f.store.mc.StartOperation(f.flushCtx, normalMode)
+		for bo.Next(f.close.ctx) {
+			ctx, done, err := f.store.mc.StartOperation(f.close.ctx, normalMode)
 			if err != nil {
 				continue
 			}
@@ -144,17 +170,22 @@ func (f *flusher[T]) loop() {
 			defer done()
 			break
 		}
-		if err := f.flushCtx.Err(); err != nil {
+		if err := f.close.ctx.Err(); err != nil {
 			return
 		}
 
 		// Flush buffered rows. If the flush is interrupted (Close canceled the context),
 		// return and let the main loop exit without starting another flush.
+		var latestErrorMsg string
 		bo = backoff.New(1000)
 		bo.SetCap(10 * time.Second)
 		for bo.Next(flushCtx) {
 			err := f.flush(flushCtx, rows)
 			if err != nil {
+				if msg := err.Error(); msg != latestErrorMsg {
+					f.logError(err)
+					latestErrorMsg = msg
+				}
 				continue
 			}
 			break
@@ -170,43 +201,48 @@ func (f *flusher[T]) loop() {
 		}
 
 		clear(dedup)
-		if cap(rows) > conf.MaxBatchSize {
-			rows = make([]T, 0, conf.BatchSize)
+		if cap(rows) > opts.MaxBatchSize {
+			rows = make([]T, 0, opts.BatchSize)
 		} else {
 			rows = rows[:0]
 		}
-		if cap(acks) > conf.MaxBatchSize {
-			acks = make([]streams.Ack, 0, conf.BatchSize)
+		if cap(acks) > opts.MaxBatchSize {
+			acks = make([]streams.Ack, 0, opts.BatchSize)
 		} else {
 			acks = acks[:0]
 		}
 		clear(metrics)
-		firstBuffered = time.Time{}
 	}
+
+	var stop bool  // indicates that processing must stop
+	var drain bool // if stopping, specifies whether to drain remaining data
 
 	for {
 
 		select {
 
-		case row := <-f.rows:
-
-			// EWMA rate estimate from inter-arrival time.
-			now := time.Now()
-			if !lastArrival.IsZero() {
-				dt := now.Sub(lastArrival).Seconds()
-				if dt > 0 {
-					inst := 1.0 / dt
-					if rate == 0 {
-						rate = inst
-					} else {
-						alpha := conf.RateAlpha
-						rate = alpha*inst + (1-alpha)*rate
-					}
+		case row, ok := <-f.rows:
+			// Return and optionally drain when there are no more rows.
+			if !ok {
+				if drain || <-f.close.stop {
+					flush()
 				}
+				return
+			}
+			// Return immediately if processing must stop without draining.
+			if stop && !drain {
+				return
+			}
+
+			var now time.Time
+			if !stop {
+				now = time.Now()
 			}
 
 			if row.ack != nil {
 				acks = append(acks, row.ack)
+			}
+			if row.pipeline != 0 {
 				metrics[row.pipeline]++
 			}
 
@@ -220,47 +256,74 @@ func (f *flusher[T]) loop() {
 					dedup[row.key] = len(rows)
 				}
 			}
+			// Append the row.
 			if !duplicated {
 				rows = append(rows, row.row)
-				if len(rows) == conf.MaxBatchSize {
+				if len(rows) == opts.MaxBatchSize {
 					flush()
-					continue
-				}
-				if len(rows) == 1 {
-					firstBuffered = now
-					maxTimer.Reset(conf.MaxFlushLatency)
 				}
 			}
 
-			idleTimer.Reset(conf.IdleFlushDelay)
+			// Skip ... if the flusher is stopped.
+			if stop {
+				continue
+			}
+
+			// EWMA rate estimate from inter-arrival time.
+			if !lastArrival.IsZero() {
+				dt := now.Sub(lastArrival).Seconds()
+				if dt > 0 {
+					inst := 1.0 / dt
+					if rate == 0 {
+						rate = inst
+					} else {
+						alpha := opts.RateAlpha
+						rate = alpha*inst + (1-alpha)*rate
+					}
+				}
+			}
+
+			// Continue if there are no pending rows.
+			if len(rows) == 0 {
+				continue
+			}
+
+			if !duplicated && len(rows) == 1 {
+				firstBuffered = now
+				maxTimer.Reset(opts.MaxFlushLatency)
+			}
+
+			idleTimer.Reset(opts.IdleFlushDelay)
 			lastArrival = now
 
 			// Adaptive schedule: expected time to reach BatchSize.
 			if rate > 0 {
-				remaining := float64(conf.BatchSize - len(rows))
+				remaining := float64(opts.BatchSize - len(rows))
 				if remaining < 0 {
 					remaining = 0
 				}
 				sec := remaining / rate
 				if math.IsNaN(sec) || math.IsInf(sec, 0) || sec < 0 {
-					sec = float64(conf.MaxFlushLatency / time.Second)
+					sec = float64(opts.MaxFlushLatency / time.Second)
 				}
 				d := time.Duration(sec * float64(time.Second))
-				if d < conf.MinFlushInterval {
-					d = conf.MinFlushInterval
+				if d < opts.MinFlushInterval {
+					d = opts.MinFlushInterval
 				}
-				if d > conf.MaxFlushLatency {
-					d = conf.MaxFlushLatency
+				if d > opts.MaxFlushLatency {
+					d = opts.MaxFlushLatency
 				}
 				// Respect max-latency deadline.
 				if !firstBuffered.IsZero() {
-					deadline := firstBuffered.Add(conf.MaxFlushLatency)
+					deadline := firstBuffered.Add(opts.MaxFlushLatency)
 					until := time.Until(deadline)
+					if until <= 0 {
+						// Deadline already exceeded: flush immediately instead of Reset(0).
+						flush()
+						continue
+					}
 					if until < d {
 						d = until
-						if d < 0 {
-							d = 0
-						}
 					}
 				}
 				adaptiveTimer.Reset(d)
@@ -275,21 +338,18 @@ func (f *flusher[T]) loop() {
 		case <-maxTimer.C:
 			flush()
 
-		case <-f.stop:
-			stopTimers()
-			return
-
-		}
-
-		if len(rows) == 0 {
-			stopTimers()
+		case d, ok := <-f.close.stop:
+			if ok {
+				stop = true
+				drain = d
+			}
 		}
 
 	}
 }
 
-// flusherConf configures a flusher.
-type flusherConf struct {
+// flusherOptions contains the options used to configure the flusher.
+type flusherOptions struct {
 
 	// QueueSize is the size of the internal channel used to queue incoming rows.
 	// A larger buffer can absorb short slowdowns in flush() without blocking writers.
