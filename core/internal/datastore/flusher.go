@@ -264,7 +264,7 @@ func (f *flusher[T]) loop(opts flusherOptions) {
 				}
 			}
 
-			// Skip ... if the flusher is stopped.
+			// Skip scheduling and rate updates if the flusher is stopped.
 			if stop {
 				continue
 			}
