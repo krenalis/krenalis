@@ -47,6 +47,7 @@ type BatchIdentityWriter struct {
 	store      *Store
 	pipeline   int
 	connection int
+	workspace  int
 	run        int
 	flatter    *flatter
 	columns    []warehouses.Column
@@ -83,6 +84,7 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 		store:      store,
 		pipeline:   pipeline.ID,
 		connection: connection.ID,
+		workspace:  workspace.ID,
 		run:        run.ID,
 		flatter:    newFlatter(pipeline.OutSchema, store.identityColumnByProperty()),
 		purge:      purge,
@@ -107,14 +109,11 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 		MaxFlushLatency:  15 * time.Second,
 		IdleFlushDelay:   2 * time.Second,
 		RateAlpha:        0.3,
+		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		LogError:         w.logError,
 	}
-	workspaceID := workspace.ID
-	connectionID := connection.ID
-	pipelineID := pipeline.ID
-	w.flusher = newFlusher(store, opts, func(ctx context.Context, identities []map[string]any) error {
+	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, identities []map[string]any) error {
 		return store.warehouse().MergeIdentities(ctx, w.columns, identities)
-	}, func(err error) {
-		slog.Warn("cannot flush batch identities to the data warehouse; retrying.", "workspace", workspaceID, "connection", connectionID, "pipeline", pipelineID, "error", err)
 	})
 	w.identities = w.flusher.Ch()
 
@@ -220,4 +219,9 @@ func (w *BatchIdentityWriter) Write(ctx context.Context, identity Identity) erro
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// logError logs an error that occurred while flushing the identities.
+func (w *BatchIdentityWriter) logError(err error) {
+	slog.Warn("cannot flush batch identities to the data warehouse; retrying.", "workspace", w.workspace, "connection", w.connection, "pipeline", w.pipeline, "error", err)
 }

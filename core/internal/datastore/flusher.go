@@ -14,6 +14,11 @@ import (
 	"github.com/meergo/meergo/tools/backoff"
 )
 
+type (
+	startOperationFunc func(ctx context.Context, modes allowedMode) (context.Context, func(), error)
+	flushFunc[T any]   func(context.Context, []T) error
+)
+
 type flusherRow[T any] struct {
 	pipeline int         // pipeline identifier; if 0, no metrics are recorded
 	key      any         // deduplication key; if nil, deduplication is disabled
@@ -22,11 +27,8 @@ type flusherRow[T any] struct {
 }
 
 type flusher[T any] struct {
-	store    *Store
-	rows     chan flusherRow[T]
-	flush    func(context.Context, []T) error
-	logError func(err error)
-	close    struct {
+	rows  chan flusherRow[T]
+	close struct {
 		atomic.Bool                    // true if Close or Stop has been called
 		stop        chan bool          // signals the loop to stop; the value indicates whether to drain
 		ctx         context.Context    // context passed to the flush function; canceled by close's cancel
@@ -35,23 +37,20 @@ type flusher[T any] struct {
 	}
 }
 
-func newFlusher[T any](store *Store, opts flusherOptions, flush func(context.Context, []T) error, logError func(err error)) *flusher[T] {
+func newFlusher[T any](opts flusherOptions, startOperation startOperationFunc, flush flushFunc[T]) *flusher[T] {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := &flusher[T]{
-		store:    store,
-		rows:     make(chan flusherRow[T], opts.QueueSize),
-		flush:    flush,
-		logError: logError,
+		rows: make(chan flusherRow[T], opts.QueueSize),
 	}
 	f.close.stop = make(chan bool, 1)
 	f.close.done = make(chan struct{})
 	f.close.ctx = ctx
 	f.close.cancel = cancel
-	go f.loop(opts)
+	go f.loop(opts, startOperation, flush)
 	return f
 }
 
-// Ch returns the channel.
+// Ch returns the channel. The Close and Stop methods close this channel.
 func (f *flusher[T]) Ch() chan<- flusherRow[T] {
 	return f.rows
 }
@@ -96,14 +95,18 @@ func (f *flusher[T]) stop(ctx context.Context, drain bool) error {
 	}
 }
 
-func (f *flusher[T]) loop(opts flusherOptions) {
+func (f *flusher[T]) loop(opts flusherOptions, startOperation startOperationFunc, innerFlush flushFunc[T]) {
 
 	var (
-		dedup   = make(map[any]int, opts.BatchSize)
-		rows    = make([]T, 0, opts.BatchSize)
-		acks    = make([]streams.Ack, 0, opts.BatchSize)
-		metrics = make(map[int]int) // pipeline to count
+		dedup = make(map[any]int, opts.BatchSize)
+		rows  = make([]T, 0, opts.BatchSize)
+		acks  = make([]streams.Ack, 0, opts.BatchSize)
 	)
+
+	var metrics map[int]int
+	if opts.MetricsFinalizer != nil {
+		metrics = make(map[int]int) // pipeline to count
+	}
 
 	// firstBuffered is the time when the first row was buffered.
 	var firstBuffered time.Time
@@ -162,7 +165,7 @@ func (f *flusher[T]) loop(opts flusherOptions) {
 		bo.SetCap(10 * time.Second)
 
 		for bo.Next(f.close.ctx) {
-			ctx, done, err := f.store.mc.StartOperation(f.close.ctx, normalMode)
+			ctx, done, err := startOperation(f.close.ctx, normalMode)
 			if err != nil {
 				continue
 			}
@@ -180,11 +183,13 @@ func (f *flusher[T]) loop(opts flusherOptions) {
 		bo = backoff.New(1000)
 		bo.SetCap(10 * time.Second)
 		for bo.Next(flushCtx) {
-			err := f.flush(flushCtx, rows)
+			err := innerFlush(flushCtx, rows)
 			if err != nil {
-				if msg := err.Error(); msg != latestErrorMsg {
-					f.logError(err)
-					latestErrorMsg = msg
+				if opts.LogError != nil {
+					if msg := err.Error(); msg != latestErrorMsg {
+						opts.LogError(err)
+						latestErrorMsg = msg
+					}
 				}
 				continue
 			}
@@ -197,7 +202,7 @@ func (f *flusher[T]) loop(opts flusherOptions) {
 			ack()
 		}
 		for pipeline, count := range metrics {
-			f.store.ds.metrics.FinalizePassed(pipeline, count)
+			opts.MetricsFinalizer(pipeline, count)
 		}
 
 		clear(dedup)
@@ -242,7 +247,7 @@ func (f *flusher[T]) loop(opts flusherOptions) {
 			if row.ack != nil {
 				acks = append(acks, row.ack)
 			}
-			if row.pipeline != 0 {
+			if metrics != nil && row.pipeline != 0 {
 				metrics[row.pipeline]++
 			}
 
@@ -378,4 +383,8 @@ type flusherOptions struct {
 	// RateAlpha is the EWMA smoothing factor for the row rate estimate.
 	// Valid range is [0, 1]. Higher means more weight to recent observations.
 	RateAlpha float64
+
+	MetricsFinalizer func(int, int)
+
+	LogError func(err error)
 }

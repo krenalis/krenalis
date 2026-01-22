@@ -14,14 +14,16 @@ import (
 )
 
 type EventWriter struct {
-	events  chan<- flusherRow[[]any]
-	flusher *flusher[[]any]
-	closed  atomic.Bool
+	workspace int
+	events    chan<- flusherRow[[]any]
+	flusher   *flusher[[]any]
+	closed    atomic.Bool
 }
 
 // newEventWriter constructs and starts a EventWriter.
 // The returned EventWriter is ready to use.
 func newEventWriter(store *Store) *EventWriter {
+	w := &EventWriter{workspace: store.workspace}
 	opts := flusherOptions{
 		QueueSize:        8192,
 		BatchSize:        5000,
@@ -30,17 +32,13 @@ func newEventWriter(store *Store) *EventWriter {
 		MaxFlushLatency:  10 * time.Second,
 		IdleFlushDelay:   750 * time.Millisecond,
 		RateAlpha:        0.4,
+		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		LogError:         w.logError,
 	}
-
-	w := &EventWriter{}
-	workspaceID := store.workspace
-	w.flusher = newFlusher(store, opts, func(ctx context.Context, events [][]any) error {
+	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, events [][]any) error {
 		return store.warehouse().Merge(ctx, eventsMergeTable, events, nil)
-	}, func(err error) {
-		slog.Warn("cannot flush events to the data warehouse; retrying.", "workspace", workspaceID, "error", err)
 	})
 	w.events = w.flusher.Ch()
-
 	return w
 }
 
@@ -226,4 +224,9 @@ func (w *EventWriter) Close(ctx context.Context) error {
 	}
 	// Close the flusher.
 	return w.flusher.Close(ctx)
+}
+
+// logError logs an error that occurred while flushing the events.
+func (w *EventWriter) logError(err error) {
+	slog.Warn("cannot flush events to the data warehouse; retrying.", "workspace", w.workspace, "error", err)
 }

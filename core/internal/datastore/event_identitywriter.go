@@ -26,6 +26,7 @@ type EventIdentityWriter struct {
 	store      *Store
 	pipeline   int
 	connection int
+	workspace  int
 	columns    []warehouses.Column
 	identities chan<- flusherRow[map[string]any]
 	flusher    *flusher[map[string]any]
@@ -56,6 +57,7 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 	connection := pipeline.Connection()
 	workspace := connection.Workspace()
 	w.connection = connection.ID
+	w.workspace = workspace.ID
 	if pipeline.OutSchema.Valid() {
 		err := schemas.CheckAlignment(pipeline.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
@@ -93,13 +95,11 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 		MaxFlushLatency:  15 * time.Second,
 		IdleFlushDelay:   2 * time.Second,
 		RateAlpha:        0.3,
+		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		LogError:         w.logError,
 	}
-	workspaceID := workspace.ID
-	connectionID := connection.ID
-	w.flusher = newFlusher(store, opts, func(ctx context.Context, identities []map[string]any) error {
+	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, identities []map[string]any) error {
 		return store.warehouse().MergeIdentities(ctx, w.columns, identities)
-	}, func(err error) {
-		slog.Warn("cannot flush event identities to the data warehouse; retrying.", "workspace", workspaceID, "connection", connectionID, "pipeline", pipelineID, "error", err)
 	})
 	w.identities = w.flusher.Ch()
 
@@ -201,6 +201,11 @@ func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack 
 		return ctx.Err()
 	}
 
+}
+
+// logError logs an error that occurred while flushing the identities.
+func (w *EventIdentityWriter) logError(err error) {
+	slog.Warn("cannot flush event identities to the data warehouse; retrying.", "workspace", w.workspace, "connection", w.connection, "pipeline", w.pipeline, "error", err)
 }
 
 // onCreatePipeline is called when a pipeline of the connection of iw's pipeline
