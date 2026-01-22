@@ -1,4 +1,4 @@
-# This Docker Compose runs a Meergo instance published on Docker Hub, along with
+# This Docker Compose runs a Meergo instance released on Docker Hub, along with
 # the surrounding infrastructure to run it (warehouse, NATS, etc.).
 
 services:
