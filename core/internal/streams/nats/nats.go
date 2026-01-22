@@ -459,6 +459,7 @@ func (s *stream) Consume(pipeline, size int) streams.Consumer {
 					Durable:       consumerName,
 					FilterSubject: filterSubject,
 					AckPolicy:     jetstream.AckExplicitPolicy,
+					MaxAckPending: -1,
 				})
 				if err != nil {
 					if ctx.Err() != nil {
