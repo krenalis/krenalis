@@ -170,7 +170,7 @@ func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack 
 				"_updated_at":   identity.UpdatedAt,
 			}
 			select {
-			case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row}:
+			case w.identities <- flusherRow[map[string]any]{key: key, row: row}:
 				continue
 			case <-ctx.Done():
 				return ctx.Err()
