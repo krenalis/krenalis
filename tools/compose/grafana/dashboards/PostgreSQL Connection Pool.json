@@ -493,7 +493,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "PostgreSQL Connection Pool Metrics",
+  "title": "PostgreSQL Connection Pool",
   "uid": "postgres-conn-pool",
   "version": 1,
   "weekStart": ""
