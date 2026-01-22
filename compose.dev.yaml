@@ -9,9 +9,10 @@
 # Meergo PostgreSQL database
 # -----------------------------------------------------------------------------
 #
+#     Host:                 127.0.0.2
+#     Port:                 5432
 #     Username:             meergo
 #     Password:             no password set (auth method = trust)
-#     Port:                 5432
 #     Database:             meergo
 #     Connecting from CLI:  psql -h 127.0.0.2 -U meergo meergo
 #
@@ -19,9 +20,10 @@
 # Meergo PostgreSQL warehouse
 # -----------------------------------------------------------------------------
 #
+#     Host:                 127.0.0.2
+#     Port:                 5433
 #     Username:             warehouse
 #     Password:             no password set (auth method = trust)
-#     Port:                 5433
 #     Database:             warehouse
 #     Connecting from CLI:  psql -h 127.0.0.2 -p 5433 -U warehouse warehouse
 #
@@ -54,6 +56,7 @@
 # -----------------------------------------------------------------------------
 #
 #     MEERGO_HTTP_HOST=0.0.0.0 # necessary for Prometheus (which must connect from a container)
+#     MEERGO_HTTP_EXTERNAL_URL=http://127.0.0.1:2022
 #     MEERGO_DB_HOST=127.0.0.2
 #     MEERGO_DB_DATABASE=meergo
 #     MEERGO_DB_PASSWORD=meergo
