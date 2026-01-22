@@ -8,13 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
+	"log/slog"
 	"sync/atomic"
 	"time"
 
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/metrics"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 )
@@ -24,9 +23,6 @@ var ErrPipelineNotExist = errors.New("pipeline does not exist")
 // ErrPurgeSkipped is returned when the purge phase is skipped because some
 // records without known IDs encountered an error.
 var ErrPurgeSkipped = errors.New("purge skipped")
-
-var maxQueuedIdentityRows = 1000
-var maxQueuedIdentityTime = 500 * time.Millisecond
 
 // Identity is an identity
 type Identity struct {
@@ -54,21 +50,12 @@ type BatchIdentityWriter struct {
 	run        int
 	flatter    *flatter
 	columns    []warehouses.Column
+	identities chan<- flusherRow[map[string]any]
+	flusher    *flusher[map[string]any]
 	purge      bool
 	skipPurge  bool
 
-	mu           sync.Mutex
-	index        map[identityKey]int // Access using 'mu'.
-	rows         []map[string]any    // Access using 'mu'.
-	metricsCount int
-	timer        *time.Timer // Access using 'mu'.
-
-	close struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		atomic.Bool
-		sync.WaitGroup
-	}
+	closed atomic.Bool
 }
 
 // newBatchIdentityWriter returns an identity writer for writing identities in
@@ -92,47 +79,49 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 	if err != nil {
 		return nil, err
 	}
-	iw := BatchIdentityWriter{
+	w := BatchIdentityWriter{
 		store:      store,
 		pipeline:   pipeline.ID,
 		connection: connection.ID,
 		run:        run.ID,
 		flatter:    newFlatter(pipeline.OutSchema, store.identityColumnByProperty()),
-		index:      map[identityKey]int{},
 		purge:      purge,
 	}
-	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
-	iw.columns = make([]warehouses.Column, 7, 7+len(pipeline.Transformation.OutPaths))
-	iw.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
-	iw.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
-	iw.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
-	iw.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
-	iw.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
-	iw.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	iw.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
+	w.columns = make([]warehouses.Column, 7, 7+len(pipeline.Transformation.OutPaths))
+	w.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	w.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
+	w.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
+	w.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	w.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
+	w.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
+	w.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
+	w.columns = appendColumnsFromProperties(w.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
-	return &iw, nil
-}
-
-// Cancel cancels the writer, ensuring that the ongoing write operations are
-// completed, while discarding the pending ones, and skipping the purge
-// operation if was required.
-//
-// If the writer is already closed, it does nothing.
-func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
-	if iw.close.Swap(true) {
-		return
+	// Start the flusher.
+	opts := flusherOptions{
+		QueueSize:        32768,
+		BatchSize:        20000,
+		MaxBatchSize:     100000,
+		MinFlushInterval: 500 * time.Millisecond,
+		MaxFlushLatency:  15 * time.Second,
+		IdleFlushDelay:   2 * time.Second,
+		RateAlpha:        0.3,
 	}
-	// Cancel the flushes if the context is canceled.
-	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
-	defer stop()
-	// Wait for the flushes to terminate.
-	iw.close.Wait()
+	workspaceID := workspace.ID
+	connectionID := connection.ID
+	pipelineID := pipeline.ID
+	w.flusher = newFlusher(store, opts, func(ctx context.Context, identities []map[string]any) error {
+		return store.warehouse().MergeIdentities(ctx, w.columns, identities)
+	}, func(err error) {
+		slog.Warn("cannot flush batch identities to the data warehouse; retrying.", "workspace", workspaceID, "connection", connectionID, "pipeline", pipelineID, "error", err)
+	})
+	w.identities = w.flusher.Ch()
+
+	return &w, nil
 }
 
-// Close closes the writer, ensuring the completion of all pending or ongoing
+// Close closes the writer, ensuring the completion of all flushed
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.
 //
@@ -141,58 +130,28 @@ func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
 // called with an empty identifier, the purge is skipped and ErrPurgeSkipped is
 // returned.
 //
-// If the writer is already closed, it does nothing and returns immediately.
+// When Close is called, no other calls to EventIdentityWriter's methods should
+// be in progress and no other shall be made.
 //
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a
-// *datastore.UnavailableError error.
-//
-// TODO(Gianluca): if these errors returned from Close seem strange, it's
-// because we still need to discuss the issue
-// https://github.com/meergo/meergo/issues/1224 and understand precisely what
-// model we want to implement for the operations and compatible methods.
-func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
-	if iw.close.Load() {
+// After Close is called, subsequent calls to Close or Stop do nothing.
+func (w *BatchIdentityWriter) Close(ctx context.Context) error {
+	if w.closed.Swap(true) {
 		return nil
 	}
-	ctx, done, err := iw.store.mc.StartOperation(ctx, normalMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	// Mark as closed and return if it was already closed in the meantime.
-	if iw.close.Swap(true) {
-		return nil
-	}
-	// Cancel the flushes if the context is canceled.
-	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
-	defer stop()
-	// Wait for the flushes to terminate.
-	iw.close.Wait()
-	// Perform a final flush.
-	iw.mu.Lock()
-	iw.flush()
-	iw.mu.Unlock()
-	iw.close.Wait()
+	// Close the flusher.
+	err := w.flusher.Close(ctx)
 	// Purge identities.
-	if iw.purge {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if iw.skipPurge {
+	if err == nil && w.purge {
+		if w.skipPurge {
 			return ErrPurgeSkipped
 		}
 		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, iw.pipeline),
-			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.Int(32)}, warehouses.OpIsNot, iw.run),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, w.pipeline),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.Int(32)}, warehouses.OpIsNot, w.run),
 		})
-		err := iw.store.warehouse().Delete(ctx, "meergo_identities", where)
-		if err != nil {
-			return err
-		}
+		err = w.store.warehouse().Delete(ctx, "meergo_identities", where)
 	}
-	return nil
+	return err
 }
 
 // Keep keeps the identity with the identifier id. Use Keep instead of Write
@@ -201,96 +160,64 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 //
 // If id is empty, the purge will be skipped because it would be impossible to
 // determine which unimported records failed due to an error.
-func (iw *BatchIdentityWriter) Keep(id string) {
-	if iw.close.Load() {
-		panic("call Keep on a closed identity writer")
-	}
-	if !iw.purge || iw.skipPurge {
-		return
+func (w *BatchIdentityWriter) Keep(ctx context.Context, id string) error {
+	if !w.purge || w.skipPurge {
+		return nil
 	}
 	if id == "" {
-		iw.skipPurge = true
-		return
+		w.skipPurge = true
+		return nil
 	}
-	key := identityKey{pipeline: iw.pipeline, identityID: id}
+	key := identityKey{pipeline: w.pipeline, identityID: id}
 	row := map[string]any{
 		"$purge":        false,
 		"_pipeline":     key.pipeline,
 		"_is_anonymous": false,
 		"_identity_id":  key.identityID,
-		"_connection":   iw.connection,
-		"_run":          iw.run,
+		"_connection":   w.connection,
+		"_run":          w.run,
 	}
-	iw.appendRow(key, row, false)
+	select {
+	case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Stop stops the writer, ensuring that the ongoing write operations are
+// completed, while discarding the pending ones, and skipping the purge
+// operation if was required.
+//
+// When Stop is called, no other calls to EventIdentityWriter's methods should
+// be in progress and no other shall be made.
+//
+// After Stop is called, subsequent calls to Stop or Close do nothing.
+func (w *BatchIdentityWriter) Stop(ctx context.Context) error {
+	if w.closed.Swap(true) {
+		return nil
+	}
+	// Stop the flusher.
+	return w.flusher.Stop(ctx)
 }
 
 // Write writes an identity. If a valid profile schema has been provided, the
 // attributes must comply with it. It returns immediately, deferring the
 // validation of the attributes and the actual write operation to a later time.
-//
-// It panics if called on a closed writer.
-func (iw *BatchIdentityWriter) Write(identity Identity) {
-	if iw.close.Load() {
-		panic("call Write on a closed identity writer")
-	}
-	key := identityKey{pipeline: iw.pipeline, identityID: identity.ID}
+func (w *BatchIdentityWriter) Write(ctx context.Context, identity Identity) error {
+	key := identityKey{pipeline: w.pipeline, identityID: identity.ID}
 	row := identity.Attributes
-	iw.flatter.flat(row)
+	w.flatter.flat(row)
 	row["_pipeline"] = key.pipeline
 	row["_is_anonymous"] = false
 	row["_identity_id"] = key.identityID
-	row["_connection"] = iw.connection
+	row["_connection"] = w.connection
 	row["_updated_at"] = identity.UpdatedAt
-	row["_run"] = iw.run
-	iw.appendRow(key, row, true)
-}
-
-// appendRow appends a row to the rows or replaces an existing row with the same key.
-func (iw *BatchIdentityWriter) appendRow(key identityKey, row map[string]any, includeInMetrics bool) {
-	iw.mu.Lock()
-	if includeInMetrics {
-		iw.metricsCount++
+	row["_run"] = w.run
+	select {
+	case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	// If a row with the same key already exists, update that row rather than adding a duplicate.
-	if i, ok := iw.index[key]; ok {
-		iw.rows[i] = row
-		iw.mu.Unlock()
-		return
-	}
-	if len(iw.rows) == 0 {
-		iw.timer = time.AfterFunc(maxQueuedIdentityTime, func() {
-			iw.mu.Lock()
-			iw.flush()
-			iw.mu.Unlock()
-		})
-	}
-	iw.index[key] = len(iw.rows)
-	iw.rows = append(iw.rows, row)
-	if len(iw.rows) == maxQueuedIdentityRows {
-		iw.flush()
-	}
-	iw.mu.Unlock()
-}
-
-// flush flushes the rows, if any, into the data warehouse.
-// It must be called while holding the iw.mu mutex.
-func (iw *BatchIdentityWriter) flush() {
-	metrics.Increment("BatchIdentityWriter.flush.calls", 1)
-	if iw.rows == nil {
-		return
-	}
-	rows := iw.rows
-	iw.rows = nil
-	count := iw.metricsCount
-	iw.metricsCount = 0
-	clear(iw.index)
-	iw.timer = nil
-	iw.close.Go(func() {
-		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
-		if err != nil {
-			iw.store.ds.metrics.FinalizeFailed(iw.pipeline, count, err.Error())
-			return
-		}
-		iw.store.ds.metrics.FinalizePassed(iw.pipeline, count)
-	})
 }
