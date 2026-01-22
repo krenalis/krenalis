@@ -1,7 +1,5 @@
-# This is the Docker Compose file that runs the latest released image of Meergo.
-#
-# For customizing the Meergo instance, see https://www.meergo.com/docs/configuration.
-#
+# This Docker Compose runs a Meergo instance released on Docker Hub, along with
+# the surrounding infrastructure to run it (warehouse, NATS, etc.).
 
 services:
   meergo:

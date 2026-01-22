@@ -1,0 +1,137 @@
+# This Docker Compose is intended to run ONLY the INFRASTRUCTURE needed by
+# Meergo during development (database, NATS, monitoring, etc.), NOT MEERGO
+# ITSELF, which must be compiled and run separately as a process on the host
+# system.
+#
+# Running this Compose, you get:
+#
+# =============================================================================
+# Meergo PostgreSQL database
+# -----------------------------------------------------------------------------
+#
+#     Host:                 127.0.0.2
+#     Port:                 5432
+#     Username:             meergo
+#     Password:             no password set (auth method = trust)
+#     Database:             meergo
+#     Connecting from CLI:  psql -h 127.0.0.2 -U meergo meergo
+#
+# =============================================================================
+# Meergo PostgreSQL warehouse
+# -----------------------------------------------------------------------------
+#
+#     Host:                 127.0.0.2
+#     Port:                 5433
+#     Username:             warehouse
+#     Password:             no password set (auth method = trust)
+#     Database:             warehouse
+#     Connecting from CLI:  psql -h 127.0.0.2 -p 5433 -U warehouse warehouse
+#
+# =============================================================================
+# NATS
+# -----------------------------------------------------------------------------
+#
+#     URL:       nats://127.0.0.2:4222
+#     User:      ruser
+#     Password:  T0pS3cr3t
+#
+# =============================================================================
+# Prometheus
+# -----------------------------------------------------------------------------
+#
+#     Scrapes metrics at:  http://localhost:2022/metrics
+#     Exposes:             http://127.0.0.2:9090
+#     Configuration:       ./tools/compose/prometheus/prometheus.yml
+#
+# =============================================================================
+# Grafana
+# -----------------------------------------------------------------------------
+#
+#     Panel:         http://127.0.0.2:3000  (credentials: admin/admin)
+#     Dashboards:    ./tools/compose/grafana/dashboards
+#     Data sources:  ./tools/compose/grafana/provisioning/datasources
+#
+# =============================================================================
+# Recommended env vars in your Meergo .env file
+# -----------------------------------------------------------------------------
+#
+#     MEERGO_HTTP_HOST=0.0.0.0 # necessary for Prometheus (which must connect from a container)
+#     MEERGO_HTTP_EXTERNAL_URL=http://127.0.0.1:2022
+#     MEERGO_DB_HOST=127.0.0.2
+#     MEERGO_DB_DATABASE=meergo
+#     MEERGO_DB_PASSWORD=meergo
+#     MEERGO_DB_USERNAME=meergo
+#     MEERGO_NATS_URL=nats://127.0.0.2:4222
+#     MEERGO_NATS_USER=ruser
+#     MEERGO_NATS_PASSWORD=T0pS3cr3t
+#     MEERGO_METRICS_ENABLED=true
+
+name: meergo-dev
+
+services:
+  db:
+    image: postgres:18.1-alpine3.23
+    ports:
+      - 127.0.0.2:5432:5432
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: meergo
+      POSTGRES_DB: meergo
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meergo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  warehouse:
+    image: postgres:18.1-alpine3.23
+    ports:
+      - 127.0.0.2:5433:5432
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: warehouse
+      POSTGRES_DB: warehouse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - warehouse:/var/lib/postgresql/data
+
+  nats:
+    image: nats:2.12-alpine3.22
+    command: --jetstream --store_dir /var/lib/nats/jetstream_storage
+    ports:
+      - 127.0.0.2:4222:4222
+    volumes:
+      - jetstream_storage:/var/lib/nats/jetstream_storage
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 127.0.0.2:9090:9090
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # for accessing Meergo.
+    volumes:
+      - ./tools/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 127.0.0.2:3000:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tools/compose/grafana/provisioning:/etc/grafana/provisioning
+      - ./tools/compose/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./tools/compose/grafana/dashboards:/var/lib/grafana/dashboards
+    attach: false # set to 'true' to enable Grafana logging (note: it is very verbose)
+
+volumes:
+  db:
+  warehouse:
+  jetstream_storage:
+  transformation-functions:
