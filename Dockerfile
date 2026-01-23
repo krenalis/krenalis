@@ -26,8 +26,8 @@ COPY tools tools
 COPY warehouses warehouses
 COPY *.go ./
 
-RUN go generate
 ENV GOCACHE=/root/.cache/go-build
+RUN --mount=type=cache,target="/root/.cache/go-build" go generate
 RUN --mount=type=cache,target="/root/.cache/go-build" go build -tags osusergo,netgo -trimpath
 
 # Stage 1: Meergo Execution Stage.
