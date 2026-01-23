@@ -71,7 +71,7 @@ services:
       MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions
       MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
       MEERGO_CONNECTOR_FILESYSTEM_ROOT: /var/meergo/storage
-      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD-/storage
+      MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
 
     volumes:
       - ./storage:/var/meergo/storage
