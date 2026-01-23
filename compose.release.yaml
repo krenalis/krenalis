@@ -30,7 +30,7 @@ services:
       MEERGO_SMTP_PASSWORD: ${MEERGO_SMTP_PASSWORD}
 
       # Event geolocation enrichment.
-      MEERGO_MAXMIND_DB_PATH: ${MEERGO_SMTP_PASSWORD}
+      MEERGO_MAXMIND_DB_PATH: ${MEERGO_MAXMIND_DB_PATH}
 
       # Transformations with AWS Lambda.
       MEERGO_TRANSFORMERS_PROVIDER: ${MEERGO_TRANSFORMERS_PROVIDER-local}
