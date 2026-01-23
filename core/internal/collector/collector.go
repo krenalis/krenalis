@@ -204,6 +204,10 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case errReadBody:
 			// connection already broken, cannot reply to the client
 		default:
+			if r.Context().Err() != nil {
+				// The request context is done; no response should be written.
+				return
+			}
 			if serveSettings {
 				slog.Error("core/events/collector: an error occurred serving the settings", "error", err)
 			} else {
