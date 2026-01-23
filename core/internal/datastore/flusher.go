@@ -73,7 +73,7 @@ func (f *flusher[T]) Stop(ctx context.Context) error {
 	return f.stop(ctx, false)
 }
 
-// close closes the flusher.
+// stop stops the flusher.
 // If drain is true, all pending rows are flushed before returning.
 func (f *flusher[T]) stop(ctx context.Context, drain bool) error {
 	if f.close.Swap(true) {
@@ -384,7 +384,11 @@ type flusherOptions struct {
 	// Valid range is [0, 1]. Higher means more weight to recent observations.
 	RateAlpha float64
 
-	MetricsFinalizer func(int, int)
+	// MetricsFinalizer receives the number of flushed rows per pipeline
+	// after a successful flush. It is called once per pipeline with its count.
+	MetricsFinalizer func(pipeline int, count int)
 
+	// LogError is invoked when a flush attempt fails. Duplicate consecutive
+	// error messages are suppressed until the message changes.
 	LogError func(err error)
 }

@@ -81,7 +81,8 @@ func receiveWithin[T any](t *testing.T, ch <-chan T, d time.Duration, expected s
 	return v
 }
 
-// TestFlusherFlushOnMaxBatchSize verifies flushing when MaxBatchSize is reached.
+// TestFlusherFlushOnMaxBatchSize verifies flushing when MaxBatchSize is
+// reached.
 func TestFlusherFlushOnMaxBatchSize(t *testing.T) {
 	opts := baseOptions()
 	opts.BatchSize = 2
@@ -185,7 +186,8 @@ func TestFlusherMaxFlushLatency(t *testing.T) {
 	})
 }
 
-// TestFlusherAdaptiveFlushRespectsMinInterval verifies adaptive scheduling respects limits.
+// TestFlusherAdaptiveFlushRespectsMinInterval verifies adaptive scheduling
+// respects limits.
 func TestFlusherAdaptiveFlushRespectsMinInterval(t *testing.T) {
 	// synctest keeps adaptive scheduling deterministic without real sleeps.
 	synctest.Test(t, func(t *testing.T) {
@@ -374,7 +376,8 @@ func TestFlusherStartOperationRetry(t *testing.T) {
 	})
 }
 
-// TestFlusherStartOperationCanceled verifies Stop/Close aborts persistent StartOperation failures.
+// TestFlusherStartOperationCanceled verifies Stop/Close aborts persistent
+// StartOperation failures.
 func TestFlusherStartOperationCanceled(t *testing.T) {
 	// synctest keeps backoff retries deterministic without real sleeps.
 	synctest.Test(t, func(t *testing.T) {
@@ -426,7 +429,8 @@ func TestFlusherStartOperationCanceled(t *testing.T) {
 	})
 }
 
-// TestFlusherMetricsAggregation verifies per-pipeline aggregation and finalization.
+// TestFlusherMetricsAggregation verifies per-pipeline aggregation and
+// finalization.
 func TestFlusherMetricsAggregation(t *testing.T) {
 	finalizeCh := make(chan struct{}, 2)
 	var mu sync.Mutex
@@ -479,7 +483,8 @@ func TestFlusherMetricsAggregation(t *testing.T) {
 	waitChannelClosed(t, f.rows)
 }
 
-// TestFlusherRetryLogErrorDedup verifies logError de-duplication across retries.
+// TestFlusherRetryLogErrorDedup verifies logError de-duplication across
+// retries.
 func TestFlusherRetryLogErrorDedup(t *testing.T) {
 	// synctest keeps backoff retries deterministic without real sleeps.
 	synctest.Test(t, func(t *testing.T) {
@@ -598,12 +603,14 @@ func TestFlusherCloseStopSemantics(t *testing.T) {
 	})
 }
 
-// TestFlusherInFlightCancellationStop verifies Stop cancels in-flight flushes on timeout.
+// TestFlusherInFlightCancellationStop verifies Stop cancels in-flight flushes
+// on timeout.
 func TestFlusherInFlightCancellationStop(t *testing.T) {
 	runInFlightCancellation(t, func(ctx context.Context, f *flusher[testRow]) error { return f.Stop(ctx) })
 }
 
-// TestFlusherInFlightCancellationClose verifies Close cancels in-flight flushes on timeout.
+// TestFlusherInFlightCancellationClose verifies Close cancels in-flight flushes
+// on timeout.
 func TestFlusherInFlightCancellationClose(t *testing.T) {
 	runInFlightCancellation(t, func(ctx context.Context, f *flusher[testRow]) error { return f.Close(ctx) })
 }
