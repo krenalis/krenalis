@@ -137,7 +137,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 			ok = yield(&e.Event)
 			if !it.postponed {
 				wait := time.Since(e.EnqueuedAt).Seconds()
-				it.sender.toolsMetrics.queueWait.Observe(wait)
+				it.sender.prometheus.queueWait.Observe(wait)
 			}
 			if !ok {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
@@ -145,7 +145,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 			}
 			it.firstEvent = false
 		}
-		it.sender.toolsMetrics.queueWait.Consolidate()
+		it.sender.prometheus.queueWait.Consolidate()
 		it.iterating = false
 		it.firstEvent = false
 		it.sender.complete()

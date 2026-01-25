@@ -92,7 +92,7 @@ type Sender struct {
 	connector string // application connector.
 	metrics   *metrics.Collector
 
-	toolsMetrics struct {
+	prometheus struct {
 		queueAvailable *prometheus.GaugeFunc
 		queueWait      *prometheus.HistogramBuf
 	}
@@ -175,13 +175,13 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 	}()
 	// Set the metrics.
 	connection := strconv.Itoa(app.ID())
-	s.toolsMetrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
+	s.prometheus.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
 		s.mu.Unlock()
 		return float64(a)
 	}, s.connector, connection)
-	s.toolsMetrics.queueWait = queueWaitMetric.Register(s.connector, connection)
+	s.prometheus.queueWait = queueWaitMetric.Register(s.connector, connection)
 	return s
 }
 
@@ -242,8 +242,8 @@ func (s *Sender) Close(ctx context.Context) error {
 		s._assertAvailable(0)
 	}
 	trace("Writer.Close: iterators are terminated; writer is now closed\n")
-	s.toolsMetrics.queueAvailable.Unregister()
-	s.toolsMetrics.queueWait.Unregister()
+	s.prometheus.queueAvailable.Unregister()
+	s.prometheus.queueWait.Unregister()
 	return nil
 }
 
