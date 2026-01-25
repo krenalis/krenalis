@@ -64,7 +64,7 @@
 #     MEERGO_NATS_URL=nats://127.0.0.1:4222
 #     MEERGO_NATS_USER=ruser
 #     MEERGO_NATS_PASSWORD=T0pS3cr3t
-#     MEERGO_METRICS_ENABLED=true
+#     MEERGO_PROMETHEUS_METRICS_ENABLED=true
 
 name: meergo-dev
 

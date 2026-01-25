@@ -68,8 +68,8 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	MetricsEnabled   bool
-	OAuthCredentials map[string]*core.OAuthCredentials
+	PrometheusMetricsEnabled bool
+	OAuthCredentials         map[string]*core.OAuthCredentials
 }
 
 type LambdaConfig struct {
@@ -158,10 +158,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		}
 	}()
 
-	// Instantiate the Prometheus handler.
-	var metricsHandler http.Handler
-	if settings.MetricsEnabled {
-		metricsHandler = promhttp.Handler()
+	// Instantiate the Prometheus metrics handler.
+	var prometheusMetricsHandler http.Handler
+	if settings.PrometheusMetricsEnabled {
+		prometheusMetricsHandler = promhttp.Handler()
 	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,8 +203,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":
-			if settings.MetricsEnabled {
-				metricsHandler.ServeHTTP(w, r)
+			if settings.PrometheusMetricsEnabled {
+				prometheusMetricsHandler.ServeHTTP(w, r)
 				return
 			}
 		case prometheus.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
@@ -247,9 +247,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	}()
 
 	// Log a human-readable overview of all externally exposed server endpoints.
-	metricsLine := ""
-	if settings.MetricsEnabled {
-		metricsLine = fmt.Sprintf("├─ Metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
+	prometheusMetricsLine := ""
+	if settings.PrometheusMetricsEnabled {
+		prometheusMetricsLine = fmt.Sprintf("├─ Prometheus metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
 	}
 	msg := fmt.Sprintf(
 		"The Meergo server has been started at %s\n"+
@@ -258,7 +258,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			"└─ Event ingestion endpoint: %s\n\n"+
 			" > Admin console: %s\n\n",
 		addr,
-		metricsLine,
+		prometheusMetricsLine,
 		settings.HTTP.ExternalURL+"v1/",
 		settings.HTTP.ExternalEventURL,
 		settings.HTTP.ExternalURL+"admin",
