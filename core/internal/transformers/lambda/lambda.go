@@ -19,7 +19,7 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers/embed"
 	"github.com/meergo/meergo/tools/backoff"
 	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 	"github.com/meergo/meergo/tools/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -496,13 +496,13 @@ var metricErrorLabels = [...]string{
 }
 
 // Metrics.
-var errorsMetric [len(metricErrorLabels)]*metrics.Counter
-var durationMetric *metrics.Histogram
-var recordsMetric *metrics.Counter
+var errorsMetric [len(metricErrorLabels)]*prometheus.Counter
+var durationMetric *prometheus.Histogram
+var recordsMetric *prometheus.Counter
 
 func init() {
 	// Errors metric.
-	vec := metrics.RegisterCounterVec(
+	vec := prometheus.RegisterCounterVec(
 		"meergo_lambda_errors_total",
 		"Total number of Lambda errors, classified by type",
 		[]string{"type"},
@@ -512,14 +512,14 @@ func init() {
 	}
 
 	// Duration metric.
-	durationMetric = metrics.RegisterHistogram(
+	durationMetric = prometheus.RegisterHistogram(
 		"meergo_lambda_duration_seconds",
 		"Duration of successful Lambda executions in seconds",
 		[]float64{0.1, 0.5, 1, 2.5, 5},
 	)
 
 	// Records metric.
-	recordsMetric = metrics.RegisterCounter(
+	recordsMetric = prometheus.RegisterCounter(
 		"meergo_lambda_records_total",
 		"Total number of input records processed by successful Lambda executions",
 	)

@@ -27,7 +27,7 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/tools/errors"
 	"github.com/meergo/meergo/tools/json"
-	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 	"github.com/meergo/meergo/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
@@ -567,7 +567,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
-		meergoMetrics.Increment("Collector.serveEvents.decoded_events", 1)
+		prometheus.Increment("Collector.serveEvents.decoded_events", 1)
 		if err != nil {
 			continue
 		}
@@ -657,7 +657,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Send a successful response to the client.
-	meergoMetrics.Increment("Collector.writeOK.calls", 1)
+	prometheus.Increment("Collector.writeOK.calls", 1)
 	w.Header().Set("Content-Type", "text/plain")
 
 	return nil

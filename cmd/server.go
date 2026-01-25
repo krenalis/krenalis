@@ -23,7 +23,7 @@ import (
 
 	"github.com/meergo/meergo/cmd/mcp"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -207,7 +207,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 				metricsHandler.ServeHTTP(w, r)
 				return
 			}
-		case metrics.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
+		case prometheus.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
 			expvar.Handler().ServeHTTP(w, r)
 			return
 		default:

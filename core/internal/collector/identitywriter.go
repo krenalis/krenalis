@@ -15,7 +15,7 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/streams"
 	"github.com/meergo/meergo/core/internal/transformers"
-	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 )
 
 var maxQueuedIdentities = 1000
@@ -73,7 +73,7 @@ func (iw *identityWriter) SetTransformer(transformer *transformers.Transformer) 
 // Write writes the identity of the provided event into the data warehouse.
 func (iw *identityWriter) Write(event streams.Event) error {
 
-	meergoMetrics.Increment("Collector.IdentityWriter.Write.calls", 1)
+	prometheus.Increment("Collector.IdentityWriter.Write.calls", 1)
 
 	iw.mu.Lock()
 
@@ -116,8 +116,8 @@ func (iw *identityWriter) Write(event streams.Event) error {
 
 func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 
-	meergoMetrics.Increment("Collector.IdentityWriter.transformAndWrite.calls", 1)
-	meergoMetrics.Increment("Collector.IdentityWriter.transformAndWrite.passed_identities", len(events))
+	prometheus.Increment("Collector.IdentityWriter.transformAndWrite.calls", 1)
+	prometheus.Increment("Collector.IdentityWriter.transformAndWrite.passed_identities", len(events))
 
 	records := make([]transformers.Record, len(events))
 	for i, event := range events {

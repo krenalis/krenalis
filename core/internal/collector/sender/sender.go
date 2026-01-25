@@ -19,7 +19,7 @@ import (
 	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/streams"
-	toolsMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -93,8 +93,8 @@ type Sender struct {
 	metrics   *metrics.Collector
 
 	toolsMetrics struct {
-		queueAvailable *toolsMetrics.GaugeFunc
-		queueWait      *toolsMetrics.HistogramBuf
+		queueAvailable *prometheus.GaugeFunc
+		queueWait      *prometheus.HistogramBuf
 	}
 
 	mu                 sync.Mutex

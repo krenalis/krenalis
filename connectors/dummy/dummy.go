@@ -22,7 +22,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -204,7 +204,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 
 // Records returns the records of the specified target.
 func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, ids []string, _ string, _ types.Type) ([]connectors.Record, string, error) {
-	metrics.Increment("Dummy.Records.calls", 1)
+	prometheus.Increment("Dummy.Records.calls", 1)
 	dummy.simulateHTTPDelay()
 	select {
 	case <-ctx.Done():
@@ -340,10 +340,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 	n := 0
 	for record := range records.All() {
 
-		metrics.Increment("Dummy.Upsert.records_read_from_iterator", 1)
+		prometheus.Increment("Dummy.Upsert.records_read_from_iterator", 1)
 
 		if dummy.customerExportRandomlyFails() {
-			metrics.Increment("Dummy.Upsert.export_failed", 1)
+			prometheus.Increment("Dummy.Upsert.export_failed", 1)
 			recordsError[n] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
 			n++
 			continue
@@ -352,7 +352,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 		var id string
 		if record.ID == "" {
 			// Add a new customers into the in-memory customers.
-			metrics.Increment("Dummy.Upsert.customers_created", 1)
+			prometheus.Increment("Dummy.Upsert.customers_created", 1)
 			customer := maps.Clone(record.Attributes)
 			id = newDummyId()
 			customer["dummyId"] = id
@@ -377,12 +377,12 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 			// Update the in-memory customers.
 			customer, ok := allCustomers[record.ID]
 			if !ok {
-				metrics.Increment("Dummy.Upsert.updated_customers_not_found", 1)
+				prometheus.Increment("Dummy.Upsert.updated_customers_not_found", 1)
 				recordsError[n] = errors.New("the customer to update does not exist in Dummy")
 				n++
 				continue
 			}
-			metrics.Increment("Dummy.Upsert.updated_customers", 1)
+			prometheus.Increment("Dummy.Upsert.updated_customers", 1)
 			maps.Copy(customer, record.Attributes)
 			id = record.ID
 		}
@@ -442,7 +442,7 @@ func (dummy *Dummy) simulateHTTPDelay() {
 	}
 	latency := rand.Float64()*1.3 + 1.5 // seconds.
 	time.Sleep(time.Duration(latency * 1e9))
-	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
+	prometheus.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
 // sendEvents sends the given events to the API and returns the sent HTTP

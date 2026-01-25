@@ -19,7 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 	"github.com/meergo/meergo/tools/types"
 	"github.com/meergo/meergo/warehouses"
 
@@ -210,8 +210,8 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 
 // Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
-	metrics.Increment("warehouses.PostgreSQL.Merge.calls", 1)
-	metrics.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
+	prometheus.Increment("warehouses.PostgreSQL.Merge.calls", 1)
+	prometheus.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
@@ -239,8 +239,8 @@ var immutableMergeIdentitiesColumns = []string{
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 
-	metrics.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
-	metrics.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
+	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
+	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {

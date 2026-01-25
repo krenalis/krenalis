@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package metrics provides custom Prometheus metric types with support for
+// Package prometheus provides custom Prometheus metric types with support for
 // buffered updates and function-based value retrieval.
 //
 // It includes counters, gauges, and histograms—each available in standalone and
@@ -17,7 +17,7 @@
 //   - [GaugeBuf] and [GaugeBufVec] implement a gauge that buffers increments locally before consolidating. Useful for high-frequency updates with reduced lock contention.
 //   - [Histogram] and [HistogramVec] implement a histogram whose value is protected by a mutex.
 //   - [HistogramBuf] and [HistogramBufVec] implement a histogram that buffers observations locally before consolidating, reducing contention during frequent updates.
-package metrics
+package prometheus
 
 import (
 	"expvar"

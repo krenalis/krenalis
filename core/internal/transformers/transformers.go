@@ -13,7 +13,7 @@ import (
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	meergoMetrics "github.com/meergo/meergo/tools/metrics"
+	"github.com/meergo/meergo/tools/prometheus"
 	"github.com/meergo/meergo/tools/types"
 )
 
@@ -117,8 +117,8 @@ func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.Tim
 // returns a FunctionExecError.
 func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
-	meergoMetrics.Increment("Transformer.Transform.calls", 1)
-	meergoMetrics.Increment("Transformer.Transform.passed_records", len(records))
+	prometheus.Increment("Transformer.Transform.calls", 1)
+	prometheus.Increment("Transformer.Transform.passed_records", len(records))
 
 	// Transform using the mapping.
 	if t.mapping != nil {
