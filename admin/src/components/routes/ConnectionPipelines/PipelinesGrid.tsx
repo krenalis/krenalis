@@ -154,8 +154,13 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 			(t) => pipeline.target === t.target && (!('eventType' in pipeline) || pipeline.eventType === t.eventType),
 		);
 		if (pipelineType == null) {
+			if (pipeline.target === 'Event' && connection.pipelineTypes.some((t) => t.target === 'Event')) {
+				throw new Error(
+					`Pipeline ${pipeline.id} has event type '${pipeline.eventType}', but the related connection does not have this event type`,
+				);
+			}
 			throw new Error(
-				`Connection ${connection.id} no longer has target '${pipeline.target}' and event type '${pipeline.eventType}' for pipeline ${pipeline.id}`,
+				`Pipeline ${pipeline.id} has target ${pipeline.target}, but the related connection ${connection.id} does not have this target`,
 			);
 		}
 
