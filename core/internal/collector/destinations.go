@@ -97,16 +97,20 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 // pipeline.
 func (d *destinations) QueueEvent(pipeline *state.Pipeline, event streams.Event) {
 	connection := pipeline.Connection()
+	var dp *destinationPipeline
 	d.mu.Lock()
 	if pipelines, ok := d.pipelines[connection.ID]; ok {
 		for _, p := range pipelines {
 			if p.id == pipeline.ID {
-				p.QueueEvent(event)
+				dp = p
 				break
 			}
 		}
 	}
 	d.mu.Unlock()
+	if dp != nil {
+		dp.QueueEvent(event)
+	}
 }
 
 // createDestinationPipeline creates a destination pipeline for the provided
@@ -125,12 +129,15 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 	queue := &destinationPipelineQueue{
 		metrics: d.metrics,
 		sender:  sender,
-		ctx:     ctx,
-		cancel:  cancel,
 		timer:   newStoppedTimer(),
+		events:  make([]queuedEvent, 0, minQueuedEventSize),
 	}
+	queue.cond = sync.NewCond(&queue.mu)
+	queue.close.ctx = ctx
+	queue.close.cancel = cancel
 
 	go func(connection, pipeline int) {
+		done := queue.close.ctx.Done()
 		for {
 			select {
 			case <-queue.timer.C:
@@ -153,7 +160,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 					continue
 				}
 				go dp.transform()
-			case <-queue.ctx.Done():
+			case <-done:
 				return
 			}
 		}
@@ -215,7 +222,7 @@ func (d *destinations) onDeleteConnection(n state.DeleteConnection) {
 	d.mu.Unlock()
 	go func() {
 		for _, pipeline := range pipelines {
-			pipeline.Discard(errors.New("connection has been deleted"))
+			pipeline.Close(errors.New("connection has been deleted"))
 		}
 	}()
 }
@@ -244,7 +251,7 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 	d.mu.Lock()
 	d.pipelines[c.ID] = slices.Delete(pipelines, i, i+1)
 	d.mu.Unlock()
-	go dp.Discard(errors.New("pipeline has been deleted"))
+	go dp.Close(errors.New("pipeline has been deleted"))
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
@@ -268,7 +275,7 @@ func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
 	if len(pipelines) > 0 {
 		go func() {
 			for _, pipeline := range pipelines {
-				pipeline.Discard(errors.New("workspace has been deleted"))
+				pipeline.Close(errors.New("workspace has been deleted"))
 			}
 		}()
 	}
@@ -320,7 +327,7 @@ func (d *destinations) onSetPipelineStatus(n state.SetPipelineStatus) {
 	pipelines = slices.Delete(pipelines, i, i+1)
 	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
-	go dp.Discard(errors.New("pipeline has been disabled"))
+	go dp.Close(errors.New("pipeline has been disabled"))
 }
 
 // onUpdatePipeline is called when a pipeline is updated.
@@ -349,7 +356,7 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 			d.mu.Lock()
 			d.pipelines[c.ID] = slices.Delete(pipelines, index, index+1)
 			d.mu.Unlock()
-			go current.Discard(errors.New("pipeline has been disabled"))
+			go current.Close(errors.New("pipeline has been disabled"))
 		}
 		return
 	}

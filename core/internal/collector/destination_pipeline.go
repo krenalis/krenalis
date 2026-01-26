@@ -22,7 +22,10 @@ import (
 
 // minQueuedEventSize is the minimum number of events in the queue required to
 // trigger a new transformation.
-const minQueuedEventSize = 100
+const (
+	minQueuedEventSize = 100
+	maxQueuedEventSize = 2 * minQueuedEventSize
+)
 
 // maxQueuedEventTime is the maximum time an event can stay in the queue before
 // being transformed.
@@ -61,12 +64,16 @@ type queuedEvent struct {
 type destinationPipelineQueue struct {
 	metrics *metrics.Collector // metrics collector
 	sender  *sender.Sender     // sender associated with the connection
-	ctx     context.Context
-	cancel  context.CancelCauseFunc
 
 	mu     sync.Mutex
+	cond   *sync.Cond
 	events []queuedEvent // events to be transformed; protected by mu
 	timer  *time.Timer   // timer to trigger transformation
+	close  struct {
+		closed bool
+		ctx    context.Context
+		cancel context.CancelCauseFunc
+	}
 }
 
 // newDestinationPipeline returns a new destination pipeline for the provided
@@ -86,19 +93,20 @@ func newDestinationPipeline(pipeline *state.Pipeline, schema types.Type, provide
 	return dp
 }
 
-// Discard discards all events in the queue and cancels any ongoing
-// transformations, passing the provided error as the cancellation cause.
+// Close closes dp by discarding all queued events and canceling any in-progress
+// transformations, using the provided error as the cancellation cause.
 // It is called when the associated pipeline is disabled or deleted.
-func (dp *destinationPipeline) Discard(cause error) {
+func (dp *destinationPipeline) Close(cause error) {
 	dp.queue.mu.Lock()
+	dp.queue.close.closed = true
 	if len(dp.queue.events) > 0 {
 		dp.queue.metrics.TransformationFailed(dp.id, len(dp.queue.events), cause.Error())
 	}
 	clear(dp.queue.events)
-	dp.queue.events = dp.queue.events[0:0]
 	dp.queue.resetTimerLocked()
+	dp.queue.cond.Broadcast()
+	dp.queue.close.cancel(cause)
 	dp.queue.mu.Unlock()
-	dp.queue.cancel(cause)
 }
 
 // QueueEvent queues an event for the pipeline.
@@ -114,6 +122,13 @@ func (dp *destinationPipeline) QueueEvent(event streams.Event) {
 		return
 	}
 	dp.queue.mu.Lock()
+	for !dp.queue.close.closed && len(dp.queue.events) >= maxQueuedEventSize {
+		dp.queue.cond.Wait()
+	}
+	if dp.queue.close.closed {
+		dp.queue.mu.Unlock()
+		return
+	}
 	dp.queue.events = append(dp.queue.events, queuedEvent{streamEvent: event, senderEvent: se})
 	n := len(dp.queue.events)
 	if n == 1 || n == minQueuedEventSize {
@@ -136,11 +151,7 @@ func (q *destinationPipelineQueue) resetTimerLocked() {
 		return
 	}
 	elapsed := time.Since(q.events[0].senderEvent.CreatedAt)
-	if elapsed < maxQueuedEventTime {
-		q.timer.Reset(maxQueuedEventTime - elapsed)
-	} else {
-		q.timer.Reset(0)
-	}
+	q.timer.Reset(max(0, maxQueuedEventTime-elapsed))
 }
 
 // transform transforms the queued events.
@@ -149,7 +160,7 @@ func (dp *destinationPipeline) transform() {
 	var events []queuedEvent
 	dp.queue.mu.Lock()
 	n := min(len(dp.queue.events), minQueuedEventSize)
-	if n == 0 {
+	if dp.queue.close.closed || n == 0 {
 		dp.queue.mu.Unlock()
 		return
 	}
@@ -157,6 +168,9 @@ func (dp *destinationPipeline) transform() {
 	copy(events, dp.queue.events[:n])
 	dp.queue.events = slices.Delete(dp.queue.events, 0, n)
 	dp.queue.resetTimerLocked()
+	if len(dp.queue.events) < maxQueuedEventSize {
+		dp.queue.cond.Broadcast()
+	}
 	dp.queue.mu.Unlock()
 
 	records := make([]transformers.Record, n)
@@ -166,7 +180,7 @@ func (dp *destinationPipeline) transform() {
 	}
 
 	// Transform the events.
-	err := dp.transformer.Transform(dp.queue.ctx, records)
+	err := dp.transformer.Transform(dp.queue.close.ctx, records)
 	if err != nil {
 		for i := 0; i < n; i++ {
 			dp.queue.sender.DiscardEvent(events[i].senderEvent)
@@ -175,8 +189,8 @@ func (dp *destinationPipeline) transform() {
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
 			msg = err.Error()
-		} else if dp.queue.ctx.Err() != nil {
-			msg = context.Cause(dp.queue.ctx).Error()
+		} else if dp.queue.close.ctx.Err() != nil {
+			msg = context.Cause(dp.queue.close.ctx).Error()
 		} else {
 			msg = "an internal error has occurred"
 			slog.Error("core/events/collector: cannot transform events", "pipeline", dp.id, "error", err)
