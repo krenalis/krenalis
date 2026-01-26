@@ -155,7 +155,7 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 				pattern = s.rateLimiterPattern
 			}
 			s.resetTimerLocked()
-			waitTime := app.WaitTime
+			waitTime := s.waitTime
 			s.mu.Unlock()
 			if iter == nil {
 				continue
