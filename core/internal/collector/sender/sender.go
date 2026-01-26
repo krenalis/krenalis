@@ -63,7 +63,7 @@ type Event struct {
 	CreatedAt        time.Time   // time at which the event was created.
 	EnqueuedAt       time.Time   // time at which the event was enqueued.
 	pipeline         int         // pipeline ID.
-	user             *user       // associated user; nil if the event was discarded.
+	user             *user       // associated user; nil if DiscardEvent was called (the event was never queued).
 	sequence         int         // sequence number; access is synchronized via Sender.mu.
 	iterator         *iterator   // iterator that consumed the event; nil if it hasn't been consumed.
 	ack              streams.Ack // event ack.
@@ -105,7 +105,7 @@ type Sender struct {
 	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
 	iterator           *iterator                                                 // current iterator; protected by mu.
 	available          int                                                       // number of available (non-read) records; protected by mu.
-	index              int                                                       // index of the oldest available event; 0 if no event is available; protected by mu.
+	index              int                                                       // starting index for the next iteration; all events before this index are unavailable; protected by mu.
 	timer              *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
 	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
 	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
@@ -402,8 +402,7 @@ func (s *Sender) complete() {
 }
 
 // discard discards the most recently read event with the provided error. It is
-// invoked when an iterator calls Events.Discard and must be executed with s.mu
-// held.
+// invoked when an iterator calls Events.Discard.
 func (s *Sender) discard(err error) {
 	s.mu.Lock()
 	i := s.iterator.index - 1
