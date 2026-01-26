@@ -72,7 +72,7 @@ type destinationPipelineQueue struct {
 // newDestinationPipeline returns a new destination pipeline for the provided
 // pipeline with the provided schema, provider, and queue.
 func newDestinationPipeline(pipeline *state.Pipeline, schema types.Type, provider transformers.FunctionProvider, queue *destinationPipelineQueue) *destinationPipeline {
-	da := &destinationPipeline{
+	dp := &destinationPipeline{
 		id:             pipeline.ID,
 		eventType:      pipeline.EventType,
 		filter:         pipeline.Filter,
@@ -80,46 +80,46 @@ func newDestinationPipeline(pipeline *state.Pipeline, schema types.Type, provide
 		transformation: pipeline.Transformation,
 		queue:          queue,
 	}
-	if t := da.transformation; t.Mapping != nil || t.Function != nil {
-		da.transformer, _ = transformers.New(pipeline, provider, nil)
+	if t := dp.transformation; t.Mapping != nil || t.Function != nil {
+		dp.transformer, _ = transformers.New(pipeline, provider, nil)
 	}
-	return da
+	return dp
 }
 
 // Discard discards all events in the queue and cancels any ongoing
 // transformations, passing the provided error as the cancellation cause.
 // It is called when the associated pipeline is disabled or deleted.
-func (da *destinationPipeline) Discard(cause error) {
-	da.queue.mu.Lock()
-	if len(da.queue.events) > 0 {
-		da.queue.metrics.TransformationFailed(da.id, len(da.queue.events), cause.Error())
+func (dp *destinationPipeline) Discard(cause error) {
+	dp.queue.mu.Lock()
+	if len(dp.queue.events) > 0 {
+		dp.queue.metrics.TransformationFailed(dp.id, len(dp.queue.events), cause.Error())
 	}
-	clear(da.queue.events)
-	da.queue.events = da.queue.events[0:0]
-	da.queue.resetTimerLocked()
-	da.queue.mu.Unlock()
-	da.queue.cancel(cause)
+	clear(dp.queue.events)
+	dp.queue.events = dp.queue.events[0:0]
+	dp.queue.resetTimerLocked()
+	dp.queue.mu.Unlock()
+	dp.queue.cancel(cause)
 }
 
 // QueueEvent queues an event for the pipeline.
 //
 // If the pipeline has a transformation, the event is transformed before being
 // queued.
-func (da *destinationPipeline) QueueEvent(event streams.Event) {
-	se := da.queue.sender.CreateEvent(da.id, da.eventType, da.schema, event)
-	if da.transformer == nil {
-		da.queue.metrics.TransformationPassed(da.id, 1)
-		da.queue.metrics.OutputValidationPassed(da.id, 1)
-		da.queue.sender.QueueEvent(se)
+func (dp *destinationPipeline) QueueEvent(event streams.Event) {
+	se := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.schema, event)
+	if dp.transformer == nil {
+		dp.queue.metrics.TransformationPassed(dp.id, 1)
+		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
+		dp.queue.sender.QueueEvent(se)
 		return
 	}
-	da.queue.mu.Lock()
-	da.queue.events = append(da.queue.events, queuedEvent{streamEvent: event, senderEvent: se})
-	n := len(da.queue.events)
+	dp.queue.mu.Lock()
+	dp.queue.events = append(dp.queue.events, queuedEvent{streamEvent: event, senderEvent: se})
+	n := len(dp.queue.events)
 	if n == 1 || n == minQueuedEventSize {
-		da.queue.resetTimerLocked()
+		dp.queue.resetTimerLocked()
 	}
-	da.queue.mu.Unlock()
+	dp.queue.mu.Unlock()
 }
 
 // resetTimerLocked schedules the timer so that the oldest queued event is
@@ -144,20 +144,20 @@ func (q *destinationPipelineQueue) resetTimerLocked() {
 }
 
 // transform transforms the queued events.
-func (da *destinationPipeline) transform() {
+func (dp *destinationPipeline) transform() {
 
 	var events []queuedEvent
-	da.queue.mu.Lock()
-	n := min(len(da.queue.events), minQueuedEventSize)
+	dp.queue.mu.Lock()
+	n := min(len(dp.queue.events), minQueuedEventSize)
 	if n == 0 {
-		da.queue.mu.Unlock()
+		dp.queue.mu.Unlock()
 		return
 	}
 	events = make([]queuedEvent, n)
-	copy(events, da.queue.events[:n])
-	da.queue.events = slices.Delete(da.queue.events, 0, n)
-	da.queue.resetTimerLocked()
-	da.queue.mu.Unlock()
+	copy(events, dp.queue.events[:n])
+	dp.queue.events = slices.Delete(dp.queue.events, 0, n)
+	dp.queue.resetTimerLocked()
+	dp.queue.mu.Unlock()
 
 	records := make([]transformers.Record, n)
 	for i := 0; i < n; i++ {
@@ -166,42 +166,42 @@ func (da *destinationPipeline) transform() {
 	}
 
 	// Transform the events.
-	err := da.transformer.Transform(da.queue.ctx, records)
+	err := dp.transformer.Transform(dp.queue.ctx, records)
 	if err != nil {
 		for i := 0; i < n; i++ {
-			da.queue.sender.DiscardEvent(events[i].senderEvent)
+			dp.queue.sender.DiscardEvent(events[i].senderEvent)
 			events[i].streamEvent.Ack()
 		}
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
 			msg = err.Error()
-		} else if da.queue.ctx.Err() != nil {
-			msg = context.Cause(da.queue.ctx).Error()
+		} else if dp.queue.ctx.Err() != nil {
+			msg = context.Cause(dp.queue.ctx).Error()
 		} else {
 			msg = "an internal error has occurred"
-			slog.Error("core/events/collector: cannot transform events", "pipeline", da.id, "error", err)
+			slog.Error("core/events/collector: cannot transform events", "pipeline", dp.id, "error", err)
 		}
-		da.queue.metrics.TransformationFailed(da.id, n, msg)
+		dp.queue.metrics.TransformationFailed(dp.id, n, msg)
 		return
 	}
 
 	for i, record := range records {
 		if err := record.Err; err != nil {
-			da.queue.sender.DiscardEvent(events[i].senderEvent)
+			dp.queue.sender.DiscardEvent(events[i].senderEvent)
 			events[i].streamEvent.Ack()
 			switch err.(type) {
 			case transformers.RecordTransformationError:
-				da.queue.metrics.TransformationFailed(da.id, 1, err.Error())
+				dp.queue.metrics.TransformationFailed(dp.id, 1, err.Error())
 			case transformers.RecordValidationError:
-				da.queue.metrics.TransformationPassed(da.id, 1)
-				da.queue.metrics.OutputValidationFailed(da.id, 1, err.Error())
+				dp.queue.metrics.TransformationPassed(dp.id, 1)
+				dp.queue.metrics.OutputValidationFailed(dp.id, 1, err.Error())
 			}
 			continue
 		}
-		da.queue.metrics.TransformationPassed(da.id, 1)
-		da.queue.metrics.OutputValidationPassed(da.id, 1)
+		dp.queue.metrics.TransformationPassed(dp.id, 1)
+		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
 		events[i].senderEvent.Type.Values = record.Attributes
-		da.queue.sender.QueueEvent(events[i].senderEvent)
+		dp.queue.sender.QueueEvent(events[i].senderEvent)
 	}
 
 }
