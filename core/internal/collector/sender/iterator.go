@@ -143,6 +143,10 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
 				break
 			}
+			if it.postponed && it.sameUser.enabled {
+				trace("iterator.seq: iterator %p postponed an event while iterating over the same user\n", it)
+				break
+			}
 			it.firstEvent = false
 		}
 		it.sender.prometheus.queueWait.Consolidate()
