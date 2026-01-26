@@ -713,13 +713,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		}
 		if s.iterator == nil {
 			s.releaseUsers()
-			if s.available > 0 {
-				var d time.Duration
-				if s.available < s.minBatchSize {
-					d = maxQueueDelay
-				}
-				s.timer.Reset(d)
-			}
+			s.resetTimerLocked()
 		}
 		if asserts {
 			s._assertAvailable(s.available)
