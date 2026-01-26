@@ -307,8 +307,9 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 			},
 			&connectors.Input{
 				Name:        "urlForDispatchingEvents",
-				Label:       "URL for dispatching events",
-				Placeholder: "https://example.com",
+				Label:       "URL to which event dispatch POSTs are made",
+				HelpText:    "If not set, event dispatch will always return an error.",
+				Placeholder: "http://127.0.0.1:1234",
 				Role:        connectors.Destination,
 			},
 			&connectors.Checkbox{
@@ -461,11 +462,11 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events connectors.Events, pr
 			return nil, err
 		}
 	}
-	u := "https://example.com/"
-	if dummy.settings.URLForDispatchingEvents != "" {
-		u = dummy.settings.URLForDispatchingEvents
+	url := dummy.settings.URLForDispatchingEvents
+	if url == "" {
+		return nil, errors.New("no event dispatch URL has been set in Dummy's settings")
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
