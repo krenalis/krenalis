@@ -1,6 +1,7 @@
 The MIT License (MIT)
 
-Copyright (c) 2024 Open2b
+Copyright (c) 2026 Open2b
+
 Copyright (c) 2016 Segment, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -1,5 +1,7 @@
 # Meergo Go SDK
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/meergo/analytics-go.svg)](https://pkg.go.dev/github.com/meergo/analytics-go)
+
 The Meergo Go SDK lets you send customer event data from your Go applications to your specified destinations.
 
 ## SDK setup requirements

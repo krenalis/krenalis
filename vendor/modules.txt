@@ -549,8 +549,8 @@ github.com/mailru/easyjson/jwriter
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
 github.com/mark3labs/mcp-go/util
-# github.com/meergo/analytics-go v0.0.6
-## explicit; go 1.21
+# github.com/meergo/analytics-go v0.0.7
+## explicit; go 1.24
 github.com/meergo/analytics-go
 # github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8
 ## explicit
