@@ -36,9 +36,8 @@ type Consumer interface {
 // BatchPublisher publishes events in batches.
 type BatchPublisher interface {
 
-	// Publish adds an event to the current batch for the given pipelines with the
-	// provided attributes.
-	Publish(pipelines []int, attributes map[string]any) error
+	// Publish adds an event to the current batch for the given topics.
+	Publish(topics []string, event map[string]any) error
 
 	// Done publishes all buffered events.
 	//
@@ -57,9 +56,9 @@ type Stream interface {
 	Batch() BatchPublisher
 
 	// Consume returns a buffered channel of the given size that streams events for
-	// the specified pipeline. Events belonging to the same shard are sent on the
+	// the specified topic. Events belonging to the same shard are sent on the
 	// channel in order, ensuring per-user ordering is preserved.
-	Consume(pipeline, size int) Consumer
+	Consume(topic string, size int) Consumer
 }
 
 // Ack acknowledges an event.

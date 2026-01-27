@@ -429,9 +429,9 @@ func (s *stream) Batch() streams.BatchPublisher {
 }
 
 // Consume returns a buffered channel of the given size that streams events for
-// the specified pipeline. Events belonging to the same shard are sent on the
+// the specified topic. Events belonging to the same shard are sent on the
 // channel in order, ensuring per-user ordering is preserved.
-func (s *stream) Consume(pipeline, size int) streams.Consumer {
+func (s *stream) Consume(topic string, size int) streams.Consumer {
 	ctx, cancel := context.WithCancel(context.Background())
 	consumer := &consumer{
 		events: make(chan streams.Event, size),
@@ -449,8 +449,8 @@ func (s *stream) Consume(pipeline, size int) streams.Consumer {
 			close(consumer.events)
 		}()
 		for shard := range numShards {
-			consumerName := "EVENTS_" + strconv.Itoa(pipeline) + "_" + strconv.Itoa(shard)
-			filterSubject := "events.v1." + strconv.Itoa(pipeline) + "." + strconv.Itoa(shard)
+			consumerName := "EVENTS_" + topic + "_" + strconv.Itoa(shard)
+			filterSubject := "events.v1." + topic + "." + strconv.Itoa(shard)
 			var cc jetstream.ConsumeContext
 			bo := backoff.New(10)
 			for bo.Next(ctx) {
@@ -561,17 +561,16 @@ func (batch *batch) Done(ctx context.Context) error {
 	return nil
 }
 
-// Publish adds an event to the current batch for the given pipelines with the
-// provided attributes.
-func (batch *batch) Publish(pipelines []int, event map[string]any) error {
+// Publish adds an event to the current batch for the given topic.
+func (batch *batch) Publish(topics []string, event map[string]any) error {
 	shard := shardOf(event["anonymousId"].(string))
 	data, err := types.Marshal(event, schemas.Event)
 	if err != nil {
 		return err
 	}
-	for _, pipeline := range pipelines {
+	for _, topic := range topics {
 		future, err := batch.conn.js.jetStream.PublishMsgAsync(&nats.Msg{
-			Subject: "events.v1." + strconv.Itoa(pipeline) + "." + strconv.Itoa(shard),
+			Subject: "events.v1." + topic + "." + strconv.Itoa(shard),
 			Data:    data,
 		})
 		if err != nil {

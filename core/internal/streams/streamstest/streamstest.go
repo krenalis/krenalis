@@ -51,7 +51,7 @@ func (c *Connection) WaitUp(ctx context.Context) bool {
 // Stream is a mock for streams.Stream.
 type Stream struct {
 	BatchFunc   func() streams.BatchPublisher
-	ConsumeFunc func(pipeline, size int) streams.Consumer
+	ConsumeFunc func(topic string, size int) streams.Consumer
 
 	BatchValue   streams.BatchPublisher
 	ConsumeValue streams.Consumer
@@ -69,9 +69,9 @@ func (s *Stream) Batch() streams.BatchPublisher {
 }
 
 // Consume implements streams.Stream.
-func (s *Stream) Consume(pipeline, size int) streams.Consumer {
+func (s *Stream) Consume(topic string, size int) streams.Consumer {
 	if s.ConsumeFunc != nil {
-		return s.ConsumeFunc(pipeline, size)
+		return s.ConsumeFunc(topic, size)
 	}
 	if s.ConsumeValue != nil {
 		return s.ConsumeValue
@@ -81,14 +81,14 @@ func (s *Stream) Consume(pipeline, size int) streams.Consumer {
 
 // batchPublisher is a mock for streams.BatchPublisher.
 type batchPublisher struct {
-	PublishFunc func(pipelines []int, attributes map[string]any) error
+	PublishFunc func(topics []string, attributes map[string]any) error
 	DoneFunc    func(context.Context) error
 }
 
 // Publish implements streams.BatchPublisher.
-func (b *batchPublisher) Publish(pipelines []int, attributes map[string]any) error {
+func (b *batchPublisher) Publish(topics []string, attributes map[string]any) error {
 	if b.PublishFunc != nil {
-		return b.PublishFunc(pipelines, attributes)
+		return b.PublishFunc(topics, attributes)
 	}
 	return nil
 }

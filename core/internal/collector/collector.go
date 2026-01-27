@@ -351,7 +351,7 @@ func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter
 	if err != nil {
 		return // ctx has been canceled or c.sc has been closed.
 	}
-	consumer := stream.Consume(pipeline, 1000)
+	consumer := stream.Consume(strconv.Itoa(pipeline), 1000)
 	events := consumer.Events()
 	done := ctx.Done()
 	for {
@@ -377,7 +377,7 @@ func (c *Collector) processForwardedEvents(ctx context.Context, destinations *de
 	if err != nil {
 		return // ctx has been canceled or c.sc has been closed.
 	}
-	consumer := stream.Consume(pipeline.ID, 1000)
+	consumer := stream.Consume(strconv.Itoa(pipeline.ID), 1000)
 	events := consumer.Events()
 	done := ctx.Done()
 	for {
@@ -403,7 +403,7 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.Eve
 	if err != nil {
 		return // ctx has been canceled or c.sc has been closed.
 	}
-	consumer := stream.Consume(pipeline, 1000)
+	consumer := stream.Consume(strconv.Itoa(pipeline), 1000)
 	events := consumer.Events()
 	done := ctx.Done()
 	for {
@@ -560,7 +560,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return errNoStreamConnection
 	}
 	batch := stream.Batch()
-	var pipelineIDs []int
+	var topics []string
 
 	var observedEvents []events.Event
 
@@ -581,7 +581,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			observedEvents = append(observedEvents, event)
 		}
 
-		pipelineIDs = pipelineIDs[0:0]
+		topics = topics[0:0]
 
 		// Store the events into the data warehouse.
 		for _, p := range pipelines {
@@ -595,7 +595,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			c.metrics.FilterPassed(p.ID, 1)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
-				pipelineIDs = append(pipelineIDs, p.ID)
+				topics = append(topics, strconv.Itoa(p.ID))
 			}
 		}
 
@@ -611,7 +611,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			c.metrics.FilterPassed(p.ID, 1)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
-				pipelineIDs = append(pipelineIDs, p.ID)
+				topics = append(topics, strconv.Itoa(p.ID))
 			}
 		}
 
@@ -631,16 +631,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.FilterPassed(p.ID, 1)
-				pipelineIDs = append(pipelineIDs, p.ID)
+				topics = append(topics, strconv.Itoa(p.ID))
 			}
 		}
 
-		if len(pipelineIDs) == 0 {
+		if len(topics) == 0 {
 			continue
 		}
 
 		// Publish the event.
-		err = batch.Publish(pipelineIDs, event)
+		err = batch.Publish(topics, event)
 		if err != nil {
 			return err
 		}
