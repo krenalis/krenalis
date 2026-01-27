@@ -105,7 +105,6 @@ type Sender struct {
 	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
 	iterator           *iterator                                                 // current iterator; protected by mu.
 	available          int                                                       // number of available (non-read) records; protected by mu.
-	index              int                                                       // starting index for the next iteration; all events before this index are unavailable; protected by mu.
 	timer              *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
 	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
 	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
@@ -150,7 +149,6 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 			if s.iterator == nil && s.available > 0 {
 				s.releaseUsers()
 				iter = newIterator(s)
-				iter.index = s.index
 				s.iterator = iter
 				pattern = s.rateLimiterPattern
 			}
@@ -212,7 +210,6 @@ func (s *Sender) Close(ctx context.Context) error {
 		if s.available > 0 {
 			s.releaseUsers()
 			iter = newIterator(s)
-			iter.index = s.index
 			s.iterator = iter
 			pattern = s.rateLimiterPattern
 			trace("Sender.Close: %d events available; create new iterator %p\n", s.available, iter)
@@ -318,9 +315,6 @@ func (s *Sender) appendToReadyQueue(event *Event) {
 	u.events++
 	if u.iterator == nil {
 		s.available++
-		if s.available == 1 {
-			s.index = len(s.events) - 1
-		}
 		if s.iterator == nil {
 			s.resetTimerLocked()
 		}
@@ -361,7 +355,6 @@ func (s *Sender) compact() {
 		if s.iterator != nil {
 			s.iterator.index = max(0, s.iterator.index-i)
 		}
-		s.index = max(0, s.index-i)
 		trace("Sender.compact: %d events compacted, %d available\n", i, s.available)
 		if asserts {
 			s._assertAvailable(s.available)
@@ -394,9 +387,6 @@ func (s *Sender) complete() {
 	}
 	s.iterator = nil
 	s.releaseUsers()
-	if s.available == 0 {
-		s.index = 0
-	}
 	s.resetTimerLocked()
 	s.mu.Unlock()
 	s.close.completed.Signal()
@@ -592,13 +582,6 @@ func (s *Sender) releaseUsers() {
 		s.available += user.events
 	}
 	clear(s.releasableUsers)
-	for i := 0; i < len(s.events); i++ {
-		event := s.events[i]
-		if event != nil && event.iterator == nil && event.user.iterator == nil {
-			s.index = i
-			break
-		}
-	}
 }
 
 // resetTimerLocked schedules the timer so that the oldest available event is
@@ -610,15 +593,26 @@ func (s *Sender) resetTimerLocked() {
 		s.timer.Stop()
 		return
 	}
+	// If an iteration is already in progress, do not reschedule.
 	if s.iterator != nil {
 		return
 	}
+	// If we have enough events for a batch, send immediately.
 	if s.available >= s.minBatchSize {
 		s.timer.Reset(0)
 		return
 	}
-	elapsed := time.Since(s.events[s.index].CreatedAt)
-	s.timer.Reset(max(0, maxQueueDelay-elapsed))
+	// Find the creation time of the oldest available event.
+	var createdAt time.Time
+	for i := 0; i < len(s.events); i++ {
+		event := s.events[i]
+		if event != nil && event.iterator == nil && event.user.iterator == nil {
+			createdAt = event.CreatedAt
+			break
+		}
+	}
+	// Wait until maxQueueDelay has elapsed since createdAt.
+	s.timer.Reset(max(0, maxQueueDelay-time.Since(createdAt)))
 }
 
 // send sends events to the application by calling the connector's SendEvents
