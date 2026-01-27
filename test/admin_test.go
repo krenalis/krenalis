@@ -35,6 +35,10 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
+	// TODO: Playwright is not supported on Fedora, and this appears to cause
+	// problems. See https://github.com/meergo/meergo/issues/2116.
+	t.Skip()
+
 	fsTempDir := meergotester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
