@@ -79,9 +79,10 @@ func main() {
 	NewCmd("npm", "run", "makevendor").InDir(repo, "admin").Run()
 
 	// Validate the Docker Compose files.
-	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
-	NewCmd("docker", "compose", "-f", "compose.dev.yaml", "config", "--quiet").InDir(repo).Run()
-	NewCmd("docker", "compose", "-f", "compose.release.yaml", "config", "--quiet").InDir(repo).Run()
+	fmt.Println("Validate Docker Compose files")
+	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()                           // compose.yaml with overriding (default).
+	NewCmd("docker", "compose", "-f", "compose.yaml", "config", "--quiet").InDir(repo).Run()     // compose.yaml without overriding.
+	NewCmd("docker", "compose", "-f", "compose.dev.yaml", "config", "--quiet").InDir(repo).Run() // compose.dev.yaml.
 
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {
