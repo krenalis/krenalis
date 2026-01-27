@@ -163,6 +163,8 @@ const Member = () => {
 			}
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
+				// Note that EmailVerificationRequired can only be returned when
+				// calling 'api.addMember', not 'api.updateMember'.
 				if (err.code === 'EmailVerificationRequired') {
 					handleError('Email verification is required');
 					redirect('organization/members');
