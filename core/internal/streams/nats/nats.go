@@ -564,7 +564,7 @@ func (batch *batch) Done(ctx context.Context) error {
 // Publish adds an event to the current batch for the given pipelines with the
 // provided attributes.
 func (batch *batch) Publish(pipelines []int, event map[string]any) error {
-	shard := shardOf(event["connectionId"].(int), event["anonymousId"].(string))
+	shard := shardOf(event["anonymousId"].(string))
 	data, err := types.Marshal(event, schemas.Event)
 	if err != nil {
 		return err
@@ -582,12 +582,10 @@ func (batch *batch) Publish(pipelines []int, event map[string]any) error {
 	return nil
 }
 
-func shardOf(connectionID int, anonymousID string) int {
+func shardOf(key string) int {
 	h := fnv.New32a()
 	var buf [20]byte
-	n := strconv.AppendInt(buf[:0], int64(connectionID), 10)
-	n = append(n, '|')
-	n = append(n, anonymousID...)
+	n := append(buf[:0], key...)
 	_, _ = h.Write(n)
 	return int(h.Sum32() % uint32(numShards))
 }
