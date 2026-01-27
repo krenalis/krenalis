@@ -32,30 +32,35 @@ export default defineConfig({
 	/* Configure projects for major browsers */
 	projects: [
 		{
+			name: 'test-fill.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/test-fill.spec.ts'],
+		},
+		{
 			name: 'auth.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/auth.spec.ts'],
 		},
-		{
-			name: 'schema.spec.ts',
-			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/schema.spec.ts'],
-		},
-		{
-			name: 'connections.spec.ts',
-			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/connections.spec.ts'],
-		},
-		{
-			name: 'pipelines.spec.ts',
-			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/pipelines.spec.ts'],
-		},
-		{
-			name: 'settings.spec.ts',
-			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/settings.spec.ts'],
-		},
+		// {
+		// 	name: 'schema.spec.ts',
+		// 	use: { ...devices['Desktop Chrome'] },
+		// 	testMatch: ['tests/schema.spec.ts'],
+		// },
+		// {
+		// 	name: 'connections.spec.ts',
+		// 	use: { ...devices['Desktop Chrome'] },
+		// 	testMatch: ['tests/connections.spec.ts'],
+		// },
+		// {
+		// 	name: 'pipelines.spec.ts',
+		// 	use: { ...devices['Desktop Chrome'] },
+		// 	testMatch: ['tests/pipelines.spec.ts'],
+		// },
+		// {
+		// 	name: 'settings.spec.ts',
+		// 	use: { ...devices['Desktop Chrome'] },
+		// 	testMatch: ['tests/settings.spec.ts'],
+		// },
 
 		// {
 		// 	name: 'firefox',

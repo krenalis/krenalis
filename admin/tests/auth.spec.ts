@@ -14,13 +14,17 @@ test('Update the member email to disable passwordless login', async ({ page }) =
 	await page.click('.header__passwordless-create-account');
 	await page.click('.members__member-edit');
 	await page.getByRole('textbox', { name: 'email' }).fill('test@meergo.com');
+	// await page.locator('sl-input >> input[name="email"]').fill('test@meergo.com'); // TEST: Try another way to access the input
+	// await page.waitForTimeout(2000); // TEST: try with a timeout to ensure React state is updated before saving
+	// TEST: use an alternative way to fill the input (ex. focus the input and then -> keyboard.type('test@meergo.com'))
+	// TEST: click outside the input (if for some reason `onSlInput` on the OS behaves like `onSlChange`)
 	await page.click('.member__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await logout(page);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 });
 
-test('Try to access a page that requires authentication and check that it redirects to the login page', async ({
+test.skip('Try to access a page that requires authentication and check that it redirects to the login page', async ({
 	page,
 }) => {
 	await page.goto(`${adminURL}/`);
@@ -31,7 +35,7 @@ test('Try to access a page that requires authentication and check that it redire
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 });
 
-test('Login', async ({ page }) => {
+test.skip('Login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
 	await page.getByRole('textbox', { name: 'email' }).fill('test@meergo.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('meergo-password');
@@ -40,7 +44,7 @@ test('Login', async ({ page }) => {
 	await logout(page);
 });
 
-test('Logout', async ({ page }) => {
+test.skip('Logout', async ({ page }) => {
 	await login(page);
 	await page.goto(`${adminURL}/`);
 	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();

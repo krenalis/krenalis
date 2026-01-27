@@ -1,0 +1,9 @@
+.test-fill {
+    padding: 30px;
+    width: 300px;
+}
+
+.test-fill input {
+    margin-bottom: 10px;
+    width: 100%;
+}

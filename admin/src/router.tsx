@@ -38,6 +38,7 @@ import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/Workspa
 import { AccessKeys } from './components/routes/AccessKeys/AccessKeys';
 import { ResetPassword } from './components/routes/ResetPassword/ResetPassword';
 import { ResetPasswordToken } from './components/routes/ResetPasswordToken/ResetPasswordToken';
+import { TestFill } from './components/routes/TestFill/TestFill';
 
 const router = createBrowserRouter([
 	{
@@ -52,7 +53,7 @@ const router = createBrowserRouter([
 			{
 				path: 'workspaces',
 				element: <WorkspacesWrapper />,
-				children: [
+				children: [	
 					{
 						path: '',
 						element: <Workspaces />,
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
 			{
 				element: <AppLayout />,
 				children: [
+					{
+						path: 'test-fill',
+						element: <TestFill />
+					},
 					{
 						path: 'connectors/:code',
 						element: <ConnectorSettings />,
