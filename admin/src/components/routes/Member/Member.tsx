@@ -54,8 +54,18 @@ const Member = () => {
 	}, []);
 
 	useEffect(() => {
-		const fetchData = async () => {
+		if (isUpdate) {
+			// Editing the currently logged-in member. This flow updates the
+			// member's own profile data.
+			setTitle(member.name);
+			setAvatar(member.avatar);
+			setName(member.name);
+			setEmail(member.email);
+		} else {
+			// Adding a new member directly, without email invitation.
 			if (publicMetadata.memberEmailVerificationRequired) {
+				// If email invitation is required, this flow is not allowed.
+				// Redirect to members list.
 				handleError('Email verification is required');
 				redirect('organization/members');
 				return;
@@ -66,15 +76,6 @@ const Member = () => {
 					nameInputRef.current?.focus();
 				}, 100);
 			}, 300);
-		};
-
-		if (isUpdate) {
-			setTitle(member.name);
-			setAvatar(member.avatar);
-			setName(member.name);
-			setEmail(member.email);
-		} else {
-			fetchData();
 		}
 	}, [isUpdate]);
 
