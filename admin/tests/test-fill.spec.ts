@@ -7,15 +7,13 @@ test('Test fill on native input', async ({ page }) => {
 	await page.waitForTimeout(2000); // Add a timeout to ensure the passwordless login is completed.
 	await page.goto(`${adminURL}/test-fill`);
 
-	// const nativeInput = page.locator('input[name="native-input"]');
+	const nativeInput = page.locator('input[name="native-input"]');
 
-	await page.locator('input[name="native-input"]').fill('hello');
-	await page.waitForTimeout(5000); // Add a timeout to ensure the saving is completed
-	await expect(page.locator('input[name="native-input"]')).toHaveValue('hello');
+	await nativeInput.fill('hello');
+	await expect(nativeInput).toHaveValue('hello');
 
-	await page.locator('input[name="native-input"]').fill('hello2');
-	await page.waitForTimeout(5000); // Add a timeout to ensure the saving is completed
-	await expect(page.locator('input[name="native-input"]')).toHaveValue('hello2');
+	await nativeInput.fill('hello2');
+	await expect(nativeInput).toHaveValue('hello2');
 });
 
 test('Test fill on Shoelace input', async ({ page }) => {
@@ -24,13 +22,11 @@ test('Test fill on Shoelace input', async ({ page }) => {
 	await page.waitForTimeout(2000); // Add a timeout to ensure the passwordless login is completed.
 	await page.goto(`${adminURL}/test-fill`);
 
-	// const slInput = page.locator('sl-input >> input[name="shoelace-input"]');
+	const slInput = page.locator('sl-input >> input[name="shoelace-input"]');
 
-	await page.locator('sl-input >> input[name="shoelace-input"]').fill('hello');
-	await page.waitForTimeout(5000); // Add a timeout to ensure the saving is completed
-	await expect(page.locator('sl-input >> input[name="shoelace-input"]')).toHaveValue('hello');
+	await slInput.fill('hello');
+	await expect(slInput).toHaveValue('hello');
 
-	await page.locator('sl-input >> input[name="shoelace-input"]').fill('hello2');
-	await page.waitForTimeout(5000); // Add a timeout to ensure the saving is completed
-	await expect(page.locator('sl-input >> input[name="shoelace-input"]')).toHaveValue('hello2');
+	await slInput.fill('hello2');
+	await expect(slInput).toHaveValue('hello2');
 });
