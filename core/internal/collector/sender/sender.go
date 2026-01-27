@@ -397,6 +397,7 @@ func (s *Sender) complete() {
 	if s.available == 0 {
 		s.index = 0
 	}
+	s.resetTimerLocked()
 	s.mu.Unlock()
 	s.close.completed.Signal()
 }
@@ -617,11 +618,7 @@ func (s *Sender) resetTimerLocked() {
 		return
 	}
 	elapsed := time.Since(s.events[s.index].CreatedAt)
-	if elapsed < maxQueueDelay {
-		s.timer.Reset(maxQueueDelay - elapsed)
-	} else {
-		s.timer.Reset(0)
-	}
+	s.timer.Reset(max(0, maxQueueDelay-elapsed))
 }
 
 // send sends events to the application by calling the connector's SendEvents
