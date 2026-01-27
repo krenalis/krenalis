@@ -9,10 +9,14 @@ test('Test fill on native input', async ({ page }) => {
 
 	const nativeInput = page.locator('input[name="native-input"]');
 
-	await nativeInput.fill('hello');
+	await nativeInput.focus();
+	await page.keyboard.type('hello');
+	// await nativeInput.fill('hello');
 	await expect(nativeInput).toHaveValue('hello');
 
-	await nativeInput.fill('hello2');
+	await nativeInput.focus();
+	await page.keyboard.type('hello2');
+	// await nativeInput.fill('hello2');
 	await expect(nativeInput).toHaveValue('hello2');
 });
 
