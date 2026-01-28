@@ -63,7 +63,7 @@ const Member = () => {
 			setEmail(member.email);
 		} else {
 			// Adding a new member directly, without email invitation.
-			if (publicMetadata.memberEmailVerificationRequired) {
+			if (publicMetadata.inviteMembersViaEmail) {
 				// If email invitation is required, this flow is not allowed.
 				// Redirect to members list.
 				handleError('Email verification is required');

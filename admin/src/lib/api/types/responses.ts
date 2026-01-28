@@ -191,7 +191,7 @@ interface PublicMetadata {
 	externalAssetsURLs: string[];
 	potentialConnectorsURL: string | null;
 	javascriptSDKURL: string;
-	memberEmailVerificationRequired: boolean;
+	inviteMembersViaEmail: boolean;
 	canSendMemberPasswordReset: boolean;
 	telemetryLevel: TelemetryLevel;
 }

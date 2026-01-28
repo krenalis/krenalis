@@ -52,17 +52,17 @@ const (
 )
 
 type apisServer struct {
-	core                            *core.Core
-	secureCookie                    *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
-	mux                             *http.ServeMux
-	runsOnHTTPS                     bool
-	javaScriptSDKURL                string
-	externalURL                     string
-	externalEventURL                string
-	externalAssetsURLs              []string
-	potentialConnectorsURL          string // must be a valid URL or empty string (which means: do not load the JSON file).
-	memberEmailVerificationRequired bool
-	sentryTelemetry                 struct {
+	core                   *core.Core
+	secureCookie           *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+	mux                    *http.ServeMux
+	runsOnHTTPS            bool
+	javaScriptSDKURL       string
+	externalURL            string
+	externalEventURL       string
+	externalAssetsURLs     []string
+	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
+	inviteMembersViaEmail  bool
+	sentryTelemetry        struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
 	}
@@ -73,19 +73,19 @@ type apisServer struct {
 // runsOnHTTPs indicates if the server runs on HTTPS.
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
-	memberEmailVerificationRequired bool, sentryTelemetryLevel core.TelemetryLevel,
+	inviteMembersViaEmail bool, sentryTelemetryLevel core.TelemetryLevel,
 	sentryErrorTunnel *sentryErrorTunnel,
 ) *apisServer {
 
 	s := &apisServer{
-		core:                            core,
-		runsOnHTTPS:                     runsOnHTTPS,
-		javaScriptSDKURL:                javaScriptSDKURL,
-		externalURL:                     externalURL,
-		externalEventURL:                externalEventURL,
-		externalAssetsURLs:              externalAssetsURLs,
-		potentialConnectorsURL:          potentialConnectorsURL,
-		memberEmailVerificationRequired: memberEmailVerificationRequired,
+		core:                   core,
+		runsOnHTTPS:            runsOnHTTPS,
+		javaScriptSDKURL:       javaScriptSDKURL,
+		externalURL:            externalURL,
+		externalEventURL:       externalEventURL,
+		externalAssetsURLs:     externalAssetsURLs,
+		potentialConnectorsURL: potentialConnectorsURL,
+		inviteMembersViaEmail:  inviteMembersViaEmail,
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
