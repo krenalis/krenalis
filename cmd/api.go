@@ -171,15 +171,15 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 }
 
 type publicMetadata struct {
-	InstallationID                  string   `json:"installationID"`
-	ExternalURL                     string   `json:"externalURL"`
-	ExternalEventURL                string   `json:"externalEventURL"`
-	ExternalAssetsURLs              []string `json:"externalAssetsURLs"`
-	PotentialConnectorsURL          *string  `json:"potentialConnectorsURL"`
-	JavaScriptSDKURL                string   `json:"javascriptSDKURL"`
-	MemberEmailVerificationRequired bool     `json:"memberEmailVerificationRequired"`
-	CanSendMemberPasswordReset      bool     `json:"canSendMemberPasswordReset"`
-	TelemetryLevel                  string   `json:"telemetryLevel"`
+	InstallationID             string   `json:"installationID"`
+	ExternalURL                string   `json:"externalURL"`
+	ExternalEventURL           string   `json:"externalEventURL"`
+	ExternalAssetsURLs         []string `json:"externalAssetsURLs"`
+	PotentialConnectorsURL     *string  `json:"potentialConnectorsURL"`
+	JavaScriptSDKURL           string   `json:"javascriptSDKURL"`
+	InviteMembersViaEmail      bool     `json:"inviteMembersViaEmail"`
+	CanSendMemberPasswordReset bool     `json:"canSendMemberPasswordReset"`
+	TelemetryLevel             string   `json:"telemetryLevel"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -190,21 +190,21 @@ type publicMetadata struct {
 //   - externalAssetsURLs: external assets URLs.
 //   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
 //   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/meergo.min.js
-//   - memberEmailVerificationRequired: require verification of a new member's email address?
+//   - inviteMembersViaEmail: should new members be added by sending invitation emails??
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
 	metadata := publicMetadata{
-		InstallationID:                  api.core.InstallationID(),
-		ExternalURL:                     api.externalURL,
-		ExternalEventURL:                api.externalEventURL,
-		ExternalAssetsURLs:              api.externalAssetsURLs,
-		JavaScriptSDKURL:                api.javaScriptSDKURL,
-		MemberEmailVerificationRequired: api.memberEmailVerificationRequired,
-		CanSendMemberPasswordReset:      api.core.CanSendMemberPasswordReset(),
-		TelemetryLevel:                  string(api.sentryTelemetry.level),
+		InstallationID:             api.core.InstallationID(),
+		ExternalURL:                api.externalURL,
+		ExternalEventURL:           api.externalEventURL,
+		ExternalAssetsURLs:         api.externalAssetsURLs,
+		JavaScriptSDKURL:           api.javaScriptSDKURL,
+		InviteMembersViaEmail:      api.inviteMembersViaEmail,
+		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
+		TelemetryLevel:             string(api.sentryTelemetry.level),
 	}
 	if api.potentialConnectorsURL != "" {
 		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL

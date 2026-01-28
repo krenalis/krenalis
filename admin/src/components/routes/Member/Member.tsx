@@ -63,10 +63,10 @@ const Member = () => {
 			setEmail(member.email);
 		} else {
 			// Adding a new member directly, without email invitation.
-			if (publicMetadata.memberEmailVerificationRequired) {
+			if (publicMetadata.inviteMembersViaEmail) {
 				// If email invitation is required, this flow is not allowed.
 				// Redirect to members list.
-				handleError('Email verification is required');
+				handleError('Email invitation is required');
 				redirect('organization/members');
 				return;
 			}
@@ -164,10 +164,10 @@ const Member = () => {
 			}
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				// Note that EmailVerificationRequired can only be returned when
+				// Note that EmailInvitationRequired can only be returned when
 				// calling 'api.addMember', not 'api.updateMember'.
-				if (err.code === 'EmailVerificationRequired') {
-					handleError('Email verification is required');
+				if (err.code === 'EmailInvitationRequired') {
+					handleError('Email invitation is required');
 					redirect('organization/members');
 					return;
 				}

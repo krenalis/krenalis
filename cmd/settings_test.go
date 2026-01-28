@@ -168,8 +168,8 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		// Member emails.
-		if !s.MemberEmailVerificationRequired {
-			t.Error("expected MemberEmailVerificationRequired true, got false")
+		if !s.InviteMembersViaEmail {
+			t.Error("expected InviteMembersViaEmail true, got false")
 		}
 		if s.MemberEmailFrom != "" {
 			t.Errorf("expected MemberEmailFrom empty, got %q", s.MemberEmailFrom)
@@ -1139,32 +1139,32 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("boolean flags parsing", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "false")
+		t.Setenv("MEERGO_INVITE_MEMBERS_VIA_EMAIL", "false")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if s.MemberEmailVerificationRequired {
+		if s.InviteMembersViaEmail {
 			t.Errorf("expected false, got true")
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "true")
+		t.Setenv("MEERGO_INVITE_MEMBERS_VIA_EMAIL", "true")
 		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if !s.MemberEmailVerificationRequired {
+		if !s.InviteMembersViaEmail {
 			t.Errorf("expected true, got false")
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "not-bool")
+		t.Setenv("MEERGO_INVITE_MEMBERS_VIA_EMAIL", "not-bool")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid boolean, got nil")
 		}
-		want := "MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
+		want := "MEERGO_INVITE_MEMBERS_VIA_EMAIL must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}

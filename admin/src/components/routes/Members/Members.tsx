@@ -96,7 +96,7 @@ const Members = () => {
 				<div className='members__content'>
 					<div className='members__title'>
 						<p className='members__title-text'>Team members</p>
-						{publicMetadata.memberEmailVerificationRequired ? (
+						{publicMetadata.inviteMembersViaEmail ? (
 							<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
 								Invite a new team member
 							</SlButton>

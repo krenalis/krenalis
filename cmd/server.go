@@ -33,13 +33,13 @@ const telemetryLevelErrors = core.TelemetryLevelErrors
 const telemetryLevelAll = core.TelemetryLevelAll
 
 type Settings struct {
-	TerminationDelay                time.Duration
-	JavaScriptSDKURL                string
-	SentryTelemetryLevel            core.TelemetryLevel
-	ExternalAssetsURLs              []string // always non nil, can be empty.
-	PotentialConnectorsURL          string   // must be a valid URL or empty string (which means: do not load the JSON file).
-	MemberEmailVerificationRequired bool
-	HTTP                            struct {
+	TerminationDelay       time.Duration
+	JavaScriptSDKURL       string
+	SentryTelemetryLevel   core.TelemetryLevel
+	ExternalAssetsURLs     []string // always non nil, can be empty.
+	PotentialConnectorsURL string   // must be a valid URL or empty string (which means: do not load the JSON file).
+	InviteMembersViaEmail  bool
+	HTTP                   struct {
 		Host string
 		Port int
 		TLS  struct {
@@ -140,7 +140,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(settings.HTTP.ExternalURL, "https://")
 	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL,
 		settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL, settings.ExternalAssetsURLs,
-		settings.PotentialConnectorsURL, settings.MemberEmailVerificationRequired,
+		settings.PotentialConnectorsURL, settings.InviteMembersViaEmail,
 		settings.SentryTelemetryLevel, sentryErrorTunnel)
 
 	admin, err := newAdmin(assetsFS)
