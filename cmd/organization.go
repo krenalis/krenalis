@@ -23,7 +23,7 @@ type organization struct {
 //
 // If the ability to add new members without requiring email
 // verification has not been enabled, it returns an
-// errors.UnprocessableError error with code EmailVerificationRequired.
+// errors.UnprocessableError error with code EmailInvitationRequired.
 func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (organization organization) AddMember(_ http.ResponseWriter, r *http.Reques
 		return nil, err
 	}
 	if organization.inviteMembersViaEmail {
-		return nil, errors.Unprocessable(core.EmailVerificationRequired, "email verification is required")
+		return nil, errors.Unprocessable(core.EmailInvitationRequired, "email invitation is required")
 	}
 	var body struct {
 		MemberToSet struct {
