@@ -21,9 +21,9 @@ type organization struct {
 
 // AddMember adds a new member of an organization.
 //
-// If the ability to add new members without requiring email
-// verification has not been enabled, it returns an
-// errors.UnprocessableError error with code EmailInvitationRequired.
+// If the ability to add new members without requiring email invitation has not
+// been enabled, it returns an errors.UnprocessableError error with code
+// EmailInvitationRequired.
 func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err

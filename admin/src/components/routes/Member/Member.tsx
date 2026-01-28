@@ -66,7 +66,7 @@ const Member = () => {
 			if (publicMetadata.inviteMembersViaEmail) {
 				// If email invitation is required, this flow is not allowed.
 				// Redirect to members list.
-				handleError('Email verification is required');
+				handleError('Email invitation is required');
 				redirect('organization/members');
 				return;
 			}
@@ -167,7 +167,7 @@ const Member = () => {
 				// Note that EmailInvitationRequired can only be returned when
 				// calling 'api.addMember', not 'api.updateMember'.
 				if (err.code === 'EmailInvitationRequired') {
-					handleError('Email verification is required');
+					handleError('Email invitation is required');
 					redirect('organization/members');
 					return;
 				}
