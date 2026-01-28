@@ -177,6 +177,8 @@ func TestAdmin(t *testing.T) {
 			absAdminDir + ":/work",
 			"-w",
 			"/work",
+			"-e",
+			"MEERGO_TEST_FS_TEMP_DIR=" + fsTempDir.Root(),
 			"-p",
 			"9323:9323",
 			"--add-host=host.docker.internal:host-gateway",
@@ -202,7 +204,9 @@ func run(t *testing.T, name string, args []string, directory, fsTempDir string) 
 	cmd.Dir = directory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "MEERGO_TEST_FS_TEMP_DIR="+fsTempDir)
+	if fsTempDir != "" { // TODO: serve ancora?
+		cmd.Env = append(os.Environ(), "MEERGO_TEST_FS_TEMP_DIR="+fsTempDir)
+	}
 	err := cmd.Run()
 	if err != nil {
 		t.Fatalf("error while executing %s: %s", name, err)
