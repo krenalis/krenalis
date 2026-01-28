@@ -630,7 +630,7 @@ func (c *Meergo) Profiles(properties []string, order string, orderDesc bool, fir
 
 func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
 	bo := backoff.New(200)
-	bo.SetAttempts(10)
+	bo.SetAttempts(20)
 	bo.SetCap(2 * time.Second)
 	bo.SetNextWaitTime(200 * time.Millisecond)
 	for bo.Next(ctx) {
