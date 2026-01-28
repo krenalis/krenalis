@@ -765,12 +765,7 @@ func (s *Sender) _assertAvailable(n int) {
 // newStoppedTimer returns a new stopped timer.
 func newStoppedTimer() *time.Timer {
 	t := time.NewTimer(math.MaxInt64)
-	if !t.Stop() {
-		select {
-		case <-t.C:
-		default:
-		}
-	}
+	t.Stop()
 	return t
 }
 
