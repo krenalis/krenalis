@@ -334,6 +334,7 @@ func (c *Meergo) Start() {
 			"MEERGO_EXTERNAL_ASSETS_URLS=https://assets.meergo.com/",
 			"MEERGO_POTENTIAL_CONNECTORS_URL=https://assets.meergo.com/admin/connectors/potentials.json",
 			"MEERGO_TELEMETRY_LEVEL=none",
+			"MEERGO_HTTP_EXTERNAL_URL=http://host.docker.internal:2023", // TODO: per ora codificato così, ovviamente va distinto in base al test, alla porta, etc...
 			"MEERGO_PROMETHEUS_METRICS_ENABLED=true",
 			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),

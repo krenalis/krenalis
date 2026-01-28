@@ -37,7 +37,7 @@ func TestAdmin(t *testing.T) {
 
 	// TODO: Playwright is not supported on Fedora, and this appears to cause
 	// problems. See https://github.com/meergo/meergo/issues/2116.
-	t.Skip()
+	// t.Skip()
 
 	fsTempDir := meergotester.NewTempStorage(t)
 
@@ -126,7 +126,7 @@ func TestAdmin(t *testing.T) {
 
 	// Write the "test-config.json" file.
 	testConfig := map[string]any{
-		"baseURL":     "http://" + c.Addr(),
+		"baseURL":     "http://host.docker.internal:2023", // TODO: the port must be configurable?
 		"workspaceID": c.WorkspaceID(),
 		"dbHost":      dbHost,
 		"dbPort":      dbPort,
@@ -152,15 +152,44 @@ func TestAdmin(t *testing.T) {
 
 	// Prepare and run the Admin tests.
 	adminDir := filepath.Join("..", "admin")
-	run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
-	run(t, "npx", []string{"playwright", "install", "chromium"}, adminDir, fsTempDir.Root())
+	// run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
+
+	// run(t, "npx", []string{"playwright", "install", "chromium"}, adminDir, fsTempDir.Root())
+
+	absAdminDir, err := filepath.Abs(adminDir)
+	if err != nil {
+		panic(err)
+	}
+
 	if passUIFlagToPlaywright {
-		run(t, "npx", []string{"playwright", "test", "--ui"}, adminDir, fsTempDir.Root())
-		t.Fatal("The Admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
-			" so the test is considered to have failed as a precaution." +
-			" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
+		// run(t, "npx", []string{"playwright", "test", "--ui"}, adminDir, fsTempDir.Root())
+		// t.Fatal("The Admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
+		// 	" so the test is considered to have failed as a precaution." +
+		// 	" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
 	} else {
-		run(t, "npx", []string{"playwright", "test"}, adminDir, fsTempDir.Root())
+		// run(t, "npx", []string{"playwright", "test"}, adminDir, fsTempDir.Root())
+
+		run(t, "docker", []string{
+			"run",
+			"--rm",
+			"--ipc=host",
+			"-v",
+			absAdminDir + ":/work",
+			"-w",
+			"/work",
+			"-p",
+			"9323:9323",
+			"--add-host=host.docker.internal:host-gateway",
+			"mcr.microsoft.com/playwright:v1.56.1",
+			"npx",
+			"playwright@1.56.1",
+			"test",
+			"--ui",
+			"--ui-host",
+			"0.0.0.0",
+			"--ui-port",
+			"9323",
+		}, adminDir, fsTempDir.Root())
 	}
 
 	// The tests have been run, so the temporary directory used by File System

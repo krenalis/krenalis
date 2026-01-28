@@ -65,7 +65,7 @@ var testsSettingsMu sync.Mutex
 func init() {
 	testsSettings = &TestsSettings{
 		HTTP: &HTTPSettings{
-			Host: "127.0.0.1",
+			Host: "0.0.0.0",
 			Port: 2023,
 		},
 		Database: &DBSettings{
