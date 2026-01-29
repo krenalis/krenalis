@@ -168,8 +168,8 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		// Member emails.
-		if !s.InviteMembersViaEmail {
-			t.Error("expected InviteMembersViaEmail true, got false")
+		if s.InviteMembersViaEmail {
+			t.Error("expected InviteMembersViaEmail false, got true")
 		}
 		if s.MemberEmailFrom != "" {
 			t.Errorf("expected MemberEmailFrom empty, got %q", s.MemberEmailFrom)

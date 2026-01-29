@@ -319,7 +319,7 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, errors.New("MEERGO_NATS_COMPRESSION can be set only when using file storage")
 	}
 
-	settings.InviteMembersViaEmail, err = boolEnvVar(envVars.Get("MEERGO_INVITE_MEMBERS_VIA_EMAIL"), true)
+	settings.InviteMembersViaEmail, err = boolEnvVar(envVars.Get("MEERGO_INVITE_MEMBERS_VIA_EMAIL"), false)
 	if err != nil {
 		return nil, fmt.Errorf("MEERGO_INVITE_MEMBERS_VIA_EMAIL must be a boolean: %s", err)
 	}
