@@ -43,6 +43,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
+	// Disable automatic execution of Identity Resolution.
+	c.UpdateIdentityResolution(false, nil)
+
 	ctx := context.Background()
 
 	// Import users from Dummy.
@@ -75,6 +78,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		run := c.RunPipeline(dummyPipeline)
 		c.WaitRunsCompletion(dummy, run)
 	}
+
+	c.RunIdentityResolution()
 
 	// Ensure that there are 10 profiles.
 	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 1000)
@@ -119,6 +124,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		run := c.RunPipeline(csvPipeline)
 		c.WaitRunsCompletion(fs, run)
 	}
+
+	c.RunIdentityResolution()
 
 	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).
 	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 1000)
@@ -168,7 +175,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"email": "kbuessen0@example.com",
 			},
 		})
-		time.Sleep(time.Second)
+		time.Sleep(2 * time.Second)
 		c.RunIdentityResolution()
 		c.WaitEventsStoredIntoWarehouse(ctx, 1)
 	}
