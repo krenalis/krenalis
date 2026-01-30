@@ -97,7 +97,7 @@ const Header = ({ title, member }: HeaderProps) => {
 							</div>
 							<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 							<Link
-								className='header__account-menu-item'
+								className='header__account-menu-item header__account-menu-item--profile'
 								path='organization/members/current'
 								onClick={closeMenu}
 							>
