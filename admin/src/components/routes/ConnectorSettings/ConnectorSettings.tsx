@@ -7,6 +7,7 @@ import Flex from '../../base/Flex/Flex';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -26,6 +27,7 @@ const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): b
 };
 
 const ConnectorSettings = () => {
+	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [connector, setConnector] = useState<TransformedConnector | null>(null);
 	const [name, setName] = useState<string>('');
 	const [sendingMode, setSendingMode] = useState<SendingModeType | null>(null);
@@ -74,6 +76,7 @@ const ConnectorSettings = () => {
 			const connector = connectors.find((c) => c.code === connectorCode);
 			if (connector == null) {
 				setNotFound(true);
+				setIsLoading(false);
 				return;
 			}
 			setConnector(connector);
@@ -92,11 +95,15 @@ const ConnectorSettings = () => {
 			if (connectionRole !== 'Source' && supportedModes.length > 0) {
 				setSendingMode(supportedModes[0]);
 			}
-			if (!connector.hasSettings(connectionRole)) return;
+			if (!connector.hasSettings(connectionRole)) {
+				setIsLoading(false);
+				return;
+			}
 			let ui: ConnectorUIResponse;
 			try {
 				ui = await api.connectors.ui(selectedWorkspace, connectorCode, connectionRole, authToken);
 			} catch (err) {
+				setIsLoading(false);
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
 					handleError('The connector does not exist anymore');
@@ -119,6 +126,7 @@ const ConnectorSettings = () => {
 			setFields(ui.fields);
 			setButtons(ui.buttons);
 			setSettings(ui.settings);
+			setIsLoading(false);
 		};
 		fetchData();
 	}, []);
@@ -272,12 +280,25 @@ const ConnectorSettings = () => {
 		</div>,
 	);
 
-	if (notFound) {
-		return <NotFound />;
+	if (isLoading) {
+		return (
+			<SlSpinner
+				style={
+					{
+						display: 'block',
+						position: 'relative',
+						top: '50px',
+						margin: 'auto',
+						fontSize: '3rem',
+						'--track-width': '6px',
+					} as React.CSSProperties
+				}
+			></SlSpinner>
+		);
 	}
 
-	if (connector == null) {
-		return null;
+	if (notFound) {
+		return <NotFound />;
 	}
 
 	return (
