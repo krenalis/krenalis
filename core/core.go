@@ -26,7 +26,7 @@ import (
 	"github.com/meergo/meergo/core/internal/datastore"
 	dbpkg "github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/initdb"
-	coremetrics "github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/streams"
@@ -56,7 +56,7 @@ type Core struct {
 	state             *state.State
 	datastore         *datastore.Datastore
 	connections       *connections.Connections
-	metrics           *coremetrics.Collector
+	metrics           *metrics.Collector
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
 	authTokenCipher   *datacrypt.Cipher
@@ -311,7 +311,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	// Init the metrics.
-	core.metrics = coremetrics.New(db, core.state)
+	core.metrics = metrics.New(db, core.state)
 	defer func() {
 		if err != nil {
 			core.metrics.Close(context.Background())
@@ -1132,11 +1132,11 @@ func (core *Core) onExecutePipeline(n state.RunPipeline) {
 
 // pipelineError represents a pipeline error.
 type pipelineError struct {
-	step coremetrics.Step
+	step metrics.Step
 	err  error
 }
 
-func newPipelineError(step coremetrics.Step, err error) *pipelineError {
+func newPipelineError(step metrics.Step, err error) *pipelineError {
 	return &pipelineError{step, err}
 }
 
@@ -1218,7 +1218,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		timeSlot := coremetrics.TimeSlotFromTime(run.StartTime)
+		timeSlot := metrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
