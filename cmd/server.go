@@ -68,8 +68,9 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	PrometheusMetricsEnabled bool
-	OAuthCredentials         map[string]*core.OAuthCredentials
+	PrometheusMetricsEnabled      bool
+	OAuthCredentials              map[string]*core.OAuthCredentials
+	MaxQueuedEventsPerDestination int
 }
 
 type LambdaConfig struct {
@@ -104,13 +105,14 @@ type LocalConfig struct {
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
 	config := core.Config{
-		DB:                   settings.DB,
-		NATS:                 settings.NATS,
-		MaxMindDBPath:        settings.MaxMindDBPath,
-		MemberEmailFrom:      settings.MemberEmailFrom,
-		SMTP:                 settings.SMTP,
-		OAuthCredentials:     maps.Clone(settings.OAuthCredentials),
-		SentryTelemetryLevel: settings.SentryTelemetryLevel,
+		DB:                            settings.DB,
+		NATS:                          settings.NATS,
+		MaxMindDBPath:                 settings.MaxMindDBPath,
+		MemberEmailFrom:               settings.MemberEmailFrom,
+		SMTP:                          settings.SMTP,
+		OAuthCredentials:              maps.Clone(settings.OAuthCredentials),
+		SentryTelemetryLevel:          settings.SentryTelemetryLevel,
+		MaxQueuedEventsPerDestination: settings.MaxQueuedEventsPerDestination,
 	}
 	config.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	config.DatabaseInitialization.InitDockerMember = initDockerMember

@@ -15,6 +15,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/meergo/meergo/connectors"
@@ -214,7 +215,7 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 			t.Fatalf("QueueEvent panicked: %v", r)
 		}
 	}()
-	s.QueueEvent(event0)
+	s.SendEvent(event0)
 
 	err := s.Close(t.Context())
 	if err != nil {
@@ -256,7 +257,7 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		},
 		Ack: nopAck,
 	})
-	s.QueueEvent(event)
+	s.SendEvent(event)
 
 	err := s.Close(t.Context())
 	if err != nil {
@@ -265,6 +266,157 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 	if !consumed {
 		t.Fatalf("event was not consumed")
 	}
+
+}
+
+// Test_Sender_MinQueuedEvents tests that the sender works correctly when
+// MaxQueuedEvents is set to its minimum value (1).
+func Test_Sender_MinQueuedEvents(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		MaxQueuedEvents = 1
+		defer func() {
+			MaxQueuedEvents = 5_000
+		}()
+
+		var total = 100
+		var consumed int
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for range events.All() {
+				consumed++
+			}
+			return nil
+		}
+		s := New(app, nil)
+
+		// Send events.
+		for i := 0; i < total; i++ {
+			s.SendEvent(createTestEvent(s, i))
+		}
+
+		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/meergo/meergo/issues/2122
+		synctest.Wait()
+		if consumed != total {
+			t.Fatalf("expected %d consumed events, got %d", total, consumed)
+		}
+
+		if err := s.Close(context.Background()); err != nil {
+			t.Fatalf("Close() failed: expected no error, got %v", err)
+		}
+
+		// Wait for the background goroutine started by New to exit.
+		// TODO(marco): remove the following line.
+		synctest.Wait()
+	})
+
+}
+
+// Test_Sender_QueueEventBlocksWhenQueueFull verifies that QueueEvent blocks
+// when the event queue is full and unblocks once space becomes available.
+func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		MaxQueuedEvents = 100
+		defer func() {
+			MaxQueuedEvents = 5_000
+		}()
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			// Consume the first event.
+			events.First()
+			return nil
+		}
+		s := New(app, nil)
+
+		// Fill the queue up to its maximum capacity.
+		for i := 0; i < MaxQueuedEvents; i++ {
+			s.SendEvent(createTestEvent(s, i))
+		}
+
+		// Start a goroutine that attempts to enqueue one more event.
+		// Since the queue is full, QueueEvent must block.
+		var done bool
+		go func() {
+			s.SendEvent(createTestEvent(s, MaxQueuedEvents))
+			done = true
+		}()
+		synctest.Wait()
+
+		// Let one queue cycle proceed so space becomes available.
+		// QueueEvent should then unblock and the goroutine must complete.
+		time.Sleep(maxQueueDelay)
+		synctest.Wait()
+		if !done {
+			t.Fatal("QueueEvent is still blocked after queue capacity was freed; expected it to unblock")
+		}
+
+		if err := s.Close(context.Background()); err != nil {
+			t.Fatalf("Close() failed: expected no error, got %v", err)
+		}
+
+		// Wait for the background goroutine started by New to exit.
+		// TODO(marco): remove the following line.
+		synctest.Wait()
+	})
+
+}
+
+// Test_Sender_QueueEventUnblocksAfterDiscard verifies QueueEvent unblocks after
+// a discard.
+func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		MaxQueuedEvents = 100
+		defer func() {
+			MaxQueuedEvents = 5_000
+		}()
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			// Discard the first event.
+			for range events.All() {
+				events.Discard(errors.New("discard error"))
+				break
+			}
+			// Pause to allow verification that an additional event is enqueued.
+			time.Sleep(1)
+			return nil
+		}
+		s := New(app, nil)
+
+		// Fill the queue up to its maximum capacity.
+		for i := 0; i < MaxQueuedEvents; i++ {
+			s.SendEvent(createTestEvent(s, i))
+		}
+
+		// Start a goroutine that attempts to enqueue one more event.
+		// Since the queue is full, QueueEvent must block.
+		var done bool
+		go func() {
+			s.SendEvent(createTestEvent(s, MaxQueuedEvents))
+			done = true
+		}()
+		synctest.Wait()
+
+		// Let one queue cycle proceed so space becomes available.
+		// QueueEvent should then unblock and the goroutine must complete.
+		time.Sleep(maxQueueDelay)
+		synctest.Wait()
+		if !done {
+			t.Fatal("QueueEvent is still blocked after queue capacity was freed; expected it to unblock")
+		}
+
+		if err := s.Close(context.Background()); err != nil {
+			t.Fatalf("Close() failed: expected no error, got %v", err)
+		}
+
+		// Wait for the background goroutine started by New to exit.
+		// TODO(marco): remove the following line.
+		synctest.Wait()
+	})
 
 }
 
@@ -364,7 +516,7 @@ func Test_Sender(t *testing.T) {
 
 			// Queue the events.
 			for _, event := range evs {
-				s.QueueEvent(event)
+				s.SendEvent(event)
 			}
 
 			for n := 0; n != test.num; {
@@ -435,6 +587,17 @@ func Test_Sender(t *testing.T) {
 		})
 	}
 
+}
+
+// createTestEvent creates a minimal event for tests.
+func createTestEvent(s *Sender, i int) *Event {
+	return s.CreateEvent(1, "page", types.Type{}, streams.Event{
+		Attributes: map[string]any{
+			"anonymousId": "user123",
+			"messageId":   fmt.Sprintf("msg-%d", i),
+		},
+		Ack: nopAck,
+	})
 }
 
 type send struct {

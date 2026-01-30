@@ -118,7 +118,7 @@ func (dp *destinationPipeline) QueueEvent(event streams.Event) {
 	if dp.transformer == nil {
 		dp.queue.metrics.TransformationPassed(dp.id, 1)
 		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
-		dp.queue.sender.QueueEvent(se)
+		dp.queue.sender.SendEvent(se)
 		return
 	}
 	dp.queue.mu.Lock()
@@ -150,7 +150,7 @@ func (q *destinationPipelineQueue) resetTimerLocked() {
 		q.timer.Reset(0)
 		return
 	}
-	elapsed := time.Since(q.events[0].senderEvent.CreatedAt)
+	elapsed := time.Since(q.events[0].senderEvent.CreatedAt())
 	q.timer.Reset(max(0, maxQueuedEventTime-elapsed))
 }
 
@@ -215,7 +215,7 @@ func (dp *destinationPipeline) transform() {
 		dp.queue.metrics.TransformationPassed(dp.id, 1)
 		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
 		events[i].senderEvent.Type.Values = record.Attributes
-		dp.queue.sender.QueueEvent(events[i].senderEvent)
+		dp.queue.sender.SendEvent(events[i].senderEvent)
 	}
 
 }

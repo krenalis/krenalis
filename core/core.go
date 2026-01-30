@@ -22,6 +22,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/collector"
+	"github.com/meergo/meergo/core/internal/collector/sender"
 	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	dbpkg "github.com/meergo/meergo/core/internal/db"
@@ -84,15 +85,16 @@ type Core struct {
 var coreActive atomic.Bool
 
 type Config struct {
-	DB                     DBConfig
-	NATS                   NATSConfig
-	FunctionProvider       any // must be a LambdaConfig or LocalConfig value
-	MaxMindDBPath          string
-	MemberEmailFrom        string
-	SMTP                   SMTPConfig
-	OAuthCredentials       map[string]*OAuthCredentials
-	SentryTelemetryLevel   TelemetryLevel
-	DatabaseInitialization struct {
+	DB                            DBConfig
+	NATS                          NATSConfig
+	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
+	MaxMindDBPath                 string
+	MemberEmailFrom               string
+	SMTP                          SMTPConfig
+	OAuthCredentials              map[string]*OAuthCredentials
+	SentryTelemetryLevel          TelemetryLevel
+	MaxQueuedEventsPerDestination int
+	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
 		InitIfEmpty bool
@@ -344,6 +346,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Init the event collector.
+	sender.MaxQueuedEvents = conf.MaxQueuedEventsPerDestination
 	core.collector, err = collector.New(db, core.sc, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		return nil, err

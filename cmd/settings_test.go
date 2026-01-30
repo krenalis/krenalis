@@ -199,6 +199,10 @@ func TestParseSettings(t *testing.T) {
 			t.Error("expected PrometheusMetricsEnabled false, got true")
 		}
 
+		// Max queued events per destination.
+		if s.MaxQueuedEventsPerDestination != 50000 {
+			t.Errorf("expected default MaxQueuedEventsPerDestination 50000, got %d", s.MaxQueuedEventsPerDestination)
+		}
 	})
 
 	t.Run("termination delay valid and invalid", func(t *testing.T) {
@@ -740,6 +744,39 @@ func TestParseSettings(t *testing.T) {
 		}
 		if s.DB.MaxConnections != 64 {
 			t.Errorf("expected 64, got %d", s.DB.MaxConnections)
+		}
+	})
+
+	t.Run("max queued events per destination parsing and bounds", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION", "notint")
+		_, err := parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for non-integer max queued events per destination, got nil")
+		}
+		want := "MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be an integer"
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+		setBaseline(t)
+		t.Setenv("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION", "0")
+		_, err = parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for max queued events per destination < 1, got nil")
+		}
+		want = "MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got 0"
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+
+		setBaseline(t)
+		t.Setenv("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION", "60000")
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if s.MaxQueuedEventsPerDestination != 60000 {
+			t.Errorf("expected 60000, got %d", s.MaxQueuedEventsPerDestination)
 		}
 	})
 

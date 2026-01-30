@@ -23,6 +23,15 @@ import (
 	"github.com/meergo/meergo/tools/types"
 )
 
+// MaxQueuedEvents defines the maximum number of events allowed in the send
+// queue. When this limit is reached, sender.SendEvent blocks until an event is
+// removed from the queue.
+//
+// This value can be configured via the MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION
+// environment variable. The minimum allowed value is 1. If not set, the default
+// value is 50000.
+var MaxQueuedEvents = 50_000
+
 const asserts = false // enable during development for assertions
 const traces = false  // set to true to trace execution flow
 
@@ -60,23 +69,17 @@ const maxQueueDelay = 200 * time.Millisecond
 // Event represents a message to be delivered to an application.
 type Event struct {
 	connectors.Event             // original event.
-	CreatedAt        time.Time   // time at which the event was created.
-	EnqueuedAt       time.Time   // time at which the event was enqueued.
+	createdAt        time.Time   // time at which the event was created.
+	enqueuedAt       time.Time   // time at which the event was enqueued; zero if it has not yet been queued or was discarded.
 	pipeline         int         // pipeline ID.
-	user             *user       // associated user; nil if DiscardEvent was called (the event was never queued).
+	user             *user       // user to whom the event belongs.
 	sequence         int         // sequence number; access is synchronized via Sender.mu.
 	iterator         *iterator   // iterator that consumed the event; nil if it hasn't been consumed.
 	ack              streams.Ack // event ack.
 }
 
-// user represents the state of a user related to event processing.
-type user struct {
-	iterator    *iterator // iterator holding the user's events; nil if no events are currently being consumed.
-	numConsumed int       // number of consumed events (0 <= consumed <= events); 0 if iterator is nil.
-	events      int       // total number of events for the user, excluding those still in the waiting queue.
-	expectedSeq int       // next expected sequence number to be added to the Sender.events queue.
-	nextSeq     int       // next sequence number to assign to a new created event for this user.
-	waiting     []*Event  // events waiting for the one with expectedSeq to be enqueued first.
+func (e *Event) CreatedAt() time.Time {
+	return e.createdAt
 }
 
 // Sender sends events, buffering them internally for batch delivery.
@@ -87,7 +90,7 @@ type user struct {
 //  1. Call the CreateEvent method. The order in which this is called determines
 //     delivery order.
 //  2. (Optional) Transform the event and set the Event.Properties field.
-//  3. Call the QueueEvent method.
+//  3. Call the SendEvent method.
 type Sender struct {
 	connector string // application connector.
 	metrics   *metrics.Collector
@@ -100,15 +103,15 @@ type Sender struct {
 	mu                 sync.Mutex
 	waitTime           func(pattern string) (time.Duration, error)               // function that returns an estimate of how long to wait before calling sendEvents.
 	sendEvents         func(ctx context.Context, events connectors.Events) error // function that sends the events to the application.
-	events             []*Event                                                  // events in the queue; protected by mu.
-	users              map[string]*user                                          // users by anonymous id; protected by mu.
-	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
-	iterator           *iterator                                                 // current iterator; protected by mu.
-	available          int                                                       // number of available (non-read) records; protected by mu.
-	timer              *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
-	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
-	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
-	sent               func(messageID string, err error)                         // function called in tests when an event is sent or discarded.
+	queue              queue
+	users              map[string]*user                  // users by anonymous id; protected by mu.
+	releasableUsers    map[*user]struct{}                // users that have been iterated and are now ready to be released.
+	iterator           *iterator                         // current iterator; protected by mu.
+	available          int                               // number of available (non-read) records; protected by mu.
+	timer              *time.Timer                       // timer to trigger an iterator every maxQueueDelay; protected by mu.
+	minBatchSize       int                               // minimum number of events in the queue required to trigger a new iteration.
+	rateLimiterPattern string                            // pattern of the rate limiter that defines how requests are throttled over time.
+	sent               func(messageID string, err error) // function called in tests when an event is sent or discarded.
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed.
@@ -116,6 +119,52 @@ type Sender struct {
 		cancel    context.CancelFunc // function to cancel iterators executions.
 		completed sync.Cond          // signal the completion of the current iteration.
 		iterators sync.WaitGroup     // waiting group for the iterators.
+	}
+}
+
+// queue is a bounded FIFO-like event queue. events may contain nil holes after
+// dequeue; total tracks the number of live entries.
+type queue struct {
+	cond   sync.Cond
+	events []*Event // backing slice for queued events; accessed under the sender mutex
+	total  int      // number of non-nil events in events; accessed under the sender mutex
+}
+
+// dequeue removes the event at index i and updates the queue state.
+// It must be called holding the sender's mu mutex.
+func (q *queue) dequeue(i int) {
+	q.events[i] = nil
+	q.total--
+	if asserts {
+		q.assertTotal(q.total)
+	}
+	if q.total < MaxQueuedEvents {
+		q.cond.Signal()
+	}
+}
+
+// enqueue appends event to the queue, blocking while it is full.
+// It must be called holding the sender's mu mutex.
+func (q *queue) enqueue(event *Event) {
+	for q.total >= MaxQueuedEvents {
+		q.cond.Wait()
+	}
+	q.events = append(q.events, event)
+	q.total++
+}
+
+// assertTotal asserts that the events are n.
+//
+// It must be called holding the s.mu mutex.
+func (q *queue) assertTotal(n int) {
+	total := 0
+	for _, event := range q.events {
+		if event != nil {
+			total++
+		}
+	}
+	if n != total {
+		panic(fmt.Sprintf("core/events/collector/sender: expected %d queued, got %d", n, total))
 	}
 }
 
@@ -127,12 +176,13 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 		waitTime:        app.WaitTime,
 		sendEvents:      app.SendEvents,
 		metrics:         metrics,
-		events:          make([]*Event, 0, 1000),
-		users:           make(map[string]*user, 1000),
+		users:           make(map[string]*user),
 		releasableUsers: make(map[*user]struct{}),
 		timer:           newStoppedTimer(),
-		minBatchSize:    10,
+		minBatchSize:    min(10, MaxQueuedEvents),
 	}
+	s.queue.events = make([]*Event, 0, min(64, MaxQueuedEvents))
+	s.queue.cond.L = &s.mu
 	s.close.completed.L = &s.mu
 	s.close.ctx, s.close.cancel = context.WithCancel(context.Background())
 	// Start an iteration every maxQueueDelay.
@@ -239,6 +289,7 @@ func (s *Sender) Close(ctx context.Context) error {
 		s._assertAvailable(0)
 	}
 	trace("Writer.Close: iterators are terminated; writer is now closed\n")
+	s.close.cancel()
 	s.prometheus.queueAvailable.Unregister()
 	s.prometheus.queueWait.Unregister()
 	return nil
@@ -247,12 +298,12 @@ func (s *Sender) Close(ctx context.Context) error {
 // CreateEvent creates a new event with the given pipeline, type, schema,
 // and original event.
 //
-// The returned event must be passed to QueueEvent (optionally after setting
+// The returned event must be passed to SendEvent (optionally after setting
 // the Properties field) or to DiscardEvent if it should be discarded.
 func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event streams.Event) *Event {
 	anonymousID, ok := event.Attributes["anonymousId"].(string)
 	if !ok {
-		panic("core/events/connector/sender: missing anonymousId")
+		panic("CreateEvent called with an event missing anonymousId")
 	}
 	s.mu.Lock()
 	u, ok := s.users[anonymousID]
@@ -260,8 +311,7 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 		u = &user{}
 		s.users[anonymousID] = u
 	}
-	seq := u.nextSeq
-	u.nextSeq++
+	sequence := u.queue.incSequence()
 	s.mu.Unlock()
 	ev := &Event{
 		Event: connectors.Event{
@@ -272,30 +322,34 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 			},
 			DestinationPipeline: pipeline,
 		},
-		CreatedAt: time.Now().UTC(),
+		createdAt: time.Now().UTC(),
 		pipeline:  pipeline,
 		user:      u,
-		sequence:  seq,
+		sequence:  sequence,
 		ack:       event.Ack,
 	}
 	return ev
 }
 
-// DiscardEvent discards the given unqueued event.
+// DiscardEvent discards the given event.
 // Call this, for example, if the event transformation fails.
 //
-// DiscardEvent must not be called if QueueEvent has already been called with
-// the same event.
+// DiscardEvent must not be called if DiscardEvent or SendEvent have already
+// been called with the same event.
 func (s *Sender) DiscardEvent(event *Event) {
-	s.queueOrDiscardEvent(event, true)
+	s.processEvent(event)
 }
 
-// QueueEvent queues an event to be sent later, possibly in a batch.
+// SendEvent enqueues an event to be sent later, possibly in a batch.
 //
 // Events from the same user (i.e., with the same anonymousId) are sent in the
-// order they were created using the CreateEvent method.
-func (s *Sender) QueueEvent(event *Event) {
-	s.queueOrDiscardEvent(event, false)
+// order they were created.
+//
+// SendEvent must not be called if DiscardEvent or SendEvent have already been
+// called with the same event.
+func (s *Sender) SendEvent(event *Event) {
+	event.enqueuedAt = time.Now().UTC()
+	s.processEvent(event)
 }
 
 // SetApplication replaces the application.
@@ -306,39 +360,6 @@ func (s *Sender) SetApplication(app *connections.Application) {
 	s.mu.Unlock()
 }
 
-// appendToReadyQueue adds the given event to the ready queue.
-//
-// It must be called holding the s.mu mutex.
-func (s *Sender) appendToReadyQueue(event *Event) {
-	s.events = append(s.events, event)
-	u := event.user
-	u.events++
-	if u.iterator == nil {
-		s.available++
-		if s.iterator == nil {
-			s.resetTimerLocked()
-		}
-	}
-}
-
-// appendToWaitingQueue adds the given event to the user's waiting queue.
-//
-// It must be called holding the s.mu mutex.
-func (s *Sender) appendToWaitingQueue(event *Event) {
-	u := event.user
-	index, _ := slices.BinarySearchFunc(u.waiting, event, func(a, b *Event) int {
-		switch {
-		case a.sequence < b.sequence:
-			return +1
-		case a.sequence > b.sequence:
-			return -1
-		default:
-			return 0
-		}
-	})
-	u.waiting = slices.Insert(u.waiting, index, event)
-}
-
 // compact compacts the events. It does nothing if s has been closed.
 func (s *Sender) compact() {
 	s.mu.Lock()
@@ -347,11 +368,11 @@ func (s *Sender) compact() {
 		return
 	}
 	var i int
-	for i < len(s.events) && s.events[i] == nil {
+	for i < len(s.queue.events) && s.queue.events[i] == nil {
 		i++
 	}
 	if i > 0 {
-		s.events = slices.Delete(s.events, 0, i)
+		s.queue.events = slices.Delete(s.queue.events, 0, i)
 		if s.iterator != nil {
 			s.iterator.index = max(0, s.iterator.index-i)
 		}
@@ -384,6 +405,9 @@ func (s *Sender) complete() {
 				trace("Sender.complete: minBatchSize decayed to %d\n", decayed)
 			}
 		}
+		if s.minBatchSize > MaxQueuedEvents {
+			s.minBatchSize = MaxQueuedEvents
+		}
 	}
 	s.iterator = nil
 	s.releaseUsers()
@@ -399,20 +423,20 @@ func (s *Sender) discard(err error) {
 	i := s.iterator.index - 1
 	var e *Event
 	for {
-		e = s.events[i]
+		e = s.queue.events[i]
 		if e != nil && e.iterator == s.iterator {
 			break
 		}
 		i--
 	}
-	// update the sender.
-	s.events[i] = nil
+	// Dequeue the event.
+	s.queue.dequeue(i)
 	// Update the user.
-	e.user.events--
-	e.user.numConsumed--
-	if e.user.numConsumed == 0 {
+	e.user.totals--
+	e.user.consumed--
+	if e.user.consumed == 0 {
 		e.user.iterator = nil
-		s.available += e.user.events
+		s.available += e.user.totals
 	}
 	// Update the iterator.
 	s.iterator.numConsumed--
@@ -440,7 +464,7 @@ func (s *Sender) postpone() {
 	i := s.iterator.index - 1
 	var e *Event
 	for {
-		e = s.events[i]
+		e = s.queue.events[i]
 		if e != nil && e.iterator == s.iterator {
 			break
 		}
@@ -448,10 +472,10 @@ func (s *Sender) postpone() {
 	}
 	e.iterator = nil
 	e.user.iterator = postponeMarker
-	e.user.numConsumed--
+	e.user.consumed--
 	s.iterator.numConsumed--
 	// Mark the user as releasable if no events were consumed during this iteration.
-	if e.user.numConsumed == 0 {
+	if e.user.consumed == 0 {
 		s.releasableUsers[e.user] = struct{}{}
 	}
 	trace("Sender.postpone: iterator %p; postpone index %d, current %d\n", s.iterator, i, s.iterator.index)
@@ -461,38 +485,21 @@ func (s *Sender) postpone() {
 	s.mu.Unlock()
 }
 
-// queueOrDiscardEvent queues the event if discard is false; otherwise, it
-// discards the event.
-func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
+// processEvent is invoked by Discard and SendEvent and represents the entry
+// point for processing an event previously created by CreateEvent.
+func (s *Sender) processEvent(event *Event) {
 	u := event.user
 	s.mu.Lock()
-	if event.sequence == u.expectedSeq {
-		u.expectedSeq++
-		if !discard {
-			s.appendToReadyQueue(event)
-		}
-		// Move events from the waiting queue to the ready queue.
-		for len(u.waiting) > 0 {
-			last := len(u.waiting) - 1
-			if u.waiting[last].sequence != u.expectedSeq {
-				break
+	event.user.queue.enqueue(event, func(event *Event) {
+		s.queue.enqueue(event)
+		u.totals++
+		if u.iterator == nil {
+			s.available++
+			if s.iterator == nil {
+				s.resetTimerLocked()
 			}
-			u.expectedSeq++
-			// Append the event to the ready queue unless it has been discarded.
-			if u.waiting[last].user != nil {
-				s.appendToReadyQueue(u.waiting[last])
-			}
-			u.waiting[last] = nil
-			u.waiting = u.waiting[:last]
 		}
-	} else {
-		s.appendToWaitingQueue(event)
-	}
-	if discard {
-		event.user = nil
-	} else {
-		event.EnqueuedAt = time.Now().UTC()
-	}
+	})
 	if asserts {
 		s._assertAvailable(s.available)
 	}
@@ -506,8 +513,8 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	var event *Event
 	s.mu.Lock()
 	var i int
-	for i = s.iterator.index; i < len(s.events); i++ {
-		e := s.events[i]
+	for i = s.iterator.index; i < len(s.queue.events); i++ {
+		e := s.queue.events[i]
 		if e == nil {
 			continue
 		}
@@ -529,13 +536,13 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	}
 	s.iterator.index = i
 	if event != nil && consume {
-		s.events[i].iterator = s.iterator
+		s.queue.events[i].iterator = s.iterator
 		s.iterator.index++
-		if event.user.numConsumed == 0 {
+		if event.user.consumed == 0 {
 			event.user.iterator = s.iterator
-			s.available -= event.user.events
+			s.available -= event.user.totals
 		}
-		event.user.numConsumed++
+		event.user.consumed++
 		s.iterator.numConsumed += 1
 		if asserts {
 			s._assertAvailable(s.available)
@@ -578,8 +585,8 @@ func (s *Sender) releaseUsers() {
 	}
 	for user := range s.releasableUsers {
 		user.iterator = nil
-		user.numConsumed = 0
-		s.available += user.events
+		user.consumed = 0
+		s.available += user.totals
 	}
 	clear(s.releasableUsers)
 }
@@ -599,20 +606,20 @@ func (s *Sender) resetTimerLocked() {
 	}
 	// If we have enough events for a batch, send immediately.
 	if s.available >= s.minBatchSize {
-		s.timer.Reset(0)
+		s.timer.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
 		return
 	}
 	// Find the creation time of the oldest available event.
 	var createdAt time.Time
-	for i := 0; i < len(s.events); i++ {
-		event := s.events[i]
+	for i := 0; i < len(s.queue.events); i++ {
+		event := s.queue.events[i]
 		if event != nil && event.iterator == nil && event.user.iterator == nil {
-			createdAt = event.CreatedAt
+			createdAt = event.createdAt
 			break
 		}
 	}
 	// Wait until maxQueueDelay has elapsed since createdAt.
-	s.timer.Reset(max(0, maxQueueDelay-time.Since(createdAt)))
+	s.timer.Reset(max(1, maxQueueDelay-time.Since(createdAt))) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
 }
 
 // send sends events to the application by calling the connector's SendEvents
@@ -673,11 +680,11 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			s._assertAvailable(s.available)
 		}
 		var index int
-		for i := 0; i < len(s.events); i++ {
-			if s.events[i] == nil || s.events[i].iterator != iter {
+		for i := 0; i < len(s.queue.events); i++ {
+			if s.queue.events[i] == nil || s.queue.events[i].iterator != iter {
 				continue
 			}
-			user := s.events[i].user
+			user := s.queue.events[i].user
 			s.releasableUsers[user] = struct{}{}
 			err := errRequest
 			if errEvents != nil {
@@ -685,7 +692,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			}
 			if s.metrics != nil {
 				key := metricsKey{
-					pipeline: s.events[i].pipeline,
+					pipeline: s.queue.events[i].pipeline,
 					err:      err,
 				}
 				if metricsCounts == nil {
@@ -695,11 +702,11 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 				}
 			}
 			if s.sent != nil {
-				defer s.sent(s.events[i].Received.MessageID(), err)
+				defer s.sent(s.queue.events[i].Received.MessageID(), err)
 			}
-			user.events--
-			acks = append(acks, s.events[i].ack)
-			s.events[i] = nil
+			user.totals--
+			acks = append(acks, s.queue.events[i].ack)
+			s.queue.dequeue(i)
 			index++
 		}
 		if s.iterator == nil {
@@ -708,6 +715,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		}
 		if asserts {
 			s._assertAvailable(s.available)
+			s._assertQueueTotal(s.queue.total)
 		}
 		s.mu.Unlock()
 	}
@@ -754,11 +762,26 @@ func (s *Sender) _assertAvailable(n int) {
 	available := 0
 	for _, user := range s.users {
 		if user.iterator == nil {
-			available += user.events
+			available += user.totals
 		}
 	}
 	if n != available {
 		panic(fmt.Sprintf("core/events/collector/sender: expected %d available, got %d", n, available))
+	}
+}
+
+// _assertQueueTotal asserts that the queued events are n.
+//
+// It must be called holding the s.mu mutex.
+func (s *Sender) _assertQueueTotal(n int) {
+	total := 0
+	for _, event := range s.queue.events {
+		if event != nil {
+			total++
+		}
+	}
+	if n != total {
+		panic(fmt.Sprintf("core/events/collector/sender: expected %d queued, got %d", n, total))
 	}
 }
 

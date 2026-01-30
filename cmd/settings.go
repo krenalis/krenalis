@@ -409,6 +409,19 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, fmt.Errorf("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID is required when MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET is set")
 	}
 
+	if e := envVars.Get("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION"); e == "" {
+		settings.MaxQueuedEventsPerDestination = 50_000
+	} else {
+		maxEvents, err := strconv.ParseInt(e, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be an integer")
+		}
+		if maxEvents < 1 {
+			return nil, fmt.Errorf("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got %d", maxEvents)
+		}
+		settings.MaxQueuedEventsPerDestination = int(maxEvents)
+	}
+
 	return settings, nil
 }
 
