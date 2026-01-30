@@ -175,9 +175,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"email": "kbuessen0@example.com",
 			},
 		})
-		time.Sleep(2 * time.Second)
-		c.RunIdentityResolution()
+		time.Sleep(5 * time.Second)
 		c.WaitEventsStoredIntoWarehouse(ctx, 1)
+		c.RunIdentityResolution()
 	}
 
 	// Ensure that there are 14 profiles (10 from Dummy + 3 from CSV + 1 from event).
