@@ -1,4 +1,4 @@
-import { getHierarchicalPaths, TransformedPipeline, TransformedMapping } from '../../../lib/core/pipeline';
+import { getHierarchicalPaths, TransformedPipeline, FlatSchema } from '../../../lib/core/pipeline';
 import { SampleIdentifiers } from './Pipeline.types';
 
 const updateMappingProperty = (
@@ -71,7 +71,7 @@ const updateMappingPropertyError = (
 	return p;
 };
 
-const checkIfPropertyExists = (property: string, schema: TransformedMapping, toHide?: string[]): string => {
+const checkIfPropertyExists = (property: string, schema: FlatSchema, toHide?: string[]): string => {
 	if (schema == null || property === '' || property == null) {
 		return '';
 	}

@@ -201,10 +201,10 @@ interface TransformedProperty {
 	disabled?: boolean;
 }
 
-type TransformedMapping = Record<string, TransformedProperty>;
+type FlatSchema = Record<string, TransformedProperty>;
 
 interface TransformedTransformation {
-	mapping: TransformedMapping | null;
+	mapping: FlatSchema | null;
 	function: TransformationFunction | null;
 }
 
@@ -348,7 +348,7 @@ const isOneOfOperator = (operator: string): boolean => {
 	return operator === 'is one of' || operator === 'is not one of';
 };
 
-const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMapping): [string, string] => {
+const splitPropertyAndPath = (propertyName: string, flatSchema: FlatSchema): [string, string] => {
 	const name = propertyName.trim();
 
 	const split = name.split('.');
@@ -459,7 +459,7 @@ const validateTransformation = (
 // takes the flatten schema and add values, and disableds. In
 // 'transformPipelineMapping' set the values or set ''. This should only return
 // the list of flattened keys mapping to the full property object.
-const flattenSchema = (typ: ObjectType | ArrayType | MapType, insertPrefilled?: boolean): TransformedMapping | null => {
+const flattenSchema = (typ: ObjectType | ArrayType | MapType, insertPrefilled?: boolean): FlatSchema | null => {
 	if (typ == null || !isRecursiveType(typ)) {
 		return null;
 	}
@@ -556,7 +556,7 @@ const transformPipelineType = (
 	};
 };
 
-const transformPipelineMapping = (mapping: Mapping, outputSchema: ObjectType): TransformedMapping => {
+const transformPipelineMapping = (mapping: Mapping, outputSchema: ObjectType): FlatSchema => {
 	const s = flattenSchema(outputSchema)!;
 	for (const path in s) {
 		const value = mapping[path];
@@ -1270,7 +1270,7 @@ const addPropertyToSchema = (
 	path: string,
 	property: Property,
 	schema: ObjectType,
-	fullSchema: TransformedMapping,
+	fullSchema: FlatSchema,
 	isFirstLevel: boolean,
 ) => {
 	if (isFirstLevel) {
@@ -1607,16 +1607,16 @@ interface hierarchicalPaths {
 
 // getHierarchicalPaths returns the ancestors and descendants paths of
 // the property with the given path.
-const getHierarchicalPaths = (path: string, mapping: TransformedMapping): hierarchicalPaths => {
-	const indentation = mapping[path].indentation;
+const getHierarchicalPaths = (path: string, schema: FlatSchema): hierarchicalPaths => {
+	const indentation = schema[path].indentation;
 	const ancestors: string[] = [];
 	const descendants: string[] = [];
-	for (const p in mapping) {
-		if (mapping[p].indentation! < indentation! && path.startsWith(`${p}.`)) {
+	for (const p in schema) {
+		if (schema[p].indentation! < indentation! && path.startsWith(`${p}.`)) {
 			ancestors.push(p);
 			continue;
 		}
-		if (mapping[p].indentation! > indentation! && p.startsWith(`${path}.`)) {
+		if (schema[p].indentation! > indentation! && p.startsWith(`${path}.`)) {
 			descendants.push(p);
 			continue;
 		}
@@ -1629,22 +1629,22 @@ const getHierarchicalPaths = (path: string, mapping: TransformedMapping): hierar
 
 // getSiblingPaths returns the sibling paths of the property with
 // the given path.
-const getSiblingPaths = (path: string, mapping: TransformedMapping): string[] => {
-	const { root, indentation } = mapping[path];
+const getSiblingPaths = (path: string, schema: FlatSchema): string[] => {
+	const { root, indentation } = schema[path];
 	const siblings: string[] = [];
-	for (const p in mapping) {
-		if (p !== path && mapping[p].root === root && mapping[p].indentation === indentation) {
+	for (const p in schema) {
+		if (p !== path && schema[p].root === root && schema[p].indentation === indentation) {
 			siblings.push(p);
 		}
 	}
 	return siblings;
 };
 
-const buildHierarchy = (paths: string[], flatSchema: TransformedMapping, property: Property): Property => {
+const buildHierarchy = (paths: string[], schema: FlatSchema, property: Property): Property => {
 	let hierarchy: Property;
 	let i = 0;
 	for (const p of [...paths].reverse()) {
-		let full = flatSchema[p].full;
+		let full = schema[p].full;
 		if (i === 0) {
 			full = property;
 		}
@@ -2064,7 +2064,7 @@ export {
 };
 
 export type {
-	TransformedMapping,
+	FlatSchema,
 	TransformedProperty,
 	TransformedPipelineType,
 	TransformedEventType,

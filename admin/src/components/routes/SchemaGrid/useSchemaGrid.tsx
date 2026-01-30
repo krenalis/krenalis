@@ -3,7 +3,7 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
-import { TransformedMapping, TransformedProperty, flattenSchema } from '../../../lib/core/pipeline';
+import { FlatSchema, TransformedProperty, flattenSchema } from '../../../lib/core/pipeline';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toMeergoStringType } from '../../helpers/types';
@@ -30,7 +30,7 @@ const useSchemaGrid = (schema: ObjectType, isLoading: boolean) => {
 };
 
 const getRows = (
-	schema: TransformedMapping,
+	schema: FlatSchema,
 	primarySources: PrimarySources,
 	connections: TransformedConnection[],
 	parent?: string,

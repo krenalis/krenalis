@@ -13,7 +13,7 @@ import {
 import {
 	TransformedPipeline,
 	TransformedPipelineType,
-	TransformedMapping,
+	FlatSchema,
 	TransformedProperty,
 	doesUpdatedAtColumnNeedFormat,
 	flattenSchema,
@@ -202,7 +202,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [isFullscreenTransformationOpen]);
 
-	const flatInputSchema = useMemo<TransformedMapping>(() => {
+	const flatInputSchema = useMemo<FlatSchema>(() => {
 		return flattenSchema(pipelineType.inputSchema);
 	}, [pipelineType.inputSchema]);
 
@@ -621,13 +621,13 @@ interface TransformationBoxProps {
 	isFullscreenTransformationOpen: boolean;
 	pipelineType: TransformedPipelineType;
 	hasSchema: boolean;
-	flatInputSchema: TransformedMapping;
+	flatInputSchema: FlatSchema;
 	mapMappingPairs: Record<string, [string, string][]>;
 	setMapMappingPairs: React.Dispatch<React.SetStateAction<Record<string, [string, string][]>>>;
 	propertiesToHide: string[] | null;
 }
 
-const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
+const isMappingChanged = (oldMapping: FlatSchema, newMapping: FlatSchema): boolean => {
 	let isChanged = false;
 	for (const key in oldMapping) {
 		if (oldMapping[key].value !== newMapping[key].value) {
@@ -647,15 +647,15 @@ const isTransformationChanged = (
 
 const isMappingModified = (
 	transformationType: '' | 'mappings' | 'function',
-	oldValue: TransformedMapping | TransformationFunction,
-	newValue: TransformedMapping | TransformationFunction,
+	oldValue: FlatSchema | TransformationFunction,
+	newValue: FlatSchema | TransformationFunction,
 ) => {
 	if (transformationType === '') {
 		return;
 	}
 	if (transformationType === 'mappings') {
-		const oldV = oldValue as TransformedMapping;
-		const newV = newValue as TransformedMapping;
+		const oldV = oldValue as FlatSchema;
+		const newV = newValue as FlatSchema;
 		return isMappingChanged(oldV, newV);
 	} else {
 		const oldV = oldValue as TransformationFunction;
@@ -695,7 +695,7 @@ const TransformationBox = ({
 	const [isEditButtonAnimated, setIsEditButtonAnimated] = useState<boolean>(false);
 
 	const pendingTransformationType = useRef<string>();
-	const firstValue = useRef<TransformedMapping | TransformationFunction>();
+	const firstValue = useRef<FlatSchema | TransformationFunction>();
 	const hasNeverChangedTransformationType = useRef<boolean>(true);
 
 	const { handleError } = useContext(appContext);
@@ -1226,7 +1226,7 @@ interface FullscreenTransformationProps {
 	isFullscreenTransformationOpen: boolean;
 	selectedLanguage: string;
 	body: ReactNode;
-	flatInputSchema: TransformedMapping;
+	flatInputSchema: FlatSchema;
 	inputSchema: ObjectType;
 	outputSchema: ObjectType;
 	isEventImport: boolean;
@@ -1616,7 +1616,7 @@ const FullscreenTransformation = ({
 
 	const onChangeSelectedPath = (side: 'in' | 'out', path: string) => {
 		let selectedPaths: string[];
-		let schema: TransformedMapping;
+		let schema: FlatSchema;
 		if (side === 'in') {
 			selectedPaths = [...selectedInPaths];
 			schema = flatInputSchema;
@@ -3044,7 +3044,7 @@ interface TransformationNestedPropertiesProps {
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
 	searchTerm: string;
-	flatSchema: TransformedMapping;
+	flatSchema: FlatSchema;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
 }
@@ -3222,7 +3222,7 @@ interface TransformationPropertyProps {
 	transformationType: 'mappings' | 'function' | '';
 	searchTerm?: string;
 	showCaret?: boolean;
-	flatSchema: TransformedMapping;
+	flatSchema: FlatSchema;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
 	isExpanded?: boolean;

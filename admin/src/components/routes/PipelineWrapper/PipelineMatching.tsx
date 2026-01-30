@@ -2,7 +2,7 @@ import React, { forwardRef, useContext, useMemo } from 'react';
 import { getMatchingComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { flattenSchema, propertyTypesAreEqual, TransformedMapping, validateMatching } from '../../../lib/core/pipeline';
+import { flattenSchema, propertyTypesAreEqual, FlatSchema, validateMatching } from '../../../lib/core/pipeline';
 import { checkIfPropertyExists } from './Pipeline.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
@@ -22,7 +22,7 @@ const PipelineMatching = forwardRef<any>((_, ref) => {
 		const flatSourceSchema = flattenSchema(pipelineType.outputMatchingSchema);
 		const flatDestinationSchema = flattenSchema(pipelineType.outputSchema);
 
-		let filteredSchema: TransformedMapping = {};
+		let filteredSchema: FlatSchema = {};
 		if (pipeline.exportMode === 'CreateOnly' || pipeline.exportMode === 'CreateOrUpdate') {
 			for (const [k, v] of Object.entries(flatSourceSchema)) {
 				const a = v.full;

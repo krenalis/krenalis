@@ -1,12 +1,12 @@
 import React from 'react';
-import { TransformedMapping, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/pipeline';
+import { FlatSchema, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/pipeline';
 import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 import { PipelineTarget } from '../../lib/api/types/pipeline';
 import TransformedConnection from '../../lib/core/connection';
 
-const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping, toHide?: string[]): ComboboxItem[] => {
+const getSchemaComboboxItems = (schema: ObjectType | FlatSchema, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -14,21 +14,21 @@ const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping, toHide?
 	if (!isFlat) {
 		schema = flattenSchema(schema as ObjectType);
 	}
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(schema)) {
 		if (toHide?.includes(k)) {
 			continue;
 		}
 		filteredSchema[k] = v;
 	}
-	return computeItems(filteredSchema as TransformedMapping);
+	return computeItems(filteredSchema as FlatSchema);
 };
 
-const getMatchingComboboxItems = (schema: TransformedMapping): ComboboxItem[] => {
+const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(schema)) {
 		const typ = schema[k].type;
 		if (typ !== 'array' && typ !== 'object' && typ !== 'map') {
@@ -43,7 +43,7 @@ const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const typ = flatSchema[k].type;
 		if (typ === 'int' || typ === 'uuid' || typ === 'decimal' || typ === 'string') {
@@ -63,7 +63,7 @@ const getFilterPropertyComboboxItems = (
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 
 	for (const [k, v] of Object.entries(flatSchema)) {
 		if (toHide?.includes(k)) {
@@ -88,7 +88,7 @@ const getIdentityColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		if (v.readOptional) {
 			continue;
@@ -106,7 +106,7 @@ const getUpdatedAtComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const typ = flatSchema[k].type;
 		if (typ === 'datetime' || typ === 'date' || typ == 'json' || typ === 'string') {
@@ -116,12 +116,12 @@ const getUpdatedAtComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const filterOrderingPropertySchema = (schema: ObjectType): TransformedMapping | null => {
+const filterOrderingPropertySchema = (schema: ObjectType): FlatSchema | null => {
 	if (schema == null) {
 		return null;
 	}
 	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const typ = flatSchema[k].type;
 		if (typ === 'decimal') {
@@ -151,7 +151,7 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
-	const filteredSchema: TransformedMapping = {};
+	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const typ = flatSchema[k].type;
 		if (typ === 'int' || typ === 'uuid' || typ === 'string') {
@@ -161,10 +161,10 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const computeItems = (flatSchema: TransformedMapping) => {
+const computeItems = (schema: FlatSchema) => {
 	const items: ComboboxItem[] = [];
-	for (const name in flatSchema) {
-		let typ = flatSchema[name].type;
+	for (const name in schema) {
+		let typ = schema[name].type;
 		items.push({
 			content: (
 				<div className='schema-combobox-item' key={name}>

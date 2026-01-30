@@ -1,6 +1,6 @@
-import { TransformedMapping } from '../../../lib/core/pipeline';
+import { FlatSchema } from '../../../lib/core/pipeline';
 
-const checkUIPreferences = (property: string, schema: TransformedMapping): string => {
+const checkUIPreferences = (property: string, schema: FlatSchema): string => {
 	if (schema == null || property === '') {
 		return '';
 	}
