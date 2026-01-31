@@ -136,7 +136,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 			}
 			ok = yield(&e.Event)
 			if !it.postponed {
-				wait := time.Since(e.enqueuedAt).Seconds()
+				wait := time.Since(e.createdAt).Seconds()
 				it.sender.prometheus.queueWait.Observe(wait)
 			}
 			if !ok {

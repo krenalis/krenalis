@@ -420,6 +420,8 @@ func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
 
 }
 
+// Test_Sender_UserRemoval verifies that users are removed after their last
+// event is discarded or sent.
 func Test_Sender_UserRemoval(t *testing.T) {
 	t.Run("DiscardBeforeEnqueue", func(t *testing.T) {
 		app := newTestApplication()
@@ -440,7 +442,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		_, ok := s.users["user-1"]
 		s.mu.Unlock()
 		if ok {
-			t.Fatal("expected user to be removed after discarding the only event before enqueue")
+			t.Fatal("expected user to be removed after discarding the only event before enqueue, got present")
 		}
 	})
 
@@ -475,14 +477,14 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
-			t.Fatal("timeout waiting for discard")
+			t.Fatal("expected discard to complete, got timeout")
 		}
 
 		s.mu.Lock()
 		_, ok := s.users["user-2"]
 		s.mu.Unlock()
 		if ok {
-			t.Fatal("expected user to be removed after discarding during iteration")
+			t.Fatal("expected user to be removed after discarding during iteration, got present")
 		}
 	})
 
@@ -513,14 +515,14 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
-			t.Fatal("timeout waiting for send")
+			t.Fatal("expected send to complete, got timeout")
 		}
 
 		s.mu.Lock()
 		_, ok := s.users["user-3"]
 		s.mu.Unlock()
 		if ok {
-			t.Fatal("expected user to be removed after sending the only event")
+			t.Fatal("expected user to be removed after sending the only event, got present")
 		}
 	})
 }

@@ -66,7 +66,7 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
 		q.events = slices.Insert(q.events, i, event)
 		return
 	}
-	if !event.enqueuedAt.IsZero() {
+	if !event.discarded {
 		forward(event)
 	}
 	expected := q.sequence.expected + 1
@@ -76,7 +76,7 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
 			break
 		}
 		// Append the event to the ready queue unless it has been discarded.
-		if !q.events[last].enqueuedAt.IsZero() {
+		if !q.events[last].discarded {
 			forward(q.events[last])
 		}
 		expected++

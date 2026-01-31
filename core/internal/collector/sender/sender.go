@@ -70,10 +70,10 @@ const maxQueueDelay = 200 * time.Millisecond
 type Event struct {
 	connectors.Event             // original event.
 	createdAt        time.Time   // time at which the event was created.
-	enqueuedAt       time.Time   // time at which the event was enqueued; zero if it has not yet been queued or was discarded.
 	pipeline         int         // pipeline ID.
 	user             *user       // user to whom the event belongs.
 	sequence         int         // sequence number; access is synchronized via Sender.mu.
+	discarded        bool        // true if DiscardEvent was called for this event.
 	iterator         *iterator   // iterator that consumed the event; nil if it hasn't been consumed.
 	ack              streams.Ack // event ack.
 }
@@ -108,6 +108,7 @@ type Sender struct {
 	releasableUsers    map[*user]struct{}                // users that have been iterated and are now ready to be released.
 	iterator           *iterator                         // current iterator; protected by mu.
 	available          int                               // number of available (non-read) records; protected by mu.
+	availableSince     time.Time                         // when available first became > 0.
 	timer              *time.Timer                       // timer to trigger an iterator every maxQueueDelay; protected by mu.
 	minBatchSize       int                               // minimum number of events in the queue required to trigger a new iteration.
 	rateLimiterPattern string                            // pattern of the rate limiter that defines how requests are throttled over time.
@@ -202,7 +203,7 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 				s.iterator = iter
 				pattern = s.rateLimiterPattern
 			}
-			s.resetTimerLocked()
+			s.scheduleIteration()
 			waitTime := s.waitTime
 			s.mu.Unlock()
 			if iter == nil {
@@ -338,6 +339,7 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 // DiscardEvent must not be called if DiscardEvent or SendEvent have already
 // been called with the same event.
 func (s *Sender) DiscardEvent(event *Event) {
+	event.discarded = true
 	s.processEvent(event)
 }
 
@@ -349,7 +351,6 @@ func (s *Sender) DiscardEvent(event *Event) {
 // SendEvent must not be called if DiscardEvent or SendEvent have already been
 // called with the same event.
 func (s *Sender) SendEvent(event *Event) {
-	event.enqueuedAt = time.Now().UTC()
 	s.processEvent(event)
 }
 
@@ -359,6 +360,22 @@ func (s *Sender) SetApplication(app *connections.Application) {
 	s.waitTime = app.WaitTime
 	s.sendEvents = app.SendEvents
 	s.mu.Unlock()
+}
+
+// addAvailable adds delta to availability.
+//
+// It must be called holding the s.mu mutex.
+func (s *Sender) addAvailable(delta int) {
+	if delta == 0 {
+		return
+	}
+	if delta > 0 && s.available == 0 {
+		s.availableSince = time.Now().UTC()
+	}
+	s.available += delta
+	if s.available == 0 {
+		s.availableSince = time.Time{}
+	}
 }
 
 // compact compacts the events. It does nothing if s has been closed.
@@ -412,7 +429,7 @@ func (s *Sender) complete() {
 	}
 	s.iterator = nil
 	s.releaseUsers()
-	s.resetTimerLocked()
+	s.scheduleIteration()
 	s.mu.Unlock()
 	s.close.completed.Signal()
 }
@@ -438,7 +455,7 @@ func (s *Sender) discard(err error) {
 	u.consumed--
 	if u.consumed == 0 {
 		u.iterator = nil
-		s.available += u.totals
+		s.addAvailable(u.totals)
 	}
 	if u.disposable() {
 		s.disposeUser(u)
@@ -509,9 +526,9 @@ func (s *Sender) processEvent(event *Event) {
 		s.queue.enqueue(event)
 		u.totals++
 		if u.iterator == nil {
-			s.available++
+			s.addAvailable(1)
 			if s.iterator == nil {
-				s.resetTimerLocked()
+				s.scheduleIteration()
 			}
 		}
 	})
@@ -558,7 +575,7 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 		s.iterator.index++
 		if event.user.consumed == 0 {
 			event.user.iterator = s.iterator
-			s.available -= event.user.totals
+			s.addAvailable(-event.user.totals)
 		}
 		event.user.consumed++
 		s.iterator.numConsumed += 1
@@ -604,7 +621,7 @@ func (s *Sender) releaseUsers() {
 	for u := range s.releasableUsers {
 		u.iterator = nil
 		u.consumed = 0
-		s.available += u.totals
+		s.addAvailable(u.totals)
 		if u.disposable() {
 			s.disposeUser(u)
 		}
@@ -612,11 +629,11 @@ func (s *Sender) releaseUsers() {
 	clear(s.releasableUsers)
 }
 
-// resetTimerLocked schedules the timer so that the oldest available event is
-// sent within maxQueueDelay.
+// scheduleIteration computes when to run the next send iteration based on
+// current queue availability, batching, and maxQueueDelay.
 //
 // It must be called holding the s.mu mutex.
-func (s *Sender) resetTimerLocked() {
+func (s *Sender) scheduleIteration() {
 	if s.available == 0 {
 		s.timer.Stop()
 		return
@@ -630,17 +647,9 @@ func (s *Sender) resetTimerLocked() {
 		s.timer.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
 		return
 	}
-	// Find the creation time of the oldest available event.
-	var createdAt time.Time
-	for i := 0; i < len(s.queue.events); i++ {
-		event := s.queue.events[i]
-		if event != nil && event.iterator == nil && event.user.iterator == nil {
-			createdAt = event.createdAt
-			break
-		}
-	}
-	// Wait until maxQueueDelay has elapsed since createdAt.
-	s.timer.Reset(max(1, maxQueueDelay-time.Since(createdAt))) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+	// Wait until maxQueueDelay has elapsed since the queue became available.
+	elapsed := time.Since(s.availableSince)
+	s.timer.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
 }
 
 // send sends events to the application by calling the connector's SendEvents
@@ -732,7 +741,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		}
 		if s.iterator == nil {
 			s.releaseUsers()
-			s.resetTimerLocked()
+			s.scheduleIteration()
 		}
 		if asserts {
 			s._assertAvailable(s.available)
