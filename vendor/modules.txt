@@ -59,12 +59,12 @@ github.com/Azure/go-ansiterm/winterm
 ## explicit; go 1.18
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
-# github.com/ClickHouse/ch-go v0.69.0
-## explicit; go 1.24.0
+# github.com/ClickHouse/ch-go v0.71.0
+## explicit; go 1.24.1
 github.com/ClickHouse/ch-go/compress
 github.com/ClickHouse/ch-go/proto
-# github.com/ClickHouse/clickhouse-go/v2 v2.42.0
-## explicit; go 1.24.0
+# github.com/ClickHouse/clickhouse-go/v2 v2.43.0
+## explicit; go 1.24.1
 github.com/ClickHouse/clickhouse-go/v2
 github.com/ClickHouse/clickhouse-go/v2/contributors
 github.com/ClickHouse/clickhouse-go/v2/ext
@@ -513,7 +513,7 @@ github.com/jordan-wright/email
 ## explicit; go 1.16
 github.com/klauspost/asmfmt
 github.com/klauspost/asmfmt/cmd/asmfmt
-# github.com/klauspost/compress v1.18.2
+# github.com/klauspost/compress v1.18.3
 ## explicit; go 1.23
 github.com/klauspost/compress
 github.com/klauspost/compress/flate
@@ -621,8 +621,8 @@ github.com/oschwald/maxminddb-golang/v2/internal/mmdberrors
 # github.com/paulmach/orb v0.12.0
 ## explicit; go 1.15
 github.com/paulmach/orb
-# github.com/pierrec/lz4/v4 v4.1.22
-## explicit; go 1.14
+# github.com/pierrec/lz4/v4 v4.1.25
+## explicit; go 1.17
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
