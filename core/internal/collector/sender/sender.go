@@ -308,7 +308,8 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 	s.mu.Lock()
 	u, ok := s.users[anonymousID]
 	if !ok {
-		u = &user{}
+		u = users.Get()
+		u.anonymousID = anonymousID
 		s.users[anonymousID] = u
 	}
 	sequence := u.queue.next()
@@ -432,11 +433,15 @@ func (s *Sender) discard(err error) {
 	// Dequeue the event.
 	s.queue.dequeue(i)
 	// Update the user.
-	e.user.totals--
-	e.user.consumed--
-	if e.user.consumed == 0 {
-		e.user.iterator = nil
-		s.available += e.user.totals
+	u := e.user
+	u.totals--
+	u.consumed--
+	if u.consumed == 0 {
+		u.iterator = nil
+		s.available += u.totals
+	}
+	if u.disposable() {
+		s.disposeUser(u)
 	}
 	// Update the iterator.
 	s.iterator.numConsumed--
@@ -455,6 +460,16 @@ func (s *Sender) discard(err error) {
 	if s.metrics != nil {
 		s.metrics.FinalizeFailed(e.pipeline, 1, err.Error())
 	}
+}
+
+// disposeUser releases a user instance back to the pool and removes it from the
+// Sender. It must be called only after the user no longer owns any events.
+// Use u.disposable() to check whether it is safe to dispose the user.
+//
+// It must be called holding the s.mu mutex.
+func (s *Sender) disposeUser(u *user) {
+	delete(s.users, u.anonymousID)
+	users.Put(u)
 }
 
 // postpone marks the most recently read event as unread. It is invoked when an
@@ -500,6 +515,9 @@ func (s *Sender) processEvent(event *Event) {
 			}
 		}
 	})
+	if u.disposable() {
+		s.disposeUser(u)
+	}
 	if asserts {
 		s._assertAvailable(s.available)
 	}
@@ -583,10 +601,13 @@ func (s *Sender) releaseUsers() {
 	if len(s.releasableUsers) == 0 {
 		return
 	}
-	for user := range s.releasableUsers {
-		user.iterator = nil
-		user.consumed = 0
-		s.available += user.totals
+	for u := range s.releasableUsers {
+		u.iterator = nil
+		u.consumed = 0
+		s.available += u.totals
+		if u.disposable() {
+			s.disposeUser(u)
+		}
 	}
 	clear(s.releasableUsers)
 }

@@ -7,14 +7,23 @@ package sender
 import (
 	"cmp"
 	"slices"
+	"sync"
 )
 
 // user represents the per-user state used during event processing.
 type user struct {
-	queue    userQueue // per-user queue holding out-of-order events.
-	iterator *iterator // iterator over the user's events; nil when no iteration is active.
-	consumed int       // number of events already consumed from iterator, if any.
-	totals   int       // total number of the user's events in the sender queue.
+	anonymousID string    // anonymous ID.
+	queue       userQueue // per-user queue holding out-of-order events.
+	iterator    *iterator // iterator over the user's events; nil when no iteration is active.
+	consumed    int       // number of events already consumed from iterator, if any.
+	totals      int       // total number of the user's events in the sender queue.
+}
+
+// disposable reports whether the user has no pending or queued events and can
+// be safely removed from the sender.
+func (u *user) disposable() bool {
+	seq := u.queue.sequence
+	return seq.expected == seq.next && u.totals == 0 && u.consumed == 0
 }
 
 // userQueue represents a per-user event queue.
@@ -84,4 +93,34 @@ func (q *userQueue) next() int {
 	next := q.sequence.next
 	q.sequence.next++
 	return next
+}
+
+// users is a shared pool used by all senders.
+// It allows reuse of *user instances to reduce allocations and GC pressure.
+var users usersPool
+
+type usersPool struct {
+	p sync.Pool
+}
+
+// Get returns a *user from the pool.
+// If the pool is empty, a new instance is allocated.
+// The returned user is reset to a clean state while preserving internal
+// buffers.
+func (p *usersPool) Get() *user {
+	v := p.p.Get()
+	if v == nil {
+		return new(user)
+	}
+	u := v.(*user)
+	events := u.queue.events[:0]
+	*u = user{}
+	u.queue.events = events
+	return u
+}
+
+// Put returns a *user to the pool for reuse.
+// The caller must ensure the user is no longer in use.
+func (p *usersPool) Put(u *user) {
+	p.p.Put(u)
 }

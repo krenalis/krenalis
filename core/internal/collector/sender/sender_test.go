@@ -420,6 +420,111 @@ func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
 
 }
 
+func Test_Sender_UserRemoval(t *testing.T) {
+	t.Run("DiscardBeforeEnqueue", func(t *testing.T) {
+		app := newTestApplication()
+		s := New(app, nil)
+		defer s.Close(t.Context())
+
+		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			Attributes: map[string]any{
+				"anonymousId": "user-1",
+				"messageId":   "msg-1",
+			},
+			Ack: nopAck,
+		})
+
+		s.DiscardEvent(event)
+
+		s.mu.Lock()
+		_, ok := s.users["user-1"]
+		s.mu.Unlock()
+		if ok {
+			t.Fatal("expected user to be removed after discarding the only event before enqueue")
+		}
+	})
+
+	t.Run("DiscardDuringIteration", func(t *testing.T) {
+		done := make(chan struct{})
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for event := range events.All() {
+				events.Discard(errors.New("discard"))
+				if event == nil {
+					t.Fatal("unexpected nil event")
+				}
+				break
+			}
+			return nil
+		}
+		s := New(app, nil)
+		s.setSentFunc(func(messageID string, err error) {
+			close(done)
+		})
+		defer s.Close(t.Context())
+
+		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			Attributes: map[string]any{
+				"anonymousId": "user-2",
+				"messageId":   "msg-2",
+			},
+			Ack: nopAck,
+		})
+		s.SendEvent(event)
+
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for discard")
+		}
+
+		s.mu.Lock()
+		_, ok := s.users["user-2"]
+		s.mu.Unlock()
+		if ok {
+			t.Fatal("expected user to be removed after discarding during iteration")
+		}
+	})
+
+	t.Run("SendSuccess", func(t *testing.T) {
+		done := make(chan struct{})
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for range events.All() {
+				break
+			}
+			return nil
+		}
+		s := New(app, nil)
+		s.setSentFunc(func(messageID string, err error) {
+			close(done)
+		})
+		defer s.Close(t.Context())
+
+		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			Attributes: map[string]any{
+				"anonymousId": "user-3",
+				"messageId":   "msg-3",
+			},
+			Ack: nopAck,
+		})
+		s.SendEvent(event)
+
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for send")
+		}
+
+		s.mu.Lock()
+		_, ok := s.users["user-3"]
+		s.mu.Unlock()
+		if ok {
+			t.Fatal("expected user to be removed after sending the only event")
+		}
+	})
+}
+
 func Test_Sender(t *testing.T) {
 
 	tests := []struct {
