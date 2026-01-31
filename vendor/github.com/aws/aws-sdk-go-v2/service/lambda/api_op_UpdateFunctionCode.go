@@ -85,6 +85,9 @@ type UpdateFunctionCodeInput struct {
 	// This has the same effect as calling PublishVersionseparately.
 	Publish bool
 
+	// Specifies where to publish the function version or configuration.
+	PublishTo types.FunctionVersionLatestPublished
+
 	// Update the function only if the revision ID matches the ID that's specified.
 	// Use this option to avoid modifying a function that has changed since you last
 	// read it.
@@ -123,17 +126,28 @@ type UpdateFunctionCodeOutput struct {
 	// x86_64 .
 	Architectures []types.Architecture
 
+	// Configuration for the capacity provider that manages compute resources for
+	// Lambda functions.
+	CapacityProviderConfig *types.CapacityProviderConfig
+
 	// The SHA256 hash of the function's deployment package.
 	CodeSha256 *string
 
 	// The size of the function's deployment package, in bytes.
 	CodeSize int64
 
+	// The SHA256 hash of the function configuration.
+	ConfigSha256 *string
+
 	// The function's dead letter queue.
 	DeadLetterConfig *types.DeadLetterConfig
 
 	// The function's description.
 	Description *string
+
+	// The function's durable execution configuration settings, if the function is
+	// configured for durability.
+	DurableConfig *types.DurableConfig
 
 	// The function's [environment variables]. Omitted from CloudTrail logs.
 	//

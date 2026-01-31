@@ -7,6 +7,68 @@ import (
 	smithy "github.com/aws/smithy-go"
 )
 
+// The callback ID token has either expired or the callback associated with the
+// token has already been closed.
+type CallbackTimeoutException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	Type *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *CallbackTimeoutException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *CallbackTimeoutException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *CallbackTimeoutException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "CallbackTimeoutException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *CallbackTimeoutException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
+// The maximum number of capacity providers for your account has been exceeded.
+// For more information, see [Lambda quotas]
+//
+// [Lambda quotas]: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+type CapacityProviderLimitExceededException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	Type *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *CapacityProviderLimitExceededException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *CapacityProviderLimitExceededException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *CapacityProviderLimitExceededException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "CapacityProviderLimitExceededException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *CapacityProviderLimitExceededException) ErrorFault() smithy.ErrorFault {
+	return smithy.FaultClient
+}
+
 // The specified code signing configuration does not exist.
 type CodeSigningConfigNotFoundException struct {
 	Message *string
@@ -97,6 +159,38 @@ func (e *CodeVerificationFailedException) ErrorCode() string {
 	return *e.ErrorCodeOverride
 }
 func (e *CodeVerificationFailedException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
+// The durable execution with the specified name has already been started. Each
+// durable execution name must be unique within the function. Use a different name
+// or check the status of the existing execution.
+type DurableExecutionAlreadyStartedException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	Type *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *DurableExecutionAlreadyStartedException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *DurableExecutionAlreadyStartedException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *DurableExecutionAlreadyStartedException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "DurableExecutionAlreadyStartedException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *DurableExecutionAlreadyStartedException) ErrorFault() smithy.ErrorFault {
+	return smithy.FaultClient
+}
 
 // Need additional permissions to configure VPC settings.
 type EC2AccessDeniedException struct {
@@ -331,6 +425,39 @@ func (e *ENILimitReachedException) ErrorCode() string {
 	return *e.ErrorCodeOverride
 }
 func (e *ENILimitReachedException) ErrorFault() smithy.ErrorFault { return smithy.FaultServer }
+
+// The maximum number of function versions that can be associated with a single
+// capacity provider has been exceeded. For more information, see [Lambda quotas].
+//
+// [Lambda quotas]: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+type FunctionVersionsPerCapacityProviderLimitExceededException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	Type *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *FunctionVersionsPerCapacityProviderLimitExceededException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *FunctionVersionsPerCapacityProviderLimitExceededException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *FunctionVersionsPerCapacityProviderLimitExceededException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "FunctionVersionsPerCapacityProviderLimitExceededException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *FunctionVersionsPerCapacityProviderLimitExceededException) ErrorFault() smithy.ErrorFault {
+	return smithy.FaultClient
+}
 
 // The code signature failed the integrity check. If the integrity check fails,
 // then Lambda blocks deployment, even if the code signing policy is set to WARN.
@@ -647,6 +774,34 @@ func (e *KMSNotFoundException) ErrorCode() string {
 }
 func (e *KMSNotFoundException) ErrorFault() smithy.ErrorFault { return smithy.FaultServer }
 
+// The function has no published versions available.
+type NoPublishedVersionException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	Type *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *NoPublishedVersionException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *NoPublishedVersionException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *NoPublishedVersionException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "NoPublishedVersionException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *NoPublishedVersionException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
 // The permissions policy for the resource is too large. For more information, see [Lambda quotas]
 // .
 //
@@ -918,10 +1073,8 @@ func (e *ResourceNotReadyException) ErrorCode() string {
 }
 func (e *ResourceNotReadyException) ErrorFault() smithy.ErrorFault { return smithy.FaultServer }
 
-// The processed request payload exceeded the Invoke request body size limit for
-// asynchronous invocations. While the event payload may be under 1 MB, the size
-// after internal serialization exceeds the maximum allowed size for asynchronous
-// invocations.
+// The request payload exceeded the maximum allowed size for serialized request
+// entities.
 type SerializedRequestEntityTooLargeException struct {
 	Message *string
 
