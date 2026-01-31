@@ -13,8 +13,8 @@ import (
 type user struct {
 	queue    userQueue // per-user queue holding out-of-order events.
 	iterator *iterator // iterator over the user's events; nil when no iteration is active.
-	totals   int       // total number of events available for iteration, excluding queued events.
 	consumed int       // number of events already consumed from iterator, if any.
+	totals   int       // total number of the user's events in the sender queue.
 }
 
 // userQueue represents a per-user event queue.
@@ -33,7 +33,7 @@ type user struct {
 //
 // Events are ordered from the most recent to the least recent.
 type userQueue struct {
-	events   []*Event // events waiting for the one with expectedSeq to be enqueued first.
+	events   []*Event // events waiting for the event with the expected sequence to be enqueued first.
 	sequence struct {
 		expected int // sequence number expected to be added next to Sender.events.
 		next     int // next sequence number to assign to a newly created event for this user.
@@ -78,9 +78,10 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
 	return
 }
 
-// incSequence allocates and returns a new sequence number for this user.
-func (q *userQueue) incSequence() int {
-	seq := q.sequence.next
+// next returns the next sequence number for this user.
+// It is called for each new event of this user.
+func (q *userQueue) next() int {
+	next := q.sequence.next
 	q.sequence.next++
-	return seq
+	return next
 }

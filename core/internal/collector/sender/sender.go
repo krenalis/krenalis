@@ -311,7 +311,7 @@ func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event 
 		u = &user{}
 		s.users[anonymousID] = u
 	}
-	sequence := u.queue.incSequence()
+	sequence := u.queue.next()
 	s.mu.Unlock()
 	ev := &Event{
 		Event: connectors.Event{
