@@ -73,7 +73,7 @@ func (a *testApplication) SendEvents(ctx context.Context, events connectors.Even
 }
 
 func Test_newStoppedTimer(t *testing.T) {
-	tm := newStoppedTimer()
+	tm := newSchedule()
 	select {
 	case <-tm.C:
 		t.Fatal("timer should be stopped")
@@ -178,53 +178,47 @@ func nopAck() {}
 // Test_Sender_DiscardedOutOfOrderEvent verifies that discarding an out-of-order
 // event does not prevent delivering the next event exactly once.
 func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
 
-	var consumed bool
+		var consumed bool
 
-	app := newTestApplication()
-	app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
-		for event := range events.All() {
-			if consumed || event.Received.MessageID() != "msg-0" {
-				t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for event := range events.All() {
+				if consumed || event.Received.MessageID() != "msg-0" {
+					t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+				}
+				consumed = true
 			}
-			consumed = true
+			return nil
 		}
-		return nil
-	}
-	s := New(app, nil)
+		s := New(app, nil)
 
-	event0 := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
-		Attributes: map[string]any{
-			"anonymousId": "user-1",
-			"messageId":   "msg-0",
-		},
-		Ack: nopAck,
-	})
-	event1 := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
-		Attributes: map[string]any{
-			"anonymousId": "user-1",
-			"messageId":   "msg-1",
-		},
-		Ack: nopAck,
-	})
+		event0 := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			Attributes: map[string]any{
+				"anonymousId": "user",
+				"messageId":   "msg-0",
+			},
+			Ack: nopAck,
+		})
+		event1 := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			Attributes: map[string]any{
+				"anonymousId": "user",
+				"messageId":   "msg-1",
+			},
+			Ack: nopAck,
+		})
 
-	s.DiscardEvent(event1)
+		s.DiscardEvent(event1)
+		s.SendEvent(event0)
+		time.Sleep(maxQueueDelay)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("QueueEvent panicked: %v", r)
+		s.Close(t.Context())
+		if !consumed {
+			t.Fatalf("event was not consumed")
 		}
-	}()
-	s.SendEvent(event0)
 
-	err := s.Close(t.Context())
-	if err != nil {
-		t.Fatalf("Close failed: %v", err)
-	}
-	if !consumed {
-		t.Fatalf("event was not consumed")
-	}
-
+	})
 }
 
 // Test_Sender_SequenceOverflowRescale verifies that per-user ordering holds
@@ -240,7 +234,6 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 			}
 			return nil
 		}
-
 		s := New(app, nil)
 
 		// Force the per-user sequence near overflow without creating a huge number
@@ -256,7 +249,7 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 
 		makeEvent := func(messageID string) *Event {
 			t.Helper()
-			return s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+			return s.CreateEvent(1, "Click", types.Type{}, streams.Event{
 				Attributes: map[string]any{
 					"anonymousId": userID,
 					"messageId":   messageID,
@@ -274,9 +267,9 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 		s.SendEvent(e2)
 		s.SendEvent(e0)
 
-		if err := s.Close(t.Context()); err != nil {
-			t.Fatalf("Close failed: %v", err)
-		}
+		time.Sleep(maxQueueDelay)
+
+		s.Close(t.Context())
 
 		want := []string{"msg-0", "msg-1", "msg-2"}
 		if !slices.Equal(seen, want) {
@@ -288,43 +281,45 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 // Test_Sender_RetryAfterSendEventsErrorWithoutIteration verifies that a send
 // error without iteration is retried and then consumes the events.
 func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
 
-	var called bool
-	var consumed bool
+		var called bool
+		var consumed bool
 
-	app := newTestApplication()
-	app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
-		if !called {
-			called = true
-			return errors.New("an error occurred")
-		}
-		for event := range events.All() {
-			if consumed || event.Received.MessageID() != "msg-0" {
-				t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			if !called {
+				called = true
+				return errors.New("an error occurred")
 			}
-			consumed = true
+			for event := range events.All() {
+				if consumed || event.Received.MessageID() != "msg-0" {
+					t.Fatalf("unexpected consumed event %q", event.Received.MessageID())
+				}
+				consumed = true
+			}
+			return nil
 		}
-		return nil
-	}
-	s := New(app, nil)
+		s := New(app, nil)
 
-	event := s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
-		Attributes: map[string]any{
-			"anonymousId": "user-1",
-			"messageId":   "msg-0",
-		},
-		Ack: nopAck,
+		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			Attributes: map[string]any{
+				"anonymousId": "user",
+				"messageId":   "msg-0",
+			},
+			Ack: nopAck,
+		})
+		s.SendEvent(event)
+
+		time.Sleep(maxQueueDelay)
+		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/meergo/meergo/issues/2122
+
+		s.Close(t.Context())
+
+		if !consumed {
+			t.Fatalf("event was not consumed")
+		}
 	})
-	s.SendEvent(event)
-
-	err := s.Close(t.Context())
-	if err != nil {
-		t.Fatalf("Close failed: %v", err)
-	}
-	if !consumed {
-		t.Fatalf("event was not consumed")
-	}
-
 }
 
 // Test_Sender_MinQueuedEvents tests that the sender works correctly when
@@ -360,13 +355,7 @@ func Test_Sender_MinQueuedEvents(t *testing.T) {
 			t.Fatalf("expected %d consumed events, got %d", total, consumed)
 		}
 
-		if err := s.Close(context.Background()); err != nil {
-			t.Fatalf("Close() failed: expected no error, got %v", err)
-		}
-
-		// Wait for the background goroutine started by New to exit.
-		// TODO(marco): remove the following line.
-		synctest.Wait()
+		s.Close(context.Background())
 	})
 
 }
@@ -411,13 +400,7 @@ func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
 			t.Fatal("QueueEvent is still blocked after queue capacity was freed; expected it to unblock")
 		}
 
-		if err := s.Close(context.Background()); err != nil {
-			t.Fatalf("Close() failed: expected no error, got %v", err)
-		}
-
-		// Wait for the background goroutine started by New to exit.
-		// TODO(marco): remove the following line.
-		synctest.Wait()
+		s.Close(context.Background())
 	})
 
 }
@@ -467,13 +450,7 @@ func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
 			t.Fatal("QueueEvent is still blocked after queue capacity was freed; expected it to unblock")
 		}
 
-		if err := s.Close(context.Background()); err != nil {
-			t.Fatalf("Close() failed: expected no error, got %v", err)
-		}
-
-		// Wait for the background goroutine started by New to exit.
-		// TODO(marco): remove the following line.
-		synctest.Wait()
+		s.Close(context.Background())
 	})
 
 }
@@ -691,10 +668,7 @@ func Test_Sender(t *testing.T) {
 			}
 
 			// Close the sender.
-			err := s.Close(context.Background())
-			if err != nil {
-				t.Fatalf("cannot close the sender: %s", err)
-			}
+			s.Close(context.Background())
 
 			// Check that all valid events have been consumed and in the correct order.
 			expectedByUser := map[string]int{}
@@ -745,9 +719,7 @@ func Test_Sender(t *testing.T) {
 				}
 			}
 
-			if err := s.Close(ctx); err != nil {
-				t.Fatalf("Close: expected no error, got error %q", err)
-			}
+			s.Close(ctx)
 
 		})
 	}

@@ -103,23 +103,21 @@ type Sender struct {
 	mu                 sync.Mutex
 	waitTime           func(pattern string) (time.Duration, error)               // function that returns an estimate of how long to wait before calling sendEvents.
 	sendEvents         func(ctx context.Context, events connectors.Events) error // function that sends the events to the application.
-	queue              queue
-	users              map[string]*user                  // users by anonymous id; protected by mu.
-	releasableUsers    map[*user]struct{}                // users that have been iterated and are now ready to be released.
-	iterator           *iterator                         // current iterator; protected by mu.
-	available          int                               // number of available (non-read) records; protected by mu.
-	availableSince     time.Time                         // when available first became > 0.
-	timer              *time.Timer                       // timer to trigger an iterator every maxQueueDelay; protected by mu.
-	minBatchSize       int                               // minimum number of events in the queue required to trigger a new iteration.
-	rateLimiterPattern string                            // pattern of the rate limiter that defines how requests are throttled over time.
-	sent               func(messageID string, err error) // function called in tests when an event is sent or discarded.
+	queue              queue                                                     // events queue.
+	users              map[string]*user                                          // users by anonymous id; protected by mu.
+	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
+	iterator           *iterator                                                 // current iterator; protected by mu.
+	available          int                                                       // number of available (non-read) records; protected by mu.
+	availableSince     time.Time                                                 // when available first became > 0.
+	schedule           *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
+	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
+	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
+	sent               func(messageID string, err error)                         // function called in tests when an event is sent or discarded.
 
 	close struct {
-		closed    atomic.Bool        // indicates if the writer has been closed.
-		ctx       context.Context    // context passes to iterators.
-		cancel    context.CancelFunc // function to cancel iterators executions.
-		completed sync.Cond          // signal the completion of the current iteration.
-		iterators sync.WaitGroup     // waiting group for the iterators.
+		atomic.Bool                      // indicates if the sender has been closed.
+		stop        chan context.Context // starts loop shutdown; returns immediately if the context is canceled.
+		done        chan struct{}        // closed when the loop has terminated.
 	}
 }
 
@@ -179,49 +177,13 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 		metrics:         metrics,
 		users:           make(map[string]*user),
 		releasableUsers: make(map[*user]struct{}),
-		timer:           newStoppedTimer(),
+		schedule:        newSchedule(),
 		minBatchSize:    min(10, MaxQueuedEvents),
 	}
 	s.queue.events = make([]*Event, 0, min(64, MaxQueuedEvents))
 	s.queue.cond.L = &s.mu
-	s.close.completed.L = &s.mu
-	s.close.ctx, s.close.cancel = context.WithCancel(context.Background())
-	// Start an iteration every maxQueueDelay.
-	go func() {
-		for {
-			select {
-			case <-s.timer.C:
-			case <-s.close.ctx.Done():
-				return
-			}
-			var iter *iterator
-			var pattern string
-			s.mu.Lock()
-			if s.iterator == nil && s.available > 0 {
-				s.releaseUsers()
-				iter = newIterator(s)
-				s.iterator = iter
-				pattern = s.rateLimiterPattern
-			}
-			s.scheduleIteration()
-			waitTime := s.waitTime
-			s.mu.Unlock()
-			if iter == nil {
-				continue
-			}
-			if pattern != "" {
-				if d, _ := waitTime(pattern); d > 0 {
-					select {
-					case <-time.After(d):
-					case <-s.close.ctx.Done():
-						return
-					}
-				}
-			}
-			s.close.iterators.Add(1)
-			go s.send(iter, pattern)
-		}
-	}()
+	s.close.stop = make(chan context.Context)
+	s.close.done = make(chan struct{})
 	// Set the metrics.
 	connection := strconv.Itoa(app.ID())
 	s.prometheus.queueAvailable = queueAvailableMetric.Register(func() float64 {
@@ -231,6 +193,8 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 		return float64(a)
 	}, s.connector, connection)
 	s.prometheus.queueWait = queueWaitMetric.Register(s.connector, connection)
+	// Start the loop.
+	go s.loop()
 	return s
 }
 
@@ -240,60 +204,19 @@ func (s *Sender) Available() int {
 	return s.available
 }
 
-// Close terminates the sender, ensuring that all events are processed before
+// Close closes the sender and waits for all in-flight sends to complete before
 // returning, unless the provided context is canceled.
-// If processing all events fails, an error is returned.
-func (s *Sender) Close(ctx context.Context) error {
-	if s.close.closed.Swap(true) {
-		return nil
+func (s *Sender) Close(ctx context.Context) {
+	if s.close.Swap(true) {
+		return
 	}
-	stop := context.AfterFunc(ctx, s.close.cancel)
-	defer stop()
-	trace("Sender.Close: start closing down\n")
-	for {
-		var iter *iterator
-		var pattern string
-		s.mu.Lock()
-		if s.iterator != nil {
-			trace("Sender.Close: wait for the iteration of iterator %p to complete\n", s.iterator)
-			s.close.completed.Wait()
-		}
-		if s.available > 0 {
-			s.releaseUsers()
-			iter = newIterator(s)
-			s.iterator = iter
-			pattern = s.rateLimiterPattern
-			trace("Sender.Close: %d events available; create new iterator %p\n", s.available, iter)
-		}
-		waitTime := s.waitTime
-		s.mu.Unlock()
-		if iter == nil {
-			break
-		}
-		if pattern != "" {
-			if d, _ := waitTime(pattern); d != 0 {
-				select {
-				case <-time.After(d):
-				case <-s.close.ctx.Done():
-				}
-				if s.close.ctx.Err() != nil {
-					break
-				}
-			}
-		}
-		s.close.iterators.Add(1)
-		go s.send(iter, pattern)
-	}
-	trace("Writer.Close: wait for iterators to terminate\n")
-	s.close.iterators.Wait()
-	if asserts && ctx.Done() == nil {
-		s._assertAvailable(0)
-	}
-	trace("Writer.Close: iterators are terminated; writer is now closed\n")
-	s.close.cancel()
+	// Stop the loop.
+	s.close.stop <- ctx
+	<-s.close.done
+	// Unregister the Prometheus metrics.
 	s.prometheus.queueAvailable.Unregister()
 	s.prometheus.queueWait.Unregister()
-	return nil
+	return
 }
 
 // CreateEvent creates a new event with the given pipeline, type, schema,
@@ -381,8 +304,8 @@ func (s *Sender) addAvailable(delta int) {
 // compact compacts the events. It does nothing if s has been closed.
 func (s *Sender) compact() {
 	s.mu.Lock()
-	if s.close.closed.Load() {
-		s.mu.Unlock()
+	defer s.mu.Unlock()
+	if s.close.Load() {
 		return
 	}
 	var i int
@@ -399,39 +322,6 @@ func (s *Sender) compact() {
 			s._assertAvailable(s.available)
 		}
 	}
-	s.mu.Unlock()
-}
-
-// complete marks the iteration of the current iterator as completed, allowing
-// other iterators to be executed.
-func (s *Sender) complete() {
-	s.mu.Lock()
-	trace("Sender.complete: iteration of iterator %p is completed\n", s.iterator)
-	// Update minBatchSize based on the maximum number of events sent in the last iteration.
-	// If a new higher value is observed, it is applied immediately.
-	// Otherwise, minBatchSize decays slowly over time to adapt to reduced load.
-	if n := s.iterator.numConsumed; n > 0 {
-		if n > s.minBatchSize {
-			// Immediately update to the new maximum.
-			s.minBatchSize = n
-			trace("Sender.complete: minBatchSize increased to %d\n", n)
-		} else {
-			// Slowly decay over time toward smaller values
-			decayed := int(0.9*float64(s.minBatchSize) + 0.1*float64(n))
-			if decayed < s.minBatchSize {
-				s.minBatchSize = decayed
-				trace("Sender.complete: minBatchSize decayed to %d\n", decayed)
-			}
-		}
-		if s.minBatchSize > MaxQueuedEvents {
-			s.minBatchSize = MaxQueuedEvents
-		}
-	}
-	s.iterator = nil
-	s.releaseUsers()
-	s.scheduleIteration()
-	s.mu.Unlock()
-	s.close.completed.Signal()
 }
 
 // discard discards the most recently read event with the provided error. It is
@@ -487,6 +377,94 @@ func (s *Sender) discard(err error) {
 func (s *Sender) disposeUser(u *user) {
 	delete(s.users, u.anonymousID)
 	users.Put(u)
+}
+
+// iterated marks the iteration of the current iterator as completed, allowing
+// other iterators to be executed.
+func (s *Sender) iterated() {
+	s.mu.Lock()
+	trace("Sender.iterated: iteration of iterator %p is completed\n", s.iterator)
+	// Update minBatchSize based on the maximum number of events sent in the last iteration.
+	// If a new higher value is observed, it is applied immediately.
+	// Otherwise, minBatchSize decays slowly over time to adapt to reduced load.
+	if n := s.iterator.numConsumed; n > 0 {
+		if n > s.minBatchSize {
+			// Immediately update to the new maximum.
+			s.minBatchSize = n
+			trace("Sender.iterated: minBatchSize increased to %d\n", n)
+		} else {
+			// Slowly decay over time toward smaller values
+			decayed := int(0.9*float64(s.minBatchSize) + 0.1*float64(n))
+			if decayed < s.minBatchSize {
+				s.minBatchSize = decayed
+				trace("Sender.iterated: minBatchSize decayed to %d\n", decayed)
+			}
+		}
+		if s.minBatchSize > MaxQueuedEvents {
+			s.minBatchSize = MaxQueuedEvents
+		}
+	}
+	s.iterator = nil
+	s.releaseUsers()
+	s.scheduleIteration()
+	s.mu.Unlock()
+}
+
+// loop runs the sender iterations according to a schedule.
+func (s *Sender) loop() {
+
+	// senders is the waiting group for all send operations.
+	var senders sync.WaitGroup
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stopCtx context.Context
+
+LOOP:
+	for {
+		select {
+		case <-s.schedule.C:
+		case stopCtx = <-s.close.stop:
+			break LOOP
+		}
+		s.mu.Lock()
+		var iter *iterator
+		var pattern string
+		if s.iterator == nil && s.available > 0 {
+			s.releaseUsers()
+			iter = newIterator(s)
+			s.iterator = iter
+			pattern = s.rateLimiterPattern
+		}
+		s.scheduleIteration()
+		waitTime := s.waitTime
+		s.mu.Unlock()
+		if iter == nil {
+			continue
+		}
+		if pattern != "" {
+			if d, _ := waitTime(pattern); d > 0 {
+				select {
+				case <-time.After(d):
+				case stopCtx = <-s.close.stop:
+					break LOOP
+				}
+			}
+		}
+		senders.Go(func() {
+			s.send(ctx, iter, pattern)
+		})
+	}
+
+	// Waits for all send operations to complete.
+	trace("wait for senders to terminate\n")
+	defer context.AfterFunc(stopCtx, cancel)()
+	senders.Wait()
+	trace("senders are terminated\n")
+
+	close(s.close.done)
+
 }
 
 // postpone marks the most recently read event as unread. It is invoked when an
@@ -635,7 +613,7 @@ func (s *Sender) releaseUsers() {
 // It must be called holding the s.mu mutex.
 func (s *Sender) scheduleIteration() {
 	if s.available == 0 {
-		s.timer.Stop()
+		s.schedule.Stop()
 		return
 	}
 	// If an iteration is already in progress, do not reschedule.
@@ -644,17 +622,17 @@ func (s *Sender) scheduleIteration() {
 	}
 	// If we have enough events for a batch, send immediately.
 	if s.available >= s.minBatchSize {
-		s.timer.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+		s.schedule.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
 		return
 	}
 	// Wait until maxQueueDelay has elapsed since the queue became available.
 	elapsed := time.Since(s.availableSince)
-	s.timer.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+	s.schedule.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
 }
 
 // send sends events to the application by calling the connector's SendEvents
 // method.
-func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
+func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern string) {
 
 	trace("Sender.send: iterator %p started\n", iter)
 	if asserts {
@@ -668,7 +646,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
 	// Adds a "RateLimiterPattern" value to the context to receive updates about
 	// the rate limiter used by the HTTP client.
-	ctx := context.WithValue(s.close.ctx,
+	ctx = context.WithValue(ctx,
 		httpclient.RateLimiterPatternContextKey,
 		httpclient.RateLimiterPatternContextValue{
 			Pattern: rateLimiterPattern,
@@ -702,7 +680,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		// SendEvents hasn't started the iteration; mark it as completed.
 		s.mu.Unlock()
 		trace("Sender.send: SendEvents of iterator %p has returned without starting an iteration, with error %#v\n", iter, err)
-		s.complete()
+		s.iterated()
 	} else {
 		// SendEvents has completed the iteration.
 		trace("Sender.send: SendEvents of iterator %p has returned, with error %#v\n", iter, err)
@@ -750,9 +728,6 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		s.mu.Unlock()
 	}
 
-	s.close.iterators.Done()
-	s.compact()
-
 	for _, ack := range acks {
 		ack()
 	}
@@ -765,6 +740,8 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		}
 		s.metrics.FinalizePassed(key.pipeline, count)
 	}
+
+	s.compact()
 
 }
 
@@ -815,8 +792,8 @@ func (s *Sender) _assertQueueTotal(n int) {
 	}
 }
 
-// newStoppedTimer returns a new stopped timer.
-func newStoppedTimer() *time.Timer {
+// newSchedule returns a new stopped timer.
+func newSchedule() *time.Timer {
 	t := time.NewTimer(math.MaxInt64)
 	t.Stop()
 	return t

@@ -70,7 +70,7 @@ func (it *iterator) First() *connectors.Event {
 	it.consumed = true
 	trace("iterator.First: iterator %p reads only the first event\n", it)
 	event, ok := it.sender.read(true)
-	it.sender.complete()
+	it.sender.iterated()
 	if !ok {
 		panic("core/events/collector/sender: iterator has called Sender.read, but no events are available")
 	}
@@ -152,6 +152,6 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 		it.sender.prometheus.queueWait.Consolidate()
 		it.iterating = false
 		it.firstEvent = false
-		it.sender.complete()
+		it.sender.iterated()
 	}
 }
