@@ -227,6 +227,64 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 
 }
 
+// Test_Sender_SequenceOverflowRescale verifies that per-user ordering holds
+// across sequence overflow.
+func Test_Sender_SequenceOverflowRescale(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var seen []string
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for event := range events.All() {
+				seen = append(seen, event.Received.MessageID())
+			}
+			return nil
+		}
+
+		s := New(app, nil)
+
+		// Force the per-user sequence near overflow without creating a huge number
+		// of events, while still asserting only on externally visible ordering.
+		const userID = "user-overflow"
+		s.mu.Lock()
+		u := users.Get()
+		u.anonymousID = userID
+		u.queue.sequence.next = math.MaxInt - 1
+		u.queue.sequence.expected = math.MaxInt - 1
+		s.users[userID] = u
+		s.mu.Unlock()
+
+		makeEvent := func(messageID string) *Event {
+			t.Helper()
+			return s.CreateEvent(1, "Valid", types.Type{}, streams.Event{
+				Attributes: map[string]any{
+					"anonymousId": userID,
+					"messageId":   messageID,
+				},
+				Ack: nopAck,
+			})
+		}
+
+		e0 := makeEvent("msg-0")
+		e1 := makeEvent("msg-1")
+		e2 := makeEvent("msg-2")
+
+		// Send out of order; delivery must follow creation order even across overflow.
+		s.SendEvent(e1)
+		s.SendEvent(e2)
+		s.SendEvent(e0)
+
+		if err := s.Close(t.Context()); err != nil {
+			t.Fatalf("Close failed: %v", err)
+		}
+
+		want := []string{"msg-0", "msg-1", "msg-2"}
+		if !slices.Equal(seen, want) {
+			t.Fatalf("unexpected order: got %v, want %v", seen, want)
+		}
+	})
+}
+
 // Test_Sender_RetryAfterSendEventsErrorWithoutIteration verifies that a send
 // error without iteration is retried and then consumes the events.
 func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {

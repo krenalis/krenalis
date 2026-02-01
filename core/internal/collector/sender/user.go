@@ -6,6 +6,7 @@ package sender
 
 import (
 	"cmp"
+	"math"
 	"slices"
 	"sync"
 )
@@ -59,6 +60,10 @@ type userQueue struct {
 // If event is out of order, it is inserted into the per-user queue to wait
 // until all earlier sequence numbers have been processed.
 func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
+	// If the sequence has been rescaled, realign the current event's number.
+	if event.sequence > q.sequence.next {
+		event.sequence += math.MinInt
+	}
 	if event.sequence != q.sequence.expected {
 		i, _ := slices.BinarySearchFunc(q.events, event, func(a, b *Event) int {
 			return cmp.Compare(b.sequence, a.sequence)
@@ -92,6 +97,15 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
 func (q *userQueue) next() int {
 	next := q.sequence.next
 	q.sequence.next++
+	// On overflow (unlikely in practice),
+	// shift sequence numbers to keep ordering consistent.
+	if q.sequence.next < 0 {
+		q.sequence.next = 0
+		q.sequence.expected += math.MinInt
+		for _, event := range q.events {
+			event.sequence += math.MinInt
+		}
+	}
 	return next
 }
 
