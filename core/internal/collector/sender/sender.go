@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/meergo/meergo/connectors"
@@ -115,9 +114,9 @@ type Sender struct {
 	sent               func(messageID string, err error)                         // function called in tests when an event is sent or discarded.
 
 	close struct {
-		atomic.Bool                      // indicates if the sender has been closed.
-		stop        chan context.Context // starts loop shutdown; returns immediately if the context is canceled.
-		done        chan struct{}        // closed when the loop has terminated.
+		closed bool                 // indicates whether the sender is closed; protected by mu.
+		stop   chan context.Context // starts loop shutdown; returns immediately if the context is canceled.
+		done   chan struct{}        // closed when the loop has terminated.
 	}
 }
 
@@ -145,9 +144,6 @@ func (q *queue) dequeue(i int) {
 // enqueue appends event to the queue, blocking while it is full.
 // It must be called holding the sender's mu mutex.
 func (q *queue) enqueue(event *Event) {
-	for q.total >= MaxQueuedEvents {
-		q.cond.Wait()
-	}
 	q.events = append(q.events, event)
 	q.total++
 }
@@ -204,12 +200,22 @@ func (s *Sender) Available() int {
 	return s.available
 }
 
-// Close closes the sender and waits for all in-flight sends to complete before
-// returning, unless the provided context is canceled.
+// Close closes the Sender and unblocks any goroutine blocked in DiscardEvent or
+// SendEvents. As long as the provided context is not canceled, it waits for all
+// in-flight sends to complete before returning.
+//
+// When Close is called, no other calls to Sender methods should be in progress
+// and no further calls should be made.
 func (s *Sender) Close(ctx context.Context) {
-	if s.close.Swap(true) {
+	s.mu.Lock()
+	if s.close.closed {
+		s.mu.Unlock()
 		return
 	}
+	s.close.closed = true
+	// Unlock goroutines blocked in DiscardEvent or SendEvents.
+	s.queue.cond.Broadcast()
+	s.mu.Unlock()
 	// Stop the loop.
 	s.close.stop <- ctx
 	<-s.close.done
@@ -305,7 +311,7 @@ func (s *Sender) addAvailable(delta int) {
 func (s *Sender) compact() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.close.Load() {
+	if s.close.closed {
 		return
 	}
 	var i int
@@ -500,7 +506,16 @@ func (s *Sender) postpone() {
 func (s *Sender) processEvent(event *Event) {
 	u := event.user
 	s.mu.Lock()
-	event.user.queue.enqueue(event, func(event *Event) {
+	event.user.queue.enqueue(event, func(event *Event) bool {
+		for s.queue.total >= MaxQueuedEvents {
+			if s.close.closed {
+				return false
+			}
+			s.queue.cond.Wait()
+		}
+		if s.close.closed {
+			return false
+		}
 		s.queue.enqueue(event)
 		u.totals++
 		if u.iterator == nil {
@@ -509,6 +524,7 @@ func (s *Sender) processEvent(event *Event) {
 				s.scheduleIteration()
 			}
 		}
+		return true
 	})
 	if u.disposable() {
 		s.disposeUser(u)

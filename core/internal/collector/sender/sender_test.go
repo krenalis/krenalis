@@ -405,6 +405,49 @@ func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
 
 }
 
+// Test_Sender_QueueEventUnblocksAfterCloseWhenFull verifies QueueEvent unblocks
+// after Close is called while the queue is full.
+func Test_Sender_QueueEventUnblocksAfterCloseWhenFull(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		MaxQueuedEvents = 100
+		defer func() {
+			MaxQueuedEvents = 5_000
+		}()
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, _ connectors.Events) error {
+			return nil
+		}
+		s := New(app, nil)
+
+		// Fill the queue up to its maximum capacity.
+		for i := 0; i < MaxQueuedEvents; i++ {
+			s.SendEvent(createTestEvent(s, i))
+		}
+
+		// Start a goroutine that attempts to enqueue one more event.
+		// Since the queue is full, QueueEvent must block.
+		var done bool
+		go func() {
+			s.SendEvent(createTestEvent(s, MaxQueuedEvents))
+			done = true
+		}()
+		synctest.Wait()
+
+		if done {
+			t.Fatal("QueueEvent unexpectedly unblocked before Close")
+		}
+
+		s.Close(t.Context())
+		synctest.Wait()
+		if !done {
+			t.Fatal("QueueEvent is still blocked after Close; expected it to unblock")
+		}
+	})
+
+}
+
 // Test_Sender_QueueEventUnblocksAfterDiscard verifies QueueEvent unblocks after
 // a discard.
 func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {

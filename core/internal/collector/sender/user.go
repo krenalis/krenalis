@@ -59,7 +59,9 @@ type userQueue struct {
 //
 // If event is out of order, it is inserted into the per-user queue to wait
 // until all earlier sequence numbers have been processed.
-func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
+//
+// If sender is closed, forward returns false and enqueue returns immediately.
+func (q *userQueue) enqueue(event *Event, forward func(event *Event) bool) {
 	// If the sequence has been rescaled, realign the current event's number.
 	if event.sequence > q.sequence.next {
 		event.sequence += math.MinInt
@@ -72,7 +74,9 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
 		return
 	}
 	if !event.discarded {
-		forward(event)
+		if !forward(event) {
+			return // The sender is closed.
+		}
 	}
 	expected := q.sequence.expected + 1
 	for len(q.events) > 0 {
@@ -82,7 +86,9 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event)) {
 		}
 		// Append the event to the ready queue unless it has been discarded.
 		if !q.events[last].discarded {
-			forward(q.events[last])
+			if !forward(q.events[last]) {
+				return // The sender is closed.
+			}
 		}
 		expected++
 		q.events[last] = nil
