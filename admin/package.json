@@ -1,6 +1,7 @@
 {
   "name": "admin",
-  "version": "0.1.0",
+  "version": "0.24.0",
+  "license": "Elastic-2.0",
   "private": true,
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
