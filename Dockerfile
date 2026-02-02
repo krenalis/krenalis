@@ -49,7 +49,7 @@ COPY --from=0 /meergo/meergo /bin/meergo
 #
 #    doas    ->   provides the 'doas' command
 #    shadow  ->   provides the 'useradd' command
-RUN apk add doas shadow
+RUN apk add --no-cache doas shadow
 
 # Create the user 'meergouser' (and its home directory): this will be used to
 # run Meergo.
