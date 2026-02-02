@@ -76,6 +76,9 @@ github.com/ClickHouse/clickhouse-go/v2/lib/driver
 github.com/ClickHouse/clickhouse-go/v2/lib/proto
 github.com/ClickHouse/clickhouse-go/v2/lib/timezone
 github.com/ClickHouse/clickhouse-go/v2/resources
+# github.com/LumenResearch/uasurfer v0.0.0-20260126094926-dace53404a8d
+## explicit; go 1.19
+github.com/LumenResearch/uasurfer
 # github.com/Microsoft/go-winio v0.6.2
 ## explicit; go 1.21
 github.com/Microsoft/go-winio
@@ -125,9 +128,6 @@ github.com/apache/arrow-go/v18/parquet/variant
 # github.com/apache/thrift v0.22.0
 ## explicit; go 1.23
 github.com/apache/thrift/lib/go/thrift
-# github.com/avct/uasurfer v0.0.0-20251203101750-d127e02ee278
-## explicit; go 1.19
-github.com/avct/uasurfer
 # github.com/aws/aws-sdk-go-v2 v1.41.1
 ## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/aws

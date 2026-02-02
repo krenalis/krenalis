@@ -26,7 +26,7 @@ import (
 	"github.com/meergo/meergo/tools/json"
 	"github.com/meergo/meergo/tools/types"
 
-	"github.com/avct/uasurfer"
+	"github.com/LumenResearch/uasurfer"
 	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/relvacode/iso8601"
