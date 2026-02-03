@@ -3,7 +3,10 @@
 # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 # Keep in sync with the version within "go.mod".
-FROM golang:1.25-alpine3.23
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /meergo
 
@@ -27,8 +30,8 @@ COPY warehouses warehouses
 COPY *.go ./
 
 ENV GOCACHE=/root/.cache/go-build
-RUN --mount=type=cache,target="/root/.cache/go-build" go generate
-RUN --mount=type=cache,target="/root/.cache/go-build" go build -tags osusergo,netgo -trimpath
+RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${TARGETARCH} go generate
+RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags osusergo,netgo -trimpath
 
 # Stage 1: Meergo Execution Stage.
 
