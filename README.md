@@ -54,7 +54,7 @@ Navigate to the directory where you want to run Meergo and execute:
 
 ```
 mkdir -p storage
-curl -fO "https://raw.githubusercontent.com/meergo/meergo/refs/tags/v0.24.0/compose.yaml"
+curl -fO "https://raw.githubusercontent.com/meergo/meergo/refs/tags/v0.25.0/compose.yaml"
 docker compose up
 ```
 
