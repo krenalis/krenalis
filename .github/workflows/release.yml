@@ -21,11 +21,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3 # TODO: pin version
-
-      - name: Set up Docker Buildx # TODO: is this needed?
-        uses: docker/setup-buildx-action@v3 # TODO: pin version
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Log in to Docker Hub
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
