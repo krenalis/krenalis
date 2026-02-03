@@ -9,9 +9,9 @@ WORKDIR /meergo
 
 # Copy the Admin files.
 RUN mkdir admin
-COPY admin/*.go admin
-COPY admin/package.json admin/package-lock.json admin/tsconfig.json admin
-COPY admin/src admin/src
+COPY admin/*.go admin/
+COPY admin/package.json admin/package-lock.json admin/tsconfig.json admin/
+COPY admin/src admin/src/
 COPY admin/public admin/public/
 COPY admin/node_modules_vendor admin/node_modules_vendor/
 COPY admin/debugid admin/debugid/
