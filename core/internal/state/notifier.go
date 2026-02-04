@@ -157,14 +157,22 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 func (notifier *notifier) init(ctx context.Context) {
 	bo := backoff.New(10)
 	bo.SetCap(5 * time.Second)
+	var acquireFailed bool
 	for bo.Next(ctx) {
 		// Acquire a connection.
 		conn, err := notifier.db.Conn(ctx)
 		if err != nil {
 			if ctx.Err() == nil {
-				slog.Error("core/state: cannot acquire connection; retrying", "retry_after", bo.WaitTime(), "error", err)
+				if !acquireFailed {
+					slog.Warn("failed to acquire notification connection; retrying", "error", err)
+					acquireFailed = true
+				}
 			}
 			continue
+		}
+		if acquireFailed {
+			slog.Info("connection for notifications successfully re-established")
+			acquireFailed = false
 		}
 		_, err = conn.Exec(ctx, "LISTEN meergo")
 		if err != nil {

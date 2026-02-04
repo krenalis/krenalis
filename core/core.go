@@ -1450,6 +1450,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	// canceled.
 	bo := backoff.New(200)
 	bo.SetCap(5 * time.Minute)
+	var unknownErrorMsg string
 	for bo.Next(ctx) {
 		err := store.ResolveIdentities(ctx, opID)
 		// In case of success, go on and send an EndIdentityResolution
@@ -1459,16 +1460,25 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 		}
 		// If the context has expired, just return.
 		if ctx.Err() != nil {
+			unknownErrorMsg = ""
 			return
 		}
 		// In case of OperationError log it, then go on and send an
 		// EndIdentityResolution notification.
 		if err2, ok := err.(*warehouses.OperationError); ok {
 			slog.Error("identity resolution ended with an error", "error", err2)
+			unknownErrorMsg = ""
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("identity resolution on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
+		if msg := err.Error(); unknownErrorMsg != msg {
+			slog.Warn("failed to check the identity resolution status; retrying", "error", err)
+			unknownErrorMsg = msg
+		}
+	}
+	if unknownErrorMsg != "" {
+		slog.Info("Identity resolution status checked successfully")
+		unknownErrorMsg = ""
 	}
 	nEnd := state.EndIdentityResolution{
 		Workspace: workspace,
