@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/tools/backoff"
 )
 
 var debugElection = false
@@ -59,7 +60,10 @@ func (state *State) keepElections() {
 	// If state.ctx is canceled, leader returns its error.
 	leader := func(election election) error {
 		debugf("-- %d Leader\n", election.number)
-		for {
+		bo := backoff.New(100)
+		bo.SetCap(leaderInterval)
+		var failed bool
+		for bo.Next(state.close.ctx) {
 			// Send the see leader notification.
 			err := state.Transaction(state.close.ctx, func(tx *db.Tx) (any, error) {
 				return SeeLeader{Election: election.number}, nil
@@ -68,10 +72,16 @@ func (state *State) keepElections() {
 				break
 			}
 			debugf("\t%s\n", err)
-			slog.Warn("core/state: cannot send a see leader notification", "error", err)
-			if err := state.sleep(100 * time.Millisecond); err != nil {
-				return err
+			if !failed {
+				slog.Warn("failed to send a see leader notification; retrying", "error", err)
+				failed = true
 			}
+		}
+		if err := state.close.ctx.Err(); err != nil {
+			return err
+		}
+		if failed {
+			slog.Info("see leader notification successfully resent")
 		}
 		return state.sleep(leaderInterval)
 	}
