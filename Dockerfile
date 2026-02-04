@@ -1,9 +1,9 @@
-# Stage 0: Meergo Building Stage.
+# Meergo Building Stage.
 
 # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 # Keep in sync with the version within "go.mod".
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -45,8 +45,8 @@ FROM alpine:3.23
 RUN apk add --no-cache python3
 RUN apk add --no-cache nodejs
 
-# Copy the Meergo executable from stage 0 to stage 1.
-COPY --from=0 /meergo/meergo /bin/meergo
+# Copy the Meergo executable from the build stage to stage 1.
+COPY --from=build /meergo/meergo /bin/meergo
 
 # Install two packages:
 #
