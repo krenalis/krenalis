@@ -238,7 +238,7 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
-	mcpToken, found := strings.CutPrefix(mcpToken, "mcp_ ")
+	mcpToken, found := strings.CutPrefix(mcpToken, "mcp_")
 	if !found {
 		return nil, errors.BadRequest("invalid MCP (Model Context Protocol) key")
 	}
