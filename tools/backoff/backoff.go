@@ -38,6 +38,10 @@ import (
 	"time"
 )
 
+const defaultCap = 15 * time.Minute
+
+var randFloat64 = rand.Float64
+
 // Backoff implements an exponential backoff algorithm with jitter.
 type Backoff struct {
 	attempts int
@@ -49,7 +53,7 @@ type Backoff struct {
 }
 
 // New returns a new Backoff with the given base, with unlimited attempts and
-// without a cap. It panics if base < 0.
+// a default cap of 15 minutes. It panics if base < 0.
 func New(base int) *Backoff {
 	if base < 0 {
 		panic("backoff: base is negative")
@@ -180,7 +184,7 @@ func (bo *Backoff) Stop() bool {
 
 // WaitTime returns the wait time for the next retry attempt in the range
 // [min, max), where min is 1ms and max is 1 + base * 2^attempt milliseconds,
-// but never greater than the cap if it has been set.
+// but never greater than the cap (defaults to 15 minutes if not set).
 // As a special case, it returns 0 if the Next and AfterFunc methods have not
 // already been called or if there are no other retry attempts.
 func (bo *Backoff) WaitTime() time.Duration {
@@ -197,9 +201,40 @@ func (bo *Backoff) WaitTime() time.Duration {
 
 // setWaitTime sets the wait time.
 func (bo *Backoff) setWaitTime() {
-	// waitTime = min(random_between(0, base * 2^attempt), cap)
-	bo.waitTime = time.Duration(1+rand.Float64()*bo.base*math.Pow(2, float64(bo.attempt))) * time.Millisecond
-	if bo.cap > 0 && bo.waitTime > bo.cap {
-		bo.waitTime = bo.cap
+	capDuration := bo.cap
+	if capDuration == 0 {
+		capDuration = defaultCap
+	}
+
+	// Base 0 degenerates to a fixed 1ms wait.
+	if bo.base == 0 {
+		bo.waitTime = time.Millisecond
+		if bo.waitTime > capDuration {
+			bo.waitTime = capDuration
+		}
+		return
+	}
+
+	capMs := float64(capDuration / time.Millisecond)
+	if capMs < 1 {
+		capMs = 1
+	}
+
+	upperMs := bo.base
+	if upperMs < 1 {
+		upperMs = 1
+	}
+	for i := 0; i < bo.attempt && upperMs < capMs; i++ {
+		upperMs *= 2
+	}
+
+	maxMs := 1 + upperMs
+	if maxMs > capMs {
+		maxMs = capMs
+	}
+
+	bo.waitTime = time.Duration(1+randFloat64()*(maxMs-1)) * time.Millisecond
+	if bo.waitTime > capDuration {
+		bo.waitTime = capDuration
 	}
 }

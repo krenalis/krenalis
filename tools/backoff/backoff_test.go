@@ -113,11 +113,32 @@ func Test_Attempt(t *testing.T) {
 // Ensure attempts saturate at math.MaxInt
 func Test_AttemptSaturates(t *testing.T) {
 	bo := New(1)
+	bo.SetCap(time.Millisecond)
 	bo.attempt = math.MaxInt - 1
 	bo.Next(context.Background()) // increment to MaxInt
 	bo.Next(context.Background()) // should remain MaxInt
 	if bo.Attempt() != math.MaxInt {
 		t.Fatalf("expected attempt %d, got %d", math.MaxInt, bo.Attempt())
+	}
+}
+
+// Test_DefaultCapUsedWhenUnset ensures that the default cap is applied when
+// SetCap is not called.
+func Test_DefaultCapUsedWhenUnset(t *testing.T) {
+	origRand := randFloat64
+	defer func() { randFloat64 = origRand }()
+	randFloat64 = func() float64 { return 0.999999 }
+
+	bo := New(10_000_000) // large base to force cap truncation
+	bo.attempt = 5        // ensure setWaitTime runs
+
+	got := bo.WaitTime()
+
+	capMs := float64(defaultCap / time.Millisecond)
+	expectedLowerMs := 1 + 0.999999*(capMs-1)
+	expectedLower := time.Duration(expectedLowerMs) * time.Millisecond
+	if got > defaultCap || got < expectedLower {
+		t.Fatalf("expected wait time in [%s, %s], got %s", expectedLower, defaultCap, got)
 	}
 }
 
