@@ -7,8 +7,10 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"expvar"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"log/slog"
@@ -190,6 +192,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 		// Serve the requests for the MCP (Model Context Protocol) server.
 		if r.URL.Path == "/mcp" {
+			if r.Method == "GET" && strings.Contains(r.Header.Get("Accept"), "text/html") {
+				err := serveMCPServerHTMLIndex(w)
+				if err != nil {
+					slog.Error("failed to serve the MCP server's HTML index page", "error", err)
+				}
+				return
+			}
 			mcpServer.ServeHTTP(w, r)
 			return
 		}
@@ -256,11 +265,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	msg := fmt.Sprintf(
 		"The Meergo server has been started at %s\n"+
 			"%s"+
-			"├─ REST API: %s\n"+
+			"├─ MCP server: %s\n"+
+			"├─ REST API:   %s\n"+
 			"└─ Event ingestion endpoint: %s\n\n"+
 			" > Admin console: %s\n\n",
 		addr,
 		prometheusMetricsLine,
+		settings.HTTP.ExternalURL+"mcp",
 		settings.HTTP.ExternalURL+"v1/",
 		settings.HTTP.ExternalEventURL,
 		settings.HTTP.ExternalURL+"admin",
@@ -287,6 +298,19 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		return err
 	}
 
+	return nil
+}
+
+// serveMCPServerHTMLIndex returns the MCP server HTML index page.
+func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fi, err := static.Open("static/mcp_index.html")
+	if err != nil {
+		return errors.New("embedded file 'static/mcp_index.html' not found in executable")
+	}
+	_, _ = io.Copy(w, fi)
+	_ = fi.Close()
 	return nil
 }
 
