@@ -107,9 +107,9 @@ const warehouseSectionTexts = {
 		description: 'Read and write credentials used by Meergo for accessing the data warehouse',
 	},
 	mcp: {
-		title: 'MCP credentials',
+		title: 'Read-only credentials',
 		description:
-			'Read-only credentials used by the built-in MCP server (Model Context Protocol server) for accessing the data warehouse',
+			"Read-only credentials used for AI querying of the data warehouse through Meergo's built-in MCP integration.",
 	},
 };
 
@@ -216,7 +216,8 @@ const WarehouseInfo = ({
 						</div>
 					) : (
 						<div className='warehouse-info__mcp-not-configured'>
-							No credentials have been set, so the MCP server has no access to the data warehouse.
+							No credentials have been set. AI-based queries currently have no access to this data
+							warehouse.
 						</div>
 					)}
 				</Section>

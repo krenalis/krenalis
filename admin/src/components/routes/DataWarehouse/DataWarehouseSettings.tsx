@@ -185,7 +185,7 @@ const DataWarehouseSettings = ({
 							onSlChange={onEnableMCPSettings}
 							className='warehouse-settings__mcp-checkbox'
 						>
-							Grant read-only access to the MCP server
+							Grant read-only access to the data warehouse for AI queries
 						</SlCheckbox>
 						{isMCPEnabled && (
 							<div className='warehouse-settings__mcp-form'>

@@ -234,7 +234,7 @@ const AccessKeys = () => {
 				<div className='access-keys__grid-learn-more'>
 					Learn more about{' '}
 					<a href='https://www.meergo.com/docs/mcp-server' target='_blank'>
-						Model Context Protocol
+						AI querying with MCP
 					</a>
 				</div>
 				<AlertDialog
