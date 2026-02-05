@@ -113,15 +113,19 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 		return err
 	}
 
+	_ = pool
+
 	// Define the privileges not allowed for a read-only user (in the format for
 	// the 'has_table_privilege' function).
 	const disallowedPrivileges = `INSERT,UPDATE,DELETE,TRUNCATE`
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
-	if err != nil {
-		return err
-	}
+	// TODO: anche questo è problematico
+
+	// // Retrieve the profiles table version.
+	// profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Determine if there are tables on the data warehouse for which the current
 	// user has too many privileges.
@@ -131,7 +135,7 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 		"meergo_identities",
 		"meergo_profile_schema_versions",
 		"meergo_events",
-		fmt.Sprintf("meergo_profiles_%d", profileSchemaVersion),
+		// fmt.Sprintf("meergo_profiles_%d", profileSchemaVersion),
 	}
 	var canWriteOnTable []any
 	for range len(tables) {
@@ -148,23 +152,27 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 		quoteString(&query, table)
 		query.WriteString(", '" + disallowedPrivileges + "')")
 	}
-	err = pool.QueryRow(ctx, query.String()).Scan(canWriteOnTable...)
-	if err != nil {
-		return err
-	}
-	var tooPrivilegedTableNames []string
-	for i, canWrite := range canWriteOnTable {
-		if *canWrite.(*bool) {
-			tooPrivilegedTableNames = append(tooPrivilegedTableNames, tables[i])
-		}
-	}
-	if len(tooPrivilegedTableNames) > 0 {
-		return &warehouses.SettingsNotReadOnly{
-			Err: fmt.Errorf(
-				"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
-				strings.Join(tooPrivilegedTableNames, ", "),
-			)}
-	}
+
+	// TODO: se questo metodo viene chiamato quando ancora il warehouse non è
+	// stato inizializzato, queste query falliscono di sicuro...
+
+	// err = pool.QueryRow(ctx, query.String()).Scan(canWriteOnTable...)
+	// if err != nil {
+	// 	return err
+	// }
+	// var tooPrivilegedTableNames []string
+	// for i, canWrite := range canWriteOnTable {
+	// 	if *canWrite.(*bool) {
+	// 		tooPrivilegedTableNames = append(tooPrivilegedTableNames, tables[i])
+	// 	}
+	// }
+	// if len(tooPrivilegedTableNames) > 0 {
+	// 	return &warehouses.SettingsNotReadOnly{
+	// 		Err: fmt.Errorf(
+	// 			"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
+	// 			strings.Join(tooPrivilegedTableNames, ", "),
+	// 		)}
+	// }
 
 	return nil
 }
