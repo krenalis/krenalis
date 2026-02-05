@@ -71,6 +71,10 @@ services:
       retries: 5
     volumes:
       - warehouse:/var/lib/postgresql/data
+    configs:
+      - source: warehouse
+        target: /docker-entrypoint-initdb.d/init.sql
+        
 
   nats:
     image: nats:2.12-alpine3.22
@@ -83,3 +87,12 @@ volumes:
   warehouse:
   jetstream_storage:
   transformation-functions:
+
+configs:
+  warehouse:
+    content: |
+      CREATE USER warehouse_ro WITH PASSWORD 'warehouse_ro';
+      GRANT CONNECT ON DATABASE warehouse TO warehouse_ro;
+      GRANT USAGE ON SCHEMA public TO warehouse_ro;
+      GRANT SELECT ON ALL TABLES IN SCHEMA public TO warehouse_ro;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO warehouse_ro;
