@@ -69,24 +69,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    volumes:
-      - warehouse:/var/lib/postgresql/data
     configs:
       - source: warehouse
         target: /docker-entrypoint-initdb.d/init.sql
-        
+    volumes:
+      - warehouse:/var/lib/postgresql/data
 
   nats:
     image: nats:2.12-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
-
-volumes:
-  db:
-  warehouse:
-  jetstream_storage:
-  transformation-functions:
 
 configs:
   warehouse:
@@ -96,3 +89,9 @@ configs:
       GRANT USAGE ON SCHEMA public TO warehouse_ro;
       GRANT SELECT ON ALL TABLES IN SCHEMA public TO warehouse_ro;
       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO warehouse_ro;
+
+volumes:
+  db:
+  warehouse:
+  jetstream_storage:
+  transformation-functions:

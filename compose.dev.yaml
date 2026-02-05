@@ -98,6 +98,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    configs:
+      - source: warehouse
+        target: /docker-entrypoint-initdb.d/init.sql
     volumes:
       - warehouse:/var/lib/postgresql/data
 
@@ -129,6 +132,15 @@ services:
       - ./tools/compose/grafana/grafana.ini:/etc/grafana/grafana.ini
       - ./tools/compose/grafana/dashboards:/var/lib/grafana/dashboards
     attach: false # set to 'true' to enable Grafana logging (note: it is very verbose)
+
+configs:
+  warehouse:
+    content: |
+      CREATE USER warehouse_ro WITH PASSWORD 'warehouse_ro';
+      GRANT CONNECT ON DATABASE warehouse TO warehouse_ro;
+      GRANT USAGE ON SCHEMA public TO warehouse_ro;
+      GRANT SELECT ON ALL TABLES IN SCHEMA public TO warehouse_ro;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO warehouse_ro;
 
 volumes:
   db:
