@@ -546,12 +546,6 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.Value(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.Value("null"), so this code converts it
-	// back to json.Value(nil).
-	if e.Warehouse.MCPSettings.IsNull() {
-		e.Warehouse.MCPSettings = nil
-	}
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
