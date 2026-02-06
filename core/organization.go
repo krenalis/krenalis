@@ -899,16 +899,17 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		if bytes.Equal(settings, mcpSettings) {
 			return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, warehouse.Platform, mcpSettings)
-		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
-				return nil, nil, errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
-			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
-				return nil, nil, errors.Unavailable("%s", err)
-			}
-			return nil, nil, err
-		}
+		// TODO: see https://github.com/meergo/meergo/issues/2129.
+		// err = this.core.datastore.CheckMCPSettings(ctx, warehouse.Platform, mcpSettings)
+		// if err != nil {
+		// 	if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
+		// 		return nil, nil, errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
+		// 	}
+		// 	if err, ok := err.(*datastore.UnavailableError); ok {
+		// 		return nil, nil, errors.Unavailable("%s", err)
+		// 	}
+		// 	return nil, nil, err
+		// }
 	}
 
 	// Check if the warehouse is initializable.
