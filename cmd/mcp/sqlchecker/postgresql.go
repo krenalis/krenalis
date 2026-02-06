@@ -60,6 +60,11 @@ var dangerousFunctions = map[string]string{
 // CheckPostgreSQL validates a PostgreSQL query ensuring it is read-only and
 // safe to execute against the data warehouse. It returns an error if the query
 // is not allowed.
+//
+// This function does not provide any security guarantee. It is a best-effort,
+// static-analysis heuristic and must not be treated as a security boundary.
+// Always enforce proper security controls (e.g. read-only database roles,
+// restricted permissions, query allow-lists) at the infrastructure level.
 func CheckPostgreSQL(query string) error {
 	result, err := pg_query.Parse(query)
 	if err != nil {
