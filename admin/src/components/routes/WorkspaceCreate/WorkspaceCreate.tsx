@@ -70,6 +70,7 @@ const WorkspaceCreate = () => {
 
 		let warehouse = selectedWarehouse;
 		let settings = warehouseSettings;
+		let mcpSettings = null;
 		if (selectedWarehouse === 'PostgreSQL-Docker') {
 			warehouse = 'PostgreSQL';
 			settings = {
@@ -77,6 +78,14 @@ const WorkspaceCreate = () => {
 				port: 5432,
 				username: 'warehouse',
 				password: 'warehouse',
+				database: 'warehouse',
+				schema: 'public',
+			};
+			mcpSettings = {
+				host: 'warehouse',
+				port: 5432,
+				username: 'warehouse_ro',
+				password: 'warehouse_ro',
 				database: 'warehouse',
 				schema: 'public',
 			};
@@ -99,7 +108,7 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					null,
+					mcpSettings,
 					uiProperties,
 				);
 			} catch (err) {
@@ -126,7 +135,7 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					null,
+					mcpSettings,
 					uiProperties,
 				);
 				id = res.id;
