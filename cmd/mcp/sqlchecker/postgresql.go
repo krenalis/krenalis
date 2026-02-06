@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
+	pg_query_wasi "github.com/wasilibs/go-pgquery"
 )
 
 // CheckPostgreSQL validates a PostgreSQL query ensuring it is read-only and
@@ -23,7 +24,7 @@ import (
 // Always enforce proper security controls (e.g. read-only database roles,
 // restricted permissions, query allow-lists) at the infrastructure level.
 func CheckPostgreSQL(query string) error {
-	result, err := pg_query.Parse(query)
+	result, err := pg_query_wasi.Parse(query)
 	if err != nil {
 		return fmt.Errorf("failed to parse query: %w", err)
 	}
