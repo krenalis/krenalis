@@ -59,7 +59,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			if err := sqlchecker.Check(query); err != nil {
+			if err := sqlchecker.CheckPostgreSQL(query); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			queryResult, err := ws.RawQueryWarehouse(ctx, query)

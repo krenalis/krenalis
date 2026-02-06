@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestCheck(t *testing.T) {
+func TestCheckPostgreSQL(t *testing.T) {
 	tests := []struct {
 		name    string
 		query   string
@@ -308,16 +308,16 @@ func TestCheck(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Check(tt.query)
+			err := CheckPostgreSQL(tt.query)
 			if tt.wantErr == "" {
 				if err != nil {
-					t.Errorf("Check(%q) = %v, want nil", tt.query, err)
+					t.Errorf("CheckPostgreSQL(%q) = %v, want nil", tt.query, err)
 				}
 			} else {
 				if err == nil {
-					t.Errorf("Check(%q) = nil, want error containing %q", tt.query, tt.wantErr)
+					t.Errorf("CheckPostgreSQL(%q) = nil, want error containing %q", tt.query, tt.wantErr)
 				} else if !strings.Contains(err.Error(), tt.wantErr) {
-					t.Errorf("Check(%q) = %v, want error containing %q", tt.query, err, tt.wantErr)
+					t.Errorf("CheckPostgreSQL(%q) = %v, want error containing %q", tt.query, err, tt.wantErr)
 				}
 			}
 		})

@@ -57,10 +57,10 @@ var dangerousFunctions = map[string]string{
 	"txid_current_snapshot": "exposes transaction state",
 }
 
-// Check validates a PostgreSQL query ensuring it is read-only and safe
-// to execute against the data warehouse. It returns an error if the query
+// CheckPostgreSQL validates a PostgreSQL query ensuring it is read-only and
+// safe to execute against the data warehouse. It returns an error if the query
 // is not allowed.
-func Check(query string) error {
+func CheckPostgreSQL(query string) error {
 	result, err := pg_query.Parse(query)
 	if err != nil {
 		return fmt.Errorf("failed to parse query: %w", err)

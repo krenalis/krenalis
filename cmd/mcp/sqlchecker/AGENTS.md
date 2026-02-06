@@ -6,7 +6,7 @@ This directory contains a Go package responsible for validating PostgreSQL queri
 
 ### Purpose
 
-The package exposes a single function that analyzes an input PostgreSQL query and determines whether it is **read-only**.
+The package exposes dialect-specific functions that analyze an input SQL query and determine whether it is **read-only**. Currently, only PostgreSQL is supported via `CheckPostgreSQL`. Additional dialects (e.g. Snowflake) will be added in the future as separate `Check<Dialect>` functions.
 
 - If the query performs only read operations (e.g. `SELECT`, `JOIN`, `WITH`, aggregations), the function returns `nil`.
 - If the query performs any write, mutation, or schema-altering operation (e.g. `INSERT`, `UPDATE`, `DELETE`, `UPSERT`, `MERGE`, `TRUNCATE`, `ALTER`, `DROP`, `CREATE`, or side-effecting functions), the function returns an error.
