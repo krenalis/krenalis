@@ -726,7 +726,6 @@ class Workspaces {
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-		warehouseMCPSettings: WarehouseSettings | null,
 		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
@@ -736,7 +735,6 @@ class Workspaces {
 				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
-				mcpSettings: warehouseMCPSettings,
 			},
 			uiPreferences: uiPreferences,
 		});
@@ -748,7 +746,6 @@ class Workspaces {
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-		mcpWarehouseSettings: WarehouseSettings | null,
 		uiPreferences: UIPreferences,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
@@ -758,7 +755,6 @@ class Workspaces {
 				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
-				mcpSettings: mcpWarehouseSettings,
 			},
 			uiPreferences: uiPreferences,
 		});

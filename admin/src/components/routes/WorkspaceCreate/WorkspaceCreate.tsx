@@ -108,7 +108,6 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					mcpSettings,
 					uiProperties,
 				);
 			} catch (err) {
@@ -135,10 +134,17 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					mcpSettings,
 					uiProperties,
 				);
 				id = res.id;
+			} catch (err) {
+				setIsCreatingWorkspace(false);
+				handleError(err);
+				return;
+			}
+			// TODO: è giusto questo codice?
+			try {
+				await api.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
 			} catch (err) {
 				setIsCreatingWorkspace(false);
 				handleError(err);
