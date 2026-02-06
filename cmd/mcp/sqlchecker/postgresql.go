@@ -14,6 +14,38 @@ import (
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
+// CheckPostgreSQL validates a PostgreSQL query ensuring it is read-only and
+// safe to execute against the data warehouse. It returns an error if the query
+// is not allowed.
+//
+// This function does not provide any security guarantee. It is a best-effort,
+// static-analysis heuristic and must not be treated as a security boundary.
+// Always enforce proper security controls (e.g. read-only database roles,
+// restricted permissions, query allow-lists) at the infrastructure level.
+func CheckPostgreSQL(query string) error {
+	result, err := pg_query.Parse(query)
+	if err != nil {
+		return fmt.Errorf("failed to parse query: %w", err)
+	}
+	if len(result.Stmts) == 0 {
+		return fmt.Errorf("empty query")
+	}
+	for _, rawStmt := range result.Stmts {
+		stmt := rawStmt.Stmt
+		if stmt == nil {
+			continue
+		}
+		selectStmt := stmt.GetSelectStmt()
+		if selectStmt == nil {
+			return fmt.Errorf("only SELECT statements are allowed")
+		}
+		if err := checkSelectStmt(selectStmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // dangerousFunctions is the set of PostgreSQL functions that are blocked
 // because they have side effects or can cause denial of service.
 var dangerousFunctions = map[string]string{
@@ -55,38 +87,6 @@ var dangerousFunctions = map[string]string{
 	// Transaction ID.
 	"txid_current":          "exposes transaction state",
 	"txid_current_snapshot": "exposes transaction state",
-}
-
-// CheckPostgreSQL validates a PostgreSQL query ensuring it is read-only and
-// safe to execute against the data warehouse. It returns an error if the query
-// is not allowed.
-//
-// This function does not provide any security guarantee. It is a best-effort,
-// static-analysis heuristic and must not be treated as a security boundary.
-// Always enforce proper security controls (e.g. read-only database roles,
-// restricted permissions, query allow-lists) at the infrastructure level.
-func CheckPostgreSQL(query string) error {
-	result, err := pg_query.Parse(query)
-	if err != nil {
-		return fmt.Errorf("failed to parse query: %w", err)
-	}
-	if len(result.Stmts) == 0 {
-		return fmt.Errorf("empty query")
-	}
-	for _, rawStmt := range result.Stmts {
-		stmt := rawStmt.Stmt
-		if stmt == nil {
-			continue
-		}
-		selectStmt := stmt.GetSelectStmt()
-		if selectStmt == nil {
-			return fmt.Errorf("only SELECT statements are allowed")
-		}
-		if err := checkSelectStmt(selectStmt); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // checkSelectStmt validates a single SELECT statement.
