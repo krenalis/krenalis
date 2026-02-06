@@ -363,7 +363,7 @@ type Warehouse struct {
 // Returns the identifier of the workspace that has been created.
 // name must be between 1 and 100 runes long.
 //
-// wharehouse.Mode specifies the initial mode of the workspace's data warehouse.
+// warehouse.Mode specifies the initial mode of the workspace's data warehouse.
 //
 // It returns an errors.UnprocessableError error with code:
 //
