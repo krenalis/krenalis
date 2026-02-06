@@ -5,7 +5,7 @@
 	align-items: center;
 	column-gap: 15px;
 	height: var(--header-height);
-	background: #6062d0;
+	background: #494bc3;
 	color: #fff;
 	position: fixed;
 	top: 0;
@@ -23,7 +23,16 @@
 	color: #fff;
 	border-right: 1px dotted #b0abc5;
 	padding-left: 15px;
-	margin-top: -2px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.header__logo > img {
+	max-width: 115px;
+	width: auto;
+	position: relative;
+	top: 1px;
 }
 
 .header__title {
@@ -33,11 +42,9 @@
 	align-items: baseline;
 	gap: 15px;
 	position: relative;
-	top: 2px;
 	left: -18px;
 	color: inherit;
 	padding-left: 20px;
-	margin-top: -5px;
 	letter-spacing: 0.02em;
 }
 

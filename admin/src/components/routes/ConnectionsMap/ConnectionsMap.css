@@ -110,6 +110,11 @@
 	}
 }
 
+.connections-map__central-logo > img {
+	max-width: 50px;
+	height: auto;
+}
+
 .connections-map__databases {
 	margin-top: 100px;
 	display: flex;
