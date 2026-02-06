@@ -28,6 +28,13 @@ This package does **not** provide any security guarantee. It is a best-effort, s
 - PostgreSQL-specific syntax and semantics are assumed.
 - The checker does not execute queries; it only performs static analysis.
 
+### Code Style
+
+- Each checker function (e.g. `CheckPostgreSQL`) must be defined in its own file, named after the dialect (e.g. `postgresql.go`). Helper functions used only by that checker belong in the same file.
+- Each exported checker function must be placed at the top of its file (after the `package` declaration and imports).
+- The documentation comment of each exported checker function must include a disclaimer stating that the function does not provide any security guarantee, is a best-effort static-analysis heuristic, and must not be treated as a security boundary.
+- Each checker file must have a corresponding test file (e.g. `postgresql_test.go`) with thorough coverage of allowed queries, disallowed statements, dangerous functions, and DoS patterns.
+
 ### Expected Usage
 
 This package is typically used as a guardrail in tooling or services that accept user-defined SQL, ensuring that only safe, read-only queries reach the Meergo data warehouse.
