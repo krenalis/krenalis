@@ -2,6 +2,7 @@ import React, { useState, useContext, useRef, useEffect } from 'react';
 import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
 import { UIPreferences } from '../../../lib/api/types/workspace';
+import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -108,7 +109,6 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					mcpSettings,
 					uiProperties,
 				);
 			} catch (err) {
@@ -135,12 +135,20 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					mcpSettings,
 					uiProperties,
 				);
 				id = res.id;
 			} catch (err) {
 				setIsCreatingWorkspace(false);
+				handleError(err);
+				return;
+			}
+			// TODO(Gianluca): this call was written just to work and is just a
+			// prototype, which needs to be reviewed.
+			try {
+				const newApi = new API(window.location.origin, id);
+				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
+			} catch (err) {
 				handleError(err);
 				return;
 			}

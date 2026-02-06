@@ -144,9 +144,6 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
-		body.Warehouse.MCPSettings = nil
-	}
 	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
@@ -253,9 +250,6 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
-	}
-	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
-		body.Warehouse.MCPSettings = nil
 	}
 	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	return nil, err
