@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/meergo/meergo/cmd/mcp/sqlchecker"
 	_core "github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/tools/errors"
 
@@ -56,6 +57,9 @@ var tools = []server.ServerTool{
 			}
 			query, err := req.RequireString("query")
 			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			if err := sqlchecker.Check(query); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			queryResult, err := ws.RawQueryWarehouse(ctx, query)
