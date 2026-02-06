@@ -217,8 +217,7 @@ const WorkspaceCreate = () => {
 				{selectedWarehouse === 'PostgreSQL-Docker' ? (
 					<div className='workspace-create__docker-description'>
 						Since you are using Meergo with Docker you can easily create a new workspace by connecting it to
-						the PostgreSQL warehouse provided directly by our image. TODO: documentare qui il fatto che
-						anche il server MCP sarà automaticamente abilitato?
+						the PostgreSQL warehouse provided directly by our image.
 					</div>
 				) : (
 					<div className='workspace-create__warehouse-settings'>
