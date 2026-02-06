@@ -18,6 +18,10 @@ The intent is to prevent accidental or malicious modifications to the underlying
 
 The target database is a data warehouse backing **Meergo**, a Customer Data Platform (CDP). Queries are expected to be analytical and non-destructive. Any operation that could modify data, metadata, or execution state is treated as unsafe.
 
+### Disclaimer
+
+This package does **not** provide any security guarantee. It is a best-effort, static-analysis heuristic and **must not** be treated as a security boundary. Determined or creative attackers may craft queries that bypass its checks. Always enforce proper security controls (e.g. read-only database roles, restricted permissions, query allow-lists) at the infrastructure level rather than relying solely on this checker.
+
 ### Assumptions and Constraints
 
 - The checker is conservative by design: if a query cannot be confidently classified as read-only, it should be rejected.
