@@ -2,6 +2,7 @@ import React, { useState, useContext, useRef, useEffect } from 'react';
 import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
 import { UIPreferences } from '../../../lib/api/types/workspace';
+import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -142,11 +143,12 @@ const WorkspaceCreate = () => {
 				handleError(err);
 				return;
 			}
-			// TODO: è giusto questo codice?
+			// TODO(Gianluca): this call was written just to work and is just a
+			// prototype, which needs to be reviewed.
 			try {
-				await api.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
+				const newApi = new API(window.location.origin, id);
+				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
 			} catch (err) {
-				setIsCreatingWorkspace(false);
 				handleError(err);
 				return;
 			}
