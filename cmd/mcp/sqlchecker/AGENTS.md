@@ -38,3 +38,7 @@ This package does **not** provide any security guarantee. It is a best-effort, s
 ### Expected Usage
 
 This package is typically used as a guardrail in tooling or services that accept user-defined SQL, ensuring that only safe, read-only queries reach the Meergo data warehouse.
+
+### AI-Assisted Development
+
+This package was implemented using Claude Opus 4.6 (`claude-opus-4-6`) via Claude Code.
