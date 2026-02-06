@@ -59,8 +59,14 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			if err := sqlchecker.CheckPostgreSQL(query); err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+			platform, _, _ := ws.Warehouse()
+			switch platform {
+			case "PostgreSQL":
+				if err := sqlchecker.CheckPostgreSQL(query); err != nil {
+					return mcp.NewToolResultError(err.Error()), nil
+				}
+			default:
+				return mcp.NewToolResultError(fmt.Sprintf("warehouse %q is not currently supported by the SQL checker", platform)), nil
 			}
 			queryResult, err := ws.RawQueryWarehouse(ctx, query)
 			if err != nil {
