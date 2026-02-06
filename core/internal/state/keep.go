@@ -532,10 +532,9 @@ type CreateWorkspace struct {
 	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Platform    string
-		Mode        WarehouseMode
-		Settings    json.Value
-		MCPSettings json.Value
+		Platform string
+		Mode     WarehouseMode
+		Settings json.Value
 	}
 	UIPreferences UIPreferences
 }
@@ -559,10 +558,12 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 		accounts:                       map[int]*Account{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
-		Warehouse:                      e.Warehouse,
 		UIPreferences:                  e.UIPreferences,
 		pipelinesToPurge:               []int{},
 	}
+	ws.Warehouse.Platform = e.Warehouse.Platform
+	ws.Warehouse.Mode = e.Warehouse.Mode
+	ws.Warehouse.Settings = e.Warehouse.Settings
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
 	state.mu.Unlock()

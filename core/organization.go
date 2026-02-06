@@ -410,12 +410,6 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		return 0, err
 	}
 
-	var mcp string
-	if n.Warehouse.MCPSettings != nil {
-		mcp = string(n.Warehouse.MCPSettings)
-	} else {
-		mcp = "null"
-	}
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 			" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name, "+
@@ -425,7 +419,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 			n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
 			n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
 			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra,
-			n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings, mcp)
+			n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
