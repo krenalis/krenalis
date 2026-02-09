@@ -5,17 +5,11 @@
 }
 
 .signup__logo {
-	font-size: 12px;
-	background-color: var(--color-primary-600);
-	color: var(--text-onaccent);
-	width: 80px;
-	height: 80px;
-	border-radius: 100%;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	font-weight: 600;
-	font-family: var(--monospace-fonts);
+	margin-bottom: 40px;
+}
+
+.signup__logo > img {
+	max-width: 230px;
 	margin: auto;
 }
 
