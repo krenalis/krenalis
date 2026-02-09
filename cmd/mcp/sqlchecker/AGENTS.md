@@ -27,6 +27,7 @@ This package does **not** provide any security guarantee. It is a best-effort, s
 - The checker is conservative by design: if a query cannot be confidently classified as read-only, it should be rejected.
 - PostgreSQL-specific syntax and semantics are assumed.
 - The checker does not execute queries; it only performs static analysis.
+- This package must not import any external module. All dependencies must be limited to the Go standard library. The functions in this package parse and validate SQL using only standard library facilities.
 
 ### Code Style
 
