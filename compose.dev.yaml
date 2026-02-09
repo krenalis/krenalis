@@ -28,6 +28,17 @@
 #     Connecting from CLI:  psql -h 127.0.0.1 -p 15433 -U warehouse warehouse
 #
 # =============================================================================
+# Meergo PostgreSQL warehouse (MCP user)
+# -----------------------------------------------------------------------------
+#
+#     Host:                 127.0.0.1
+#     Port:                 15433
+#     Username:             warehouse_ro
+#     Password:             no password set (auth method = trust)
+#     Database:             warehouse
+#     Connecting from CLI:  psql -h 127.0.0.1 -p 15433 -U warehouse_ro warehouse
+#
+# =============================================================================
 # NATS
 # -----------------------------------------------------------------------------
 #
