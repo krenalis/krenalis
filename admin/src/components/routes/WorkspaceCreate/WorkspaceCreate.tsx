@@ -143,8 +143,6 @@ const WorkspaceCreate = () => {
 				handleError(err);
 				return;
 			}
-			// TODO(Gianluca): this call was written just to work and is just a
-			// prototype, which needs to be reviewed.
 			try {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
