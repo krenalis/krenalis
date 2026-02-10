@@ -4,4 +4,4 @@ export const SNIPPET = `import Analytics from 'meergo-analytics-nodejs';
 
 const client = new Analytics("writekey", "endpoint");`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/admin/nodejs-sdk';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/nodejs-sdk';
