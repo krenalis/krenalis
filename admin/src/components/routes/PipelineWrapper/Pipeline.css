@@ -426,10 +426,10 @@
 }
 
 .pipeline__transformation-section .section__description > p {
-	margin-bottom: 10px;
+	margin-bottom: 1rem;
 }
 
-.pipeline__transformation-section .section__description > p:last-child {
+.pipeline__transformation-section .section__description > p:last-of-type {
 	margin-bottom: 0;
 }
 

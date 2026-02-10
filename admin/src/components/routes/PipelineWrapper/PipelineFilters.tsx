@@ -25,7 +25,15 @@ import { checkIfPropertyExists } from './Pipeline.helpers';
 import { StringType } from '../../../lib/api/types/types';
 
 const PipelineFilters = forwardRef<any>((_, ref) => {
-	const { pipeline, setPipeline, pipelineType, connection, isTransformationDisabled } = useContext(PipelineContext);
+	const { pipeline, setPipeline, pipelineType, connection, isTransformationDisabled, isImport } =
+		useContext(PipelineContext);
+	const targetTerm =
+		pipelineType.target === 'Event'
+			? 'events'
+			: connection.connector.terms.users?.trim()
+				? connection.connector.terms.users.toLowerCase()
+				: 'contacts';
+	const actionVerb = isImport ? 'import' : pipelineType.target === 'Event' ? 'send' : 'export';
 
 	const flatInputSchema = useMemo(() => {
 		return flattenSchema(pipelineType.inputSchema);
@@ -559,8 +567,15 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	return (
 		<Section
 			className={`pipeline__filters${isDisabled ? ' pipeline__filters--disabled' : ''}`}
-			title='Filter'
-			description='The filters that define the pipeline'
+			title='Filters'
+			description={
+				<>
+					<span>{`Choose which ${targetTerm} to ${actionVerb}. Leave empty to ${actionVerb} all ${targetTerm}.`}</span>
+					<a href='https://www.meergo.com/docs/ref/admin/filters' target='_blank' rel='noopener'>
+						Learn more about filters
+					</a>
+				</>
+			}
 			padded={true}
 			ref={ref}
 			annotated={true}

@@ -9,6 +9,24 @@
 	line-height: 1.57;
 }
 
+.section__description a,
+.section__description a:visited {
+	color: var(--sl-color-primary-600);
+	text-decoration: none;
+}
+
+.section__description > :is(span, p, div, ul, ol) + a:not(:has(*)) {
+	display: block;
+	margin-top: 1rem;
+}
+
+.section__description a[target='_blank']:not(:has(*))::after {
+	content: ' ↗';
+	font-size: 0.8em;
+	margin-right: 2px;
+	padding-right: 3px;
+}
+
 .section__content {
 	margin-top: 15px;
 	width: 100%;

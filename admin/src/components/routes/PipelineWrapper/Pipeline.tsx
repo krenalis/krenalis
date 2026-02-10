@@ -144,10 +144,24 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 						pipelineType!.fields.includes('Matching') ||
 						pipelineType!.fields.includes('UpdateOnDuplicates')) && (
 						<Section
-							title='Export settings'
-							description='Select the matching properties that define a match between users, and specify what can be done with users'
+							title='Matching'
+							description={
+								<>
+									<span>
+										Configure how profiles are matched to existing records and which action is taken
+										when a match is found or not found.
+									</span>
+									<a
+										href='https://www.meergo.com/docs/ref/admin/matching'
+										target='_blank'
+										rel='noopener'
+									>
+										Learn more about matching
+									</a>
+								</>
+							}
 							padded={true}
-							className='pipeline__export-settings'
+							className='pipeline__matching'
 							annotated={true}
 						>
 							{pipelineType!.fields.includes('Matching') && <PipelineMatching ref={matchingSectionRef} />}

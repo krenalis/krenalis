@@ -106,6 +106,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		setTransformationType,
 		isFormatChanged,
 		isEditing,
+		isImport,
 		handleEmptyMatchingError,
 	} = useContext(PipelineContext);
 
@@ -432,23 +433,30 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		/>
 	);
 
-	let transformationDescription: ReactNode =
-		"The relation between the pipeline's input properties and the resulting output properties";
-	if (connection.isDestination && pipelineType.target === 'Event') {
-		transformationDescription = (
-			<>
-				<p>
-					Enter the <b>additional information</b> you want to include in the event. These values will be sent
-					together with the base event data.
-				</p>
-				<p>
-					The pipeline already builds and sends the event to {connection.connector.label} with default fields.
-					By adding extra data, you make the event more complete and useful for segmentation, personalization,
-					or reporting.
-				</p>
-			</>
-		);
-	}
+	const transformationTargetTerm =
+		pipelineType.target === 'Event'
+			? 'event'
+			: connection.connector.terms.user?.trim()
+				? connection.connector.terms.user.toLowerCase()
+				: 'customer';
+	const transformationTargetsTerm = connection.connector.terms.users?.trim()
+		? connection.connector.terms.users.toLowerCase()
+		: `${transformationTargetTerm}s`;
+	const transformationMainSentence = isImport
+		? `Define how incoming ${transformationTargetTerm} data is mapped and transformed to profiles.`
+		: pipelineType.target === 'User'
+			? `Define how exported profile data is mapped and transformed to create or update ${transformationTargetTerm} records in ${connection.connector.label}.`
+			: `Add additional fields to customize the event sent to the destination. These values are sent together with the base event data.`;
+
+	let transformationDescription: ReactNode = (
+		<>
+			<p>{transformationMainSentence}</p>
+			<p>Use Mappings for simple cases, or switch to JavaScript or Python for advanced logic.</p>
+			<a href='https://www.meergo.com/docs/ref/admin/transformations' target='_blank' rel='noopener'>
+				Learn more about transformations
+			</a>
+		</>
+	);
 
 	return (
 		<div
@@ -555,7 +563,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 									checked={pipeline.incremental}
 									onSlChange={onChangeIncremental}
 									disabled={pipeline.updatedAtColumn === ''}
-									helpText='Only imports users whose update time is subsequent to the last import'
+									helpText={`Only imports ${transformationTargetsTerm} whose update time is subsequent to the last import`}
 								>
 									Run incremental import
 								</SlCheckbox>
@@ -567,7 +575,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 				pipelineType.fields.includes('Incremental') && (
 					<Section
 						title='Incremental import'
-						description='Only imports users that have been updated since the last import'
+						description={`Only imports ${transformationTargetsTerm} that have changed since the last import.`}
 						padded={true}
 						annotated={true}
 					>
