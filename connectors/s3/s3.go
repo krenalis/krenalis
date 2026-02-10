@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3pkg "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 //go:embed documentation/source/overview.md
@@ -77,24 +77,24 @@ type innerSettings struct {
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
-func (ss3 *S3) AbsolutePath(ctx context.Context, name string) (string, error) {
+func (s3 *S3) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
 		return "", connectors.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
 	}
-	return "s3://" + ss3.settings.Bucket + "/" + name, nil
+	return "s3://" + s3.settings.Bucket + "/" + name, nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
-func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+func (s3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
 		return nil, time.Time{}, connectors.NewInvalidSettingsError("object key cannot be longer than 1024 bytes")
 	}
-	client := ss3.client()
-	res, err := client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(ss3.settings.Bucket),
+	client := s3.client()
+	res, err := client.GetObject(ctx, &s3pkg.GetObjectInput{
+		Bucket: aws.String(s3.settings.Bucket),
 		Key:    aws.String(name),
 	})
 	if err != nil {
@@ -112,17 +112,17 @@ func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (s3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
 		var s innerSettings
-		if ss3.settings != nil {
-			s = *ss3.settings
+		if s3.settings != nil {
+			s = *s3.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ss3.saveSettings(ctx, settings)
+		return nil, s3.saveSettings(ctx, settings)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
@@ -175,20 +175,20 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, r
 }
 
 // Write writes the data read from r into the file with the given path name.
-func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
+func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
 		return connectors.NewInvalidSettingsError("object key cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
 	}
-	client := ss3.client()
+	client := s3.client()
 	tm := transfermanager.New(client, func(opts *transfermanager.Options) {
 		opts.PartSizeBytes = 8 * 1024 * 1024
 		opts.Concurrency = 2
 	})
 	_, err := tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
-		Bucket:      aws.String(ss3.settings.Bucket),
+		Bucket:      aws.String(s3.settings.Bucket),
 		Key:         aws.String(name),
 		Body:        p,
 		ContentType: aws.String(contentType),
@@ -197,22 +197,22 @@ func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string)
 }
 
 // client returns a S3 client.
-func (ss3 *S3) client() *s3.Client {
+func (s3 *S3) client() *s3pkg.Client {
 	cfg := aws.Config{
-		Region: ss3.settings.Region,
+		Region: s3.settings.Region,
 		Credentials: aws.NewCredentialsCache(
 			credentials.NewStaticCredentialsProvider(
-				ss3.settings.AccessKeyID,
-				ss3.settings.SecretAccessKey,
+				s3.settings.AccessKeyID,
+				s3.settings.SecretAccessKey,
 				"",
 			),
 		),
 	}
-	return s3.NewFromConfig(cfg)
+	return s3pkg.NewFromConfig(cfg)
 }
 
 // saveSettings validates and saves the settings.
-func (ss3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
+func (s3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -246,10 +246,10 @@ func (ss3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
 	if err != nil {
 		return err
 	}
-	err = ss3.env.SetSettings(ctx, b)
+	err = s3.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
-	ss3.settings = &s
+	s3.settings = &s
 	return nil
 }
