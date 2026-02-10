@@ -4,4 +4,4 @@ export const SNIPPET = `<script>
   }})();
 </script>`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/integrations/javascript-sdk';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/admin/javascript-sdk';
