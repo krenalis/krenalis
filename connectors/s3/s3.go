@@ -24,7 +24,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -183,11 +183,11 @@ func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string)
 		name = name[1:]
 	}
 	client := ss3.client()
-	u := manager.NewUploader(client, func(u *manager.Uploader) {
-		u.PartSize = 8 * 1024 * 1024
-		u.Concurrency = 2
+	tm := transfermanager.New(client, func(opts *transfermanager.Options) {
+		opts.PartSizeBytes = 8 * 1024 * 1024
+		opts.Concurrency = 2
 	})
-	_, err := u.Upload(ctx, &s3.PutObjectInput{
+	_, err := tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
 		Bucket:      aws.String(ss3.settings.Bucket),
 		Key:         aws.String(name),
 		Body:        p,
