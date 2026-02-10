@@ -11,6 +11,15 @@
 	transform: translateY(-80px);
 }
 
+.login__logo {
+	margin-bottom: 40px;
+}
+
+.login__logo > img {
+	max-width: 230px;
+	margin: auto;
+}
+
 .login__heading {
 	text-align: center;
 }

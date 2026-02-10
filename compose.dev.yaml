@@ -28,6 +28,17 @@
 #     Connecting from CLI:  psql -h 127.0.0.1 -p 15433 -U warehouse warehouse
 #
 # =============================================================================
+# Meergo PostgreSQL warehouse (MCP user)
+# -----------------------------------------------------------------------------
+#
+#     Host:                 127.0.0.1
+#     Port:                 15433
+#     Username:             warehouse_ro
+#     Password:             no password set (auth method = trust)
+#     Database:             warehouse
+#     Connecting from CLI:  psql -h 127.0.0.1 -p 15433 -U warehouse_ro warehouse
+#
+# =============================================================================
 # NATS
 # -----------------------------------------------------------------------------
 #
@@ -141,6 +152,10 @@ configs:
       GRANT USAGE ON SCHEMA public TO warehouse_ro;
       GRANT SELECT ON ALL TABLES IN SCHEMA public TO warehouse_ro;
       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO warehouse_ro;
+      ALTER ROLE warehouse_ro IN DATABASE warehouse SET default_transaction_read_only = on;
+      ALTER ROLE warehouse_ro IN DATABASE warehouse SET statement_timeout = '5s';
+      ALTER ROLE warehouse_ro IN DATABASE warehouse SET lock_timeout = '1s';
+      ALTER ROLE warehouse_ro IN DATABASE warehouse SET idle_in_transaction_session_timeout = '5s';
 
 volumes:
   db:

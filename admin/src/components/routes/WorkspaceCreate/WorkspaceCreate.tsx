@@ -143,8 +143,6 @@ const WorkspaceCreate = () => {
 				handleError(err);
 				return;
 			}
-			// TODO(Gianluca): this call was written just to work and is just a
-			// prototype, which needs to be reviewed.
 			try {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
@@ -224,8 +222,8 @@ const WorkspaceCreate = () => {
 				</SlSelect>
 				{selectedWarehouse === 'PostgreSQL-Docker' ? (
 					<div className='workspace-create__docker-description'>
-						Since you are using Meergo with Docker you can easily create a new workspace by connecting it to
-						the PostgreSQL warehouse provided directly by our image.
+						Select this data warehouse to use the PostgreSQL database provided by Meergo's Docker Compose,
+						ready for initialization. No additional configuration is required.
 					</div>
 				) : (
 					<div className='workspace-create__warehouse-settings'>
