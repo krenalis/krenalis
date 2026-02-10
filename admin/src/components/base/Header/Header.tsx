@@ -6,6 +6,7 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Link } from '..//Link/Link';
 import appContext from '../../../context/AppContext';
 import { useLocation } from 'react-router-dom';
@@ -60,6 +61,18 @@ const Header = ({ title, member }: HeaderProps) => {
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>
+			<SlTooltip content='Meergo documentation and API reference' placement='bottom'>
+				<a
+					className='header__docs'
+					href='https://www.meergo.com/docs'
+					target='_blank'
+					rel='noreferrer'
+					aria-label='Documentation (opens in a new tab)'
+				>
+					<SlIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
+					Documentation
+				</a>
+			</SlTooltip>
 			<div className='header__account'>
 				<SlDropdown distance={17} ref={dropdownRef} open={isTooltipOpen}>
 					<SlAvatar

@@ -62,6 +62,7 @@ play.svg
 plug.svg
 plus-circle.svg
 plus.svg
+question-circle.svg
 question-lg.svg
 search.svg
 send.svg
