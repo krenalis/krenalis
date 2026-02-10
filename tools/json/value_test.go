@@ -216,17 +216,17 @@ func Test_Value(t *testing.T) {
 		if n, err := Value(`-55`).Int(); err != nil {
 			t.Fatalf("expected -55, got error %q", err)
 		} else if n != -55 {
-			t.Fatalf("expected -55, got %q", n)
+			t.Fatalf("expected -55, got %d", n)
 		}
 		if n, err := Value(strconv.FormatInt(math.MaxInt64, 10)).Int(); err != nil {
 			t.Fatalf("expected %d, got error %q", math.MaxInt64, err)
 		} else if n != math.MaxInt64 {
-			t.Fatalf("expected %d, got %q", math.MaxInt64, n)
+			t.Fatalf("expected %d, got %d", math.MaxInt64, n)
 		}
 		if n, err := Value(`-3.0`).Int(); err != nil {
 			t.Fatalf("expected -3, got error %q", err)
 		} else if n != -3 {
-			t.Fatalf("expected -3, got %q", n)
+			t.Fatalf("expected -3, got %d", n)
 		}
 		if n, err := Value(`3.45`).Int(); err == nil {
 			t.Fatalf("expected error, got %d and no error", n)
@@ -480,17 +480,17 @@ func Test_Value(t *testing.T) {
 		if n, err := Value(`816`).Uint(); err != nil {
 			t.Fatalf("expected 816, got error %q", err)
 		} else if n != 816 {
-			t.Fatalf("expected 816, got %q", n)
+			t.Fatalf("expected 816, got %d", n)
 		}
 		if n, err := Value(strconv.FormatUint(math.MaxUint64, 10)).Uint(); err != nil {
 			t.Fatalf("expected %d, got error %q", uint64(math.MaxUint64), err)
 		} else if n != math.MaxUint64 {
-			t.Fatalf("expected %d, got %q", uint64(math.MaxUint64), n)
+			t.Fatalf("expected %d, got %d", uint64(math.MaxUint64), n)
 		}
 		if n, err := Value(`3.0`).Uint(); err != nil {
 			t.Fatalf("expected 3, got error %q", err)
 		} else if n != 3 {
-			t.Fatalf("expected 3, got %q", n)
+			t.Fatalf("expected 3, got %d", n)
 		}
 		if n, err := Value(`8.2`).Uint(); err == nil {
 			t.Fatalf("expected error, got %d and no error", n)

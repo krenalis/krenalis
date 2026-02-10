@@ -344,7 +344,7 @@ func Test_Decimal_Binary(t *testing.T) {
 	for i := -N; i < N-1; i++ {
 		bin, err := New(int64(i), 0).Binary(0)
 		if err != nil {
-			t.Fatalf("%q.Binary(0): unexpected error '%#v'", i, err)
+			t.Fatalf("%d.Binary(0): unexpected error '%#v'", i, err)
 		}
 		d, err := Binary(bin, 4, 0)
 		if err != nil {

@@ -29,7 +29,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		case warehouses.OpOr:
 			op = " OR "
 		default:
-			return fmt.Errorf("invalid operator %q", multiExpr.Operator)
+			return fmt.Errorf("invalid operator %d", multiExpr.Operator)
 		}
 		for i, operand := range multiExpr.Operands {
 			if i > 0 {
@@ -203,7 +203,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(" IS NOT NULL")
 
 	default:
-		panic(fmt.Sprintf("unexpected operator %q", op))
+		panic(fmt.Sprintf("unexpected operator %d", op))
 	}
 
 	return nil
