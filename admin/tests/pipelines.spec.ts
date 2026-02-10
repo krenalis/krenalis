@@ -535,14 +535,14 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 	await fillUserPipelineFilters(page);
 
 	// Table.
-	await page.locator('.pipeline__table sl-input >> input').fill('users');
-	await page.locator('.pipeline__table sl-button').click();
+	await page.locator('.pipeline__destination_table sl-input >> input').fill('users');
+	await page.locator('.pipeline__destination_table sl-button').click();
 
-	await expect(page.locator('.pipeline__table-key-section')).toBeAttached();
+	await expect(page.locator('.pipeline__destination_table-key-section')).toBeAttached();
 	await expect(page.locator('.pipeline__transformation')).toBeAttached();
 
 	// Table key.
-	let tableKey = page.locator('.pipeline__table-key-property');
+	let tableKey = page.locator('.pipeline__destination_table-key-property');
 	await tableKey.locator('sl-input >> input').click();
 	await tableKey.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 

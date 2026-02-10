@@ -189,9 +189,9 @@ const PipelineFile = () => {
 
 	return (
 		<Section
-			title={`File`}
+			title={`Export file`}
 			className='pipeline__file'
-			description='The settings of the file'
+			description='Configure the format, location, and options of the exported file.'
 			padded={true}
 			annotated={true}
 		>

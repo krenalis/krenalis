@@ -347,31 +347,31 @@
 	max-width: 630px;
 }
 
-.pipeline__table {
+.pipeline__destination_table {
 	display: flex;
 	align-items: center;
 	gap: 30px;
 }
 
-.pipeline__table .popover {
+.pipeline__destination_table .popover {
 	margin-left: -15px;
 }
 
-.pipeline__table-key-property {
+.pipeline__destination_table-key-property {
 	display: flex;
 	align-items: center;
 	gap: 30px;
 }
 
-.pipeline__table-key-property .popover {
+.pipeline__destination_table-key-property .popover {
 	margin-left: -15px;
 }
 
-.pipeline__table-key-section--disabled {
+.pipeline__destination_table-key-section--disabled {
 	opacity: 0.7;
 }
 
-.pipeline__table-key-section--disabled * {
+.pipeline__destination_table-key-section--disabled * {
 	opacity: 1;
 }
 

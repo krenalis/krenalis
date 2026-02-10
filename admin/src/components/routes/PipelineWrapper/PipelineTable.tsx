@@ -141,12 +141,12 @@ const PipelineTable = () => {
 	return (
 		<>
 			<Section
-				title='Table name'
-				description='An existing table on the database where profiles will be exported'
+				title='Destination table'
+				description='Enter the name of an existing database table where profile data will be exported.'
 				padded={true}
 				annotated={true}
 			>
-				<div className='pipeline__table'>
+				<div className='pipeline__destination_table'>
 					<SlInput value={pipeline.tableName} onSlInput={onUpdateTableName} />
 					<FeedbackButton
 						ref={tableConfirmationButtonRef}
@@ -166,14 +166,14 @@ const PipelineTable = () => {
 			</Section>
 			{pipelineType.target === 'User' && !isTransformationHidden && (
 				<Section
-					title='Table key'
-					description='The property of the table that is used as key in export queries'
+					title='Matching column'
+					description='Select the column used to match table records for updates, or to create a new record when no match is found.'
 					padded={true}
 					annotated={true}
 					ref={tableKeySectionRef}
-					className={`pipeline__table-key-section${isTransformationDisabled ? ' pipeline__table-key-section--disabled' : ''}`}
+					className={`pipeline__destination_table-key-section${isTransformationDisabled ? ' pipeline__destination_table-key-section--disabled' : ''}`}
 				>
-					<div className='pipeline__table-key-property' ref={tableKeyRef}>
+					<div className='pipeline__destination_table-key-property' ref={tableKeyRef}>
 						<Combobox
 							value={pipeline.tableKey}
 							onInput={onTableKeyPropertyUpdate}
