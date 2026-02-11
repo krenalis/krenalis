@@ -56,6 +56,7 @@ const PipelineFile = () => {
 		pipelineType,
 		isEditing,
 		setIssues,
+		isImport,
 	} = useContext(pipelineContext);
 
 	const formatRef = useRef<string>(pipeline.format);
@@ -189,9 +190,9 @@ const PipelineFile = () => {
 
 	return (
 		<Section
-			title={`Export file`}
+			title={`${isImport ? 'Import' : 'Export'} file`}
 			className='pipeline__file'
-			description='Configure the format, location, and options of the exported file.'
+			description={`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}
 			padded={true}
 			annotated={true}
 		>
