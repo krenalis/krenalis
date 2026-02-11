@@ -20,7 +20,7 @@ import { serializeFilter } from '../../../utils/filters';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
-const GRID_COLUMNS: GridColumn[] = [{ name: 'Pipeline' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
+const GRID_COLUMNS: GridColumn[] = [{ name: 'Pipeline' }, { name: 'Filters' }, { name: 'Enabled' }, { name: '' }];
 
 interface PipelinesGridProps {
 	newPipelineID: React.MutableRefObject<number>;
