@@ -71,6 +71,103 @@ const ConnectionPipelines = () => {
 		redirect(newLocation);
 	};
 
+	const joinWithAnd = (items: string[], emptyValue = ''): string => {
+		if (items.length === 0) {
+			return emptyValue;
+		}
+		if (items.length === 1) {
+			return items[0];
+		}
+		if (items.length === 2) {
+			return `${items[0]} and ${items[1]}`;
+		}
+		return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+	};
+	const joinObjects = (objects: string[]): string => joinWithAnd(objects, 'records');
+	const joinActions = (actions: string[]): string => joinWithAnd(actions);
+
+	const usersTerm = connection.connector.terms.users?.trim()
+		? connection.connector.terms.users.toLowerCase()
+		: 'users';
+	const userTerm = connection.connector.terms.user?.trim() ? connection.connector.terms.user.toLowerCase() : 'user';
+	const connectionLabelForCopy =
+		connection.connector.code === 'javascript' ? 'a website' : connection.connector.label;
+	const supportedTargets = new Set(connection.pipelineTypes.map((type) => type.target));
+	const supportsUser = supportedTargets.has('User');
+	const supportsEvent = supportedTargets.has('Event');
+	const supportsGroup = supportedTargets.has('Group');
+
+	const batchObjects: string[] = [];
+	if (supportsUser) {
+		batchObjects.push(usersTerm);
+	}
+	if (supportsGroup) {
+		batchObjects.push('groups');
+	}
+	const objectText = joinObjects(batchObjects);
+
+	let pipelinesDescription: string;
+	if (connection.isSource) {
+		const sourceActions: string[] = [];
+		if (supportsEvent) {
+			sourceActions.push('collect events');
+		}
+		if (supportsUser) {
+			sourceActions.push(`import ${usersTerm}`);
+		}
+		if (supportsGroup) {
+			sourceActions.push('import groups');
+		}
+		pipelinesDescription = `Use pipelines to ${joinActions(sourceActions)} from ${connectionLabelForCopy} into your workspace.`;
+	} else if (supportsUser && supportsEvent) {
+		pipelinesDescription = `Use pipelines to export profiles and send events to ${connectionLabelForCopy}.`;
+	} else if (supportsEvent) {
+		pipelinesDescription = `Use pipelines to send events from your workspace to ${connectionLabelForCopy}.`;
+	} else {
+		pipelinesDescription = `Use pipelines to export ${objectText} from your workspace to ${connectionLabelForCopy}.`;
+	}
+
+	const pipelinesDocsBaseURL = 'https://www.meergo.com/docs';
+	const shouldShowPipelineDocsLinks = !new Set(['dummy', 'ui-sample']).has(connection.connector.code.toLowerCase());
+	const buildPipelinesDocsURL = (target: 'users' | 'events'): string => {
+		const roleSegment = connection.isSource ? 'sources' : 'destinations';
+		return `${pipelinesDocsBaseURL}/ref/admin/pipelines/${roleSegment}-${connection.connector.code}-${target}`;
+	};
+	const pipelinesDocLinks: Array<{ label: string; href: string }> = [];
+	if (shouldShowPipelineDocsLinks) {
+		if (connection.isSource) {
+			if (supportsEvent) {
+				pipelinesDocLinks.push({
+					label: `Collect events from ${connectionLabelForCopy}`,
+					href: buildPipelinesDocsURL('events'),
+				});
+			}
+			if (supportsUser) {
+				pipelinesDocLinks.push({
+					label: `Import ${usersTerm} from ${connectionLabelForCopy}`,
+					href: buildPipelinesDocsURL('users'),
+				});
+			}
+		} else {
+			if (supportsEvent) {
+				pipelinesDocLinks.push({
+					label: `Activate events in ${connectionLabelForCopy}`,
+					href: buildPipelinesDocsURL('events'),
+				});
+			}
+			if (supportsUser) {
+				pipelinesDocLinks.push({
+					label:
+						userTerm === 'customer'
+							? `Activate customer profiles in ${connectionLabelForCopy}`
+							: `Activate profiles in ${connectionLabelForCopy}`,
+					href: buildPipelinesDocsURL('users'),
+				});
+			}
+		}
+	}
+	const displayedPipelineDocLinks = pipelinesDocLinks.slice(0, 2);
+
 	if (isLoading) {
 		return (
 			<SlSpinner
@@ -94,12 +191,13 @@ const ConnectionPipelines = () => {
 			description={
 				<>
 					{connection.isSource
-						? 'Select which destinations should receive events from this source.'
-						: 'Select which sources should send events to this destination.'}
+						? 'Choose which destinations should receive events from this source.'
+						: 'Choose which sources should send events to this destination.'}
+					<br />
 					<br />
 					{connection.isSource
-						? 'When you link a destination connection here, events from this source will automatically be forwarded to that destination and processed by its pipelines'
-						: 'When you link a source connection here, events from that source will automatically be forwarded to this destination and processed by its pipelines'}
+						? 'A source pipeline is not required - incoming events are automatically forwarded and processed by the destination pipelines.'
+						: "No source pipeline is required - events are automatically forwarded from the linked sources and processed by this destination's pipelines."}
 				</>
 			}
 			annotated={true}
@@ -132,7 +230,16 @@ const ConnectionPipelines = () => {
 			<Section
 				className='connection-pipelines__list'
 				title='Pipelines'
-				description={`Pipelines import events, users, and groups from a website into the workspace's data warehouse using ${connection.connector.label}`}
+				description={
+					<>
+						<span>{pipelinesDescription}</span>
+						{displayedPipelineDocLinks.map((link) => (
+							<a key={link.label} href={link.href} target='_blank' rel='noopener'>
+								{link.label}
+							</a>
+						))}
+					</>
+				}
 				annotated={true}
 			>
 				{connection.pipelines!.length === 0 ? (

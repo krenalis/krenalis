@@ -24,7 +24,7 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 	const [installCommand, setInstallCommand] = useState<string>();
 	const [documentationLink, setDocumentationLink] = useState<string>();
 
-	const { api, handleError, redirect, publicMetadata } = useContext(AppContext);
+	const { api, handleError, redirect, publicMetadata, connectors } = useContext(AppContext);
 
 	useEffect(() => {
 		import(`../../../constants/snippets/${connectorCode.toLowerCase().replace(/\./g, '')}.ts`).then(
@@ -69,6 +69,10 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 		return s3;
 	}, [connectorCode, snippet, keys, publicMetadata.externalEventURL]);
 
+	const connectorLabelForDocs = useMemo<string>(() => {
+		return connectors.find((c) => c.code === connectorCode)?.label ?? connectorCode;
+	}, [connectors, connectorCode]);
+
 	let applicationType = 'server';
 	if (connectorCode === 'android' || connectorCode === 'apple') {
 		applicationType = 'app';
@@ -96,12 +100,12 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 			title={`Add Meergo to your ${applicationType}`}
 			className='connection-pipelines__instructions'
 			description={
-				<div className='connection-pipelines__instructions-text'>
-					Copy this snippet and paste it into your {applicationType} to receive events
-					<a target='_blank' href={documentationLink}>
-						See documentation
+				<>
+					<span>Copy this snippet and paste it into your {applicationType} to receive events.</span>
+					<a target='_blank' rel='noopener' href={documentationLink}>
+						{connectorLabelForDocs} SDK documentation
 					</a>
-				</div>
+				</>
 			}
 			annotated={true}
 		>

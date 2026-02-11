@@ -5,34 +5,38 @@ import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-
-const LINKED_CONNECTIONS_COLUMNS: GridColumn[] = [
-	{
-		name: 'Name',
-	},
-	{
-		name: 'Type',
-	},
-	{
-		name: 'Connector',
-	},
-	/* See issue https://github.com/meergo/meergo/issues/1255.
-	{
-		name: 'Health',
-	},
-*/
-	{
-		name: '', // the column for the remove button.
-	},
-];
+import { ConnectionRole } from '../../../lib/api/types/connection';
 
 const useLinkedConnectionsGrid = (
 	linkedConnections: Number[] | null,
 	setLinkedConnections: React.Dispatch<React.SetStateAction<Number[] | null>>,
 	onUnlink: (id: number) => Promise<void>,
 	isClickable: boolean,
+	role: ConnectionRole,
 ) => {
 	const { connections, redirect } = useContext(AppContext);
+
+	const columns: GridColumn[] = useMemo(() => {
+		return [
+			{
+				name: role === 'Source' ? 'Destination' : 'Source',
+			},
+			{
+				name: 'Type',
+			},
+			{
+				name: 'Connector',
+			},
+			/* See issue https://github.com/meergo/meergo/issues/1255.
+			{
+				name: 'Health',
+			},
+		*/
+			{
+				name: '', // the column for the remove button.
+			},
+		];
+	}, [role]);
 
 	const fullLinkedConnections = useMemo(() => {
 		if (linkedConnections == null) {
@@ -105,9 +109,9 @@ const useLinkedConnectionsGrid = (
 			r.push(row);
 		}
 		return r;
-	}, [linkedConnections]);
+	}, [linkedConnections, fullLinkedConnections, isClickable, redirect]);
 
-	return { rows: rows, columns: LINKED_CONNECTIONS_COLUMNS };
+	return { rows: rows, columns };
 };
 
 export { useLinkedConnectionsGrid };

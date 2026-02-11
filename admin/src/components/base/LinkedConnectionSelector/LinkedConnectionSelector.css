@@ -56,6 +56,6 @@
 .linked-connection-selector__no-connection-message {
 	margin-top: 8px;
 	font-size: 14px;
-	opacity: 0.6;
+	color: var(--sl-color-neutral-500);
 	text-align: center;
 }

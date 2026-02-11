@@ -1,5 +1,5 @@
 .section__title {
-	font-size: 16px;
+	font-size: 18px;
 }
 
 .section__description {
@@ -20,8 +20,13 @@
 	margin-top: 1rem;
 }
 
+.section__description > a:not(:has(*)) + a:not(:has(*)) {
+	display: block;
+	margin-top: 0.25rem;
+}
+
 .section__description a[target='_blank']:not(:has(*))::after {
-	content: ' ↗';
+	content: '\00a0↗';
 	font-size: 0.8em;
 	margin-right: 2px;
 	padding-right: 3px;

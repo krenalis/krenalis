@@ -36,7 +36,13 @@ const LinkedConnectionSelector = ({
 	onUnlink,
 	isClickable,
 }: ConnectionSelectorProps) => {
-	const { rows, columns } = useLinkedConnectionsGrid(linkedConnections, setLinkedConnections, onUnlink, isClickable);
+	const { rows, columns } = useLinkedConnectionsGrid(
+		linkedConnections,
+		setLinkedConnections,
+		onUnlink,
+		isClickable,
+		role,
+	);
 
 	const { linkableConnections, selectableConnections } = useMemo(() => {
 		const linkableConnections: TransformedConnection[] = [];
@@ -58,7 +64,7 @@ const LinkedConnectionSelector = ({
 			}
 		}
 		return { linkableConnections, selectableConnections };
-	}, [connections, linkedConnections]);
+	}, [connections, linkedConnections, role]);
 
 	const onSelectLinkedConnection = async (e) => {
 		const id = Number(e.detail.item.value);
@@ -82,7 +88,11 @@ const LinkedConnectionSelector = ({
 	return (
 		<div className='linked-connection-selector'>
 			{linkableConnections.length === 0 ? (
-				`Currently there is no linkable ${role === 'Source' ? 'destination' : 'source'}`
+				<div className='linked-connection-selector__no-connection-message'>
+					{role === 'Source'
+						? 'No event destinations are available to link.'
+						: 'No event sources are available to link.'}
+				</div>
 			) : (
 				<div className={'linked-connection-selector__content'}>
 					{(title != null || description != null || hasSelectableConnections) && (

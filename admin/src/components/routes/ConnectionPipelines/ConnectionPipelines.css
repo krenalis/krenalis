@@ -6,14 +6,6 @@
 	margin-bottom: 50px;
 }
 
-.connection-pipelines__instructions-text a {
-	color: var(--sl-color-primary-600);
-	display: block;
-	font-weight: 600;
-	margin-top: 10px;
-	width: max-content;
-}
-
 .connection-pipelines__pipeline-type {
 	margin: auto;
 	border-bottom: 0 !important;
@@ -34,6 +26,10 @@
 
 .connection-pipelines .section {
 	max-width: 1600px;
+}
+
+.connection-pipelines__list .section__description > a:not(:has(*)) + a:not(:has(*)) {
+	margin-top: 0.5rem;
 }
 
 .connection-pipelines__grid {
