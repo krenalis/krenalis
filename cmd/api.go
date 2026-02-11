@@ -137,7 +137,7 @@ func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, nil
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(`{"api":"Meergo API","version":"v1","documentation":"https://www.meergo.com/docs/api"}`))
+	_, _ = w.Write([]byte(`{"api":"Meergo API","version":"v1","documentation":"https://www.meergo.com/docs/ref/api"}`))
 	return nil, nil
 }
 
