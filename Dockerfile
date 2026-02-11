@@ -3,7 +3,7 @@
 # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 # Keep in sync with the version within "go.mod".
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23 AS build
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.23 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
