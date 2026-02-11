@@ -31,7 +31,7 @@ jobs:
           # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
-          go-version: "1.25"
+          go-version: "1.26"
 
       - uses: actions/setup-node@v4
         with:
