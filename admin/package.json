@@ -21,6 +21,9 @@
     "react-xarrows": "2.0.2",
     "recharts": "3.2.0"
   },
+  "overrides": {
+    "lodash": "4.17.23"
+  },
   "scripts": {
     "makevendor": "go run ./makevendor",
     "minify-snippet": "node minify-snippet.js",
