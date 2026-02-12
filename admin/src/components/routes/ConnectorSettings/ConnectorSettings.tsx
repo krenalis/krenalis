@@ -290,7 +290,13 @@ const ConnectorSettings = () => {
 	}
 
 	return (
-		<div className='connector-settings'>
+		<form
+			className='connector-settings'
+			onSubmit={(e) => {
+				e.preventDefault();
+				onPipelineClick('save');
+			}}
+		>
 			<div className='route-content'>
 				<div className='connector-settings__settings'>
 					<div className='connector-settings__basic'>
@@ -358,7 +364,7 @@ const ConnectorSettings = () => {
 					)}
 				</div>
 			</div>
-		</div>
+		</form>
 	);
 };
 
