@@ -23,14 +23,6 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 			},
 		],
 	},
-	parquet: {
-		Source: [
-			{
-				label: 'Import users from Parquet',
-				url: 'https://example.com',
-			},
-		],
-	},
 	postgresql: {
 		Source: [{ label: 'How to configure PostgreSQL as a source', url: 'https://docs.example.com/postgres-source' }],
 		Destination: [{ label: 'PostgreSQL destination setup', url: 'https://docs.example.com/postgres-dest' }],
@@ -40,10 +32,23 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 interface DocumentationLinksProps {
 	connectorCode: string;
 	role: string;
+	storageCode?: string;
+	connectorLabel?: string;
 }
 
-const DocumentationLinks = ({ connectorCode, role }: DocumentationLinksProps) => {
-	const links = DOCUMENTATION_LINKS[connectorCode]?.[role];
+const DocumentationLinks = ({ connectorCode, role, storageCode, connectorLabel }: DocumentationLinksProps) => {
+	let links: { label: string; url: string }[];
+
+	if (storageCode != null && connectorLabel != null) {
+		const isSource = role === 'Source';
+		const label = isSource ? `Import users from ${connectorLabel}` : `Export users to ${connectorLabel}`;
+		const basePath = isSource ? 'ingest-users' : 'activate-users';
+		const url = `https://www.meergo.com/docs/${basePath}/files?storage=${storageCode}&format=${connectorCode}`;
+		links = [{ label, url }];
+	} else {
+		links = DOCUMENTATION_LINKS[connectorCode]?.[role];
+	}
+
 	if (!links || links.length === 0) return null;
 
 	return (
