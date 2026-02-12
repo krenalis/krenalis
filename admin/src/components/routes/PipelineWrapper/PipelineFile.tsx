@@ -38,6 +38,7 @@ import {
 import { Combobox } from '../../base/Combobox/Combobox';
 import { PipelineIssues } from './PipelineIssues';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import DocumentationLinks from '../../base/DocumentationLinks/DocumentationLinks';
 
 const PipelineFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -861,6 +862,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					/>
 				</div>
 			)}
+			<DocumentationLinks connectorCode={connection.connector.code} role={connection.role} />
 			<SlDrawer
 				className='pipeline__file-preview-drawer'
 				open={filePreviewColumns != null && filePreviewRows != null}

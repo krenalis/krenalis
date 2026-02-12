@@ -18,6 +18,7 @@ import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/r
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import * as icons from '../../../constants/icons';
+import DocumentationLinks from '../../base/DocumentationLinks/DocumentationLinks';
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
 	return connectionRole === 'Source' && c.strategies;
@@ -256,6 +257,9 @@ const ConnectorSettings = () => {
 			);
 		}
 	}
+	buttonsToRender.push(
+		<DocumentationLinks key='documentation-links' connectorCode={connectorCode} role={connectionRole} />,
+	);
 	buttonsToRender.push(
 		<div className='connector-settings__save-wrapper'>
 			<SlButton
