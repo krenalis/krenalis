@@ -3,7 +3,6 @@ import './ConnectorSettings.css';
 import ConnectorField from '../../base/ConnectorFields/ConnectorField';
 import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import NotFound from '../NotFound/NotFound';
-import Flex from '../../base/Flex/Flex';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -19,8 +18,6 @@ import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/r
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import * as icons from '../../../constants/icons';
-import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
 	return connectionRole === 'Source' && c.strategies;
@@ -80,16 +77,7 @@ const ConnectorSettings = () => {
 				return;
 			}
 			setConnector(connector);
-			setTitle(
-				<Flex alignItems='center' gap={10}>
-					<span>
-						<LittleLogo code={connector.code} path={CONNECTORS_ASSETS_PATH} />
-					</span>
-					<span>
-						Add {connectionRole.toLowerCase()} connection for {connector.label}
-					</span>
-				</Flex>,
-			);
+			setTitle(`Add ${connectionRole.toLowerCase()} connection for ${connector.label}`);
 			setName(connector.label);
 			const supportedModes = connector.supportedSendingModes;
 			if (connectionRole !== 'Source' && supportedModes.length > 0) {
