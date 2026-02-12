@@ -79,7 +79,7 @@ const ConnectionsList = () => {
 				<div className='connections-list__name-cell'>
 					<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} /> {c.name}
 				</div>,
-				c.connector.type,
+				c.connector.type === 'FileStorage' ? 'File storage' : c.connector.type,
 				c.connector.label,
 				/* See issue https://github.com/meergo/meergo/issues/1255.
 				<div className='connections-list__status-cell'>
