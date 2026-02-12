@@ -23,6 +23,14 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 			},
 		],
 	},
+	parquet: {
+		Source: [
+			{
+				label: 'Import users from Parquet',
+				url: 'https://example.com',
+			},
+		],
+	},
 	postgresql: {
 		Source: [{ label: 'How to configure PostgreSQL as a source', url: 'https://docs.example.com/postgres-source' }],
 		Destination: [{ label: 'PostgreSQL destination setup', url: 'https://docs.example.com/postgres-dest' }],

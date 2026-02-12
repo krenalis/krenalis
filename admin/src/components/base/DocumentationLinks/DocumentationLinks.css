@@ -3,7 +3,7 @@
 	flex-direction: column;
 	align-items: center;
 	gap: 0.25rem;
-	margin-top: 0;
+	margin-top: 1rem;
 	flex-basis: 100%;
 }
 
@@ -20,4 +20,10 @@
 	font-size: 0.8em;
 	margin-right: 2px;
 	padding-right: 3px;
+}
+
+@media (max-width: 1200px) {
+	.documentation-links {
+		align-items: start;
+	}
 }

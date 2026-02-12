@@ -193,7 +193,12 @@ const PipelineFile = () => {
 		<Section
 			title={`${isImport ? 'Import' : 'Export'} file`}
 			className='pipeline__file'
-			description={`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}
+			description={
+				<>
+					<span>{`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}</span>
+					{pipeline.format !== '' && <DocumentationLinks connectorCode={pipeline.format} role={connection.role} />}
+				</>
+			}
 			padded={true}
 			annotated={true}
 		>
@@ -862,7 +867,6 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					/>
 				</div>
 			)}
-			<DocumentationLinks connectorCode={connection.connector.code} role={connection.role} />
 			<SlDrawer
 				className='pipeline__file-preview-drawer'
 				open={filePreviewColumns != null && filePreviewRows != null}
