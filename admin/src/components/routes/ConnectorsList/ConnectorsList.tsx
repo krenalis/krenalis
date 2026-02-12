@@ -204,11 +204,12 @@ const ConnectorsList = () => {
 		}
 	}
 
-	// TODO(@Andrea): add the link to the feedback page on the Meergo
-	// website when it is implemented.
 	const feedbackMessage = (
 		<span className='connectors-list__feedback-message'>
-			Can't find the connector you're looking for? <a target='_blank'>Contact us</a>
+			Can't find the connector you're looking for?{' '}
+			<a href='mailto:hello@meergo.com' target='_blank'>
+				Contact us
+			</a>
 		</span>
 	);
 
