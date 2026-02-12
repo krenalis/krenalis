@@ -206,7 +206,18 @@ const WarehouseInfo = ({
 			{warehouseName !== 'Snowflake' && (
 				<Section
 					title={warehouseSectionTexts.mcp.title}
-					description={warehouseSectionTexts.mcp.description}
+					description={
+						<>
+							<span>{warehouseSectionTexts.mcp.description}</span>
+							<a
+								href='http://localhost:8080/docs/ref/admin/warehouse-read-only-mcp-credentials'
+								target='_blank'
+								rel='noopener'
+							>
+								Set up AI querying
+							</a>
+						</>
+					}
 					padded={mcpRows.length === 0}
 					annotated={true}
 				>
