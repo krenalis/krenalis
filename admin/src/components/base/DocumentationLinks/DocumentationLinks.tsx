@@ -167,26 +167,45 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 	// SDKs
 	javascript: {
 		Source: [
-			{ label: 'JavaScript SDK documentation', url: 'https://www.meergo.com/docs/integrations/javascript-sdk' },
+			{ label: 'Collect events with JavaScript SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=javascript#1-connect-an-application' },
+			{ label: 'Ingest users with JavaScript SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=javascript#1-connect-an-application' },
 		],
 	},
 	android: {
-		Source: [{ label: 'Android SDK documentation', url: 'https://www.meergo.com/docs/integrations/android-sdk' }],
+		Source: [
+			{ label: 'Collect events with Android SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=android#1-connect-an-application' },
+			{ label: 'Ingest users with Android SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=android#1-connect-an-application' },
+		],
 	},
 	nodejs: {
-		Source: [{ label: 'Node.js SDK documentation', url: 'https://www.meergo.com/docs/integrations/nodejs-sdk' }],
+		Source: [
+			{ label: 'Collect events with Node.js SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=nodejs#1-connect-an-application' },
+			{ label: 'Ingest users with Node.js SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=nodejs#1-connect-an-application' },
+		],
 	},
 	python: {
-		Source: [{ label: 'Python SDK documentation', url: 'https://www.meergo.com/docs/integrations/python-sdk' }],
+		Source: [
+			{ label: 'Collect events with Python SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=python#1-connect-an-application' },
+			{ label: 'Ingest users with Python SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=python#1-connect-an-application' },
+		],
 	},
 	go: {
-		Source: [{ label: 'Go SDK documentation', url: 'https://www.meergo.com/docs/integrations/go-sdk' }],
+		Source: [
+			{ label: 'Collect events with Go SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=go#1-connect-an-application' },
+			{ label: 'Ingest users with Go SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=go#1-connect-an-application' },
+		],
 	},
 	java: {
-		Source: [{ label: 'Java SDK documentation', url: 'https://www.meergo.com/docs/integrations/java-sdk' }],
+		Source: [
+			{ label: 'Collect events with Java SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=java#1-connect-an-application' },
+			{ label: 'Ingest users with Java SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=java#1-connect-an-application' },
+		],
 	},
 	dotnet: {
-		Source: [{ label: '.NET SDK documentation', url: 'https://www.meergo.com/docs/integrations/dotnet-sdk' }],
+		Source: [
+			{ label: 'Collect events with .NET SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=net#1-connect-an-application' },
+			{ label: 'Ingest users with .NET SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=net#1-connect-an-application' },
+		],
 	},
 };
 
