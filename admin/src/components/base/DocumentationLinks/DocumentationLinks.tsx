@@ -6,32 +6,58 @@ import './DocumentationLinks.css';
 const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: string }[]>> = {
 	// Databases
 	postgresql: {
-		Source: [{ label: 'Ingest users from PostgreSQL', url: 'https://www.meergo.com/docs/ingest-users/databases' }],
+		Source: [
+			{
+				label: 'Ingest users from PostgreSQL',
+				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=postgresql#1-connect-a-database',
+			},
+		],
 		Destination: [
 			{
 				label: 'Activate profiles to PostgreSQL',
-				url: 'https://www.meergo.com/docs/activate-profiles/databases',
+				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=postgresql#1-connect-a-database-table',
 			},
 		],
 	},
 	mysql: {
-		Source: [{ label: 'Ingest users from MySQL', url: 'https://www.meergo.com/docs/ingest-users/databases' }],
+		Source: [
+			{
+				label: 'Ingest users from MySQL',
+				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=mysql#1-connect-a-database',
+			},
+		],
 		Destination: [
-			{ label: 'Activate profiles to MySQL', url: 'https://www.meergo.com/docs/activate-profiles/databases' },
+			{
+				label: 'Activate profiles to MySQL',
+				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=mysql#1-connect-a-database-table',
+			},
 		],
 	},
 	snowflake: {
-		Source: [{ label: 'Ingest users from Snowflake', url: 'https://www.meergo.com/docs/ingest-users/databases' }],
+		Source: [
+			{
+				label: 'Ingest users from Snowflake',
+				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=snowflake#1-connect-a-database',
+			},
+		],
 		Destination: [
-			{ label: 'Activate profiles to Snowflake', url: 'https://www.meergo.com/docs/activate-profiles/databases' },
+			{
+				label: 'Activate profiles to Snowflake',
+				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=snowflake#1-connect-a-database-table',
+			},
 		],
 	},
 	clickhouse: {
-		Source: [{ label: 'Ingest users from ClickHouse', url: 'https://www.meergo.com/docs/ingest-users/databases' }],
+		Source: [
+			{
+				label: 'Ingest users from ClickHouse',
+				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=clickhouse#1-connect-a-database',
+			},
+		],
 		Destination: [
 			{
 				label: 'Activate profiles to ClickHouse',
-				url: 'https://www.meergo.com/docs/activate-profiles/databases',
+				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=clickhouse#1-connect-a-database-table',
 			},
 		],
 	},
@@ -110,13 +136,13 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 		Source: [
 			{
 				label: 'Ingest users from files on S3',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=s3',
+				url: 'https://www.meergo.com/docs/ingest-users/files?storage=s3#1-connect-a-storage',
 			},
 		],
 		Destination: [
 			{
 				label: 'Activate profiles to files on S3',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=s3',
+				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=s3#1-connect-a-storage',
 			},
 		],
 	},
@@ -124,13 +150,13 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 		Source: [
 			{
 				label: 'Ingest users from files on SFTP',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=sftp',
+				url: 'https://www.meergo.com/docs/ingest-users/files?storage=sftp#1-connect-a-storage',
 			},
 		],
 		Destination: [
 			{
 				label: 'Activate profiles to files on SFTP',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=sftp',
+				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=sftp#1-connect-a-storage',
 			},
 		],
 	},
@@ -138,13 +164,13 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 		Source: [
 			{
 				label: 'Ingest users from files on File System',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=filesystem',
+				url: 'https://www.meergo.com/docs/ingest-users/files?storage=filesystem#1-connect-a-storage',
 			},
 		],
 		Destination: [
 			{
 				label: 'Activate profiles to files on File System',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=filesystem',
+				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=filesystem#1-connect-a-storage',
 			},
 		],
 	},
