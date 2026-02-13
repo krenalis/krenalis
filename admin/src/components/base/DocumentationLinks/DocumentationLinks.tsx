@@ -1,4 +1,5 @@
 import React from 'react';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import './DocumentationLinks.css';
 
 // Mapping: connectorCode -> role -> links
@@ -196,6 +197,7 @@ interface DocumentationLinksProps {
 	connectorLabel?: string;
 	align?: 'start' | 'end';
 	fade?: boolean;
+	showIcon?: boolean;
 }
 
 const DocumentationLinks = ({
@@ -205,6 +207,7 @@ const DocumentationLinks = ({
 	connectorLabel,
 	align = 'end',
 	fade = false,
+	showIcon = false,
 }: DocumentationLinksProps) => {
 	let links: { label: string; url: string }[];
 
@@ -224,6 +227,7 @@ const DocumentationLinks = ({
 		<div className={`documentation-links documentation-links--${align}${fade ? ' documentation-links--fade' : ''}`}>
 			{links.map((link) => (
 				<a key={link.url} href={link.url} target='_blank' rel='noopener'>
+					{showIcon && <SlIcon name='question-circle' />}
 					{link.label}
 				</a>
 			))}
