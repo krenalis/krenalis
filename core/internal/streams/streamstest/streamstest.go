@@ -81,14 +81,14 @@ func (s *Stream) Consume(topic string, size int) streams.Consumer {
 
 // batchPublisher is a mock for streams.BatchPublisher.
 type batchPublisher struct {
-	PublishFunc func(topics []string, attributes map[string]any) error
+	PublishFunc func(topics []string, attributes map[string]any, destinations []int) error
 	DoneFunc    func(context.Context) error
 }
 
 // Publish implements streams.BatchPublisher.
-func (b *batchPublisher) Publish(topics []string, attributes map[string]any) error {
+func (b *batchPublisher) Publish(topics []string, attributes map[string]any, destinations []int) error {
 	if b.PublishFunc != nil {
-		return b.PublishFunc(topics, attributes)
+		return b.PublishFunc(topics, attributes, destinations)
 	}
 	return nil
 }

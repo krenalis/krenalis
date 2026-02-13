@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -484,6 +485,18 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 						err = fmt.Errorf("invalid event data: %s", err)
 						return
 					}
+					if header := msg.Headers(); header != nil {
+						if destinations, ok := header["destinations"]; ok {
+							event.Destinations = make([]int, len(destinations))
+							for i, d := range destinations {
+								event.Destinations[i], _ = strconv.Atoi(d)
+								if event.Destinations[i] < 1 {
+									err = fmt.Errorf("invalid event destination: %q", d)
+									return
+								}
+							}
+						}
+					}
 					event.Ack = func() {
 						if err := msg.Ack(); err != nil {
 							slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
@@ -562,14 +575,23 @@ func (batch *batch) Done(ctx context.Context) error {
 }
 
 // Publish adds an event to the current batch for the given topic.
-func (batch *batch) Publish(topics []string, event map[string]any) error {
+func (batch *batch) Publish(topics []string, event map[string]any, destinations []int) error {
 	shard := shardOf(event["anonymousId"].(string))
 	data, err := types.Marshal(event, schemas.Event)
 	if err != nil {
 		return err
 	}
 	for _, topic := range topics {
+		var header nats.Header
+		if strings.HasPrefix(topic, "connection-") {
+			s := make([]string, len(destinations))
+			for i, d := range destinations {
+				s[i] = strconv.Itoa(d)
+			}
+			header = nats.Header{"destinations": s}
+		}
 		future, err := batch.conn.js.jetStream.PublishMsgAsync(&nats.Msg{
+			Header:  header,
 			Subject: "events.v1." + topic + "." + strconv.Itoa(shard),
 			Data:    data,
 		})

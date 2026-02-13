@@ -37,7 +37,7 @@ type Consumer interface {
 type BatchPublisher interface {
 
 	// Publish adds an event to the current batch for the given topics.
-	Publish(topics []string, event map[string]any) error
+	Publish(topics []string, event map[string]any, destinations []int) error
 
 	// Done publishes all buffered events.
 	//
@@ -66,6 +66,7 @@ type Ack func()
 
 // Event represents an event read from the stream.
 type Event struct {
-	Attributes map[string]any
-	Ack        Ack
+	Attributes   map[string]any
+	Destinations []int
+	Ack          Ack
 }

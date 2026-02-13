@@ -93,14 +93,18 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 }
 
 // QueueEvent queues the given event to be sent on the specified destination
-// pipeline.
-func (d *destinations) QueueEvent(pipeline *state.Pipeline, event streams.Event) {
-	connection := pipeline.Connection()
+// connection.
+func (d *destinations) QueueEvent(connection int, event streams.Event) {
 	d.mu.Lock()
-	pipelines := d.pipelines[connection.ID]
+	pipelines := d.pipelines[connection]
 	d.mu.Unlock()
-	if dp, _ := pipelines.find(pipeline.ID); dp != nil {
-		dp.QueueEvent(event)
+	for _, d := range event.Destinations {
+		for _, p := range pipelines {
+			if p.id == d {
+				p.QueueEvent(event)
+				break
+			}
+		}
 	}
 }
 
