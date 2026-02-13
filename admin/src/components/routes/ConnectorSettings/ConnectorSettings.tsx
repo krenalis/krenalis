@@ -258,9 +258,6 @@ const ConnectorSettings = () => {
 		}
 	}
 	buttonsToRender.push(
-		<DocumentationLinks key='documentation-links' connectorCode={connectorCode} role={connectionRole} />,
-	);
-	buttonsToRender.push(
 		<div className='connector-settings__save-wrapper'>
 			<SlButton
 				className='connector-settings__save-button'
@@ -270,6 +267,12 @@ const ConnectorSettings = () => {
 				Add
 			</SlButton>
 		</div>,
+	);
+	buttonsToRender.push(
+		<hr key='documentation-divider' className='connector-settings__divider' />,
+	);
+	buttonsToRender.push(
+		<DocumentationLinks key='documentation-links' connectorCode={connectorCode} role={connectionRole} />,
 	);
 
 	if (isLoading) {

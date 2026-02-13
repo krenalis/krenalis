@@ -1,7 +1,7 @@
 .documentation-links {
 	display: flex;
 	flex-direction: column;
-	align-items: start;
+	align-items: end;
 	gap: 0.25rem;
 	margin-top: 1rem;
 	flex-basis: 100%;
@@ -24,6 +24,6 @@
 
 @media (max-width: 1200px) {
 	.documentation-links {
-		align-items: start;
+		align-items: end;
 	}
 }
