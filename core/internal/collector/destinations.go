@@ -7,7 +7,6 @@ package collector
 import (
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -33,7 +32,7 @@ type destinations struct {
 	senders map[int]*sender.Sender
 
 	mu        sync.Mutex
-	pipelines map[int][]*destinationPipeline // maps a destination connection ID to its pipelines; it is protected by mu.
+	pipelines map[int]destinationPipelines // maps a destination connection ID to its pipelines; it is protected by mu.
 
 	close struct {
 		closed    atomic.Bool             // indicates if the writer has been closed
@@ -53,7 +52,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		provider:    provider,
 		metrics:     metrics,
 		senders:     map[int]*sender.Sender{},
-		pipelines:   map[int][]*destinationPipeline{},
+		pipelines:   map[int]destinationPipelines{},
 	}
 	d.close.ctx, d.close.cancel = context.WithCancelCause(context.Background())
 
@@ -76,7 +75,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		}
 		app := connections.Application(c)
 		sender := sender.New(app, d.metrics)
-		pipelines := make([]*destinationPipeline, 0, 1)
+		pipelines := make(destinationPipelines, 0, 1)
 		// Keeps all pipelines active on the connection's events.
 		for _, p := range c.Pipelines() {
 			if !p.Enabled || p.Target != state.TargetEvent {
@@ -97,18 +96,10 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 // pipeline.
 func (d *destinations) QueueEvent(pipeline *state.Pipeline, event streams.Event) {
 	connection := pipeline.Connection()
-	var dp *destinationPipeline
 	d.mu.Lock()
-	if pipelines, ok := d.pipelines[connection.ID]; ok {
-		for _, p := range pipelines {
-			if p.id == pipeline.ID {
-				dp = p
-				break
-			}
-		}
-	}
+	pipelines := d.pipelines[connection.ID]
 	d.mu.Unlock()
-	if dp != nil {
+	if dp, _ := pipelines.find(pipeline.ID); dp != nil {
 		dp.QueueEvent(event)
 	}
 }
@@ -141,25 +132,15 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 		for {
 			select {
 			case <-queue.timer.C:
-				var found bool
-				var dp *destinationPipeline
 				d.mu.Lock()
 				pipelines, ok := d.pipelines[connection]
-				if !ok {
-					d.mu.Unlock()
-					continue
-				}
-				for _, dp = range pipelines {
-					if dp.id == pipeline {
-						found = true
-						break
-					}
-				}
 				d.mu.Unlock()
-				if !found {
+				if !ok {
 					continue
 				}
-				go dp.transform()
+				if dp, _ := pipelines.find(pipeline); dp != nil {
+					go dp.transform()
+				}
 			case <-done:
 				return
 			}
@@ -197,11 +178,12 @@ func (d *destinations) onCreatePipeline(n state.CreatePipeline) {
 	if c.Role != state.Destination {
 		return
 	}
-	// No lock is needed for reading d.senders since the state is frozen,
+	// No lock is needed for reading d.senders and d.pipelines since the state is frozen,
 	// ensuring there are no concurrent writes.
 	pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
+	pipelines := d.pipelines[c.ID].append(pipeline)
 	d.mu.Lock()
-	d.pipelines[c.ID] = append(d.pipelines[c.ID], pipeline)
+	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
 }
 
@@ -237,19 +219,14 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 	if c.Role != state.Destination {
 		return
 	}
-	var i int
-	var dp *destinationPipeline
 	pipelines := d.pipelines[c.ID] // No lock needed for reads while the state is frozen.
-	for i, dp = range pipelines {
-		if dp.id == p.ID {
-			break
-		}
-	}
-	if i == len(pipelines) {
+	dp, i := pipelines.find(p.ID)
+	if dp == nil {
 		panic("unexpected missing pipeline")
 	}
+	pipelines = pipelines.delete(i)
 	d.mu.Lock()
-	d.pipelines[c.ID] = slices.Delete(pipelines, i, i+1)
+	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
 	go dp.Close(errors.New("pipeline has been deleted"))
 }
@@ -307,24 +284,19 @@ func (d *destinations) onSetPipelineStatus(n state.SetPipelineStatus) {
 	if n.Enabled {
 		// Add the pipeline.
 		pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
+		pipelines = pipelines.append(pipeline)
 		d.mu.Lock()
-		d.pipelines[c.ID] = append(pipelines, pipeline)
+		d.pipelines[c.ID] = pipelines
 		d.mu.Unlock()
 		return
 	}
 	// Remove the pipeline.
-	var i int
-	var dp *destinationPipeline
-	for i, dp = range pipelines {
-		if dp.id == p.ID {
-			break
-		}
-	}
-	if i == len(pipelines) {
+	dp, i := pipelines.find(p.ID)
+	if dp == nil {
 		panic("unexpected missing pipeline")
 	}
+	pipelines = pipelines.delete(i)
 	d.mu.Lock()
-	pipelines = slices.Delete(pipelines, i, i+1)
 	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
 	go dp.Close(errors.New("pipeline has been disabled"))
@@ -341,20 +313,13 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 		return
 	}
 	pipelines := d.pipelines[c.ID] // No lock needed for reads while the state is frozen.
-	var current *destinationPipeline
-	var index int
-	for i, dp := range pipelines {
-		if dp.id == p.ID {
-			current = dp
-			index = i
-			break
-		}
-	}
+	current, index := pipelines.find(p.ID)
 	// Removes it if is not enabled but present.
 	if !p.Enabled {
 		if current != nil {
+			pipelines = pipelines.delete(index)
 			d.mu.Lock()
-			d.pipelines[c.ID] = slices.Delete(pipelines, index, index+1)
+			d.pipelines[c.ID] = pipelines
 			d.mu.Unlock()
 			go current.Close(errors.New("pipeline has been disabled"))
 		}
@@ -363,8 +328,9 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 	// Adds it if it wasn't present.
 	if current == nil {
 		pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
+		pipelines = pipelines.append(pipeline)
 		d.mu.Lock()
-		d.pipelines[c.ID] = append(pipelines, pipeline)
+		d.pipelines[c.ID] = pipelines
 		d.mu.Unlock()
 		return
 	}
@@ -392,7 +358,40 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 			pipeline.transformer, _ = transformers.New(p, d.provider, nil)
 		}
 	}
+	pipelines = pipelines.replace(index, &pipeline)
 	d.mu.Lock()
-	pipelines[index] = &pipeline
+	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
+}
+
+type destinationPipelines []*destinationPipeline
+
+func (pp destinationPipelines) append(pipelines ...*destinationPipeline) destinationPipelines {
+	updated := make([]*destinationPipeline, len(pp)+len(pipelines))
+	copy(updated, pp)
+	copy(updated[len(pp):], pipelines)
+	return updated
+}
+
+func (pp destinationPipelines) delete(index int) destinationPipelines {
+	updated := make([]*destinationPipeline, len(pp)-1)
+	copy(updated, pp[:index])
+	copy(updated[index:], pp[index+1:])
+	return updated
+}
+
+func (pp destinationPipelines) find(id int) (*destinationPipeline, int) {
+	for i, pipeline := range pp {
+		if pipeline.id == id {
+			return pipeline, i
+		}
+	}
+	return nil, -1
+}
+
+func (pp destinationPipelines) replace(i int, p *destinationPipeline) destinationPipelines {
+	updates := make([]*destinationPipeline, len(pp))
+	copy(updates, pp)
+	updates[i] = p
+	return updates
 }
