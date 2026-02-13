@@ -156,7 +156,12 @@ const PipelineFile = () => {
 
 	const { hasSheets, formatCode, formatLabel, fileExtension } = useMemo(() => {
 		const format = connectors.find((c) => c.code === pipeline.format);
-		return { hasSheets: format?.hasSheets, formatCode: format?.code, formatLabel: format?.label, fileExtension: format?.fileExtension };
+		return {
+			hasSheets: format?.hasSheets,
+			formatCode: format?.code,
+			formatLabel: format?.label,
+			fileExtension: format?.fileExtension,
+		};
 	}, [pipeline]);
 
 	const onFormatChange = (e) => {
@@ -196,7 +201,15 @@ const PipelineFile = () => {
 			description={
 				<>
 					<span>{`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}</span>
-					{pipeline.format !== '' && !isFormatLoading && <DocumentationLinks connectorCode={pipeline.format} role={connection.role} storageCode={connection.connector.code} connectorLabel={formatLabel} fade />}
+					{pipeline.format !== '' && !isFormatLoading && (
+						<DocumentationLinks
+							connectorCode={pipeline.format}
+							role={connection.role}
+							storageCode={connection.connector.code}
+							connectorLabel={formatLabel}
+							fade
+						/>
+					)}
 				</>
 			}
 			padded={true}
