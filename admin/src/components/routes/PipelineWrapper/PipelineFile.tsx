@@ -38,6 +38,7 @@ import {
 import { Combobox } from '../../base/Combobox/Combobox';
 import { PipelineIssues } from './PipelineIssues';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import DocumentationLinks from '../../base/DocumentationLinks/DocumentationLinks';
 
 const PipelineFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -153,9 +154,14 @@ const PipelineFile = () => {
 		fetchFields();
 	}, [formatRef.current]);
 
-	const { hasSheets, formatCode, fileExtension } = useMemo(() => {
+	const { hasSheets, formatCode, formatLabel, fileExtension } = useMemo(() => {
 		const format = connectors.find((c) => c.code === pipeline.format);
-		return { hasSheets: format?.hasSheets, formatCode: format?.code, fileExtension: format?.fileExtension };
+		return {
+			hasSheets: format?.hasSheets,
+			formatCode: format?.code,
+			formatLabel: format?.label,
+			fileExtension: format?.fileExtension,
+		};
 	}, [pipeline]);
 
 	const onFormatChange = (e) => {
@@ -192,7 +198,20 @@ const PipelineFile = () => {
 		<Section
 			title={`${isImport ? 'Import' : 'Export'} file`}
 			className='pipeline__file'
-			description={`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}
+			description={
+				<>
+					<span>{`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}</span>
+					{pipeline.format !== '' && !isFormatLoading && (
+						<DocumentationLinks
+							connectorCode={pipeline.format}
+							role={connection.role}
+							storageCode={connection.connector.code}
+							connectorLabel={formatLabel}
+							fade
+						/>
+					)}
+				</>
+			}
 			padded={true}
 			annotated={true}
 		>
