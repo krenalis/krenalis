@@ -269,10 +269,10 @@ const ConnectorSettings = () => {
 		</div>,
 	);
 	buttonsToRender.push(
-		<hr key='documentation-divider' className='connector-settings__divider' />,
-	);
-	buttonsToRender.push(
-		<DocumentationLinks key='documentation-links' connectorCode={connectorCode} role={connectionRole} showIcon />,
+		<div key='documentation-wrapper' className='connector-settings__documentation'>
+			<hr className='connector-settings__divider' />
+			<DocumentationLinks connectorCode={connectorCode} role={connectionRole} showIcon />
+		</div>,
 	);
 
 	if (isLoading) {
