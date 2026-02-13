@@ -301,8 +301,9 @@ const DocumentationLinks = ({
 		const label = isSource
 			? `How to import users from ${connectorLabel}`
 			: `How to export users to ${connectorLabel}`;
-		const basePath = isSource ? 'ingest-users' : 'activate-users';
-		const url = `https://www.meergo.com/docs/${basePath}/files?storage=${storageCode}&format=${connectorCode}#4-enter-file-settings`;
+		const basePath = isSource ? 'ingest-users' : 'activate-profiles';
+		const fragment = isSource ? '4-enter-file-settings' : '5-enter-file-settings';
+		const url = `https://www.meergo.com/docs/${basePath}/files?storage=${storageCode}&format=${connectorCode}#${fragment}`;
 		links = [{ label, url }];
 	} else {
 		links = DOCUMENTATION_LINKS[connectorCode]?.[role];
