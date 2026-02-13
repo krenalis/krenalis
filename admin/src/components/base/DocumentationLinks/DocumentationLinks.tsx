@@ -167,44 +167,86 @@ const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: s
 	// SDKs
 	javascript: {
 		Source: [
-			{ label: 'Collect events with JavaScript SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=javascript#1-connect-an-application' },
-			{ label: 'Ingest users with JavaScript SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=javascript#1-connect-an-application' },
+			{
+				label: 'Collect events with JavaScript SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=javascript#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with JavaScript SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=javascript#1-connect-an-application',
+			},
 		],
 	},
 	android: {
 		Source: [
-			{ label: 'Collect events with Android SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=android#1-connect-an-application' },
-			{ label: 'Ingest users with Android SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=android#1-connect-an-application' },
+			{
+				label: 'Collect events with Android SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=android#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with Android SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=android#1-connect-an-application',
+			},
 		],
 	},
 	nodejs: {
 		Source: [
-			{ label: 'Collect events with Node.js SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=nodejs#1-connect-an-application' },
-			{ label: 'Ingest users with Node.js SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=nodejs#1-connect-an-application' },
+			{
+				label: 'Collect events with Node.js SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=nodejs#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with Node.js SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=nodejs#1-connect-an-application',
+			},
 		],
 	},
 	python: {
 		Source: [
-			{ label: 'Collect events with Python SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=python#1-connect-an-application' },
-			{ label: 'Ingest users with Python SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=python#1-connect-an-application' },
+			{
+				label: 'Collect events with Python SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=python#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with Python SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=python#1-connect-an-application',
+			},
 		],
 	},
 	go: {
 		Source: [
-			{ label: 'Collect events with Go SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=go#1-connect-an-application' },
-			{ label: 'Ingest users with Go SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=go#1-connect-an-application' },
+			{
+				label: 'Collect events with Go SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=go#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with Go SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=go#1-connect-an-application',
+			},
 		],
 	},
 	java: {
 		Source: [
-			{ label: 'Collect events with Java SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=java#1-connect-an-application' },
-			{ label: 'Ingest users with Java SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=java#1-connect-an-application' },
+			{
+				label: 'Collect events with Java SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=java#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with Java SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=java#1-connect-an-application',
+			},
 		],
 	},
 	dotnet: {
 		Source: [
-			{ label: 'Collect events with .NET SDK', url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=net#1-connect-an-application' },
-			{ label: 'Ingest users with .NET SDK', url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=net#1-connect-an-application' },
+			{
+				label: 'Collect events with .NET SDK',
+				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=net#1-connect-an-application',
+			},
+			{
+				label: 'Ingest users with .NET SDK',
+				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=net#1-connect-an-application',
+			},
 		],
 	},
 };
@@ -214,7 +256,6 @@ interface DocumentationLinksProps {
 	role: string;
 	storageCode?: string;
 	connectorLabel?: string;
-	align?: 'start' | 'end';
 	fade?: boolean;
 	showIcon?: boolean;
 }
@@ -224,7 +265,6 @@ const DocumentationLinks = ({
 	role,
 	storageCode,
 	connectorLabel,
-	align = 'end',
 	fade = false,
 	showIcon = false,
 }: DocumentationLinksProps) => {
@@ -232,7 +272,9 @@ const DocumentationLinks = ({
 
 	if (storageCode != null && connectorLabel != null) {
 		const isSource = role === 'Source';
-		const label = isSource ? `Import users from ${connectorLabel}` : `Export users to ${connectorLabel}`;
+		const label = isSource
+			? `How to import users from ${connectorLabel}`
+			: `How to export users to ${connectorLabel}`;
 		const basePath = isSource ? 'ingest-users' : 'activate-users';
 		const url = `https://www.meergo.com/docs/${basePath}/files?storage=${storageCode}&format=${connectorCode}#4-enter-file-settings`;
 		links = [{ label, url }];
@@ -243,7 +285,7 @@ const DocumentationLinks = ({
 	if (!links || links.length === 0) return null;
 
 	return (
-		<div className={`documentation-links documentation-links--${align}${fade ? ' documentation-links--fade' : ''}`}>
+		<div className={`documentation-links${fade ? ' documentation-links--fade' : ''}`}>
 			{links.map((link) => (
 				<a key={link.url} href={link.url} target='_blank' rel='noopener'>
 					{showIcon && <SlIcon name='question-circle' />}
