@@ -14,6 +14,19 @@
 	align-items: start;
 }
 
+.documentation-links--fade {
+	animation: documentation-links-fade-in 0.4s ease-in 0.15s both;
+}
+
+@keyframes documentation-links-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
 .documentation-links a,
 .documentation-links a:visited {
 	color: var(--sl-color-primary-600);

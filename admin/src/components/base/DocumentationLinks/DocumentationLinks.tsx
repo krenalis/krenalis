@@ -195,6 +195,7 @@ interface DocumentationLinksProps {
 	storageCode?: string;
 	connectorLabel?: string;
 	align?: 'start' | 'end';
+	fade?: boolean;
 }
 
 const DocumentationLinks = ({
@@ -203,6 +204,7 @@ const DocumentationLinks = ({
 	storageCode,
 	connectorLabel,
 	align = 'end',
+	fade = false,
 }: DocumentationLinksProps) => {
 	let links: { label: string; url: string }[];
 
@@ -219,7 +221,7 @@ const DocumentationLinks = ({
 	if (!links || links.length === 0) return null;
 
 	return (
-		<div className={`documentation-links documentation-links--${align}`}>
+		<div className={`documentation-links documentation-links--${align}${fade ? ' documentation-links--fade' : ''}`}>
 			{links.map((link) => (
 				<a key={link.url} href={link.url} target='_blank' rel='noopener'>
 					{link.label}

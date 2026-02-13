@@ -196,7 +196,7 @@ const PipelineFile = () => {
 			description={
 				<>
 					<span>{`Configure the format, location, and options of the file to ${isImport ? 'import' : 'export'}.`}</span>
-					{pipeline.format !== '' && <DocumentationLinks connectorCode={pipeline.format} role={connection.role} storageCode={connection.connector.code} connectorLabel={formatLabel} align="start" />}
+					{pipeline.format !== '' && !isFormatLoading && <DocumentationLinks connectorCode={pipeline.format} role={connection.role} storageCode={connection.connector.code} connectorLabel={formatLabel} align="start" fade />}
 				</>
 			}
 			padded={true}
