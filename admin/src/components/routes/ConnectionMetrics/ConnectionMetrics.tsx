@@ -561,10 +561,10 @@ const ConnectionMetrics = () => {
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
 								<SlSelect
 									size='small'
-									label='Pipeline'
+									placeholder='All pipelines'
 									onSlChange={onChangesetSelectedPipeline}
 									value={selectedPipeline == null ? '' : String(selectedPipeline)}
-									className={`connection-metrics__pipelines${selectedPipeline != null ? ' connection-metrics__pipelines--filtered' : ''}`}
+									className='connection-metrics__pipelines'
 									clearable
 								>
 									{c.pipelines?.map((p) => {
