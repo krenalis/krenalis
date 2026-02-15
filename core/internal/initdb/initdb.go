@@ -31,8 +31,8 @@ func DatabaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 	return count == 0, nil
 }
 
-//go:embed "DB_initialization_queries.sql"
-var initSQLQueries string
+//go:embed "schema.sql"
+var schema string
 
 // Initialize initializes the provided PostgreSQL database by executing queries
 // in the given transaction, creating all the database objects (tables, types,
@@ -41,7 +41,7 @@ var initSQLQueries string
 // This function must be called on a transaction opened on an empty database.
 // Otherwise, the behavior is undefined.
 func Initialize(ctx context.Context, tx *db.Tx) error {
-	for query := range strings.SplitSeq(initSQLQueries, ";\n") {
+	for query := range strings.SplitSeq(schema, ";\n") {
 		query = strings.TrimSpace(query)
 		if query == "" {
 			continue
