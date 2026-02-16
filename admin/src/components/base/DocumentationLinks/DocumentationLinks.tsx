@@ -2,280 +2,77 @@ import React from 'react';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import './DocumentationLinks.css';
 
-// Mapping: connectorCode -> role -> links
-const DOCUMENTATION_LINKS: Record<string, Record<string, { label: string; url: string }[]>> = {
-	// Databases
-	postgresql: {
-		Source: [
-			{
-				label: 'Ingest users from PostgreSQL',
-				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=postgresql#1-connect-a-database',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to PostgreSQL',
-				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=postgresql#1-connect-a-database-table',
-			},
-		],
-	},
-	mysql: {
-		Source: [
-			{
-				label: 'Ingest users from MySQL',
-				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=mysql#1-connect-a-database',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to MySQL',
-				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=mysql#1-connect-a-database-table',
-			},
-		],
-	},
-	snowflake: {
-		Source: [
-			{
-				label: 'Ingest users from Snowflake',
-				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=snowflake#1-connect-a-database',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to Snowflake',
-				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=snowflake#1-connect-a-database-table',
-			},
-		],
-	},
-	clickhouse: {
-		Source: [
-			{
-				label: 'Ingest users from ClickHouse',
-				url: 'https://www.meergo.com/docs/ingest-users/databases?settings=clickhouse#1-connect-a-database',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to ClickHouse',
-				url: 'https://www.meergo.com/docs/activate-profiles/databases?settings=clickhouse#1-connect-a-database-table',
-			},
-		],
-	},
-	// SaaS apps (Source + Destination)
-	stripe: {
-		Source: [
-			{ label: 'Ingest users from Stripe', url: 'https://www.meergo.com/docs/ingest-users/saas-apps/stripe' },
-		],
-		Destination: [
-			{ label: 'Activate profiles on Stripe', url: 'https://www.meergo.com/docs/activate-profiles/stripe' },
-		],
-	},
-	hubspot: {
-		Source: [
-			{ label: 'Ingest users from HubSpot', url: 'https://www.meergo.com/docs/ingest-users/saas-apps/hubspot' },
-		],
-		Destination: [
-			{ label: 'Activate profiles on HubSpot', url: 'https://www.meergo.com/docs/activate-profiles/hubspot' },
-		],
-	},
-	klaviyo: {
-		Source: [
-			{ label: 'Ingest users from Klaviyo', url: 'https://www.meergo.com/docs/ingest-users/saas-apps/klaviyo' },
-		],
-		Destination: [
-			{ label: 'Activate profiles on Klaviyo', url: 'https://www.meergo.com/docs/activate-profiles/klaviyo' },
-			{ label: 'Activate events on Klaviyo', url: 'https://www.meergo.com/docs/activate-events/klaviyo' },
-		],
-	},
-	mailchimp: {
-		Source: [
-			{
-				label: 'Ingest users from Mailchimp',
-				url: 'https://www.meergo.com/docs/ingest-users/saas-apps/mailchimp',
-			},
-		],
-		Destination: [
-			{ label: 'Activate profiles on Mailchimp', url: 'https://www.meergo.com/docs/activate-profiles/mailchimp' },
-		],
-	},
-	// SaaS apps (Destination only, events)
-	mixpanel: {
-		Destination: [
-			{ label: 'Activate events on Mixpanel', url: 'https://www.meergo.com/docs/activate-events/mixpanel' },
-		],
-	},
-	'google-analytics': {
-		Destination: [
-			{
-				label: 'Activate events on Google Analytics',
-				url: 'https://www.meergo.com/docs/activate-events/google-analytics',
-			},
-		],
-	},
-	posthog: {
-		Destination: [
-			{ label: 'Activate events on PostHog', url: 'https://www.meergo.com/docs/activate-events/posthog' },
-		],
-	},
-	// SaaS apps (Source only)
-	segment: {
-		Source: [
-			{ label: 'Ingest users from Segment', url: 'https://www.meergo.com/docs/ingest-users/saas-apps/segment' },
-		],
-	},
-	rudderstack: {
-		Source: [
-			{
-				label: 'Ingest users from RudderStack',
-				url: 'https://www.meergo.com/docs/ingest-users/saas-apps/rudderstack',
-			},
-		],
-	},
-	// File storages
-	s3: {
-		Source: [
-			{
-				label: 'Ingest users from files on S3',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=s3#1-connect-a-storage',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to files on S3',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=s3#1-connect-a-storage',
-			},
-		],
-	},
-	sftp: {
-		Source: [
-			{
-				label: 'Ingest users from files on SFTP',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=sftp#1-connect-a-storage',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to files on SFTP',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=sftp#1-connect-a-storage',
-			},
-		],
-	},
-	filesystem: {
-		Source: [
-			{
-				label: 'Ingest users from files on File System',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=filesystem#1-connect-a-storage',
-			},
-		],
-		Destination: [
-			{
-				label: 'Activate profiles to files on File System',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=filesystem#1-connect-a-storage',
-			},
-		],
-	},
-	'http-get': {
-		Source: [
-			{
-				label: 'Ingest users from files via HTTP GET',
-				url: 'https://www.meergo.com/docs/ingest-users/files?storage=http#panel-storage-http-get',
-			},
-		],
-	},
-	'http-post': {
-		Destination: [
-			{
-				label: 'Activate profiles to files via HTTP POST',
-				url: 'https://www.meergo.com/docs/activate-profiles/files?storage=http#panel-storage-http-post',
-			},
-		],
-	},
-	// SDKs
-	javascript: {
-		Source: [
-			{
-				label: 'Collect events with JavaScript SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=javascript#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with JavaScript SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=javascript#1-connect-an-application',
-			},
-		],
-	},
-	android: {
-		Source: [
-			{
-				label: 'Collect events with Android SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=android#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with Android SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=android#1-connect-an-application',
-			},
-		],
-	},
-	nodejs: {
-		Source: [
-			{
-				label: 'Collect events with Node.js SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=nodejs#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with Node.js SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=nodejs#1-connect-an-application',
-			},
-		],
-	},
-	python: {
-		Source: [
-			{
-				label: 'Collect events with Python SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=python#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with Python SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=python#1-connect-an-application',
-			},
-		],
-	},
-	go: {
-		Source: [
-			{
-				label: 'Collect events with Go SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=go#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with Go SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=go#1-connect-an-application',
-			},
-		],
-	},
-	java: {
-		Source: [
-			{
-				label: 'Collect events with Java SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=java#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with Java SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=java#1-connect-an-application',
-			},
-		],
-	},
-	dotnet: {
-		Source: [
-			{
-				label: 'Collect events with .NET SDK',
-				url: 'https://www.meergo.com/docs/collect-events/apps-you-developed?sdk=net#1-connect-an-application',
-			},
-			{
-				label: 'Ingest users with .NET SDK',
-				url: 'https://www.meergo.com/docs/ingest-users/apps-you-developed?sdk=net#1-connect-an-application',
-			},
-		],
-	},
+const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
+	postgresql: 'PostgreSQL',
+	mysql: 'MySQL',
+	snowflake: 'Snowflake',
+	clickhouse: 'ClickHouse',
+	stripe: 'Stripe',
+	hubspot: 'HubSpot',
+	klaviyo: 'Klaviyo',
+	mailchimp: 'Mailchimp',
+	mixpanel: 'Mixpanel',
+	'google-analytics': 'Google Analytics',
+	posthog: 'PostHog',
+	segment: 'Segment',
+	rudderstack: 'RudderStack',
+	s3: 'files on S3',
+	sftp: 'files on SFTP',
+	filesystem: 'files on File System',
+	'http-get': 'files via HTTP GET',
+	'http-post': 'files via HTTP POST',
+	javascript: 'JavaScript SDK',
+	android: 'Android SDK',
+	nodejs: 'Node.js SDK',
+	python: 'Python SDK',
+	go: 'Go SDK',
+	java: 'Java SDK',
+	dotnet: '.NET SDK',
 };
+
+const SDK_CONNECTORS = new Set(['javascript', 'android', 'nodejs', 'python', 'go', 'java', 'dotnet']);
+const EVENTS_ONLY_DESTINATIONS = new Set(['mixpanel', 'google-analytics', 'posthog']);
+const USERS_AND_EVENTS_DESTINATIONS = new Set(['klaviyo']);
+const PREPOSITION_TO = new Set([
+	'postgresql',
+	'mysql',
+	'snowflake',
+	'clickhouse',
+	's3',
+	'sftp',
+	'filesystem',
+	'http-post',
+]);
+
+function getConnectionDocLinks(connectorCode: string, role: string): { label: string; url: string }[] {
+	const isSource = role === 'Source';
+	const direction = isSource ? 'sources' : 'destinations';
+	const baseUrl = `https://www.meergo.com/docs/ref/admin/connection-configuration/${direction}-${connectorCode}`;
+	const name = CONNECTOR_DISPLAY_NAMES[connectorCode] ?? connectorCode;
+
+	if (SDK_CONNECTORS.has(connectorCode)) {
+		return [
+			{ label: `Collect events with ${name}`, url: `${baseUrl}-events` },
+			{ label: `Ingest users with ${name}`, url: `${baseUrl}-users` },
+		];
+	}
+
+	const prep = PREPOSITION_TO.has(connectorCode) ? 'to' : 'on';
+	const links: { label: string; url: string }[] = [];
+
+	if (isSource) {
+		links.push({ label: `Ingest users from ${name}`, url: `${baseUrl}-users` });
+	} else {
+		if (!EVENTS_ONLY_DESTINATIONS.has(connectorCode)) {
+			links.push({ label: `Activate profiles ${prep} ${name}`, url: `${baseUrl}-users` });
+		}
+		if (EVENTS_ONLY_DESTINATIONS.has(connectorCode) || USERS_AND_EVENTS_DESTINATIONS.has(connectorCode)) {
+			links.push({ label: `Activate events on ${name}`, url: `${baseUrl}-events` });
+		}
+	}
+
+	return links;
+}
 
 interface DocumentationLinksProps {
 	connectorCode: string;
@@ -306,7 +103,7 @@ const DocumentationLinks = ({
 		const url = `https://www.meergo.com/docs/${basePath}/files?storage=${storageCode}&format=${connectorCode}#${fragment}`;
 		links = [{ label, url }];
 	} else {
-		links = DOCUMENTATION_LINKS[connectorCode]?.[role];
+		links = getConnectionDocLinks(connectorCode, role);
 	}
 
 	if (!links || links.length === 0) return null;
