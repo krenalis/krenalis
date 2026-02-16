@@ -75,7 +75,7 @@ const useConnection = () => {
 		fetchData();
 	}, [connections, params.id]);
 
-	return { isLoading, connection };
+	return { isLoading, connection, setConnection };
 };
 
 export { useConnection };

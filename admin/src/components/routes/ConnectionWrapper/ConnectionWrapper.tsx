@@ -12,7 +12,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 const ConnectionWrapper = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { isLoading, connection } = useConnection();
+	const { isLoading, connection, setConnection } = useConnection();
 
 	useEffect(() => {
 		if (isLoading) {
@@ -45,7 +45,7 @@ const ConnectionWrapper = () => {
 		);
 	}
 	return (
-		<ConnectionContext.Provider value={{ connection }}>
+		<ConnectionContext.Provider value={{ connection, setConnection }}>
 			<div className='connection-wrapper'>
 				<ConnectionTabs connection={connection} />
 				<div className='route-content route-content--connection'>

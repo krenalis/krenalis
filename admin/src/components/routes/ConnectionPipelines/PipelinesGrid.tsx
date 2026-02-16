@@ -19,6 +19,7 @@ import { Variant } from '../App/App.types';
 import { serializeFilter } from '../../../utils/filters';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import TransformedConnection from '../../../lib/core/connection';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Pipeline' }, { name: 'Filters' }, { name: 'Enabled' }, { name: '' }];
 
@@ -43,7 +44,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		runPipelineDropdownButtonRefs,
 		runPipeline,
 	} = useContext(AppContext);
-	const { connection } = useContext(ConnectionContext);
+	const { connection, setConnection } = useContext(ConnectionContext);
 
 	useLayoutEffect(() => {
 		const handleResize = () => {
@@ -77,14 +78,28 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 
 	const onPipelineStatusSwitch = async (pipelineID: number) => {
 		const index = connection.pipelines!.findIndex((p) => p.id === pipelineID);
-		const enabledValue = connection.pipelines![index].enabled;
+		const oldEnabled = connection.pipelines![index].enabled;
+		const newEnabled = !oldEnabled;
+
+		// Optimistically update the switch in the local state before awaiting
+		// the API call. This ensures immediate UI feedback and prevents visible
+		// flickering or delay caused by network latency. If the API request
+		// fails, the previous value will be restored.
+		const c = structuredClone(connection); // clone connection
+		Object.setPrototypeOf(c, TransformedConnection.prototype); // restore class methods (structuredClone doesn't clone functions)
+		c.pipelines![index].enabled = newEnabled;
+
+		setConnection(c);
+
 		try {
-			await api.workspaces.connections.setPipelineStatus(pipelineID, !enabledValue);
+			await api.workspaces.connections.setPipelineStatus(pipelineID, newEnabled);
 		} catch (err) {
 			handleError(err);
+			// Reset the switch
+			c.pipelines![index].enabled = oldEnabled;
+			setConnection(c);
 			return;
 		}
-		setIsLoadingConnections(true);
 	};
 
 	const onDeletePipeline = (pipelineID: number) => {
