@@ -661,6 +661,13 @@ const transformInPipelineToSet = async (
 	selectedInPaths: string[],
 	selectedOutPaths: string[],
 ): Promise<PipelineToSet> => {
+	if (pipeline.name.trim() === '') {
+		throw new Error(`Pipeline name cannot be empty`);
+	}
+	if (Array.from(pipeline.name).length > 60) {
+		throw new Error(`Pipeline name cannot be longer than 60 characters`);
+	}
+
 	let mapping: Mapping;
 	let inSchema: ObjectType;
 	let outSchema: ObjectType;

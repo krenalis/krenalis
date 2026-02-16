@@ -109,6 +109,7 @@ const PipelineHeader = () => {
 								className='pipeline__header-name-input'
 								value={pipeline != null ? pipeline.name : pipelineType.name}
 								onSlInput={onUpdateName}
+								maxlength={60}
 							></SlInput>
 							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
 						</span>

@@ -75,6 +75,11 @@
 	font-size: 14px;
 }
 
+.pipeline__header-name sl-icon-button::part(base) {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
 .pipeline__header .pipeline__issues::part(trigger) {
 	text-align: center;
 }
