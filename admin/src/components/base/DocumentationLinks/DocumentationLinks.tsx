@@ -30,6 +30,13 @@ const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
 	dotnet: '.NET SDK',
 };
 
+const STORAGE_URL_SLUGS: Record<string, string> = {
+	s3: 's3',
+	sftp: 'sftp',
+	filesystem: 'file-system',
+	'http-get': 'http-get',
+};
+
 const SDK_CONNECTORS = new Set(['javascript', 'android', 'nodejs', 'python', 'go', 'java', 'dotnet']);
 const EVENTS_ONLY_DESTINATIONS = new Set(['mixpanel', 'google-analytics', 'posthog']);
 const USERS_AND_EVENTS_DESTINATIONS = new Set(['klaviyo']);
@@ -98,9 +105,9 @@ const DocumentationLinks = ({
 		const label = isSource
 			? `How to import users from ${connectorLabel}`
 			: `How to export users to ${connectorLabel}`;
-		const basePath = isSource ? 'ingest-users' : 'activate-profiles';
-		const fragment = isSource ? '4-enter-file-settings' : '5-enter-file-settings';
-		const url = `https://www.meergo.com/docs/${basePath}/files?storage=${storageCode}&format=${connectorCode}#${fragment}`;
+		const direction = isSource ? 'sources' : 'destinations';
+		const storageSlug = STORAGE_URL_SLUGS[storageCode] ?? storageCode;
+		const url = `https://www.meergo.com/docs/ref/admin/pipeline-configuration/${direction}-${connectorCode}-on-${storageSlug}`;
 		links = [{ label, url }];
 	} else {
 		links = getConnectionDocLinks(connectorCode, role);
