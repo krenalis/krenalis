@@ -70,8 +70,8 @@ type Collector struct {
 	destinations     *destinations // destination connections used to send events
 	identityWriters  sync.Map      // a map from pipeline identifier to a *identityWriter value
 	workers          struct {
-		cancelConnection map[int]context.CancelFunc // maps connection IDs to their worker cancel functions
 		cancelPipeline   map[int]context.CancelFunc // maps pipeline IDs to their worker cancel functions
+		cancelConnection map[int]context.CancelFunc // maps connection IDs to their worker cancel functions
 		sync.WaitGroup                              // wait group used to wait for all workers to exit
 	}
 	closed atomic.Bool
@@ -118,15 +118,16 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 		}
 		switch connection.Role {
 		case state.Source:
-			// There is one worker per source SDK and webhook pipeline.
+			// There is one worker per active source SDK and webhook pipeline.
 			for _, p := range connection.Pipelines() {
 				if p.Enabled {
 					c.startPipelineWorker(p)
 				}
 			}
 		case state.Destination:
-			// There is one worker per destination app connection that is linked to at least
-			// one source connection with at least one active pipeline sending events.
+			// There is one worker per destination app connection
+			// that has at least one active pipeline sending events
+			// and is linked to at least one source connection.
 			if len(connection.LinkedConnections) == 0 {
 				continue
 			}
@@ -314,7 +315,15 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	}
 	if connection.Role == state.Source {
 		for _, p := range connection.Pipelines() {
-			c.stopPipelineWorker(p)
+			if p.Enabled {
+				c.stopPipelineWorker(p)
+			}
+		}
+		for _, id := range connection.LinkedConnections {
+			destination, _ := c.state.Connection(id)
+			if len(destination.LinkedConnections) == 0 {
+				c.stopConnectionWorker(connection)
+			}
 		}
 		return
 	}
@@ -403,10 +412,6 @@ func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 	if len(connection.LinkedConnections) == 0 || p.Target != state.TargetEvent {
 		return
 	}
-	if p.Enabled {
-		c.startConnectionWorker(connection)
-		return
-	}
 	for _, p := range connection.Pipelines() {
 		if p.Enabled && p.Target == state.TargetEvent {
 			c.startConnectionWorker(connection)
@@ -452,10 +457,7 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	if len(connection.LinkedConnections) == 0 || p.Target != state.TargetEvent {
 		return
 	}
-	if p.Enabled {
-		c.startConnectionWorker(connection)
-		return
-	}
+	// The pipeline may have been enabled and may no longer be.
 	for _, p := range connection.Pipelines() {
 		if p.Enabled && p.Target == state.TargetEvent {
 			c.startConnectionWorker(connection)
@@ -491,16 +493,16 @@ func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter
 	}
 }
 
-// processForwardedEvents reads events from the pipeline and forwards them to
-// the configured destination pipelines.
+// processForwardedEvents reads events from the connection and forwards them to
+// its destination pipelines.
 //
 // It is called in its own goroutine and runs until the context is canceled.
-func (c *Collector) processForwardedEvents(ctx context.Context, destinations *destinations, connection *state.Connection) {
+func (c *Collector) processForwardedEvents(ctx context.Context, destinations *destinations, connection int) {
 	stream, err := c.sc.Stream(ctx)
 	if err != nil {
 		return // ctx has been canceled or c.sc has been closed.
 	}
-	consumer := stream.Consume("connection-"+strconv.Itoa(connection.ID), 1000)
+	consumer := stream.Consume("connection-"+strconv.Itoa(connection), 1000)
 	events := consumer.Events()
 	done := ctx.Done()
 	for {
@@ -509,7 +511,7 @@ func (c *Collector) processForwardedEvents(ctx context.Context, destinations *de
 			if !ok {
 				panic("consumer channel was closed before the worker terminated")
 			}
-			destinations.QueueEvent(connection.ID, event)
+			destinations.QueueEvent(connection, event)
 		case <-done:
 			consumer.Close()
 			return
@@ -837,7 +839,7 @@ func (c *Collector) startConnectionWorker(connection *state.Connection) {
 	ctx, cancel := context.WithCancel(context.Background())
 	c.workers.cancelConnection[connection.ID] = cancel
 	c.workers.Go(func() {
-		c.processForwardedEvents(ctx, c.destinations, connection)
+		c.processForwardedEvents(ctx, c.destinations, connection.ID)
 	})
 }
 
@@ -872,8 +874,8 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 }
 
 // stopConnectionWorker stops the worker associated with the given connection.
-// If no worker exists, it does nothing. Cancellation runs asynchronously in a
-// separate goroutine. It must be called with the state frozen.
+// If no worker exists, it does nothing.
+// It must be called with the state frozen.
 func (c *Collector) stopConnectionWorker(connection *state.Connection) {
 	if cancel, ok := c.workers.cancelConnection[connection.ID]; ok {
 		cancel()
@@ -882,8 +884,8 @@ func (c *Collector) stopConnectionWorker(connection *state.Connection) {
 }
 
 // stopPipelineWorker stops the worker associated with the given pipeline.
-// If no worker exists, it does nothing. Cancellation runs asynchronously in a
-// separate goroutine. It must be called with the state frozen.
+// If no worker exists, it does nothing.
+// It must be called with the state frozen.
 func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 	cancel, ok := c.workers.cancelPipeline[pipeline.ID]
 	if !ok {

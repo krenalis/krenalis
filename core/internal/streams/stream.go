@@ -36,7 +36,9 @@ type Consumer interface {
 // BatchPublisher publishes events in batches.
 type BatchPublisher interface {
 
-	// Publish adds an event to the current batch for the given topics.
+	// Publish adds an event to the current batch for the given topic.
+	// If the topic begins with "connection-", destinations contains the destination
+	// pipelines the event is sent to.
 	Publish(topics []string, event map[string]any, destinations []int) error
 
 	// Done publishes all buffered events.

@@ -489,11 +489,12 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 						if destinations, ok := header["destinations"]; ok {
 							event.Destinations = make([]int, len(destinations))
 							for i, d := range destinations {
-								event.Destinations[i], _ = strconv.Atoi(d)
-								if event.Destinations[i] < 1 {
+								id, _ := strconv.Atoi(d)
+								if id <= 0 {
 									err = fmt.Errorf("invalid event destination: %q", d)
 									return
 								}
+								event.Destinations[i] = id
 							}
 						}
 					}
@@ -575,6 +576,8 @@ func (batch *batch) Done(ctx context.Context) error {
 }
 
 // Publish adds an event to the current batch for the given topic.
+// If the topic begins with "connection-", destinations contains the destination
+// pipelines the event is sent to.
 func (batch *batch) Publish(topics []string, event map[string]any, destinations []int) error {
 	shard := shardOf(event["anonymousId"].(string))
 	data, err := types.Marshal(event, schemas.Event)
@@ -584,11 +587,11 @@ func (batch *batch) Publish(topics []string, event map[string]any, destinations 
 	for _, topic := range topics {
 		var header nats.Header
 		if strings.HasPrefix(topic, "connection-") {
-			s := make([]string, len(destinations))
+			h := make([]string, len(destinations))
 			for i, d := range destinations {
-				s[i] = strconv.Itoa(d)
+				h[i] = strconv.Itoa(d)
 			}
-			header = nats.Header{"destinations": s}
+			header = nats.Header{"destinations": h}
 		}
 		future, err := batch.conn.js.jetStream.PublishMsgAsync(&nats.Msg{
 			Header:  header,
