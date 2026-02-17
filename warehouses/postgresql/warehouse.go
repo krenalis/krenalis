@@ -67,8 +67,8 @@ func New(conf *warehouses.Config) (*PostgreSQL, error) {
 		return nil, warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, warehouses.SettingsErrorf("password length must be in range [1,100]")
+	if n := utf8.RuneCountInString(s.Password); n > 100 {
+		return nil, warehouses.SettingsErrorf("password cannot be longer than 100 characters")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
