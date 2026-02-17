@@ -615,16 +615,12 @@ func TestParseSettings(t *testing.T) {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
-		// Password length.
+		// Empty password.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_PASSWORD", "")
 		_, err = parseEnvSettings()
-		if err == nil {
-			t.Fatalf("expected error for password length, got nil")
-		}
-		want = "invalid MEERGO_DB_PASSWORD: length must be 1..100 characters"
-		if err.Error() != want {
-			t.Fatalf("expected %q, got %q", want, err)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
 		}
 
 		// Database length.
