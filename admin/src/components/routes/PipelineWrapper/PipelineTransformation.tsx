@@ -3342,14 +3342,14 @@ const TransformationProperty = ({
 			languageTypeName = toPythonType(
 				property.type,
 				pipeline.transformation.function.preserveJSON,
-				property.nullable || isImport,
+				property.nullable || (isImport && side === 'output'),
 			);
 			languageTypeLabel = 'Python type';
 		} else {
 			languageTypeName = toJavascriptType(
 				property.type,
 				pipeline.transformation.function.preserveJSON,
-				property.nullable || isImport,
+				property.nullable || (isImport && side === 'output'),
 			);
 			languageTypeLabel = 'JavaScript type';
 		}
