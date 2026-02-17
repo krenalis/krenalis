@@ -147,7 +147,15 @@ const PipelineTable = () => {
 				annotated={true}
 			>
 				<div className='pipeline__destination_table'>
-					<SlInput value={pipeline.tableName} onSlInput={onUpdateTableName} />
+					<SlInput
+						value={pipeline.tableName}
+						onSlInput={onUpdateTableName}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter' && pipeline.tableName !== '') {
+								onConfirmTable();
+							}
+						}}
+					/>
 					<FeedbackButton
 						ref={tableConfirmationButtonRef}
 						variant='success'
