@@ -11,6 +11,10 @@ const PasswordToggle = ({ password }: PasswordToggleInterface) => {
 
 	const onToggle = () => setIsVisible(!isVisible);
 
+	if (!password) {
+		return <p className='password-toggle__empty'>No password set</p>;
+	}
+
 	return (
 		<div className='password-toggle'>
 			<p className='password-toggle__password'>{isVisible ? password : '●'.repeat(password.length)}</p>
