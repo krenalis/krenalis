@@ -207,8 +207,8 @@ func parseEnvSettings() (*Settings, error) {
 	}
 
 	settings.DB.Password = envVars.Get("MEERGO_DB_PASSWORD")
-	if n := utf8.RuneCountInString(settings.DB.Password); n < 1 || n > 100 {
-		return nil, fmt.Errorf("invalid MEERGO_DB_PASSWORD: length must be 1..100 characters")
+	if n := utf8.RuneCountInString(settings.DB.Password); n > 100 {
+		return nil, fmt.Errorf("invalid MEERGO_DB_PASSWORD: length must be a maximum of 100 characters")
 	}
 
 	settings.DB.Database = envVars.Get("MEERGO_DB_DATABASE")
