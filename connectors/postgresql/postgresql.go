@@ -256,8 +256,8 @@ func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 		return connectors.NewInvalidSettingsError("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return connectors.NewInvalidSettingsError("password length must be in range [1,100]")
+	if n := utf8.RuneCountInString(s.Password); n > 100 {
+		return connectors.NewInvalidSettingsError("password must be no longer than 100 characters")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
