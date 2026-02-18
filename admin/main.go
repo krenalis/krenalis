@@ -399,19 +399,19 @@ func build(outDir, vendorDir, entryPoint string, external []string, resolve map[
 		Write:    true,
 	})
 	if result.Errors != nil {
-		var msg string
+		var msg strings.Builder
 		for _, err := range result.Errors {
 			if len(result.Errors) == 1 {
-				msg += " "
+				msg.WriteString(" ")
 			} else {
-				msg += "\n  - "
+				msg.WriteString("\n  - ")
 			}
-			msg += err.Text
+			msg.WriteString(err.Text)
 			if loc := err.Location; loc != nil {
-				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
+				msg.WriteString(fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column))
 			}
 		}
-		return errors.New(msg)
+		return errors.New(msg.String())
 	}
 
 	return nil

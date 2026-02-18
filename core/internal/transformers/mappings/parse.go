@@ -78,22 +78,23 @@ func (p path) String() string {
 	if p.elements == nil {
 		return ""
 	}
-	s := p.elements[0]
+	var s strings.Builder
+	s.WriteString(p.elements[0])
 	for i, name := range p.elements {
 		if i == 0 {
 			continue
 		}
 		dec := p.decorators[i]
 		if dec.indexing() {
-			s += "[" + strconv.Quote(name) + "]"
+			s.WriteString("[" + strconv.Quote(name) + "]")
 		} else {
-			s += "." + name
+			s.WriteString("." + name)
 		}
 		if dec.optional() {
-			s += "?"
+			s.WriteString("?")
 		}
 	}
-	return s
+	return s.String()
 }
 
 // decorators represents the bit flags for the indexing ("x?") and optional

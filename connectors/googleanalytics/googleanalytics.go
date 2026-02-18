@@ -272,11 +272,12 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 			return nil, err
 		}
 		if len(validationResponse.ValidationMessages) > 0 {
-			msg := "the Google Analytics debug server has returned validation messages:\n"
+			var msg strings.Builder
+			msg.WriteString("the Google Analytics debug server has returned validation messages:\n")
 			for _, m := range validationResponse.ValidationMessages {
-				msg += string(m)
+				msg.WriteString(string(m))
 			}
-			return nil, errors.New(msg)
+			return nil, errors.New(msg.String())
 		}
 
 		// Next, build a new request to be returned to Meergo, in which
