@@ -501,9 +501,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		}
 
 		if pp, ok := values["properties"].(map[string]any); ok {
-			for name, value := range pp {
-				properties[name] = value
-			}
+			maps.Copy(properties, pp)
 		}
 
 		if event.Type.ID == "product_purchased" {
