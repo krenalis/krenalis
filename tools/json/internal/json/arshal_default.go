@@ -1403,7 +1403,7 @@ func isLegacyEmpty(v addressableValue) bool {
 // a composite Go type (e.g., an array, slice, struct, map, or interface).
 func canLegacyStringify(t reflect.Type) bool {
 	// Based on encoding/json.typeFields#L1126-L1143@v1.23.0
-	if t.Name() == "" && t.Kind() == reflect.Ptr {
+	if t.Name() == "" && t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	switch t.Kind() {
