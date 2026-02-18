@@ -311,10 +311,7 @@ func (f *flusher[T]) loop(opts flusherOptions, startOperation startOperationFunc
 				if math.IsNaN(sec) || math.IsInf(sec, 0) || sec < 0 {
 					sec = float64(opts.MaxFlushLatency / time.Second)
 				}
-				d := max(time.Duration(sec*float64(time.Second)), opts.MinFlushInterval)
-				if d > opts.MaxFlushLatency {
-					d = opts.MaxFlushLatency
-				}
+				d := min(max(time.Duration(sec*float64(time.Second)), opts.MinFlushInterval), opts.MaxFlushLatency)
 				// Respect max-latency deadline.
 				if !firstBuffered.IsZero() {
 					deadline := firstBuffered.Add(opts.MaxFlushLatency)
