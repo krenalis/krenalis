@@ -102,7 +102,6 @@ func TestValidateHost(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateHost(tc.host)
 			if tc.wantErr && err == nil {

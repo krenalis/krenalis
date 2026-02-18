@@ -81,7 +81,6 @@ func TestValidateConnectorCode(t *testing.T) {
 
 	// Valid.
 	for _, code := range valid {
-		code := code
 		t.Run(fmt.Sprintf("valid_%q", code), func(t *testing.T) {
 			defer func() {
 				if r := recover(); r != nil {
@@ -94,7 +93,6 @@ func TestValidateConnectorCode(t *testing.T) {
 
 	// Invalid.
 	for code, expected := range invalid {
-		code, expected := code, expected
 		t.Run(fmt.Sprintf("invalid_%q", code), func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {

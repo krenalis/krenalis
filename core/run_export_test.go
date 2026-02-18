@@ -101,7 +101,6 @@ func TestGetAttribute(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			got, ok := getAttribute(test.attributes, test.path)
 			if got != test.expected {

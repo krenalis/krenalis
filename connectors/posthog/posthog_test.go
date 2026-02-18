@@ -539,7 +539,6 @@ func TestMakeSessionUUIDv7(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Helper()
 
@@ -620,7 +619,6 @@ func TestMakeSessionUUIDv7DifferentInputs(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := makeSessionUUIDv7(tc.anonymousID, tc.sessionID)
 			if err != nil {
