@@ -51,7 +51,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	const eventProfileEmail = "event-profile@example.com"
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
-		Traits: map[string]interface{}{
+		Traits: map[string]any{
 			"email": eventProfileEmail,
 		},
 		Context: &analytics.Context{
@@ -100,7 +100,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	// warehouse.
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "uT8VT5tx1A",
-		Traits: map[string]interface{}{
+		Traits: map[string]any{
 			"email": eventProfileEmail,
 		},
 	})
@@ -141,7 +141,7 @@ def transform(event: dict) -> dict:
 	// warehouse.
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "Kw5vKdDYBQ",
-		Traits: map[string]interface{}{
+		Traits: map[string]any{
 			"email": eventProfileEmail,
 		},
 	})

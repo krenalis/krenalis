@@ -66,7 +66,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		},
 		IdentityColumn: "identity",
 		Format:         "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]interface{}{
+		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),
@@ -94,7 +94,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		},
 		IdentityColumn: "identity",
 		Format:         "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]interface{}{
+		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),

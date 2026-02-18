@@ -49,7 +49,7 @@ type buffer struct {
 func newBufferPool() *bufferPool {
 	p := &bufferPool{}
 	p.ptrs = sync.Pool{
-		New: func() interface{} { return &buffer{} },
+		New: func() any { return &buffer{} },
 	}
 	return p
 }

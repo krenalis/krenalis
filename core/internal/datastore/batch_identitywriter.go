@@ -26,10 +26,10 @@ var ErrPurgeSkipped = errors.New("purge skipped")
 
 // Identity is an identity
 type Identity struct {
-	ID          string                 // Identifier of the identity; it is empty for anonymous identities.
-	AnonymousID string                 // AnonymousID of identities received via events.
-	Attributes  map[string]interface{} // Attributes. Keys are profile schema's properties.
-	UpdatedAt   time.Time              // Update time in UTC.
+	ID          string         // Identifier of the identity; it is empty for anonymous identities.
+	AnonymousID string         // AnonymousID of identities received via events.
+	Attributes  map[string]any // Attributes. Keys are profile schema's properties.
+	UpdatedAt   time.Time      // Update time in UTC.
 }
 
 // identityKey represents a key in the meergo_identities table.

@@ -489,7 +489,7 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events connectors.Events, pr
 }
 
 // deepClone returns a deep clone of the provided properties.
-func deepClone(properties map[string]interface{}) map[string]interface{} {
+func deepClone(properties map[string]any) map[string]any {
 	bytes, _ := json.Marshal(properties)
 	var clone map[string]any
 	_ = json.Unmarshal(bytes, &clone)
