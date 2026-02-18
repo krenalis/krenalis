@@ -25,11 +25,11 @@ func TestTypes(t *testing.T) {
 		{`smallint`, "", types.Int(16), nil, nil, nil, nil},
 		{`integer`, "", types.Int(32), nil, nil, nil, nil},
 		{`bigint`, "", types.Int(64), nil, nil, nil, nil},
-		{`numeric`, "", types.Decimal(10, 3), nil, pointer("10"), pointer("10"), pointer("3")},
+		{`numeric`, "", types.Decimal(10, 3), nil, new("10"), new("10"), new("3")},
 		{`real`, "", types.Float(32), nil, nil, nil, nil},
 		{`double precision`, "", types.Float(64), nil, nil, nil, nil},
-		{`character varying`, "", types.String().WithMaxLength(20), pointer("20"), nil, nil, nil},
-		{`character`, "", types.String().WithMaxLength(8), pointer("8"), nil, nil, nil},
+		{`character varying`, "", types.String().WithMaxLength(20), new("20"), nil, nil, nil},
+		{`character`, "", types.String().WithMaxLength(8), new("8"), nil, nil, nil},
 		{`text`, "", types.String(), nil, nil, nil, nil},
 		{`timestamp without time zone`, "", types.DateTime(), nil, nil, nil, nil},
 		{`timestamp with time zone`, "", types.DateTime(), nil, nil, nil, nil},
@@ -103,6 +103,8 @@ func TestUnsupportedTypes(t *testing.T) {
 }
 
 // pointer returns a pointer to s.
+//
+//go:fix inline
 func pointer(s string) *string {
-	return &s
+	return new(s)
 }
