@@ -597,9 +597,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							"_updated_at":    time.Now().UTC(),
 							"_run":           1,
 						}
-						for k, v := range profile.attributes {
-							row[k] = v
-						}
+						maps.Copy(row, profile.attributes)
 						rows = append(rows, row)
 					}
 					err = wh.MergeIdentities(ctx, mergeColumns, rows)
