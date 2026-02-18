@@ -11,6 +11,7 @@ import (
 	"iter"
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/meergo/meergo/tools/decimal"
@@ -327,11 +328,11 @@ type Record struct {
 type RecordsError map[int]error
 
 func (err RecordsError) Error() string {
-	var msg string
+	var msg strings.Builder
 	for i, e := range err {
-		msg += fmt.Sprintf("record %d: %v\n", i, e)
+		msg.WriteString(fmt.Sprintf("record %d: %v\n", i, e))
 	}
-	return msg
+	return msg.String()
 }
 
 // Records provides access to a non-empty sequence of records to be created or
@@ -488,11 +489,11 @@ type EventTypeInfo struct {
 type EventsError map[int]error
 
 func (err EventsError) Error() string {
-	var msg string
+	var msg strings.Builder
 	for i, e := range err {
-		msg += fmt.Sprintf("event %d: %v\n", i, e)
+		msg.WriteString(fmt.Sprintf("event %d: %v\n", i, e))
 	}
-	return msg
+	return msg.String()
 }
 
 // Events provides access to a non-empty sequence of events to be sent to an

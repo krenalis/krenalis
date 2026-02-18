@@ -300,34 +300,36 @@ func build(outDir, entryPoint string, plugin api.Plugin) error {
 		Write: true,
 	})
 	if result.Errors != nil {
-		msg := "cannot generate Admin assets when making vendor:"
+		var msg strings.Builder
+		msg.WriteString("cannot generate Admin assets when making vendor:")
 		for _, err := range result.Errors {
 			if len(result.Errors) == 1 {
-				msg += " "
+				msg.WriteString(" ")
 			} else {
-				msg += "\n  - "
+				msg.WriteString("\n  - ")
 			}
-			msg += err.Text
+			msg.WriteString(err.Text)
 			if loc := err.Location; loc != nil {
-				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
+				msg.WriteString(fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column))
 			}
 		}
-		return errors.New(msg)
+		return errors.New(msg.String())
 	}
 	if result.Warnings != nil {
-		msg := "cannot generate Admin's assets when making vendor:"
+		var msg strings.Builder
+		msg.WriteString("cannot generate Admin's assets when making vendor:")
 		for _, err := range result.Warnings {
 			if len(result.Warnings) == 1 {
-				msg += " "
+				msg.WriteString(" ")
 			} else {
-				msg += "\n  - "
+				msg.WriteString("\n  - ")
 			}
-			msg += err.Text
+			msg.WriteString(err.Text)
 			if loc := err.Location; loc != nil {
-				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
+				msg.WriteString(fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column))
 			}
 		}
-		return errors.New(msg)
+		return errors.New(msg.String())
 	}
 	return nil
 }

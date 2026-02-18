@@ -623,15 +623,16 @@ type mailchimpError struct {
 }
 
 func (err *mailchimpError) Error() string {
-	s := err.Title
+	var s strings.Builder
+	s.WriteString(err.Title)
 	if len(err.Errors) == 0 {
-		s += " " + err.Detail
+		s.WriteString(" " + err.Detail)
 	} else {
 		for _, e := range err.Errors {
-			s += "\n\t" + e.Field + ": " + e.Message
+			s.WriteString("\n\t" + e.Field + ": " + e.Message)
 		}
 	}
-	return s
+	return s.String()
 }
 
 // call calls the Mailchimp API.

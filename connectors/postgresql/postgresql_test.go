@@ -164,15 +164,16 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	// Execute the query.
-	query := "SELECT "
+	var query strings.Builder
+	query.WriteString("SELECT ")
 	for i, c := range table.Columns {
 		if i > 0 {
-			query += ", "
+			query.WriteString(", ")
 		}
-		query += c.Name
+		query.WriteString(c.Name)
 	}
-	query += " FROM " + table.Name
-	rows, columns, err := connector.Query(context.Background(), query)
+	query.WriteString(" FROM " + table.Name)
+	rows, columns, err := connector.Query(context.Background(), query.String())
 	if err != nil {
 		t.Fatalf("query execution is failed: %s", err)
 	}
