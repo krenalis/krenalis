@@ -693,7 +693,6 @@ func TestDecoderContextIPHandling(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1110,7 +1109,6 @@ func TestParseRemoteAddr(t *testing.T) {
 	}
 
 	for _, test := range valid {
-		test := test
 		t.Run("valid/"+test.in, func(t *testing.T) {
 			t.Parallel()
 
@@ -1145,7 +1143,6 @@ func TestParseRemoteAddr(t *testing.T) {
 	}
 
 	for _, in := range invalid {
-		in := in
 		t.Run("invalid/"+in, func(t *testing.T) {
 			t.Parallel()
 

@@ -359,7 +359,6 @@ func TestEncodePropertiesAllocations(t *testing.T) {
 	}
 
 	for name, attributes := range cases {
-		attributes := attributes
 		t.Run(name, func(t *testing.T) {
 			allocs := testing.AllocsPerRun(100, func() {
 				bb := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
