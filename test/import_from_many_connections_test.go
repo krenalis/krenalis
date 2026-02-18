@@ -171,7 +171,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		c.SendEvent(javaScriptKey, analytics.Identify{
 			UserId:      "f4ca124298",
 			AnonymousId: "5ce0fd49-199a-47e7-b0c8-498f5144f0ee",
-			Traits: map[string]interface{}{
+			Traits: map[string]any{
 				"email": "kbuessen0@example.com",
 			},
 		})

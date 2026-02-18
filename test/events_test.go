@@ -88,7 +88,7 @@ func TestEvents(t *testing.T) {
 	// Send an identity event. More than importing an event, this should create an identity.
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
-		Traits: map[string]interface{}{
+		Traits: map[string]any{
 			"email": eventProfileEmail,
 		},
 	})
