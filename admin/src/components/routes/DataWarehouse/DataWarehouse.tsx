@@ -155,7 +155,7 @@ const WarehouseInfo = ({
 		} else {
 			value = warehouseSettings[k];
 		}
-		const label = k.charAt(0).toUpperCase() + k.slice(1);
+		const label = k[0].toUpperCase() + k.slice(1);
 		const row: GridRow = { cells: [<span style={{ fontWeight: '600' }}>{label}</span>, value] };
 		rows.push(row);
 	}
@@ -168,7 +168,7 @@ const WarehouseInfo = ({
 		} else {
 			value = warehouseMCPSettings[k];
 		}
-		const label = k.charAt(0).toUpperCase() + k.slice(1);
+		const label = k[0].toUpperCase() + k.slice(1);
 		const row: GridRow = { cells: [<span style={{ fontWeight: '600' }}>{label}</span>, value] };
 		mcpRows.push(row);
 	}
