@@ -20,7 +20,7 @@ type Properties struct {
 func (pp Properties) All() iter.Seq2[int, Property] {
 	n := len(pp.properties)
 	return func(yield func(i int, property Property) bool) {
-		for i := 0; i < n; i++ {
+		for i := range n {
 			if !yield(i, pp.properties[i]) {
 				return
 			}
@@ -174,7 +174,7 @@ func (pp Properties) Len() int {
 func (pp Properties) Names() []string {
 	properties := pp.properties
 	names := make([]string, len(properties))
-	for i := 0; i < len(properties); i++ {
+	for i := range properties {
 		names[i] = properties[i].Name
 	}
 	return names
@@ -192,7 +192,7 @@ func (pp Properties) Slice() []Property {
 func (pp Properties) SortedNames() []string {
 	properties := pp.properties
 	names := make([]string, len(properties))
-	for i := 0; i < len(properties); i++ {
+	for i := range properties {
 		names[i] = properties[i].Name
 	}
 	slices.Sort(names)
@@ -239,7 +239,7 @@ func (pp Properties) walk(traverseArrayMap bool) iter.Seq2[string, Property] {
 		}
 		n := len(pp.properties)
 		entries := make([]entry, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			entries[i].prop = &pp.properties[n-1-i]
 		}
 		for len(entries) > 0 {

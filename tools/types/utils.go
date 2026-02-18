@@ -138,7 +138,7 @@ func Filter(t Type, f func(p Property) bool) Type {
 	var ps []Property
 	pp := t.vl.(Properties).properties
 	all := true
-	for i := 0; i < len(pp); i++ {
+	for i := range pp {
 		if f(pp[i]) {
 			if !all {
 				ps = append(ps, pp[i])
@@ -268,7 +268,7 @@ func PruneAtPath(t Type, path string) (Type, error) {
 func asRole(t Type, role Role) (Type, bool) {
 	pp := t.vl.(Properties).properties
 	var ppc []Property
-	for i := 0; i < len(pp); i++ {
+	for i := range pp {
 		if pp[i].Type.Kind() == ObjectKind {
 			if t, ok := asRole(pp[i].Type, role); ok {
 				if ppc == nil {
@@ -323,7 +323,7 @@ func baseChar(r rune) rune {
 func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
 	var ps []Property
 	unchanged := true
-	for i := 0; i < len(pp); i++ {
+	for i := range pp {
 		if t := &pp[i].Type; t.kind == ObjectKind {
 			if properties, ok := prune(t.vl.(Properties).properties, path+pp[i].Name+".", f); ok {
 				// Almost one property of the object has been pruned.

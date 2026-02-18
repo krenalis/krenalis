@@ -160,11 +160,11 @@ func TestRateLimiter_ConcurrentAccess_SuccessOnly(t *testing.T) {
 
 	ctx := context.Background()
 
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				err := l.Wait(ctx)
 				if err != nil {
 					errCh <- fmt.Errorf("unexpected error: %s", err)
@@ -189,7 +189,7 @@ func TestRateLimiter_ErrorRateScaling(t *testing.T) {
 	n := 50
 
 	// Simulate a burst of failures to increase error rate quickly.
-	for i := 0; i < n; i++ {
+	for range n {
 		l.errorRate.Failure()
 	}
 
@@ -217,7 +217,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 	var maxRunning int32
 	var wg sync.WaitGroup
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -253,7 +253,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 func TestRateLimiter_TokenRefill(t *testing.T) {
 	l := newRateLimiter(2, 2, 0)
 	ctx := context.Background()
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		if err := l.Wait(ctx); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -278,7 +278,7 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 	ctx := context.Background()
 
 	// Bring to slowdown state
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		if err := l.Wait(ctx); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

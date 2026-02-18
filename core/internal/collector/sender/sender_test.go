@@ -345,7 +345,7 @@ func Test_Sender_MinQueuedEvents(t *testing.T) {
 		s := New(app, nil)
 
 		// Send events.
-		for i := 0; i < total; i++ {
+		for i := range total {
 			s.SendEvent(createTestEvent(s, i))
 		}
 

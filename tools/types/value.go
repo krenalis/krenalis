@@ -580,7 +580,7 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 		case ArrayKind:
 			b = append(b, '[')
 			n := rv.Len()
-			for i := 0; i < n; i++ {
+			for i := range n {
 				if i > 0 {
 					b = append(b, ',')
 				}

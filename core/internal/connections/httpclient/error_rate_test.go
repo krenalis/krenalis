@@ -59,7 +59,7 @@ func TestErrorRate_ConvergesToLimits(t *testing.T) {
 
 	// Converge towards 1 (all failures)
 	er.Set(0)
-	for i := 0; i < maxSteps; i++ {
+	for range maxSteps {
 		// Simulate the passage of at least tau seconds between updates
 		er.lastUpdate = time.Now().Add(-time.Duration(tau) * time.Second)
 		er.Failure()
@@ -73,7 +73,7 @@ func TestErrorRate_ConvergesToLimits(t *testing.T) {
 
 	// Converge towards 0 (all successes)
 	er.Set(1)
-	for i := 0; i < maxSteps; i++ {
+	for range maxSteps {
 		er.lastUpdate = time.Now().Add(-time.Duration(tau) * time.Second)
 		er.Success()
 		if er.rate < tol {

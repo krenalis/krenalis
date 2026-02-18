@@ -166,7 +166,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 				n, name, typ.MinElements(), typ.MaxElements())
 		}
 		t := typ.Elem()
-		for i := 0; i < n; i++ {
+		for i := range n {
 			v[i], err = s.normalize(name, t, v[i])
 			if err != nil {
 				return nil, err

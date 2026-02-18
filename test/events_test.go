@@ -100,7 +100,7 @@ func TestEvents(t *testing.T) {
 	})
 
 	// Send 3 events.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		c.SendEvent(javaScriptKey, analytics.Track{
 			UserId:      "f4ca124298",
 			AnonymousId: "baeeb556-96f3-4631-a22d-928431af8bf6",

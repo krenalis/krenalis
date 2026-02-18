@@ -186,7 +186,7 @@ func (c *copyForDeleteFrom) Next() bool {
 
 func (c *copyForDeleteFrom) Values() ([]any, error) {
 	n := len(c.row) - 1
-	for i := 0; i < n; i++ {
+	for i := range n {
 		c.row[i] = c.keys[i]
 	}
 	c.keys = c.keys[n:]

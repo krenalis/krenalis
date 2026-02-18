@@ -298,12 +298,12 @@ func TestEncodePropertiesAllocations(t *testing.T) {
 
 	buildRichPayload := func() map[string]any {
 		metadata := make(map[string]any, 10)
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			metadata[fmt.Sprintf("key_%02d", i)] = fmt.Sprintf("value-%d", i)
 		}
 
 		lineItems := make([]any, 0, 5)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			lineItems = append(lineItems, map[string]any{
 				"product": fmt.Sprintf("prod_%d", i),
 				"price":   1000 + i,

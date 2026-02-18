@@ -174,7 +174,7 @@ func (dp *destinationPipeline) transform() {
 	dp.queue.mu.Unlock()
 
 	records := make([]transformers.Record, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		records[i].Purpose = transformers.Create
 		records[i].Attributes = events[i].streamEvent.Attributes
 	}
@@ -182,7 +182,7 @@ func (dp *destinationPipeline) transform() {
 	// Transform the events.
 	err := dp.transformer.Transform(dp.queue.close.ctx, records)
 	if err != nil {
-		for i := 0; i < n; i++ {
+		for i := range n {
 			dp.queue.sender.DiscardEvent(events[i].senderEvent)
 			events[i].streamEvent.Ack()
 		}

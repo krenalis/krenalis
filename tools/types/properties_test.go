@@ -350,7 +350,7 @@ func Test_Properties_Names(t *testing.T) {
 	if len(got) != len(expected) {
 		t.Fatalf("expected %d names, got %d", len(expected), len(got))
 	}
-	for i := 0; i < len(expected); i++ {
+	for i := range expected {
 		if got[i] != expected[i] {
 			t.Fatalf("expected %q at index %d, got %q", expected[i], i, got[i])
 		}
@@ -361,7 +361,7 @@ func Test_Properties_Names(t *testing.T) {
 	if len(gotSorted) != len(sortedExpected) {
 		t.Fatalf("expected %d sorted names, got %d", len(sortedExpected), len(gotSorted))
 	}
-	for i := 0; i < len(sortedExpected); i++ {
+	for i := range sortedExpected {
 		if gotSorted[i] != sortedExpected[i] {
 			t.Fatalf("expected sorted name %q at index %d, got %q", sortedExpected[i], i, gotSorted[i])
 		}

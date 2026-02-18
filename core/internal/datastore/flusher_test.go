@@ -457,7 +457,7 @@ func TestFlusherMetricsAggregation(t *testing.T) {
 
 	receiveWithin(t, flushCh, 1*time.Second, "flush")
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		receiveWithin(t, finalizeCh, 1*time.Second, "metrics finalize")
 	}
 

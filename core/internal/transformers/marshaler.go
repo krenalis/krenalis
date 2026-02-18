@@ -162,7 +162,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		elem := t.Elem()
 		n := len(v)
 		var err error
-		for i := 0; i < n; i++ {
+		for i := range n {
 			if i > 0 {
 				b = append(b, ',')
 			}
@@ -327,7 +327,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		elem := t.Elem()
 		var err error
 		n := len(v)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			if i > 0 {
 				b = append(b, ',')
 			}

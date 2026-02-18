@@ -66,7 +66,7 @@ func BenchmarkAllocWithUse(b *testing.B) {
 
 // BenchmarkPoolWithUse measures the performance of reusing buffers from the pool.
 func BenchmarkPoolWithUse(b *testing.B) {
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		Put(Get(4096))
 	}
 

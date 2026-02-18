@@ -81,7 +81,7 @@ func ValidFunctionName(name string) bool {
 		return false
 	}
 	n := len(name)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		c := name[i]
 		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || i > 0 && (c == '-' || c >= '0' && c <= '9') {
 			continue
