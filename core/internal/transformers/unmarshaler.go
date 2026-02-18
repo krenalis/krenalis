@@ -390,10 +390,8 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		}
 		if t.Unique() {
 			for i, elem := range arr {
-				for _, item2 := range arr[i+1:] {
-					if elem == item2 {
-						return nil, newRecordValidationError("", "contains a duplicated value")
-					}
+				if slices.Contains(arr[i+1:], elem) {
+					return nil, newRecordValidationError("", "contains a duplicated value")
 				}
 			}
 		}

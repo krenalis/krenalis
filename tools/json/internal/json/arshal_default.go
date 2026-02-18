@@ -1728,11 +1728,8 @@ func makeInterfaceArshaler(t reflect.Type) *arshaler {
 
 	var fncs arshaler
 	var whichMarshaler reflect.Type
-	for _, iface := range allMarshalerTypes {
-		if t.Implements(iface) {
-			whichMarshaler = t
-			break
-		}
+	if slices.ContainsFunc(allMarshalerTypes, t.Implements) {
+		whichMarshaler = t
 	}
 	fncs.marshal = func(enc *jsontext.Encoder, va addressableValue, mo *jsonopts.Struct) error {
 		xe := export.Encoder(enc)
