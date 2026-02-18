@@ -683,10 +683,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			if dt.Unique() {
 				for i, it := range d {
-					for _, it2 := range d[i:] {
-						if it == it2 {
-							return v, errInvalidConversion
-						}
+					if slices.Contains(d[i:], it) {
+						return v, errInvalidConversion
 					}
 				}
 			}
@@ -713,10 +711,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			if !st.Unique() && dt.Unique() {
 				for i, item := range d {
-					for _, item2 := range d[i:] {
-						if item == item2 {
-							return v, errInvalidConversion
-						}
+					if slices.Contains(d[i:], item) {
+						return v, errInvalidConversion
 					}
 				}
 			}

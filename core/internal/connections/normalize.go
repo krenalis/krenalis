@@ -733,10 +733,8 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		if typ.Unique() {
 			for i, e := range a {
-				for _, e2 := range a[i:] {
-					if e == e2 {
-						return nil, inputValidationErrorf(name, "contains the duplicated value %v", e)
-					}
+				if slices.Contains(a[i:], e) {
+					return nil, inputValidationErrorf(name, "contains the duplicated value %v", e)
 				}
 			}
 		}
