@@ -303,7 +303,7 @@ const hex = "0123456789ABCDEF" // uppercase hex digits for percent-encoding
 // writes the value to the buffer.
 func (bb *BodyBuffer) QueryEscape(s []byte) {
 	start := 0
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		c := s[i]
 		switch {
 		case (c >= 'A' && c <= 'Z') ||

@@ -422,11 +422,11 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 		c.buf.WriteByte(',')
 		c.buf.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		c.buf.WriteByte(',')
-		for j := 0; j < 6; j++ {
+		for j := range 6 {
 			c.buf.WriteString(strconv.Itoa(m.passed[j]))
 			c.buf.WriteByte(',')
 		}
-		for j := 0; j < 6; j++ {
+		for j := range 6 {
 			c.buf.WriteString(strconv.Itoa(m.failed[j]))
 			if j != 5 {
 				c.buf.WriteByte(',')

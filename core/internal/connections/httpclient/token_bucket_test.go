@@ -27,7 +27,7 @@ func TestTokenBucket_BasicUsage(t *testing.T) {
 	tb := newTokenBucket(capacity, refill)
 
 	// Drain the bucket completely
-	for i := 0; i < capacity; i++ {
+	for range capacity {
 		if err := tb.Take(context.Background()); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -68,7 +68,7 @@ func TestTokenBucket_Capacity(t *testing.T) {
 	tb := newTokenBucket(capacity, refill)
 
 	// Consume all available tokens
-	for i := 0; i < capacity; i++ {
+	for range capacity {
 		_ = tb.Take(context.Background())
 	}
 
@@ -189,7 +189,7 @@ func TestTokenBucket_ConcurrentTake(t *testing.T) {
 	var wg sync.WaitGroup
 	const n = 10
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		go func() {
 			defer wg.Done()
 			err := tb.Take(context.Background())

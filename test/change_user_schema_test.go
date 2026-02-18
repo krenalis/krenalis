@@ -108,7 +108,7 @@ func TestChangeProfileSchema(t *testing.T) {
 			continue
 		case "android":
 			props := p.Type.Properties().Slice()
-			for i := 0; i < len(props); i++ {
+			for i := range props {
 				if props[i].Name == "id" {
 					props[i].Name = "identifier"
 					break

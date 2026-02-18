@@ -360,7 +360,7 @@ func (database *Database) Writer(ctx context.Context, pipeline *state.Pipeline, 
 // or an invalid type but no issue, it returns an error.
 func columnsIssues(columns []connectors.Column) ([]string, error) {
 	var n int
-	for i := 0; i < len(columns); i++ {
+	for i := range columns {
 		valid := columns[i].Type.Valid()
 		if columns[i].Issue == "" {
 			if !valid {
@@ -377,7 +377,7 @@ func columnsIssues(columns []connectors.Column) ([]string, error) {
 	}
 	issues := make([]string, n)
 	j := 0
-	for i := 0; i < len(columns); i++ {
+	for i := range columns {
 		if columns[i].Issue == "" {
 			continue
 		}
@@ -405,7 +405,7 @@ func columnsOfType(t types.Type) []connectors.Column {
 // it returns a nil slice.
 func columnsProperties(columns []connectors.Column, role state.Role) []types.Property {
 	var n int // number of valid columns to return
-	for i := 0; i < len(columns); i++ {
+	for i := range columns {
 		if columns[i].Type.Valid() && (role == state.Source || columns[i].Writable) {
 			n++
 		}
@@ -415,7 +415,7 @@ func columnsProperties(columns []connectors.Column, role state.Role) []types.Pro
 	}
 	properties := make([]types.Property, n)
 	j := 0
-	for i := 0; i < len(columns); i++ {
+	for i := range columns {
 		if !columns[i].Type.Valid() {
 			continue
 		}

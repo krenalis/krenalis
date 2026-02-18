@@ -341,7 +341,7 @@ func TestValidateProperty(t *testing.T) {
 
 func genManyElems(n int) string {
 	var s strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i > 0 {
 			s.WriteByte(',')
 		}
@@ -352,7 +352,7 @@ func genManyElems(n int) string {
 
 func buildDeepArray(depth int) string {
 	s := "0"
-	for i := 0; i < depth; i++ {
+	for range depth {
 		s = "[" + s + "]"
 	}
 	return s
@@ -360,7 +360,7 @@ func buildDeepArray(depth int) string {
 
 func buildDeepObject(depth int) string {
 	s := "0"
-	for i := 0; i < depth; i++ {
+	for range depth {
 		s = `{"a":` + s + `}`
 	}
 	return s
@@ -368,7 +368,7 @@ func buildDeepObject(depth int) string {
 
 func buildMixedDepth(depth int) string {
 	s := "0"
-	for i := 0; i < depth; i++ {
+	for i := range depth {
 		if i%2 == 0 {
 			s = `{"a":` + s + `}`
 		} else {

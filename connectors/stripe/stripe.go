@@ -442,7 +442,7 @@ func encodeAttributes(dst *connectors.BodyBuffer, attributes map[string]any) {
 			n := strconv.AppendInt(buf[:0], int64(v), 10)
 			dst.QueryEscape(n)
 		case []any:
-			for i := 0; i < len(v); i++ {
+			for i := range v {
 				if depth == len(path) {
 					panic("stripe: maximum nesting exceeded")
 				}

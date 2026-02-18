@@ -724,7 +724,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		a := make([]any, n)
 		t := typ.Elem()
-		for i := 0; i < n; i++ {
+		for i := range n {
 			v := rv.Index(i).Interface()
 			a[i], err = normalize(name, t, v, false, layouts)
 			if err != nil {

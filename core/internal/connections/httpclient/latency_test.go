@@ -48,7 +48,7 @@ func TestLatencyAvg_Converges(t *testing.T) {
 	const tol = 5 * time.Millisecond
 	const maxSteps = 1000
 
-	for i := 0; i < maxSteps; i++ {
+	for range maxSteps {
 		l.lastUpdate = time.Now().Add(-time.Duration(tauLatency) * time.Second)
 		l.Observe(target)
 		if absDuration(l.latency-target) < tol {

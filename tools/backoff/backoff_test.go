@@ -70,7 +70,7 @@ func Test_AfterFunc_Context(t *testing.T) {
 	c := make(chan struct{})
 
 	cap := 2 * time.Second
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		bo := New(1)
 		bo.SetCap(cap)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Duration(i)*time.Millisecond)
@@ -206,7 +206,7 @@ func Test_Next(t *testing.T) {
 // Test_Next_Context verifies Next exits when the context is done.
 func Test_Next_Context(t *testing.T) {
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		bo := New(1)
 		bo.SetCap(2 * time.Second)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Duration(i)*time.Millisecond)
