@@ -285,10 +285,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updat
 		path += "batch/read"
 	} else {
 		propertyName := "lastmodifieddate"
-		unix := updatedAt.UnixMilli()
-		if unix < 0 {
-			unix = 0
-		}
+		unix := max(updatedAt.UnixMilli(), 0)
 		bb.WriteString(`"filterGroups":[{"filters":[{"value":"`)
 		bb.WriteString(strconv.FormatInt(unix, 10))
 		bb.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +

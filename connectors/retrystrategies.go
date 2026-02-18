@@ -45,10 +45,7 @@ func HeaderStrategy(reason FailureReason, header string, parse func(s string) (t
 		if parse == nil {
 			// Some servers might return a decimal value instead of an integer value.
 			if seconds, err := strconv.ParseFloat(s, 64); err == nil {
-				d := time.Duration(seconds * float64(time.Second))
-				if d < 0 {
-					d = 0
-				}
+				d := max(time.Duration(seconds*float64(time.Second)), 0)
 				return reason, d
 			}
 			date, err := time.Parse(time.RFC1123, s)

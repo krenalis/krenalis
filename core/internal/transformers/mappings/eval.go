@@ -553,10 +553,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v1 == nil {
 			return nil, types.String(), nil
 		}
-		start := v1.(int)
-		if start < 1 {
-			start = 1
-		}
+		start := max(v1.(int), 1)
 		length := -1
 		if len(p.args) == 3 {
 			v2, vt2, err := eval(p.args[2], source, attributes)

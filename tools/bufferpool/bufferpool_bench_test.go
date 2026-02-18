@@ -42,10 +42,7 @@ func sampleSize(i int) int {
 
 // fillBuffer appends bytes to the buffer up to a percentage of its capacity.
 func fillBuffer(b []byte, percent int) []byte {
-	n := cap(b) * percent / 100
-	if n > cap(b) {
-		n = cap(b)
-	}
+	n := min(cap(b)*percent/100, cap(b))
 	for i := 0; i < n; i += 64 {
 		b = append(b, byte(i%256))
 	}
