@@ -161,9 +161,7 @@ func TestRateLimiter_ConcurrentAccess_SuccessOnly(t *testing.T) {
 	ctx := context.Background()
 
 	for range 4 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range 100 {
 				err := l.Wait(ctx)
 				if err != nil {
@@ -172,7 +170,7 @@ func TestRateLimiter_ConcurrentAccess_SuccessOnly(t *testing.T) {
 				}
 				l.OnSuccess(0)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -218,9 +216,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start // synchronize start
 			err := l.Wait(context.Background())
 			if err != nil {
@@ -240,7 +236,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 			time.Sleep(10 * time.Millisecond)
 			atomic.AddInt32(&running, -1)
 			l.OnSuccess(0)
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
