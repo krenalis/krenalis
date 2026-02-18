@@ -208,10 +208,7 @@ func (bo *Backoff) setWaitTime() {
 
 	// Base 0 degenerates to a fixed 1ms wait.
 	if bo.base == 0 {
-		bo.waitTime = time.Millisecond
-		if bo.waitTime > capDuration {
-			bo.waitTime = capDuration
-		}
+		bo.waitTime = min(time.Millisecond, capDuration)
 		return
 	}
 
@@ -233,8 +230,5 @@ func (bo *Backoff) setWaitTime() {
 		maxMs = capMs
 	}
 
-	bo.waitTime = time.Duration(1+randFloat64()*(maxMs-1)) * time.Millisecond
-	if bo.waitTime > capDuration {
-		bo.waitTime = capDuration
-	}
+	bo.waitTime = min(time.Duration(1+randFloat64()*(maxMs-1))*time.Millisecond, capDuration)
 }
