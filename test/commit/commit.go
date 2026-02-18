@@ -55,6 +55,17 @@ func main() {
 		NewCmd("go", "mod", "tidy").InDir(repo, module).Run()
 	}
 
+	// Go-fix modules.
+	fmt.Println("Go-fixing modules")
+	for _, module := range modules {
+		// Call the command 3 times, because some fixes are applied in
+		// subsequent calls. 3 is a reasonable number to most likely perform all
+		// the necessary fixes.
+		for range 3 {
+			NewCmd("go", "fix", "./...").InDir(repo, module).Run()
+		}
+	}
+
 	// Format modules.
 	fmt.Println("Format modules")
 	for _, module := range modules {
