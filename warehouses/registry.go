@@ -35,7 +35,7 @@ func Register[T Warehouse](platform Platform, new NewFunc[T]) {
 		panic("meergo/warehouses: new function is nil for warehouse platform " + platform.Name)
 	}
 	platform.newFunc = reflect.ValueOf(new)
-	platform.ct = reflect.TypeOf((*T)(nil)).Elem()
+	platform.ct = reflect.TypeFor[T]()
 	registry.Lock()
 	defer registry.Unlock()
 	if _, dup := registry.platforms[platform.Name]; dup {

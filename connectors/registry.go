@@ -82,7 +82,7 @@ func RegisterApplication[T any](app ApplicationSpec, new ApplicationNewFunc[T]) 
 		panic("meergo/connectors: new function is nil for connector " + app.Code)
 	}
 	app.newFunc = reflect.ValueOf(new)
-	app.ct = reflect.TypeOf((*T)(nil)).Elem()
+	app.ct = reflect.TypeFor[T]()
 	validateApplicationConnector(app)
 	registry.Lock()
 	defer registry.Unlock()
@@ -101,7 +101,7 @@ func RegisterDatabase[T any](database DatabaseSpec, new DatabaseNewFunc[T]) {
 		panic("meergo/connectors: new function is nil for connector " + database.Code)
 	}
 	database.newFunc = reflect.ValueOf(new)
-	database.ct = reflect.TypeOf((*T)(nil)).Elem()
+	database.ct = reflect.TypeFor[T]()
 	validateDatabaseConnector(database)
 	registry.Lock()
 	defer registry.Unlock()
@@ -119,7 +119,7 @@ func RegisterFile[T any](file FileSpec, new FileNewFunc[T]) {
 		panic("meergo/connectors: new function is nil for connector " + file.Code)
 	}
 	file.newFunc = reflect.ValueOf(new)
-	file.ct = reflect.TypeOf((*T)(nil)).Elem()
+	file.ct = reflect.TypeFor[T]()
 	validateFileConnector(file)
 	registry.Lock()
 	defer registry.Unlock()
@@ -138,7 +138,7 @@ func RegisterFileStorage[T any](storage FileStorageSpec, new FileStorageNewFunc[
 		panic("meergo/connectors: new function is nil for connector " + storage.Code)
 	}
 	storage.newFunc = reflect.ValueOf(new)
-	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
+	storage.ct = reflect.TypeFor[T]()
 	validateFileStorageConnector(storage)
 	registry.Lock()
 	defer registry.Unlock()
@@ -157,7 +157,7 @@ func RegisterMessageBroker[T any](broker MessageBrokerSpec, new MessageBrokerNew
 		panic("meergo/connectors: new function is nil for connector " + broker.Code)
 	}
 	broker.newFunc = reflect.ValueOf(new)
-	broker.ct = reflect.TypeOf((*T)(nil)).Elem()
+	broker.ct = reflect.TypeFor[T]()
 	validateMessageBrokerConnector(broker)
 	registry.Lock()
 	defer registry.Unlock()
@@ -176,7 +176,7 @@ func RegisterSDK[T any](sdk SDKSpec, new SDKNewFunc[T]) {
 		panic("meergo/connectors: new function is nil for connector " + sdk.Code)
 	}
 	sdk.newFunc = reflect.ValueOf(new)
-	sdk.ct = reflect.TypeOf((*T)(nil)).Elem()
+	sdk.ct = reflect.TypeFor[T]()
 	validateSDKConnector(sdk)
 	registry.Lock()
 	defer registry.Unlock()
@@ -195,7 +195,7 @@ func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 		panic("meergo/connectors: new function is nil for connector " + webhook.Code)
 	}
 	webhook.newFunc = reflect.ValueOf(new)
-	webhook.ct = reflect.TypeOf((*T)(nil)).Elem()
+	webhook.ct = reflect.TypeFor[T]()
 	validateWebhookConnector(webhook)
 	registry.Lock()
 	defer registry.Unlock()
