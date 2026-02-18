@@ -364,8 +364,8 @@ func (e *SemanticError) Error() string {
 			// if the struct happens to include an unexported field.
 			typeString = e.GoType.Kind().String()
 			if e.GoType.Kind() == reflect.Struct && e.GoType.Name() == "" {
-				for i := range e.GoType.NumField() {
-					if pkgPath := e.GoType.Field(i).PkgPath; pkgPath != "" {
+				for field := range e.GoType.Fields() {
+					if pkgPath := field.PkgPath; pkgPath != "" {
 						typeString = pkgPath[strings.LastIndexByte(pkgPath, '/')+len("/"):] + ".struct"
 						break
 					}
