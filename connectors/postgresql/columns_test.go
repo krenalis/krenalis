@@ -101,10 +101,3 @@ func TestUnsupportedTypes(t *testing.T) {
 		})
 	}
 }
-
-// pointer returns a pointer to s.
-//
-//go:fix inline
-func pointer(s string) *string {
-	return new(s)
-}
