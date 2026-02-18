@@ -11,7 +11,7 @@ const PasswordToggle = ({ password }: PasswordToggleInterface) => {
 
 	const onToggle = () => setIsVisible(!isVisible);
 
-	if (!password) {
+	if (password === '') {
 		return <p className='password-toggle__empty'>No password set</p>;
 	}
 
