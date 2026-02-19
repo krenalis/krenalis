@@ -574,7 +574,7 @@ func NewNonInitializableError(err error) error {
 }
 
 func (err *NonInitializableError) Error() string {
-	return fmt.Sprintf("data warehouse is not initializable: %s", err.Err)
+	return fmt.Sprintf("cannot initialize the data warehouse: %s", err.Err)
 }
 
 // SettingsError represents an error in the data warehouse settings.

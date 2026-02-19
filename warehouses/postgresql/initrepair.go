@@ -61,7 +61,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 	// In addition to the names of known objects, which must be printed in the
 	// error in a certain order, it also adds any additional objects returned by
 	// the DB query.
-	allErrObjects := make([]string, 0, len(count))
+	allErrObjects := make([]string, len(sortedErrObjects))
 	copy(allErrObjects, sortedErrObjects)
 	for _, k := range slices.Sorted(maps.Keys(count)) {
 		if !slices.Contains(allErrObjects, k) {
@@ -69,7 +69,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		}
 	}
 
-	// Populate 'errors' to return an error like: «database is not empty (it
+	// Populate 'errors' to return an error like: «the database is not empty (it
 	// contains 16 tables, 4 indexes, 1 type, 5 views)».
 	var errors []string
 	for _, obj := range allErrObjects {
@@ -89,8 +89,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		}
 	}
 	if errors != nil {
-		slices.Sort(errors)
-		err := fmt.Errorf("database is not empty (it contains %s)", strings.Join(errors, ", "))
+		err := fmt.Errorf("the database is not empty (contains %s)", strings.Join(errors, ", "))
 		return warehouses.NewNonInitializableError(err)
 	}
 	return nil
