@@ -3,6 +3,7 @@ import './GridCell.css';
 import { GridCell as GridCellInterface } from '../Grid.types';
 import toJSDate from '../../../../utils/toJSDate';
 import JSONbig from 'json-bigint';
+import { RelativeTime } from '../../RelativeTime/RelativeTime';
 
 interface GridCellProps {
 	cell: GridCellInterface;
@@ -22,7 +23,7 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 		case 'datetime':
 			if (cell.value != null) {
 				const date = toJSDate(cell.value as string);
-				value = date.toLocaleString();
+				value = <RelativeTime date={date} />;
 			}
 			break;
 		case 'date':
