@@ -26,3 +26,8 @@
 .toast::part(close-button__base) {
 	color: var(--text-onaccent);
 }
+
+.toast::part(close-button) {
+	align-self: start;
+	padding-top: 1.25rem;
+}
