@@ -60,3 +60,15 @@
 	align-items: center;
 	flex-flow: wrap;
 }
+
+.general-settings__grid-alert-workspace-name {
+	font-family: var(--monospace-fonts);
+	background-color: var(--sl-color-neutral-100);
+	display: inline-block;
+	padding: 0px 5px;
+	border-radius: 3px;
+}
+
+.general-settings__grid-alert-workspace-ul {
+	text-align: left;
+}
