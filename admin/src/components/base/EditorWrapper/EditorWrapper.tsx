@@ -101,6 +101,9 @@ const EditorWrapper = ({
 						renderLineHighlight: 'none',
 						scrollBeyondLastLine: false,
 						renderWhitespace: 'none',
+						guides: {
+							indentation: false,
+						},
 						readOnly: isReadOnly,
 						lineNumbers: hideGutter ? 'off' : undefined,
 						glyphMargin: hideGutter ? false : undefined,
