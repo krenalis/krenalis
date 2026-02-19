@@ -72,11 +72,11 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 			}
 		} else {
 			if (windowWidth > 1700) {
-				setGridColumnsWidths('280px 280px 80px auto');
+				setGridColumnsWidths('280px 320px 80px auto');
 			} else if (windowWidth > 800) {
-				setGridColumnsWidths('180px 180px 80px auto');
+				setGridColumnsWidths('180px 220px 80px auto');
 			} else {
-				setGridColumnsWidths('150px 150px 80px auto');
+				setGridColumnsWidths('150px 190px 80px auto');
 			}
 		}
 	}, [windowWidth, connection.isDatabase, connection.isSource]);
