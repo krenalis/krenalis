@@ -203,9 +203,9 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		let description = pipelineType.description;
 		if (connection.isFileStorage) {
 			if (connection.isSource) {
-				description = `Import ${pipeline.target.toLowerCase()}s from ${pipeline.path} into the data warehouse`;
+				description = `Import ${pipeline.target.toLowerCase()}s from "${pipeline.path}" into the data warehouse`;
 			} else {
-				description = `Export ${pipeline.target.toLowerCase()}s to ${pipeline.path}`;
+				description = `Export ${pipeline.target.toLowerCase()}s to "${pipeline.path}"`;
 			}
 		}
 
