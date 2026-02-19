@@ -7,6 +7,7 @@ package postgresql
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -62,7 +63,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 	// the DB query.
 	allErrObjects := make([]string, 0, len(count))
 	copy(allErrObjects, sortedErrObjects)
-	for k := range count {
+	for _, k := range slices.Sorted(maps.Keys(count)) {
 		if !slices.Contains(allErrObjects, k) {
 			allErrObjects = append(allErrObjects, k)
 		}
