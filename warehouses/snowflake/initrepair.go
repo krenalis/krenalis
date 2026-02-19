@@ -36,7 +36,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	if err := rows.Err(); err != nil {
 		return snowflake(err)
 	}
-	// Populate 'errors' to return an error like: «database is not empty (it
+	// Populate 'errors' to return an error like: «the database is not empty (it
 	// contains 1 view, 3 sequences, 4 indexes, 5 tables)».
 	var errors []string
 	for typ, count := range count {
@@ -53,7 +53,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	}
 	if errors != nil {
 		slices.Sort(errors)
-		err := fmt.Errorf("database is not empty (it contains %s)", strings.Join(errors, ", "))
+		err := fmt.Errorf("the database is not empty (contains %s)", strings.Join(errors, ", "))
 		return warehouses.NewNonInitializableError(err)
 	}
 	return nil

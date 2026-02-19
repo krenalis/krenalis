@@ -868,7 +868,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	err = this.core.datastore.CanInitialize(ctx, warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
-			return nil, errors.Unprocessable(WarehouseNotInitializable, "data warehouse is not initializable: %w", err.Err)
+			return nil, errors.Unprocessable(WarehouseNotInitializable, "cannot initialize the data warehouse: %w", err.Err)
 		}
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return nil, errors.Unavailable("%s", err)
