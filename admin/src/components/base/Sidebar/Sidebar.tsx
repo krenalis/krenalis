@@ -192,6 +192,10 @@ const WorkspaceSelector = ({
 		redirect('workspaces');
 	};
 
+	const onCreateWorkspace = () => {
+		redirect('workspaces/create');
+	};
+
 	const onWorkspaceSelectorClick = (e) => {
 		const isInWorkspaceDialog = e.target.closest('.workspace-selector__dialog') != null;
 		if (!isInWorkspaceDialog) {
@@ -268,8 +272,12 @@ const WorkspaceSelector = ({
 				</SlInput>
 				{options}
 				<div className='workspace-selector__dialog-view-all' onClick={onViewAllWorkspaces}>
-					All workspaces
+					View all workspaces
 					<SlIcon name='arrow-right-short' />
+				</div>
+				<div className='workspace-selector__dialog-create' onClick={onCreateWorkspace}>
+					Create a new workspace
+					<SlIcon name='plus-circle' />
 				</div>
 			</div>
 		</div>

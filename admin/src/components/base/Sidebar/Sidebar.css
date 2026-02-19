@@ -95,8 +95,7 @@
 
 .workspace-selector__dialog-view-all {
 	color: var(--sl-color-primary-600);
-	font-weight: 600;
-	margin-top: 10px;
+	margin-top: 12px;
 	padding-top: 10px;
 	border-top: 1px solid rgba(52, 53, 146, 0.16);
 	display: flex;
@@ -107,6 +106,25 @@
 
 .workspace-selector__dialog-view-all sl-icon {
 	color: var(--sl-color-primary-600);
+}
+
+.workspace-selector__dialog-create {
+	color: var(--sl-color-primary-600);
+	padding-top: 9px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 10px;
+	margin-bottom: -3px;
+	border-top: 1px solid rgba(52, 53, 146, 0.16);
+	cursor: pointer;
+}
+
+.workspace-selector__dialog-create sl-icon {
+	color: var(--sl-color-primary-600);
+	display: flex;
+	position: relative;
+	top: 1px;
 }
 
 .workspace-selector__dialog-option {
