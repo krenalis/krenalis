@@ -21,7 +21,13 @@ import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import TransformedConnection from '../../../lib/core/connection';
 
-const GRID_COLUMNS: GridColumn[] = [{ name: 'Pipeline' }, { name: 'Filters' }, { name: 'Enabled' }, { name: '' }];
+const GRID_COLUMNS_WITH_FILTERS: GridColumn[] = [
+	{ name: 'Pipeline' },
+	{ name: 'Filters' },
+	{ name: 'Enabled' },
+	{ name: '' },
+];
+const GRID_COLUMNS_WITHOUT_FILTERS: GridColumn[] = [{ name: 'Pipeline' }, { name: 'Enabled' }, { name: '' }];
 
 interface PipelinesGridProps {
 	newPipelineID: React.MutableRefObject<number>;
@@ -56,14 +62,24 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 	}, []);
 
 	useLayoutEffect(() => {
-		if (windowWidth > 1700) {
-			setGridColumnsWidths('280px 280px 80px auto');
-		} else if (windowWidth > 800) {
-			setGridColumnsWidths('180px 180px 80px auto');
+		if (connection.isDatabase && connection.isSource) {
+			if (windowWidth > 1700) {
+				setGridColumnsWidths('280px 80px auto');
+			} else if (windowWidth > 800) {
+				setGridColumnsWidths('180px 80px auto');
+			} else {
+				setGridColumnsWidths('150px 80px auto');
+			}
 		} else {
-			setGridColumnsWidths('150px 150px 80px auto');
+			if (windowWidth > 1700) {
+				setGridColumnsWidths('280px 280px 80px auto');
+			} else if (windowWidth > 800) {
+				setGridColumnsWidths('180px 180px 80px auto');
+			} else {
+				setGridColumnsWidths('150px 150px 80px auto');
+			}
 		}
-	}, [windowWidth]);
+	}, [windowWidth, connection.isDatabase, connection.isSource]);
 
 	useEffect(() => {
 		for (const a of pipelines) {
@@ -332,7 +348,10 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		);
 
 		const row: GridRow = {
-			cells: [nameCell, conditionsCell, enabledCell, pipelinesCell],
+			cells:
+				connection.isDatabase && connection.isSource
+					? [nameCell, enabledCell, pipelinesCell]
+					: [nameCell, conditionsCell, enabledCell, pipelinesCell],
 			key: String(pipeline.id),
 		};
 		if (pipeline.id === newPipelineID.current && connection.pipelines!.length > 1) {
@@ -347,7 +366,11 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 			<Grid
 				className='connection-pipelines__grid'
 				rows={rows}
-				columns={GRID_COLUMNS}
+				columns={
+					connection.isDatabase && connection.isSource
+						? GRID_COLUMNS_WITHOUT_FILTERS
+						: GRID_COLUMNS_WITH_FILTERS
+				}
 				gridColumnsWidths={gridColumnsWidths}
 				noRowsMessage='No pipelines to show'
 			/>
