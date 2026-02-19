@@ -53,7 +53,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	}
 	if errors != nil {
 		slices.Sort(errors)
-		err := fmt.Errorf("the database is not empty (it contains %s)", strings.Join(errors, ", "))
+		err := fmt.Errorf("the database is not empty (contains %s)", strings.Join(errors, ", "))
 		return warehouses.NewNonInitializableError(err)
 	}
 	return nil
