@@ -56,20 +56,36 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
+
+	// In addition to the names of known objects, which must be printed in the
+	// error in a certain order, it also adds any additional objects returned by
+	// the DB query.
+	allErrObjects := make([]string, 0, len(count))
+	copy(allErrObjects, sortedErrObjects)
+	for k := range count {
+		if !slices.Contains(allErrObjects, k) {
+			allErrObjects = append(allErrObjects, k)
+		}
+	}
+
 	// Populate 'errors' to return an error like: «database is not empty (it
-	// contains 1 view, 3 sequences, 4 indexes, 5 tables)».
+	// contains 16 tables, 4 indexes, 1 type, 5 views)».
 	var errors []string
-	for typ, count := range count {
-		if count == 1 {
-			errors = append(errors, "1 "+typ)
+	for _, obj := range allErrObjects {
+		switch c := count[obj]; c {
+		case 0:
 			continue
+		case 1:
+			errors = append(errors, "1 "+obj)
+			continue
+		default:
+			if obj == "index" {
+				obj += "es"
+			} else {
+				obj += "s"
+			}
+			errors = append(errors, strconv.Itoa(c)+" "+obj)
 		}
-		if typ == "index" {
-			typ += "es"
-		} else {
-			typ += "s"
-		}
-		errors = append(errors, strconv.Itoa(count)+" "+typ)
 	}
 	if errors != nil {
 		slices.Sort(errors)
@@ -89,6 +105,10 @@ func (warehouse *PostgreSQL) Initialize(ctx context.Context, profileColumns []wa
 func (warehouse *PostgreSQL) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, true)
 }
+
+// sortedErrObjects contains the names of the database objects sorted as they should
+// appear in the initialization error, if the database is not empty.
+var sortedErrObjects = []string{"table", "index", "type", "view", "materialized view", "sequence"}
 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
 // tables, types, etc...) on the data warehouse.
