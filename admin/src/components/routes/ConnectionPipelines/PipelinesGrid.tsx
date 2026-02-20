@@ -15,6 +15,7 @@ import { Pipeline } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import { Variant } from '../App/App.types';
 import { serializeFilter } from '../../../utils/filters';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -38,6 +39,7 @@ interface PipelinesGridProps {
 const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: PipelinesGridProps) => {
 	const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>();
 	const [isAlertDialogOpen, setIsDialogAlertOpen] = useState<boolean>(false);
+	const [deleteConfirmationInput, setDeleteConfirmationInput] = useState<string>('');
 	const [windowWidth, setWindowWidth] = useState<number>(window.innerWidth);
 	const [gridColumnsWidths, setGridColumnsWidths] = useState<string>();
 
@@ -120,6 +122,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 
 	const onDeletePipeline = (pipelineID: number) => {
 		setPipelineToDelete(pipelines.find((p) => p.id === pipelineID));
+		setDeleteConfirmationInput('');
 		setIsDialogAlertOpen(true);
 	};
 
@@ -140,6 +143,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 
 	const closeAlertDialog = () => {
 		setIsDialogAlertOpen(false);
+		setDeleteConfirmationInput('');
 		setTimeout(() => {
 			// Reset the pipeline to delete after a delay to prevent flash of
 			// content in the dialog, where the pipeline name is used.
@@ -378,19 +382,17 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				variant='danger'
 				isOpen={isAlertDialogOpen}
 				onClose={closeAlertDialog}
-				title={
-					<span>
-						Are you sure you want to delete the pipeline{' '}
-						<span className='connection-pipelines__grid-alert-pipeline-name'>{pipelineToDelete?.name}</span>{' '}
-						?
-					</span>
-				}
+				title={<span>Delete the pipeline?</span>}
 				className='connection-pipelines__grid-alert'
 				actions={
 					<>
 						<SlButton onClick={closeAlertDialog}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={onConfirmDeletePipeline}>
-							Delete
+						<SlButton
+							variant='danger'
+							onClick={onConfirmDeletePipeline}
+							disabled={!pipelineToDelete || deleteConfirmationInput !== pipelineToDelete.name}
+						>
+							Delete pipeline
 						</SlButton>
 					</>
 				}
@@ -405,8 +407,13 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 						resolution execution.
 					</p>
 				) : (
-					<p>If you continue, you will permanently lose the pipeline</p>
+					<p>If you continue, you will permanently lose the pipeline.</p>
 				)}
+				<ConfirmByTyping
+					confirmText={pipelineToDelete?.name ?? ''}
+					value={deleteConfirmationInput}
+					onInput={setDeleteConfirmationInput}
+				/>
 			</AlertDialog>
 		</>
 	);

@@ -6,6 +6,7 @@ import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import { CONFIRM_ANIMATION_DURATION } from '../PipelineWrapper/Pipeline.constants';
 import appContext from '../../../context/AppContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
@@ -24,6 +25,7 @@ const GeneralSettings = () => {
 	const [lastName, setLastName] = useState<string>();
 	const [extra, setExtra] = useState<string>();
 	const [isDeleteConfirmationDialogOpen, setIsDeleteConfirmationDialogOpen] = useState<boolean>(false);
+	const [deleteConfirmationInput, setDeleteConfirmationInput] = useState<string>('');
 
 	const deleteButtonRef = useRef<any>();
 
@@ -127,7 +129,12 @@ const GeneralSettings = () => {
 		setIsLoadingWorkspaces(true);
 	};
 
-	const onDelete = () => setIsDeleteConfirmationDialogOpen(true);
+	const isDeleteConfirmed = deleteConfirmationInput === name;
+
+	const onDelete = () => {
+		setDeleteConfirmationInput('');
+		setIsDeleteConfirmationDialogOpen(true);
+	};
 
 	const onDeleteConfirmation = async () => {
 		deleteButtonRef.current!.load();
@@ -150,6 +157,7 @@ const GeneralSettings = () => {
 
 	const onCancelDeletion = () => {
 		setIsDeleteConfirmationDialogOpen(false);
+		setDeleteConfirmationInput('');
 	};
 
 	return (
@@ -248,12 +256,7 @@ const GeneralSettings = () => {
 				variant='danger'
 				isOpen={isDeleteConfirmationDialogOpen}
 				onClose={onCancelDeletion}
-				title={
-					<span>
-						Permanently delete workspace{' '}
-						<span className='general-settings__grid-alert-workspace-name'>{name}</span> ?
-					</span>
-				}
+				title={<span>Delete the workspace?</span>}
 				actions={
 					<>
 						<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
@@ -263,20 +266,26 @@ const GeneralSettings = () => {
 							variant='danger'
 							onClick={onDeleteConfirmation}
 							animationDuration={CONFIRM_ANIMATION_DURATION}
+							disabled={!isDeleteConfirmed}
 						>
-							Permanently delete workspace
+							Delete workspace
 						</FeedbackButton>
 					</>
 				}
 			>
 				<ul className='general-settings__grid-alert-workspace-ul'>
 					<li>The workspace will be permanently removed.</li>
-					<li>Customer data stored in the connected data warehouse will NOT be deleted.</li>
+					<li>Data stored in the connected data warehouse will NOT be deleted.</li>
 					<li>
-						The warehouse cannot be connected to another Meergo workspace unless its contents are manually
-						cleared.
+						The data warehouse will not be able to connect to another Meergo workspace unless its contents
+						are manually cleared.
 					</li>
 				</ul>
+				<ConfirmByTyping
+					confirmText={name}
+					value={deleteConfirmationInput}
+					onInput={setDeleteConfirmationInput}
+				/>
 			</AlertDialog>
 		</div>
 	);

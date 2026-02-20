@@ -150,3 +150,11 @@
 .connection-settings__danger-zone-description {
 	font-size: 14px;
 }
+
+.connection-settings__delete-alert .alert-dialog__content {
+	text-align: left;
+}
+
+.connection-settings__delete-alert-pipelines {
+	text-decoration: underline;
+}

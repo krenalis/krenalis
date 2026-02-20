@@ -4,6 +4,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import { NotFoundError } from '../../../lib/api/errors';
 import DangerZone from '../../base/DangerZone/DangerZone';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import Flex from '../../base/Flex/Flex';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -25,6 +26,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		sendingMode: connection.sendingMode,
 	});
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
+	const [deleteConfirmationInput, setDeleteConfirmationInput] = useState<string>('');
 	const [isDeleting, setIsDeleting] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -168,7 +170,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<SlButton
 						className='connection-settings__danger-zone-delete-button'
 						variant='danger'
-						onClick={() => setAskDeletionConfirmation(true)}
+						onClick={() => {
+							setDeleteConfirmationInput('');
+							setAskDeletionConfirmation(true);
+						}}
 					>
 						Delete
 					</SlButton>
@@ -177,19 +182,56 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 			<AlertDialog
 				variant='danger'
+				className='connection-settings__delete-alert'
 				isOpen={askDeletionConfirmation}
-				onClose={() => setAskDeletionConfirmation(false)}
-				title='Are you sure?'
+				onClose={() => {
+					setAskDeletionConfirmation(false);
+					setDeleteConfirmationInput('');
+				}}
+				title='Delete the connection?'
 				actions={
 					<>
-						<SlButton onClick={() => setAskDeletionConfirmation(false)}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={onDeletionConfirmation} loading={isDeleting}>
-							Delete
+						<SlButton
+							onClick={() => {
+								setAskDeletionConfirmation(false);
+								setDeleteConfirmationInput('');
+							}}
+						>
+							Cancel
+						</SlButton>
+						<SlButton
+							variant='danger'
+							onClick={onDeletionConfirmation}
+							loading={isDeleting}
+							disabled={deleteConfirmationInput !== connection.name}
+						>
+							Delete connection
 						</SlButton>
 					</>
 				}
 			>
-				<p>If you continue, you will permanently lose all the connection data</p>
+				{connection.isSource ? (
+					<p>
+						If you continue, you will permanently lose the connection and{' '}
+						<span className='connection-settings__delete-alert-pipelines'>
+							all its associated pipelines and their data
+						</span>
+						. The profiles will be updated accordingly at the next identity resolution execution.
+					</p>
+				) : (
+					<p>
+						If you continue, you will permanently lose the connection and{' '}
+						<span className='connection-settings__delete-alert-pipelines'>
+							all its associated pipelines
+						</span>
+						.
+					</p>
+				)}
+				<ConfirmByTyping
+					confirmText={connection.name}
+					value={deleteConfirmationInput}
+					onInput={setDeleteConfirmationInput}
+				/>
 			</AlertDialog>
 		</div>
 	);
