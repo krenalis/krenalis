@@ -1,11 +1,24 @@
 .confirm-by-typing {
 	text-align: left;
 	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid var(--sl-color-neutral-200);
 }
 
 .confirm-by-typing__instruction {
-	margin: 0 0 8px 0;
-	font-size: 14px;
+	margin: 0 0 10px 0;
+	font-size: 15px;
+	text-align: center;
+}
+
+.confirm-by-typing__input {
+	width: 80%;
+	display: block;
+	margin: 0 auto;
+}
+
+.confirm-by-typing__input::part(input) {
+	font-family: var(--monospace-fonts);
 }
 
 .confirm-by-typing__confirm-text {
