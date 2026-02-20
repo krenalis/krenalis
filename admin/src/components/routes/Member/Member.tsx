@@ -270,11 +270,16 @@ const Member = () => {
 									/>
 								</div>
 							)}
-							<label className='member__avatar'>
+							<div className='member__avatar'>
 								<div className='member__avatar-label'>Avatar</div>
 								<div className='member__avatar-box'>
 									<div className='member__avatar-buttons'>
-										<div className='member__add-avatar'>Upload</div>
+										<div
+											className='member__add-avatar'
+											onClick={() => fileInputRef.current?.click()}
+										>
+											Upload
+										</div>
 										{avatar && (
 											<div className='member__remove-avatar' onClick={onDeleteAvatar}>
 												Delete
@@ -289,7 +294,7 @@ const Member = () => {
 										onChange={onUpdateAvatar}
 									/>
 								</div>
-							</label>
+							</div>
 							{error && (
 								<div className='member__error'>
 									<SlIcon slot='icon' name='exclamation-octagon' />
