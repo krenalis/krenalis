@@ -240,6 +240,10 @@
 	text-decoration: underline;
 }
 
+.connection-pipelines__grid-alert .alert-dialog__content {
+	text-align: left;
+}
+
 @media screen and (max-width: 1440px) {
 	.connection-pipelines__buttons > .connection-pipelines__manage-button {
 		display: none;

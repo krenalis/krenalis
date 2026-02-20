@@ -182,6 +182,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 			<AlertDialog
 				variant='danger'
+				className='connection-settings__delete-alert'
 				isOpen={askDeletionConfirmation}
 				onClose={() => {
 					setAskDeletionConfirmation(false);
@@ -209,7 +210,13 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					</>
 				}
 			>
-				<p>If you continue, you will permanently lose all the connection data</p>
+				<p>
+					If you continue, you will permanently lose the connection and{' '}
+					<span className='connection-settings__delete-alert-pipelines'>
+						all its associated pipelines and their data
+					</span>
+					. The profiles will be updated accordingly at the next identity resolution execution.
+				</p>
 				<ConfirmByTyping
 					confirmText={connection.name}
 					value={deleteConfirmationInput}

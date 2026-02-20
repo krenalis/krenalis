@@ -399,7 +399,6 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 			>
 				{connection.isSource && pipelineToDelete?.target === 'User' ? (
 					<p>
-						{/* TODO Allineare a sx */}
 						If you continue{' '}
 						<span className='connection-pipelines__grid-alert-identities'>
 							you will permanently lose the identities
