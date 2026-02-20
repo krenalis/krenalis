@@ -407,7 +407,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 						resolution execution.
 					</p>
 				) : (
-					<p>If you continue, you will permanently lose the pipeline</p>
+					<p>If you continue, you will permanently lose the pipeline.</p>
 				)}
 				<ConfirmByTyping
 					confirmText={pipelineToDelete?.name ?? ''}
