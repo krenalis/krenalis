@@ -396,8 +396,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		if err != nil {
 			return 0, err
 		}
-		createOnly := state.CreateOnly
-		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, &createOnly)
+		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, new(state.CreateOnly))
 		if err != nil {
 			return 0, errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
 		}
@@ -452,8 +451,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	// Determine the connector code, for file pipelines.
 	var formatCode *string
 	if format != nil {
-		code := format.Code
-		formatCode = &code
+		formatCode = new(format.Code)
 	}
 
 	// Generate a random identifier.
@@ -1424,12 +1422,11 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				}
 				// Destination/Application/Event.
 				for _, et := range eventTypes {
-					id := et.ID
 					pipelineTypes = append(pipelineTypes, PipelineType{
 						Name:        et.Name,
 						Description: et.Description,
 						Target:      TargetEvent,
-						EventType:   &id,
+						EventType:   new(et.ID),
 					})
 				}
 			}

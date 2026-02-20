@@ -153,8 +153,7 @@ func (app *Application) PreviewSendEvent(ctx context.Context, event connectors.E
 		return nil, connectorError(err)
 	}
 	// Check that schema is aligned with the event type's schema.
-	createOnly := state.CreateOnly
-	err = schemas.CheckAlignment(event.Type.Schema, eventTypeSchema, &createOnly)
+	err = schemas.CheckAlignment(event.Type.Schema, eventTypeSchema, new(state.CreateOnly))
 	if err != nil {
 		return nil, err
 	}

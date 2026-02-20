@@ -262,9 +262,6 @@ func Test_Where_Equal(t *testing.T) {
 
 func Test_Where_MarshalJSON(t *testing.T) {
 
-	jn := decimal.MustParse("34")
-	jt := time.Date(2024, 9, 12, 11, 3, 6, 820793551, time.UTC)
-
 	tests := []struct {
 		where    Where
 		expected []byte
@@ -277,11 +274,11 @@ func Test_Where_MarshalJSON(t *testing.T) {
 					{Property: []string{"b"}, Operator: OpIsNot, Values: []any{"foo"}},
 					{Property: []string{"c"}, Operator: OpIsBetween, Values: []any{10, 20}},
 					{Property: []string{"d"}, Operator: OpIsLessThan, Values: []any{34.98}},
-					{Property: []string{"e"}, Operator: OpIsGreaterThan, Values: []any{jn}},
+					{Property: []string{"e"}, Operator: OpIsGreaterThan, Values: []any{decimal.MustParse("34")}},
 					{Property: []string{"f"}, Operator: OpIsTrue},
 					{Property: []string{"g"}, Operator: OpIsNotOneOf, Values: []any{1, 2, 3}},
 					{Property: []string{"h"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "foo"}}},
-					{Property: []string{"i"}, Operator: OpIsBetween, Values: []any{JSONConditionValue{String: "34", Number: &jn}}},
+					{Property: []string{"i"}, Operator: OpIsBetween, Values: []any{JSONConditionValue{String: "34", Number: new(decimal.MustParse("34"))}}},
 				},
 			},
 			expected: []byte(`{"logical":"And","conditions":[` +
@@ -299,7 +296,7 @@ func Test_Where_MarshalJSON(t *testing.T) {
 			where: Where{
 				Logical: OpOr,
 				Conditions: []WhereCondition{
-					{Property: []string{"a"}, Operator: OpIsAfter, Values: []any{jt}},
+					{Property: []string{"a"}, Operator: OpIsAfter, Values: []any{new(time.Date(2024, 9, 12, 11, 3, 6, 820793551, time.UTC))}},
 				},
 			},
 			expected: []byte(`{"logical":"Or","conditions":[{"property":["a"],"operator":"IsAfter","values":["2024-09-12T11:03:06.820793551Z"]}` + `]}`),
@@ -324,17 +321,14 @@ func Test_Where_MarshalJSON(t *testing.T) {
 
 func Test_JSONConditionValue_Marshal(t *testing.T) {
 
-	jn := decimal.MustInt(34)
-	jf := decimal.MustParse("893.051")
-
 	tests := []struct {
 		v        JSONConditionValue
 		expected []byte
 	}{
 		{v: JSONConditionValue{String: ""}, expected: []byte(`""`)},
 		{v: JSONConditionValue{String: "foo"}, expected: []byte(`"foo"`)},
-		{v: JSONConditionValue{String: "34", Number: &jn}, expected: []byte(`"34"`)},
-		{v: JSONConditionValue{String: "893.051", Number: &jf}, expected: []byte(`"893.051"`)},
+		{v: JSONConditionValue{String: "34", Number: new(decimal.MustInt(34))}, expected: []byte(`"34"`)},
+		{v: JSONConditionValue{String: "893.051", Number: new(decimal.MustParse("893.051"))}, expected: []byte(`"893.051"`)},
 	}
 
 	for _, test := range tests {

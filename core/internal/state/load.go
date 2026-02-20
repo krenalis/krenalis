@@ -62,14 +62,11 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			}
 			switch connector.AsDestination.SendingMode {
 			case connectors.Client:
-				mode := Client
-				c.SendingMode = &mode
+				c.SendingMode = new(Client)
 			case connectors.Server:
-				mode := Server
-				c.SendingMode = &mode
+				c.SendingMode = new(Server)
 			case connectors.ClientAndServer:
-				mode := ClientAndServer
-				c.SendingMode = &mode
+				c.SendingMode = new(ClientAndServer)
 			}
 			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
@@ -394,11 +391,11 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.account = ws.accounts[account]
 			}
 			if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {
-				mode := Server
 				if sm := *c.connector.SendingMode; sm == Client {
-					mode = Client
+					c.SendingMode = new(Client)
+				} else {
+					c.SendingMode = new(Server)
 				}
-				c.SendingMode = &mode
 			}
 			if c.LinkedConnections == nil {
 				targets := c.connector.SourceTargets

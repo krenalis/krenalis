@@ -678,8 +678,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		if err != nil {
 			return err
 		}
-		createOnly := state.CreateOnly
-		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, &createOnly)
+		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, new(state.CreateOnly))
 		if err != nil {
 			return errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
 		}
@@ -726,8 +725,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Determine the format code, for file pipelines.
 	var formatCode *string
 	if format != nil {
-		code := format.Code
-		formatCode = &code
+		formatCode = new(format.Code)
 	}
 
 	// Marshal the input and the output schemas.
@@ -1057,16 +1055,13 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	this.Name = pipeline.Name
 	this.Enabled = pipeline.Enabled
 	if pipeline.EventType != "" {
-		et := pipeline.EventType
-		this.EventType = &et
+		this.EventType = new(pipeline.EventType)
 	}
 	_, this.Running = this.pipeline.Run()
 	if pipeline.Target == state.TargetUser || pipeline.Target == state.TargetGroup {
 		if pipeline.SchedulePeriod != 0 {
-			start := int(pipeline.ScheduleStart)
-			period := SchedulePeriod(pipeline.SchedulePeriod)
-			this.ScheduleStart = &start
-			this.SchedulePeriod = &period
+			this.ScheduleStart = new(int(pipeline.ScheduleStart))
+			this.SchedulePeriod = new(SchedulePeriod(pipeline.SchedulePeriod))
 		}
 	}
 	this.InSchema = pipeline.InSchema
@@ -1091,53 +1086,41 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 		}
 	}
 	if pipeline.Query != "" {
-		query := pipeline.Query
-		this.Query = &query
+		this.Query = new(pipeline.Query)
 	}
 	if f := pipeline.Format(); f != nil {
 		this.Format = f.Code
 	}
 	if pipeline.Path != "" {
-		path := pipeline.Path
-		this.Path = &path
+		this.Path = new(pipeline.Path)
 	}
 	if pipeline.Sheet != "" {
-		sheet := pipeline.Sheet
-		this.Sheet = &sheet
+		this.Sheet = new(pipeline.Sheet)
 	}
 	this.Compression = Compression(pipeline.Compression)
 	if pipeline.TableName != "" {
-		table := pipeline.TableName
-		this.TableName = &table
+		this.TableName = new(pipeline.TableName)
 	}
 	if pipeline.ExportMode != "" {
-		mode := pipeline.ExportMode
-		matching := pipeline.Matching
-		updateOnDuplicates := pipeline.UpdateOnDuplicates
-		this.ExportMode = (*ExportMode)(&mode)
-		this.Matching = (*Matching)(&matching)
-		this.UpdateOnDuplicates = &updateOnDuplicates
+		this.ExportMode = new(ExportMode(pipeline.ExportMode))
+		this.Matching = new(Matching(pipeline.Matching))
+		this.UpdateOnDuplicates = new(pipeline.UpdateOnDuplicates)
 	}
 	if pipeline.TableKey != "" {
-		key := pipeline.TableKey
-		this.TableKey = &key
+		this.TableKey = new(pipeline.TableKey)
 	}
 	if pipeline.IdentityColumn != "" {
-		p := pipeline.IdentityColumn
-		this.IdentityColumn = &p
+		this.IdentityColumn = new(pipeline.IdentityColumn)
 	}
 	if pipeline.UpdatedAtColumn != "" {
-		column := pipeline.UpdatedAtColumn
-		this.UpdatedAtColumn = &column
+		this.UpdatedAtColumn = new(pipeline.UpdatedAtColumn)
 	}
 	if pipeline.UpdatedAtFormat != "" {
-		format := pipeline.UpdatedAtFormat
-		this.UpdatedAtFormat = &format
+		this.UpdatedAtFormat = new(pipeline.UpdatedAtFormat)
 	}
 	this.Incremental = pipeline.Incremental
 	if pipeline.OrderBy != "" {
-		p := pipeline.OrderBy
-		this.OrderBy = &p
+		this.OrderBy = new(pipeline.OrderBy)
 	}
 }
 
