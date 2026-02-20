@@ -42,6 +42,7 @@ const Member = () => {
 
 	const nameInputRef = useRef<any>();
 	const fileInputRef = useRef<any>();
+	const passwordInputRef = useRef<any>();
 
 	const isUpdate = useMemo(() => {
 		return location.pathname.endsWith('current');
@@ -123,6 +124,9 @@ const Member = () => {
 
 	const onPasswordEnable = () => {
 		setPassword('');
+		setTimeout(() => {
+			passwordInputRef.current?.focus();
+		}, 100);
 	};
 
 	const onUpdatePassword = (e) => {
@@ -239,6 +243,7 @@ const Member = () => {
 							</div>
 							<div className='member__password'>
 								<SlInput
+									ref={passwordInputRef}
 									type='password'
 									label='Password'
 									name='password'
