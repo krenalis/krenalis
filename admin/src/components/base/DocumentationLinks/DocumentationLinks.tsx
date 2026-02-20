@@ -51,6 +51,10 @@ const PREPOSITION_TO = new Set([
 	'http-post',
 ]);
 
+// getConnectionDocLinks returns the documentation links for a given connector
+// and role. Connectors without a declared display name in
+// CONNECTOR_DISPLAY_NAMES are intentionally excluded (returns an empty array),
+// since their docs page does not exist.
 function getConnectionDocLinks(connectorCode: string, role: string): { label: string; url: string }[] {
 	const isSource = role === 'Source';
 	const direction = isSource ? 'sources' : 'destinations';
