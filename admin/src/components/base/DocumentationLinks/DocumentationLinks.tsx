@@ -55,7 +55,8 @@ function getConnectionDocLinks(connectorCode: string, role: string): { label: st
 	const isSource = role === 'Source';
 	const direction = isSource ? 'sources' : 'destinations';
 	const baseUrl = `https://www.meergo.com/docs/ref/admin/connection-configuration/${direction}-${connectorCode}`;
-	const name = CONNECTOR_DISPLAY_NAMES[connectorCode] ?? connectorCode;
+	const name = CONNECTOR_DISPLAY_NAMES[connectorCode];
+	if (name == null) return [];
 
 	if (SDK_CONNECTORS.has(connectorCode)) {
 		return [
