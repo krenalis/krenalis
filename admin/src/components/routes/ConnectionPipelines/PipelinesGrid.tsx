@@ -382,25 +382,24 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				variant='danger'
 				isOpen={isAlertDialogOpen}
 				onClose={closeAlertDialog}
-				title={
-					<span>
-						Are you sure you want to delete the pipeline{' '}
-						<span className='connection-pipelines__grid-alert-pipeline-name'>{pipelineToDelete?.name}</span>{' '}
-						?
-					</span>
-				}
+				title={<span>Delete the pipeline?</span>}
 				className='connection-pipelines__grid-alert'
 				actions={
 					<>
 						<SlButton onClick={closeAlertDialog}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={onConfirmDeletePipeline} disabled={!pipelineToDelete || deleteConfirmationInput !== pipelineToDelete.name}>
-							Delete
+						<SlButton
+							variant='danger'
+							onClick={onConfirmDeletePipeline}
+							disabled={!pipelineToDelete || deleteConfirmationInput !== pipelineToDelete.name}
+						>
+							Delete pipeline
 						</SlButton>
 					</>
 				}
 			>
 				{connection.isSource && pipelineToDelete?.target === 'User' ? (
 					<p>
+						{/* TODO Allineare a sx */}
 						If you continue{' '}
 						<span className='connection-pipelines__grid-alert-identities'>
 							you will permanently lose the identities
@@ -411,7 +410,11 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				) : (
 					<p>If you continue, you will permanently lose the pipeline</p>
 				)}
-				<ConfirmByTyping confirmText={pipelineToDelete?.name ?? ''} value={deleteConfirmationInput} onInput={setDeleteConfirmationInput} />
+				<ConfirmByTyping
+					confirmText={pipelineToDelete?.name ?? ''}
+					value={deleteConfirmationInput}
+					onInput={setDeleteConfirmationInput}
+				/>
 			</AlertDialog>
 		</>
 	);

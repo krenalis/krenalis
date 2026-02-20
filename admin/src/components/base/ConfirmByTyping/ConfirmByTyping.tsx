@@ -8,6 +8,8 @@ interface ConfirmByTypingProps {
 	onInput: (value: string) => void;
 }
 
+// TODO: focus direttamente nella casella
+
 const ConfirmByTyping = ({ confirmText, value, onInput }: ConfirmByTypingProps) => {
 	return (
 		<div className='confirm-by-typing'>
@@ -16,7 +18,7 @@ const ConfirmByTyping = ({ confirmText, value, onInput }: ConfirmByTypingProps) 
 			</p>
 			<SlInput
 				className='confirm-by-typing__input'
-				placeholder={confirmText}
+				// placeholder={confirmText}
 				value={value}
 				onSlInput={(e) => onInput((e.target as HTMLInputElement).value)}
 			/>

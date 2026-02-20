@@ -256,12 +256,7 @@ const GeneralSettings = () => {
 				variant='danger'
 				isOpen={isDeleteConfirmationDialogOpen}
 				onClose={onCancelDeletion}
-				title={
-					<span>
-						Permanently delete workspace{' '}
-						<span className='general-settings__grid-alert-workspace-name'>{name}</span> ?
-					</span>
-				}
+				title={<span>Delete the workspace?</span>}
 				actions={
 					<>
 						<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
@@ -273,20 +268,24 @@ const GeneralSettings = () => {
 							animationDuration={CONFIRM_ANIMATION_DURATION}
 							disabled={!isDeleteConfirmed}
 						>
-							Permanently delete workspace
+							Delete workspace
 						</FeedbackButton>
 					</>
 				}
 			>
 				<ul className='general-settings__grid-alert-workspace-ul'>
 					<li>The workspace will be permanently removed.</li>
-					<li>Customer data stored in the connected data warehouse will NOT be deleted.</li>
+					<li>Data stored in the connected data warehouse will NOT be deleted.</li>
 					<li>
-						The warehouse cannot be connected to another Meergo workspace unless its contents are manually
-						cleared.
+						The data warehouse NON SI POTRÀ CONNETTERE to another Meergo workspace unless its contents are
+						manually cleared.
 					</li>
 				</ul>
-				<ConfirmByTyping confirmText={name} value={deleteConfirmationInput} onInput={setDeleteConfirmationInput} />
+				<ConfirmByTyping
+					confirmText={name}
+					value={deleteConfirmationInput}
+					onInput={setDeleteConfirmationInput}
+				/>
 			</AlertDialog>
 		</div>
 	);

@@ -170,7 +170,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<SlButton
 						className='connection-settings__danger-zone-delete-button'
 						variant='danger'
-						onClick={() => { setDeleteConfirmationInput(''); setAskDeletionConfirmation(true); }}
+						onClick={() => {
+							setDeleteConfirmationInput('');
+							setAskDeletionConfirmation(true);
+						}}
 					>
 						Delete
 					</SlButton>
@@ -180,19 +183,38 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			<AlertDialog
 				variant='danger'
 				isOpen={askDeletionConfirmation}
-				onClose={() => { setAskDeletionConfirmation(false); setDeleteConfirmationInput(''); }}
+				onClose={() => {
+					setAskDeletionConfirmation(false);
+					setDeleteConfirmationInput('');
+				}}
 				title='Are you sure?'
 				actions={
 					<>
-						<SlButton onClick={() => { setAskDeletionConfirmation(false); setDeleteConfirmationInput(''); }}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={onDeletionConfirmation} loading={isDeleting} disabled={deleteConfirmationInput !== connection.name}>
-							Delete
+						<SlButton
+							onClick={() => {
+								setAskDeletionConfirmation(false);
+								setDeleteConfirmationInput('');
+							}}
+						>
+							Cancel
+						</SlButton>
+						<SlButton
+							variant='danger'
+							onClick={onDeletionConfirmation}
+							loading={isDeleting}
+							disabled={deleteConfirmationInput !== connection.name}
+						>
+							Delete connection
 						</SlButton>
 					</>
 				}
 			>
 				<p>If you continue, you will permanently lose all the connection data</p>
-				<ConfirmByTyping confirmText={connection.name} value={deleteConfirmationInput} onInput={setDeleteConfirmationInput} />
+				<ConfirmByTyping
+					confirmText={connection.name}
+					value={deleteConfirmationInput}
+					onInput={setDeleteConfirmationInput}
+				/>
 			</AlertDialog>
 		</div>
 	);
