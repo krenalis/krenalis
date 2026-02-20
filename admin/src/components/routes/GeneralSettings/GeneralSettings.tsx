@@ -277,8 +277,8 @@ const GeneralSettings = () => {
 					<li>The workspace will be permanently removed.</li>
 					<li>Data stored in the connected data warehouse will NOT be deleted.</li>
 					<li>
-						The data warehouse NON SI POTRÀ CONNETTERE to another Meergo workspace unless its contents are
-						manually cleared.
+						The data warehouse will not be able to connect to another Meergo workspace unless its contents
+						are manually cleared.
 					</li>
 				</ul>
 				<ConfirmByTyping
