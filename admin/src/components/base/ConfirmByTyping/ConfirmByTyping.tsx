@@ -16,6 +16,7 @@ const ConfirmByTyping = ({ confirmText, value, onInput }: ConfirmByTypingProps) 
 			</p>
 			<SlInput
 				className='confirm-by-typing__input'
+				placeholder={confirmText}
 				value={value}
 				onSlInput={(e) => onInput((e.target as HTMLInputElement).value)}
 			/>
