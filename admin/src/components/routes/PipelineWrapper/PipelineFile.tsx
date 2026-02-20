@@ -32,7 +32,7 @@ import { flattenSchema } from '../../../lib/core/pipeline';
 import { Popover } from '../../base/Popover/Popover';
 import {
 	filterOrderingPropertySchema,
-	getIdentityColumnComboboxItems,
+	getUserIDColumnComboboxItems,
 	getOrderingPropertyPathComboboxItems,
 } from '../../helpers/getSchemaComboboxItems';
 import { Combobox } from '../../base/Combobox/Combobox';
@@ -174,7 +174,7 @@ const PipelineFile = () => {
 		p.compression = '';
 		p.sheet = format.hasSheets ? '' : null;
 		p.path = '';
-		p.identityColumn = '';
+		p.userIDColumn = '';
 		p.updatedAtColumn = '';
 		p.updatedAtFormat = '';
 		p.transformation.mapping = flattenSchema(pipelineType.outputSchema, true);
@@ -678,13 +678,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			}, ERROR_ANIMATION_DURATION);
 		} else {
 			fileConfirmButtonRef.current!.confirm();
-			if (pipeline.identityColumn != null) {
-				const compatibleColumns = getIdentityColumnComboboxItems(schema);
-				const isStillCompatible = compatibleColumns.findIndex((c) => c.term === pipeline.identityColumn) !== -1;
+			if (pipeline.userIDColumn != null) {
+				const compatibleColumns = getUserIDColumnComboboxItems(schema);
+				const isStillCompatible = compatibleColumns.findIndex((c) => c.term === pipeline.userIDColumn) !== -1;
 				if (!isStillCompatible) {
-					// Empty the identity column.
+					// Empty the user ID column.
 					const p = structuredClone(pipeline);
-					p.identityColumn = '';
+					p.userIDColumn = '';
 					setPipeline(p);
 				}
 			}

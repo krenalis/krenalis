@@ -234,7 +234,7 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 		}
 	}()
 	properties := pipeline.InSchema.Properties()
-	var identityColumn, updatedAtColumn types.Property
+	var userIDColumn, updatedAtColumn types.Property
 	for i, c := range columns {
 		if !c.Type.Valid() {
 			columns[i] = connectors.Column{}
@@ -248,15 +248,15 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 			columns[i] = connectors.Column{}
 			continue
 		}
-		if c.Name == pipeline.IdentityColumn {
-			identityColumn = p
+		if c.Name == pipeline.UserIDColumn {
+			userIDColumn = p
 		}
 		if c.Name == pipeline.UpdatedAtColumn {
 			updatedAtColumn = p
 		}
 	}
-	if identityColumn.Name == "" {
-		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no identity column %q", pipeline.IdentityColumn)}
+	if userIDColumn.Name == "" {
+		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no user ID column %q", pipeline.UserIDColumn)}
 	}
 	if pipeline.UpdatedAtColumn != "" && updatedAtColumn.Name == "" {
 		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no update time column %q", pipeline.UpdatedAtColumn)}
@@ -569,7 +569,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 		defer r.Close()
 		run, _ := r.pipeline.Run()
 		n := 0 // number of properties per record
-		var identityIndex = -1
+		var userIDIndex = -1
 		var updatedAtIndex = -1
 		scanner := scanner{
 			values: make([]any, len(r.columns)),
@@ -584,8 +584,8 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 			p, _ := inSchemaProperties.ByName(c.Name)
 			properties[i] = p
-			if p.Name == r.pipeline.IdentityColumn {
-				identityIndex = i
+			if p.Name == r.pipeline.UserIDColumn {
+				userIDIndex = i
 			}
 			if p.Name == r.pipeline.UpdatedAtColumn {
 				updatedAtIndex = i
@@ -613,15 +613,15 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				scanner.reset()
 				continue Rows
 			}
-			// Get the identity.
-			if identityIndex >= 0 {
-				v := scanner.values[identityIndex]
+			// Get the user ID.
+			if userIDIndex >= 0 {
+				v := scanner.values[userIDIndex]
 				if v == nil {
-					record.Err = errors.New("identity value is NULL")
+					record.Err = errors.New("user ID value is NULL")
 					continue Rows
 				}
-				p := properties[identityIndex]
-				id, err := parseIdentityColumn(p.Name, p.Type, v, r.timeLayouts)
+				p := properties[userIDIndex]
+				id, err := parseUserIDColumn(p.Name, p.Type, v, r.timeLayouts)
 				if err != nil {
 					record.Err = err
 					continue Rows

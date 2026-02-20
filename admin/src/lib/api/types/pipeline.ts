@@ -97,7 +97,7 @@ interface Pipeline {
 	tableName: string | null;
 	tableKey: string | null;
 	sheet: string | null;
-	identityColumn: string | null;
+	userIDColumn: string | null;
 	updatedAtColumn: string | null;
 	updatedAtFormat: string | null;
 	incremental: boolean | null;
@@ -128,7 +128,7 @@ interface PipelineToSet {
 	tableName?: string | null;
 	tableKey?: string | null;
 	sheet?: string | null;
-	identityColumn?: string | null;
+	userIDColumn?: string | null;
 	updatedAtColumn?: string | null;
 	updatedAtFormat?: string | null;
 	incremental?: boolean;

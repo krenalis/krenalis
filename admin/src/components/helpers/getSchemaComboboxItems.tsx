@@ -83,7 +83,7 @@ const getFilterPropertyComboboxItems = (
 	return computeItems(filteredSchema);
 };
 
-const getIdentityColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getUserIDColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -186,7 +186,7 @@ export {
 	getSchemaComboboxItems,
 	getMatchingComboboxItems,
 	getUIPreferencesComboboxItems,
-	getIdentityColumnComboboxItems,
+	getUserIDColumnComboboxItems,
 	getUpdatedAtComboboxItems,
 	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,

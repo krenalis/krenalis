@@ -487,7 +487,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 		},
 		"query": "SELECT email, first_name, last_name FROM users WHERE \${updated_at} LIMIT \${limit}",
 		"incremental": false,
-		"identityColumn": "email",
+		"userIDColumn": "email",
 		"updatedAtColumn": "",
 		"updatedAtFormat": ""
 	}
@@ -835,7 +835,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 			},
 			"path": "test.csv",
 			"sheet": null,
-			"identityColumn": "email",
+			"userIDColumn": "email",
 			"incremental": false,
 			"updatedAtColumn": "",
 			"updatedAtFormat": "",
@@ -1173,7 +1173,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 			"transformation": null,
 			"path": "test.csv",
 			"sheet": null,
-			"identityColumn": "",
+			"userIDColumn": "",
 			"updatedAtColumn": "",
 			"updatedAtFormat": "",
 			"compression": "",

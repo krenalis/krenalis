@@ -431,7 +431,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		TableName:          pipeline.TableName,
 		TableKey:           pipeline.TableKey,
-		IdentityColumn:     pipeline.IdentityColumn,
+		UserIDColumn:       pipeline.UserIDColumn,
 		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
 		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
 		Incremental:        pipeline.Incremental,
@@ -534,7 +534,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
 			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
 			"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
-			"update_on_duplicates, table_name, table_key, identity_column, updated_at_column,\n" +
+			"update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n" +
 			"updated_at_format, incremental)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
@@ -543,7 +543,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
-			n.TableName, n.TableKey, n.IdentityColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
+			n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)

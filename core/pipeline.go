@@ -80,7 +80,7 @@ type Pipeline struct {
 	UpdateOnDuplicates *bool           `json:"updateOnDuplicates"`
 	TableName          *string         `json:"tableName"`
 	TableKey           *string         `json:"tableKey"`
-	IdentityColumn     *string         `json:"identityColumn"`
+	UserIDColumn       *string         `json:"userIDColumn"`
 	UpdatedAtColumn    *string         `json:"updatedAtColumn"`
 	UpdatedAtFormat    *string         `json:"updatedAtFormat"`
 	Incremental        bool            `json:"incremental"`
@@ -286,7 +286,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 				serialized = struct {
 					serializedPipeline
 					Query           string          `json:"query"`
-					IdentityColumn  string          `json:"identityColumn"`
+					UserIDColumn    string          `json:"userIDColumn"`
 					UpdatedAtColumn *string         `json:"updatedAtColumn"`
 					UpdatedAtFormat *string         `json:"updatedAtFormat"`
 					Incremental     bool            `json:"incremental"`
@@ -299,7 +299,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 				}{
 					serializedPipeline: p,
 					Query:              *this.Query,
-					IdentityColumn:     *this.IdentityColumn,
+					UserIDColumn:       *this.UserIDColumn,
 					UpdatedAtColumn:    this.UpdatedAtColumn,
 					UpdatedAtFormat:    this.UpdatedAtFormat,
 					Incremental:        this.Incremental,
@@ -318,7 +318,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 					Sheet           *string         `json:"sheet"`
 					Compression     Compression     `json:"compression"`
 					Filter          *Filter         `json:"filter"`
-					IdentityColumn  string          `json:"identityColumn"`
+					UserIDColumn    string          `json:"userIDColumn"`
 					UpdatedAtColumn *string         `json:"updatedAtColumn"`
 					UpdatedAtFormat *string         `json:"updatedAtFormat"`
 					Incremental     bool            `json:"incremental"`
@@ -335,7 +335,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 					Sheet:              this.Sheet,
 					Compression:        this.Compression,
 					Filter:             this.Filter,
-					IdentityColumn:     *this.IdentityColumn,
+					UserIDColumn:       *this.UserIDColumn,
 					UpdatedAtColumn:    this.UpdatedAtColumn,
 					UpdatedAtFormat:    this.UpdatedAtFormat,
 					Incremental:        this.Incremental,
@@ -711,7 +711,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		TableName:          pipeline.TableName,
 		TableKey:           pipeline.TableKey,
-		IdentityColumn:     pipeline.IdentityColumn,
+		UserIDColumn:       pipeline.UserIDColumn,
 		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
 		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
 		Incremental:        pipeline.Incremental,
@@ -792,7 +792,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		"transformation_out_paths = $13, query = $14, format = $15, path = $16, sheet = $17, " +
 		"compression = $18, order_by = $19, format_settings = $20, export_mode = $21, matching_in = $22, " +
 		"matching_out = $23, update_on_duplicates = $24, table_name = $25, table_key = $26, " +
-		"identity_column = $27, updated_at_column = $28, updated_at_format = $29, incremental = $30, " +
+		"user_id_column = $27, updated_at_column = $28, updated_at_format = $29, incremental = $30, " +
 		"properties_to_unset = $31"
 	if (c.Role == state.Source && !pipeline.Incremental) || shouldReload(this.pipeline, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
@@ -852,7 +852,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
-			n.TableKey, n.IdentityColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental, n.PropertiesToUnset,
+			n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental, n.PropertiesToUnset,
 			n.ID,
 		)
 		if err != nil {
@@ -1109,8 +1109,8 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	if pipeline.TableKey != "" {
 		this.TableKey = new(pipeline.TableKey)
 	}
-	if pipeline.IdentityColumn != "" {
-		this.IdentityColumn = new(pipeline.IdentityColumn)
+	if pipeline.UserIDColumn != "" {
+		this.UserIDColumn = new(pipeline.UserIDColumn)
 	}
 	if pipeline.UpdatedAtColumn != "" {
 		this.UpdatedAtColumn = new(pipeline.UpdatedAtColumn)
@@ -1226,10 +1226,10 @@ type PipelineToSet struct {
 	// It is the empty string for any other type of pipeline.
 	TableKey string `json:"tableKey"`
 
-	// IdentityColumn is the property name used as identity when importing
-	// from a file or from a database.
+	// UserIDColumn is the property name used as user ID when importing from a
+	// file or from a database.
 	// It cannot be longer than 1024 runes.
-	IdentityColumn string `json:"identityColumn"`
+	UserIDColumn string `json:"userIDColumn"`
 
 	// UpdatedAtColumn is the update time column when importing from a file or from
 	// a database. May be empty to indicate that no properties should be used for
@@ -1405,7 +1405,7 @@ func shouldReload(a *state.Pipeline, n *state.UpdatePipeline) bool {
 	if !bytes.Equal(a.FormatSettings, n.FormatSettings) {
 		return true
 	}
-	if a.IdentityColumn != n.IdentityColumn {
+	if a.UserIDColumn != n.UserIDColumn {
 		return true
 	}
 	if a.UpdatedAtColumn != n.UpdatedAtColumn {

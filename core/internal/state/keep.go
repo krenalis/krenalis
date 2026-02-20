@@ -456,7 +456,7 @@ type CreatePipeline struct {
 	UpdateOnDuplicates bool
 	TableName          string
 	TableKey           string
-	IdentityColumn     string
+	UserIDColumn       string
 	UpdatedAtColumn    string
 	UpdatedAtFormat    string
 	Incremental        bool
@@ -501,7 +501,7 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 		UpdateOnDuplicates: e.UpdateOnDuplicates,
 		TableName:          e.TableName,
 		TableKey:           e.TableKey,
-		IdentityColumn:     e.IdentityColumn,
+		UserIDColumn:       e.UserIDColumn,
 		UpdatedAtColumn:    e.UpdatedAtColumn,
 		UpdatedAtFormat:    e.UpdatedAtFormat,
 		Incremental:        e.Incremental,
@@ -1346,7 +1346,7 @@ type UpdatePipeline struct {
 	UpdateOnDuplicates bool
 	TableName          string
 	TableKey           string
-	IdentityColumn     string
+	UserIDColumn       string
 	UpdatedAtColumn    string
 	UpdatedAtFormat    string
 	Incremental        bool
@@ -1390,7 +1390,7 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 		p.UpdateOnDuplicates = e.UpdateOnDuplicates
 		p.TableName = e.TableName
 		p.TableKey = e.TableKey
-		p.IdentityColumn = e.IdentityColumn
+		p.UserIDColumn = e.UserIDColumn
 		p.UpdatedAtColumn = e.UpdatedAtColumn
 		p.UpdatedAtFormat = e.UpdatedAtFormat
 		p.Incremental = e.Incremental

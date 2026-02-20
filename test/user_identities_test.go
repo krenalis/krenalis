@@ -51,8 +51,8 @@ func Test_Identities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityColumn: "identity",
-		Format:         "csv",
+		UserIDColumn: "identity",
+		Format:       "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
@@ -75,8 +75,8 @@ func Test_Identities(t *testing.T) {
 				"email": "email",
 			},
 		},
-		IdentityColumn: "identity",
-		Format:         "csv",
+		UserIDColumn: "identity",
+		Format:       "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,

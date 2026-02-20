@@ -101,9 +101,9 @@ func (file *File) Connector() string {
 // If the pipeline's input schema does not align with the file's schema, the
 // iterator, not Records, will return a *schemas.Error error.
 //
-// If the identity column specified in the pipeline exists in the file schema but
-// its type differs, the iterator returns an error. The same applies to the update
-// time column, if specified.
+// If the user ID column specified in the pipeline exists in the file schema but
+// its type differs, the iterator returns an error. The same applies to the
+// update time column, if specified.
 //
 // If the pipeline's sheet is not found in the file, the All method of the
 // iterator returns immediately and a subsequent call to Err returns
@@ -598,14 +598,14 @@ func (rr *recordReader) Record(ctx context.Context) (map[string]any, error) {
 // The close method should be called when there are no more records to write.
 func newRecordWriter(format string, pipeline *state.Pipeline, storageUpdatedAt time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
-		format:              format,
-		pipeline:            pipeline,
-		storageUpdatedAt:    storageUpdatedAt,
-		timeLayouts:         layout,
-		startTime:           startTime,
-		limit:               limit,
-		identityColumnIndex: -1,
-		updatedAtIndex:      -1,
+		format:            format,
+		pipeline:          pipeline,
+		storageUpdatedAt:  storageUpdatedAt,
+		timeLayouts:       layout,
+		startTime:         startTime,
+		limit:             limit,
+		userIDColumnIndex: -1,
+		updatedAtIndex:    -1,
 	}
 	return &rw
 }
@@ -618,7 +618,7 @@ type recordWriter struct {
 	timeLayouts            *state.TimeLayouts
 	startTime              time.Time
 	limit                  int
-	identityColumnIndex    int
+	userIDColumnIndex      int
 	updatedAtIndex         int
 	numPropertiesPerRecord int
 	properties             []types.Property // properties of the pipeline's schema, or the file's columns if a pipeline has not been provided
@@ -657,16 +657,16 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 				continue
 			}
 			rw.properties[i] = p
-			if p.Name == rw.pipeline.IdentityColumn {
-				rw.identityColumnIndex = i
+			if p.Name == rw.pipeline.UserIDColumn {
+				rw.userIDColumnIndex = i
 			}
 			if p.Name == rw.pipeline.UpdatedAtColumn {
 				rw.updatedAtIndex = i
 			}
 			rw.numPropertiesPerRecord++
 		}
-		if rw.pipeline.IdentityColumn != "" && rw.identityColumnIndex == -1 {
-			return fmt.Errorf("there is no identity column %q", rw.pipeline.IdentityColumn)
+		if rw.pipeline.UserIDColumn != "" && rw.userIDColumnIndex == -1 {
+			return fmt.Errorf("there is no user ID column %q", rw.pipeline.UserIDColumn)
 		}
 		if rw.pipeline.UpdatedAtColumn != "" && rw.updatedAtIndex == -1 {
 			return fmt.Errorf("there is no update time column %q", rw.pipeline.UpdatedAtColumn)
@@ -717,10 +717,10 @@ func (rw *recordWriter) Record(record map[string]any) error {
 		UpdatedAt:  updatedAt,
 		Err:        err,
 	}
-	// Get the identity column.
-	if i := rw.identityColumnIndex; i >= 0 {
+	// Get the user ID column.
+	if i := rw.userIDColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityColumn(p.Name, p.Type, record[p.Name], rw.timeLayouts)
+		rw.record.ID, err = parseUserIDColumn(p.Name, p.Type, record[p.Name], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -791,10 +791,10 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 		UpdatedAt:  updatedAt,
 		Err:        err,
 	}
-	// Get the identity column.
-	if i := rw.identityColumnIndex; i >= 0 {
+	// Get the user ID column.
+	if i := rw.userIDColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityColumn(p.Name, p.Type, record[i], rw.timeLayouts)
+		rw.record.ID, err = parseUserIDColumn(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -866,10 +866,10 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 		UpdatedAt:  updatedAt,
 		Err:        err,
 	}
-	// Get the identity column.
-	if i := rw.identityColumnIndex; i >= 0 {
+	// Get the user ID column.
+	if i := rw.userIDColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityColumn(p.Name, p.Type, record[i], rw.timeLayouts)
+		rw.record.ID, err = parseUserIDColumn(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}

@@ -87,8 +87,8 @@ func TestParquetImport(t *testing.T) {
 				OutPaths: []string{"parquet_id", "parquet_imported"},
 			},
 		},
-		IdentityColumn: "parquet_id",
-		Format:         "parquet",
+		UserIDColumn: "parquet_id",
+		Format:       "parquet",
 	})
 
 	// Import and wait.

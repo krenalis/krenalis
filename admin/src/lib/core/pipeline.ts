@@ -258,7 +258,7 @@ interface TransformedPipeline {
 	tableName?: string | null;
 	tableKey?: string | null;
 	sheet?: string | null;
-	identityColumn?: string | null;
+	userIDColumn?: string | null;
 	updatedAtColumn?: string | null;
 	updatedAtFormat?: string | null;
 	incremental?: boolean | null;
@@ -638,7 +638,7 @@ const transformPipeline = (
 		tableName: pipeline.tableName,
 		tableKey: pipeline.tableKey,
 		sheet: pipeline.sheet,
-		identityColumn: pipeline.identityColumn,
+		userIDColumn: pipeline.userIDColumn,
 		updatedAtColumn: pipeline.updatedAtColumn,
 		updatedAtFormat: pipeline.updatedAtFormat,
 		incremental: pipeline.incremental,
@@ -901,16 +901,16 @@ const transformInPipelineToSet = async (
 	}
 
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-		if (pipeline.identityColumn == null || pipeline.identityColumn === '') {
+		if (pipeline.userIDColumn == null || pipeline.userIDColumn === '') {
 			throw new Error('User identifier cannot be empty');
 		}
-		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === pipeline.identityColumn) !== -1;
+		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === pipeline.userIDColumn) !== -1;
 		if (!isAlreadyInSchema) {
-			const identityColumn = flattenedInputSchema[pipeline.identityColumn];
-			if (identityColumn == null) {
+			const userIDColumn = flattenedInputSchema[pipeline.userIDColumn];
+			if (userIDColumn == null) {
 				throw new Error('User identifier must be a valid property');
 			}
-			inSchema.properties.push(identityColumn.full);
+			inSchema.properties.push(userIDColumn.full);
 		}
 
 		if (pipeline.updatedAtColumn) {
@@ -1099,7 +1099,7 @@ const transformInPipelineToSet = async (
 		tableName: pipeline.tableName,
 		tableKey: pipeline.tableKey,
 		sheet: pipeline.sheet,
-		identityColumn: pipeline.identityColumn,
+		userIDColumn: pipeline.userIDColumn,
 		updatedAtColumn: pipeline.updatedAtColumn,
 		updatedAtFormat: pipeline.updatedAtFormat,
 		incremental: incremental,
@@ -1173,13 +1173,13 @@ const computeDefaultPipeline = (
 	}
 	if (fields.includes('Query')) {
 		pipeline.query = connection.connector.asSource.sampleQuery;
-		pipeline.identityColumn = '';
+		pipeline.userIDColumn = '';
 		pipeline.updatedAtColumn = '';
 		pipeline.updatedAtFormat = '';
 	}
 	if (fields.includes('File')) {
 		pipeline.path = '';
-		pipeline.identityColumn = '';
+		pipeline.userIDColumn = '';
 		pipeline.updatedAtColumn = '';
 		pipeline.updatedAtFormat = '';
 		pipeline.sheet = null;

@@ -7,7 +7,7 @@ import {
 } from './Pipeline.helpers';
 import {
 	getSchemaComboboxItems,
-	getIdentityColumnComboboxItems,
+	getUserIDColumnComboboxItems,
 	getUpdatedAtComboboxItems,
 } from '../../helpers/getSchemaComboboxItems';
 import {
@@ -114,7 +114,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const updatedAtFormatRef = useRef(null);
 	const updatedAtCustomFormatInputRef = useRef(null);
 
-	const hasIdentityColumns = useMemo(() => {
+	const hasUserIDColumn = useMemo(() => {
 		return (
 			connection.isSource && (connection.isDatabase || connection.isFileStorage) && pipelineType.target === 'User'
 		);
@@ -161,7 +161,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (!hasIdentityColumns || !pipeline.updatedAtColumn) {
+		if (!hasUserIDColumn || !pipeline.updatedAtColumn) {
 			return;
 		}
 		// check if the update time format is custom.
@@ -172,13 +172,13 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (hasIdentityColumns && isFirstCompilation.current && !isEditing) {
-			// precompile the 'IdentityColumn' and 'updatedAtColumn'
+		if (hasUserIDColumn && isFirstCompilation.current && !isEditing) {
+			// precompile the 'userIDColumn' and 'updatedAtColumn'
 			// fields, if possible.
 			const p = { ...pipeline };
 			const hasIdColumn = pipelineType.inputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 			if (hasIdColumn) {
-				p.identityColumn = 'id';
+				p.userIDColumn = 'id';
 				isFirstCompilation.current = false;
 			}
 			const hasUpdatedAtColumn =
@@ -259,12 +259,12 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		return null;
 	}, [pipeline.format, connectors]);
 
-	const identityColumnError = useMemo<string>(() => {
+	const userIDColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			if (pipeline.identityColumn === '' && !isFirstCompilation.current) {
-				return 'The user identifier cannot be empty';
+			if (pipeline.userIDColumn === '' && !isFirstCompilation.current) {
+				return 'user ID cannot be empty';
 			}
-			return checkIfPropertyExists(pipeline.identityColumn, flatInputSchema);
+			return checkIfPropertyExists(pipeline.userIDColumn, flatInputSchema);
 		}
 	}, [pipeline, flatInputSchema]);
 
@@ -274,9 +274,9 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [pipeline, flatInputSchema]);
 
-	const { identityColumnList, updatedAtList, mappingList } = useMemo(() => {
+	const { userIDColumnList, updatedAtList, mappingList } = useMemo(() => {
 		return {
-			identityColumnList: getIdentityColumnComboboxItems(pipelineType.inputSchema),
+			userIDColumnList: getUserIDColumnComboboxItems(pipelineType.inputSchema),
 			updatedAtList: getUpdatedAtComboboxItems(pipelineType.inputSchema),
 			mappingList: getSchemaComboboxItems(
 				pipelineType.inputSchema,
@@ -308,9 +308,9 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	};
 
 	const onSelectProperty = (path: string, value: string) => {
-		if (path === 'identityColumn') {
+		if (path === 'userIDColumn') {
 			const p = { ...pipeline };
-			p.identityColumn = value;
+			p.userIDColumn = value;
 			setPipeline(p);
 			if (isFirstCompilation.current) {
 				isFirstCompilation.current = false;
@@ -328,9 +328,9 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		updateMapping(path, value);
 	};
 
-	const onUpdateIdentityColumn = (_: string, value: string) => {
+	const onUpdateUserIDColumn = (_: string, value: string) => {
 		const p = { ...pipeline };
-		p.identityColumn = value;
+		p.userIDColumn = value;
 		setPipeline(p);
 		if (isFirstCompilation.current) {
 			isFirstCompilation.current = false;
@@ -463,38 +463,38 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			className={`pipeline__transformation${isTransformationDisabled ? ' pipeline__transformation--disabled' : ''}`}
 			ref={ref}
 		>
-			{hasIdentityColumns ? (
+			{hasUserIDColumn ? (
 				<Section
-					title='Identity columns'
-					description='The columns from which to import the value to uniquely identify an identity, and possibly the time of its last modification.'
+					title='User columns'
+					description='The columns from which to import the value to uniquely identify a user, and possibly the time of its last modification.'
 					padded={true}
 					annotated={true}
 				>
 					<div className='pipeline__transformation-identity-columns'>
 						<div className='pipeline__transformation-identity-column'>
 							<Combobox
-								onInput={onUpdateIdentityColumn}
-								onSelect={onUpdateIdentityColumn}
-								name='identityColumn'
-								value={identityColumnList.length === 0 ? '' : pipeline.identityColumn!}
-								disabled={isTransformationDisabled || identityColumnList.length === 0}
+								onInput={onUpdateUserIDColumn}
+								onSelect={onUpdateUserIDColumn}
+								name='userIDColumn'
+								value={userIDColumnList.length === 0 ? '' : pipeline.userIDColumn!}
+								disabled={isTransformationDisabled || userIDColumnList.length === 0}
 								className='pipeline__transformation-input-property'
 								isExpression={false}
-								items={identityColumnList}
-								label='Identity'
+								items={userIDColumnList}
+								label='User ID'
 								controlled={true}
 								required
 								caret={true}
-								clearable={pipeline.identityColumn?.length > 0}
+								clearable={pipeline.userIDColumn?.length > 0}
 								error={
-									identityColumnList.length === 0
+									userIDColumnList.length === 0
 										? `No column ${
 												connection.isFileStorage ? 'in the file' : 'returned by the query'
 											} can be used as user identifier`
-										: identityColumnError
+										: userIDColumnError
 								}
 								size='small'
-								helpText='A column that uniquely identifies an identity'
+								helpText='A column that uniquely identifies a user'
 							/>
 						</div>
 						<div className='pipeline__transformation-updated-at-column'>
@@ -513,7 +513,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 									clearable={pipeline.updatedAtColumn?.length > 0}
 									error={updatedAtColumnError}
 									size='small'
-									helpText='A column with the time of the last modification of an identity'
+									helpText='A column with the time of the last modification of a user'
 								/>
 							</div>
 							{needFormat && (

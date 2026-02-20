@@ -75,7 +75,7 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: &meergotester.Transformation{
 			Mapping: mapping,
 		},
-		IdentityColumn: "dummyId",
+		UserIDColumn:   "dummyId",
 		Format:         "json",
 		FormatSettings: meergotester.SettingsProperties(properties),
 	})
@@ -90,7 +90,7 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: &meergotester.Transformation{
 			Mapping: mapping,
 		},
-		IdentityColumn: "dummyId",
+		UserIDColumn:   "dummyId",
 		Format:         "json",
 		FormatSettings: meergotester.SettingsProperties(properties),
 	})

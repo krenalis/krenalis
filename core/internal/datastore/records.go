@@ -250,7 +250,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				r.last = last
 				return yield(previous.records[0])
 			}
-			// Verify if the previous records have the same User ID.
+			// Verify if the previous records have the same user ID.
 			sameUserID := true
 			id := previous.records[0].ID
 			for _, record := range previous.records[1:] {
@@ -274,7 +274,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				}
 				return true
 			}
-			// The previous records do not have the same User ID.
+			// The previous records do not have the same user ID.
 			// Remove duplicates and return the records with an error.
 			previous.records = slices.CompactFunc(previous.records, func(a, b Record) bool {
 				return a.ID == b.ID
@@ -306,8 +306,8 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				value = row[r.matchingIndex]
 			}
 			record := Record{
-				ID:         row[last],              // the User ID is the last column.
-				Attributes: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
+				ID:         row[last],              // the user ID is the last column.
+				Attributes: r.unflat(row[:last-1]), // skip the last 2 columns: the external ID and the user ID.
 			}
 			// If there is no matching application user and the external ID is nil, assign an empty string.
 			record.ExternalID, _ = row[last-1].(string)

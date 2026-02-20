@@ -112,7 +112,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 					"gender": "gender",
 				},
 			},
-			IdentityColumn:  "csv_id",
+			UserIDColumn:    "csv_id",
 			UpdatedAtColumn: "timestamp",
 			UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 			Format:          "csv",

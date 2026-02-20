@@ -1254,7 +1254,7 @@ type Pipeline struct {
 	UpdateOnDuplicates bool
 	TableName          string
 	TableKey           string
-	IdentityColumn     string
+	UserIDColumn       string
 	UpdatedAtColumn    string
 	UpdatedAtFormat    string
 	Reload             bool

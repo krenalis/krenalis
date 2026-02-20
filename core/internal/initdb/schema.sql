@@ -149,7 +149,7 @@ CREATE TABLE pipelines (
     update_on_duplicates boolean NOT NULL,
     table_name varchar(1024) NOT NULL DEFAULT '',
     table_key text NOT NULL,
-    identity_column varchar(1024) NOT NULL DEFAULT '',
+    user_id_column varchar(1024) NOT NULL DEFAULT '',
     updated_at_column varchar(1024) NOT NULL DEFAULT '',
     updated_at_format varchar(64) NOT NULL DEFAULT '',
     incremental boolean NOT NULL DEFAULT FALSE,

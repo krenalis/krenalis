@@ -353,13 +353,13 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	default:
 		return errors.BadRequest("compression %q is not valid", pipeline.Compression)
 	}
-	// Validate the identity column.
-	if pipeline.IdentityColumn != "" {
-		if !types.IsValidPropertyName(pipeline.IdentityColumn) {
-			return errors.BadRequest("identity column is not a valid property name")
+	// Validate the user ID column.
+	if pipeline.UserIDColumn != "" {
+		if !types.IsValidPropertyName(pipeline.UserIDColumn) {
+			return errors.BadRequest("user ID column is not a valid property name")
 		}
-		if utf8.RuneCountInString(pipeline.IdentityColumn) > 1024 {
-			return errors.BadRequest("identity column is longer than 1024 runes")
+		if utf8.RuneCountInString(pipeline.UserIDColumn) > 1024 {
+			return errors.BadRequest("user ID column is longer than 1024 runes")
 		}
 	}
 	// Validate the update time column.
@@ -474,30 +474,30 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 
-	// Check the column for the identity column and for the timestamp.
+	// Check the column for the user ID column and for the timestamp.
 	importFromColumns := v.connection.role == state.Source &&
 		(v.connection.connector.typ == state.Database || v.connection.connector.typ == state.FileStorage)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		// Validate the identity column.
-		if pipeline.IdentityColumn == "" {
-			return errors.BadRequest("identity column is mandatory")
+		// Validate the user ID column.
+		if pipeline.UserIDColumn == "" {
+			return errors.BadRequest("user ID column is mandatory")
 		}
-		identityColumn, ok := inProperties.ByName(pipeline.IdentityColumn)
+		userIDColumn, ok := inProperties.ByName(pipeline.UserIDColumn)
 		if !ok {
-			return errors.BadRequest("identity column %q not found within input schema", pipeline.IdentityColumn)
+			return errors.BadRequest("user ID column %q not found within input schema", pipeline.UserIDColumn)
 		}
-		switch k := identityColumn.Type.Kind(); k {
+		switch k := userIDColumn.Type.Kind(); k {
 		case types.StringKind, types.IntKind, types.UUIDKind, types.JSONKind:
 		default:
-			return errors.BadRequest("identity column %q has kind %s instead of int, uuid, json, or string", pipeline.IdentityColumn, k)
+			return errors.BadRequest("user ID column %q has kind %s instead of int, uuid, json, or string", pipeline.UserIDColumn, k)
 		}
-		if identityColumn.ReadOptional {
-			return errors.BadRequest("identity column cannot be optional")
+		if userIDColumn.ReadOptional {
+			return errors.BadRequest("user ID column cannot be optional")
 		}
-		usedInPaths = append(usedInPaths, pipeline.IdentityColumn)
+		usedInPaths = append(usedInPaths, pipeline.UserIDColumn)
 		// Validate the update time column and format.
 		var requiresUpdatedAtFormat bool
 		if pipeline.UpdatedAtColumn != "" {
@@ -525,8 +525,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			}
 		}
 	} else {
-		if pipeline.IdentityColumn != "" {
-			return errors.BadRequest("pipeline cannot specify an identity column")
+		if pipeline.UserIDColumn != "" {
+			return errors.BadRequest("pipeline cannot specify a user ID column")
 		}
 		if pipeline.UpdatedAtColumn != "" {
 			return errors.BadRequest("pipeline cannot specify an update time column")

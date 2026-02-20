@@ -36,7 +36,7 @@ type PipelineToSet struct {
 	UpdateOnDuplicates bool            `json:"updateOnDuplicates"`
 	TableName          string          `json:"tableName"`
 	TableKey           string          `json:"tableKey"`
-	IdentityColumn     string          `json:"identityColumn"`
+	UserIDColumn       string          `json:"userIDColumn"`
 	UpdatedAtColumn    string          `json:"updatedAtColumn"`
 	UpdatedAtFormat    string          `json:"updatedAtFormat"`
 	Incremental        bool            `json:"incremental"`

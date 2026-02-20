@@ -427,45 +427,6 @@ func ordinal(n int) string {
 	return fmt.Sprintf("%dth", n)
 }
 
-// parseIdentityColumn parses the value for the identity column.
-func parseIdentityColumn(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
-	id, err := normalize(name, typ, value, false, layouts)
-	if err != nil {
-		return "", err
-	}
-	switch id := id.(type) {
-	case nil:
-		return "", fmt.Errorf("identity value is null")
-	case string:
-		if id == "" {
-			return "", fmt.Errorf("identity value is empty")
-		}
-		return id, nil
-	case int:
-		return strconv.FormatInt(int64(id), 10), nil
-	case uint:
-		return strconv.FormatUint(uint64(id), 10), nil
-	case float64:
-		if int(math.Round(id)) == int(id) {
-			return strconv.FormatInt(int64(id), 10), nil
-		}
-	case json.Value:
-		switch id.Kind() {
-		case json.String:
-			s := id.String()
-			if s == "" {
-				return "", fmt.Errorf("identity value is empty")
-			}
-			return s, nil
-		case json.Number:
-			if _, err := id.Int(); err == nil {
-				return string(id), nil
-			}
-		}
-	}
-	return "", fmt.Errorf("identity value is not a JSON string or JSON integer number")
-}
-
 // parseUpdatedAtColumn parses an update time column value. If the value cannot
 // be parsed or is not valid, it returns an error. If the value is valid but
 // nil, and nullable is true, it returns the zero time and a nil error.
@@ -556,6 +517,45 @@ func parseUpdatedAtColumnWithFormat(format, v string) (time.Time, error) {
 		}
 		return t.UTC(), nil
 	}
+}
+
+// parseUserIDColumn parses the value for the user ID column.
+func parseUserIDColumn(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
+	id, err := normalize(name, typ, value, false, layouts)
+	if err != nil {
+		return "", err
+	}
+	switch id := id.(type) {
+	case nil:
+		return "", fmt.Errorf("user ID value is null")
+	case string:
+		if id == "" {
+			return "", fmt.Errorf("user ID value is empty")
+		}
+		return id, nil
+	case int:
+		return strconv.FormatInt(int64(id), 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(id), 10), nil
+	case float64:
+		if int(math.Round(id)) == int(id) {
+			return strconv.FormatInt(int64(id), 10), nil
+		}
+	case json.Value:
+		switch id.Kind() {
+		case json.String:
+			s := id.String()
+			if s == "" {
+				return "", fmt.Errorf("user ID value is empty")
+			}
+			return s, nil
+		case json.Number:
+			if _, err := id.Int(); err == nil {
+				return string(id), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("user ID value is not a JSON string or JSON integer number")
 }
 
 // rewriteColumnErrors updates error messages for types.InvalidPropertyNameError
