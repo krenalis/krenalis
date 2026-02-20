@@ -188,7 +188,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					setAskDeletionConfirmation(false);
 					setDeleteConfirmationInput('');
 				}}
-				title='Are you sure?'
+				title='Delete the connection?'
 				actions={
 					<>
 						<SlButton
@@ -210,13 +210,23 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					</>
 				}
 			>
-				<p>
-					If you continue, you will permanently lose the connection and{' '}
-					<span className='connection-settings__delete-alert-pipelines'>
-						all its associated pipelines and their data
-					</span>
-					. The profiles will be updated accordingly at the next identity resolution execution.
-				</p>
+				{connection.isSource ? (
+					<p>
+						If you continue, you will permanently lose the connection and{' '}
+						<span className='connection-settings__delete-alert-pipelines'>
+							all its associated pipelines and their data
+						</span>
+						. The profiles will be updated accordingly at the next identity resolution execution.
+					</p>
+				) : (
+					<p>
+						If you continue, you will permanently lose the connection and{' '}
+						<span className='connection-settings__delete-alert-pipelines'>
+							all its associated pipelines
+						</span>
+						.
+					</p>
+				)}
 				<ConfirmByTyping
 					confirmText={connection.name}
 					value={deleteConfirmationInput}
