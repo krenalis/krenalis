@@ -124,14 +124,6 @@ const IdentityResolutionSettings = () => {
 	};
 
 	const items = getSchemaComboboxItems(suitableAsIdentifiers);
-	const identifiersComboboxItems = [];
-	for (const it of items) {
-		const isAlreadyUsed = identifiers.includes(it.term);
-		if (isAlreadyUsed) {
-			continue;
-		}
-		identifiersComboboxItems.push(it);
-	}
 
 	return (
 		<div className='identifiers'>
@@ -166,6 +158,8 @@ const IdentityResolutionSettings = () => {
 					>
 						{identifiers.map((identifier, i) => {
 							const position = i + 1;
+							const otherIdentifiers = identifiers.filter((_, j) => j !== i);
+							const rowItems = items.filter((it) => !otherIdentifiers.includes(it.term));
 							return (
 								<div key={position} className='identifiers__identifier'>
 									<div className='identifiers__identifier-position'>{position}</div>
@@ -177,7 +171,7 @@ const IdentityResolutionSettings = () => {
 										onSelect={onUpdateIdentifier}
 										isExpression={false}
 										controlled={true}
-										items={identifiersComboboxItems}
+										items={rowItems}
 										size='small'
 									/>
 									<SlDropdown>
