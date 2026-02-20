@@ -278,7 +278,7 @@ const Member = () => {
 											className='member__add-avatar'
 											onClick={() => fileInputRef.current?.click()}
 										>
-											Upload
+											Change
 										</div>
 										{avatar && (
 											<div className='member__remove-avatar' onClick={onDeleteAvatar}>
