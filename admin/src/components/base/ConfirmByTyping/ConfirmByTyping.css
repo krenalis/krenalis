@@ -6,7 +6,7 @@
 }
 
 .confirm-by-typing__instruction {
-	margin: 0 0 10px 10%;
+	margin: 0 auto 10px;
 	font-size: 15px;
 	width: 80%;
 }
@@ -25,6 +25,6 @@
 	font-family: var(--monospace-fonts);
 	background-color: var(--sl-color-neutral-100);
 	display: inline-block;
-	padding: 0px 5px;
+	padding: 0 5px;
 	border-radius: 3px;
 }
