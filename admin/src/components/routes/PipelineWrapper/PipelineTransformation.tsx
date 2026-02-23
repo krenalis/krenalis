@@ -3072,11 +3072,9 @@ const TransformationNestedProperties = ({
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
 	let path = property.name;
-	let parentProperty: Property;
 	const isFirstLevel = parentName == null;
 	if (!isFirstLevel) {
 		path = parentName + '.' + property.name;
-		parentProperty = flatSchema[parentName]?.full;
 	}
 
 	let isSearched = false;
@@ -3142,19 +3140,6 @@ const TransformationNestedProperties = ({
 		properties = elementTyp.properties;
 	}
 
-	let hideCheckbox = false;
-	if (parentProperty != null && (parentProperty.type.kind === 'array' || parentProperty.type.kind === 'map')) {
-		// direct children of an array or map property.
-		hideCheckbox = true;
-	} else if (
-		(property.type.kind === 'array' || property.type.kind === 'map') &&
-		parentName != null &&
-		parentProperty == null
-	) {
-		// descendant of an array or map property.
-		hideCheckbox = true;
-	}
-
 	return (
 		<div
 			className={`fullscreen-transformation__nested${isExpanded || showSearchedChildren ? ' fullscreen-transformation__nested--expand' : ''}`}
@@ -3172,7 +3157,6 @@ const TransformationNestedProperties = ({
 				onChangeSelectedPath={onChangeSelectedPath}
 				isExpanded={isExpanded || showSearchedChildren}
 				setIsExpanded={setIsExpanded}
-				hideCheckbox={hideCheckbox}
 			/>
 			<div
 				className='fullscreen-transformation__sub-properties'
@@ -3209,9 +3193,6 @@ const TransformationNestedProperties = ({
 									flatSchema={flatSchema}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
-									hideCheckbox={
-										property.type.kind === 'array' || property.type.kind === 'map' || hideCheckbox
-									}
 								/>
 							);
 						}
@@ -3236,7 +3217,6 @@ interface TransformationPropertyProps {
 	isExpanded?: boolean;
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 	isOutMatchingProperty?: boolean;
-	hideCheckbox?: boolean;
 }
 
 const TransformationProperty = ({
@@ -3254,7 +3234,6 @@ const TransformationProperty = ({
 	isExpanded,
 	setIsExpanded,
 	isOutMatchingProperty,
-	hideCheckbox = false,
 }: TransformationPropertyProps) => {
 	const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(false);
 
@@ -3300,8 +3279,22 @@ const TransformationProperty = ({
 		}
 	}
 
+	// Properties nested under array or map properties must not be selected
+	// directly.
+	const parentProperty = flatSchema[parentName]?.full;
+	let hideSelection = false;
+	if (parentProperty != null && (parentProperty.type.kind === 'array' || parentProperty.type.kind === 'map')) {
+		// Direct child of an array/map property.
+		hideSelection = true;
+	} else if (parentName != null && parentProperty == null) {
+		// Descendant of an array/map property: the intermediate element type
+		// objects of array/map properties are not key inside the flatSchema, so
+		// descendant's parent lookup always returns undefined.
+		hideSelection = true;
+	}
+
 	const onClick = (e: any) => {
-		if (isSelectDisabled) {
+		if (isSelectDisabled || hideSelection) {
 			return;
 		}
 		const isCopy = e.target.closest('.fullscreen-transformation__property-copy') != null;
@@ -3367,7 +3360,7 @@ const TransformationProperty = ({
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
-			style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
+			style={{ cursor: transformationType === 'function' && !hideSelection ? 'pointer' : 'default' }}
 			onClick={transformationType === 'function' ? onClick : null}
 		>
 			<div className='fullscreen-transformation__property-padding'>
@@ -3382,7 +3375,7 @@ const TransformationProperty = ({
 				)}
 			</div>
 			{transformationType === 'function' &&
-				(hideCheckbox ? (
+				(hideSelection ? (
 					<div className='fullscreen-transformation__property-check-empty' />
 				) : (
 					<SlCheckbox
