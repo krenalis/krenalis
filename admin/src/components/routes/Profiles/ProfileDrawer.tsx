@@ -151,11 +151,13 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 				<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
 			</div>
 			<div className='profile-drawer__top-section'>
-				<SlAvatar className='profile-drawer__image' image={String(profileImage) || ''} />
+				<SlAvatar className='profile-drawer__image' image={profileImage != null ? String(profileImage) : ''} />
 				<div className='profile-drawer__profile-properties'>
-					<span className='profile-drawer__first-name'>{profileFirstName || ''}</span>{' '}
-					<span className='profile-drawer__last-name'>{profileLastName || ''}</span>
-					<div className='profile-drawer__information'>{profileExtra || ''}</div>
+					<span className='profile-drawer__first-name'>
+						{profileFirstName != null ? profileFirstName : ''}
+					</span>{' '}
+					<span className='profile-drawer__last-name'>{profileLastName != null ? profileLastName : ''}</span>
+					<div className='profile-drawer__information'>{profileExtra != null ? profileExtra : ''}</div>
 					{profileImage == null &&
 						profileFirstName == null &&
 						profileLastName == null &&
