@@ -30,7 +30,7 @@ require (
 	github.com/mark3labs/mcp-go v0.44.0
 	github.com/meergo/analytics-go v0.0.7
 	github.com/nats-io/nats.go v1.49.0
-	github.com/nats-io/nkeys v0.4.12
+	github.com/nats-io/nkeys v0.4.15
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1
 	github.com/pkg/sftp v1.13.10
 	github.com/prometheus/client_golang v1.23.2
