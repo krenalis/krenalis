@@ -368,7 +368,7 @@ github.com/ebitengine/purego/internal/strings
 github.com/ericlagergren/decimal
 github.com/ericlagergren/decimal/internal/arith
 github.com/ericlagergren/decimal/internal/c
-# github.com/evanw/esbuild v0.27.2
+# github.com/evanw/esbuild v0.27.3
 ## explicit; go 1.13
 github.com/evanw/esbuild/internal/api_helpers
 github.com/evanw/esbuild/internal/ast
