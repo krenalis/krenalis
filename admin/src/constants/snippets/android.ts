@@ -4,6 +4,7 @@ export const SNIPPET = `import com.meergo.analytics.kotlin.android.Analytics
 import com.meergo.analytics.kotlin.core.*
 
 val client = Analytics("writekey", applicationContext) {
+  endpoint = "endpoint"
   trackApplicationLifecycleEvents = true
   flushAt = 3
   flushInterval = 10
