@@ -675,10 +675,10 @@ github.com/rabbitmq/amqp091-go
 # github.com/relvacode/iso8601 v1.7.0
 ## explicit; go 1.13
 github.com/relvacode/iso8601
-# github.com/richardlehane/mscfb v1.0.4
-## explicit
+# github.com/richardlehane/mscfb v1.0.6
+## explicit; go 1.18
 github.com/richardlehane/mscfb
-# github.com/richardlehane/msoleps v1.0.4
+# github.com/richardlehane/msoleps v1.0.6
 ## explicit
 github.com/richardlehane/msoleps/types
 # github.com/segmentio/asm v1.2.1
@@ -736,7 +736,7 @@ github.com/testcontainers/testcontainers-go/modules/nats
 # github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
 ## explicit; go 1.24.0
 github.com/testcontainers/testcontainers-go/modules/postgres
-# github.com/tiendc/go-deepcopy v1.7.1
+# github.com/tiendc/go-deepcopy v1.7.2
 ## explicit; go 1.18
 github.com/tiendc/go-deepcopy
 # github.com/tklauser/go-sysconf v0.3.15
@@ -764,7 +764,7 @@ github.com/wk8/go-ordered-map/v2
 # github.com/xuri/efp v0.0.1
 ## explicit; go 1.11
 github.com/xuri/efp
-# github.com/xuri/excelize/v2 v2.10.0
+# github.com/xuri/excelize/v2 v2.10.1
 ## explicit; go 1.24.0
 github.com/xuri/excelize/v2
 # github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9
