@@ -48,6 +48,9 @@ require (
 	golang.org/x/text v0.34.0
 )
 
+// Pin filippo.io/edwards25519 to v1.1.1 to satisfy Dependabot.
+replace filippo.io/edwards25519 => filippo.io/edwards25519 v1.1.1
+
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
