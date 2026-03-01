@@ -141,7 +141,7 @@ func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events connectors.Even
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
@@ -173,18 +173,6 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, updatedAt 
 			b.WriteString("&filter=greater-than%28updated%2C")
 			b.WriteString(url.QueryEscape(updatedAt.Add(-time.Second).Format(time.RFC3339)))
 			b.WriteString("%29")
-		}
-		if ids != nil {
-			b.WriteString("&filter=any%28id%2C%5B")
-			for i, id := range ids {
-				if i > 0 {
-					b.WriteString("%2C")
-				}
-				b.WriteString(`%22`)
-				b.WriteString(url.QueryEscape(id))
-				b.WriteString(`%22`)
-			}
-			b.WriteString("%5D%29")
 		}
 		u = b.String()
 	}

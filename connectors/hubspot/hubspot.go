@@ -249,7 +249,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/crm/v3/objects/contacts/"
 
@@ -270,29 +270,13 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updat
 	defer bb.Close()
 
 	bb.WriteByte('{')
-
-	if ids != nil {
-		bb.WriteString(`"inputs":[`)
-		for i, id := range ids {
-			if i > 0 {
-				bb.WriteByte(',')
-			}
-			bb.WriteString(`{"id":"`)
-			bb.WriteString(id)
-			bb.WriteString(`"}`)
-		}
-		bb.WriteString(`],`)
-		path += "batch/read"
-	} else {
-		propertyName := "lastmodifieddate"
-		unix := max(updatedAt.UnixMilli(), 0)
-		bb.WriteString(`"filterGroups":[{"filters":[{"value":"`)
-		bb.WriteString(strconv.FormatInt(unix, 10))
-		bb.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
-			`]}],"sorts":["` + propertyName + `"],`)
-		path += "search"
-	}
-
+	propertyName := "lastmodifieddate"
+	unix := max(updatedAt.UnixMilli(), 0)
+	bb.WriteString(`"filterGroups":[{"filters":[{"value":"`)
+	bb.WriteString(strconv.FormatInt(unix, 10))
+	bb.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
+		`]}],"sorts":["` + propertyName + `"],`)
+	path += "search"
 	bb.WriteString(`"after":"`)
 	bb.WriteString(cursor)
 	bb.WriteString(`","limit":100,"properties":[`)

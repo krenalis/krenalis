@@ -105,7 +105,7 @@ func (stripe *Stripe) RecordSchema(ctx context.Context, target connectors.Target
 }
 
 // Records returns the records of the specified target.
-func (stripe *Stripe) Records(ctx context.Context, _ connectors.Targets, _ time.Time, _ []string, cursor string, _ types.Type) ([]connectors.Record, string, error) {
+func (stripe *Stripe) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/v1/customers"
 	if cursor != "" {

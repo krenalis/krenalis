@@ -15,7 +15,6 @@ import (
 	"maps"
 	"math/rand/v2"
 	"net/http"
-	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -203,7 +202,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, ids []string, _ string, _ types.Type) ([]connectors.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	prometheus.Increment("Dummy.Records.calls", 1)
 	dummy.simulateHTTPDelay()
 	select {
@@ -216,9 +215,6 @@ func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, updatedAt
 	customers := make([]connectors.Record, 0, len(allCustomers))
 	for id, attributes := range allCustomers {
 		if customersUpdatedAt[id].Before(updatedAt) {
-			continue
-		}
-		if ids != nil && !slices.Contains(ids, id) {
 			continue
 		}
 		customers = append(customers, connectors.Record{

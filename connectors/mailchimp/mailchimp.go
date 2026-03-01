@@ -233,7 +233,7 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 }
 
 // Records returns the records of the specified target.
-func (mc *Mailchimp) Records(ctx context.Context, _ connectors.Targets, updatedAt time.Time, _ []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (mc *Mailchimp) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 

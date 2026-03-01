@@ -268,8 +268,7 @@ type RecordFetcher interface {
 	//
 	// If updatedAt is not the zero time, only records created or modified at or
 	// after that time are returned. The precision of updatedAt is limited to
-	// microseconds. If ids is not nil, only records with identifiers in ids should
-	// be returned, if any.
+	// microseconds.
 	//
 	// cursor represents the position from which to start reading the records; it is
 	// the cursor value returned by the previous call in a paginated query.
@@ -288,7 +287,7 @@ type RecordFetcher interface {
 	// with the io.EOF error.
 	//
 	// In case of an error, it returns a non-nil and non-EOF error.
-	Records(ctx context.Context, target Targets, updatedAt time.Time, ids []string, cursor string, schema types.Type) ([]Record, string, error)
+	Records(ctx context.Context, target Targets, updatedAt time.Time, cursor string, schema types.Type) ([]Record, string, error)
 }
 
 // RecordUpserter is implemented by application connectors that support updating
