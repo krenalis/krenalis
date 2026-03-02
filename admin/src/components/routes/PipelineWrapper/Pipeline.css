@@ -422,6 +422,14 @@
 	margin-top: 30px;
 }
 
+.pipeline__transformation-incremental sl-checkbox::part(label) {
+	margin-inline-start: 8px;
+}
+
+.pipeline__transformation-incremental sl-checkbox::part(form-control-help-text) {
+	padding-left: calc(var(--sl-toggle-size-medium) + 8px);
+}
+
 .pipeline__transformation--disabled {
 	opacity: 0.7;
 }
