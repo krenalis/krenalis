@@ -336,7 +336,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updat
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	// Note that records.All() cannot be used because the HubSpot API's "upsert" method does not allow updating contacts using "hs_object_id".
 	// See https://community.hubspot.com/t5/APIs-Integrations/Create-or-update-a-batch-of-contacts-by-unique-property-values/m-p/1047925.

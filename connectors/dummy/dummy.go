@@ -325,7 +325,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName", "favouriteDrink", "address"}
 
 // Upsert updates or creates records in the API for the specified target.
-func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	dummy.simulateHTTPDelay()
 

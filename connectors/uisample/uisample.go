@@ -147,7 +147,7 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (uiSample *UISample) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (uiSample *UISample) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 	return nil
 }
 

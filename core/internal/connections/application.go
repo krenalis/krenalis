@@ -342,7 +342,7 @@ func (app *Application) Writer(ctx context.Context, outSchema types.Type, export
 		return nil, err
 	}
 	inner := app.inner.(connectors.RecordUpserter)
-	writer := appwriter.New(app.connector, target, inner.Upsert, appwriter.AcksFunc(ack))
+	writer := appwriter.New(app.connector, target, inner.Upsert, outSchema, appwriter.AcksFunc(ack))
 	return writer, nil
 }
 

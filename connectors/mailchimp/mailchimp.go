@@ -388,7 +388,7 @@ const maxBodyRecordsBytes = 100 * 1024 * 1024
 const maxBodyRecords = 5000
 
 // Upsert updates or creates records in the API for the specified target.
-func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 

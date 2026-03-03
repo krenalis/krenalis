@@ -172,7 +172,7 @@ var arrayIndex = regexp.MustCompile(`^\w+\[(\d+)\]`)
 var localeCode = regexp.MustCompile(`^[a-z]{2}(?:-[A-Z]{2})?$`)
 
 // Upsert updates or creates records in the API for the specified target.
-func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	record := records.First()
 

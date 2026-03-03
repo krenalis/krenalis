@@ -301,7 +301,10 @@ type RecordUpserter interface {
 
 	// Upsert updates or creates records in the application for the specified
 	// target.
-	Upsert(ctx context.Context, target Targets, records Records) error
+	//
+	// The attributes of each record are compliant with the provided schema,
+	// and the schema is compliant with a recent destination schema.
+	Upsert(ctx context.Context, target Targets, records Records, schema types.Type) error
 }
 
 // Record represents an application record.

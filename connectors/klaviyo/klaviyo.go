@@ -431,7 +431,7 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (ky *Klaviyo) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (ky *Klaviyo) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	record := records.First()
 

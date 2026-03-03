@@ -18,6 +18,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/tools/types"
 )
 
 func Test_Writer(t *testing.T) {
@@ -38,7 +39,7 @@ func Test_Writer(t *testing.T) {
 		t.Run(fmt.Sprintf("%d/%d/%f", test.num, test.seed, test.create), func(t *testing.T) {
 
 			app := newApplication(t, test.seed)
-			w := New("test", state.TargetUser, app.Upsert, app.ack)
+			w := New("test", state.TargetUser, app.Upsert, types.Type{}, app.ack)
 
 			ctx := context.Background()
 
@@ -124,7 +125,7 @@ func (app *application) validateRecord(r connectors.Record) {
 	}
 }
 
-func (app *application) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
+func (app *application) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	// Test Peek.
 	if app.rng.Int()%8 == 0 {

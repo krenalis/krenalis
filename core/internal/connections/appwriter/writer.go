@@ -13,6 +13,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/tools/types"
 )
 
 const assert = false // enable during development for assertions
@@ -22,7 +23,7 @@ type AcksFunc func(ids []string, err error)
 
 // UpsertFunc updates or creates records via the application for the specified
 // target.
-type UpsertFunc func(ctx context.Context, target connectors.Targets, records connectors.Records) error
+type UpsertFunc func(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error
 
 const minBatchSize = 1000
 const maxQueueDelay = 200 * time.Millisecond
@@ -38,6 +39,7 @@ type Writer struct {
 	connector string             // application connector.
 	target    connectors.Targets // target, can be TargetUser or TargetGroup
 	upsert    UpsertFunc         // function that updates or creates records in the application.
+	schema    types.Type         // schema
 	acks      AcksFunc           // ack function
 
 	mu        sync.Mutex  // mutex for iterator, records, index, and available fields
@@ -66,11 +68,12 @@ type record struct {
 // New returns a new Writer. connector is the application's connector, target is
 // the record target, upsert is the function that creates or updates records in
 // the application, and acks acknowledges both successes and failures.
-func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc) *Writer {
+func New(connector string, target state.Target, upsert UpsertFunc, schema types.Type, acks AcksFunc) *Writer {
 	w := &Writer{
 		connector: connector,
 		target:    connectors.Targets(target),
 		upsert:    upsert,
+		schema:    schema,
 		acks:      acks,
 		records:   make([]record, 0, 100),
 		timer:     time.NewTimer(maxQueueDelay),
@@ -328,7 +331,7 @@ func (w *Writer) consume(iter *iterator) {
 	if trace {
 		fmt.Printf("Writer.consume: iterator %p started\n", iter)
 	}
-	err := w.upsert(w.close.ctx, w.target, iter)
+	err := w.upsert(w.close.ctx, w.target, iter, w.schema)
 	errors, _ := err.(connectors.RecordsError)
 	var errorOf map[error][]string
 	w.mu.Lock()
