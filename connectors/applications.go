@@ -249,9 +249,8 @@ type EventType struct {
 	// Description is the description of the event type to be displayed.
 	Description string
 
-	// Filter is the recommended default filter to use for pipelines that use
-	// this event type.
-	Filter string
+	// DefaultFilter is the default filter to use for pipelines.
+	DefaultFilter string
 }
 
 // RecordFetcher is implemented by application connectors that support fetching

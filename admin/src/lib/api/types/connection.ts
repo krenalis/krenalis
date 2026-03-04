@@ -11,7 +11,7 @@ interface EventType {
 	id: string;
 	name: string;
 	description: string;
-	filter: string;
+	defaultFilter: string;
 }
 
 interface Connection {

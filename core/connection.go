@@ -65,10 +65,10 @@ type Connection struct {
 
 // EventType represents an event type of a destination application connection.
 type EventType struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Filter      string `json:"filter"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	DefaultFilter string `json:"defaultFilter"`
 }
 
 type PipelineInfo struct {

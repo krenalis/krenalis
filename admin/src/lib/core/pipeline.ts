@@ -236,7 +236,7 @@ interface TransformedEventType {
 	id: string;
 	name: string;
 	description: string;
-	filter: Filter | null;
+	defaultFilter: Filter | null;
 }
 
 interface TransformedPipeline {
@@ -1159,8 +1159,8 @@ const computeDefaultPipeline = (
 	};
 	if (fields.includes('Filter')) {
 		const eventType = connection.eventTypes.find((t) => t.id === pipelineType.eventType);
-		if (eventType != null && eventType.filter != null) {
-			pipeline.filter = eventType.filter;
+		if (eventType != null && eventType.defaultFilter != null) {
+			pipeline.filter = eventType.defaultFilter;
 		} else if ((connection.isSDK || connection.isWebhook) && pipelineType.target === 'User') {
 			pipeline.filter = {
 				logical: 'or',

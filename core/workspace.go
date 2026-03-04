@@ -503,10 +503,10 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		eventTypes := make([]EventType, len(appEventTypes))
 		for i, et := range appEventTypes {
 			eventTypes[i] = EventType{
-				ID:          et.ID,
-				Name:        et.Name,
-				Description: et.Description,
-				Filter:      et.Filter,
+				ID:            et.ID,
+				Name:          et.Name,
+				Description:   et.Description,
+				DefaultFilter: et.DefaultFilter,
 			}
 		}
 		connection.EventTypes = &eventTypes
