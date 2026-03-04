@@ -158,9 +158,11 @@ func TestExportAndImportParquet(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		err := parquetFile.Close()
-		if err != nil {
-			t.Logf("cannot close temporary Parquet file: %s", err)
+		if parquetFile != nil {
+			err := parquetFile.Close()
+			if err != nil {
+				t.Logf("cannot close temporary Parquet file: %s", err)
+			}
 		}
 	}()
 	parquetFileName := parquetFile.Name()
@@ -177,6 +179,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = parquetFile.Close()
+	parquetFile = nil
 	if err != nil {
 		t.Fatal(err)
 	}
