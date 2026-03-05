@@ -347,7 +347,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 		}
 
 		var id string
-		if record.ID == "" {
+		if record.IsCreate() {
 			// Add a new customers into the in-memory customers.
 			prometheus.Increment("Dummy.Upsert.customers_created", 1)
 			customer := maps.Clone(record.Attributes)

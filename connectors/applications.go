@@ -326,6 +326,13 @@ type Record struct {
 	Err error
 }
 
+// IsCreate reports whether this record should be created when passed to Upsert.
+// In Meergo, a record to be created has an empty ID.
+func (r Record) IsCreate() bool { return r.ID == "" }
+
+// IsUpdate reports whether this record should be updated when passed to Upsert.
+func (r Record) IsUpdate() bool { return r.ID != "" }
+
 // RecordsError is returned by the Upsert method of an application connector
 // when only some records have failed or when the method can distinguish errors
 // based on individual records. It maps record indices to their respective

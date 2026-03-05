@@ -404,14 +404,14 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 			bb.WriteByte(',')
 		}
 		method := "PATCH"
-		if record.ID == "" {
+		if record.IsCreate() {
 			method = "POST"
 		}
 		bb.WriteString(`{"method":"`)
 		bb.WriteString(method)
 		bb.WriteString(`","path":"`)
 		bb.WriteString(basePath)
-		if record.ID != "" {
+		if record.IsUpdate() {
 			bb.WriteByte('/')
 			bb.WriteString(url.PathEscape(record.ID))
 		}

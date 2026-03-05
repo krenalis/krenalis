@@ -215,7 +215,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 	}
 
 	// Drop create/update-only fields.
-	if record.ID == "" {
+	if record.IsCreate() {
 		delete(record.Attributes, "default_source")
 		if tax, ok := record.Attributes["tax"].(map[string]any); ok {
 			if validate, ok := tax["validate_location"]; ok && validate == "auto" {
@@ -229,7 +229,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 
 	// Stripe requires empty arrays and maps to be serialized as empty strings.
 	// Apply this only when updating a customer.
-	if record.ID != "" {
+	if record.IsUpdate() {
 		if metadata, ok := record.Attributes["metadata"].(map[string]any); ok && len(metadata) == 0 {
 			record.Attributes["metadata"] = nil
 		}
@@ -248,7 +248,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 	encodeAttributes(bb, record.Attributes)
 
 	u := "/v1/customers"
-	if record.ID != "" {
+	if record.IsUpdate() {
 		u += "/" + record.ID
 	}
 

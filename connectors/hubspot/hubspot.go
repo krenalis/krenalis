@@ -342,7 +342,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, record
 	// See https://community.hubspot.com/t5/APIs-Integrations/Create-or-update-a-batch-of-contacts-by-unique-property-values/m-p/1047925.
 
 	method := "update"
-	if first, _ := records.Peek(); first.ID == "" {
+	if first, _ := records.Peek(); first.IsCreate() {
 		method = "create"
 	}
 

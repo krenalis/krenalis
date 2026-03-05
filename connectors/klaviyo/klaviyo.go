@@ -449,14 +449,14 @@ func (ky *Klaviyo) Upsert(ctx context.Context, target connectors.Targets, record
 		_ = bb.Encode(properties)
 		bb.WriteByte('}') // add '}'.
 	}
-	if record.ID != "" {
+	if record.IsUpdate() {
 		bb.WriteString(`,"id":`)
 		_ = bb.Encode(record.ID)
 	}
 	bb.WriteString(`}}`)
 
 	u := "https://a.klaviyo.com/api/profiles/"
-	if record.ID == "" {
+	if record.IsCreate() {
 		return ky.call(ctx, "POST", u, bb, 201, nil)
 	}
 
