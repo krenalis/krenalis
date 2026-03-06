@@ -131,9 +131,11 @@ func (bb *BodyBuffer) EncodeIndent(value any, prefix, indent string) error {
 	return bb.plain.EncodeIndent(value, prefix, indent)
 }
 
-// EncodeKeyValue appends the JSON encoding of a key-value pair to the buffer.
-// If the previous write to the buffer was made by EncodeKeyValue, a comma is
-// appended before the key-value pair.
+// EncodeKeyValue appends one JSON object entry (`"key": value`) to the buffer.
+// Comma rule:
+//   - no manual comma is needed between consecutive EncodeKeyValue calls
+//   - a comma is auto-inserted only when the previous write was EncodeKeyValue
+//   - if you write anything else between calls, you must manage commas manually
 //
 // Example usage:
 //
