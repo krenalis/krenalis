@@ -88,6 +88,18 @@ func nextVisibleChar(sql string, start int) (byte, error) {
 	return sql[start], nil
 }
 
+// hasUnicodeQuotedIdentifierPrefix reports whether a Unicode quoted identifier
+// starts at start using PostgreSQL's U&"..." introducer.
+func hasUnicodeQuotedIdentifierPrefix(sql string, start int) bool {
+	if start+2 >= len(sql) {
+		return false
+	}
+	if sql[start] != 'U' && sql[start] != 'u' {
+		return false
+	}
+	return sql[start+1] == '&' && sql[start+2] == '"'
+}
+
 // skipIgnored skips spaces and comments.
 func skipIgnored(sql string, start int) (int, error) {
 	for {

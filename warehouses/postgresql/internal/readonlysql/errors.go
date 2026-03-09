@@ -31,6 +31,10 @@ func rejectQuotedIdentifierFunctionCall() error {
 	return reject("function call with quoted identifier is not supported")
 }
 
+func rejectUnicodeQuotedIdentifier() error {
+	return reject(`Unicode quoted identifier syntax U&"..." is not supported`)
+}
+
 func rejectQualifiedFunctionCall(name string) error {
 	return reject(fmt.Sprintf("qualified function call %s is not allowed", name))
 }

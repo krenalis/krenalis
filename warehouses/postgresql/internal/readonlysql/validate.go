@@ -56,6 +56,8 @@ func ValidateReadOnly(query string) error {
 		switch c := query[i]; {
 		case isSpace(c):
 			i++
+		case hasUnicodeQuotedIdentifierPrefix(query, i):
+			return rejectUnicodeQuotedIdentifier()
 		case c == ':' && i+1 < len(query) && query[i+1] == ':':
 			return rejectTypeCast()
 		case c == ';':

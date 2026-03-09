@@ -26,6 +26,7 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "cast operator in string", sql: "SELECT '::'"},
 		{name: "cast operator in dollar quote", sql: "SELECT $$::$$"},
 		{name: "share identifier", sql: "SELECT share FROM t"},
+		{name: "unicode prefix separated by operator", sql: `SELECT U & "foo" FROM t`},
 		{name: "with select", sql: "WITH a AS (SELECT 1) SELECT * FROM a"},
 	}
 
@@ -57,6 +58,9 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "unterminated block comment", sql: "SELECT 1 /* unterminated", wantErr: "rejected: unterminated block comment"},
 		{name: "unterminated single quoted string", sql: "SELECT 'unterminated", wantErr: "rejected: unterminated single-quoted string"},
 		{name: "unterminated dollar quoted string", sql: "SELECT $$unterminated", wantErr: "rejected: unterminated dollar-quoted string"},
+		{name: "unicode quoted identifier", sql: `SELECT U&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
+		{name: "unicode quoted identifier lowercase", sql: `SELECT u&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
+		{name: "unterminated unicode quoted identifier", sql: `SELECT U&"unterminated`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
 	}
 
 	for _, tt := range rejectTests {
