@@ -344,6 +344,21 @@ func TestValidateReadOnlyIdentifierLength(t *testing.T) {
 	})
 }
 
+// TestValidateReadOnlyIdentifierDollarSign verifies that dollar signs are
+// rejected in unquoted identifiers but remain acceptable in quoted ones.
+func TestValidateReadOnlyIdentifierDollarSign(t *testing.T) {
+	t.Run("reject/unquoted dollar sign", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT foo$bar FROM t")
+		assertExactError(t, err, "rejected: dollar sign is not allowed in unquoted identifiers or outside dollar-quoted strings")
+		assertRejectedError(t, err)
+		assertNoRejectedFunctionError(t, err)
+	})
+
+	t.Run("accept/quoted dollar sign", func(t *testing.T) {
+		mustAcceptSQL(t, `SELECT "foo$bar" FROM t`)
+	})
+}
+
 func mustAcceptSQL(t *testing.T, sql string) {
 	t.Helper()
 	if err := ValidateReadOnly(sql); err != nil {

@@ -262,7 +262,7 @@ func isWordStart(b byte) bool {
 
 // isWordChar reports whether b can continue an SQL word.
 func isWordChar(b byte) bool {
-	return isWordStart(b) || ('0' <= b && b <= '9') || b == '$'
+	return isWordStart(b) || ('0' <= b && b <= '9')
 }
 
 // isTagStart reports whether b can start a dollar-quote tag.

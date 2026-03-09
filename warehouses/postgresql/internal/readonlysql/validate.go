@@ -107,9 +107,7 @@ func ValidateReadOnly(query string) error {
 				i = next
 				continue
 			}
-			lastVisibleChar = c
-			lockingClauseState = lockingClauseNone
-			i++
+			return rejectDollarSign()
 		case isWordStart(c):
 			name, err := scanIdentifierChain(query, i)
 			if err != nil {

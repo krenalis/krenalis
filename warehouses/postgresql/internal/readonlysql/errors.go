@@ -79,6 +79,10 @@ func rejectTypeCast() error {
 	return reject("type cast operator :: is not allowed")
 }
 
+func rejectDollarSign() error {
+	return reject("dollar sign is not allowed in unquoted identifiers or outside dollar-quoted strings")
+}
+
 func newFunctionNotAllowedError(name string) error {
 	return &warehouses.RejectedReadOnlyQueryError{
 		Msg:      fmt.Sprintf("rejected: function or built-in %s is not allowed in read-only queries", name),
