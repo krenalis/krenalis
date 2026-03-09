@@ -192,8 +192,14 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 			i++
 		case hasUnicodeQuotedIdentifierPrefix(query, i):
 			return rejectUnicodeQuotedIdentifier()
+		case hasUnicodeEscapeStringConstantPrefix(query, i):
+			return rejectUnicodeEscapeStringConstant()
 		case hasEscapeStringConstantPrefix(query, i):
 			return rejectEscapeStringConstant()
+		case hasBitStringConstantPrefix(query, i):
+			return rejectBitStringConstant()
+		case hasHexStringConstantPrefix(query, i):
+			return rejectHexStringConstant()
 		case c == ';':
 			return rejectSemicolon()
 		case c == '\'':

@@ -62,8 +62,17 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "unicode quoted identifier", sql: `SELECT U&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
 		{name: "unicode quoted identifier lowercase", sql: `SELECT u&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
 		{name: "unterminated unicode quoted identifier", sql: `SELECT U&"unterminated`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
+		{name: "unicode escape string constant", sql: `SELECT U&'d\0061t\+000061'`, wantErr: `rejected: Unicode escape string syntax U&'...' is not supported`},
+		{name: "unicode escape string constant lowercase", sql: `SELECT u&'d\0061t\+000061'`, wantErr: `rejected: Unicode escape string syntax U&'...' is not supported`},
+		{name: "unterminated unicode escape string constant", sql: `SELECT U&'unterminated`, wantErr: `rejected: Unicode escape string syntax U&'...' is not supported`},
 		{name: "escape string constant", sql: "SELECT E'foo'", wantErr: "rejected: escape string syntax E'...' is not supported"},
 		{name: "escape string constant lowercase", sql: "SELECT e'foo'", wantErr: "rejected: escape string syntax E'...' is not supported"},
+		{name: "bit string constant", sql: "SELECT B'1010'", wantErr: "rejected: bit string syntax B'...' is not supported"},
+		{name: "bit string constant lowercase", sql: "SELECT b'1010'", wantErr: "rejected: bit string syntax B'...' is not supported"},
+		{name: "unterminated bit string constant", sql: "SELECT B'101", wantErr: "rejected: bit string syntax B'...' is not supported"},
+		{name: "hex string constant", sql: "SELECT X'1f'", wantErr: "rejected: hex string syntax X'...' is not supported"},
+		{name: "hex string constant lowercase", sql: "SELECT x'1f'", wantErr: "rejected: hex string syntax X'...' is not supported"},
+		{name: "unterminated hex string constant", sql: "SELECT X'1", wantErr: "rejected: hex string syntax X'...' is not supported"},
 	}
 
 	for _, tt := range rejectTests {

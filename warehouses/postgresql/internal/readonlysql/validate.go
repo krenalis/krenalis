@@ -58,8 +58,14 @@ func ValidateReadOnly(query string) error {
 			i++
 		case hasUnicodeQuotedIdentifierPrefix(query, i):
 			return rejectUnicodeQuotedIdentifier()
+		case hasUnicodeEscapeStringConstantPrefix(query, i):
+			return rejectUnicodeEscapeStringConstant()
 		case hasEscapeStringConstantPrefix(query, i):
 			return rejectEscapeStringConstant()
+		case hasBitStringConstantPrefix(query, i):
+			return rejectBitStringConstant()
+		case hasHexStringConstantPrefix(query, i):
+			return rejectHexStringConstant()
 		case c == ':' && i+1 < len(query) && query[i+1] == ':':
 			return rejectTypeCast()
 		case c == ';':

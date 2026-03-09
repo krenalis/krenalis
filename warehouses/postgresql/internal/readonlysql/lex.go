@@ -134,16 +134,43 @@ func hasUnicodeQuotedIdentifierPrefix(sql string, start int) bool {
 	return sql[start+1] == '&' && sql[start+2] == '"'
 }
 
-// hasEscapeStringConstantPrefix reports whether a PostgreSQL escape string
-// constant starts at start using the E'...' introducer.
-func hasEscapeStringConstantPrefix(sql string, start int) bool {
+// hasUnicodeEscapeStringConstantPrefix reports whether a PostgreSQL Unicode
+// escape string constant starts at start using the U&'...' introducer.
+func hasUnicodeEscapeStringConstantPrefix(sql string, start int) bool {
+	if start+2 >= len(sql) {
+		return false
+	}
+	if sql[start] != 'U' && sql[start] != 'u' {
+		return false
+	}
+	return sql[start+1] == '&' && sql[start+2] == '\''
+}
+
+// hasPrefixedSingleQuotedForm reports whether a single-letter PostgreSQL form
+// starts at start using an introducer such as E'...'.
+func hasPrefixedSingleQuotedForm(sql string, start int, upper byte) bool {
 	if start+1 >= len(sql) {
 		return false
 	}
-	if sql[start] != 'E' && sql[start] != 'e' {
-		return false
-	}
-	return sql[start+1] == '\''
+	return (sql[start] == upper || sql[start] == upper+'a'-'A') && sql[start+1] == '\''
+}
+
+// hasEscapeStringConstantPrefix reports whether a PostgreSQL escape string
+// constant starts at start using the E'...' introducer.
+func hasEscapeStringConstantPrefix(sql string, start int) bool {
+	return hasPrefixedSingleQuotedForm(sql, start, 'E')
+}
+
+// hasBitStringConstantPrefix reports whether a PostgreSQL bit string constant
+// starts at start using the B'...' introducer.
+func hasBitStringConstantPrefix(sql string, start int) bool {
+	return hasPrefixedSingleQuotedForm(sql, start, 'B')
+}
+
+// hasHexStringConstantPrefix reports whether a PostgreSQL hex string constant
+// starts at start using the X'...' introducer.
+func hasHexStringConstantPrefix(sql string, start int) bool {
+	return hasPrefixedSingleQuotedForm(sql, start, 'X')
 }
 
 // skipIgnored skips spaces and comments.

@@ -39,8 +39,20 @@ func rejectUnicodeQuotedIdentifier() error {
 	return reject(`Unicode quoted identifier syntax U&"..." is not supported`)
 }
 
+func rejectUnicodeEscapeStringConstant() error {
+	return reject(`Unicode escape string syntax U&'...' is not supported`)
+}
+
 func rejectEscapeStringConstant() error {
 	return reject(`escape string syntax E'...' is not supported`)
+}
+
+func rejectBitStringConstant() error {
+	return reject(`bit string syntax B'...' is not supported`)
+}
+
+func rejectHexStringConstant() error {
+	return reject(`hex string syntax X'...' is not supported`)
 }
 
 func rejectQualifiedFunctionCall(name string) error {
