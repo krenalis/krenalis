@@ -222,44 +222,6 @@ func skipBlockComment(sql string, start int) (int, error) {
 	return 0, rejectUnterminatedBlockComment()
 }
 
-// skipDollarQuotedString skips a dollar-quoted string if one starts at start.
-func skipDollarQuotedString(sql string, start int) (int, bool, error) {
-	tag, ok := parseDollarQuoteTag(sql, start)
-	if !ok {
-		return 0, false, nil
-	}
-
-	delimiter := "$" + tag + "$"
-	bodyStart := start + len(delimiter)
-	end := strings.Index(sql[bodyStart:], delimiter)
-	if end < 0 {
-		return 0, true, rejectUnterminatedDollarQuotedString()
-	}
-	return bodyStart + end + len(delimiter), true, nil
-}
-
-// parseDollarQuoteTag parses the tag of a dollar-quoted string delimiter.
-func parseDollarQuoteTag(sql string, start int) (string, bool) {
-	if start+1 >= len(sql) || sql[start] != '$' {
-		return "", false
-	}
-	if sql[start+1] == '$' {
-		return "", true
-	}
-	if !isTagStart(sql[start+1]) {
-		return "", false
-	}
-
-	i := start + 2
-	for i < len(sql) && isTagChar(sql[i]) {
-		i++
-	}
-	if i >= len(sql) || sql[i] != '$' {
-		return "", false
-	}
-	return sql[start+1 : i], true
-}
-
 // isSpace reports whether b is ASCII whitespace.
 func isSpace(b byte) bool {
 	switch b {
@@ -277,16 +239,6 @@ func isWordStart(b byte) bool {
 
 // isWordChar reports whether b can continue an SQL word.
 func isWordChar(b byte) bool {
-	return isWordStart(b) || ('0' <= b && b <= '9')
-}
-
-// isTagStart reports whether b can start a dollar-quote tag.
-func isTagStart(b byte) bool {
-	return isWordStart(b)
-}
-
-// isTagChar reports whether b can continue a dollar-quote tag.
-func isTagChar(b byte) bool {
 	return isWordStart(b) || ('0' <= b && b <= '9')
 }
 

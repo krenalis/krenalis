@@ -63,10 +63,6 @@ func rejectUnterminatedBlockComment() error {
 	return reject("unterminated block comment")
 }
 
-func rejectUnterminatedDollarQuotedString() error {
-	return reject("unterminated dollar-quoted string")
-}
-
 func rejectSpecialFormNotAllowed(name string) error {
 	return reject(fmt.Sprintf("special form %s is not allowed", name))
 }
@@ -88,7 +84,7 @@ func rejectTypeCast() error {
 }
 
 func rejectDollarSign() error {
-	return reject("dollar sign is not allowed in unquoted identifiers or outside dollar-quoted strings")
+	return reject("dollar sign syntax is not supported")
 }
 
 func newFunctionNotAllowedError(name string) error {

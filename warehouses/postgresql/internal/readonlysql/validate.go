@@ -99,16 +99,6 @@ func ValidateReadOnly(query string) error {
 			}
 			i = next
 		case c == '$':
-			next, ok, err := skipDollarQuotedString(query, i)
-			if err != nil {
-				return err
-			}
-			if ok {
-				lastVisibleChar = query[next-1]
-				lockingClauseState = lockingClauseNone
-				i = next
-				continue
-			}
 			return rejectDollarSign()
 		case isWordStart(c):
 			name, err := scanIdentifierChain(query, i)

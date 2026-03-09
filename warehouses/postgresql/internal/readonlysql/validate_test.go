@@ -21,10 +21,8 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 	}{
 		{name: "simple select", sql: "SELECT 1"},
 		{name: "forbidden token in single quote", sql: "SELECT 'DELETE'"},
-		{name: "forbidden token in dollar quote", sql: "SELECT $$DELETE$$"},
 		{name: "forbidden token in quoted identifier", sql: `SELECT "DELETE" FROM t`},
 		{name: "cast operator in string", sql: "SELECT '::'"},
-		{name: "cast operator in dollar quote", sql: "SELECT $$::$$"},
 		{name: "share identifier", sql: "SELECT share FROM t"},
 		{name: "unicode prefix separated by operator", sql: `SELECT U & "foo" FROM t`},
 		{name: "with select", sql: "WITH a AS (SELECT 1) SELECT * FROM a"},
@@ -57,7 +55,9 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "comment only", sql: "-- comment only", wantErr: "rejected: no visible SELECT token found"},
 		{name: "unterminated block comment", sql: "SELECT 1 /* unterminated", wantErr: "rejected: unterminated block comment"},
 		{name: "unterminated single quoted string", sql: "SELECT 'unterminated", wantErr: "rejected: unterminated single-quoted string"},
-		{name: "unterminated dollar quoted string", sql: "SELECT $$unterminated", wantErr: "rejected: unterminated dollar-quoted string"},
+		{name: "forbidden token in dollar quote", sql: "SELECT $$DELETE$$", wantErr: "rejected: dollar sign syntax is not supported"},
+		{name: "cast operator in dollar quote", sql: "SELECT $$::$$", wantErr: "rejected: dollar sign syntax is not supported"},
+		{name: "unterminated dollar quoted string", sql: "SELECT $$unterminated", wantErr: "rejected: dollar sign syntax is not supported"},
 		{name: "nul in quoted identifier", sql: "SELECT \"a\x00b\" FROM t", wantErr: "rejected: double-quoted identifier contains NUL byte"},
 		{name: "unicode quoted identifier", sql: `SELECT U&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
 		{name: "unicode quoted identifier lowercase", sql: `SELECT u&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
@@ -112,7 +112,6 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 		{name: "count with spaces", sql: "SELECT count (*) FROM meergo_events"},
 		{name: "date trunc with spaces", sql: "SELECT date_trunc ('day', received_at) FROM meergo_events"},
 		{name: "lower in string", sql: "SELECT 'lower('"},
-		{name: "setval in dollar quote", sql: "SELECT $$setval(x)$$"},
 		{name: "quoted lower identifier", sql: `SELECT "lower" FROM t`},
 	}
 
@@ -348,11 +347,11 @@ func TestValidateReadOnlyIdentifierLength(t *testing.T) {
 }
 
 // TestValidateReadOnlyIdentifierDollarSign verifies that dollar signs are
-// rejected in unquoted identifiers but remain acceptable in quoted ones.
+// rejected in SQL text but remain acceptable in quoted identifiers.
 func TestValidateReadOnlyIdentifierDollarSign(t *testing.T) {
 	t.Run("reject/unquoted dollar sign", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT foo$bar FROM t")
-		assertExactError(t, err, "rejected: dollar sign is not allowed in unquoted identifiers or outside dollar-quoted strings")
+		assertExactError(t, err, "rejected: dollar sign syntax is not supported")
 		assertRejectedError(t, err)
 		assertNoRejectedFunctionError(t, err)
 	})

@@ -190,6 +190,10 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 		switch c := query[i]; {
 		case isSpace(c):
 			i++
+		case hasUnicodeQuotedIdentifierPrefix(query, i):
+			return rejectUnicodeQuotedIdentifier()
+		case hasEscapeStringConstantPrefix(query, i):
+			return rejectEscapeStringConstant()
 		case c == ';':
 			return rejectSemicolon()
 		case c == '\'':
@@ -199,9 +203,12 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 			}
 			i = next
 		case c == '"':
-			next, err := skipDoubleQuotedIdentifier(query, i)
+			next, byteLen, err := scanDoubleQuotedIdentifier(query, i)
 			if err != nil {
 				return err
+			}
+			if byteLen > maxIdentifierBytes {
+				return rejectIdentifierTooLong()
 			}
 			nextChar, err := nextVisibleChar(query, next)
 			if err != nil {
@@ -220,15 +227,7 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 			}
 			i = next
 		case c == '$':
-			next, ok, err := skipDollarQuotedString(query, i)
-			if err != nil {
-				return err
-			}
-			if ok {
-				i = next
-				continue
-			}
-			i++
+			return rejectDollarSign()
 		case isWordStart(c):
 			name, err := scanIdentifierChain(query, i)
 			if err != nil {
