@@ -107,8 +107,8 @@ func (dw warehouse) Query(ctx context.Context, query warehouses.RowQuery, withTo
 	return rows, total, err
 }
 
-func (dw warehouse) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
-	rows, columnCount, err := dw.inner.RawQuery(ctx, query)
+func (dw warehouse) QueryReadOnly(ctx context.Context, query string) (warehouses.Rows, int, error) {
+	rows, columnCount, err := dw.inner.QueryReadOnly(ctx, query)
 	err = unavailableError(err)
 	return rows, columnCount, err
 }

@@ -114,6 +114,22 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// RejectedReadOnlyQueryError reports that QueryReadOnly rejected a query.
+//
+// Function contains the normalized function name when the rejection is caused
+// by a non-allowed function or built-in. It is empty for other rejected
+// queries.
+//
+// Msg contains a human-readable description of the rejection.
+type RejectedReadOnlyQueryError struct {
+	Msg      string
+	Function string
+}
+
+func (e *RejectedReadOnlyQueryError) Error() string {
+	return e.Msg
+}
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -222,9 +238,17 @@ type Warehouse interface {
 	// to.
 	Query(ctx context.Context, query RowQuery, withTotal bool) (Rows, int, error)
 
-	// RawQuery executes a query and returns the results and the number of columns
-	// in each row.
-	RawQuery(ctx context.Context, query string) (Rows, int, error)
+	// QueryReadOnly executes a read-only query and returns the results and the
+	// number of columns in each row.
+	//
+	// It rejects queries that the implementation does not accept as read-only.
+	// This validation is conservative, so some valid SQL queries may still be
+	// rejected.
+	//
+	// If the query is rejected, the returned error is a
+	// *RejectedReadOnlyQueryError. Its Function field is populated when the
+	// rejection is caused by a non-allowed function or built-in.
+	QueryReadOnly(ctx context.Context, query string) (Rows, int, error)
 
 	// ResolveIdentities resolves the identities.
 	//
