@@ -276,6 +276,33 @@ func TestValidateReadOnlyMixedCases(t *testing.T) {
 	})
 }
 
+// TestValidateReadOnlyWhitespace verifies that all PostgreSQL whitespace
+// characters (space, tab, newline, carriage return, form feed, vertical tab)
+// are correctly recognised as token separators.
+func TestValidateReadOnlyWhitespace(t *testing.T) {
+	tests := []struct {
+		name string
+		sql  string
+	}{
+		{name: "tab between tokens", sql: "SELECT\t1"},
+		{name: "newline between tokens", sql: "SELECT\n1"},
+		{name: "carriage return between tokens", sql: "SELECT\r1"},
+		{name: "form feed between tokens", sql: "SELECT\f1"},
+		{name: "vertical tab between tokens", sql: "SELECT\v1"},
+		{name: "mixed whitespace", sql: "SELECT\t\n\r\f\v1"},
+		{name: "leading whitespace", sql: "\t\n\r\f\v SELECT 1"},
+		{name: "trailing whitespace", sql: "SELECT 1\t\n\r\f\v"},
+		{name: "whitespace around function call", sql: "SELECT\tlower\t(\t'ABC'\t)"},
+		{name: "vertical tab around function call", sql: "SELECT\vlower\v(\v'ABC'\v)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mustAcceptSQL(t, tt.sql)
+		})
+	}
+}
+
 func mustAcceptSQL(t *testing.T, sql string) {
 	t.Helper()
 	if err := ValidateReadOnly(sql); err != nil {

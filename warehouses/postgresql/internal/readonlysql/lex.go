@@ -214,7 +214,7 @@ func parseDollarQuoteTag(sql string, start int) (string, bool) {
 // isSpace reports whether b is ASCII whitespace.
 func isSpace(b byte) bool {
 	switch b {
-	case ' ', '\t', '\n', '\r', '\f':
+	case ' ', '\t', '\n', '\r', '\f', '\v':
 		return true
 	default:
 		return false
