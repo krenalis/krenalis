@@ -1355,7 +1355,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	return profiles, schema, total, nil
 }
 
-const maxReadyOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
+const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
 
 // QueryReadOnly executes a read-only query on the warehouse, returning the
 // result as a json.Value representing a JSON Array (representing the rows) of
@@ -1420,14 +1420,14 @@ func (this *Workspace) QueryReadOnly(ctx context.Context, query string) (json.Va
 		}
 		// Truncate the response if it exceeds the limit, simultaneously
 		// returning the truncated response and an error.
-		if b.Len()+len("]") >= maxReadyOnlyResponseSize {
+		if b.Len()+len("]") >= maxReadOnlyResponseSize {
 			b.Truncate(size)
 			b.WriteByte(']')
 			value, err := b.Value()
 			if err != nil {
 				return nil, err
 			}
-			return value, fmt.Errorf("only a subset of rows was returned because the total size exceeded the %d-byte limit", maxReadyOnlyResponseSize)
+			return value, fmt.Errorf("only a subset of rows was returned because the total size exceeded the %d-byte limit", maxReadOnlyResponseSize)
 		}
 		comma = true
 	}
