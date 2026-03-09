@@ -58,6 +58,7 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "unterminated block comment", sql: "SELECT 1 /* unterminated", wantErr: "rejected: unterminated block comment"},
 		{name: "unterminated single quoted string", sql: "SELECT 'unterminated", wantErr: "rejected: unterminated single-quoted string"},
 		{name: "unterminated dollar quoted string", sql: "SELECT $$unterminated", wantErr: "rejected: unterminated dollar-quoted string"},
+		{name: "nul in quoted identifier", sql: "SELECT \"a\x00b\" FROM t", wantErr: "rejected: double-quoted identifier contains NUL byte"},
 		{name: "unicode quoted identifier", sql: `SELECT U&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
 		{name: "unicode quoted identifier lowercase", sql: `SELECT u&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
 		{name: "unterminated unicode quoted identifier", sql: `SELECT U&"unterminated`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},

@@ -106,6 +106,9 @@ func scanDoubleQuotedIdentifier(sql string, start int) (int, int, error) {
 	byteLen := 0
 	for i := start + 1; i < len(sql); i++ {
 		if sql[i] != '"' {
+			if sql[i] == 0 {
+				return 0, 0, rejectNULInQuotedIdentifier()
+			}
 			byteLen++
 			continue
 		}

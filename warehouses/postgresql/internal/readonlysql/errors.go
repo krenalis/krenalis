@@ -51,6 +51,10 @@ func rejectUnterminatedDoubleQuotedIdentifier() error {
 	return reject("unterminated double-quoted identifier")
 }
 
+func rejectNULInQuotedIdentifier() error {
+	return reject("double-quoted identifier contains NUL byte")
+}
+
 func rejectUnterminatedBlockComment() error {
 	return reject("unterminated block comment")
 }
