@@ -59,6 +59,7 @@ var forbiddenTokens = newASCIIWordSet(
 var nonFunctionCallTokens = newASCIIWordSet(
 	"all",
 	"any",
+	"array",
 	"as",
 	"cast",
 	"exists",

@@ -90,6 +90,8 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 		{name: "array length", sql: "SELECT array_length(_identities, 1) FROM meergo_profiles_5"},
 		{name: "cardinality", sql: "SELECT cardinality(preferences_categories) FROM meergo_profiles_5"},
 		{name: "unnest", sql: "SELECT unnest(preferences_categories) FROM meergo_profiles_5"},
+		{name: "array subquery", sql: "SELECT ARRAY(SELECT id FROM t)"},
+		{name: "array literal", sql: "SELECT ARRAY[1, 2, 3]"},
 		{name: "cast int", sql: "SELECT CAST(x AS int) FROM t"},
 		{name: "cast text", sql: "SELECT CAST(amount AS text) FROM orders"},
 		{name: "filter clause", sql: "SELECT count(*) FILTER (WHERE x > 0) FROM t"},
