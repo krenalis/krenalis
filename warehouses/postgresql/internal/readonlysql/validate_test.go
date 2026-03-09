@@ -90,6 +90,8 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 		{name: "array length", sql: "SELECT array_length(_identities, 1) FROM meergo_profiles_5"},
 		{name: "cardinality", sql: "SELECT cardinality(preferences_categories) FROM meergo_profiles_5"},
 		{name: "unnest", sql: "SELECT unnest(preferences_categories) FROM meergo_profiles_5"},
+		{name: "filter clause", sql: "SELECT count(*) FILTER (WHERE x > 0) FROM t"},
+		{name: "filter clause with sum", sql: "SELECT sum(amount) FILTER (WHERE status = 'paid') FROM orders"},
 		{name: "jsonb extract path text", sql: "SELECT jsonb_extract_path_text(properties, 'foo') FROM meergo_events"},
 		{name: "jsonb array length", sql: "SELECT jsonb_array_length(properties->'items') FROM meergo_events"},
 		{name: "to char", sql: "SELECT to_char(received_at, 'YYYY-MM-DD') FROM meergo_events"},

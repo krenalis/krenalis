@@ -61,6 +61,7 @@ var nonFunctionCallTokens = newASCIIWordSet(
 	"any",
 	"as",
 	"exists",
+	"filter",
 	"in",
 	"row",
 	"some",
