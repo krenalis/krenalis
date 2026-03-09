@@ -31,7 +31,7 @@ const (
 func ValidateReadOnly(query string) error {
 	// This checker is intentionally conservative and not a full SQL parser.
 	// It recognizes only a small set of opaque regions with certainty, scans
-	// visible SQL words using the approximation [A-Za-z_][A-Za-z0-9_$]*, and
+	// visible SQL words using the approximation [A-Za-z_][A-Za-z0-9_]*, and
 	// applies a blacklist of forbidden non-SELECT statement tokens.
 	//
 	// Function calls are accepted only for non-qualified names on an explicit
@@ -58,6 +58,8 @@ func ValidateReadOnly(query string) error {
 			i++
 		case hasUnicodeQuotedIdentifierPrefix(query, i):
 			return rejectUnicodeQuotedIdentifier()
+		case hasEscapeStringConstantPrefix(query, i):
+			return rejectEscapeStringConstant()
 		case c == ':' && i+1 < len(query) && query[i+1] == ':':
 			return rejectTypeCast()
 		case c == ';':

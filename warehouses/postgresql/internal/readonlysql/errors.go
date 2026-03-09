@@ -39,6 +39,10 @@ func rejectUnicodeQuotedIdentifier() error {
 	return reject(`Unicode quoted identifier syntax U&"..." is not supported`)
 }
 
+func rejectEscapeStringConstant() error {
+	return reject(`escape string syntax E'...' is not supported`)
+}
+
 func rejectQualifiedFunctionCall(name string) error {
 	return reject(fmt.Sprintf("qualified function call %s is not allowed", name))
 }

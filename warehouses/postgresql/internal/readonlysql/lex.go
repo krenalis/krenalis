@@ -134,6 +134,18 @@ func hasUnicodeQuotedIdentifierPrefix(sql string, start int) bool {
 	return sql[start+1] == '&' && sql[start+2] == '"'
 }
 
+// hasEscapeStringConstantPrefix reports whether a PostgreSQL escape string
+// constant starts at start using the E'...' introducer.
+func hasEscapeStringConstantPrefix(sql string, start int) bool {
+	if start+1 >= len(sql) {
+		return false
+	}
+	if sql[start] != 'E' && sql[start] != 'e' {
+		return false
+	}
+	return sql[start+1] == '\''
+}
+
 // skipIgnored skips spaces and comments.
 func skipIgnored(sql string, start int) (int, error) {
 	for {
