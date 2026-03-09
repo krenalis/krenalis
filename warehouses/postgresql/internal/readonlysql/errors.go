@@ -31,6 +31,10 @@ func rejectQuotedIdentifierFunctionCall() error {
 	return reject("function call with quoted identifier is not supported")
 }
 
+func rejectIdentifierTooLong() error {
+	return reject("identifier exceeds 63 bytes")
+}
+
 func rejectUnicodeQuotedIdentifier() error {
 	return reject(`Unicode quoted identifier syntax U&"..." is not supported`)
 }

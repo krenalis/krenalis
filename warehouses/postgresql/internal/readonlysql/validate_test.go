@@ -307,6 +307,43 @@ func TestValidateReadOnlyWhitespace(t *testing.T) {
 	}
 }
 
+// TestValidateReadOnlyIdentifierLength verifies conservative rejection of
+// identifiers longer than PostgreSQL's default 63-byte limit.
+func TestValidateReadOnlyIdentifierLength(t *testing.T) {
+	t.Run("accept/unquoted at limit", func(t *testing.T) {
+		mustAcceptSQL(t, "SELECT "+strings.Repeat("a", 63))
+	})
+
+	t.Run("reject/unquoted over limit", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT " + strings.Repeat("a", 64))
+		assertExactError(t, err, "rejected: identifier exceeds 63 bytes")
+		assertRejectedError(t, err)
+		assertNoRejectedFunctionError(t, err)
+	})
+
+	t.Run("accept/quoted at limit", func(t *testing.T) {
+		mustAcceptSQL(t, `SELECT "`+strings.Repeat("a", 63)+`"`)
+	})
+
+	t.Run("reject/quoted over limit", func(t *testing.T) {
+		err := ValidateReadOnly(`SELECT "` + strings.Repeat("a", 64) + `"`)
+		assertExactError(t, err, "rejected: identifier exceeds 63 bytes")
+		assertRejectedError(t, err)
+		assertNoRejectedFunctionError(t, err)
+	})
+
+	t.Run("accept/quoted utf8 counted in bytes", func(t *testing.T) {
+		mustAcceptSQL(t, `SELECT "`+strings.Repeat("é", 31)+`"`)
+	})
+
+	t.Run("reject/quoted utf8 over byte limit", func(t *testing.T) {
+		err := ValidateReadOnly(`SELECT "` + strings.Repeat("é", 32) + `"`)
+		assertExactError(t, err, "rejected: identifier exceeds 63 bytes")
+		assertRejectedError(t, err)
+		assertNoRejectedFunctionError(t, err)
+	})
+}
+
 func mustAcceptSQL(t *testing.T, sql string) {
 	t.Helper()
 	if err := ValidateReadOnly(sql); err != nil {

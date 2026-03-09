@@ -71,9 +71,12 @@ func ValidateReadOnly(query string) error {
 			lockingClauseState = lockingClauseNone
 			i = next
 		case c == '"':
-			next, err := skipDoubleQuotedIdentifier(query, i)
+			next, byteLen, err := scanDoubleQuotedIdentifier(query, i)
 			if err != nil {
 				return err
+			}
+			if byteLen > maxIdentifierBytes {
+				return rejectIdentifierTooLong()
 			}
 			nextChar, err := nextVisibleChar(query, next)
 			if err != nil {

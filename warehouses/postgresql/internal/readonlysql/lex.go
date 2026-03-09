@@ -6,6 +6,11 @@ package readonlysql
 
 import "strings"
 
+// maxIdentifierBytes is the default PostgreSQL identifier limit in bytes.
+// PostgreSQL truncates longer identifiers by default; this checker rejects them
+// conservatively instead of modeling truncation semantics.
+const maxIdentifierBytes = 63
+
 type scannedName struct {
 	token          string
 	normalized     string
@@ -27,6 +32,9 @@ func (n scannedName) isWord(word string) bool {
 // scanIdentifierChain scans an identifier, optionally followed by dotted parts.
 func scanIdentifierChain(sql string, start int) (scannedName, error) {
 	tokenEnd := scanIdentifierEnd(sql, start)
+	if tokenEnd-start > maxIdentifierBytes {
+		return scannedName{}, rejectIdentifierTooLong()
+	}
 	parts := []string{strings.ToLower(sql[start:tokenEnd])}
 	lastEnd := tokenEnd
 
@@ -49,6 +57,9 @@ func scanIdentifierChain(sql string, start int) (scannedName, error) {
 		}
 
 		partEnd := scanIdentifierEnd(sql, i)
+		if partEnd-i > maxIdentifierBytes {
+			return scannedName{}, rejectIdentifierTooLong()
+		}
 		parts = append(parts, strings.ToLower(sql[i:partEnd]))
 		lastEnd = partEnd
 	}
@@ -86,6 +97,26 @@ func nextVisibleChar(sql string, start int) (byte, error) {
 		return 0, nil
 	}
 	return sql[start], nil
+}
+
+// scanDoubleQuotedIdentifier scans a double-quoted identifier and returns the
+// first index after it together with the identifier length in bytes after
+// unescaping doubled double quotes.
+func scanDoubleQuotedIdentifier(sql string, start int) (int, int, error) {
+	byteLen := 0
+	for i := start + 1; i < len(sql); i++ {
+		if sql[i] != '"' {
+			byteLen++
+			continue
+		}
+		if i+1 < len(sql) && sql[i+1] == '"' {
+			byteLen++
+			i++
+			continue
+		}
+		return i + 1, byteLen, nil
+	}
+	return 0, 0, rejectUnterminatedDoubleQuotedIdentifier()
 }
 
 // hasUnicodeQuotedIdentifierPrefix reports whether a Unicode quoted identifier
@@ -144,17 +175,8 @@ func skipSingleQuotedString(sql string, start int) (int, error) {
 
 // skipDoubleQuotedIdentifier skips a double-quoted identifier.
 func skipDoubleQuotedIdentifier(sql string, start int) (int, error) {
-	for i := start + 1; i < len(sql); i++ {
-		if sql[i] != '"' {
-			continue
-		}
-		if i+1 < len(sql) && sql[i+1] == '"' {
-			i++
-			continue
-		}
-		return i + 1, nil
-	}
-	return 0, rejectUnterminatedDoubleQuotedIdentifier()
+	next, _, err := scanDoubleQuotedIdentifier(sql, start)
+	return next, err
 }
 
 // skipLineComment skips a line comment.
