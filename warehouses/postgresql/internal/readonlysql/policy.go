@@ -110,6 +110,7 @@ var allowedFunctionCalls = newASCIIWordSet(
 	"ltrim",
 	"max",
 	"min",
+	"now",
 	"nullif",
 	"replace",
 	"right",

@@ -99,6 +99,8 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 		{name: "jsonb extract path text", sql: "SELECT jsonb_extract_path_text(properties, 'foo') FROM meergo_events"},
 		{name: "jsonb array length", sql: "SELECT jsonb_array_length(properties->'items') FROM meergo_events"},
 		{name: "to char", sql: "SELECT to_char(received_at, 'YYYY-MM-DD') FROM meergo_events"},
+		{name: "now", sql: "SELECT now()"},
+		{name: "now in where", sql: "SELECT * FROM meergo_events WHERE received_at > now() - interval '7 days'"},
 		{name: "lower with spaces", sql: "SELECT lower    ('ABC')"},
 		{name: "count with spaces", sql: "SELECT count (*) FROM meergo_events"},
 		{name: "date trunc with spaces", sql: "SELECT date_trunc ('day', received_at) FROM meergo_events"},
@@ -131,7 +133,6 @@ func TestValidateReadOnlyFunctionsRejected(t *testing.T) {
 		{name: "unknown name", sql: "SELECT unknown_name(1)", wantErr: "rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
 		{name: "mixed case unknown name", sql: "SELECT UnKnOwN_NaMe(1)", wantErr: "rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
 		{name: "text", sql: "SELECT text(42)", wantErr: "rejected: function or built-in text is not allowed in read-only queries", want: "text"},
-		{name: "now", sql: "SELECT now()", wantErr: "rejected: function or built-in now is not allowed in read-only queries", want: "now"},
 		{name: "current setting", sql: "SELECT current_setting('search_path')", wantErr: "rejected: function or built-in current_setting is not allowed in read-only queries", want: "current_setting"},
 	}
 
