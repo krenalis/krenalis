@@ -19,17 +19,17 @@ import (
 // number of columns in each row.
 //
 // Safety depends on deployment assumptions in addition to SQL validation:
-//   - Queries must use a PostgreSQL role with read-only access.
-//   - standard_conforming_strings must be on.
+//   - The workspace warehouse user must have only read-only access.
 //   - The workspace warehouse schema must not expose user-defined operators.
+//   - The PostgreSQL standard_conforming_strings session setting must be on
+//     (this is the default).
 func (warehouse *PostgreSQL) QueryReadOnly(ctx context.Context, query string) (warehouses.Rows, int, error) {
 	// Security is layered:
-	// 1. QueryReadOnly rejects queries outside the supported read-only subset.
+	// 1. QueryReadOnly rejects queries outside a supported read-only subset.
 	// 2. The query runs inside a PostgreSQL read-only transaction.
 	// 3. The PostgreSQL role is expected to have read-only privileges.
 	// 4. The workspace warehouse schema is expected not to expose user-defined
 	//    operators.
-	// 5. The SQL validator assumes standard_conforming_strings = on.
 
 	if err := readonlysql.ValidateReadOnly(query); err != nil {
 		return nil, 0, err
