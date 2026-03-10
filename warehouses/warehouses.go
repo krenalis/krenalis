@@ -245,6 +245,9 @@ type Warehouse interface {
 	// This validation is conservative, so some valid SQL queries may still be
 	// rejected.
 	//
+	// See the implementation documentation for security assumptions and
+	// deployment requirements.
+	//
 	// If the query is rejected, the returned error is a
 	// *RejectedReadOnlyQueryError. Its Function field is populated when the
 	// rejection is caused by a non-allowed function or built-in.

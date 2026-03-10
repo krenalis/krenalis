@@ -17,7 +17,20 @@ import (
 
 // QueryReadOnly executes a read-only query and returns the results and the
 // number of columns in each row.
+//
+// Safety depends on deployment assumptions in addition to SQL validation:
+//   - Queries must use a PostgreSQL role with read-only access.
+//   - standard_conforming_strings must be on.
+//   - The workspace warehouse schema must not expose user-defined operators.
 func (warehouse *PostgreSQL) QueryReadOnly(ctx context.Context, query string) (warehouses.Rows, int, error) {
+	// Security is layered:
+	// 1. QueryReadOnly rejects queries outside the supported read-only subset.
+	// 2. The query runs inside a PostgreSQL read-only transaction.
+	// 3. The PostgreSQL role is expected to have read-only privileges.
+	// 4. The workspace warehouse schema is expected not to expose user-defined
+	//    operators.
+	// 5. The SQL validator assumes standard_conforming_strings = on.
+
 	if err := readonlysql.ValidateReadOnly(query); err != nil {
 		return nil, 0, err
 	}
@@ -41,6 +54,7 @@ func (warehouse *PostgreSQL) QueryReadOnly(ctx context.Context, query string) (w
 		return nil, 0, err
 	}
 	columnCount := len(rows.FieldDescriptions())
+
 	return &queryReadOnlyRows{pgxRows: rows, tx: tx, conn: conn}, columnCount, nil
 }
 
