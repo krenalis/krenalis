@@ -13,7 +13,7 @@ const maxIdentifierBytes = 63
 
 type scannedName struct {
 	token          string
-	normalized     string
+	start          int
 	isQualified    bool
 	isFunctionCall bool
 	next           int
@@ -21,12 +21,49 @@ type scannedName struct {
 
 // isSelect reports whether n is the SELECT keyword.
 func (n scannedName) isSelect() bool {
-	return strings.EqualFold(n.token, "SELECT")
+	return asciiEqualFold(n.token, "select")
 }
 
 // isWord reports whether n matches word case-insensitively.
 func (n scannedName) isWord(word string) bool {
-	return strings.EqualFold(n.token, word)
+	return asciiEqualFold(n.token, word)
+}
+
+// normalizedToken returns the lowercase ASCII form of the first identifier
+// segment. It is intended for error paths.
+func (n scannedName) normalizedToken() string {
+	return asciiLowerString(n.token)
+}
+
+// normalizedChain returns the lowercase ASCII dotted identifier chain. It is
+// intended for error paths.
+func (n scannedName) normalizedChain(sql string) string {
+	if !n.isQualified {
+		return n.normalizedToken()
+	}
+
+	var b strings.Builder
+	b.Grow(n.next - n.start)
+
+	for i := n.start; i < n.next; {
+		partEnd := scanIdentifierEnd(sql, i)
+		for j := i; j < partEnd; j++ {
+			b.WriteByte(asciiLower(sql[j]))
+		}
+
+		next, err := skipIgnored(sql, partEnd)
+		if err != nil || next >= n.next || sql[next] != '.' {
+			break
+		}
+
+		b.WriteByte('.')
+		i, err = skipIgnored(sql, next+1)
+		if err != nil || i >= n.next {
+			break
+		}
+	}
+
+	return b.String()
 }
 
 // scanIdentifierChain scans an identifier, optionally followed by dotted parts.
@@ -35,8 +72,8 @@ func scanIdentifierChain(sql string, start int) (scannedName, error) {
 	if tokenEnd-start > maxIdentifierBytes {
 		return scannedName{}, rejectIdentifierTooLong()
 	}
-	parts := []string{strings.ToLower(sql[start:tokenEnd])}
 	lastEnd := tokenEnd
+	isQualified := false
 
 	for {
 		i, err := skipIgnored(sql, lastEnd)
@@ -60,7 +97,7 @@ func scanIdentifierChain(sql string, start int) (scannedName, error) {
 		if partEnd-i > maxIdentifierBytes {
 			return scannedName{}, rejectIdentifierTooLong()
 		}
-		parts = append(parts, strings.ToLower(sql[i:partEnd]))
+		isQualified = true
 		lastEnd = partEnd
 	}
 
@@ -71,8 +108,8 @@ func scanIdentifierChain(sql string, start int) (scannedName, error) {
 
 	return scannedName{
 		token:          sql[start:tokenEnd],
-		normalized:     strings.Join(parts, "."),
-		isQualified:    len(parts) > 1,
+		start:          start,
+		isQualified:    isQualified,
 		isFunctionCall: callStart < len(sql) && sql[callStart] == '(',
 		next:           lastEnd,
 	}, nil

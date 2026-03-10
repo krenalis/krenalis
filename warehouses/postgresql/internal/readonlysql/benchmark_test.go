@@ -9,10 +9,13 @@ import (
 	"testing"
 )
 
-var benchmarkBIQueries = []struct {
-	name  string
-	query string
-}{
+type benchmarkQueryCase struct {
+	name    string
+	query   string
+	wantErr bool
+}
+
+var benchmarkBIQueries = []benchmarkQueryCase{
 	{
 		name: "ProfilesProjectionFilter",
 		query: `
@@ -160,6 +163,50 @@ LIMIT 1000`,
 	},
 }
 
+var benchmarkIdentifierPathQueries = []benchmarkQueryCase{
+	{
+		name:  "AllowedFunctionSimple",
+		query: "SELECT lower('x')",
+	},
+	{
+		name:  "AllowedFunctionMixedCaseUnderscore",
+		query: "SELECT DaTe_TrUnC('day', received_at) FROM meergo_events",
+	},
+	{
+		name:  "QualifiedColumnReference",
+		query: "SELECT e.connection_id FROM meergo_events AS e",
+	},
+	{
+		name:  "QualifiedColumnReferenceWithComments",
+		query: "SELECT e /*x*/ . /*y*/ connection_id FROM meergo_events AS e",
+	},
+	{
+		name:    "RejectedFunctionDigits",
+		query:   "SELECT AbC123(1)",
+		wantErr: true,
+	},
+	{
+		name:    "RejectedFunctionLeadingUnderscore",
+		query:   "SELECT _FoO(1)",
+		wantErr: true,
+	},
+	{
+		name:    "RejectedQualifiedFunctionMixedCase",
+		query:   "SELECT Pg_Catalog.LoWeR('ABC')",
+		wantErr: true,
+	},
+	{
+		name:    "RejectedQualifiedFunctionThreeParts",
+		query:   "SELECT A.B.C(1)",
+		wantErr: true,
+	},
+	{
+		name:    "RejectedQualifiedFunctionThreePartsWithComments",
+		query:   "SELECT A /*x*/ . /*y*/ B /*z*/ . /*w*/ C(1)",
+		wantErr: true,
+	},
+}
+
 // BenchmarkValidateReadOnlyBIQueries benchmarks ValidateReadOnly on representative BI queries.
 func BenchmarkValidateReadOnlyBIQueries(b *testing.B) {
 	b.Run("CurrentASCIIWordSetLookup", func(b *testing.B) {
@@ -170,12 +217,31 @@ func BenchmarkValidateReadOnlyBIQueries(b *testing.B) {
 	})
 }
 
+// BenchmarkValidateReadOnlyIdentifierPaths benchmarks focused identifier and
+// dotted-name cases that are relevant when refactoring scanIdentifierChain.
+func BenchmarkValidateReadOnlyIdentifierPaths(b *testing.B) {
+	b.Run("CurrentASCIIWordSetLookup", func(b *testing.B) {
+		benchmarkValidateReadOnlyCases(b, ValidateReadOnly, benchmarkIdentifierPathQueries)
+	})
+	b.Run("ASCIILenSwitchLookup", func(b *testing.B) {
+		benchmarkValidateReadOnlyCases(b, validateReadOnlyASCIILenSwitch, benchmarkIdentifierPathQueries)
+	})
+}
+
 func benchmarkValidateReadOnly(b *testing.B, validate func(string) error) {
-	for _, tc := range benchmarkBIQueries {
+	benchmarkValidateReadOnlyCases(b, validate, benchmarkBIQueries)
+}
+
+func benchmarkValidateReadOnlyCases(b *testing.B, validate func(string) error, cases []benchmarkQueryCase) {
+	for _, tc := range cases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				if err := validate(tc.query); err != nil {
+				err := validate(tc.query)
+				switch {
+				case tc.wantErr && err == nil:
+					b.Fatalf("validate returned nil error for rejected query")
+				case !tc.wantErr && err != nil:
 					b.Fatalf("validate returned unexpected error: %v", err)
 				}
 			}
@@ -252,10 +318,10 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 					continue
 				}
 				if name.isQualified {
-					return rejectQualifiedFunctionCall(name.normalized)
+					return rejectQualifiedFunctionCall(name.normalizedChain(query))
 				}
-				if !inAllowedFunctionList(name.normalized) {
-					return newFunctionNotAllowedError(name.normalized)
+				if !inAllowedFunctionList(name.token) {
+					return newFunctionNotAllowedError(name.normalizedToken())
 				}
 				if name.isSelect() {
 					seenSelect = true
@@ -285,16 +351,16 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 }
 
 func handleSpecialFormASCIILenSwitch(query string, name scannedName) (handled bool, next int, err error) {
-	if inDisallowedSpecialFormList(name.normalized) {
+	if inDisallowedSpecialFormList(name.token) {
 		return true, 0, rejectSpecialFormNotAllowed(strings.ToUpper(name.token))
 	}
-	if !inAllowedSpecialFormList(name.normalized) {
+	if !inAllowedSpecialFormList(name.token) {
 		return false, 0, nil
 	}
 	if !name.isFunctionCall {
 		return true, name.next, nil
 	}
-	next, err = parseSpecialFormSuffix(query, strings.ToUpper(name.token), name.normalized, name.next)
+	next, err = parseSpecialFormSuffix(query, name.token, name.next)
 	return true, next, err
 }
 

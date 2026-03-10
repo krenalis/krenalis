@@ -48,9 +48,24 @@ func asciiEqualFold(s, t string) bool {
 		return false
 	}
 	for i := 0; i < len(s); i++ {
-		if asciiLower(s[i]) != t[i] {
+		if asciiLower(s[i]) != asciiLower(t[i]) {
 			return false
 		}
 	}
 	return true
+}
+
+func asciiLowerString(s string) string {
+	for i := 0; i < len(s); i++ {
+		if 'A' <= s[i] && s[i] <= 'Z' {
+			b := make([]byte, len(s))
+			copy(b, s[:i])
+			b[i] = asciiLower(s[i])
+			for j := i + 1; j < len(s); j++ {
+				b[j] = asciiLower(s[j])
+			}
+			return string(b)
+		}
+	}
+	return s
 }

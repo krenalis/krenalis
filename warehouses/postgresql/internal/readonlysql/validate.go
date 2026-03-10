@@ -152,13 +152,13 @@ func ValidateReadOnly(query string) error {
 					continue
 				}
 				if lastVisibleChar == '.' {
-					return rejectQualifiedFunctionCall(name.normalized)
+					return rejectQualifiedFunctionCall(name.normalizedChain(query))
 				}
 				if name.isQualified {
-					return rejectQualifiedFunctionCall(name.normalized)
+					return rejectQualifiedFunctionCall(name.normalizedChain(query))
 				}
-				if !isAllowedFunction(name.normalized) {
-					return newFunctionNotAllowedError(name.normalized)
+				if !isAllowedFunction(name.token) {
+					return newFunctionNotAllowedError(name.normalizedToken())
 				}
 				if name.isSelect() {
 					seenSelect = true

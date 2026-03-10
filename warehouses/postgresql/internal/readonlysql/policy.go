@@ -72,10 +72,10 @@ var nonFunctionCallTokens = newASCIIWordSet(
 // allowedFunctionCalls is the PostgreSQL 14 through 18 allowlist used by
 // ValidateReadOnly.
 //
-// Names are unqualified and compared case-insensitively after normalization to
-// lower case. Qualified function calls are rejected elsewhere. The list must be
-// reviewed when upgrading PostgreSQL. It is intentionally limited to a
-// practical BI-oriented subset rather than all safe PostgreSQL built-ins.
+// Names are unqualified and compared case-insensitively. Qualified function
+// calls are rejected elsewhere. The list must be reviewed when upgrading
+// PostgreSQL. It is intentionally limited to a practical BI-oriented subset
+// rather than all safe PostgreSQL built-ins.
 var allowedFunctionCalls = newASCIIWordSet(
 	"abs",
 	"array_agg",
@@ -172,31 +172,29 @@ func isDisallowedSpecialForm(name string) bool {
 }
 
 func handleSpecialForm(sql string, name scannedName) (handled bool, next int, err error) {
-	if isDisallowedSpecialForm(name.normalized) {
+	if isDisallowedSpecialForm(name.token) {
 		return true, 0, rejectSpecialFormNotAllowed(strings.ToUpper(name.token))
 	}
-	if !isAllowedSpecialForm(name.normalized) {
+	if !isAllowedSpecialForm(name.token) {
 		return false, 0, nil
 	}
 	if !name.isFunctionCall {
 		return true, name.next, nil
 	}
-	next, err = parseSpecialFormSuffix(sql, strings.ToUpper(name.token), name.normalized, name.next)
+	next, err = parseSpecialFormSuffix(sql, name.token, name.next)
 	return true, next, err
 }
 
 func specialFormAllowsPrecision(name string) bool {
-	switch name {
-	case "current_time", "current_timestamp", "localtime", "localtimestamp":
-		return true
-	default:
-		return false
-	}
+	return asciiEqualFold(name, "current_time") ||
+		asciiEqualFold(name, "current_timestamp") ||
+		asciiEqualFold(name, "localtime") ||
+		asciiEqualFold(name, "localtimestamp")
 }
 
-func parseSpecialFormSuffix(sql string, upperName string, normalizedName string, start int) (int, error) {
-	if !specialFormAllowsPrecision(normalizedName) {
-		return 0, rejectSpecialFormDoesNotAllowParentheses(upperName)
+func parseSpecialFormSuffix(sql string, name string, start int) (int, error) {
+	if !specialFormAllowsPrecision(name) {
+		return 0, rejectSpecialFormDoesNotAllowParentheses(strings.ToUpper(name))
 	}
 
 	i, err := skipIgnored(sql, start)
@@ -204,7 +202,7 @@ func parseSpecialFormSuffix(sql string, upperName string, normalizedName string,
 		return 0, err
 	}
 	if i >= len(sql) || sql[i] != '(' {
-		return 0, rejectMalformedSpecialFormPrecision(upperName)
+		return 0, rejectMalformedSpecialFormPrecision(strings.ToUpper(name))
 	}
 	i++
 
@@ -217,7 +215,7 @@ func parseSpecialFormSuffix(sql string, upperName string, normalizedName string,
 		i++
 	}
 	if digitStart == i {
-		return 0, rejectMalformedSpecialFormPrecision(upperName)
+		return 0, rejectMalformedSpecialFormPrecision(strings.ToUpper(name))
 	}
 
 	i, err = skipIgnored(sql, i)
@@ -225,7 +223,7 @@ func parseSpecialFormSuffix(sql string, upperName string, normalizedName string,
 		return 0, err
 	}
 	if i >= len(sql) || sql[i] != ')' {
-		return 0, rejectMalformedSpecialFormPrecision(upperName)
+		return 0, rejectMalformedSpecialFormPrecision(strings.ToUpper(name))
 	}
 	return i + 1, nil
 }

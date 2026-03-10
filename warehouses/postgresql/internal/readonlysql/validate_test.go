@@ -190,6 +190,52 @@ func TestValidateReadOnlyQualifiedFunctionsRejected(t *testing.T) {
 	}
 }
 
+// TestValidateReadOnlyIdentifierChains verifies identifier-chain handling that
+// is easy to regress when changing name normalization or dotted-name scanning.
+func TestValidateReadOnlyIdentifierChains(t *testing.T) {
+	t.Run("accept/qualified column reference", func(t *testing.T) {
+		mustAcceptSQL(t, "SELECT e.connection_id FROM meergo_events AS e")
+	})
+
+	t.Run("accept/qualified column reference with spaces and comments", func(t *testing.T) {
+		mustAcceptSQL(t, "SELECT e /*x*/ . /*y*/ connection_id FROM meergo_events AS e")
+	})
+
+	t.Run("accept/mixed case allowed function with underscore", func(t *testing.T) {
+		mustAcceptSQL(t, "SELECT DaTe_TrUnC('day', received_at) FROM meergo_events")
+	})
+
+	t.Run("reject/mixed case function with digits", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT AbC123(1)")
+		assertExactError(t, err, "rejected: function or built-in abc123 is not allowed in read-only queries")
+		assertFunctionNotAllowedError(t, err, "abc123")
+	})
+
+	t.Run("reject/leading underscore function", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT _FoO(1)")
+		assertExactError(t, err, "rejected: function or built-in _foo is not allowed in read-only queries")
+		assertFunctionNotAllowedError(t, err, "_foo")
+	})
+
+	t.Run("reject/qualified mixed case exact name", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT Pg_Catalog.LoWeR('ABC')")
+		assertExactError(t, err, "rejected: qualified function call pg_catalog.lower is not allowed")
+		assertNoRejectedFunctionError(t, err)
+	})
+
+	t.Run("reject/multi part qualified exact name", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT A.B.C(1)")
+		assertExactError(t, err, "rejected: qualified function call a.b.c is not allowed")
+		assertNoRejectedFunctionError(t, err)
+	})
+
+	t.Run("reject/multi part qualified with spaces and comments", func(t *testing.T) {
+		err := ValidateReadOnly("SELECT A /*x*/ . /*y*/ B /*z*/ . /*w*/ C(1)")
+		assertExactError(t, err, "rejected: qualified function call a.b.c is not allowed")
+		assertNoRejectedFunctionError(t, err)
+	})
+}
+
 // TestValidateReadOnlySpecialForms verifies accepted and rejected PostgreSQL
 // special forms.
 func TestValidateReadOnlySpecialForms(t *testing.T) {
@@ -368,6 +414,33 @@ func TestValidateReadOnlyIdentifierDollarSign(t *testing.T) {
 	t.Run("accept/quoted dollar sign", func(t *testing.T) {
 		mustAcceptSQL(t, `SELECT "foo$bar" FROM t`)
 	})
+}
+
+// TestValidateReadOnlySuccessPathAllocs verifies that representative accepted
+// queries do not allocate in the validator success path.
+func TestValidateReadOnlySuccessPathAllocs(t *testing.T) {
+	tests := []struct {
+		name string
+		sql  string
+	}{
+		{name: "allowed function simple", sql: "SELECT lower('x')"},
+		{name: "allowed function mixed case underscore", sql: "SELECT DaTe_TrUnC('day', received_at) FROM meergo_events"},
+		{name: "qualified column reference", sql: "SELECT e.connection_id FROM meergo_events AS e"},
+		{name: "qualified column reference with comments", sql: "SELECT e /*x*/ . /*y*/ connection_id FROM meergo_events AS e"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			allocs := testing.AllocsPerRun(1000, func() {
+				if err := ValidateReadOnly(tt.sql); err != nil {
+					t.Fatalf("ValidateReadOnly(%q) returned unexpected error: %v", tt.sql, err)
+				}
+			})
+			if allocs != 0 {
+				t.Fatalf("ValidateReadOnly(%q) allocated %.0f times, want 0", tt.sql, allocs)
+			}
+		})
+	}
 }
 
 func mustAcceptSQL(t *testing.T, sql string) {
