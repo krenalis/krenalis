@@ -33,6 +33,7 @@ import (
 	"embed"
 
 	// Import connectors.
+	_ "github.com/meergo/meergo/connectors/brevo"
 	_ "github.com/meergo/meergo/connectors/clickhouse"
 	_ "github.com/meergo/meergo/connectors/csv"
 	_ "github.com/meergo/meergo/connectors/excel"
