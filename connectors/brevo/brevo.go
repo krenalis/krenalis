@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file.
 
 // Package brevo provides a connector for Brevo.
-// (https://developers.brevo.com/reference/contacts-1)
+// (https://developers.brevo.com/)
 //
 // Brevo is a trademark of Sendinblue SAS.
 // This connector is not affiliated with or endorsed by Sendinblue SAS.
