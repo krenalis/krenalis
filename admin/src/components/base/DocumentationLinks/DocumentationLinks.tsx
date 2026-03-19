@@ -28,6 +28,7 @@ const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
 	go: 'Go SDK',
 	java: 'Java SDK',
 	dotnet: '.NET SDK',
+	ios: 'iOS SDK',
 };
 
 const STORAGE_URL_SLUGS: Record<string, string> = {
@@ -37,7 +38,7 @@ const STORAGE_URL_SLUGS: Record<string, string> = {
 	'http-get': 'http-get',
 };
 
-const SDK_CONNECTORS = new Set(['javascript', 'android', 'nodejs', 'python', 'go', 'java', 'dotnet']);
+const SDK_CONNECTORS = new Set(['javascript', 'android', 'nodejs', 'python', 'go', 'java', 'dotnet', 'ios']);
 const EVENTS_ONLY_DESTINATIONS = new Set(['mixpanel', 'google-analytics', 'posthog']);
 const USERS_AND_EVENTS_DESTINATIONS = new Set(['klaviyo']);
 const PREPOSITION_TO = new Set([

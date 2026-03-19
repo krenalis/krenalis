@@ -36,6 +36,9 @@ var androidOverview string
 //go:embed documentation/go/overview.md
 var goOverview string
 
+//go:embed documentation/ios/overview.md
+var iOSOverview string
+
 //go:embed documentation/java/overview.md
 var javaOverview string
 
@@ -82,6 +85,17 @@ func init() {
 				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users using Go",
 					Overview: goOverview,
+				},
+			},
+		},
+		{
+			Code:       "ios",
+			Label:      "iOS",
+			Categories: connectors.CategorySDK,
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
+					Summary:  "Import events and users from an Apple application",
+					Overview: iOSOverview,
 				},
 			},
 		},

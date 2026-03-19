@@ -46,9 +46,9 @@ const ConnectorsList = () => {
 	}, [connectors]);
 
 	const searchedConnectors: any[] = useMemo(() => {
-		const sortedConnectors = connectors.sort((a, b) => (a.label <= b.label ? -1 : 1));
+		const sortedConnectors = connectors.sort((a, b) => (a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1));
 		const sortedAdditionalPotentialConnectors = additionalPotentialConnectors.sort((a, b) =>
-			a.label <= b.label ? -1 : 1,
+			a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1,
 		);
 		let searchedConnectors = [];
 
