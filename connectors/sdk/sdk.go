@@ -89,9 +89,11 @@ func init() {
 			},
 		},
 		{
-			Code:       "ios",
-			Label:      "iOS",
-			Categories: connectors.CategorySDK,
+			Code:                "ios",
+			Label:               "iOS",
+			Categories:          connectors.CategorySDK,
+			Strategies:          true,
+			FallbackToRequestIP: true,
 			Documentation: connectors.Documentation{
 				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users from an Apple application",
