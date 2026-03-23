@@ -12,7 +12,7 @@ esbuild
 	.then((result) => {
 		const text = result.outputFiles[0].text;
 		let transformed = text.replace(/meergo\.load\([^)]*\)/, '\n  $&;\n  ');
-		const snippet = `export const SNIPPET = \`<script>\n  ${transformed}</script>\`;\n\nexport const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/javascript-sdk';`;
+		const snippet = `export const SNIPPET = \`<script>\n  ${transformed}</script>\`;\n\nexport const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/javascript-sdk';`;
 		fs.writeFileSync('src/constants/snippets/javascript.ts', snippet);
 	})
 	.catch((err) => {

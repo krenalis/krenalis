@@ -452,7 +452,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		<>
 			<p>{transformationMainSentence}</p>
 			<p>Use Mappings for simple cases, or switch to JavaScript or Python for advanced logic.</p>
-			<a href='https://www.meergo.com/docs/ref/admin/transformations' target='_blank' rel='noopener'>
+			<a href='https://www.krenalis.com/docs/ref/admin/transformations' target='_blank' rel='noopener'>
 				Learn more about transformations
 			</a>
 		</>

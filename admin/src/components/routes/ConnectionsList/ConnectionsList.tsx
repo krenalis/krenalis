@@ -179,7 +179,7 @@ const ConnectionsList = () => {
 						<Grid columns={connectionsColumns} rows={connectionsRows} />
 						<div className='grid-learn-more'>
 							Learn more about{' '}
-							<a href='https://www.meergo.com/docs/ref/admin/integrations' target='_blank'>
+							<a href='https://www.krenalis.com/docs/ref/admin/integrations' target='_blank'>
 								integrations
 							</a>
 						</div>

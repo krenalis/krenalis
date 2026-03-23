@@ -127,7 +127,7 @@ const ConnectionPipelines = () => {
 		pipelinesDescription = `Use pipelines to export ${objectText} from your workspace to ${connectionLabelForCopy}.`;
 	}
 
-	const pipelinesDocsBaseURL = 'https://www.meergo.com/docs';
+	const pipelinesDocsBaseURL = 'https://www.krenalis.com/docs';
 	const shouldShowPipelineDocsLinks = !new Set(['dummy', 'ui-sample']).has(connection.connector.code.toLowerCase());
 	const buildPipelinesDocsURL = (target: 'users' | 'events'): string => {
 		const roleSegment = connection.isSource ? 'sources' : 'destinations';

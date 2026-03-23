@@ -64,7 +64,7 @@ const Header = ({ title, member }: HeaderProps) => {
 			<SlTooltip content='Meergo documentation and API reference' placement='bottom'>
 				<a
 					className='header__docs'
-					href='https://www.meergo.com/docs'
+					href='https://www.krenalis.com/docs'
 					target='_blank'
 					rel='noreferrer'
 					aria-label='Documentation (opens in a new tab)'

@@ -8,4 +8,4 @@ let analytics = Analytics(configuration: Configuration(writeKey: "writekey")
     .flushAt(3)
     .flushInterval(10)) // ...other config options`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/ios-sdk';
+export const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/ios-sdk';

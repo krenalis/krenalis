@@ -152,7 +152,7 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 										when a match is found or not found.
 									</span>
 									<a
-										href='https://www.meergo.com/docs/ref/admin/matching'
+										href='https://www.krenalis.com/docs/ref/admin/matching'
 										target='_blank'
 										rel='noopener'
 									>

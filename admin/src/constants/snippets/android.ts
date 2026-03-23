@@ -10,4 +10,4 @@ val client = Analytics("writekey", applicationContext) {
   // ...other config options
 }`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/android-sdk';
+export const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/android-sdk';

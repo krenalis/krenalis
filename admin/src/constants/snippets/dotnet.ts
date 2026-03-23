@@ -7,4 +7,4 @@ var config = new Config()
 
 Analytics.Initialize("writekey", config);`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/dotnet-sdk';
+export const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/dotnet-sdk';

@@ -209,7 +209,7 @@ const AccessKeys = () => {
 				/>
 				<div className='access-keys__grid-learn-more'>
 					Learn more about{' '}
-					<a href='https://www.meergo.com/docs/ref/admin/api-keys' target='_blank'>
+					<a href='https://www.krenalis.com/docs/ref/admin/api-keys' target='_blank'>
 						API keys
 					</a>
 				</div>
@@ -233,7 +233,7 @@ const AccessKeys = () => {
 				/>
 				<div className='access-keys__grid-learn-more'>
 					Learn more about{' '}
-					<a href='https://www.meergo.com/docs/ref/admin/ai-querying-with-mcp' target='_blank'>
+					<a href='https://www.krenalis.com/docs/ref/admin/ai-querying-with-mcp' target='_blank'>
 						AI querying with MCP
 					</a>
 				</div>
