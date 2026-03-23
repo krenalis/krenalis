@@ -40,7 +40,7 @@ func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescripti
 			"name":        "_mpid",
 			"type":        "uuid",
 			"nullable":    true,
-			"description": "The MPID (Meergo Profile ID) uniquely identifies an unified profile within Meergo. It doesn't have a corresponding property in the profile schema. It's used to reference the 'events.mpid' column.",
+			"description": "The MPID (Krenalis Profile ID) uniquely identifies an unified profile within Krenalis. It doesn't have a corresponding property in the profile schema. It's used to reference the 'events.mpid' column.",
 		},
 	})
 	info = append(info, map[string]any{

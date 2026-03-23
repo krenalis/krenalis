@@ -74,10 +74,10 @@ var tools = []server.ServerTool{
 	{
 		Tool: mcp.NewTool("profile-schema",
 			mcp.WithDescription(
-				"Return the profile schema (with details of all its properties and the corresponding data warehouse columns) related to the Meergo workspace."+
-					" Information is returned about the properties of the profile schema in Meergo (with their types),"+
+				"Return the profile schema (with details of all its properties and the corresponding data warehouse columns) related to the Krenalis workspace."+
+					" Information is returned about the properties of the profile schema in Krenalis (with their types),"+
 					" and about the corresponding column of the 'profiles' view in the data warehouse (along with its column type), where the user information is actually stored."+
-					" All profile schema properties in Meergo are always nullable, as any of them can be omitted."+
+					" All profile schema properties in Krenalis are always nullable, as any of them can be omitted."+
 					" Unlike the event schema, which is fixed for each workspace, the profile schema can be modified and thus change over time.",
 			),
 			mcp.WithTitleAnnotation("Profile schema of the workspace"),
@@ -104,7 +104,7 @@ var tools = []server.ServerTool{
 		Tool: mcp.NewTool("event-schema",
 			mcp.WithDescription(
 				"Return the event schema (with details of all its properties and the corresponding data warehouse columns)."+
-					" Information is returned about the properties of the event schema in Meergo (with their types),"+
+					" Information is returned about the properties of the event schema in Krenalis (with their types),"+
 					" and about the corresponding column of the 'events' table in the data warehouse (along with its column type), where the profile information is actually stored."+
 					" Unlike the workspace profile schema, which can be modified, the event schema is the same for every workspace and is never modified.",
 			),
@@ -126,7 +126,7 @@ var tools = []server.ServerTool{
 	{
 		Tool: mcp.NewTool("profile-doc",
 			mcp.WithDescription(
-				"Return information about the profile identities in Meergo.",
+				"Return information about the profile identities in Krenalis.",
 			),
 			mcp.WithTitleAnnotation("Documentation about profile identities"),
 			mcp.WithReadOnlyHintAnnotation(true),
@@ -135,9 +135,9 @@ var tools = []server.ServerTool{
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return mcp.NewToolResultText(strings.Join([]string{
-				"The 'meergo_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'profiles' view.",
-				"The 'meergo_identities._connection' column references the ID (integer) of the connection from which the identity was imported.",
-				"If there's no match between the contents of 'meergo_identities' and the 'profiles' view, it might be because the Identity Resolution process hasn't been run recently.",
+				"The 'krenalis_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'profiles' view.",
+				"The 'krenalis_identities._connection' column references the ID (integer) of the connection from which the identity was imported.",
+				"If there's no match between the contents of 'krenalis_identities' and the 'profiles' view, it might be because the Identity Resolution process hasn't been run recently.",
 			}, " ")), nil
 		},
 	},
@@ -187,8 +187,8 @@ var tools = []server.ServerTool{
 					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
 					" A connection performs its operations (importing, sending, and exporting data) through 'pipelines'."+
 					" Each connection can have zero, one, or multiple 'pipelines'."+
-					" Application connections interface with external applications outside Meergo."+
-					" Database connections interface with external databases outside Meergo."+
+					" Application connections interface with external applications outside Krenalis."+
+					" Database connections interface with external databases outside Krenalis."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
 					" SDK connections receive data (events and user data) from SDKs, browsers, and server-side applications."+
 					" Webhook connections receive data (events and user data) from applications via a webhook."+
@@ -224,8 +224,8 @@ var tools = []server.ServerTool{
 	},
 }
 
-// workspaceFromCtx retrieves the Meergo workspace from the information provided
-// within the context.
+// workspaceFromCtx retrieves the Krenalis workspace from the information
+// provided within the context.
 //
 // If the workspace cannot be retrieved for some reason, this function returns
 // an error explaining the problem.
@@ -234,7 +234,7 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
-	core, err := meergoCoreFromCtx(ctx)
+	core, err := krenalisCoreFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}

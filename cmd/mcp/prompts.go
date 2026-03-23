@@ -38,9 +38,9 @@ var prompts = []server.ServerPrompt{
 		"Explain to me how pipelines, connections, and identity resolution work. Provide concrete examples using data from my workspace, if possible.",
 	),
 	simplePrompt(
-		"i-am-new-to-meergo",
-		"Get an overview on how Meergo works",
-		"I'm new to Meergo and don't know how it works or what it does. Can you explain how it works, what it allows me to do, and what are the key concepts I need to work with?",
+		"i-am-new-to-krenalis",
+		"Get an overview on how Krenalis works",
+		"I'm new to Krenalis and don't know how it works or what it does. Can you explain how it works, what it allows me to do, and what are the key concepts I need to work with?",
 	),
 }
 
