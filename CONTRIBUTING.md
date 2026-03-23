@@ -21,7 +21,7 @@ The following is a set of guidelines for contributing to Meergo and its reposito
 
 ## Code of Conduct
 
-By participating, you are expected to adhere to the [Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [conduct@meergo.com](mailto:conduct@meergo.com).
+By participating, you are expected to adhere to the [Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [conduct@krenalis.com](mailto:conduct@krenalis.com).
 
 ## Meergo repositories and packages
 

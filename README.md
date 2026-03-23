@@ -78,7 +78,7 @@ To run the executable, provide an empty PostgreSQL database on first run, starti
 
 We take the security of Meergo and its ecosystem seriously.
 
-If you discover a potential vulnerability, please report it privately to **[security@meergo.com](mailto:security@meergo.com)** rather than opening a public issue. See the [SECURITY](https://github.com/krenalis/krenalis/blob/main/SECURITY.md) file for details.
+If you discover a potential vulnerability, please report it privately to **[security@krenalis.com](mailto:security@krenalis.com)** rather than opening a public issue. See the [SECURITY](https://github.com/krenalis/krenalis/blob/main/SECURITY.md) file for details.
 
 We will acknowledge your report as quickly as possible and keep you updated throughout the resolution process. Valid reports will be credited in the release notes once the fix is published.
 

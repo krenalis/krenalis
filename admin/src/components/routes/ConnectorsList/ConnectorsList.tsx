@@ -207,7 +207,7 @@ const ConnectorsList = () => {
 	const feedbackMessage = (
 		<span className='connectors-list__feedback-message'>
 			Can't find the connector you're looking for?{' '}
-			<a href='mailto:hello@meergo.com' target='_blank'>
+			<a href='mailto:hello@krenalis.com' target='_blank'>
 				Contact us
 			</a>
 		</span>

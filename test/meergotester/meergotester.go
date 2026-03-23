@@ -567,7 +567,7 @@ func (c *Meergo) createWorkspace(name string, profileSchema types.Type, uiPrefer
 
 func (c *Meergo) login() error {
 	body := map[string]any{
-		"email":    "acme@meergo.com",
+		"email":    "acme@krenalis.com",
 		"password": "meergo-password",
 	}
 	return c.call("POST", "/v1/members/login", body, nil)

@@ -67,7 +67,7 @@ func Initialize(ctx context.Context, tx *db.Tx) error {
 //
 //  1. Deletes the members already present in the PostgreSQL database;
 //
-//  2. Creates a new member whose email is "docker@meergo.com" and whose
+//  2. Creates a new member whose email is "docker@krenalis.com" and whose
 //     password is "meergo-password".
 func InitializeDockerMember(ctx context.Context, tx *db.Tx) error {
 	_, err := tx.Exec(ctx, "TRUNCATE members")
@@ -75,7 +75,7 @@ func InitializeDockerMember(ctx context.Context, tx *db.Tx) error {
 		return err
 	}
 	const query = `INSERT INTO members (organization, name, avatar, email, password, created_at)
-		SELECT id, 'User', NULL, 'docker@meergo.com', '$2a$10$dGlVroo3N23Vn99edSPe..xo1hhKzGLYafIjFQjazu3faeFizvW7m', now() at time zone 'utc'
+		SELECT id, 'User', NULL, 'docker@krenalis.com', '$2a$10$dGlVroo3N23Vn99edSPe..xo1hhKzGLYafIjFQjazu3faeFizvW7m', now() at time zone 'utc'
 		FROM organizations`
 	_, err = tx.Exec(ctx, query)
 	if err != nil {
