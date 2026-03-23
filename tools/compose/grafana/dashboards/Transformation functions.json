@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Dashboard per il monitoraggio delle funzioni Lambda tramite metriche Prometheus (meergo_lambda_*)",
+  "description": "Dashboard per il monitoraggio delle funzioni Lambda tramite metriche Prometheus (krenalis_lambda_*)",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -79,7 +79,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(meergo_lambda_duration_seconds_count[5m]))\n/\n(\n  sum(rate(meergo_lambda_duration_seconds_count[5m]))\n  + sum(rate(meergo_lambda_errors_total[5m]))\n)\n* 100",
+          "expr": "sum(rate(krenalis_lambda_duration_seconds_count[5m]))\n/\n(\n  sum(rate(krenalis_lambda_duration_seconds_count[5m]))\n  + sum(rate(krenalis_lambda_errors_total[5m]))\n)\n* 100",
           "legendFormat": "Success Rate",
           "range": true,
           "refId": "A"
@@ -176,7 +176,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.99, sum by(le) (rate(meergo_lambda_duration_seconds_bucket{job=\"meergo\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by(le) (rate(krenalis_lambda_duration_seconds_bucket{job=\"krenalis\"}[5m])))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "p99 latency",
@@ -191,7 +191,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.95, sum by(le) (rate(meergo_lambda_duration_seconds_bucket{job=\"meergo\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by(le) (rate(krenalis_lambda_duration_seconds_bucket{job=\"krenalis\"}[5m])))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -207,7 +207,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.5, sum by(le) (rate(meergo_lambda_duration_seconds_bucket{job=\"meergo\"}[5m])))",
+          "expr": "histogram_quantile(0.5, sum by(le) (rate(krenalis_lambda_duration_seconds_bucket{job=\"krenalis\"}[5m])))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -309,7 +309,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum by(type) (rate(meergo_lambda_errors_total[5m]))",
+          "expr": "sum by(type) (rate(krenalis_lambda_errors_total[5m]))",
           "legendFormat": "{{type}}",
           "refId": "A"
         }
@@ -403,7 +403,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum(rate(meergo_lambda_errors_total[5m]))",
+          "expr": "sum(rate(krenalis_lambda_errors_total[5m]))",
           "legendFormat": "Errors/sec",
           "refId": "A"
         }
@@ -500,7 +500,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": true,
-          "expr": "rate(meergo_lambda_records_total{job=\"meergo\"}[5m])",
+          "expr": "rate(krenalis_lambda_records_total{job=\"krenalis\"}[5m])",
           "format": "time_series",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -601,7 +601,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "rate(meergo_lambda_records_total[5m]) / rate(meergo_lambda_duration_seconds_count[5m])",
+          "expr": "rate(krenalis_lambda_records_total[5m]) / rate(krenalis_lambda_duration_seconds_count[5m])",
           "legendFormat": "Records per call",
           "refId": "A"
         }
@@ -616,7 +616,7 @@
     "lambda",
     "aws",
     "prometheus",
-    "meergo"
+    "krenalis"
   ],
   "templating": {
     "list": []

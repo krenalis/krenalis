@@ -164,12 +164,12 @@
       },
       "targets": [
         {
-          "expr": "meergo_db_acquired_conns",
+          "expr": "krenalis_db_acquired_conns",
           "legendFormat": "Acquired Connections",
           "refId": "A"
         },
         {
-          "expr": "meergo_db_max_conns",
+          "expr": "krenalis_db_max_conns",
           "legendFormat": "Max Connections Limit",
           "refId": "B"
         }
@@ -272,7 +272,7 @@
       },
       "targets": [
         {
-          "expr": "rate(meergo_db_acquire_duration_seconds_total[5m])",
+          "expr": "rate(krenalis_db_acquire_duration_seconds_total[5m])",
           "legendFormat": "Acquire Duration Rate (seconds/sec)",
           "refId": "A"
         }
@@ -359,7 +359,7 @@
       },
       "targets": [
         {
-          "expr": "rate(meergo_db_acquire_count_total[5m])",
+          "expr": "rate(krenalis_db_acquire_count_total[5m])",
           "legendFormat": "Acquire Count Rate (acquisitions/sec)",
           "refId": "A"
         }
@@ -450,7 +450,7 @@
       },
       "targets": [
         {
-          "expr": "rate(meergo_db_new_conns_count_total[5m])",
+          "expr": "rate(krenalis_db_new_conns_count_total[5m])",
           "legendFormat": "New Connections Rate (connections/sec)",
           "refId": "A"
         }
