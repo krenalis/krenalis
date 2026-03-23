@@ -7,7 +7,7 @@ services:
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
-      - ${MEERGO_DOCKER_COMPOSE_PORT-2022}:2022
+      - ${KRENALIS_DOCKER_COMPOSE_PORT-2022}:2022
     environment:
       # For information on how to configure these environment variables and
       # enable additional features, see:
@@ -17,7 +17,7 @@ services:
       # '.env' file (see https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/#env-file)
       # rather than editing this file.
       KRENALIS_HTTP_HOST: meergo
-      KRENALIS_HTTP_EXTERNAL_URL: ${KRENALIS_HTTP_EXTERNAL_URL-http://127.0.0.1:${MEERGO_DOCKER_COMPOSE_PORT-2022}/}
+      KRENALIS_HTTP_EXTERNAL_URL: ${KRENALIS_HTTP_EXTERNAL_URL-http://127.0.0.1:${KRENALIS_DOCKER_COMPOSE_PORT-2022}/}
       KRENALIS_PROMETHEUS_METRICS_ENABLED: ${KRENALIS_PROMETHEUS_METRICS_ENABLED-true}
       KRENALIS_TRANSFORMERS_PROVIDER: ${KRENALIS_TRANSFORMERS_PROVIDER-local}
       KRENALIS_DB_HOST: db

@@ -33,7 +33,7 @@ import (
 // This file contains tests on Identity Resolution. These tests are executed on
 // the registered data warehouses, provided that the environment variables:
 //
-//      MEERGO_TEST_PATH_WAREHOUSE_<warehouse-name>
+//      KRENALIS_TEST_PATH_WAREHOUSE_<warehouse-name>
 //
 // are set for the corresponding data warehouse and point to JSON files
 // containing the warehouse settings.
@@ -525,15 +525,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsFile, ok := os.LookupEnv("MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE")
+				settingsFile, ok := os.LookupEnv("KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE")
 				if !ok {
-					t.Skipf("the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
+					t.Skipf("the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
 				}
 				// Read the JSON file with the warehouse settings.
 				var err error
 				settings, err = os.ReadFile(settingsFile)
 				if err != nil {
-					t.Fatalf("cannot open the path %q specified in the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
+					t.Fatalf("cannot open the path %q specified in the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
 				}
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))

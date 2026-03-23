@@ -36,8 +36,8 @@ const passUIFlagToPlaywright = false
 func TestAdmin(t *testing.T) {
 
 	// See https://github.com/krenalis/krenalis/issues/2116.
-	if os.Getenv("MEERGO_TEST_SKIP_ADMIN_TESTS") == "true" {
-		t.Skip("Admin test skipped as MEERGO_TEST_SKIP_ADMIN_TESTS is set to true")
+	if os.Getenv("KRENALIS_TEST_SKIP_ADMIN_TESTS") == "true" {
+		t.Skip("Admin test skipped as KRENALIS_TEST_SKIP_ADMIN_TESTS is set to true")
 	}
 
 	fsTempDir := meergotester.NewTempStorage(t)
@@ -174,7 +174,7 @@ func run(t *testing.T, name string, args []string, directory, fsTempDir string) 
 	cmd.Dir = directory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "MEERGO_TEST_FS_TEMP_DIR="+fsTempDir)
+	cmd.Env = append(os.Environ(), "KRENALIS_TEST_FS_TEMP_DIR="+fsTempDir)
 	err := cmd.Run()
 	if err != nil {
 		t.Fatalf("error while executing %s: %s", name, err)

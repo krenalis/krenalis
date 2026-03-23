@@ -689,16 +689,16 @@ func newPostHogForTests(t *testing.T) *PostHog {
 	t.Helper()
 
 	var s innerSettings
-	s.APIKey = os.Getenv("MEERGO_TEST_POSTHOG_API_KEY")
+	s.APIKey = os.Getenv("KRENALIS_TEST_POSTHOG_API_KEY")
 	if s.APIKey == "" {
-		t.Fatal("expected env var MEERGO_TEST_POSTHOG_API_KEY to be set, got empty")
+		t.Fatal("expected env var KRENALIS_TEST_POSTHOG_API_KEY to be set, got empty")
 	}
 	if len(s.APIKey) != 47 || !strings.HasPrefix(s.APIKey, "phc_") {
-		t.Fatalf("expected MEERGO_TEST_POSTHOG_API_KEY to look like a PostHog project API key, got %q", s.APIKey)
+		t.Fatalf("expected KRENALIS_TEST_POSTHOG_API_KEY to look like a PostHog project API key, got %q", s.APIKey)
 	}
 
-	region := os.Getenv("MEERGO_TEST_POSTHOG_PROJECT_REGION")
-	selfHostedURL := os.Getenv("MEERGO_TEST_POSTHOG_SELF_HOSTED_URL")
+	region := os.Getenv("KRENALIS_TEST_POSTHOG_PROJECT_REGION")
+	selfHostedURL := os.Getenv("KRENALIS_TEST_POSTHOG_SELF_HOSTED_URL")
 	switch {
 	case region != "" && selfHostedURL != "":
 		t.Fatal("expected a single deployment setting, got both cloud region and self-hosted URL")
@@ -707,16 +707,16 @@ func newPostHogForTests(t *testing.T) *PostHog {
 		case "US", "EU":
 			s.Cloud = &cloudSettings{ProjectRegion: region}
 		default:
-			t.Fatalf("expected MEERGO_TEST_POSTHOG_PROJECT_REGION to be either US or EU, got %q", region)
+			t.Fatalf("expected KRENALIS_TEST_POSTHOG_PROJECT_REGION to be either US or EU, got %q", region)
 		}
 	case selfHostedURL != "":
 		url, err := validation.ParseURL(selfHostedURL, validation.NoPath|validation.NoQuery)
 		if err != nil {
-			t.Fatalf("expected MEERGO_TEST_POSTHOG_SELF_HOSTED_URL to be a valid base URL, got %v", err)
+			t.Fatalf("expected KRENALIS_TEST_POSTHOG_SELF_HOSTED_URL to be a valid base URL, got %v", err)
 		}
 		s.SelfHosted = &selfHostedSettings{URL: url}
 	default:
-		t.Fatal("expected MEERGO_TEST_POSTHOG_PROJECT_REGION or MEERGO_TEST_POSTHOG_SELF_HOSTED_URL to be set, got none")
+		t.Fatal("expected KRENALIS_TEST_POSTHOG_PROJECT_REGION or KRENALIS_TEST_POSTHOG_SELF_HOSTED_URL to be set, got none")
 	}
 
 	app, err := testconnector.NewApplication("posthog", s)
