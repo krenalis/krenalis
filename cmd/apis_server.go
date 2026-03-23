@@ -31,8 +31,8 @@ const maxRequestSize = 500 * 1024
 var newline = []byte("\n")
 
 var (
-	// errMissingWorkspace is returned when the "Meergo-Workspace" header is required but not provided.
-	errMissingWorkspace = errors.Forbidden("Meergo-Workspace header is missing; provide it in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+	// errMissingWorkspace is returned when the "Krenalis-Workspace" header is required but not provided.
+	errMissingWorkspace = errors.Forbidden("Krenalis-Workspace header is missing; provide it in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 
 	// errInvalidSessionCookie is returned when a session cookie has expired or is no lo longer valid.
 	errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
@@ -180,7 +180,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //
 // Authorization is provided via a session cookie.
 //
-// The workspace is nil when the "Meergo-Workspace" header is absent.
+// The workspace is nil when the "Krenalis-Workspace" header is absent.
 //
 // It returns errors.UnauthorizedError if authorization fails, or
 // errInvalidSessionCookie if the session cookie is invalid.
@@ -212,20 +212,20 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	if !org.HasMember(session.Member) {
 		return nil, nil, 0, errInvalidSessionCookie
 	}
-	// If the 'Meergo-Workspace' header is missing, return with a nil workspace.
-	header, ok := r.Header["Meergo-Workspace"]
+	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.
+	header, ok := r.Header["Krenalis-Workspace"]
 	if !ok {
 		return org, nil, session.Member, nil
 	}
 	if len(header) > 1 {
-		return nil, nil, 0, errors.BadRequest("request contains multiple Meergo-Workspace headers")
+		return nil, nil, 0, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 	}
 	var workspaceID int64
 	if header[0] != "" && header[0][0] != '+' {
 		workspaceID, _ = strconv.ParseInt(header[0], 10, 32)
 	}
 	if workspaceID <= 0 {
-		return nil, nil, 0, errors.BadRequest("Meergo-Workspace header is invalid; it should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+		return nil, nil, 0, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 	}
 	ws, err = org.Workspace(int(workspaceID))
 	if err != nil {
@@ -242,7 +242,7 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 //   - API key in the "Authorization" header
 //   - Session cookie from the Admin console
 //
-// The workspace is nil when the "Meergo-Workspace" header is absent and either:
+// The workspace is nil when the "Krenalis-Workspace" header is absent and either:
 //   - the API key is not bound to a workspace, or
 //   - the session cookie is from the Admin console.
 //
@@ -278,20 +278,20 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 			}
 			return org, ws, nil
 		}
-		header, ok := r.Header["Meergo-Workspace"]
-		// If the Meergo-Workspace header is present, return the workspace as well.
+		header, ok := r.Header["Krenalis-Workspace"]
+		// If the Krenalis-Workspace header is present, return the workspace as well.
 		if !ok {
 			return org, nil, nil
 		}
 		if len(header) > 1 {
-			return nil, nil, errors.BadRequest("request contains multiple Meergo-Workspace headers")
+			return nil, nil, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 		}
 		var id int64
 		if header[0] != "" && header[0][0] != '+' {
 			id, _ = strconv.ParseInt(header[0], 10, 32)
 		}
 		if id <= 0 {
-			return nil, nil, errors.BadRequest("Meergo-Workspace header is invalid; it should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+			return nil, nil, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 		}
 		ws, err := org.Workspace(int(id))
 		if err != nil {

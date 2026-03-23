@@ -588,19 +588,19 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !ok || key.Type != state.AccessKeyTypeAPI {
 				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
-			if header, ok := r.Header["Meergo-Workspace"]; ok {
+			if header, ok := r.Header["Krenalis-Workspace"]; ok {
 				if len(header) > 1 {
 					return errors.BadRequest(`request contains multiple "Meergo-Warehouse" headers`)
 				}
 				if key.Workspace > 0 {
-					return errors.BadRequest(`"Meergo-Workspace" header cannot be provided with a workspace restricted key`)
+					return errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
 				}
 				var id int64
 				if header[0] != "" && header[0][0] != '+' {
 					id, _ = strconv.ParseInt(header[0], 10, 32)
 				}
 				if id <= 0 {
-					return errors.BadRequest(`"Meergo-Workspace" header is invalid; use "Meergo-Workspace: <WORKSPACE_ID>"`)
+					return errors.BadRequest(`"Krenalis-Workspace" header is invalid; use "Krenalis-Workspace: <WORKSPACE_ID>"`)
 				}
 				if _, ok = c.state.Workspace(int(id)); !ok {
 					return errors.NotFound("workspace %d does not exist", id)

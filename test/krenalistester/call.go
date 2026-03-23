@@ -74,7 +74,7 @@ func (c *Meergo) call(method, path string, body any, response any) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	if id := c.WorkspaceID(); id > 0 {
-		req.Header.Set("Meergo-Workspace", strconv.Itoa(id))
+		req.Header.Set("Krenalis-Workspace", strconv.Itoa(id))
 	}
 
 	c.t.Logf("[info] %s %s: executing request", method, url)
