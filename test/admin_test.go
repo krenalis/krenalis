@@ -35,7 +35,7 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
-	// See https://github.com/meergo/meergo/issues/2116.
+	// See https://github.com/krenalis/krenalis/issues/2116.
 	if os.Getenv("MEERGO_TEST_SKIP_ADMIN_TESTS") == "true" {
 		t.Skip("Admin test skipped as MEERGO_TEST_SKIP_ADMIN_TESTS is set to true")
 	}

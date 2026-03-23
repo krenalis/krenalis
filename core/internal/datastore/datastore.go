@@ -241,11 +241,11 @@ func (ds *Datastore) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
 	ds.mu.Lock()
 	store, ok := ds.store[ws.ID]
-	if ok { // see issue https://github.com/meergo/meergo/issues/2051
+	if ok { // see issue https://github.com/krenalis/krenalis/issues/2051
 		delete(ds.store, ws.ID)
 	}
 	ds.mu.Unlock()
-	if !ok { // see issue https://github.com/meergo/meergo/issues/2051
+	if !ok { // see issue https://github.com/krenalis/krenalis/issues/2051
 		return
 	}
 	err := store.close()

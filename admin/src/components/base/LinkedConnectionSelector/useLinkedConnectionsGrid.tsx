@@ -27,7 +27,7 @@ const useLinkedConnectionsGrid = (
 			{
 				name: 'Connector',
 			},
-			/* See issue https://github.com/meergo/meergo/issues/1255.
+			/* See issue https://github.com/krenalis/krenalis/issues/1255.
 			{
 				name: 'Health',
 			},
@@ -90,7 +90,7 @@ const useLinkedConnectionsGrid = (
 					Unlink
 				</SlButton>
 			);
-			/* See issue https://github.com/meergo/meergo/issues/1255.
+			/* See issue https://github.com/krenalis/krenalis/issues/1255.
 			const healthCell = (
 				<div className='linked-connection-grid__status'>
 					<StatusDot status={fc.status} />

@@ -132,7 +132,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 	if ts.IsZero() {
 		// For now, let's take the current timestamp. This behavior is a bit
 		// implicit at the moment, but when we implement
-		// https://github.com/meergo/meergo/issues/1777, this behavior will be
+		// https://github.com/krenalis/krenalis/issues/1777, this behavior will be
 		// removed from here.
 		ts = time.Now()
 	}

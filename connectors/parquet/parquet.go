@@ -131,8 +131,8 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 			// imported correctly.
 			//
 			// TODO: see the issues:
-			//  - https://github.com/meergo/meergo/issues/1369 (groups)
-			//  - https://github.com/meergo/meergo/issues/1325 (arrays)
+			//  - https://github.com/krenalis/krenalis/issues/1369 (groups)
+			//  - https://github.com/krenalis/krenalis/issues/1325 (arrays)
 			records.Issue("Column %q is not supported because column groups (which are used to represent types as object, arrays, and maps) are not supported.", strings.Join(c.Path(), "."))
 			continue
 		}
@@ -146,7 +146,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 			continue
 		}
 		if !types.IsValidPropertyName(pathFirstComponent) {
-			// TODO: see https://github.com/meergo/meergo/issues/1405.
+			// TODO: see https://github.com/krenalis/krenalis/issues/1405.
 			records.Issue("Column %q does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores.", pathFirstComponent)
 			continue
 		}
@@ -493,7 +493,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 			if ts, ok := record[p.Name].(time.Time); ok {
 				// Time values are exported with microseconds precision instead
 				// of nanoseconds for this reason:
-				// https://github.com/meergo/meergo/issues/1392.
+				// https://github.com/krenalis/krenalis/issues/1392.
 				converted[p.Name] = ts.UnixMicro()
 				continue
 			}
@@ -526,8 +526,8 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 			continue
 		case
 			// TODO (Gianluca): as a workaround for the lack of support for
-			// Array properties (https://github.com/meergo/meergo/issues/1325)
-			// and Map properties (https://github.com/meergo/meergo/issues/1371),
+			// Array properties (https://github.com/krenalis/krenalis/issues/1325)
+			// and Map properties (https://github.com/krenalis/krenalis/issues/1371),
 			// we decided at the moment to encode them and export them as JSON.
 			types.ArrayKind,
 			types.MapKind:
@@ -734,7 +734,7 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 		case types.TimeKind:
 			// Time values are exported with microseconds precision instead of
 			// nanoseconds for this reason:
-			// https://github.com/meergo/meergo/issues/1392.
+			// https://github.com/krenalis/krenalis/issues/1392.
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.TIME = parquet.NewTimeType()
@@ -761,8 +761,8 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			types.ArrayKind,
 			types.MapKind:
 			// TODO (Gianluca): as a workaround for the lack of support for
-			// Array properties (https://github.com/meergo/meergo/issues/1325)
-			// and Map properties (https://github.com/meergo/meergo/issues/1371),
+			// Array properties (https://github.com/krenalis/krenalis/issues/1325)
+			// and Map properties (https://github.com/krenalis/krenalis/issues/1371),
 			// we decided at the moment to encode them and export them as JSON.
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
@@ -846,7 +846,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			return types.JSON(), nil
 		}
 		if lt.BSON != nil {
-			return types.Type{}, nil // TODO: see https://github.com/meergo/meergo/issues/1400.
+			return types.Type{}, nil // TODO: see https://github.com/krenalis/krenalis/issues/1400.
 		}
 		if lt.UUID != nil {
 			return types.UUID(), nil
@@ -878,7 +878,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_JSON:
 			return types.JSON(), nil
 		case parquet.ConvertedType_BSON:
-			return types.Type{}, nil // TODO: see https://github.com/meergo/meergo/issues/1400.
+			return types.Type{}, nil // TODO: see https://github.com/krenalis/krenalis/issues/1400.
 		case parquet.ConvertedType_DECIMAL:
 			var prec, scale int
 			if elem.Precision != nil {
@@ -896,7 +896,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_DATE:
 			return types.Date(), nil
 		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:
-			// TODO: https://github.com/meergo/meergo/issues/1385
+			// TODO: https://github.com/krenalis/krenalis/issues/1385
 			return types.Type{}, nil
 		case parquet.ConvertedType_TIME_MICROS, parquet.ConvertedType_TIME_MILLIS:
 			return types.Time(), nil

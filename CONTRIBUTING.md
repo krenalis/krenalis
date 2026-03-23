@@ -29,12 +29,12 @@ Meergo is an **open development project** and is **freely available**. Connector
 
 Here's a list of Meergo components:
 
-- [meergo](https://github.com/meergo/meergo) - Meergo monorepo (Multiple licenses)
-- [meergo/admin](https://github.com/meergo/meergo/tree/main/admin) - Meergo Admin console (Elastic License v2)
-- [meergo/connectors](https://github.com/meergo/meergo/tree/main/connectors) - Meergo connectors (MIT)
-- [meergo/core](https://github.com/meergo/meergo/tree/main/core) - Meergo Core (Elastic License v2)
-- [meergo/tools](https://github.com/meergo/meergo/tree/main/tools) - Meergo tools (Elastic License v2)
-- [meergo/warehouses](https://github.com/meergo/meergo/tree/main/warehouses) - Meergo warehouse integrations (MIT)
+- [meergo](https://github.com/krenalis/krenalis) - Meergo monorepo (Multiple licenses)
+- [meergo/admin](https://github.com/krenalis/krenalis/tree/main/admin) - Meergo Admin console (Elastic License v2)
+- [meergo/connectors](https://github.com/krenalis/krenalis/tree/main/connectors) - Meergo connectors (MIT)
+- [meergo/core](https://github.com/krenalis/krenalis/tree/main/core) - Meergo Core (Elastic License v2)
+- [meergo/tools](https://github.com/krenalis/krenalis/tree/main/tools) - Meergo tools (Elastic License v2)
+- [meergo/warehouses](https://github.com/krenalis/krenalis/tree/main/warehouses) - Meergo warehouse integrations (MIT)
 
 ### SDKs for event collection
 
@@ -42,15 +42,15 @@ All SDKs are released under the MIT License.
 
 Issues for the various SDKs are tracked in the main Meergo repository, using a specific label for each SDK as shown below.
 
-| SDK        | Repository                                                             | Issues Label                                                                                      |
-|------------|------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| JavaScript | [analytics-javascript](https://github.com/meergo/analytics-javascript) | [javascript-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Ajavascript-sdk) |
-| Android    | [analytics-android](https://github.com/meergo/analytics-android)       | [android-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Aandroid-sdk)       |
-| Python     | [analytics-python](https://github.com/meergo/analytics-python)         | [python-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Apython-sdk)         |
-| .NET       | [analytics-dotnet](https://github.com/meergo/analytics-dotnet)         | [dotnet-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Adotnet-sdk)         |
-| Java       | [analytics-java](https://github.com/meergo/analytics-java)             | [java-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Ajava-sdk)             |
-| Node.js    | [analytics-nodejs](https://github.com/meergo/analytics-nodejs)         | [nodejs-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Anodejs-sdk)         |
-| Go         | [analytics-go](https://github.com/meergo/analytics-go)                 | [go-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Ago-sdk)                 |
+| SDK        | Repository                                                             | Issues Label                                                                                          |
+|------------|------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| JavaScript | [analytics-javascript](https://github.com/meergo/analytics-javascript) | [javascript-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Ajavascript-sdk) |
+| Android    | [analytics-android](https://github.com/meergo/analytics-android)       | [android-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Aandroid-sdk)       |
+| Python     | [analytics-python](https://github.com/meergo/analytics-python)         | [python-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Apython-sdk)         |
+| .NET       | [analytics-dotnet](https://github.com/meergo/analytics-dotnet)         | [dotnet-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Adotnet-sdk)         |
+| Java       | [analytics-java](https://github.com/meergo/analytics-java)             | [java-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Ajava-sdk)             |
+| Node.js    | [analytics-nodejs](https://github.com/meergo/analytics-nodejs)         | [nodejs-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Anodejs-sdk)         |
+| Go         | [analytics-go](https://github.com/meergo/analytics-go)                 | [go-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Ago-sdk)                 |
 
 ## Reporting bugs
 
@@ -63,7 +63,7 @@ If you find a bug in Meergo, please do the following:
    For example, if you encounter an "Internal Server Error" in the Admin console, check Meergo's log file or standard error output first.
 
 2. **Check existing issues.**  
-   Look at the [open issues](https://github.com/meergo/meergo/issues) to see if someone already reported it.
+   Look at the [open issues](https://github.com/krenalis/krenalis/issues) to see if someone already reported it.
     * If you find the same issue, add a comment if you have new or useful information.
     * Otherwise, adding a reaction (👍) is enough to show that it affects you too, but in this case subscribe to the issue to receive notifications.
 

@@ -1515,7 +1515,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		// TODO(Gianluca): for https://github.com/krenalis/krenalis/issues/1833.
 		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
@@ -1712,7 +1712,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
-		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		// TODO(Gianluca): for https://github.com/krenalis/krenalis/issues/1833.
 		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
@@ -2117,14 +2117,14 @@ const maxRawQuerySize = 10 * 1024 * 1024 // 10 MiB.
 // error.
 //
 // TODO(Gianluca): the error handling is currently minimal. See the issue
-// https://github.com/meergo/meergo/issues/1667.
+// https://github.com/krenalis/krenalis/issues/1667.
 func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
 	// TODO(Gianluca): here the warehouse mode is not checked. The reason is
 	// that the mode is currently stored in the store. We should review all
-	// this. This is discussed in the issue https://github.com/meergo/meergo/issues/1224.
+	// this. This is discussed in the issue https://github.com/krenalis/krenalis/issues/1224.
 
 	// Retrieve the warehouse instance for the MCP.
 	this.core.mcpMu.Lock()

@@ -53,4 +53,4 @@ This table is based on the following principles:
 
 [^arraymapcomposite]: Supporting `array(T)` or `map(T)`, where `T` is of type `array`, `object` or `map`, would open up major implementation issues, especially in the Admin console, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
-[^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/meergo/meergo/issues/956) for more details.
+[^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/krenalis/krenalis/issues/956) for more details.

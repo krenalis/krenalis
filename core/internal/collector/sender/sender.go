@@ -638,12 +638,12 @@ func (s *Sender) scheduleIteration() {
 	}
 	// If we have enough events for a batch, send immediately.
 	if s.available >= s.minBatchSize {
-		s.schedule.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+		s.schedule.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/krenalis/krenalis/issues/2122
 		return
 	}
 	// Wait until maxQueueDelay has elapsed since the queue became available.
 	elapsed := time.Since(s.availableSince)
-	s.schedule.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+	s.schedule.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/krenalis/krenalis/issues/2122
 }
 
 // send sends events to the application by calling the connector's SendEvents

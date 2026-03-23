@@ -113,7 +113,7 @@ type sfSettings struct {
 // a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
-	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1693.
+	// TODO(Gianluca): see the issue https://github.com/krenalis/krenalis/issues/1693.
 	return errors.New("the read-only access check is currently not implemented in Snowflake")
 }
 

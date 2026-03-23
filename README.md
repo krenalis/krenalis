@@ -78,7 +78,7 @@ To run the executable, provide an empty PostgreSQL database on first run, starti
 
 We take the security of Meergo and its ecosystem seriously.
 
-If you discover a potential vulnerability, please report it privately to **[security@meergo.com](mailto:security@meergo.com)** rather than opening a public issue. See the [SECURITY](https://github.com/meergo/meergo/blob/main/SECURITY.md) file for details.
+If you discover a potential vulnerability, please report it privately to **[security@meergo.com](mailto:security@meergo.com)** rather than opening a public issue. See the [SECURITY](https://github.com/krenalis/krenalis/blob/main/SECURITY.md) file for details.
 
 We will acknowledge your report as quickly as possible and keep you updated throughout the resolution process. Valid reports will be credited in the release notes once the fix is published.
 
@@ -88,13 +88,13 @@ Meergo is an open, community-driven project. We welcome contributions from devel
 
 ### Ways to contribute
 
-* [Contributing to the source code](https://github.com/meergo/meergo/blob/main/CONTRIBUTING.md)
-* [Suggesting new features and reporting issues](https://github.com/meergo/meergo/issues)
+* [Contributing to the source code](https://github.com/krenalis/krenalis/blob/main/CONTRIBUTING.md)
+* [Suggesting new features and reporting issues](https://github.com/krenalis/krenalis/issues)
 
 To keep the project coherent and maintainable, we follow a roadmap and prioritize issues in a specific order.
 For this reason, please open an issue or discussion before submitting a pull request for a new feature.
 
 ## License
 
-Meergo is licensed under the **MIT License** (for connectors and warehouse integrations) and the **Elastic 2.0 License** (for the core and admin). Both licenses are documented in the [LICENSE](https://github.com/meergo/meergo/blob/main/LICENSE) file.
+Meergo is licensed under the **MIT License** (for connectors and warehouse integrations) and the **Elastic 2.0 License** (for the core and admin). Both licenses are documented in the [LICENSE](https://github.com/krenalis/krenalis/blob/main/LICENSE) file.
 You are free to use, modify, and integrate the project according to the terms described there.

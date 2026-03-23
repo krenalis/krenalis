@@ -9,7 +9,7 @@ import "github.com/meergo/meergo/tools/types"
 // https://docs.stripe.com/api/customers/object.
 //
 // Currently, we don't support expanded responses/fields. We have an issue about
-// them: https://github.com/meergo/meergo/issues/1818.
+// them: https://github.com/krenalis/krenalis/issues/1818.
 //
 // The "object" and "livemode" fields have been excluded because they are not relevant to Meergo.
 //

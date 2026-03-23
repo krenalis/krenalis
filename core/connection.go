@@ -56,7 +56,7 @@ type Connection struct {
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	LinkedConnections []int         `json:"linkedConnections,omitempty"`
-	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
+	Health            Health        `json:"-"` // See issue https://github.com/krenalis/krenalis/issues/1255.
 	Pipelines         []Pipeline    `json:"pipelines"`
 
 	// EventTypes is populated only by the (*Workspace).Connection method.
@@ -195,7 +195,7 @@ func (this *Connection) ApplicationEventSchema(ctx context.Context, eventType st
 //
 // TODO(Gianluca): this method is currently unused, and it has been kept for the
 // future, when we will re-expose the endpoint to retrieve group schemas. See
-// the issue https://github.com/meergo/meergo/issues/895.
+// the issue https://github.com/krenalis/krenalis/issues/895.
 func (this *Connection) ApplicationGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
 	this.core.mustBeOpen()
 	return this.applicationSchemas(ctx, state.TargetGroup)
@@ -389,7 +389,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/meergo/meergo/issues/2086.
+	// See issue https://github.com/krenalis/krenalis/issues/2086.
 	if eventType != "" {
 		app := this.application()
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
@@ -1093,7 +1093,7 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 // the given target and event type.
 //
 // TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1266.
+// https://github.com/krenalis/krenalis/issues/1266.
 //
 // It returns an errors.UnprocessableError error with code EventTypeNotExist, if
 // the event type does not exist for the connection.
@@ -1237,7 +1237,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 			return nil, errors.NotFound("event type not expected")
 		}
 		// TODO(Gianluca): regarding message broker connectors, see the issue
-		// https://github.com/meergo/meergo/issues/1264.
+		// https://github.com/krenalis/krenalis/issues/1264.
 		switch target {
 		case TargetUser:
 			// Source/SDK/User.
@@ -1259,7 +1259,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 // PipelineTypes returns the pipeline types for the connection.
 //
 // TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1265.
+// https://github.com/krenalis/krenalis/issues/1265.
 //
 // Refer to the specifications in the file "core/Pipelines.csv" for more
 // details.
@@ -1980,7 +1980,7 @@ func (this *Connection) storage() *connections.FileStorage {
 // event type is not empty, it returns its schema.
 //
 // TODO(Gianluca): this function is deprecated and should no longer be used.
-// This is retained until https://github.com/meergo/meergo/issues/1266 is
+// This is retained until https://github.com/krenalis/krenalis/issues/1266 is
 // resolved, then this method will be removed.
 //
 // It returns an errors.BadRequestError error if target or eventType is not

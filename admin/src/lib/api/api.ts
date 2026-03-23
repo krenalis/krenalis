@@ -397,7 +397,7 @@ class Connections {
 	};
 
 	// TODO(Gianluca): this method is deprecated. See the issue
-	// https://github.com/meergo/meergo/issues/1265.
+	// https://github.com/krenalis/krenalis/issues/1265.
 	pipelineTypes = async (connection: number) => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipeline-types`,
@@ -407,7 +407,7 @@ class Connections {
 	};
 
 	// TODO(Gianluca): this method is deprecated. See the issue
-	// https://github.com/meergo/meergo/issues/1266.
+	// https://github.com/krenalis/krenalis/issues/1266.
 	pipelineSchemas = async (
 		connection: number,
 		target: PipelineTarget,

@@ -157,7 +157,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		switch c.Type.Kind() {
 		case types.StringKind:
 			s = " = ''"
-		// See issue https://github.com/meergo/meergo/issues/1804.
+		// See issue https://github.com/krenalis/krenalis/issues/1804.
 		// case types.JSONKind:
 		//	s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
@@ -181,7 +181,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		switch c.Type.Kind() {
 		case types.StringKind:
 			s = " <> ''"
-		// See issue https://github.com/meergo/meergo/issues/1804.
+		// See issue https://github.com/krenalis/krenalis/issues/1804.
 		// case types.JSONKind:
 		//	s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:

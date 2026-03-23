@@ -84,7 +84,7 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]connectors.C
 		return nil, err
 	}
 	// The "SELECT * FROM table" query does not return MATERIALIZED columns.
-	// See issue https://github.com/meergo/meergo/issues/1417.
+	// See issue https://github.com/krenalis/krenalis/issues/1417.
 	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table+" LIMIT 0", true)
 	if err != nil {
 		return nil, err

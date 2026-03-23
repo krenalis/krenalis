@@ -68,7 +68,7 @@ RUN useradd meergouser -m
 # we'll create it here, with the correct privileges already in place.
 #
 # This part should be simplified (i.e. removed) when we will implement
-# https://github.com/meergo/meergo/issues/1962.
+# https://github.com/krenalis/krenalis/issues/1962.
 #
 RUN mkdir -p /var/meergo/transformation-functions
 RUN chown meergouser:meergouser /var/meergo/transformation-functions

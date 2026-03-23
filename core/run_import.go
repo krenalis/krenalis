@@ -206,7 +206,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	// TODO(Gianluca): calling Close may return error in case the warehouse mode
 	// does not allow the closing (that is the flushing of users). However,
 	// before handling that error, we should instead address
-	// https://github.com/meergo/meergo/issues/1224.
+	// https://github.com/krenalis/krenalis/issues/1224.
 	err = iw.Close(ctx)
 	if err != nil {
 		if err != datastore.ErrPurgeSkipped {

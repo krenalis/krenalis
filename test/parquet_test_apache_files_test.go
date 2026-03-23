@@ -17,7 +17,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 
 	// TODO: test all files within 'test/testdata/apache/parquet-testing'.
 	// TODO: test column values in addition to column names and types.
-	// See the issue https://github.com/meergo/meergo/issues/1418.
+	// See the issue https://github.com/krenalis/krenalis/issues/1418.
 
 	// Retrieve the storage directory that contains the Parquet file to import.
 	storageDir, err := filepath.Abs("testdata/apache/parquet-testing/data")

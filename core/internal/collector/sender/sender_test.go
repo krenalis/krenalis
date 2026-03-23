@@ -312,7 +312,7 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		s.SendEvent(event)
 
 		time.Sleep(maxQueueDelay)
-		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/meergo/meergo/issues/2122
+		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/krenalis/krenalis/issues/2122
 
 		s.Close(t.Context())
 
@@ -349,7 +349,7 @@ func Test_Sender_MinQueuedEvents(t *testing.T) {
 			s.SendEvent(createTestEvent(s, i))
 		}
 
-		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/meergo/meergo/issues/2122
+		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/krenalis/krenalis/issues/2122
 		synctest.Wait()
 		if consumed != total {
 			t.Fatalf("expected %d consumed events, got %d", total, consumed)

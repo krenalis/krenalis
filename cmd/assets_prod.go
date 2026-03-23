@@ -61,7 +61,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Content-Type", ct)
 			}
 		case "codicon-37A3DWZT.ttf":
-			// See issue https://github.com/meergo/meergo/issues/1497
+			// See issue https://github.com/krenalis/krenalis/issues/1497
 			after = "monaco/vs/editor/codicon-37A3DWZT.ttf"
 			w.Header().Add("Content-Type", "font/ttf")
 		default:

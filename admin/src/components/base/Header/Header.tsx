@@ -141,7 +141,7 @@ const Header = ({ title, member }: HeaderProps) => {
 							<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 							<a
 								className='header__account-menu-item'
-								href='https://github.com/meergo/meergo/issues'
+								href='https://github.com/krenalis/krenalis/issues'
 								target='_blank'
 								onClick={closeMenu}
 							>
@@ -150,7 +150,7 @@ const Header = ({ title, member }: HeaderProps) => {
 							</a>
 							<a
 								className='header__account-menu-item'
-								href='https://github.com/meergo/meergo/discussions'
+								href='https://github.com/krenalis/krenalis/discussions'
 								target='_blank'
 								onClick={closeMenu}
 							>

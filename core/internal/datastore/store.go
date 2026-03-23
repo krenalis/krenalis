@@ -100,7 +100,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // TODO(Gianluca): in this method, there is an inconsistency related to the
 // parameters, that is: the schema is passed as properties, while the operations
 // are columns, so there is a mix of different levels of abstraction. This is
-// discussed in the issue https://github.com/meergo/meergo/issues/862.
+// discussed in the issue https://github.com/krenalis/krenalis/issues/862.
 //
 // This method, once called, can then return in four distinct cases:
 //
@@ -315,7 +315,7 @@ func (store *Store) NewEventWriter() *EventWriter {
 // TODO(Gianluca): in this method, there is an inconsistency related to the
 // parameters, that is: the schema is passed as properties, while the operations
 // are columns, so there is a mix of different levels of abstraction. This is
-// discussed in the issue https://github.com/meergo/meergo/issues/862.
+// discussed in the issue https://github.com/krenalis/krenalis/issues/862.
 //
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
@@ -458,7 +458,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
 	// actual IR execution. See issue
-	// https://github.com/meergo/meergo/issues/1224.
+	// https://github.com/krenalis/krenalis/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err

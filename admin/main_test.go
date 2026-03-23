@@ -13,7 +13,7 @@ import (
 
 func Test_Build(t *testing.T) {
 
-	t.Skip() // TODO(Gianluca): re-enable. See https://github.com/meergo/meergo/issues/694.
+	t.Skip() // TODO(Gianluca): re-enable. See https://github.com/krenalis/krenalis/issues/694.
 
 	resolve, err := readResolveFile()
 	if err != nil {
