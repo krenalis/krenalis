@@ -36,4 +36,3 @@ An application connector can support any subset of the following:
 - **Destination (events)**: send behavioral events to the app (activation)
 
 You declare which capabilities you support in `connectors.ApplicationSpec` and you must implement the matching interfaces.
-
