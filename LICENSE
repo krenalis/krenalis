@@ -1,4 +1,4 @@
-Meergo monorepo uses multiple licenses.
+Krenalis monorepo uses multiple licenses.
 
 The license for a particular work is defined with the following prioritized
 rules:
@@ -14,9 +14,9 @@ Directories containing third-party software, such as 'vendor/' and
 directories retains its original license terms as distributed by their
 respective authors.
 
-Meergo's connectors and data warehouse integrations, located in the 'connectors/'
-and 'warehouses/' directories, are released as Open Source under the MIT
-License.
+Krenalis's connectors and data warehouse integrations, located in the
+'connectors/' and 'warehouses/' directories, are released as Open Source under
+the MIT License.
 
 ---
 
