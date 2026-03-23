@@ -575,21 +575,21 @@ func marshalJSON(data any) json.Value {
 
 func newMixpanelForTests(t *testing.T) *Mixpanel {
 	var s innerSettings
-	s.ProjectID = os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_ID")
+	s.ProjectID = os.Getenv("KRENALIS_TEST_MIXPANEL_PROJECT_ID")
 	if s.ProjectID == "" {
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_ID is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_PROJECT_ID is required but not provided")
 	}
-	s.ProjectToken = os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_TOKEN")
+	s.ProjectToken = os.Getenv("KRENALIS_TEST_MIXPANEL_PROJECT_TOKEN")
 	if s.ProjectToken == "" {
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_TOKEN is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_PROJECT_TOKEN is required but not provided")
 	}
-	s.DataResidency = os.Getenv("MEERGO_TEST_MIXPANEL_DATA_RESIDENCY")
+	s.DataResidency = os.Getenv("KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY")
 	switch s.DataResidency {
 	case "US", "EU", "IN":
 	case "":
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY is required but not provided")
 	default:
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
 	}
 	app, err := testconnector.NewApplication("mixpanel", s)
 	if err != nil {

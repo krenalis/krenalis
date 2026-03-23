@@ -34,8 +34,8 @@ func (state *State) keepElections() {
 	defer state.close.Done()
 	state.election.lastSeen = time.Now()
 
-	// Check if the MEERGO_DEBUG_ELECTION variable is set.
-	if v := os.Getenv("MEERGO_DEBUG_ELECTION"); v == "true" {
+	// Check if the KRENALIS_DEBUG_ELECTION variable is set.
+	if v := os.Getenv("KRENALIS_DEBUG_ELECTION"); v == "true" {
 		debugElection = true
 	}
 

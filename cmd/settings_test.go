@@ -39,24 +39,24 @@ func TestEnvLoading(t *testing.T) {
 		if !ok {
 			t.Fatalf("unexpected: %q", env)
 		}
-		if strings.HasPrefix(key, "MEERGO_ENV_TEST_") {
+		if strings.HasPrefix(key, "KRENALIS_ENV_TEST_") {
 			got[key] = value
 		}
 	}
 
 	// Test the environment variables.
 	expected := map[string]any{
-		"MEERGO_ENV_TEST_A": "10",
-		"MEERGO_ENV_TEST_B": "321",
-		"MEERGO_ENV_TEST_C": "  hello  my   friend",
-		"MEERGO_ENV_TEST_D": `"my-quoted-value"`,
-		"MEERGO_ENV_TEST_E": "my-quoted-value",
-		"MEERGO_ENV_TEST_F": "\"my-quoted-value",
-		"MEERGO_ENV_TEST_G": "\"my-quoted-value\"",
+		"KRENALIS_ENV_TEST_A": "10",
+		"KRENALIS_ENV_TEST_B": "321",
+		"KRENALIS_ENV_TEST_C": "  hello  my   friend",
+		"KRENALIS_ENV_TEST_D": `"my-quoted-value"`,
+		"KRENALIS_ENV_TEST_E": "my-quoted-value",
+		"KRENALIS_ENV_TEST_F": "\"my-quoted-value",
+		"KRENALIS_ENV_TEST_G": "\"my-quoted-value\"",
 
-		"MEERGO_ENV_TEST_H":     "3290",
-		"MEERGO_ENV_TEST_I":     "hello\\ world",
-		"MEERGO_ENV_TEST_EMPTY": "",
+		"KRENALIS_ENV_TEST_H":     "3290",
+		"KRENALIS_ENV_TEST_I":     "hello\\ world",
+		"KRENALIS_ENV_TEST_EMPTY": "",
 	}
 	if !reflect.DeepEqual(got, expected) {
 		for expectedK, expectedV := range expected {
@@ -97,9 +97,9 @@ func TestParseSettings(t *testing.T) {
 	// helper to set a minimal valid baseline env that lets settingsFromEnv succeed.
 	setBaseline := func(t *testing.T) {
 		t.Helper()
-		t.Setenv("MEERGO_DB_USERNAME", "u")
-		t.Setenv("MEERGO_DB_PASSWORD", "p")
-		t.Setenv("MEERGO_DB_DATABASE", "db")
+		t.Setenv("KRENALIS_DB_USERNAME", "u")
+		t.Setenv("KRENALIS_DB_PASSWORD", "p")
+		t.Setenv("KRENALIS_DB_DATABASE", "db")
 	}
 
 	t.Run("minimal baseline with defaults", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("termination delay valid and invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TERMINATION_DELAY", "150ms")
+		t.Setenv("KRENALIS_TERMINATION_DELAY", "150ms")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -218,12 +218,12 @@ func TestParseSettings(t *testing.T) {
 
 		// invalid.
 		setBaseline(t)
-		t.Setenv("MEERGO_TERMINATION_DELAY", "not-a-duration")
+		t.Setenv("KRENALIS_TERMINATION_DELAY", "not-a-duration")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid duration, got nil")
 		}
-		want := "invalid duration value specified for MEERGO_TERMINATION_DELAY: time: invalid duration \"not-a-duration\""
+		want := "invalid duration value specified for KRENALIS_TERMINATION_DELAY: time: invalid duration \"not-a-duration\""
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -231,12 +231,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("JavaScript SDK URL invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_JAVASCRIPT_SDK_URL", "://bad")
+		t.Setenv("KRENALIS_JAVASCRIPT_SDK_URL", "://bad")
 		_, err := parseEnvSettings()
 		if err == nil {
-			t.Fatalf("expected error for invalid MEERGO_JAVASCRIPT_SDK_URL, got nil")
+			t.Fatalf("expected error for invalid KRENALIS_JAVASCRIPT_SDK_URL, got nil")
 		}
-		want := "MEERGO_JAVASCRIPT_SDK_URL must be a valid URL: invalid URL specified for MEERGO_JAVASCRIPT_SDK_URL: parse \"://bad\": missing protocol scheme"
+		want := "KRENALIS_JAVASCRIPT_SDK_URL must be a valid URL: invalid URL specified for KRENALIS_JAVASCRIPT_SDK_URL: parse \"://bad\": missing protocol scheme"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -254,7 +254,7 @@ func TestParseSettings(t *testing.T) {
 			t.Run("level="+in, func(t *testing.T) {
 				setBaseline(t)
 				if in != "" {
-					t.Setenv("MEERGO_TELEMETRY_LEVEL", in)
+					t.Setenv("KRENALIS_TELEMETRY_LEVEL", in)
 				}
 				s, err := parseEnvSettings()
 				if err != nil {
@@ -267,12 +267,12 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_TELEMETRY_LEVEL", "verbose")
+		t.Setenv("KRENALIS_TELEMETRY_LEVEL", "verbose")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid telemetry level, got nil")
 		}
-		want := "invalid MEERGO_TELEMETRY_LEVEL: want one of none, errors, stats, or all"
+		want := "invalid KRENALIS_TELEMETRY_LEVEL: want one of none, errors, stats, or all"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -280,8 +280,8 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("HTTP host and port validation", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_HOST", "exämple.com")
-		t.Setenv("MEERGO_HTTP_PORT", "8080")
+		t.Setenv("KRENALIS_HTTP_HOST", "exämple.com")
+		t.Setenv("KRENALIS_HTTP_PORT", "8080")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -294,24 +294,24 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_HOST", "bad host")
+		t.Setenv("KRENALIS_HTTP_HOST", "bad host")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid host, got nil")
 		}
-		want := "MEERGO_HTTP_HOST must be a valid host: host is not valid"
+		want := "KRENALIS_HTTP_HOST must be a valid host: host is not valid"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_HOST", "127.0.0.1")
-		t.Setenv("MEERGO_HTTP_PORT", "0")
+		t.Setenv("KRENALIS_HTTP_HOST", "127.0.0.1")
+		t.Setenv("KRENALIS_HTTP_PORT", "0")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid port, got nil")
 		}
-		want = "MEERGO_HTTP_PORT must be a valid port: port cannot be 0"
+		want = "KRENALIS_HTTP_PORT must be a valid port: port cannot be 0"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -319,22 +319,22 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("HTTP port non numeric and overflow", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_PORT", "abc")
+		t.Setenv("KRENALIS_HTTP_PORT", "abc")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for non-numeric port, got nil")
 		}
-		want := "MEERGO_HTTP_PORT must be a valid port: port is not a positive integer"
+		want := "KRENALIS_HTTP_PORT must be a valid port: port is not a positive integer"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_PORT", "70000")
+		t.Setenv("KRENALIS_HTTP_PORT", "70000")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for port >65535, got nil")
 		}
-		want = "MEERGO_HTTP_PORT must be a valid port: port must not exceed 65535"
+		want = "KRENALIS_HTTP_PORT must be a valid port: port must not exceed 65535"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -342,29 +342,29 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("TLS true requires cert and key", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
 		// Missing cert triggers error.
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", "")
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", "")
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is true and cert is missing, got nil")
 		}
-		want := "MEERGO_HTTP_TLS_CERT_FILE must be set when MEERGO_HTTP_TLS_ENABLED is true"
+		want := "KRENALIS_HTTP_TLS_CERT_FILE must be set when KRENALIS_HTTP_TLS_ENABLED is true"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
 		// Missing key triggers error.
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", "")
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", "")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is true and key is missing, got nil")
 		}
-		want = "MEERGO_HTTP_TLS_KEY_FILE must be set when MEERGO_HTTP_TLS_ENABLED is true"
+		want = "KRENALIS_HTTP_TLS_KEY_FILE must be set when KRENALIS_HTTP_TLS_ENABLED is true"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -372,7 +372,7 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("TLS false with no cert/key is allowed", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "false")
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "false")
 		// No cert/key envs set.
 		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -381,13 +381,13 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("TLS false rejects cert file", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "false")
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", "/some/path.pem")
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "false")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", "/some/path.pem")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is false and cert file is set, got nil")
 		}
-		want := "MEERGO_HTTP_TLS_CERT_FILE must not be set when MEERGO_HTTP_TLS_ENABLED is false"
+		want := "KRENALIS_HTTP_TLS_CERT_FILE must not be set when KRENALIS_HTTP_TLS_ENABLED is false"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -395,13 +395,13 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("TLS false rejects key file", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "false")
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", "/some/key.pem")
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "false")
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", "/some/key.pem")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is false and key file is set, got nil")
 		}
-		want := "MEERGO_HTTP_TLS_KEY_FILE must not be set when MEERGO_HTTP_TLS_ENABLED is false"
+		want := "KRENALIS_HTTP_TLS_KEY_FILE must not be set when KRENALIS_HTTP_TLS_ENABLED is false"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -413,14 +413,14 @@ func TestParseSettings(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			nonexistentFile = `C:\no\such\cert.pem`
 		}
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", nonexistentFile)
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", nonexistentFile)
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing cert file, got nil")
 		}
-		want := fmt.Sprintf("MEERGO_HTTP_TLS_CERT_FILE points to a non-existent file: %q", nonexistentFile)
+		want := fmt.Sprintf("KRENALIS_HTTP_TLS_CERT_FILE points to a non-existent file: %q", nonexistentFile)
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -430,14 +430,14 @@ func TestParseSettings(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			nonexistentFile = `C:\no\such\key.pem`
 		}
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", nonexistentFile)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", nonexistentFile)
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing key file, got nil")
 		}
-		want = fmt.Sprintf("MEERGO_HTTP_TLS_KEY_FILE points to a non-existent file: %q", nonexistentFile)
+		want = fmt.Sprintf("KRENALIS_HTTP_TLS_KEY_FILE points to a non-existent file: %q", nonexistentFile)
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -445,12 +445,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("TLS enabled invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "maybe")
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "maybe")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid TLS boolean, got nil")
 		}
-		want := "MEERGO_HTTP_TLS_ENABLED must be a boolean: value \"maybe\" is not a valid boolean value (expected true, false or empty string)"
+		want := "KRENALIS_HTTP_TLS_ENABLED must be a boolean: value \"maybe\" is not a valid boolean value (expected true, false or empty string)"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -458,22 +458,22 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("external URL path or query rejected", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_EXTERNAL_URL", "https://example.com/path")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "https://example.com/path")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for external URL with path, got nil")
 		}
-		want := "invalid URL specified for MEERGO_HTTP_EXTERNAL_URL: path must be \"/\""
+		want := "invalid URL specified for KRENALIS_HTTP_EXTERNAL_URL: path must be \"/\""
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_EXTERNAL_URL", "https://example.com/?q=1")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "https://example.com/?q=1")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for external URL with query, got nil")
 		}
-		want = "invalid URL specified for MEERGO_HTTP_EXTERNAL_URL: query cannot be specified"
+		want = "invalid URL specified for KRENALIS_HTTP_EXTERNAL_URL: query cannot be specified"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -481,8 +481,8 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("ExternalURL override and event URL override", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_EXTERNAL_URL", "https://example.com/")
-		t.Setenv("MEERGO_HTTP_EXTERNAL_EVENT_URL", "https://example.com/events")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "https://example.com/")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_EVENT_URL", "https://example.com/events")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -497,10 +497,10 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("external URL omits default https port", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
-		t.Setenv("MEERGO_HTTP_PORT", "443")
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_PORT", "443")
 
 		s, err := parseEnvSettings()
 		if err != nil {
@@ -513,12 +513,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("external event URL query rejected", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_EXTERNAL_EVENT_URL", "https://example.com/events?q=1")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_EVENT_URL", "https://example.com/events?q=1")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for event URL with query, got nil")
 		}
-		want := "invalid URL specified for MEERGO_HTTP_EXTERNAL_EVENT_URL: query cannot be specified"
+		want := "invalid URL specified for KRENALIS_HTTP_EXTERNAL_EVENT_URL: query cannot be specified"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -526,12 +526,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("HTTP timeouts parsing invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_READ_TIMEOUT", "bad")
+		t.Setenv("KRENALIS_HTTP_READ_TIMEOUT", "bad")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid read timeout, got nil")
 		}
-		want := "invalid value specified for MEERGO_HTTP_READ_TIMEOUT: time: invalid duration \"bad\""
+		want := "invalid value specified for KRENALIS_HTTP_READ_TIMEOUT: time: invalid duration \"bad\""
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -539,12 +539,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("HTTP write timeout invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_WRITE_TIMEOUT", "bad")
+		t.Setenv("KRENALIS_HTTP_WRITE_TIMEOUT", "bad")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid write timeout, got nil")
 		}
-		want := "invalid value specified for MEERGO_HTTP_WRITE_TIMEOUT: time: invalid duration \"bad\""
+		want := "invalid value specified for KRENALIS_HTTP_WRITE_TIMEOUT: time: invalid duration \"bad\""
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -552,12 +552,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("HTTP idle timeout invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_HTTP_IDLE_TIMEOUT", "bad")
+		t.Setenv("KRENALIS_HTTP_IDLE_TIMEOUT", "bad")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid idle timeout, got nil")
 		}
-		want := "invalid value specified for MEERGO_HTTP_IDLE_TIMEOUT: time: invalid duration \"bad\""
+		want := "invalid value specified for KRENALIS_HTTP_IDLE_TIMEOUT: time: invalid duration \"bad\""
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -566,7 +566,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("db required and validations", func(t *testing.T) {
 		// Missing host.
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_HOST", "")
+		t.Setenv("KRENALIS_DB_HOST", "")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -578,46 +578,46 @@ func TestParseSettings(t *testing.T) {
 		// Missing username.
 		setBaseline(t)
 		// Remove the variable since it's part of the baseline.
-		err = os.Unsetenv("MEERGO_DB_USERNAME")
+		err = os.Unsetenv("KRENALIS_DB_USERNAME")
 		if err != nil {
-			t.Fatalf("expected error for unsetting MEERGO_DB_USERNAME")
+			t.Fatalf("expected error for unsetting KRENALIS_DB_USERNAME")
 		}
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length, got nil")
 		}
-		want := "environment variable MEERGO_DB_USERNAME is missing"
+		want := "environment variable KRENALIS_DB_USERNAME is missing"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Empty username.
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_USERNAME", "")
+		t.Setenv("KRENALIS_DB_USERNAME", "")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length, got nil")
 		}
-		want = "MEERGO_DB_USERNAME cannot be empty"
+		want = "KRENALIS_DB_USERNAME cannot be empty"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Username length.
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_USERNAME", strings.Repeat("x", 64))
+		t.Setenv("KRENALIS_DB_USERNAME", strings.Repeat("x", 64))
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length, got nil")
 		}
-		want = "invalid MEERGO_DB_USERNAME: length must be 1..63 bytes"
+		want = "invalid KRENALIS_DB_USERNAME: length must be 1..63 bytes"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Empty password.
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_PASSWORD", "")
+		t.Setenv("KRENALIS_DB_PASSWORD", "")
 		_, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -625,19 +625,19 @@ func TestParseSettings(t *testing.T) {
 
 		// Database length.
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_DATABASE", "")
+		t.Setenv("KRENALIS_DB_DATABASE", "")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for database length, got nil")
 		}
-		want = "invalid MEERGO_DB_DATABASE: length must be 1..63 bytes"
+		want = "invalid KRENALIS_DB_DATABASE: length must be 1..63 bytes"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Schema default and override.
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_SCHEMA", "custom")
+		t.Setenv("KRENALIS_DB_SCHEMA", "custom")
 		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -649,18 +649,18 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("db host invalid and boundary values", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_HOST", "bad host")
+		t.Setenv("KRENALIS_DB_HOST", "bad host")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid DB host, got nil")
 		}
-		want := "MEERGO_DB_HOST must be a valid host: host is not valid"
+		want := "KRENALIS_DB_HOST must be a valid host: host is not valid"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_HOST", "127.0.0.1")
-		t.Setenv("MEERGO_DB_PORT", "65535")
+		t.Setenv("KRENALIS_DB_HOST", "127.0.0.1")
+		t.Setenv("KRENALIS_DB_PORT", "65535")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -670,25 +670,25 @@ func TestParseSettings(t *testing.T) {
 		}
 		tooLong := strings.Repeat("a", 64)
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_USERNAME", tooLong)
+		t.Setenv("KRENALIS_DB_USERNAME", tooLong)
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length >63, got nil")
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_DATABASE", tooLong)
+		t.Setenv("KRENALIS_DB_DATABASE", tooLong)
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for database length >63, got nil")
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_PASSWORD", strings.Repeat("x", 101))
+		t.Setenv("KRENALIS_DB_PASSWORD", strings.Repeat("x", 101))
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for password length >100, got nil")
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "2")
+		t.Setenv("KRENALIS_DB_MAX_CONNECTIONS", "2")
 		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -700,40 +700,40 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("db max connections parsing and bounds", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "notint")
+		t.Setenv("KRENALIS_DB_MAX_CONNECTIONS", "notint")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for non-integer max connections, got nil")
 		}
-		want := "MEERGO_DB_MAX_CONNECTIONS must be an integer"
+		want := "KRENALIS_DB_MAX_CONNECTIONS must be an integer"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "1")
+		t.Setenv("KRENALIS_DB_MAX_CONNECTIONS", "1")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for max connections < 2, got nil")
 		}
-		want = "MEERGO_DB_MAX_CONNECTIONS must be >= 2, got 1"
+		want = "KRENALIS_DB_MAX_CONNECTIONS must be >= 2, got 1"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "-7")
+		t.Setenv("KRENALIS_DB_MAX_CONNECTIONS", "-7")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for max connections < 2, got nil")
 		}
-		want = "MEERGO_DB_MAX_CONNECTIONS must be >= 2, got -7"
+		want = "KRENALIS_DB_MAX_CONNECTIONS must be >= 2, got -7"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "64")
+		t.Setenv("KRENALIS_DB_MAX_CONNECTIONS", "64")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -745,28 +745,28 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("max queued events per destination parsing and bounds", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION", "notint")
+		t.Setenv("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION", "notint")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for non-integer max queued events per destination, got nil")
 		}
-		want := "MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be an integer"
+		want := "KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION must be an integer"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION", "0")
+		t.Setenv("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION", "0")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for max queued events per destination < 1, got nil")
 		}
-		want = "MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got 0"
+		want = "KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got 0"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION", "60000")
+		t.Setenv("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION", "60000")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -806,24 +806,24 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "invalid scheme rejected",
 				env:     "http://nats.example.com:4222",
-				wantErr: "MEERGO_NATS_URL scheme http is not allowed. Allowed schemes are nats, tls, ws, and wss",
+				wantErr: "KRENALIS_NATS_URL scheme http is not allowed. Allowed schemes are nats, tls, ws, and wss",
 			},
 			{
 				name:    "invalid URL rejected",
 				env:     "nats://[::1",
-				wantErr: "MEERGO_NATS_URL contains an invalid URL: \"nats://[::1\"",
+				wantErr: "KRENALIS_NATS_URL contains an invalid URL: \"nats://[::1\"",
 			},
 			{
 				name:    "mixed websocket and non-websocket rejected",
 				env:     "ws://n2:443, n1:4222",
-				wantErr: "MEERGO_NATS_URL contains both websocket and non-websocket URLs",
+				wantErr: "KRENALIS_NATS_URL contains both websocket and non-websocket URLs",
 			},
 		}
 
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
-				t.Setenv("MEERGO_NATS_URL", tc.env)
+				t.Setenv("KRENALIS_NATS_URL", tc.env)
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
 					if err == nil {
@@ -902,7 +902,7 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "password without user rejected",
 				envPass: "nats-pass",
-				wantErr: "MEERGO_NATS_USER must be set if MEERGO_NATS_PASSWORD is provided",
+				wantErr: "KRENALIS_NATS_USER must be set if KRENALIS_NATS_PASSWORD is provided",
 			},
 			{
 				name:      "token set",
@@ -917,7 +917,7 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "non-user NKey rejected",
 				envNKey: string(accountSeed),
-				wantErr: "MEERGO_NATS_NKEY value is not a user NKey",
+				wantErr: "KRENALIS_NATS_NKEY value is not a user NKey",
 			},
 		}
 
@@ -925,16 +925,16 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.envUser != "" {
-					t.Setenv("MEERGO_NATS_USER", tc.envUser)
+					t.Setenv("KRENALIS_NATS_USER", tc.envUser)
 				}
 				if tc.envPass != "" {
-					t.Setenv("MEERGO_NATS_PASSWORD", tc.envPass)
+					t.Setenv("KRENALIS_NATS_PASSWORD", tc.envPass)
 				}
 				if tc.envToken != "" {
-					t.Setenv("MEERGO_NATS_TOKEN", tc.envToken)
+					t.Setenv("KRENALIS_NATS_TOKEN", tc.envToken)
 				}
 				if tc.envNKey != "" {
-					t.Setenv("MEERGO_NATS_NKEY", tc.envNKey)
+					t.Setenv("KRENALIS_NATS_NKEY", tc.envNKey)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -994,7 +994,7 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "invalid storage rejected",
 				env:     "s3",
-				wantErr: "MEERGO_NATS_STORAGE value \"s3\" is not supported; expected file or memory",
+				wantErr: "KRENALIS_NATS_STORAGE value \"s3\" is not supported; expected file or memory",
 			},
 		}
 
@@ -1002,7 +1002,7 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
-					t.Setenv("MEERGO_NATS_STORAGE", tc.env)
+					t.Setenv("KRENALIS_NATS_STORAGE", tc.env)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -1064,17 +1064,17 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "replicas 0 rejected",
 				env:     "0",
-				wantErr: "MEERGO_NATS_REPLICAS value \"0\" is not supported; expected 1, 2, 3, 4, or 5",
+				wantErr: "KRENALIS_NATS_REPLICAS value \"0\" is not supported; expected 1, 2, 3, 4, or 5",
 			},
 			{
 				name:    "replicas 6 rejected",
 				env:     "6",
-				wantErr: "MEERGO_NATS_REPLICAS value \"6\" is not supported; expected 1, 2, 3, 4, or 5",
+				wantErr: "KRENALIS_NATS_REPLICAS value \"6\" is not supported; expected 1, 2, 3, 4, or 5",
 			},
 			{
 				name:    "replicas text rejected",
 				env:     "two",
-				wantErr: "MEERGO_NATS_REPLICAS value \"two\" is not supported; expected 1, 2, 3, 4, or 5",
+				wantErr: "KRENALIS_NATS_REPLICAS value \"two\" is not supported; expected 1, 2, 3, 4, or 5",
 			},
 		}
 
@@ -1082,7 +1082,7 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
-					t.Setenv("MEERGO_NATS_REPLICAS", tc.env)
+					t.Setenv("KRENALIS_NATS_REPLICAS", tc.env)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -1132,12 +1132,12 @@ func TestParseSettings(t *testing.T) {
 				name:    "compression with memory storage rejected",
 				env:     "s2",
 				storage: "memory",
-				wantErr: "MEERGO_NATS_COMPRESSION can be set only when using file storage",
+				wantErr: "KRENALIS_NATS_COMPRESSION can be set only when using file storage",
 			},
 			{
 				name:    "invalid compression rejected",
 				env:     "gzip",
-				wantErr: "MEERGO_NATS_COMPRESSION value \"gzip\" is not supported; expected s2",
+				wantErr: "KRENALIS_NATS_COMPRESSION value \"gzip\" is not supported; expected s2",
 			},
 		}
 
@@ -1145,10 +1145,10 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
-					t.Setenv("MEERGO_NATS_COMPRESSION", tc.env)
+					t.Setenv("KRENALIS_NATS_COMPRESSION", tc.env)
 				}
 				if tc.storage != "" {
-					t.Setenv("MEERGO_NATS_STORAGE", tc.storage)
+					t.Setenv("KRENALIS_NATS_STORAGE", tc.storage)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -1172,7 +1172,7 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("boolean flags parsing", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_INVITE_MEMBERS_VIA_EMAIL", "false")
+		t.Setenv("KRENALIS_INVITE_MEMBERS_VIA_EMAIL", "false")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1182,7 +1182,7 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_INVITE_MEMBERS_VIA_EMAIL", "true")
+		t.Setenv("KRENALIS_INVITE_MEMBERS_VIA_EMAIL", "true")
 		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1192,12 +1192,12 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_INVITE_MEMBERS_VIA_EMAIL", "not-bool")
+		t.Setenv("KRENALIS_INVITE_MEMBERS_VIA_EMAIL", "not-bool")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid boolean, got nil")
 		}
-		want := "MEERGO_INVITE_MEMBERS_VIA_EMAIL must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
+		want := "KRENALIS_INVITE_MEMBERS_VIA_EMAIL must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1207,7 +1207,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("metrics enabled parsing", func(t *testing.T) {
 
 		setBaseline(t)
-		t.Setenv("MEERGO_PROMETHEUS_METRICS_ENABLED", "false")
+		t.Setenv("KRENALIS_PROMETHEUS_METRICS_ENABLED", "false")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1217,7 +1217,7 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_PROMETHEUS_METRICS_ENABLED", "true")
+		t.Setenv("KRENALIS_PROMETHEUS_METRICS_ENABLED", "true")
 		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1227,12 +1227,12 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_PROMETHEUS_METRICS_ENABLED", "not-bool")
+		t.Setenv("KRENALIS_PROMETHEUS_METRICS_ENABLED", "not-bool")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid boolean, got nil")
 		}
-		want := "MEERGO_PROMETHEUS_METRICS_ENABLED must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
+		want := "KRENALIS_PROMETHEUS_METRICS_ENABLED must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1242,35 +1242,35 @@ func TestParseSettings(t *testing.T) {
 	t.Run("SMTP conditional block", func(t *testing.T) {
 		// Host set but missing port.
 		setBaseline(t)
-		t.Setenv("MEERGO_SMTP_HOST", "smtp.example.com")
+		t.Setenv("KRENALIS_SMTP_HOST", "smtp.example.com")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when SMTP host set without port, got nil")
 		}
-		want := "MEERGO_SMTP_PORT is required if MEERGO_SMTP_HOST is set"
+		want := "KRENALIS_SMTP_PORT is required if KRENALIS_SMTP_HOST is set"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Invalid port yields specific error text from code.
 		setBaseline(t)
-		t.Setenv("MEERGO_SMTP_HOST", "smtp.example.com")
-		t.Setenv("MEERGO_SMTP_PORT", "0")
+		t.Setenv("KRENALIS_SMTP_HOST", "smtp.example.com")
+		t.Setenv("KRENALIS_SMTP_PORT", "0")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid SMTP port, got nil")
 		}
-		want = "MEERGO_SMTP_PORT must be a valid port: port cannot be 0"
+		want = "KRENALIS_SMTP_PORT must be a valid port: port cannot be 0"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Valid SMTP.
 		setBaseline(t)
-		t.Setenv("MEERGO_SMTP_HOST", "smtp.example.com")
-		t.Setenv("MEERGO_SMTP_PORT", "587")
-		t.Setenv("MEERGO_SMTP_USERNAME", "user")
-		t.Setenv("MEERGO_SMTP_PASSWORD", "pass")
+		t.Setenv("KRENALIS_SMTP_HOST", "smtp.example.com")
+		t.Setenv("KRENALIS_SMTP_PORT", "587")
+		t.Setenv("KRENALIS_SMTP_USERNAME", "user")
+		t.Setenv("KRENALIS_SMTP_PASSWORD", "pass")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1286,13 +1286,13 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("smtp host invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_SMTP_HOST", "bad host")
-		t.Setenv("MEERGO_SMTP_PORT", "25")
+		t.Setenv("KRENALIS_SMTP_HOST", "bad host")
+		t.Setenv("KRENALIS_SMTP_PORT", "25")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid SMTP host, got nil")
 		}
-		want := "MEERGO_SMTP_HOST must be a valid host: host is not valid"
+		want := "KRENALIS_SMTP_HOST must be a valid host: host is not valid"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1301,7 +1301,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("MaxMind DB path set when file exists", func(t *testing.T) {
 		setBaseline(t)
 		path := createTempFile(t, "GeoIP2-*.mmdb")
-		t.Setenv("MEERGO_MAXMIND_DB_PATH", path)
+		t.Setenv("KRENALIS_MAXMIND_DB_PATH", path)
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1320,12 +1320,12 @@ func TestParseSettings(t *testing.T) {
 			nonexistentFile = `C:\no\such.mmdb`
 		}
 		setBaseline(t)
-		t.Setenv("MEERGO_MAXMIND_DB_PATH", nonexistentFile)
+		t.Setenv("KRENALIS_MAXMIND_DB_PATH", nonexistentFile)
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing MaxMind db file, got nil")
 		}
-		want := fmt.Sprintf("MEERGO_MAXMIND_DB_PATH points to a non-existent file: %q", nonexistentFile)
+		want := fmt.Sprintf("KRENALIS_MAXMIND_DB_PATH points to a non-existent file: %q", nonexistentFile)
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1333,12 +1333,12 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("transformers provider invalid", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMERS_PROVIDER", "unsupported")
+		t.Setenv("KRENALIS_TRANSFORMERS_PROVIDER", "unsupported")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid transformers provider, got nil")
 		}
-		want := "invalid MEERGO_TRANSFORMERS_PROVIDER: want one of local or aws-lambda"
+		want := "invalid KRENALIS_TRANSFORMERS_PROVIDER: want one of local or aws-lambda"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1346,8 +1346,8 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("transformers local-only accepted", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMERS_PROVIDER", "local")
-		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE", "/usr/bin/node")
+		t.Setenv("KRENALIS_TRANSFORMERS_PROVIDER", "local")
+		t.Setenv("KRENALIS_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE", "/usr/bin/node")
 		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for local-only transformers, got %v", err)
 		}
@@ -1355,8 +1355,8 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("transformers Lambda-only accepted", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMERS_PROVIDER", "aws-lambda")
-		t.Setenv("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME", "nodejs18.x")
+		t.Setenv("KRENALIS_TRANSFORMERS_PROVIDER", "aws-lambda")
+		t.Setenv("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME", "nodejs18.x")
 		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for Lambda-only transformers, got %v", err)
 		}
@@ -1365,49 +1365,49 @@ func TestParseSettings(t *testing.T) {
 	t.Run("OAuth HubSpot and Mailchimp combinations", func(t *testing.T) {
 		// HubSpot ID without secret -> error.
 		setBaseline(t)
-		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_ID", "id")
+		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID", "id")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for HubSpot ID without secret, got nil")
 		}
-		want := "MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET is required when MEERGO_OAUTH_HUBSPOT_CLIENT_ID is set"
+		want := "KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET is required when KRENALIS_OAUTH_HUBSPOT_CLIENT_ID is set"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// HubSpot valid, Mailchimp missing secret -> error.
 		setBaseline(t)
-		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_ID", "id")
-		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
-		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
+		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID", "id")
+		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
+		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for Mailchimp ID without secret, got nil")
 		}
-		want = "MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET is required when MEERGO_OAUTH_MAILCHIMP_CLIENT_ID is set"
+		want = "KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is set"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Mailchimp secret without id -> error. Ensure ID is unset.
 		setBaseline(t)
-		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID", "")
-		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET", "sec")
+		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "")
+		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET", "sec")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for Mailchimp secret without id, got nil")
 		}
-		want = "MEERGO_OAUTH_MAILCHIMP_CLIENT_ID is required when MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET is set"
+		want = "KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is set"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		// Both valid.
 		setBaseline(t)
-		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_ID", "id")
-		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
-		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
-		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET", "msec")
+		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID", "id")
+		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
+		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
+		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET", "msec")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -1422,8 +1422,8 @@ func TestParseSettings(t *testing.T) {
 func TestParseEnvURLSuccess(t *testing.T) {
 
 	t.Run("empty env returns empty and nil", func(t *testing.T) {
-		t.Setenv("MEERGO_PARSE_ENV_URL_EMPTY", "")
-		got, err := parseEnvURL("MEERGO_PARSE_ENV_URL_EMPTY", 0)
+		t.Setenv("KRENALIS_PARSE_ENV_URL_EMPTY", "")
+		got, err := parseEnvURL("KRENALIS_PARSE_ENV_URL_EMPTY", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1433,8 +1433,8 @@ func TestParseEnvURLSuccess(t *testing.T) {
 	})
 
 	t.Run("http without path gets normalized to slash", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_HTTP_NOPATH", "http://example.com")
-		got, err := parseEnvURL("MEERGO_URL_HTTP_NOPATH", 0)
+		t.Setenv("KRENALIS_URL_HTTP_NOPATH", "http://example.com")
+		got, err := parseEnvURL("KRENALIS_URL_HTTP_NOPATH", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1445,8 +1445,8 @@ func TestParseEnvURLSuccess(t *testing.T) {
 	})
 
 	t.Run("https with slash path stays as is", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_HTTPS_SLASH", "https://example.com/")
-		got, err := parseEnvURL("MEERGO_URL_HTTPS_SLASH", 0)
+		t.Setenv("KRENALIS_URL_HTTPS_SLASH", "https://example.com/")
+		got, err := parseEnvURL("KRENALIS_URL_HTTPS_SLASH", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1457,8 +1457,8 @@ func TestParseEnvURLSuccess(t *testing.T) {
 	})
 
 	t.Run("strip leading zeros in port then default port removal", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_HTTP_LEADING_ZERO_PORT", "http://example.com:00080")
-		got, err := parseEnvURL("MEERGO_URL_HTTP_LEADING_ZERO_PORT", 0)
+		t.Setenv("KRENALIS_URL_HTTP_LEADING_ZERO_PORT", "http://example.com:00080")
+		got, err := parseEnvURL("KRENALIS_URL_HTTP_LEADING_ZERO_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1470,8 +1470,8 @@ func TestParseEnvURLSuccess(t *testing.T) {
 	})
 
 	t.Run("keep non-default valid port", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_NONDEFAULT_PORT", "https://example.com:8443/")
-		got, err := parseEnvURL("MEERGO_URL_NONDEFAULT_PORT", 0)
+		t.Setenv("KRENALIS_URL_NONDEFAULT_PORT", "https://example.com:8443/")
+		got, err := parseEnvURL("KRENALIS_URL_NONDEFAULT_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1482,8 +1482,8 @@ func TestParseEnvURLSuccess(t *testing.T) {
 	})
 
 	t.Run("remove default port 443 for https", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_HTTPS_DEFAULT_PORT", "https://example.com:443")
-		got, err := parseEnvURL("MEERGO_URL_HTTPS_DEFAULT_PORT", 0)
+		t.Setenv("KRENALIS_URL_HTTPS_DEFAULT_PORT", "https://example.com:443")
+		got, err := parseEnvURL("KRENALIS_URL_HTTPS_DEFAULT_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1494,8 +1494,8 @@ func TestParseEnvURLSuccess(t *testing.T) {
 	})
 
 	t.Run("ipv6 literal with port is accepted", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_IPV6_PORT", "http://[::1]:8080")
-		got, err := parseEnvURL("MEERGO_URL_IPV6_PORT", 0)
+		t.Setenv("KRENALIS_URL_IPV6_PORT", "http://[::1]:8080")
+		got, err := parseEnvURL("KRENALIS_URL_IPV6_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1510,17 +1510,17 @@ func TestParseEnvURLSuccess(t *testing.T) {
 func TestParseEnvURLFlags(t *testing.T) {
 
 	t.Run("noPath rejects non-root path", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_NOPATH_FLAG_BAD", "https://example.com/foo")
-		_, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_BAD", validation.NoPath)
-		wantErr := `invalid URL specified for MEERGO_URL_NOPATH_FLAG_BAD: path must be "/"`
+		t.Setenv("KRENALIS_URL_NOPATH_FLAG_BAD", "https://example.com/foo")
+		_, err := parseEnvURL("KRENALIS_URL_NOPATH_FLAG_BAD", validation.NoPath)
+		wantErr := `invalid URL specified for KRENALIS_URL_NOPATH_FLAG_BAD: path must be "/"`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("noPath allows empty path which normalizes to slash", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_NOPATH_FLAG_OK", "https://example.com")
-		got, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_OK", validation.NoPath)
+		t.Setenv("KRENALIS_URL_NOPATH_FLAG_OK", "https://example.com")
+		got, err := parseEnvURL("KRENALIS_URL_NOPATH_FLAG_OK", validation.NoPath)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1531,18 +1531,18 @@ func TestParseEnvURLFlags(t *testing.T) {
 	})
 
 	t.Run("noQuery rejects non-empty query", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_NOQUERY_BAD", "https://example.com/?a=b")
-		_, err := parseEnvURL("MEERGO_URL_NOQUERY_BAD", validation.NoQuery)
-		wantErr := "invalid URL specified for MEERGO_URL_NOQUERY_BAD: query cannot be specified"
+		t.Setenv("KRENALIS_URL_NOQUERY_BAD", "https://example.com/?a=b")
+		_, err := parseEnvURL("KRENALIS_URL_NOQUERY_BAD", validation.NoQuery)
+		wantErr := "invalid URL specified for KRENALIS_URL_NOQUERY_BAD: query cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("noQuery rejects trailing question mark (ForceQuery)", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_NOQUERY_FORCE", "https://example.com/?")
-		_, err := parseEnvURL("MEERGO_URL_NOQUERY_FORCE", validation.NoQuery)
-		wantErr := "invalid URL specified for MEERGO_URL_NOQUERY_FORCE: query cannot be specified"
+		t.Setenv("KRENALIS_URL_NOQUERY_FORCE", "https://example.com/?")
+		_, err := parseEnvURL("KRENALIS_URL_NOQUERY_FORCE", validation.NoQuery)
+		wantErr := "invalid URL specified for KRENALIS_URL_NOQUERY_FORCE: query cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
@@ -1553,91 +1553,91 @@ func TestParseEnvURLFlags(t *testing.T) {
 func TestParseURLErrors(t *testing.T) {
 
 	t.Run("leading space", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_SPACE_START", " https://example.com/")
-		_, err := parseEnvURL("MEERGO_URL_SPACE_START", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_SPACE_START: it starts with a space"
+		t.Setenv("KRENALIS_URL_SPACE_START", " https://example.com/")
+		_, err := parseEnvURL("KRENALIS_URL_SPACE_START", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_SPACE_START: it starts with a space"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("trailing space", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_SPACE_END", "https://example.com/ ")
-		_, err := parseEnvURL("MEERGO_URL_SPACE_END", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_SPACE_END: it ends with a space"
+		t.Setenv("KRENALIS_URL_SPACE_END", "https://example.com/ ")
+		_, err := parseEnvURL("KRENALIS_URL_SPACE_END", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_SPACE_END: it ends with a space"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("url.Parse failure", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_PARSE_FAIL", "http://[::1")
-		_, err := parseEnvURL("MEERGO_URL_PARSE_FAIL", 0)
+		t.Setenv("KRENALIS_URL_PARSE_FAIL", "http://[::1")
+		_, err := parseEnvURL("KRENALIS_URL_PARSE_FAIL", 0)
 		// We match the exact message format propagated by url.Parse into errInvalidURL.
-		wantErr := "invalid URL specified for MEERGO_URL_PARSE_FAIL: parse \"http://[::1\": missing ']' in host"
+		wantErr := "invalid URL specified for KRENALIS_URL_PARSE_FAIL: parse \"http://[::1\": missing ']' in host"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("unsupported scheme", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_BAD_SCHEME", "ftp://example.com/")
-		_, err := parseEnvURL("MEERGO_URL_BAD_SCHEME", 0)
-		wantErr := `invalid URL specified for MEERGO_URL_BAD_SCHEME: scheme must be "http" or "https"`
+		t.Setenv("KRENALIS_URL_BAD_SCHEME", "ftp://example.com/")
+		_, err := parseEnvURL("KRENALIS_URL_BAD_SCHEME", 0)
+		wantErr := `invalid URL specified for KRENALIS_URL_BAD_SCHEME: scheme must be "http" or "https"`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("user info present", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_USERINFO", "http://user:pass@example.com/")
-		_, err := parseEnvURL("MEERGO_URL_USERINFO", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_USERINFO: user and password cannot be specified"
+		t.Setenv("KRENALIS_URL_USERINFO", "http://user:pass@example.com/")
+		_, err := parseEnvURL("KRENALIS_URL_USERINFO", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_USERINFO: user and password cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("missing host", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_NO_HOST", "http://")
-		_, err := parseEnvURL("MEERGO_URL_NO_HOST", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_NO_HOST: host must be specified"
+		t.Setenv("KRENALIS_URL_NO_HOST", "http://")
+		_, err := parseEnvURL("KRENALIS_URL_NO_HOST", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_NO_HOST: host must be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("invalid port: zero", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_PORT_ZERO", "https://example.com:0")
-		_, err := parseEnvURL("MEERGO_URL_PORT_ZERO", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_PORT_ZERO: port cannot be 0"
+		t.Setenv("KRENALIS_URL_PORT_ZERO", "https://example.com:0")
+		_, err := parseEnvURL("KRENALIS_URL_PORT_ZERO", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_PORT_ZERO: port cannot be 0"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("invalid port: above max", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_PORT_BIG", "https://example.com:65536")
-		_, err := parseEnvURL("MEERGO_URL_PORT_BIG", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_PORT_BIG: port must not exceed 65535"
+		t.Setenv("KRENALIS_URL_PORT_BIG", "https://example.com:65536")
+		_, err := parseEnvURL("KRENALIS_URL_PORT_BIG", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_PORT_BIG: port must not exceed 65535"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("invalid port: non numeric", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_PORT_NAN", "https://example.com:abc")
-		_, err := parseEnvURL("MEERGO_URL_PORT_NAN", 0)
-		wantErr := `invalid URL specified for MEERGO_URL_PORT_NAN: parse "https://example.com:abc": invalid port ":abc" after host`
+		t.Setenv("KRENALIS_URL_PORT_NAN", "https://example.com:abc")
+		_, err := parseEnvURL("KRENALIS_URL_PORT_NAN", 0)
+		wantErr := `invalid URL specified for KRENALIS_URL_PORT_NAN: parse "https://example.com:abc": invalid port ":abc" after host`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
 
 	t.Run("fragment present", func(t *testing.T) {
-		t.Setenv("MEERGO_URL_FRAGMENT", "https://example.com/#frag")
-		_, err := parseEnvURL("MEERGO_URL_FRAGMENT", 0)
-		wantErr := "invalid URL specified for MEERGO_URL_FRAGMENT: fragment cannot be specified"
+		t.Setenv("KRENALIS_URL_FRAGMENT", "https://example.com/#frag")
+		_, err := parseEnvURL("KRENALIS_URL_FRAGMENT", 0)
+		wantErr := "invalid URL specified for KRENALIS_URL_FRAGMENT: fragment cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}

@@ -20,7 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const settingsEnvKey = "MEERGO_TEST_PATH_SNOWFLAKE"
+const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
 
 func Test_Merge(t *testing.T) {
 

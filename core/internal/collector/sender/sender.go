@@ -26,7 +26,7 @@ import (
 // queue. When this limit is reached, sender.SendEvent blocks until an event is
 // removed from the queue.
 //
-// This value can be configured via the MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION
+// This value can be configured via the KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION
 // environment variable. The minimum allowed value is 1. If not set, the default
 // value is 50000.
 var MaxQueuedEvents = 50_000

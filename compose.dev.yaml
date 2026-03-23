@@ -66,15 +66,15 @@
 # Recommended env vars in your Meergo .env file
 # -----------------------------------------------------------------------------
 #
-#     MEERGO_HTTP_HOST=0.0.0.0 # necessary for Prometheus (which must connect from a container)
-#     MEERGO_HTTP_EXTERNAL_URL=http://127.0.0.1:2022
-#     MEERGO_DB_PORT=15432
-#     MEERGO_DB_DATABASE=meergo
-#     MEERGO_DB_USERNAME=meergo
-#     MEERGO_NATS_URL=nats://127.0.0.1:4222
-#     MEERGO_NATS_USER=ruser
-#     MEERGO_NATS_PASSWORD=T0pS3cr3t
-#     MEERGO_PROMETHEUS_METRICS_ENABLED=true
+#     KRENALIS_HTTP_HOST=0.0.0.0 # necessary for Prometheus (which must connect from a container)
+#     KRENALIS_HTTP_EXTERNAL_URL=http://127.0.0.1:2022
+#     KRENALIS_DB_PORT=15432
+#     KRENALIS_DB_DATABASE=meergo
+#     KRENALIS_DB_USERNAME=meergo
+#     KRENALIS_NATS_URL=nats://127.0.0.1:4222
+#     KRENALIS_NATS_USER=ruser
+#     KRENALIS_NATS_PASSWORD=T0pS3cr3t
+#     KRENALIS_PROMETHEUS_METRICS_ENABLED=true
 
 name: meergo-dev
 

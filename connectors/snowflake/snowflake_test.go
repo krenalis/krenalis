@@ -20,7 +20,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-const settingsEnvKey = "MEERGO_TEST_PATH_SNOWFLAKE"
+const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
 
 func Test_Columns(t *testing.T) {
 
@@ -106,7 +106,7 @@ func Test_Columns(t *testing.T) {
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
 //
-// Set the environment variable MEERGO_TEST_PATH_SNOWFLAKE with the path to the
+// Set the environment variable KRENALIS_TEST_PATH_SNOWFLAKE with the path to the
 // database credentials in JSON format for running the test.
 func Test_Merge_Query(t *testing.T) {
 

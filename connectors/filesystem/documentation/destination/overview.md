@@ -12,7 +12,7 @@ Its sole purpose is to test file exports and explore the various file formats su
 Requirements for the File System connector:
 
 * A local file system directory that will be accessed by the File System connector.
-* The running Meergo instance must have the `MEERGO_CONNECTOR_FILESYSTEM_ROOT` environment variable, which points to the file system directory that will be accessed by the connector.
-* Optionally, the `MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT` environment variable controls the root displayed in the admin.
+* The running Meergo instance must have the `KRENALIS_CONNECTOR_FILESYSTEM_ROOT` environment variable, which points to the file system directory that will be accessed by the connector.
+* Optionally, the `KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT` environment variable controls the root displayed in the admin.
 
 💡 **Note:** When running Meergo with Docker Compose, the File System connector is automatically configured by default and you can skip this section.

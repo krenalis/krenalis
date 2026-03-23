@@ -24,9 +24,9 @@ func TestSendEvents(t *testing.T) {
 
 	// Read Klaviyo settings from environment variables, then prepare
 	// the settings that will be passed to the connector.
-	privateAPIKey := os.Getenv("MEERGO_TEST_KLAVIYO_PRIVATE_API_KEY")
+	privateAPIKey := os.Getenv("KRENALIS_TEST_KLAVIYO_PRIVATE_API_KEY")
 	if privateAPIKey == "" {
-		t.Fatal("env var MEERGO_TEST_KLAVIYO_PRIVATE_API_KEY is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_KLAVIYO_PRIVATE_API_KEY is required but not provided")
 	}
 	sett := innerSettings{
 		PrivateAPIKey: privateAPIKey,

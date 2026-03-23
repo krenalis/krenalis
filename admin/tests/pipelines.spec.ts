@@ -704,9 +704,9 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) => {
 	const connectionID = await addFileSystemSource(page);
 
-	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
+	const tempDir = process.env.KRENALIS_TEST_FS_TEMP_DIR;
 	if (!tempDir) {
-		throw new Error('Missing environment variable: MEERGO_TEST_FS_TEMP_DIR');
+		throw new Error('Missing environment variable: KRENALIS_TEST_FS_TEMP_DIR');
 	}
 
 	// Create a temporary file.
@@ -879,9 +879,9 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) => {
 	const connectionID = await addFileSystemDestination(page);
 
-	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
+	const tempDir = process.env.KRENALIS_TEST_FS_TEMP_DIR;
 	if (!tempDir) {
-		throw new Error('Missing environment variable: MEERGO_TEST_FS_TEMP_DIR');
+		throw new Error('Missing environment variable: KRENALIS_TEST_FS_TEMP_DIR');
 	}
 
 	// Create a temporary file.

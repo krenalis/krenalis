@@ -165,7 +165,7 @@ func (c *Meergo) PopulateProfileSchema(populate bool) {
 }
 
 // SetFileSystemRoot sets the root of the File System connections; the value set
-// here will be passed to Meergo via the MEERGO_CONNECTOR_FILESYSTEM_ROOT
+// here will be passed to Meergo via the KRENALIS_CONNECTOR_FILESYSTEM_ROOT
 // environment variable.
 func (c *Meergo) SetFileSystemRoot(root string) {
 	c.fileSystemRoot = root
@@ -331,25 +331,25 @@ func (c *Meergo) Start() {
 		// in running Meergo if certain system environment variables are not
 		// provided (this for example gives errors on Windows).
 		env := append(os.Environ(), []string{
-			"MEERGO_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
-			"MEERGO_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
-			"MEERGO_TELEMETRY_LEVEL=none",
-			"MEERGO_PROMETHEUS_METRICS_ENABLED=true",
-			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
-			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
-			"MEERGO_DB_HOST=" + testsSettings.Database.Host,
-			"MEERGO_DB_PORT=" + strconv.Itoa(testsSettings.Database.Port),
-			"MEERGO_DB_USERNAME=" + testsSettings.Database.Username,
-			"MEERGO_DB_PASSWORD=" + testsSettings.Database.Password,
-			"MEERGO_DB_DATABASE=" + testsSettings.Database.Database,
-			"MEERGO_DB_SCHEMA=" + testsSettings.Database.Schema,
-			"MEERGO_TRANSFORMERS_PROVIDER=local",
-			"MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
-			"MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
-			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
-			fmt.Sprintf("MEERGO_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
-			"MEERGO_NATS_USER=" + testsSettings.NATS.User,
-			"MEERGO_NATS_PASSWORD=" + testsSettings.NATS.Password,
+			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
+			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
+			"KRENALIS_TELEMETRY_LEVEL=none",
+			"KRENALIS_PROMETHEUS_METRICS_ENABLED=true",
+			"KRENALIS_HTTP_HOST=" + testsSettings.HTTP.Host,
+			"KRENALIS_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
+			"KRENALIS_DB_HOST=" + testsSettings.Database.Host,
+			"KRENALIS_DB_PORT=" + strconv.Itoa(testsSettings.Database.Port),
+			"KRENALIS_DB_USERNAME=" + testsSettings.Database.Username,
+			"KRENALIS_DB_PASSWORD=" + testsSettings.Database.Password,
+			"KRENALIS_DB_DATABASE=" + testsSettings.Database.Database,
+			"KRENALIS_DB_SCHEMA=" + testsSettings.Database.Schema,
+			"KRENALIS_TRANSFORMERS_PROVIDER=local",
+			"KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
+			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
+			"KRENALIS_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
+			fmt.Sprintf("KRENALIS_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
+			"KRENALIS_NATS_USER=" + testsSettings.NATS.User,
+			"KRENALIS_NATS_PASSWORD=" + testsSettings.NATS.Password,
 		}...)
 		if !meergoAlreadyBuilt {
 			buildMeergo(c.t, c.repo, meergoDir)
@@ -388,7 +388,7 @@ func (c *Meergo) Start() {
 		setts.NATS.Password = testsSettings.NATS.Password
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = c.transformationsTempDir
-		err := os.Setenv("MEERGO_CONNECTOR_FILESYSTEM_ROOT", c.fileSystemRoot)
+		err := os.Setenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT", c.fileSystemRoot)
 		if err != nil {
 			c.t.Fatal(err)
 		}
