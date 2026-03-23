@@ -100,7 +100,7 @@ func init() {
 			panic("KRENALIS_TESTS_ADDR must be in the format host:port")
 		}
 	}
-	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
+	if pythonPath := os.Getenv("KRENALIS_TESTS_PYTHON_PATH"); pythonPath != "" {
 		testsSettings.PythonExecutable = pythonPath
 	}
 }
