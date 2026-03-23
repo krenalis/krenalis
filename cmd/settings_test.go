@@ -39,24 +39,24 @@ func TestEnvLoading(t *testing.T) {
 		if !ok {
 			t.Fatalf("unexpected: %q", env)
 		}
-		if strings.HasPrefix(key, "MEERGO_ENV_TEST_") {
+		if strings.HasPrefix(key, "KRENALIS_ENV_TEST_") {
 			got[key] = value
 		}
 	}
 
 	// Test the environment variables.
 	expected := map[string]any{
-		"MEERGO_ENV_TEST_A": "10",
-		"MEERGO_ENV_TEST_B": "321",
-		"MEERGO_ENV_TEST_C": "  hello  my   friend",
-		"MEERGO_ENV_TEST_D": `"my-quoted-value"`,
-		"MEERGO_ENV_TEST_E": "my-quoted-value",
-		"MEERGO_ENV_TEST_F": "\"my-quoted-value",
-		"MEERGO_ENV_TEST_G": "\"my-quoted-value\"",
+		"KRENALIS_ENV_TEST_A": "10",
+		"KRENALIS_ENV_TEST_B": "321",
+		"KRENALIS_ENV_TEST_C": "  hello  my   friend",
+		"KRENALIS_ENV_TEST_D": `"my-quoted-value"`,
+		"KRENALIS_ENV_TEST_E": "my-quoted-value",
+		"KRENALIS_ENV_TEST_F": "\"my-quoted-value",
+		"KRENALIS_ENV_TEST_G": "\"my-quoted-value\"",
 
-		"MEERGO_ENV_TEST_H":     "3290",
-		"MEERGO_ENV_TEST_I":     "hello\\ world",
-		"MEERGO_ENV_TEST_EMPTY": "",
+		"KRENALIS_ENV_TEST_H":     "3290",
+		"KRENALIS_ENV_TEST_I":     "hello\\ world",
+		"KRENALIS_ENV_TEST_EMPTY": "",
 	}
 	if !reflect.DeepEqual(got, expected) {
 		for expectedK, expectedV := range expected {
