@@ -13,7 +13,7 @@ Do not use `http.DefaultClient` for connector calls.
 Always close response bodies (`defer res.Body.Close()` or `_ = res.Body.Close()`), including on non-2xx responses, to avoid resource leaks.
 Do not manually drain response bodies.
 
-Meergo's connector HTTP client does **not** follow redirects automatically. If the API returns redirects that must be followed, handle them explicitly (read `Location`, rebuild the request, and call `Do` again). Follow at most 2 redirects (max two hops). If more redirects are returned, stop and return an error.
+Krenalis's connector HTTP client does **not** follow redirects automatically. If the API returns redirects that must be followed, handle them explicitly (read `Location`, rebuild the request, and call `Do` again). Follow at most 2 redirects (max two hops). If more redirects are returned, stop and return an error.
 
 ## Build request bodies with BodyBuffer
 

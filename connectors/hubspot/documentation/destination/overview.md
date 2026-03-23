@@ -3,13 +3,13 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 ## What can you do with this?
 
-Using this connector you can create and update unified Meergo users from your data warehouse in HubSpot as contacts.
+Using this connector you can create and update unified Krenalis users from your data warehouse in HubSpot as contacts.
 
 ## What does it require?
 
 * An account with [HubSpot](https://www.hubspot.com/).
 * A [HubSpot developer account](https://developers.hubspot.com/).
-* The ability to set environment variables when starting Meergo.
+* The ability to set environment variables when starting Krenalis.
 
 > HubSpot is a trademark of HubSpot, Inc.
 > This connector is not affiliated with or endorsed by HubSpot, Inc.

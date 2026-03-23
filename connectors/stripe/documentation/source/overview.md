@@ -3,7 +3,7 @@ Stripe is a payment processing platform that enables businesses to accept online
 
 ## What can you do with this?
 
-This connector lets you read customers from Stripe, import them into your data warehouse, and unify them as users in Meergo.
+This connector lets you read customers from Stripe, import them into your data warehouse, and unify them as users in Krenalis.
 
 ## What does it require?
 

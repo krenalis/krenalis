@@ -2,7 +2,7 @@ Brevo is an all-in-one marketing platform that helps businesses engage customers
 
 ## What can you do with this?
 
-Using this connector you can create and update Brevo contacts from Meergo, and you can also send server-side events to Brevo.
+Using this connector you can create and update Brevo contacts from Krenalis, and you can also send server-side events to Brevo.
 
 ## What does it require?
 

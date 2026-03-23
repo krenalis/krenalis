@@ -1,6 +1,6 @@
 # ApplicationSpec: what to fill, and how
 
-Meergo validates `connectors.ApplicationSpec` vs implementation at registration time and can panic when they do not match. Treat spec fields as a contract.
+Krenalis validates `connectors.ApplicationSpec` vs implementation at registration time and can panic when they do not match. Treat spec fields as a contract.
 
 ## Literal style: omit zero values
 
@@ -76,7 +76,7 @@ func init() {
         // Prefer setting TimeLayouts over writing per-field parsing code in the connector when the API
         // returns non-ISO date/time strings.
         //
-        // If left empty, Meergo parses time strings as ISO 8601.
+        // If left empty, Krenalis parses time strings as ISO 8601.
         //
         // Note: this does not apply to Record.UpdatedAt (which is already a time.Time).
         // Omit TimeLayouts entirely when defaults are fine.
@@ -89,7 +89,7 @@ func init() {
 
 ## EndpointGroups (rate limit + retry)
 
-Endpoint groups let Meergo enforce client-side rate limits and apply retry strategies per API endpoint group.
+Endpoint groups let Krenalis enforce client-side rate limits and apply retry strategies per API endpoint group.
 
 Key points:
 
@@ -98,7 +98,7 @@ Key points:
     - `"/api/profiles/"` (path prefix)
     - `"GET /3.0/lists/"` (method + path)
     - `"GET login.mailchimp.com/oauth2/metadata"` (method + host + path)
-- If `EndpointGroups` is nil, Meergo defaults to a single `"/"` group (matches all requests) with a conservative rate limit (1 rps, burst 1).
+- If `EndpointGroups` is nil, Krenalis defaults to a single `"/"` group (matches all requests) with a conservative rate limit (1 rps, burst 1).
 - Never set `EndpointGroups` to an empty slice (`[]connectors.EndpointGroup{}`): it registers no patterns and requests fail at runtime.
 - `Patterns` must be either nil or contain at least one pattern (an explicit empty slice panics at registration time).
   - To match all, omit the `Patterns` field (equivalent to nil). Do not write `Patterns: nil`.
@@ -130,15 +130,15 @@ Before coding, build a short table in your design summary with one row per endpo
 - group/pattern
 - vendor bucket scope (global vs specific endpoint family)
 - raw documented limits + window
-- converted Meergo values (`RequestsPerSecond`, `Burst`, `MaxConcurrentRequests`)
+- converted Krenalis values (`RequestsPerSecond`, `Burst`, `MaxConcurrentRequests`)
 - `RequireOAuth` and a short `RetryPolicy` summary (so merge/split decisions are explicit)
 - source links
 
 This table is mandatory whenever you define non-default rate limits.
 
-### Converting per-hour/per-minute limits to Meergo RateLimit
+### Converting per-hour/per-minute limits to Krenalis RateLimit
 
-Meergo models rate limits as a token bucket with:
+Krenalis models rate limits as a token bucket with:
 
 - `RequestsPerSecond` (float64): average rate
 - `Burst` (int): maximum accumulated tokens (short burst capacity)
@@ -160,7 +160,7 @@ Always include the derived values and original limits in your "Connector Design"
 For each non-default endpoint group, add a short comment near `EndpointGroups` showing:
 
 - the vendor limit you mapped (for example `120 req/min`)
-- the converted Meergo values
+- the converted Krenalis values
 - a doc link
 
 This keeps future rewrites from silently changing the mapping logic.
@@ -190,5 +190,5 @@ Note: host-less patterns apply to **all** hosts. Use them only if the same rate 
 ### Retry policy guidance
 
 - If the vendor docs specify retry behavior (status codes, headers, backoff), encode it in `RetryPolicy`.
-- If the vendor docs do **not** specify how to retry, prefer omitting `RetryPolicy` and rely on Meergo's default behavior for idempotent requests.
+- If the vendor docs do **not** specify how to retry, prefer omitting `RetryPolicy` and rely on Krenalis's default behavior for idempotent requests.
 - If the vendor uses a documented non-standard header for 429 resets (or similar), it is reasonable to add a small targeted policy for that status code (e.g. header-based strategy), and still omit other codes unless justified.

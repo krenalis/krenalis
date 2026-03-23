@@ -1,6 +1,6 @@
 # Settings + UI (ServeUI)
 
-Settings are stored as JSON. Meergo provides:
+Settings are stored as JSON. Krenalis provides:
 
 - `env.Settings` (current settings JSON)
 - `env.SetSettings(ctx, newSettingsJSON)` to persist updates
@@ -25,7 +25,7 @@ Rules:
   - update the connector instance's in-memory settings too (so subsequent calls use the newly saved settings)
 - Unknown events: return `connectors.ErrUIEventNotExist`
 - For invalid settings: return `connectors.NewInvalidSettingsError(...)` (or `...Errorf`)
-- Do not add redundant UTF-8 checks for string settings (Meergo already guarantees UTF-8 strings).
+- Do not add redundant UTF-8 checks for string settings (Krenalis already guarantees UTF-8 strings).
 - For security-sensitive settings (API keys/tokens/secrets/base URLs), make validation complete:
   - enforce both min and max length for secrets/tokens (no "min only" checks)
   - validate provider-required format/prefix/allowed charset when documented

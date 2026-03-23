@@ -4,9 +4,9 @@ description: Create an application connector
 license: MIT
 ---
 
-# Prompt: Create a Meergo Application Connector (Go)
+# Prompt: Create a Krenalis Application Connector (Go)
 
-You are running in a local repo that contains the Meergo source code. Your task is to implement a **new Meergo Application connector** (a Go package) that integrates a SaaS product via HTTP APIs.
+You are running in a local repo that contains the Krenalis source code. Your task is to implement a **new Krenalis Application connector** (a Go package) that integrates a SaaS product via HTTP APIs.
 
 This prompt is a reusable base. When the user provides a concrete product/API later, you must adapt the connector accordingly.
 
@@ -17,7 +17,7 @@ This skill uses a `references/` directory for on-demand details. Keep your worki
 This prompt is **only** for building **Application connectors** (SaaS HTTP APIs) under `connectors/<code>/`.
 
 - Do not implement other connector types (SDK, webhook, database, file, file-storage, etc.).
-- Do not add new frameworks or large dependencies to the repo. Prefer stdlib + existing Meergo helpers.
+- Do not add new frameworks or large dependencies to the repo. Prefer stdlib + existing Krenalis helpers.
 
 ## 1) Discovery (required): decide what to build
 
@@ -143,7 +143,7 @@ At minimum, compare candidates along these axes:
 - request model: synchronous, asynchronous with polling, or asynchronous with callback/webhook-only completion
 - outcome visibility: immediate, pollable by a documented endpoint, callback-only, or ambiguous
 - outcome granularity: whole-request only, per-item/per-event, or ambiguous
-- contract fit: whether the endpoint can satisfy the Meergo method contract when the method returns
+- contract fit: whether the endpoint can satisfy the Krenalis method contract when the method returns
 
 This is a hard requirement for capability families where APIs often expose both direct and bulk/job-based variants, especially:
 
@@ -183,14 +183,14 @@ The most important quality-sensitive capability families are:
 
 #### Phase 3: contract-fit evaluation
 
-After classifying capabilities, evaluate whether each candidate endpoint is actually compatible with the Meergo interface you would use it for.
+After classifying capabilities, evaluate whether each candidate endpoint is actually compatible with the Krenalis interface you would use it for.
 
 This phase is separate from endpoint discovery and capability existence.
-An endpoint may exist and still be a poor or invalid implementation choice for a Meergo method.
+An endpoint may exist and still be a poor or invalid implementation choice for a Krenalis method.
 
 For every chosen capability and every serious alternative considered, build a short candidate comparison table with this shape:
 
-| Meergo method | Candidate endpoint | Delivery model | Outcome retrieval | Outcome granularity | Contract fit | Decision |
+| Krenalis method | Candidate endpoint | Delivery model | Outcome retrieval | Outcome granularity | Contract fit | Decision |
 |---------------|--------------------|----------------|-------------------|---------------------|--------------|----------|
 
 Where:
@@ -217,20 +217,20 @@ Use these rules:
 
 - `Sync` endpoints are generally compatible candidates, subject to the usual validation/error semantics.
 - `Async + poll` endpoints must be taken seriously and compared against sync endpoints when they exist.
-  - They are `Conditionally compatible` only if the connector can recover a sufficiently deterministic final outcome by polling official endpoints within the same Meergo method call.
-  - If the documented outcome remains too ambiguous, too delayed, or cannot be mapped back to consumed records/events with acceptable confidence, mark them `Incompatible` or keep them separate as a bulk/export job concept rather than the primary Meergo method implementation.
+  - They are `Conditionally compatible` only if the connector can recover a sufficiently deterministic final outcome by polling official endpoints within the same Krenalis method call.
+  - If the documented outcome remains too ambiguous, too delayed, or cannot be mapped back to consumed records/events with acceptable confidence, mark them `Incompatible` or keep them separate as a bulk/export job concept rather than the primary Krenalis method implementation.
 - `Async + callback only` endpoints are `Incompatible` for `Upsert` and `SendEvents`.
-  - If the final outcome is available only by delivering it to an external webhook/callback endpoint, the connector cannot rely on that endpoint to satisfy the Meergo method contract when the method returns.
+  - If the final outcome is available only by delivering it to an external webhook/callback endpoint, the connector cannot rely on that endpoint to satisfy the Krenalis method contract when the method returns.
   - Do not treat such endpoints as valid primary implementations of `Upsert` or `SendEvents`.
 
 Do not reject async endpoints merely because they are async.
-Reject them only when their documented completion/result model is not usable within the Meergo contract, or when another candidate is clearly a better contract fit.
+Reject them only when their documented completion/result model is not usable within the Krenalis contract, or when another candidate is clearly a better contract fit.
 
 When comparing candidate endpoints, explicitly check and record:
 
 - whether a documented job-status/job-result endpoint exists
 - whether the connector can read the final result directly, without requiring third-party infrastructure
-- whether the final result can be obtained within a bounded polling window suitable for the Meergo method call
+- whether the final result can be obtained within a bounded polling window suitable for the Krenalis method call
 - whether the result includes per-item/per-event failures, or only a global success/failure state
 - whether global import/export options change semantics in ways that make the endpoint a poor fit for generic `Upsert` / `SendEvents`
 
@@ -326,7 +326,7 @@ The `Capability matrix` section must be a complete table with this shape:
 - `Not found`
 - `Ambiguous`
 
-The `Candidate endpoint comparison` section must compare the primary chosen endpoint(s) with any serious alternatives for the same Meergo capability, especially import/bulk/job variants for `Upsert` and `SendEvents`.
+The `Candidate endpoint comparison` section must compare the primary chosen endpoint(s) with any serious alternatives for the same Krenalis capability, especially import/bulk/job variants for `Upsert` and `SendEvents`.
 
 Use the same table shape defined in Phase 3.
 
@@ -335,9 +335,9 @@ If any capability or API behavior is excluded, include a short `Why excluded?` n
 Choose the evidence style that matches the reason:
 
 - if the capability appears absent, include explicit negative evidence from all available official sources that could reasonably describe it
-- if the capability exists but is excluded because the endpoint is a poor fit for the Meergo contract, include explicit positive evidence of the endpoint's documented behavior plus the concrete contract-mismatch reason
+- if the capability exists but is excluded because the endpoint is a poor fit for the Krenalis contract, include explicit positive evidence of the endpoint's documented behavior plus the concrete contract-mismatch reason
 
-For contract-mismatch exclusions, ground the explanation in the actual Meergo method contract:
+For contract-mismatch exclusions, ground the explanation in the actual Krenalis method contract:
 
 - `Upsert` must return the outcome of the records it consumed in that call; per-record failures should be representable as `connectors.RecordsError`
 - `SendEvents` must return the outcome of the events it consumed in that call; per-event failures should be representable as `connectors.EventsError`
@@ -345,7 +345,7 @@ For contract-mismatch exclusions, ground the explanation in the actual Meergo me
 
 Therefore, an endpoint is a poor fit for the primary `Upsert` / `SendEvents` implementation when its documented completion model does not let the connector determine a usable outcome for the consumed records/events before the method returns.
 
-If a capability is excluded not because it is absent, but because the endpoint is a poor fit for the Meergo contract, say that explicitly in `Why excluded?`.
+If a capability is excluded not because it is absent, but because the endpoint is a poor fit for the Krenalis contract, say that explicitly in `Why excluded?`.
 Typical examples:
 
 - endpoint exists, but final outcome is callback-only
@@ -377,7 +377,7 @@ After producing the "Connector Design" summary:
 
 - Proceed to implementation **without asking for confirmation** if:
   - discovery is accurate enough to justify the chosen implementation path
-  - auth method is unambiguous and implementable with Meergo (OAuth auth-code+refresh, or a well-defined token/API key)
+  - auth method is unambiguous and implementable with Krenalis (OAuth auth-code+refresh, or a well-defined token/API key)
   - base URL (including region/tenant behavior) is unambiguous
   - the chosen capability set can be implemented end-to-end without inventing required fields/IDs
   - rate limits are documented, or you can safely use the conservative default (`1 rps, burst 1`) and rely on 429 handling
@@ -395,7 +395,7 @@ If something is optional (e.g. implementing Source vs Destination), prefer omitt
 
 ### Go version and standard library (required)
 
-Meergo is compiled with the Go version specified by the `go` directive (and, if present, the `toolchain` directive) in `go.mod`.
+Krenalis is compiled with the Go version specified by the `go` directive (and, if present, the `toolchain` directive) in `go.mod`.
 
 Before implementing the connector:
 
@@ -420,7 +420,7 @@ If you cannot access the official docs, ask the user to provide at least:
 
 - **OAuth vs API key / token**:
   - Prefer **OAuth** when the integration is installed by end users and credentials must be granted per-account/tenant/workspace.
-  - Prefer **API keys / personal tokens** when the app explicitly recommends them for server-to-server integrations, or when OAuth requires flows Meergo does not support.
+  - Prefer **API keys / personal tokens** when the app explicitly recommends them for server-to-server integrations, or when OAuth requires flows Krenalis does not support.
   - If the app supports both and the choice affects product UX, ask the user which onboarding they want (OAuth install vs paste-a-key), but propose a default based on the docs.
 - **Rate limits**:
   - If the docs specify rate limits, encode them in `EndpointGroups`.
@@ -444,13 +444,13 @@ If you cannot access the official docs, ask the user to provide at least:
 
 Implement the connector as a Go package under:
 
-`<MEERGO_REPO_ROOT>/connectors/<code>/`
+`<KRENALIS_REPO_ROOT>/connectors/<code>/`
 
 Follow existing patterns (see packages like `connectors/hubspot`, `connectors/klaviyo`, `connectors/mailchimp`, `connectors/mixpanel`, `connectors/posthog`, `connectors/googleanalytics`).
 
 ### Registration import (critical)
 
-Your connector registers itself in `init()`, but that `init()` runs **only if the package is imported** somewhere in the Meergo binary.
+Your connector registers itself in `init()`, but that `init()` runs **only if the package is imported** somewhere in the Krenalis binary.
 
 Therefore, after creating `connectors/<code>/...`, add a blank import in the main build entrypoint `main.go`:
 
@@ -464,7 +464,7 @@ _ "github.com/krenalis/krenalis/connectors/<code>"
 
 ### Spec vs implementation must match
 
-Meergo validates `connectors.ApplicationSpec` vs implemented interfaces at registration time (panics on mismatch). Details, including OAuth consistency rules and endpoint group validity rules:
+Krenalis validates `connectors.ApplicationSpec` vs implemented interfaces at registration time (panics on mismatch). Details, including OAuth consistency rules and endpoint group validity rules:
 
 - [references/application-spec.md](references/application-spec.md)
 
@@ -492,7 +492,7 @@ Performance rule: stream JSON request bodies into `BodyBuffer` (avoid allocating
 
 For `TargetUser`:
 
-- `Record.ID` MUST be the application's **User ID** (Meergo terminology): the application's unique user identifier (the canonical ID assigned by the application, typically server-generated at create time).
+- `Record.ID` MUST be the application's **User ID** (Krenalis terminology): the application's unique user identifier (the canonical ID assigned by the application, typically server-generated at create time).
 - Empty `Record.ID` means "create". Non-empty `Record.ID` means "update that existing application user".
 - Do not overload `Record.ID` with email/ext_id/phone or other natural keys, even if the vendor API accepts them as alternate identifiers. Model those as attributes and/or matching properties instead.
 - In code, prefer using the helper methods on `connectors.Record`:
@@ -504,9 +504,9 @@ Details and examples:
 
 - [references/users.md](references/users.md)
 
-### Schemas and Meergo types (always relevant)
+### Schemas and Krenalis types (always relevant)
 
-Meergo schemas use `github.com/krenalis/krenalis/tools/types`.
+Krenalis schemas use `github.com/krenalis/krenalis/tools/types`.
 
 Guiding rules:
 
@@ -523,7 +523,7 @@ Full schema and value-mapping guidance (import/export canonical types, `types.Ma
 
 ### Iteration, batching, retries, and errors
 
-Meergo record/event sequences have strict consumption semantics. Violating them can panic or drop data. Canonical iteration rules and batching pattern:
+Krenalis record/event sequences have strict consumption semantics. Violating them can panic or drop data. Canonical iteration rules and batching pattern:
 
 - [references/iteration-batching.md](references/iteration-batching.md)
 
@@ -552,7 +552,7 @@ If `HasSettings: true` for Source and/or Destination, implement `ServeUI`. Other
 
 ### Concurrency and state
 
-Meergo can call `Upsert` / `SendEvents` concurrently on the same connector instance. Keep per-call state in locals and avoid shared mutable state (or guard it with a mutex). Do not create your own concurrency for processing records/events (no goroutines/worker pools).
+Krenalis can call `Upsert` / `SendEvents` concurrently on the same connector instance. Keep per-call state in locals and avoid shared mutable state (or guard it with a mutex). Do not create your own concurrency for processing records/events (no goroutines/worker pools).
 
 ## 4) Testing expectations (required)
 
@@ -614,7 +614,7 @@ Before finishing, ensure:
 - embedded connector documentation matches actual implemented behavior (do not claim unsupported capabilities)
 - package comments and function/method comments exist for exported and non-exported declarations that need them, with concise Go-style wording
 - schemas match real API behavior: properties that may be absent on the read path are marked `ReadOptional`, and role-dependent schema flags are used coherently
-- shared schemas may rely on Meergo applying the correct role semantics, while separate source/destination schemas avoid irrelevant flags unless a documented reason justifies them
+- shared schemas may rely on Krenalis applying the correct role semantics, while separate source/destination schemas avoid irrelevant flags unless a documented reason justifies them
 - destination matching via `Records()` does not by itself justify source/read-only flags in a destination-only schema
 - `Record.Attributes` never uses type-incompatible placeholders
 - connector-authored error messages never include PII, and any echoed value satisfies the two conditions above (guaranteed non-PII and necessary to understand/fix the error)
@@ -644,7 +644,7 @@ If any checklist item is violated, include a short `Skill deviations` section in
 
 ## References
 
-- [references/meergo-context.md](references/meergo-context.md)
+- [references/krenalis-context.md](references/krenalis-context.md)
 - [references/application-spec.md](references/application-spec.md)
 - [references/auth.md](references/auth.md)
 - [references/settings-ui.md](references/settings-ui.md)

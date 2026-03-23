@@ -3,7 +3,7 @@ Klaviyo is an email marketing and automation platform that enables businesses to
 
 ## What can you do with this?
 
-Using this connector you can read profiles from Klaviyo, import them into your data warehouse, and unify them as users in Meergo.
+Using this connector you can read profiles from Klaviyo, import them into your data warehouse, and unify them as users in Krenalis.
 
 ## What does it require?
 

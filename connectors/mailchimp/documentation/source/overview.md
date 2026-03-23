@@ -3,7 +3,7 @@ Mailchimp is an email marketing platform that helps businesses design and send m
 
 ## What can you do with this?
 
-Using this connector you can read contacts from Mailchimp, import them into your data warehouse, and unify them as users in Meergo.
+Using this connector you can read contacts from Mailchimp, import them into your data warehouse, and unify them as users in Krenalis.
 
 ## What does it require?
 

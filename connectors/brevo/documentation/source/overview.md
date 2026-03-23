@@ -2,7 +2,7 @@ Brevo is an all-in-one marketing platform that helps businesses engage customers
 
 ## What can you do with this?
 
-Using this connector you can read Brevo contacts as users in Meergo, including their core status fields and custom contact attributes.
+Using this connector you can read Brevo contacts as users in Krenalis, including their core status fields and custom contact attributes.
 
 ## What does it require?
 

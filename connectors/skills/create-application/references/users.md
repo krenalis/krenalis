@@ -50,16 +50,16 @@ Contract:
   - `cursor` is empty on first call.
   - return `nextCursor` string for the next page.
   - when there are no more records, return `io.EOF` (possibly with final batch).
-- It is allowed to return duplicate IDs; Meergo deduplicates upstream.
+- It is allowed to return duplicate IDs; Krenalis deduplicates upstream.
 - Each returned record must have:
-  - `ID` non-empty UTF-8, and it MUST be the application's User ID (Meergo terminology): the canonical unique user identifier (typically the primary key assigned by the application, generated server-side when the user/contact is created)
+  - `ID` non-empty UTF-8, and it MUST be the application's User ID (Krenalis terminology): the canonical unique user identifier (typically the primary key assigned by the application, generated server-side when the user/contact is created)
     - Do NOT set `Record.ID` to a natural key like email/phone/ext_id, even if the vendor API accepts them as alternate identifiers when addressing a user.
-    - Put those alternate identifiers in `Attributes` and use Meergo pipeline matching to map the matching property value to the application's User ID for updates. (In Meergo core this app User ID is stored as `DestinationProfile.ExternalID`.)
+    - Put those alternate identifiers in `Attributes` and use Krenalis pipeline matching to map the matching property value to the application's User ID for updates. (In Krenalis core this app User ID is stored as `DestinationProfile.ExternalID`.)
   - `Attributes` map containing the properties defined in `schema` (unless `ReadOptional`), with values compatible with the corresponding property types
     - If a non-optional requested property is missing from the upstream API response, do not silently omit it: either mark the property as `ReadOptional` in your `RecordSchema` (preferred if the API may omit it), or set `record.Err` for that record.
-    - Extra attributes not explicitly requested are allowed; Meergo will ignore unknown keys. For efficiency, avoid fetching/processing extra fields if the API lets you request only needed fields; balance readability vs performance and prefer returning only the requested subset unless the cost is negligible or the API cannot filter fields.
+    - Extra attributes not explicitly requested are allowed; Krenalis will ignore unknown keys. For efficiency, avoid fetching/processing extra fields if the API lets you request only needed fields; balance readability vs performance and prefer returning only the requested subset unless the cost is negligible or the API cannot filter fields.
     - Do not use type-incompatible placeholders (e.g. `""` for `DateTime`); if a value is missing, omit the key (preferred) or set it to `nil` only if the property is `Nullable`.
-  - `UpdatedAt` MUST be set to the application's actual "last updated" timestamp (non-zero; year >= 1900). Any time zone is allowed; Meergo normalizes to UTC and truncates to microseconds.
+  - `UpdatedAt` MUST be set to the application's actual "last updated" timestamp (non-zero; year >= 1900). Any time zone is allowed; Krenalis normalizes to UTC and truncates to microseconds.
   - `Err` optionally set to mark a per-record read error (if Err != nil, only ID is significant)
     - Keep `record.Err` messages fixed: do not include input-specific values or upstream field contents in the message text.
 
@@ -67,7 +67,7 @@ Use `schema` to request/return only needed fields (important for performance).
 
 ### Destination matching depends on Records() (important)
 
-For destination application exports, Meergo can synchronize destination users by calling `Records(...)` with a schema pruned to the pipeline's "out matching property". This is a read/input pipeline schema concern. If you reuse one shared schema for both roles, Meergo will apply the correct role semantics to the role-dependent flags. If you keep a separate destination schema, omit `ReadOptional: true` unless there is a specific, documented reason to keep it. The fact that destination matching uses `Records()` does not change this readability rule. For this to work reliably:
+For destination application exports, Krenalis can synchronize destination users by calling `Records(...)` with a schema pruned to the pipeline's "out matching property". This is a read/input pipeline schema concern. If you reuse one shared schema for both roles, Krenalis will apply the correct role semantics to the role-dependent flags. If you keep a separate destination schema, omit `ReadOptional: true` unless there is a specific, documented reason to keep it. The fact that destination matching uses `Records()` does not change this readability rule. For this to work reliably:
 
 - `Record.ID` must be the application's User ID (unique user identifier).
 - `Record.Attributes` must include the requested out matching property path (it may be nil, but it must be present when requested unless it is read-optional).
@@ -78,7 +78,7 @@ Do not substitute the matching property value into `Record.ID`.
 
 - `Record.UpdatedAt`:
   - MUST be set to the application's actual "last updated" timestamp for every returned record.
-  - Any time zone is allowed; Meergo converts to UTC and truncates to microseconds. You do not need to call `.UTC()` yourself (unless you specifically need a UTC timestamp for some API formatting).
+  - Any time zone is allowed; Krenalis converts to UTC and truncates to microseconds. You do not need to call `.UTC()` yourself (unless you specifically need a UTC timestamp for some API formatting).
   - If missing or unparseable, set `record.Err` (or fail the page) and do NOT use `time.Time{}` as a placeholder.
 - Time-typed properties inside `Record.Attributes`:
   - if missing: omit the key when the schema is `ReadOptional` (preferred), otherwise set `record.Err`
@@ -95,10 +95,10 @@ When the application's list endpoint supports a `limit` / `pageSize` parameter w
 
 When using `updatedAt` in API queries:
 
-- `updatedAt` is already in `time.UTC` (location is UTC) and truncated to microseconds by Meergo before being passed to your connector, so you do not need to call `updatedAt.UTC()` before formatting it.
+- `updatedAt` is already in `time.UTC` (location is UTC) and truncated to microseconds by Krenalis before being passed to your connector, so you do not need to call `updatedAt.UTC()` before formatting it.
 - If the API requires a string, you can format it directly (e.g. `updatedAt.Format(time.RFC3339Nano)` or an app-specific layout).
 
-Meergo truncates `Record.UpdatedAt` to microseconds internally; connectors may also truncate to microseconds for clarity and to avoid surprising diffs.
+Krenalis truncates `Record.UpdatedAt` to microseconds internally; connectors may also truncate to microseconds for clarity and to avoid surprising diffs.
 
 ## Upsert (writing users)
 
@@ -115,16 +115,16 @@ The **records sequence is non-empty**, but you do NOT need to process all items 
 - handle invalid inputs with `records.Discard(err)` or return `connectors.RecordsError` for per-record failures when the API provides them
 - use `records.Postpone()` to handle body size limits / request limits, so the record will be retried in a later call
 
-The attributes of each record conform to the schema passed as an argument to `Upsert`. The provided schema is a subset of the connector's destination schema, so it may not include all properties. If the destination schema is dynamic, the schema passed to `Upsert` is a subset of the most recent destination schema retrieved by Meergo.
+The attributes of each record conform to the schema passed as an argument to `Upsert`. The provided schema is a subset of the connector's destination schema, so it may not include all properties. If the destination schema is dynamic, the schema passed to `Upsert` is a subset of the most recent destination schema retrieved by Krenalis.
 
 ### Record.ID semantics (create vs update)
 
-- A record to be created has an **empty** `Record.ID` (this is a Meergo contract). In code, prefer `record.IsCreate()`.
+- A record to be created has an **empty** `Record.ID` (this is a Krenalis contract). In code, prefer `record.IsCreate()`.
 - A record to be updated has a **non-empty** `Record.ID` containing the application's User ID (unique user identifier). In code, prefer `record.IsUpdate()`.
 
 ### Avoid validating Record.ID shape in Upsert (important)
 
-When `Upsert` receives a record with `record.IsUpdate() == true`, `record.ID` is the application's User ID that Meergo already knows (it comes from the destination application's previously read users, i.e. from your connector's `Records(...)` results, and is then reused for exports).
+When `Upsert` receives a record with `record.IsUpdate() == true`, `record.ID` is the application's User ID that Krenalis already knows (it comes from the destination application's previously read users, i.e. from your connector's `Records(...)` results, and is then reused for exports).
 
 Therefore:
 

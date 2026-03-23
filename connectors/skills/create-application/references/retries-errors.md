@@ -2,7 +2,7 @@
 
 ## Idempotency and retries
 
-Meergo's connector HTTP client retries **only idempotent** requests, and only if it can recreate the body (via `req.GetBody`).
+Krenalis's connector HTTP client retries **only idempotent** requests, and only if it can recreate the body (via `req.GetBody`).
 
 Mark idempotency by:
 

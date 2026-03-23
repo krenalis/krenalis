@@ -3,7 +3,7 @@ Klaviyo is an email marketing and automation platform that enables businesses to
 
 ## What can you do with this?
 
-Using this connector you can create and update unified Meergo users from your data warehouse in Klaviyo as profiles.
+Using this connector you can create and update unified Krenalis users from your data warehouse in Klaviyo as profiles.
 
 ## What does it require?
 

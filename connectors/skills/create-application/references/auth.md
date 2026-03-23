@@ -10,10 +10,10 @@ If the application requires OAuth 2.0:
   - `AuthURL`, `TokenURL`
   - scopes split by role (`SourceScopes` vs `DestinationScopes`)
   - redirect URL restrictions if needed (`Disallow127_0_0_1`, `DisallowLocalhost`)
-- `AuthURL` should be the provider's base authorization endpoint. Meergo automatically appends `response_type=code`, `client_id`, `redirect_uri`, `state`, and (if present) `scope`.
-- Use Meergo's built-in OAuth only if the application supports the **authorization code** flow with **refresh tokens**.
+- `AuthURL` should be the provider's base authorization endpoint. Krenalis automatically appends `response_type=code`, `client_id`, `redirect_uri`, `state`, and (if present) `scope`.
+- Use Krenalis's built-in OAuth only if the application supports the **authorization code** flow with **refresh tokens**.
   - If the API supports only client credentials or otherwise cannot issue refresh tokens, do not use `ApplicationSpec.OAuth`; fall back to a non-OAuth auth method (API key / token) or ask the user how they want to authenticate.
-- If the provider requires **PKCE** for the authorization code flow, verify that Meergo supports it for application connectors. If not supported, do not use `ApplicationSpec.OAuth`; fall back to a non-OAuth method or ask the user for the intended auth approach.
+- If the provider requires **PKCE** for the authorization code flow, verify that Krenalis supports it for application connectors. If not supported, do not use `ApplicationSpec.OAuth`; fall back to a non-OAuth method or ask the user for the intended auth approach.
 - Ensure `EndpointGroups` include patterns for:
   - the OAuth token endpoint (`TokenURL`) (token exchange happens before you have an access token)
   - any OAuth metadata endpoints your flow needs
@@ -40,7 +40,7 @@ If the connector does **not** use `ApplicationSpec.OAuth`, it must still authent
 - In connector-authored validation errors, wrap setting/property names and any echoed setting values in `«...»` (for example `«api_key»`, `«base_url»`).
 - `connectors.QuoteErrorTerm(...)` is the default helper when the quoted term may contain `»`.
 - Use `connectors.QuoteErrorTerm(...)` only when the quoted term may contain `»`. If the quoted term cannot contain `»`, write it directly as `«...»` even when the value is computed at runtime.
-- Do not add explicit UTF-8 checks for setting strings: Meergo already guarantees strings are valid UTF-8.
+- Do not add explicit UTF-8 checks for setting strings: Krenalis already guarantees strings are valid UTF-8.
 - For security-sensitive strings (API keys, tokens, secrets), validate both lower and upper bounds (min and max length), not only minimum length.
 - If the provider documents allowed characters/prefixes/formats, validate them; if not documented, keep validation conservative but still enforce an explicit max length to avoid unbounded inputs.
 - Validate base URLs strictly (scheme/host/path constraints according to provider requirements).

@@ -1,6 +1,6 @@
 # Docker Compose monitoring tools
 
-This directory contains the files needed to monitor a running Meergo instance using Docker Compose (the development version, not the release version).
+This directory contains the files needed to monitor a running Krenalis instance using Docker Compose (the development version, not the release version).
 
 Once Docker Compose is started:
 

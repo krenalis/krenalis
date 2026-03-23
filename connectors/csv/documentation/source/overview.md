@@ -1,7 +1,7 @@
 
 ## What can you do with this?
 
-This connector lets you import users from a CSV file into your data warehouse and unify them as users within Meergo. 
+This connector lets you import users from a CSV file into your data warehouse and unify them as users within Krenalis. 
 
 ## What does it require?
 

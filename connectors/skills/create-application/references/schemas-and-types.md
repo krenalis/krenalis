@@ -1,6 +1,6 @@
 # Schemas and data types
 
-Meergo uses `github.com/krenalis/krenalis/tools/types` to represent schemas.
+Krenalis uses `github.com/krenalis/krenalis/tools/types` to represent schemas.
 
 You will define:
 
@@ -16,7 +16,7 @@ Guidelines:
   - **Create:** `CreateRequired` (the property value is required when creating the record)
   - **Update:** `UpdateRequired` (the property value is required when updating the record)
   - Use `Nullable` if the property value may be **JSON null** (`nil` in Go).
-- These are role-dependent flags. Meergo applies the correct role semantics so the flags that do not matter for the chosen role are ignored.
+- These are role-dependent flags. Krenalis applies the correct role semantics so the flags that do not matter for the chosen role are ignored.
 - `ReadOptional` describes the read path, not the fact that a property may be used for destination matching.
 - A shared schema is appropriate only when source and destination differ by role-dependent flags alone.
 - If some fields are read-only or otherwise not writable, the destination schema must exclude them even if the source schema includes them.
@@ -52,7 +52,7 @@ That example illustrates read-side optionality. If you reuse the same static sch
 
 ## Express constraints in the schema (prefer schema over runtime checks)
 
-If the application imposes constraints that are expressible in Meergo schemas, encode them in the type returned by `RecordSchema` / `EventTypeSchema` instead of re-validating them in `Upsert` / `SendEvents`.
+If the application imposes constraints that are expressible in Krenalis schemas, encode them in the type returned by `RecordSchema` / `EventTypeSchema` instead of re-validating them in `Upsert` / `SendEvents`.
 
 Common examples:
 
@@ -62,13 +62,13 @@ Common examples:
 - String regex/pattern: `types.String().WithMaxLength(255).WithPattern(regexp.MustCompile("^[A-Za-z0-9_-]+$"))`
 - Array size limits: `types.Array(types.String()).WithMinElements(1).WithMaxElements(100)`
 
-This makes the constraint visible to Meergo (and UIs), and avoids per-call defensive validation code in connectors.
+This makes the constraint visible to Krenalis (and UIs), and avoids per-call defensive validation code in connectors.
 
 If you need a constraint that is not covered above, check the `types.Type` methods in `tools/types/types.go` in this repo.
 
 ## Record attribute values (import/export)
 
-Meergo supports a canonical set of value types for each schema property type. Your connector must map between:
+Krenalis supports a canonical set of value types for each schema property type. Your connector must map between:
 
 - API payload values (mostly strings / numbers / timestamps)
 - `connectors.Record.Attributes` and `connectors.Event.Type.Values`
@@ -84,7 +84,7 @@ When filling `Record.Attributes` from API responses:
 - For numeric types return `int`, `uint`, `float64`, or `decimal.Decimal` depending on the schema.
 - For `datetime`/`date`/`time` fields you may return:
   - `time.Time`, or
-  - a `string`/`[]byte` exactly as returned by the API; Meergo will parse it (ISO 8601 by default, or using `ApplicationSpec.TimeLayouts` if you set it at registration), or
+  - a `string`/`[]byte` exactly as returned by the API; Krenalis will parse it (ISO 8601 by default, or using `ApplicationSpec.TimeLayouts` if you set it at registration), or
   - for `datetime`, a Unix-epoch value (string or float64) if `TimeLayouts.DateTime` uses `"unix"`, `"unixmilli"`, `"unixmicro"`, or `"unixnano"`.
 - For `uuid` you may return a UUID string or a 16-byte slice (vendor dependent).
 - For `ip` you may return a string, `net.IP`, or `netip.Addr`.
@@ -97,7 +97,7 @@ Practical rule: for time-typed *attributes* (`datetime`/`date`/`time` in your sc
 
 ### Export (connectors receiving values, e.g. Upsert, SendEvents)
 
-Meergo passes canonical types to connectors:
+Krenalis passes canonical types to connectors:
 
 - `string`, `bool`, `int`, `uint`, `float64`, `decimal.Decimal`, `time.Time` (UTC)
 - `uuid`: `string`
@@ -114,7 +114,7 @@ params, err := types.Marshal(event.Type.Values, event.Type.Schema)
 
 This encodes values according to schema expectations.
 
-Meergo guarantees that the values you receive in `event.Type.Values` (in `SendEvents` / `PreviewSendEvents`) conform to `event.Type.Schema` (including required fields for event sending, i.e. `CreateRequired`).
+Krenalis guarantees that the values you receive in `event.Type.Values` (in `SendEvents` / `PreviewSendEvents`) conform to `event.Type.Schema` (including required fields for event sending, i.e. `CreateRequired`).
 
 For `Upsert`, values in `Record.Attributes` follow the canonical Go types described above for the given schema; do not add defensive type-checks for basic types. Only validate additional API-specific rules that cannot be expressed in the schema.
 

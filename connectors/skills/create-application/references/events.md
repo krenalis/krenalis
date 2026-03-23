@@ -72,7 +72,7 @@ func (c *MyApp) EventTypeSchema(ctx context.Context, eventType string) (types.Ty
 - MUST keep event serialization linear: read values from the current event and write JSON directly into `BodyBuffer` inside the batching loop.
 - MUST NOT build an intermediate map/struct for one event and then serialize it in a separate step, unless a documented exception is required.
 
-Meergo guarantees that `event.Type.Values` conforms to `event.Type.Schema`.
+Krenalis guarantees that `event.Type.Values` conforms to `event.Type.Schema`.
 Do not re-check presence or basic Go types for schema-defined fields.
 Only validate application-specific constraints that cannot be expressed in the schema.
 
@@ -227,7 +227,7 @@ Use `events.Peek()` when the first unread event determines the endpoint or paylo
 func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error {
 	first, ok := events.Peek()
 	if !ok {
-		panic("meergo guarantees a non-empty events sequence")
+		panic("krenalis guarantees a non-empty events sequence")
 	}
 
 	switch first.Type.ID {
