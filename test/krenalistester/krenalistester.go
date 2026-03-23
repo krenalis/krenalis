@@ -135,7 +135,7 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 				log.Print("generating Meergo assets")
 				err := generateAssets(ctx, c.repo)
 				if err != nil {
-					panic(fmt.Sprintf("cannot generate Meergo assets: %s", err))
+					panic(fmt.Sprintf("cannot generate Krenalis assets: %s", err))
 				}
 				log.Print("assets generated")
 				assetsAlreadyGenerated = true

@@ -109,7 +109,7 @@ func Main(assets fs.FS) {
 		})
 		if err != nil {
 			// Failing to initialize Sentry shouldn't stop Meergo from starting.
-			slog.Warn("meergo: failed to init Sentry", "error", err)
+			slog.Warn("krenalis: failed to init Sentry", "error", err)
 		} else {
 			defer sentry.Flush(2 * time.Second)
 		}

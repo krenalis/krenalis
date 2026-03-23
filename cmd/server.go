@@ -175,7 +175,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			if r := recover(); r != nil {
 
 				// Log the panic (and the stack trace) using slog.Error.
-				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1", "reason", r, "stacktrace", string(debug.Stack()))
+				slog.Error("cmd: a panic occurred, Krenalis will exit with status code 1", "reason", r, "stacktrace", string(debug.Stack()))
 
 				// Send the panic to Sentry.
 				if settings.SentryTelemetryLevel == telemetryLevelErrors || settings.SentryTelemetryLevel == telemetryLevelAll {

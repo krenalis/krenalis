@@ -32,14 +32,14 @@ func Platforms() []Platform {
 // Register is called twice with the same platform or if new is nil, it panics.
 func Register[T Warehouse](platform Platform, new NewFunc[T]) {
 	if new == nil {
-		panic("meergo/warehouses: new function is nil for warehouse platform " + platform.Name)
+		panic("krenalis/warehouses: new function is nil for warehouse platform " + platform.Name)
 	}
 	platform.newFunc = reflect.ValueOf(new)
 	platform.ct = reflect.TypeFor[T]()
 	registry.Lock()
 	defer registry.Unlock()
 	if _, dup := registry.platforms[platform.Name]; dup {
-		panic("meergo/warehouses: Register called twice for type " + platform.Name)
+		panic("krenalis/warehouses: Register called twice for type " + platform.Name)
 	}
 	registry.platforms[platform.Name] = platform
 }
@@ -51,7 +51,7 @@ func Registered(platform string) Platform {
 	warehouse, ok := registry.platforms[platform]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo/warehouses: unknown warehouse platform %q (forgotten import?)", platform))
+		panic(fmt.Errorf("krenalis/warehouses: unknown warehouse platform %q (forgotten import?)", platform))
 	}
 	return warehouse
 }

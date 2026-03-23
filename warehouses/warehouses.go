@@ -99,7 +99,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("meergo/warehouses: cannot scan a %T value into a warehouses.AlterOperationType value", v)
+		return fmt.Errorf("krenalis/warehouses: cannot scan a %T value into a warehouses.AlterOperationType value", v)
 	}
 	switch s {
 	case "AddColumn":
@@ -109,7 +109,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	case "RenameColumn":
 		*op = OperationRenameColumn
 	default:
-		return fmt.Errorf("meergo/warehouses: invalid warehouses.AlterOperationType: %s", s)
+		return fmt.Errorf("krenalis/warehouses: invalid warehouses.AlterOperationType: %s", s)
 	}
 	return nil
 }

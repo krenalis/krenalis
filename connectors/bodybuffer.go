@@ -82,7 +82,7 @@ func GetBodyBuffer(enc ContentEncoding, length int) *BodyBuffer {
 		bb.body.buf = bufferpool.Get(length)
 		bb.gzipW.Reset(&bb.body)
 	default:
-		panic(fmt.Sprintf("meergo: invalid encoding %d", enc))
+		panic(fmt.Sprintf("krenalis: invalid encoding %d", enc))
 	}
 	return &BodyBuffer{bodyBufferState: bb}
 }
@@ -374,7 +374,7 @@ func (bb *BodyBuffer) Truncate(n int) {
 		panic(errPostReqWrite.Error())
 	}
 	if n < 0 || n > len(plain)-bb.flushed {
-		panic("meergo: truncation out of range")
+		panic("krenalis: truncation out of range")
 	}
 	switch bb.enc {
 	case NoEncoding:
