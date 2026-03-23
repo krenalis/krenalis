@@ -78,12 +78,12 @@ func parseEnvSettings() (*Settings, error) {
 		}
 	}
 	if len(settings.ExternalAssetsURLs) == 0 {
-		settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, "https://assets.meergo.com/")
+		settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, "https://assets.krenalis.com/")
 	}
 
 	switch potentialsURL := envVars.Get("MEERGO_POTENTIAL_CONNECTORS_URL"); potentialsURL {
 	case "":
-		settings.PotentialConnectorsURL = "https://assets.meergo.com/admin/connectors/potentials.json"
+		settings.PotentialConnectorsURL = "https://assets.krenalis.com/admin/connectors/potentials.json"
 	case "none":
 		settings.PotentialConnectorsURL = ""
 	default:
