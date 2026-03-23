@@ -89,15 +89,15 @@ func init() {
 		panic(err)
 	}
 	testsSettings.PythonExecutable = pyExecutable
-	if addr := os.Getenv("MEERGO_TESTS_ADDR"); addr != "" {
+	if addr := os.Getenv("KRENALIS_TESTS_ADDR"); addr != "" {
 		host, port, err := net.SplitHostPort(addr)
 		if err != nil {
-			panic("MEERGO_TESTS_ADDR must be in the format host:port")
+			panic("KRENALIS_TESTS_ADDR must be in the format host:port")
 		}
 		testsSettings.HTTP.Host = host
 		testsSettings.HTTP.Port, err = strconv.Atoi(port)
 		if err != nil {
-			panic("MEERGO_TESTS_ADDR must be in the format host:port")
+			panic("KRENALIS_TESTS_ADDR must be in the format host:port")
 		}
 	}
 	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
