@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -18,18 +18,18 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	c.UpdateIdentityResolution(false, nil)
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.CreateDummy("Dummy 1", meergotester.Source)
-	dummy2 := c.CreateDummy("Dummy 2", meergotester.Source)
+	dummy1 := c.CreateDummy("Dummy 1", krenalistester.Source)
+	dummy2 := c.CreateDummy("Dummy 2", krenalistester.Source)
 
 	// Create two identical pipelines for two different connections.
-	pipelineParams := meergotester.PipelineToSet{
+	pipelineParams := krenalistester.PipelineToSet{
 		Enabled: true,
 		Name:    "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
@@ -42,7 +42,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",

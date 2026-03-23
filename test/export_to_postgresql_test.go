@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -18,14 +18,14 @@ func TestExportToPostgreSQL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+		dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -39,7 +39,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email":      "coalesce(email, 'default.email@example.com')",
 					"first_name": "firstName",
@@ -81,7 +81,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportPipeline := c.CreatePipeline(pgsql, "User", meergotester.PipelineToSet{
+	exportPipeline := c.CreatePipeline(pgsql, "User", krenalistester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -95,7 +95,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.String(), CreateRequired: true},
 			{Name: "full_name", Type: types.String()},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"full_name": `first_name " " last_name`,
@@ -116,7 +116,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Update the pipeline to export the empty string for full_name.
-	c.UpdatePipeline(exportPipeline, meergotester.PipelineToSet{
+	c.UpdatePipeline(exportPipeline, krenalistester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -128,7 +128,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.String(), CreateRequired: true},
 			{Name: "full_name", Type: types.String()},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"full_name": `""`,

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -39,7 +39,7 @@ func TestPipelinesCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -52,12 +52,12 @@ func TestPipelinesCreation(t *testing.T) {
 
 	tests := []struct {
 		conn     int
-		pipeline meergotester.PipelineToSet
+		pipeline krenalistester.PipelineToSet
 		err      string
 	}{
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from a CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -69,7 +69,7 @@ func TestPipelinesCreation(t *testing.T) {
 					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email":     "Email",
 						"timestamp": "timestamp",
@@ -79,7 +79,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -87,7 +87,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -99,7 +99,7 @@ func TestPipelinesCreation(t *testing.T) {
 					{Name: "_email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"_email":    "_email",
 						"timestamp": "timestamp",
@@ -109,7 +109,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -118,7 +118,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: dstFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Export profiles to a CSV on File System",
 				Path: "profiles.csv",
 				InSchema: types.Object([]types.Property{
@@ -127,7 +127,7 @@ func TestPipelinesCreation(t *testing.T) {
 				}),
 				Format:  "csv",
 				OrderBy: "email",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -135,7 +135,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -147,7 +147,7 @@ func TestPipelinesCreation(t *testing.T) {
 					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -156,7 +156,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UserIDColumn:    "identity",
 				UpdatedAtColumn: "timestamp",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -165,7 +165,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -176,7 +176,7 @@ func TestPipelinesCreation(t *testing.T) {
 					{Name: "email", Type: types.String(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -185,7 +185,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -194,7 +194,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -205,7 +205,7 @@ func TestPipelinesCreation(t *testing.T) {
 					{Name: "email", Type: types.String()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -213,7 +213,7 @@ func TestPipelinesCreation(t *testing.T) {
 				},
 				UserIDColumn: "- - invalid - -",
 				Format:       "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -222,7 +222,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -232,7 +232,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -240,7 +240,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UserIDColumn:    "email",
 				UpdatedAtColumn: "timestamp",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -248,14 +248,14 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:            "Import users from CSV on File System",
 				Path:            "users.csv",
 				UserIDColumn:    "email",
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -264,7 +264,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -274,7 +274,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -283,7 +283,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UpdatedAtColumn: "timestamp",
 				UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 				Format:          "csv",
-				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+				FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 					"separator":      ",",
 					"hasColumnNames": true,
 				}),
@@ -292,7 +292,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -302,7 +302,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -314,7 +314,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -325,7 +325,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -336,7 +336,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -347,7 +347,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -359,7 +359,7 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "my_last_change_time" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -370,7 +370,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -381,15 +381,15 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: javaScriptConnection,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:     "Import identities from events",
 				Enabled:  true,
-				Filter:   meergotester.DefaultFilterUserFromEvents,
+				Filter:   krenalistester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},
@@ -398,10 +398,10 @@ func TestPipelinesCreation(t *testing.T) {
 		},
 		{
 			conn: javaScriptConnection,
-			pipeline: meergotester.PipelineToSet{
+			pipeline: krenalistester.PipelineToSet{
 				Name:    "Import identities from events",
 				Enabled: true,
-				Filter:  meergotester.DefaultFilterUserFromEvents,
+				Filter:  krenalistester.DefaultFilterUserFromEvents,
 				InSchema: types.Object([]types.Property{
 					{Name: "traits", Type: types.Object([]types.Property{
 						{Name: "email", Type: types.String()},
@@ -410,7 +410,7 @@ func TestPipelinesCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String(), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},

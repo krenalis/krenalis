@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
 func TestProfilePropertiesSuitableAsIdentifiers(t *testing.T) {
@@ -16,7 +16,7 @@ func TestProfilePropertiesSuitableAsIdentifiers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 

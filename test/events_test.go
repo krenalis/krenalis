@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
@@ -25,13 +25,13 @@ func TestEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Load some users in the data warehouse from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -42,7 +42,7 @@ func TestEvents(t *testing.T) {
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -63,19 +63,19 @@ func TestEvents(t *testing.T) {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.CreatePipeline(javaScriptID, "Event", meergotester.PipelineToSet{
+		c.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+		c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
-			Filter:   meergotester.DefaultFilterUserFromEvents,
+			Filter:   krenalistester.DefaultFilterUserFromEvents,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email": "traits.email",
 				},
@@ -217,7 +217,7 @@ func TestEvents(t *testing.T) {
 	// Test importing an identity with a pipeline that has no mapping.
 	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", nil)
 	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
-	c.CreatePipeline(javaScript2ID, "User", meergotester.PipelineToSet{
+	c.CreatePipeline(javaScript2ID, "User", krenalistester.PipelineToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})

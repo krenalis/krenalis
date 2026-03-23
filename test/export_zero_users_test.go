@@ -14,20 +14,20 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core"
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestExportZeroProfiles(t *testing.T) {
 
 	// Create the temporary storage.
-	storage := meergotester.NewTempStorage(t)
+	storage := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
@@ -36,8 +36,8 @@ func TestExportZeroProfiles(t *testing.T) {
 
 	// Test the export of zero profiles to an application (Dummy).
 	func() {
-		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", meergotester.PipelineToSet{
+		dummyDest := c.CreateDummy("Dummy (destination)", krenalistester.Destination)
+		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", krenalistester.PipelineToSet{
 			Name:    "Export profiles to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -48,13 +48,13 @@ func TestExportZeroProfiles(t *testing.T) {
 				{Name: "email", Type: types.String(), Nullable: true},
 				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"lastName": "last_name",
 				},
 			},
-			ExportMode: meergotester.CreateOrUpdate,
-			Matching: meergotester.Matching{
+			ExportMode: krenalistester.CreateOrUpdate,
+			Matching: krenalistester.Matching{
 				In:  "email",
 				Out: "email",
 			},
@@ -68,11 +68,11 @@ func TestExportZeroProfiles(t *testing.T) {
 	func() {
 
 		// Create the File System connection.
-		fsID := c.CreateConnection(meergotester.ConnectionToCreate{
+		fsID := c.CreateConnection(krenalistester.ConnectionToCreate{
 			Name:      "File System",
-			Role:      meergotester.Destination,
+			Role:      krenalistester.Destination,
 			Connector: "filesystem",
-			Settings: meergotester.JSONEncodeSettings(map[string]any{
+			Settings: krenalistester.JSONEncodeSettings(map[string]any{
 				"root": storage.Root(),
 			}),
 		})
@@ -81,7 +81,7 @@ func TestExportZeroProfiles(t *testing.T) {
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 		// Create a pipeline for the File System for exporting the profiles.
-		exportProfilesPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+		exportProfilesPipelineID := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 			Name:    "Export profiles to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -93,7 +93,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			}),
 			Format:  "csv",
 			OrderBy: "email",
-			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+			FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 				"separator": ",",
 			}),
 		})

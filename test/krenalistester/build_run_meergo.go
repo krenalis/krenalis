@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package meergotester
+package krenalistester
 
 import (
 	"bytes"
@@ -43,12 +43,12 @@ func buildMeergo(t *testing.T, repo, meergoDir string) {
 	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/krenalis/krenalis="+repo)
 
 	// Copy the file with the connectors and warehouse imports, replacing the
-	// package name "meergotester" with "main".
-	testImports, err := os.ReadFile(filepath.Join(repo, "test", "meergotester", "test_imports.go"))
+	// package name "krenalistester" with "main".
+	testImports, err := os.ReadFile(filepath.Join(repo, "test", "krenalistester", "test_imports.go"))
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
-	testImports = bytes.Replace(testImports, []byte(`package meergotester`), []byte(`package main`), 1)
+	testImports = bytes.Replace(testImports, []byte(`package krenalistester`), []byte(`package main`), 1)
 	err = os.WriteFile(filepath.Join(tmpdir, "test_imports.go"), testImports, 0644)
 	if err != nil {
 		t.Fatalf("%s", err)

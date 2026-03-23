@@ -16,7 +16,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core"
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/klauspost/compress/snappy"
@@ -25,13 +25,13 @@ import (
 func TestExportUsersToFile(t *testing.T) {
 
 	// Create the temporary storage.
-	storage := meergotester.NewTempStorage(t)
+	storage := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
@@ -40,8 +40,8 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+		dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -55,7 +55,7 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email":      "coalesce(email, 'default.email@example.com')",
 					"first_name": "firstName",
@@ -69,11 +69,11 @@ func TestExportUsersToFile(t *testing.T) {
 	}
 
 	// Create the File System connection.
-	fsID := c.CreateConnection(meergotester.ConnectionToCreate{
+	fsID := c.CreateConnection(krenalistester.ConnectionToCreate{
 		Name:      "File System",
-		Role:      meergotester.Destination,
+		Role:      krenalistester.Destination,
 		Connector: "filesystem",
-		Settings: meergotester.JSONEncodeSettings(map[string]any{
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{
 			"simulateHighIOLatency": false,
 		}),
 	})
@@ -82,7 +82,7 @@ func TestExportUsersToFile(t *testing.T) {
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 	// Create a pipeline for the CSV for exporting the users.
-	exportUsersPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+	exportUsersPipelineID := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Export users to the CSV on File System",
 		Enabled: true,
 		Path:    exportedFilename,
@@ -93,7 +93,7 @@ func TestExportUsersToFile(t *testing.T) {
 			{Name: "gender", Type: types.String(), ReadOptional: true},
 		}),
 		Format: "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator": ",",
 		}),
 		OrderBy: "email",
@@ -120,7 +120,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/v1/pipelines/"+strconv.Itoa(exportUsersPipelineID), meergotester.PipelineToSet{
+		c.MustCall("PUT", "/v1/pipelines/"+strconv.Itoa(exportUsersPipelineID), krenalistester.PipelineToSet{
 			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -131,10 +131,10 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
 			Format: "csv",
-			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+			FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 				"separator": ",",
 			}),
-			Compression: meergotester.Compression(compression),
+			Compression: krenalistester.Compression(compression),
 			OrderBy:     "email",
 		}, nil)
 

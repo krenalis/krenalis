@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/test/testimages"
 
 	"github.com/testcontainers/testcontainers-go"
@@ -40,13 +40,13 @@ func TestAdmin(t *testing.T) {
 		t.Skip("Admin test skipped as KRENALIS_TEST_SKIP_ADMIN_TESTS is set to true")
 	}
 
-	fsTempDir := meergotester.NewTempStorage(t)
+	fsTempDir := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(fsTempDir.Root())
 	c.Start()
 	defer c.Stop()
@@ -95,7 +95,7 @@ func TestAdmin(t *testing.T) {
 
 	// Initialize the PostgreSQL database referenced in pipelines.
 	{
-		pool, err := meergotester.ConnectionPool(t.Context(), &meergotester.DBSettings{
+		pool, err := krenalistester.ConnectionPool(t.Context(), &krenalistester.DBSettings{
 			Host:     dbHost,
 			Port:     dbPort,
 			Username: dbUsername,

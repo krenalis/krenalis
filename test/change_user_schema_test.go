@@ -12,7 +12,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -22,7 +22,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -258,7 +258,7 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Create a primary source for the first property.
 	firstProperty := file.Schema.Properties().Names()[0]
-	primarySource := c.CreateDummy("Primary Source", meergotester.Source)
+	primarySource := c.CreateDummy("Primary Source", krenalistester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
 	c.AlterProfileSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()

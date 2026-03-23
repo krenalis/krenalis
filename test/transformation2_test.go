@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -20,15 +20,15 @@ func TestTransformation2(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Create a Dummy (source) connection.
-	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
+	dummy := c.CreateDummy("Dummy (source)", krenalistester.Source)
 
 	// Create a pipeline with a transformation function which imports users, then run it.
-	pipeline := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
+	pipeline := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -40,8 +40,8 @@ func TestTransformation2(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
-			Function: &meergotester.TransformationFunction{
+		Transformation: &krenalistester.Transformation{
+			Function: &krenalistester.TransformationFunction{
 				Language: "Python",
 				Source: `
 def transform(user: dict) -> dict:

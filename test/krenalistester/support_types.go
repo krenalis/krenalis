@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package meergotester
+package krenalistester
 
 import (
 	"bytes"
@@ -304,7 +304,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an meergotester.Target value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an krenalistester.Target value", v)
 	}
 	switch s {
 	case "Event":
@@ -314,7 +314,7 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	case "Group":
 		*at = TargetGroup
 	default:
-		return fmt.Errorf("json: invalid meergotester.Target: %s", s)
+		return fmt.Errorf("json: invalid krenalistester.Target: %s", s)
 	}
 	return nil
 }

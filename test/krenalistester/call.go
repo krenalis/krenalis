@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package meergotester
+package krenalistester
 
 import (
 	"bytes"

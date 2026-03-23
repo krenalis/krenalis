@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/meergo/analytics-go"
@@ -39,18 +39,18 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Create a connection that exports to Dummy
-	dummyID := c.CreateDummyWithSettings("Dummy", meergotester.Destination, meergotester.DummySettings{
+	dummyID := c.CreateDummyWithSettings("Dummy", krenalistester.Destination, krenalistester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
 	})
-	c.CreateEventPipeline(dummyID, "send_identity", meergotester.PipelineToSet{
+	c.CreateEventPipeline(dummyID, "send_identity", krenalistester.PipelineToSet{
 		Name:    "Send events",
 		Enabled: true,
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "'dummy@email.example.com'",
 			},

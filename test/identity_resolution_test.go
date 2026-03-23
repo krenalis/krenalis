@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -25,13 +25,13 @@ import (
 // running the import pipeline on the JSON.
 func TestIdentityResolution(t *testing.T) {
 
-	storage := meergotester.NewTempStorage(t)
+	storage := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
@@ -66,33 +66,33 @@ func TestIdentityResolution(t *testing.T) {
 	}
 
 	// Create the pipeline A.
-	pipelineA := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+	pipelineA := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:      "Pipeline A",
 		Enabled:   true,
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: mapping,
 		},
 		UserIDColumn:   "dummyId",
 		Format:         "json",
-		FormatSettings: meergotester.SettingsProperties(properties),
+		FormatSettings: krenalistester.SettingsProperties(properties),
 	})
 
 	// Create the pipeline B.
-	pipelineB := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+	pipelineB := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:      "Pipeline B",
 		Enabled:   true,
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: mapping,
 		},
 		UserIDColumn:   "dummyId",
 		Format:         "json",
-		FormatSettings: meergotester.SettingsProperties(properties),
+		FormatSettings: krenalistester.SettingsProperties(properties),
 	})
 
 	// Define a function "expectProfiles" which checks if the expected profile

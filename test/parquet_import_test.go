@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -31,7 +31,7 @@ func TestParquetImport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.PopulateProfileSchema(false)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
@@ -53,7 +53,7 @@ func TestParquetImport(t *testing.T) {
 
 	// Create a File System source connection, with a pipeline that imports from the Parquet file.
 	fs := c.CreateSourceFileSystem()
-	pipeline1 := c.CreatePipeline(fs, "User", meergotester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(fs, "User", krenalistester.PipelineToSet{
 		Name:    "Parquet",
 		Enabled: true,
 		Path:    "test.parquet",
@@ -73,8 +73,8 @@ func TestParquetImport(t *testing.T) {
 		// Define a transformation function that imports the Parquet row IDs in
 		// "parquet_id" (it is used for sorting the profiles before comparing them)
 		// and any other property into the JSON property "parquet_imported".
-		Transformation: &meergotester.Transformation{
-			Function: &meergotester.TransformationFunction{
+		Transformation: &krenalistester.Transformation{
+			Function: &krenalistester.TransformationFunction{
 				Language: "Python",
 				Source: strings.Join([]string{
 					`def transform(user: dict) -> dict:`,

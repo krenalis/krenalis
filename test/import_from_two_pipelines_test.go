@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -33,7 +33,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -45,7 +45,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	fsID := c.CreateSourceFileSystem()
 
 	// Create the first pipeline for the CSV for importing "email" and "name".
-	pipelineFirstName := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+	pipelineFirstName := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users' email and name from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -58,7 +58,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "name",
 				"email":      "email",
@@ -66,14 +66,14 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),
 	})
 
 	// Create the second pipeline for the CSV for importing "email" and "lastName".
-	pipelineLastName := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+	pipelineLastName := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users' email and lastName from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -86,7 +86,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"last_name": "lastname",
 				"email":     "email",
@@ -94,7 +94,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),

@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -17,7 +17,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -25,10 +25,10 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	// are no identifiers.
 	c.UpdateIdentityResolution(false, nil)
 
-	dummy := c.CreateDummy("Dummy", meergotester.Source)
+	dummy := c.CreateDummy("Dummy", krenalistester.Source)
 
 	// Import the "first_name" property from the first pipeline.
-	pipeline1 := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users (1)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -37,7 +37,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "firstName",
 			},
@@ -47,7 +47,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	// Import the "last_name" property from the second pipeline: this will create
 	// separated identities that refer to the same "identity" - from the API's
 	// point of view.
-	pipeline2 := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
+	pipeline2 := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users (2)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -56,7 +56,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"last_name": "lastName",
 			},

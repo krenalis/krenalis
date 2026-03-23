@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -18,21 +18,21 @@ func TestReimport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	c.UpdateIdentityResolution(false, nil)
 
 	// First of all, create a Dummy connection.
-	dummy := c.CreateDummy("Dummy", meergotester.Source)
+	dummy := c.CreateDummy("Dummy", krenalistester.Source)
 
 	// Create a pipeline that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the first name
 	//
-	dummyPipeline := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
+	dummyPipeline := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -43,7 +43,7 @@ func TestReimport(t *testing.T) {
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -82,7 +82,7 @@ func TestReimport(t *testing.T) {
 	// - the email
 	// - the last name (instead of the first name)
 	//
-	c.UpdatePipeline(dummyPipeline, meergotester.PipelineToSet{
+	c.UpdatePipeline(dummyPipeline, krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -93,7 +93,7 @@ func TestReimport(t *testing.T) {
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"last_name": "lastName",

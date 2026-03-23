@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -25,7 +25,7 @@ func Test_Identities(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -35,7 +35,7 @@ func Test_Identities(t *testing.T) {
 	fs1 := c.CreateSourceFileSystem()
 	fs2 := c.CreateSourceFileSystem()
 
-	pipeline1 := c.CreatePipeline(fs1, "User", meergotester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
 		Name:    "CSV 1",
 		Enabled: true,
 		Path:    "users1.csv",
@@ -46,20 +46,20 @@ func Test_Identities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),
 	})
 
-	pipeline2 := c.CreatePipeline(fs2, "User", meergotester.PipelineToSet{
+	pipeline2 := c.CreatePipeline(fs2, "User", krenalistester.PipelineToSet{
 		Name:    "CSV 2",
 		Enabled: true,
 		Path:    "users2.csv",
@@ -70,14 +70,14 @@ func Test_Identities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),

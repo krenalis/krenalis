@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 
 	"github.com/meergo/analytics-go"
 )
@@ -24,7 +24,7 @@ func TestEventsContext(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -38,7 +38,7 @@ func TestEventsContext(t *testing.T) {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		webhookEventWriteKey = keys[0]
-		c.CreatePipeline(webhookID, "Event", meergotester.PipelineToSet{
+		c.CreatePipeline(webhookID, "Event", krenalistester.PipelineToSet{
 			Name:    "Ingest events",
 			Enabled: true,
 		})

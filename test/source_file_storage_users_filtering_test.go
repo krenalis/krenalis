@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -24,23 +24,23 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
 	fs1 := c.CreateSourceFileSystem()
 
-	pipeline1 := c.CreatePipeline(fs1, "User", meergotester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
 		Name:    "CSV",
 		Enabled: true,
 		Path:    "users.csv",
-		Filter: &meergotester.Filter{
-			Logical: meergotester.OpAnd,
-			Conditions: []meergotester.FilterCondition{
+		Filter: &krenalistester.Filter{
+			Logical: krenalistester.OpAnd,
+			Conditions: []krenalistester.FilterCondition{
 				{
 					Property: "email",
-					Operator: meergotester.OpIsNot,
+					Operator: krenalistester.OpIsNot,
 					Values:   []string{"et@example.com"},
 				},
 			},
@@ -52,14 +52,14 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		UserIDColumn: "CSV_id",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),

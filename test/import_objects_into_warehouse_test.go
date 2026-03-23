@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -18,12 +18,12 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
-	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
+	dummy := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -36,8 +36,8 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 				{Name: "idfa", Type: types.String(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
-			Function: &meergotester.TransformationFunction{
+		Transformation: &krenalistester.Transformation{
+			Function: &krenalistester.TransformationFunction{
 				Language: "Python",
 				Source: `
 def transform(user: dict) -> dict:

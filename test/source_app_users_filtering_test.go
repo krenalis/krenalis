@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -17,21 +17,21 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Import users from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
-		Filter: &meergotester.Filter{
-			Logical: meergotester.OpAnd,
-			Conditions: []meergotester.FilterCondition{
+		Filter: &krenalistester.Filter{
+			Logical: krenalistester.OpAnd,
+			Conditions: []krenalistester.FilterCondition{
 				{
 					Property: "email",
-					Operator: meergotester.OpIsNot,
+					Operator: krenalistester.OpIsNot,
 					Values:   []string{"kdericut4@example.com"},
 				},
 			},
@@ -42,7 +42,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -32,7 +32,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.PopulateProfileSchema(false)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
@@ -137,7 +137,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		t.Run(test.path, func(t *testing.T) {
 
 			// Read the file.
-			_, gotSchema := c.File(fs, test.path, "parquet", "", meergotester.NoCompression, nil, 0)
+			_, gotSchema := c.File(fs, test.path, "parquet", "", krenalistester.NoCompression, nil, 0)
 			gotProperties := gotSchema.Properties().Slice()
 
 			// Validate the properties.

@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -17,7 +17,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -25,8 +25,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+		dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -37,7 +37,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",
@@ -50,8 +50,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Export the profiles to Dummy.
 	{
-		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", meergotester.PipelineToSet{
+		dummyDest := c.CreateDummy("Dummy (destination)", krenalistester.Destination)
+		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", krenalistester.PipelineToSet{
 			Name:    "Export users to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -61,13 +61,13 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "email", Type: types.String(), Nullable: true},
 				{Name: "lastName", Type: types.String(), Nullable: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"lastName": "email", // this is intended.
 				},
 			},
-			ExportMode: meergotester.CreateOrUpdate,
-			Matching: meergotester.Matching{
+			ExportMode: krenalistester.CreateOrUpdate,
+			Matching: krenalistester.Matching{
 				In:  "email",
 				Out: "email",
 			},
@@ -80,8 +80,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.CreateDummy("Dummy (source 2)", meergotester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+		dummySrc := c.CreateDummy("Dummy (source 2)", krenalistester.Source)
+		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -94,7 +94,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",

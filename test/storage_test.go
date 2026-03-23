@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -36,7 +36,7 @@ func TestStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -46,7 +46,7 @@ func TestStorage(t *testing.T) {
 
 	// Test the "/files/sheets" endpoint.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}
-	gotSheets := c.Sheets(storage, "file_with_3_sheets.xlsx", "excel", meergotester.NoCompression, json.Value("{}"))
+	gotSheets := c.Sheets(storage, "file_with_3_sheets.xlsx", "excel", krenalistester.NoCompression, json.Value("{}"))
 	if !reflect.DeepEqual(expectedSheets, gotSheets) {
 		t.Fatalf("expected sheets %#v, got %#v", expectedSheets, gotSheets)
 	}
@@ -62,10 +62,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	// Test the "/files" endpoint.
-	excelSettings := meergotester.JSONEncodeSettings(map[string]any{
+	excelSettings := krenalistester.JSONEncodeSettings(map[string]any{
 		"hasColumnNames": true,
 	})
-	records, schema := c.File(storage, "storage_users.xlsx", "excel", "Sheet1", meergotester.NoCompression, excelSettings, 100)
+	records, schema := c.File(storage, "storage_users.xlsx", "excel", "Sheet1", krenalistester.NoCompression, excelSettings, 100)
 
 	expectedRecords := []map[string]any{
 		{"customer_id": "1234", "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith"},

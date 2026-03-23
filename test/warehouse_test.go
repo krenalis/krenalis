@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -17,11 +17,11 @@ func TestWarehouse(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewMeergoInstance(t)
 	c.Start()
 	defer c.Stop()
 
-	settings := meergotester.PostgresWarehouseSettings()
+	settings := krenalistester.PostgresWarehouseSettings()
 
 	// Call the TestWorkspaceCreation method, checking that it returns the
 	// error that the data warehouse cannot be initialized (because it already
@@ -29,8 +29,8 @@ func TestWarehouse(t *testing.T) {
 	profileSchema := types.Object([]types.Property{
 		{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 	})
-	err := c.TestWorkspaceCreation("PostgreSQL", profileSchema, meergotester.UIPreferences{},
-		"PostgreSQL", settings, meergotester.Normal)
+	err := c.TestWorkspaceCreation("PostgreSQL", profileSchema, krenalistester.UIPreferences{},
+		"PostgreSQL", settings, krenalistester.Normal)
 	var gotErr string
 	if err != nil {
 		gotErr = err.Error()
