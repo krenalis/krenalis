@@ -4,8 +4,8 @@
 vendor/**/.gitattributes
 
 # Ignore the binaries produced by `go build`.
-meergo
-meergo.exe
+krenalis
+krenalis.exe
 
 # Since '.env' files are used for Meergo configuration and may contain critical
 # information, it's convenient to add this repository-wide exclusion rule here,
