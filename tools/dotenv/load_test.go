@@ -125,8 +125,8 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name:           "skip key with inner spaces",
-			envContent:     []byte("MEERGO SPACE\tKEY=value\n"),
-			expectedAbsent: []string{"MEERGO SPACE\tKEY"},
+			envContent:     []byte("KRENALIS SPACE\tKEY=value\n"),
+			expectedAbsent: []string{"KRENALIS SPACE\tKEY"},
 		},
 		{
 			name:           "skip value containing NUL",
