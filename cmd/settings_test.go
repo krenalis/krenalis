@@ -114,7 +114,7 @@ func TestParseSettings(t *testing.T) {
 		if s.TerminationDelay != 0 {
 			t.Errorf("expected default 0, got %s", s.TerminationDelay)
 		}
-		if sdkURL := "https://cdn.meergo.com/meergo.min.js"; s.JavaScriptSDKURL != sdkURL {
+		if sdkURL := "https://cdn.krenalis.com/meergo.min.js"; s.JavaScriptSDKURL != sdkURL {
 			t.Errorf("expected default %q, got %q", sdkURL, s.JavaScriptSDKURL)
 		}
 		if s.SentryTelemetryLevel != core.TelemetryLevelAll {

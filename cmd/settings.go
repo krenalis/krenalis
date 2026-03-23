@@ -46,7 +46,7 @@ func parseEnvSettings() (*Settings, error) {
 	if url, err := parseEnvURL("MEERGO_JAVASCRIPT_SDK_URL", 0); err != nil {
 		return nil, fmt.Errorf("MEERGO_JAVASCRIPT_SDK_URL must be a valid URL: %s", err)
 	} else if url == "" {
-		settings.JavaScriptSDKURL = "https://cdn.meergo.com/meergo.min.js"
+		settings.JavaScriptSDKURL = "https://cdn.krenalis.com/meergo.min.js"
 	} else {
 		settings.JavaScriptSDKURL = url
 	}

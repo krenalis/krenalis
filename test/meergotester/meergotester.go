@@ -369,7 +369,7 @@ func (c *Meergo) Start() {
 		// Meergo settings.
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Settings{}
-		setts.JavaScriptSDKURL = "https://cdn.meergo.com/meergo.min.js"
+		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/meergo.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.ExternalAssetsURLs = []string{"https://assets.krenalis.com/"}
 		setts.PotentialConnectorsURL = "https://assets.krenalis.com/admin/connectors/potentials.json"
