@@ -153,7 +153,7 @@ func TestExportAndImportParquet(t *testing.T) {
 	// It's useful that this is a physical file on disk (rather than a file in
 	// memory) because this allows you to read the file with external tools to
 	// debug it.
-	parquetFile, err := os.CreateTemp("", "meergo-parquet-test-*.parquet")
+	parquetFile, err := os.CreateTemp("", "krenalis-parquet-test-*.parquet")
 	if err != nil {
 		t.Fatal(err)
 	}

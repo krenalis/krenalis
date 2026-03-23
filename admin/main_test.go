@@ -48,7 +48,7 @@ func Test_Build(t *testing.T) {
 
 		if !bytes.Equal(nodeContent, vendorContent) {
 
-			tmpDir, err := os.MkdirTemp("", "meergo-test-build")
+			tmpDir, err := os.MkdirTemp("", "krenalis-test-build")
 			if err != nil {
 				t.Fatalf("cannot create temporary directory: %s", err)
 			}

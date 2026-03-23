@@ -21,7 +21,7 @@ import (
 func buildMeergo(t *testing.T, repo, meergoDir string) {
 
 	// Create a temporary directory.
-	tmpdir, err := os.MkdirTemp("", "meergo-build-for-tests-*")
+	tmpdir, err := os.MkdirTemp("", "krenalis-build-for-tests-*")
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
@@ -36,7 +36,7 @@ func buildMeergo(t *testing.T, repo, meergoDir string) {
 	}
 
 	// Initialize the Go module.
-	execCmd(t, tmpdir, "go", "mod", "init", "meergo")
+	execCmd(t, tmpdir, "go", "mod", "init", "krenalis")
 
 	// Edit the go.mod so that the local Meergo sources are used, both for Go
 	// and for the Admin.
@@ -112,7 +112,7 @@ func launchMeergo(ctx context.Context, env []string) error {
 	if err != nil {
 		return err
 	}
-	meergoDir := filepath.Join(repo, "test", "meergo-executable-for-tests")
+	meergoDir := filepath.Join(repo, "test", "krenalis-executable-for-tests")
 	cmd := exec.CommandContext(ctx, "./"+meergoExecFilename(), "-init-db-if-empty")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -123,7 +123,7 @@ func launchMeergo(ctx context.Context, env []string) error {
 
 func meergoExecFilename() string {
 	if runtime.GOOS == "windows" {
-		return "meergo.exe"
+		return "krenalis.exe"
 	}
-	return "meergo"
+	return "krenalis"
 }

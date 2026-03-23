@@ -145,7 +145,7 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 	}
 
 	// Create a temporary directory that will hold the function files.
-	transformationsTempDir, err := os.MkdirTemp("", "meergo-tests-python-function-*")
+	transformationsTempDir, err := os.MkdirTemp("", "krenalis-tests-python-function-*")
 	if err != nil {
 		t.Fatalf("cannot create temporary directory for Python function files: %s", err)
 	}
@@ -316,7 +316,7 @@ func (c *Meergo) Start() {
 	if launchMeergoExternally {
 		// Create, if necessary, the directory that will hold the Meergo
 		// executable (as well as the other files needed for the execution).
-		meergoDir := filepath.Join(c.repo, "test", "meergo-executable-for-tests")
+		meergoDir := filepath.Join(c.repo, "test", "krenalis-executable-for-tests")
 		err = os.Mkdir(meergoDir, 0755)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			c.t.Fatal(err)

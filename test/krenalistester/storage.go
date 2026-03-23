@@ -21,7 +21,7 @@ type TempStorage struct {
 // (eg. the test failed) the storage is kept; this can be useful to debug the
 // test.
 func NewTempStorage(t *testing.T) *TempStorage {
-	root, err := os.MkdirTemp("", "meergo-test-storage")
+	root, err := os.MkdirTemp("", "krenalis-test-storage")
 	if err != nil {
 		t.Fatal(err)
 	}
