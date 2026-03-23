@@ -430,14 +430,14 @@ func (c *Meergo) Start() {
 	for {
 		select {
 		case <-c.meergoRunning:
-			c.t.Fatalf("Meergo has exited")
+			c.t.Fatalf("Krenalis has exited")
 		default:
 		}
 		conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 		if err != nil {
 			attempts++
 			if attempts >= 30 {
-				c.t.Fatalf("cannot connect to Meergo on %q. No response after %d connections attempts, aborting test", addr, attempts)
+				c.t.Fatalf("cannot connect to Krenalis on %q. No response after %d connections attempts, aborting test", addr, attempts)
 			}
 			// Use an exponential backoff timeout.
 			timeout := time.Duration(math.Exp(float64(attempts-1))*5) * time.Millisecond
