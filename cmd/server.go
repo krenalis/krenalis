@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/cmd/mcp"
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/prometheus"
+	"github.com/krenalis/krenalis/cmd/mcp"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

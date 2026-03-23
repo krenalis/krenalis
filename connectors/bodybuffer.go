@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/meergo/meergo/tools/bufferpool"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/bufferpool"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // ContentEncoding represents supported HTTP body encodings.

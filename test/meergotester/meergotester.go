@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/cmd"
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/test/testimages"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/cmd"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"

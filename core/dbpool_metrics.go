@@ -5,7 +5,7 @@
 package core
 
 import (
-	"github.com/meergo/meergo/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/db"
 
 	"github.com/prometheus/client_golang/prometheus"
 )

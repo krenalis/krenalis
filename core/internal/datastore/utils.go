@@ -7,8 +7,8 @@ package datastore
 import (
 	"strings"
 
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // IsMetaProperty reports whether the given property name refers to a property

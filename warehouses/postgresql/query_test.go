@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Test_appendJoins renders join clauses and checks for errors on invalid join

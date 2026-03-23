@@ -7,7 +7,7 @@ package http
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/testconnector"
+	"github.com/krenalis/krenalis/core/testconnector"
 )
 
 func TestAbsolutePath(t *testing.T) {

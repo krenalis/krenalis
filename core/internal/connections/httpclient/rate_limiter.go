@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // rateLimiterState represents the rate limiter's state.

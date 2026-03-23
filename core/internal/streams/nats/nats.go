@@ -19,11 +19,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/core/natsopts"
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/core/natsopts"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"

@@ -13,14 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/test/testimages"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	// Import PostgreSQL warehouse platform package for Test_Records.
-	_ "github.com/meergo/meergo/warehouses/postgresql"
+	_ "github.com/krenalis/krenalis/warehouses/postgresql"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"

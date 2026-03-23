@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestExportZeroProfiles(t *testing.T) {

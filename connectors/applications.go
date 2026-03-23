@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // ErrEventTypeNotExist is returned by the EventSender.EventTypeSchema method if

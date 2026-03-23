@@ -7,7 +7,7 @@ package connectors
 import (
 	"reflect"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // SDKSpec represents an SDK connector specification.

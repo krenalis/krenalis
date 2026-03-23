@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"iter"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // iterator implements the connectors.Records interface to iterate over a

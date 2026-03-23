@@ -11,7 +11,7 @@ If the connector needs user configuration in the Admin console, implement:
 ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error)
 ```
 
-Where `json.Value` is `github.com/meergo/meergo/tools/json.Value` (not the standard library `encoding/json` package).
+Where `json.Value` is `github.com/krenalis/krenalis/tools/json.Value` (not the standard library `encoding/json` package).
 
 Rules:
 

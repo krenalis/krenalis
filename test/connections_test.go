@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/test/meergotester"
 )
 
 func TestConnections(t *testing.T) {

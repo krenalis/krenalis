@@ -7,8 +7,8 @@ package mcp
 import (
 	"strings"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // profileSchemaInfoForMCPClient takes the profile schema, a function that maps

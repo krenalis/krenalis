@@ -16,8 +16,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
 )
 
 type isZeroer interface {

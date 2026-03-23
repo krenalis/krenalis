@@ -14,10 +14,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonopts"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonopts"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // ErrUnknownName indicates that a JSON object member could not be

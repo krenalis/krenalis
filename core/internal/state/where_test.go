@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func Test_unmarshalWhere(t *testing.T) {

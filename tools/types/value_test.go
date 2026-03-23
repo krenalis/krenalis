@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 func Test_Decode(t *testing.T) {

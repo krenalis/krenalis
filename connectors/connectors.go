@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/google/uuid"
 )

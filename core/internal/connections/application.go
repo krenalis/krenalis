@@ -15,16 +15,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/connections/appwriter"
-	"github.com/meergo/meergo/core/internal/connections/httpclient"
-	"github.com/meergo/meergo/core/internal/filters"
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/connections/appwriter"
+	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
+	"github.com/krenalis/krenalis/core/internal/filters"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // InvalidEventError is returned by the PreviewSendEvent method when an event

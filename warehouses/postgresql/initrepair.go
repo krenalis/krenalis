@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // CanInitialize checks whether the data warehouse can be initialized.

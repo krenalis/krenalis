@@ -7,7 +7,7 @@ package connectors
 import (
 	"reflect"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // MessageBrokerSpec represents a message broker connector specification.

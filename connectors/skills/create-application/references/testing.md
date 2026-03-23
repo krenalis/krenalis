@@ -20,7 +20,7 @@ For connectors implementing users (`Records` + `Upsert`) and events (`SendEvents
 
 ## Prefer core/testconnector helpers
 
-For connector tests, prefer `github.com/meergo/meergo/core/testconnector` instead of ad-hoc test scaffolding.
+For connector tests, prefer `github.com/krenalis/krenalis/core/testconnector` instead of ad-hoc test scaffolding.
 
 Use these helpers as defaults:
 

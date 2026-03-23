@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/streams"
+	"github.com/krenalis/krenalis/core/internal/streams"
 )
 
 type EventWriter struct {

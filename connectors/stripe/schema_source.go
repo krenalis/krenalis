@@ -4,7 +4,7 @@
 
 package stripe
 
-import "github.com/meergo/meergo/tools/types"
+import "github.com/krenalis/krenalis/tools/types"
 
 // https://docs.stripe.com/api/customers/object.
 //

@@ -7,8 +7,8 @@ package cmd
 import (
 	"net/http"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 type connector struct {

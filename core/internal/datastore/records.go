@@ -11,9 +11,9 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Record represents a record.

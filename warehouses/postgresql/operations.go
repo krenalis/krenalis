@@ -11,8 +11,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 type warehouseOp string

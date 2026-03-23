@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/tools/prometheus"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/prometheus"
 )
 
 var maxQueuedIdentities = 1000

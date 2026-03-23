@@ -9,7 +9,7 @@ import (
 	_ "embed"
 	"strings"
 
-	"github.com/meergo/meergo/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/db"
 )
 
 // DatabaseIsEmpty reports whether the given PostgreSQL database is empty, that

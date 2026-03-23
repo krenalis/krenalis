@@ -7,7 +7,7 @@ package jsontext
 import (
 	"io"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal"
 )
 
 // Internal is for internal use only.

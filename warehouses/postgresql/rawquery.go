@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // RawQuery executes a query and returns the results and the number of columns

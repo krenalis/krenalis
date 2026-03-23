@@ -7,8 +7,8 @@ package connections
 import (
 	"context"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/state"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/state"
 )
 
 // messageBrokerConnection is the interface implemented by message broker

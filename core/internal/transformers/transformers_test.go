@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestSchemaSubset(t *testing.T) {

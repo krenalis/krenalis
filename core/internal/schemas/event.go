@@ -5,7 +5,7 @@
 package schemas
 
 import (
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // Event is the event schema.

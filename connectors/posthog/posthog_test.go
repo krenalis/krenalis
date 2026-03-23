@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/google/uuid"
 )

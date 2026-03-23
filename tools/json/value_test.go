@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/meergo/meergo/tools/decimal"
+	"github.com/krenalis/krenalis/tools/decimal"
 )
 
 func Test_Value(t *testing.T) {

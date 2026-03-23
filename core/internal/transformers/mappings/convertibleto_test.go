@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestConvertibleTo(t *testing.T) {

@@ -10,11 +10,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/datastore/diffschemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // AlterProfileSchema alters the profile schema and the primary sources of the

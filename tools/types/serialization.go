@@ -16,7 +16,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/decimal"
+	"github.com/krenalis/krenalis/tools/decimal"
 
 	"golang.org/x/text/unicode/norm"
 )

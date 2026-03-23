@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/snowflakedb/gosnowflake"
 )

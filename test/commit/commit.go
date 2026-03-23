@@ -286,7 +286,7 @@ func removeGoSum(repo, module string) {
 // runGoTestAdmin runs Admin tests via go test.
 func runGoTestAdmin() {
 	start := time.Now()
-	args := []string{"test", "-run", "^TestAdmin$", "github.com/meergo/meergo/test", "-count", "1", "-v"}
+	args := []string{"test", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test", "-count", "1", "-v"}
 	NewCmd("go", args...).Run()
 	elapsed := time.Since(start)
 	if elapsed < 2*time.Second {

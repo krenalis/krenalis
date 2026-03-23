@@ -11,10 +11,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	"github.com/meergo/meergo/tools/prometheus"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
+	"github.com/krenalis/krenalis/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // Purpose represents the purpose of a record transformation.

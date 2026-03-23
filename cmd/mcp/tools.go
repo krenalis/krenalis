@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strings"
 
-	_core "github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
+	_core "github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"

@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestTransformation2 tests that the transformation functions are behaving

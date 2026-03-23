@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonopts"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonopts"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // Reference encoding and time packages to assist pkgsite

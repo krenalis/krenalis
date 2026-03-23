@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestConvertToExternal(t *testing.T) {

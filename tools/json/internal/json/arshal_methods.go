@@ -10,11 +10,11 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonopts"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonopts"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 var errNonStringValue = errors.New("JSON value must be string type")

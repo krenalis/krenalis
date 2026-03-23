@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/mark3labs/mcp-go/server"
 )

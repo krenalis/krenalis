@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/test/meergotester"
 
 	"github.com/meergo/analytics-go"
 )

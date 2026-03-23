@@ -7,8 +7,8 @@ package datastore
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func Test_IsMetaProperty(t *testing.T) {

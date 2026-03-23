@@ -12,7 +12,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/dotenv"
+	"github.com/krenalis/krenalis/tools/dotenv"
 )
 
 var (

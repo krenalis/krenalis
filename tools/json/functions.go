@@ -13,8 +13,8 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/json/internal/json"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // ErrInvalidJSON is returned when an argument is not valid JSON, or is not

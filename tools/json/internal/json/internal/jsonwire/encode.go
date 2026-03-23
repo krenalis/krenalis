@@ -11,7 +11,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
 )
 
 // escapeASCII reports whether the ASCII character needs to be escaped.

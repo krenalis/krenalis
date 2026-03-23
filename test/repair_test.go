@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/test/meergotester"
 )
 
 func TestRepair(t *testing.T) {

@@ -17,10 +17,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/natsopts"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/core/natsopts"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // parseEnvSettings parses the settings from the process environment variables.

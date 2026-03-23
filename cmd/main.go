@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/meergo/meergo/core"
+	"github.com/krenalis/krenalis/core"
 
 	"github.com/getsentry/sentry-go"
 )

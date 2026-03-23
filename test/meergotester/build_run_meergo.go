@@ -40,7 +40,7 @@ func buildMeergo(t *testing.T, repo, meergoDir string) {
 
 	// Edit the go.mod so that the local Meergo sources are used, both for Go
 	// and for the Admin.
-	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/meergo/meergo="+repo)
+	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/krenalis/krenalis="+repo)
 
 	// Copy the file with the connectors and warehouse imports, replacing the
 	// package name "meergotester" with "main".

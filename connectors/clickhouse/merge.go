@@ -8,7 +8,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )

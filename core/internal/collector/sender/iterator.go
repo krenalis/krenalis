@@ -8,7 +8,7 @@ import (
 	"iter"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // iterator implements the connectors.Events interface to iterate over a

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestAdminInitialProfileSchema tests the correctness of the profile schema that is

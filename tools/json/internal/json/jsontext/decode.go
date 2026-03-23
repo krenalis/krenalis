@@ -9,9 +9,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonopts"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonopts"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
 )
 
 // NOTE: The logic for decoding is complicated by the fact that reading from

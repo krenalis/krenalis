@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/db"
-	json "github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/db"
+	json "github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/uuid"
 )

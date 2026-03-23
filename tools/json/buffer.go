@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"slices"
 
-	"github.com/meergo/meergo/tools/json/internal/json"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // Buffer embeds a bytes.Buffer, providing all its methods along with

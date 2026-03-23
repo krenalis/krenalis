@@ -5,7 +5,7 @@
 package sender
 
 import (
-	"github.com/meergo/meergo/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/prometheus"
 )
 
 // Queue available.

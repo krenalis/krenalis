@@ -1,4 +1,4 @@
-//go:generate go run github.com/meergo/meergo/admin
+//go:generate go run github.com/krenalis/krenalis/admin
 
 // To compile:
 //
@@ -33,36 +33,36 @@ import (
 	"embed"
 
 	// Import connectors.
-	_ "github.com/meergo/meergo/connectors/brevo"
-	_ "github.com/meergo/meergo/connectors/clickhouse"
-	_ "github.com/meergo/meergo/connectors/csv"
-	_ "github.com/meergo/meergo/connectors/excel"
-	_ "github.com/meergo/meergo/connectors/filesystem"
-	_ "github.com/meergo/meergo/connectors/googleanalytics"
-	_ "github.com/meergo/meergo/connectors/http"
-	_ "github.com/meergo/meergo/connectors/hubspot"
-	_ "github.com/meergo/meergo/connectors/json"
-	_ "github.com/meergo/meergo/connectors/klaviyo"
-	_ "github.com/meergo/meergo/connectors/mailchimp"
-	_ "github.com/meergo/meergo/connectors/mixpanel"
-	_ "github.com/meergo/meergo/connectors/mysql"
-	_ "github.com/meergo/meergo/connectors/parquet"
-	_ "github.com/meergo/meergo/connectors/postgresql"
-	_ "github.com/meergo/meergo/connectors/posthog"
-	_ "github.com/meergo/meergo/connectors/rudderstack"
-	_ "github.com/meergo/meergo/connectors/s3"
-	_ "github.com/meergo/meergo/connectors/sdk"
-	_ "github.com/meergo/meergo/connectors/segment"
-	_ "github.com/meergo/meergo/connectors/sftp"
-	_ "github.com/meergo/meergo/connectors/snowflake"
-	_ "github.com/meergo/meergo/connectors/stripe"
-	_ "github.com/meergo/meergo/connectors/webhook"
+	_ "github.com/krenalis/krenalis/connectors/brevo"
+	_ "github.com/krenalis/krenalis/connectors/clickhouse"
+	_ "github.com/krenalis/krenalis/connectors/csv"
+	_ "github.com/krenalis/krenalis/connectors/excel"
+	_ "github.com/krenalis/krenalis/connectors/filesystem"
+	_ "github.com/krenalis/krenalis/connectors/googleanalytics"
+	_ "github.com/krenalis/krenalis/connectors/http"
+	_ "github.com/krenalis/krenalis/connectors/hubspot"
+	_ "github.com/krenalis/krenalis/connectors/json"
+	_ "github.com/krenalis/krenalis/connectors/klaviyo"
+	_ "github.com/krenalis/krenalis/connectors/mailchimp"
+	_ "github.com/krenalis/krenalis/connectors/mixpanel"
+	_ "github.com/krenalis/krenalis/connectors/mysql"
+	_ "github.com/krenalis/krenalis/connectors/parquet"
+	_ "github.com/krenalis/krenalis/connectors/postgresql"
+	_ "github.com/krenalis/krenalis/connectors/posthog"
+	_ "github.com/krenalis/krenalis/connectors/rudderstack"
+	_ "github.com/krenalis/krenalis/connectors/s3"
+	_ "github.com/krenalis/krenalis/connectors/sdk"
+	_ "github.com/krenalis/krenalis/connectors/segment"
+	_ "github.com/krenalis/krenalis/connectors/sftp"
+	_ "github.com/krenalis/krenalis/connectors/snowflake"
+	_ "github.com/krenalis/krenalis/connectors/stripe"
+	_ "github.com/krenalis/krenalis/connectors/webhook"
 
 	// Import data warehouses.
-	_ "github.com/meergo/meergo/warehouses/postgresql"
-	_ "github.com/meergo/meergo/warehouses/snowflake"
+	_ "github.com/krenalis/krenalis/warehouses/postgresql"
+	_ "github.com/krenalis/krenalis/warehouses/snowflake"
 
-	"github.com/meergo/meergo/cmd"
+	"github.com/krenalis/krenalis/cmd"
 )
 
 //go:embed admin/assets/*

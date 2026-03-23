@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 type Token struct {

@@ -20,10 +20,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/tools/datacrypt"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/datacrypt"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 const maxIDLen = len("@9223372036854775807")

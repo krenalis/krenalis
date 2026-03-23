@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/google/go-cmp/cmp"
 )

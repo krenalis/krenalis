@@ -12,7 +12,7 @@ package segment
 import (
 	_ "embed"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 //go:embed documentation/overview.md

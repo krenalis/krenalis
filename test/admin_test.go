@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/test/testimages"
+	"github.com/krenalis/krenalis/test/meergotester"
+	"github.com/krenalis/krenalis/test/testimages"
 
 	"github.com/testcontainers/testcontainers-go"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"

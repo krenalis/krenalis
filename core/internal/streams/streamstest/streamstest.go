@@ -8,7 +8,7 @@ package streamstest
 import (
 	"context"
 
-	"github.com/meergo/meergo/core/internal/streams"
+	"github.com/krenalis/krenalis/core/internal/streams"
 )
 
 // Connection is a mock for streams.Connection.

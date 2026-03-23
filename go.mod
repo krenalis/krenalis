@@ -1,4 +1,4 @@
-module github.com/meergo/meergo
+module github.com/krenalis/krenalis
 
 // Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 // Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".

@@ -455,7 +455,7 @@ Your connector registers itself in `init()`, but that `init()` runs **only if th
 Therefore, after creating `connectors/<code>/...`, add a blank import in the main build entrypoint `main.go`:
 
 ```go
-_ "github.com/meergo/meergo/connectors/<code>"
+_ "github.com/krenalis/krenalis/connectors/<code>"
 ```
 
 (If your tests use a dedicated imports file, add the blank import there too so tests see the connector.)
@@ -506,7 +506,7 @@ Details and examples:
 
 ### Schemas and Meergo types (always relevant)
 
-Meergo schemas use `github.com/meergo/meergo/tools/types`.
+Meergo schemas use `github.com/krenalis/krenalis/tools/types`.
 
 Guiding rules:
 

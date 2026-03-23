@@ -15,8 +15,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/tools/backoff"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/backoff"
 )
 
 var debugElection = false

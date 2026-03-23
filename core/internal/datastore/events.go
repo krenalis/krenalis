@@ -5,9 +5,9 @@
 package datastore
 
 import (
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // EventColumnByPath returns the warehouses.Column corresponding to the property

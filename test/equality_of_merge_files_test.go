@@ -21,12 +21,12 @@ func TestEqualityOfMergeFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	file1 = bytes.Replace(file1, []byte("\t\"github.com/meergo/meergo/connectors\"\n"), nil, 1)
+	file1 = bytes.Replace(file1, []byte("\t\"github.com/krenalis/krenalis/connectors\"\n"), nil, 1)
 	file2, err := os.ReadFile("../warehouses/postgresql/merge.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	file2 = bytes.Replace(file2, []byte("\t\"github.com/meergo/meergo/warehouses\"\n"), nil, 1)
+	file2 = bytes.Replace(file2, []byte("\t\"github.com/krenalis/krenalis/warehouses\"\n"), nil, 1)
 	file2 = bytes.ReplaceAll(file2, []byte(`warehouses.`), []byte(`connectors.`))
 	if !bytes.Equal(file1, file2) {
 		t.Fatal("the content of 'connectors/postgresql/merge.go' differs from " +
@@ -40,12 +40,12 @@ func TestEqualityOfMergeFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	file1 = bytes.Replace(file1, []byte("\t\"github.com/meergo/meergo/connectors\"\n"), nil, 1)
+	file1 = bytes.Replace(file1, []byte("\t\"github.com/krenalis/krenalis/connectors\"\n"), nil, 1)
 	file2, err = os.ReadFile("../warehouses/snowflake/merge.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	file2 = bytes.Replace(file2, []byte("\t\"github.com/meergo/meergo/warehouses\"\n"), nil, 1)
+	file2 = bytes.Replace(file2, []byte("\t\"github.com/krenalis/krenalis/warehouses\"\n"), nil, 1)
 	file2 = bytes.ReplaceAll(file2, []byte(`warehouses.`), []byte(`connectors.`))
 	if !bytes.Equal(file1, file2) {
 		t.Fatal("the content of 'connectors/snowflake/merge.go' differs from " +

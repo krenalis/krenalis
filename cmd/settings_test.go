@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/natsopts"
-	"github.com/meergo/meergo/tools/dotenv"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/core/natsopts"
+	"github.com/krenalis/krenalis/tools/dotenv"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/nats-io/nkeys"
 )

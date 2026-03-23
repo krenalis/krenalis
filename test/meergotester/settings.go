@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 type TestsSettings struct {

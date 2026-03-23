@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/evanw/esbuild/pkg/api"
 )

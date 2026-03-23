@@ -1,6 +1,6 @@
 # Schemas and data types
 
-Meergo uses `github.com/meergo/meergo/tools/types` to represent schemas.
+Meergo uses `github.com/krenalis/krenalis/tools/types` to represent schemas.
 
 You will define:
 

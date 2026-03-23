@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // pgTypeInfo holds information about a PostgreSQL type, as read from the

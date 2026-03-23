@@ -7,9 +7,9 @@ package connections
 import (
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/tools/decimal"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/tools/decimal"
 )
 
 // receivedEvent implements the connectors.ReceivedEvent interface.
