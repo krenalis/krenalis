@@ -806,24 +806,24 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "invalid scheme rejected",
 				env:     "http://nats.example.com:4222",
-				wantErr: "MEERGO_NATS_URL scheme http is not allowed. Allowed schemes are nats, tls, ws, and wss",
+				wantErr: "KRENALIS_NATS_URL scheme http is not allowed. Allowed schemes are nats, tls, ws, and wss",
 			},
 			{
 				name:    "invalid URL rejected",
 				env:     "nats://[::1",
-				wantErr: "MEERGO_NATS_URL contains an invalid URL: \"nats://[::1\"",
+				wantErr: "KRENALIS_NATS_URL contains an invalid URL: \"nats://[::1\"",
 			},
 			{
 				name:    "mixed websocket and non-websocket rejected",
 				env:     "ws://n2:443, n1:4222",
-				wantErr: "MEERGO_NATS_URL contains both websocket and non-websocket URLs",
+				wantErr: "KRENALIS_NATS_URL contains both websocket and non-websocket URLs",
 			},
 		}
 
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
-				t.Setenv("MEERGO_NATS_URL", tc.env)
+				t.Setenv("KRENALIS_NATS_URL", tc.env)
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
 					if err == nil {
@@ -902,7 +902,7 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "password without user rejected",
 				envPass: "nats-pass",
-				wantErr: "MEERGO_NATS_USER must be set if MEERGO_NATS_PASSWORD is provided",
+				wantErr: "KRENALIS_NATS_USER must be set if KRENALIS_NATS_PASSWORD is provided",
 			},
 			{
 				name:      "token set",
@@ -917,7 +917,7 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "non-user NKey rejected",
 				envNKey: string(accountSeed),
-				wantErr: "MEERGO_NATS_NKEY value is not a user NKey",
+				wantErr: "KRENALIS_NATS_NKEY value is not a user NKey",
 			},
 		}
 
@@ -925,16 +925,16 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.envUser != "" {
-					t.Setenv("MEERGO_NATS_USER", tc.envUser)
+					t.Setenv("KRENALIS_NATS_USER", tc.envUser)
 				}
 				if tc.envPass != "" {
-					t.Setenv("MEERGO_NATS_PASSWORD", tc.envPass)
+					t.Setenv("KRENALIS_NATS_PASSWORD", tc.envPass)
 				}
 				if tc.envToken != "" {
-					t.Setenv("MEERGO_NATS_TOKEN", tc.envToken)
+					t.Setenv("KRENALIS_NATS_TOKEN", tc.envToken)
 				}
 				if tc.envNKey != "" {
-					t.Setenv("MEERGO_NATS_NKEY", tc.envNKey)
+					t.Setenv("KRENALIS_NATS_NKEY", tc.envNKey)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -994,7 +994,7 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "invalid storage rejected",
 				env:     "s3",
-				wantErr: "MEERGO_NATS_STORAGE value \"s3\" is not supported; expected file or memory",
+				wantErr: "KRENALIS_NATS_STORAGE value \"s3\" is not supported; expected file or memory",
 			},
 		}
 
@@ -1002,7 +1002,7 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
-					t.Setenv("MEERGO_NATS_STORAGE", tc.env)
+					t.Setenv("KRENALIS_NATS_STORAGE", tc.env)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -1064,17 +1064,17 @@ func TestParseSettings(t *testing.T) {
 			{
 				name:    "replicas 0 rejected",
 				env:     "0",
-				wantErr: "MEERGO_NATS_REPLICAS value \"0\" is not supported; expected 1, 2, 3, 4, or 5",
+				wantErr: "KRENALIS_NATS_REPLICAS value \"0\" is not supported; expected 1, 2, 3, 4, or 5",
 			},
 			{
 				name:    "replicas 6 rejected",
 				env:     "6",
-				wantErr: "MEERGO_NATS_REPLICAS value \"6\" is not supported; expected 1, 2, 3, 4, or 5",
+				wantErr: "KRENALIS_NATS_REPLICAS value \"6\" is not supported; expected 1, 2, 3, 4, or 5",
 			},
 			{
 				name:    "replicas text rejected",
 				env:     "two",
-				wantErr: "MEERGO_NATS_REPLICAS value \"two\" is not supported; expected 1, 2, 3, 4, or 5",
+				wantErr: "KRENALIS_NATS_REPLICAS value \"two\" is not supported; expected 1, 2, 3, 4, or 5",
 			},
 		}
 
@@ -1082,7 +1082,7 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
-					t.Setenv("MEERGO_NATS_REPLICAS", tc.env)
+					t.Setenv("KRENALIS_NATS_REPLICAS", tc.env)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {
@@ -1132,12 +1132,12 @@ func TestParseSettings(t *testing.T) {
 				name:    "compression with memory storage rejected",
 				env:     "s2",
 				storage: "memory",
-				wantErr: "MEERGO_NATS_COMPRESSION can be set only when using file storage",
+				wantErr: "KRENALIS_NATS_COMPRESSION can be set only when using file storage",
 			},
 			{
 				name:    "invalid compression rejected",
 				env:     "gzip",
-				wantErr: "MEERGO_NATS_COMPRESSION value \"gzip\" is not supported; expected s2",
+				wantErr: "KRENALIS_NATS_COMPRESSION value \"gzip\" is not supported; expected s2",
 			},
 		}
 
@@ -1145,10 +1145,10 @@ func TestParseSettings(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				setBaseline(t)
 				if tc.env != "" {
-					t.Setenv("MEERGO_NATS_COMPRESSION", tc.env)
+					t.Setenv("KRENALIS_NATS_COMPRESSION", tc.env)
 				}
 				if tc.storage != "" {
-					t.Setenv("MEERGO_NATS_STORAGE", tc.storage)
+					t.Setenv("KRENALIS_NATS_STORAGE", tc.storage)
 				}
 				s, err := parseEnvSettings()
 				if tc.wantErr != "" {

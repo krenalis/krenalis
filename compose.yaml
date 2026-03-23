@@ -25,9 +25,9 @@ services:
       KRENALIS_DB_USERNAME: meergo
       KRENALIS_DB_PASSWORD: meergo
       KRENALIS_DB_DATABASE: meergo
-      MEERGO_NATS_URL: nats://nats:4222
-      MEERGO_NATS_USER: ruser
-      MEERGO_NATS_PASSWORD: T0pS3cr3t
+      KRENALIS_NATS_URL: nats://nats:4222
+      KRENALIS_NATS_USER: ruser
+      KRENALIS_NATS_PASSWORD: T0pS3cr3t
       KRENALIS_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
       KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/meergo/transformation-functions

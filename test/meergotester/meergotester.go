@@ -347,9 +347,9 @@ func (c *Meergo) Start() {
 			"KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
 			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
-			fmt.Sprintf("MEERGO_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
-			"MEERGO_NATS_USER=" + testsSettings.NATS.User,
-			"MEERGO_NATS_PASSWORD=" + testsSettings.NATS.Password,
+			fmt.Sprintf("KRENALIS_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
+			"KRENALIS_NATS_USER=" + testsSettings.NATS.User,
+			"KRENALIS_NATS_PASSWORD=" + testsSettings.NATS.Password,
 		}...)
 		if !meergoAlreadyBuilt {
 			buildMeergo(c.t, c.repo, meergoDir)

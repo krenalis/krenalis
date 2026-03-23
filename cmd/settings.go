@@ -237,7 +237,7 @@ func parseEnvSettings() (*Settings, error) {
 		settings.DB.MaxConnections = int32(maxConn)
 	}
 
-	if s := envVars.Get("MEERGO_NATS_URL"); s == "" {
+	if s := envVars.Get("KRENALIS_NATS_URL"); s == "" {
 		settings.NATS.Servers = []string{"nats://127.0.0.1:4222"}
 	} else {
 		var hasWS bool
@@ -251,7 +251,7 @@ func parseEnvSettings() (*Settings, error) {
 			if strings.Contains(entry, "://") {
 				u, err := url.Parse(entry)
 				if err != nil {
-					return nil, fmt.Errorf("MEERGO_NATS_URL contains an invalid URL: %q", entry)
+					return nil, fmt.Errorf("KRENALIS_NATS_URL contains an invalid URL: %q", entry)
 				}
 				switch u.Scheme {
 				case "nats", "tls":
@@ -259,64 +259,64 @@ func parseEnvSettings() (*Settings, error) {
 				case "ws", "wss":
 					hasWS = true
 				default:
-					return nil, fmt.Errorf("MEERGO_NATS_URL scheme %s is not allowed. Allowed schemes are nats, tls, ws, and wss", u.Scheme)
+					return nil, fmt.Errorf("KRENALIS_NATS_URL scheme %s is not allowed. Allowed schemes are nats, tls, ws, and wss", u.Scheme)
 				}
 			} else {
 				if _, err := url.Parse("nats://" + entry); err != nil {
-					return nil, fmt.Errorf("MEERGO_NATS_URL contains an invalid URL: %q", entry)
+					return nil, fmt.Errorf("KRENALIS_NATS_URL contains an invalid URL: %q", entry)
 				}
 				hasNonWS = true
 			}
 			if hasWS && hasNonWS {
-				return nil, fmt.Errorf("MEERGO_NATS_URL contains both websocket and non-websocket URLs")
+				return nil, fmt.Errorf("KRENALIS_NATS_URL contains both websocket and non-websocket URLs")
 			}
 			settings.NATS.Servers = append(settings.NATS.Servers, entry)
 		}
 		if len(settings.NATS.Servers) == 0 {
-			return nil, fmt.Errorf("MEERGO_NATS_URL does not contain URLs")
+			return nil, fmt.Errorf("KRENALIS_NATS_URL does not contain URLs")
 		}
 	}
-	settings.NATS.User = envVars.Get("MEERGO_NATS_USER")
-	if pw := envVars.Get("MEERGO_NATS_PASSWORD"); pw != "" {
+	settings.NATS.User = envVars.Get("KRENALIS_NATS_USER")
+	if pw := envVars.Get("KRENALIS_NATS_PASSWORD"); pw != "" {
 		if settings.NATS.User == "" {
-			return nil, fmt.Errorf("MEERGO_NATS_USER must be set if MEERGO_NATS_PASSWORD is provided")
+			return nil, fmt.Errorf("KRENALIS_NATS_USER must be set if KRENALIS_NATS_PASSWORD is provided")
 		}
 		settings.NATS.Password = pw
 	}
-	settings.NATS.Token = envVars.Get("MEERGO_NATS_TOKEN")
-	if nkey := envVars.Get("MEERGO_NATS_NKEY"); nkey != "" {
+	settings.NATS.Token = envVars.Get("KRENALIS_NATS_TOKEN")
+	if nkey := envVars.Get("KRENALIS_NATS_NKEY"); nkey != "" {
 		prefix, seed, err := natsopts.DecodeSeed([]byte(nkey))
 		if err != nil || prefix != natsopts.PrefixByteUser || len(seed) != ed25519.SeedSize {
-			return nil, fmt.Errorf("MEERGO_NATS_NKEY value is not a user NKey")
+			return nil, fmt.Errorf("KRENALIS_NATS_NKEY value is not a user NKey")
 		}
 		settings.NATS.NKey = ed25519.NewKeyFromSeed(seed)
 	}
-	switch storage := envVars.Get("MEERGO_NATS_STORAGE"); strings.ToLower(storage) {
+	switch storage := envVars.Get("KRENALIS_NATS_STORAGE"); strings.ToLower(storage) {
 	case "", "file":
 		settings.NATS.Storage = natsopts.FileStorage
 	case "memory":
 		settings.NATS.Storage = natsopts.MemoryStorage
 	default:
-		return nil, fmt.Errorf("MEERGO_NATS_STORAGE value %q is not supported; expected file or memory", storage)
+		return nil, fmt.Errorf("KRENALIS_NATS_STORAGE value %q is not supported; expected file or memory", storage)
 	}
-	switch replicas := envVars.Get("MEERGO_NATS_REPLICAS"); replicas {
+	switch replicas := envVars.Get("KRENALIS_NATS_REPLICAS"); replicas {
 	case "", "1":
 		settings.NATS.Replicas = 1
 	case "2", "3", "4", "5":
 		settings.NATS.Replicas = int(replicas[0] - '0')
 	default:
-		return nil, fmt.Errorf("MEERGO_NATS_REPLICAS value %q is not supported; expected 1, 2, 3, 4, or 5", replicas)
+		return nil, fmt.Errorf("KRENALIS_NATS_REPLICAS value %q is not supported; expected 1, 2, 3, 4, or 5", replicas)
 	}
-	switch compression := envVars.Get("MEERGO_NATS_COMPRESSION"); strings.ToLower(compression) {
+	switch compression := envVars.Get("KRENALIS_NATS_COMPRESSION"); strings.ToLower(compression) {
 	case "":
 		settings.NATS.Compression = natsopts.NoCompression
 	case "s2":
 		settings.NATS.Compression = natsopts.S2Compression
 	default:
-		return nil, fmt.Errorf("MEERGO_NATS_COMPRESSION value %q is not supported; expected s2", compression)
+		return nil, fmt.Errorf("KRENALIS_NATS_COMPRESSION value %q is not supported; expected s2", compression)
 	}
 	if settings.NATS.Compression != natsopts.NoCompression && settings.NATS.Storage != natsopts.FileStorage {
-		return nil, errors.New("MEERGO_NATS_COMPRESSION can be set only when using file storage")
+		return nil, errors.New("KRENALIS_NATS_COMPRESSION can be set only when using file storage")
 	}
 
 	settings.InviteMembersViaEmail, err = boolEnvVar(envVars.Get("KRENALIS_INVITE_MEMBERS_VIA_EMAIL"), false)
