@@ -165,7 +165,7 @@ func (c *Meergo) PopulateProfileSchema(populate bool) {
 }
 
 // SetFileSystemRoot sets the root of the File System connections; the value set
-// here will be passed to Meergo via the MEERGO_CONNECTOR_FILESYSTEM_ROOT
+// here will be passed to Meergo via the KRENALIS_CONNECTOR_FILESYSTEM_ROOT
 // environment variable.
 func (c *Meergo) SetFileSystemRoot(root string) {
 	c.fileSystemRoot = root
@@ -346,7 +346,7 @@ func (c *Meergo) Start() {
 			"KRENALIS_TRANSFORMERS_PROVIDER=local",
 			"KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
-			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
+			"KRENALIS_CONNECTOR_FILESYSTEM_ROOT=" + c.fileSystemRoot,
 			fmt.Sprintf("KRENALIS_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
 			"KRENALIS_NATS_USER=" + testsSettings.NATS.User,
 			"KRENALIS_NATS_PASSWORD=" + testsSettings.NATS.Password,
@@ -388,7 +388,7 @@ func (c *Meergo) Start() {
 		setts.NATS.Password = testsSettings.NATS.Password
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = c.transformationsTempDir
-		err := os.Setenv("MEERGO_CONNECTOR_FILESYSTEM_ROOT", c.fileSystemRoot)
+		err := os.Setenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT", c.fileSystemRoot)
 		if err != nil {
 			c.t.Fatal(err)
 		}
