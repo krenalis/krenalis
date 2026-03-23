@@ -56,9 +56,9 @@ func GetEnvVars() (*EnvVars, error) {
 	}
 
 	// Ensure that all the environment variables whose name starts with
-	// "MEERGO_" have values which contain only valid UTF-8 characters.
+	// "KRENALIS_" have values which contain only valid UTF-8 characters.
 	for _, v := range os.Environ() {
-		if strings.HasPrefix(v, "MEERGO_") {
+		if strings.HasPrefix(v, "KRENALIS_") {
 			key, value, _ := strings.Cut(v, "=")
 			if !utf8.ValidString(value) {
 				return nil, fmt.Errorf("the environment variable %q contains a value which is not UTF-8 valid", key)
@@ -78,10 +78,10 @@ type EnvVars struct{}
 // If the variable is not present, this method returns the empty string.
 // It is guaranteed that the returned value contains only UTF-8 valid
 // characters.
-// If key does not start with "MEERGO_", this method panics.
+// If key does not start with "KRENALIS_", this method panics.
 func (env *EnvVars) Get(key string) string {
-	if !strings.HasPrefix(key, "MEERGO_") {
-		panic("EnvVars.Get: key must start with MEERGO_")
+	if !strings.HasPrefix(key, "KRENALIS_") {
+		panic("EnvVars.Get: key must start with KRENALIS_")
 	}
 	return os.Getenv(key)
 }
@@ -90,10 +90,10 @@ func (env *EnvVars) Get(key string) string {
 // key. If the variable is present, it returns its value and true; otherwise, it
 // returns an empty string and false. It is guaranteed that the returned value
 // contains only valid UTF-8 characters.
-// If key does not start with "MEERGO_", this method panics.
+// If key does not start with "KRENALIS_", this method panics.
 func (env *EnvVars) Lookup(key string) (string, bool) {
-	if !strings.HasPrefix(key, "MEERGO_") {
-		panic("EnvVars.Lookup: key must start with MEERGO_")
+	if !strings.HasPrefix(key, "KRENALIS_") {
+		panic("EnvVars.Lookup: key must start with KRENALIS_")
 	}
 	return os.LookupEnv(key)
 }

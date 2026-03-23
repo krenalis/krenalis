@@ -47,23 +47,23 @@ func TestLoad(t *testing.T) {
 		buf.WriteString("# Leading comment.\n")
 		buf.WriteString("   # Comment with leading spaces.\n")
 		buf.WriteString("\r\n")
-		buf.WriteString("MEERGO_SIMPLE=abc\n")
-		buf.WriteString("  MEERGO_SPACED =   value  # inline comment with # symbols # should be trimmed.\n")
-		buf.WriteString("export MEERGO_EXPORT=exported\n")
-		buf.WriteString(" export\t MEERGO_EXPORT_2 \t=exported_2\n")
-		buf.WriteString("MEERGO_TRAIL=value  \n")
-		buf.WriteString("MEERGO_HASH=value#literal\n")
-		buf.WriteString("MEERGO_CR=carriage\r\n")
-		buf.WriteString("MEERGO_DOUBLE=\"line1\\nline2\\t\\\"quote\\\"\\\\slash\"\n")
-		buf.WriteString("MEERGO_QHASH=\"foo # bar\"\n")
-		buf.WriteString("MEERGO_QCOMMENT=\"value\" # comment\n")
-		buf.WriteString("MEERGO_SINGLE='don\\'t'\n")
-		buf.WriteString("MEERGO_NULL=good\n")
+		buf.WriteString("KRENALIS_SIMPLE=abc\n")
+		buf.WriteString("  KRENALIS_SPACED =   value  # inline comment with # symbols # should be trimmed.\n")
+		buf.WriteString("export KRENALIS_EXPORT=exported\n")
+		buf.WriteString(" export\t KRENALIS_EXPORT_2 \t=exported_2\n")
+		buf.WriteString("KRENALIS_TRAIL=value  \n")
+		buf.WriteString("KRENALIS_HASH=value#literal\n")
+		buf.WriteString("KRENALIS_CR=carriage\r\n")
+		buf.WriteString("KRENALIS_DOUBLE=\"line1\\nline2\\t\\\"quote\\\"\\\\slash\"\n")
+		buf.WriteString("KRENALIS_QHASH=\"foo # bar\"\n")
+		buf.WriteString("KRENALIS_QCOMMENT=\"value\" # comment\n")
+		buf.WriteString("KRENALIS_SINGLE='don\\'t'\n")
+		buf.WriteString("KRENALIS_NULL=good\n")
 		buf.WriteByte(0)
 		buf.WriteString("bad\n")
-		buf.WriteString("MEERGO_NO_EQUALS\n")
+		buf.WriteString("KRENALIS_NO_EQUALS\n")
 		buf.WriteString("=should_be_skipped\n")
-		buf.WriteString("MEERGO_LAST=value_with_no_newline")
+		buf.WriteString("KRENALIS_LAST=value_with_no_newline")
 		return buf.Bytes()
 	}()
 
@@ -83,45 +83,45 @@ func TestLoad(t *testing.T) {
 		{
 			name:     "missing file",
 			skipFile: true,
-			preEnv:   map[string]string{"MEERGO_BASELINE": "preserve"},
-			expected: map[string]string{"MEERGO_BASELINE": "preserve"},
+			preEnv:   map[string]string{"KRENALIS_BASELINE": "preserve"},
+			expected: map[string]string{"KRENALIS_BASELINE": "preserve"},
 		},
 		{
 			name:       "happy path",
 			envContent: happyContent,
 			expected: map[string]string{
-				"MEERGO_SIMPLE":   "abc",
-				"MEERGO_SPACED":   "value",
-				"MEERGO_EXPORT":   "exported",
-				"MEERGO_EXPORT_2": "exported_2",
-				"MEERGO_TRAIL":    "value  ",
-				"MEERGO_HASH":     "value#literal",
-				"MEERGO_CR":       "carriage",
-				"MEERGO_DOUBLE":   "line1\nline2\t\"quote\"\\slash",
-				"MEERGO_QHASH":    "foo # bar",
-				"MEERGO_SINGLE":   "don't",
-				"MEERGO_QCOMMENT": "value",
-				"MEERGO_LAST":     "value_with_no_newline",
+				"KRENALIS_SIMPLE":   "abc",
+				"KRENALIS_SPACED":   "value",
+				"KRENALIS_EXPORT":   "exported",
+				"KRENALIS_EXPORT_2": "exported_2",
+				"KRENALIS_TRAIL":    "value  ",
+				"KRENALIS_HASH":     "value#literal",
+				"KRENALIS_CR":       "carriage",
+				"KRENALIS_DOUBLE":   "line1\nline2\t\"quote\"\\slash",
+				"KRENALIS_QHASH":    "foo # bar",
+				"KRENALIS_SINGLE":   "don't",
+				"KRENALIS_QCOMMENT": "value",
+				"KRENALIS_LAST":     "value_with_no_newline",
 			},
 			expectedAbsent: []string{
-				"MEERGO_NO_EQUALS",
+				"KRENALIS_NO_EQUALS",
 			},
 		},
 		{
 			name:       "override existing variable",
-			envContent: []byte("MEERGO_OVERRIDE=from_file\n"),
-			preEnv:     map[string]string{"MEERGO_OVERRIDE": "from_env"},
-			expected:   map[string]string{"MEERGO_OVERRIDE": "from_file"},
+			envContent: []byte("KRENALIS_OVERRIDE=from_file\n"),
+			preEnv:     map[string]string{"KRENALIS_OVERRIDE": "from_env"},
+			expected:   map[string]string{"KRENALIS_OVERRIDE": "from_file"},
 		},
 		{
 			name:       "utf8 bom stripped",
-			envContent: append([]byte("\xEF\xBB\xBF"), []byte("MEERGO_BOM=value\n")...),
-			expected:   map[string]string{"MEERGO_BOM": "value"},
+			envContent: append([]byte("\xEF\xBB\xBF"), []byte("KRENALIS_BOM=value\n")...),
+			expected:   map[string]string{"KRENALIS_BOM": "value"},
 		},
 		{
 			name:           "skip key containing NUL",
-			envContent:     []byte("MEERGO_ZERO\x00KEY=value\n"),
-			expectedAbsent: []string{"MEERGO_ZERO\x00KEY"},
+			envContent:     []byte("KRENALIS_ZERO\x00KEY=value\n"),
+			expectedAbsent: []string{"KRENALIS_ZERO\x00KEY"},
 		},
 		{
 			name:           "skip key with inner spaces",
@@ -130,14 +130,14 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name:           "skip value containing NUL",
-			envContent:     []byte("MEERGO_KEY=zero\x00value\n"),
-			expectedAbsent: []string{"MEERGO_KEY=zero\x00value"},
+			envContent:     []byte("KRENALIS_KEY=zero\x00value\n"),
+			expectedAbsent: []string{"KRENALIS_KEY=zero\x00value"},
 		},
 		{
 			name:            "file without read permission",
-			envContent:      []byte("MEERGO_FORBIDDEN=value\n"),
-			preEnv:          map[string]string{"MEERGO_FORBIDDEN": "from_env"},
-			expected:        map[string]string{"MEERGO_FORBIDDEN": "from_env"},
+			envContent:      []byte("KRENALIS_FORBIDDEN=value\n"),
+			preEnv:          map[string]string{"KRENALIS_FORBIDDEN": "from_env"},
+			expected:        map[string]string{"KRENALIS_FORBIDDEN": "from_env"},
 			noReadPerm:      true,
 			wantErr:         true,
 			expectedErrPart: "cannot open",
@@ -145,66 +145,66 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name:            "invalid escape sequence",
-			envContent:      []byte("MEERGO_BAD=\"bad\\q\"\n"),
-			preEnv:          map[string]string{"MEERGO_BAD": "from_env"},
-			expected:        map[string]string{"MEERGO_BAD": "from_env"},
+			envContent:      []byte("KRENALIS_BAD=\"bad\\q\"\n"),
+			preEnv:          map[string]string{"KRENALIS_BAD": "from_env"},
+			expected:        map[string]string{"KRENALIS_BAD": "from_env"},
 			expectedAbsent:  nil,
 			wantErr:         true,
 			expectedErrPart: "invalid escape sequence",
 		},
 		{
 			name:            "unterminated double quoted value",
-			envContent:      []byte("MEERGO_OPEN=\"missing\n"),
-			preEnv:          map[string]string{"MEERGO_OPEN": "from_env"},
-			expected:        map[string]string{"MEERGO_OPEN": "from_env"},
+			envContent:      []byte("KRENALIS_OPEN=\"missing\n"),
+			preEnv:          map[string]string{"KRENALIS_OPEN": "from_env"},
+			expected:        map[string]string{"KRENALIS_OPEN": "from_env"},
 			wantErr:         true,
 			expectedErrPart: "unterminated quoted value",
 		},
 		{
 			name:            "text after quoted value",
-			envContent:      []byte("MEERGO_TRAIL_BAD=\"value\"not-comment\n"),
-			preEnv:          map[string]string{"MEERGO_TRAIL_BAD": "from_env"},
-			expected:        map[string]string{"MEERGO_TRAIL_BAD": "from_env"},
+			envContent:      []byte("KRENALIS_TRAIL_BAD=\"value\"not-comment\n"),
+			preEnv:          map[string]string{"KRENALIS_TRAIL_BAD": "from_env"},
+			expected:        map[string]string{"KRENALIS_TRAIL_BAD": "from_env"},
 			wantErr:         true,
 			expectedErrPart: "characters after the closing quote",
 		},
 		{
 			name:            "quoted comment missing space",
-			envContent:      []byte("MEERGO_QUOTED_FAIL=\"value\"#comment\n"),
-			preEnv:          map[string]string{"MEERGO_QUOTED_FAIL": "from_env"},
-			expected:        map[string]string{"MEERGO_QUOTED_FAIL": "from_env"},
+			envContent:      []byte("KRENALIS_QUOTED_FAIL=\"value\"#comment\n"),
+			preEnv:          map[string]string{"KRENALIS_QUOTED_FAIL": "from_env"},
+			expected:        map[string]string{"KRENALIS_QUOTED_FAIL": "from_env"},
 			wantErr:         true,
 			expectedErrPart: "characters after the closing quote",
 		},
 		{
 			name:            "non regular file",
 			dotEnvIsDir:     true,
-			preEnv:          map[string]string{"MEERGO_DIR": "from_env"},
-			expected:        map[string]string{"MEERGO_DIR": "from_env"},
+			preEnv:          map[string]string{"KRENALIS_DIR": "from_env"},
+			expected:        map[string]string{"KRENALIS_DIR": "from_env"},
 			wantErr:         true,
 			expectedErrPart: "file is not a regular file",
 		},
 		{
 			name: "file exceeds max size",
 			envContent: append(
-				append([]byte("MEERGO_BIG="), bytes.Repeat([]byte{'x'}, maxEnvFileSize+1)...),
+				append([]byte("KRENALIS_BIG="), bytes.Repeat([]byte{'x'}, maxEnvFileSize+1)...),
 				'\n',
 			),
-			preEnv:          map[string]string{"MEERGO_BIG": "from_env"},
-			expected:        map[string]string{"MEERGO_BIG": "from_env"},
+			preEnv:          map[string]string{"KRENALIS_BIG": "from_env"},
+			expected:        map[string]string{"KRENALIS_BIG": "from_env"},
 			wantErr:         true,
 			expectedErrPart: "file size exceeds 10 MiB limit",
 		},
 		{
 			name: "partial success before error",
 			envContent: []byte(strings.Join([]string{
-				"MEERGO_OK=good",
-				"MEERGO_FAIL=\"bad\\q\"",
+				"KRENALIS_OK=good",
+				"KRENALIS_FAIL=\"bad\\q\"",
 				"",
 			}, "\n")),
-			expected: map[string]string{"MEERGO_OK": "good"},
+			expected: map[string]string{"KRENALIS_OK": "good"},
 			expectedAbsent: []string{
-				"MEERGO_FAIL",
+				"KRENALIS_FAIL",
 			},
 			wantErr:         true,
 			expectedErrPart: "invalid escape sequence",
