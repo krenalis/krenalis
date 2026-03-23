@@ -20,7 +20,7 @@ func TestJavaScriptSDKEventURL(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	const expectedJavaScriptSDKURL = "https://cdn.krenalis.com/meergo.min.js"
+	const expectedJavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 	gotJavaScriptSDKURL := c.JavaScriptSDKURL()
 	if gotJavaScriptSDKURL != expectedJavaScriptSDKURL {
 		t.Fatalf("expected JavaScript SDK URL: %q, got: %q", expectedJavaScriptSDKURL, gotJavaScriptSDKURL)
