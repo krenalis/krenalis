@@ -17,7 +17,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 

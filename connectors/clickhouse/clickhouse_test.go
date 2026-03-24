@@ -33,8 +33,8 @@ func Test_Merge_Query(t *testing.T) {
 	cols := []struct {
 		DriverType  string
 		DriverValue any
-		MeergoType  types.Type
-		MeergoValue any
+		KrenalisType  types.Type
+		KrenalisValue any
 	}{
 		{"Bool", true, types.Boolean(), true},
 		{"Int8", int8(-23), types.Int(8), -23},
@@ -74,7 +74,7 @@ func Test_Merge_Query(t *testing.T) {
 	for i, c := range cols {
 		table.Columns[i] = connectors.Column{
 			Name:     fmt.Sprintf("c%d", i),
-			Type:     c.MeergoType,
+			Type:     c.KrenalisType,
 			Nullable: strings.HasPrefix(c.DriverType, "Nullable("),
 		}
 	}
@@ -160,7 +160,7 @@ func Test_Merge_Query(t *testing.T) {
 	}()
 	row := make([]any, len(cols))
 	for i, c := range cols {
-		row[i] = c.MeergoValue
+		row[i] = c.KrenalisValue
 	}
 	err = connector.Merge(context.Background(), table, [][]any{row})
 	if err != nil {
@@ -214,7 +214,7 @@ func Test_Merge_Query(t *testing.T) {
 			case fmt.Stringer:
 				// Normalize the decimal type in the same way as the normalization does.
 				// This avoids the explicit dependency on "github.com/shopspring/decimal" for the meergo module.
-				if typ := cols[i].MeergoType; typ.Kind() == types.DecimalKind {
+				if typ := cols[i].KrenalisType; typ.Kind() == types.DecimalKind {
 					v, err = decimal.Parse(vt.String(), typ.Precision(), typ.Scale())
 					if err != nil {
 						t.Fatalf("column %q: an error occurred parsing %v (%T) as decimal: %s", table.Columns[i].Name, v, v, err)

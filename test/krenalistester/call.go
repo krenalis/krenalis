@@ -35,7 +35,7 @@ func (e *StatusCodeError) Error() string {
 // Returns an error if the calls returns an error, which may be a
 // StatusCodeError error in case of a HTTP request which returned a status code
 // which is not 200, or if the HTTP response cannot be decoded into response.
-func (c *Meergo) Call(method, path string, body, response any) error {
+func (c *Krenalis) Call(method, path string, body, response any) error {
 	return c.call(method, path, body, response)
 }
 
@@ -45,7 +45,7 @@ func (c *Meergo) Call(method, path string, body, response any) error {
 // Calls (*testing.T).Fatal if the call returns an error, if the HTTP response
 // cannot be decoded into response, or if the HTTP response's status code is not
 // 200.
-func (c *Meergo) MustCall(method, path string, body, response any) {
+func (c *Krenalis) MustCall(method, path string, body, response any) {
 	err := c.call(method, path, body, response)
 	if err != nil {
 		c.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, strings.TrimSpace(err.Error()), body != nil, response != nil, string(debug.Stack()))
@@ -53,7 +53,7 @@ func (c *Meergo) MustCall(method, path string, body, response any) {
 	}
 }
 
-func (c *Meergo) call(method, path string, body any, response any) error {
+func (c *Krenalis) call(method, path string, body any, response any) error {
 
 	path = strings.TrimLeft(path, "/")
 	url := "http://" + c.Addr() + "/" + path

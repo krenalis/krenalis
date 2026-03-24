@@ -27,7 +27,7 @@ func TestExportZeroProfiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
