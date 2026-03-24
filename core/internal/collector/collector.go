@@ -590,7 +590,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			if header, ok := r.Header["Krenalis-Workspace"]; ok {
 				if len(header) > 1 {
-					return errors.BadRequest(`request contains multiple "Krenalis-Warehouse" headers`)
+					return errors.BadRequest(`request contains multiple "Krenalis-Workspace" headers`)
 				}
 				if key.Workspace > 0 {
 					return errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
