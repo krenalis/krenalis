@@ -69,7 +69,7 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	table := connectors.Table{
-		Name:    "test_meergo_query",
+		Name:    "test_krenalis_query",
 		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
@@ -83,9 +83,9 @@ func Test_Merge_Query(t *testing.T) {
 
 	// Run the MySQL container.
 	const (
-		database = "meergo"
-		username = "meergo"
-		password = "meergo"
+		database = "krenalis"
+		username = "krenalis"
+		password = "krenalis"
 	)
 	var mysqlContainer testcontainers.Container
 	ctx := context.Background()
