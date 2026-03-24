@@ -25,7 +25,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-const functionsDir = ".meergo-functions"
+const functionsDir = ".krenalis-functions"
 
 type function struct {
 	settings Settings
