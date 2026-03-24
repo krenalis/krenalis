@@ -84,7 +84,7 @@ func Test_Decoder(t *testing.T) {
 		{typ: "page", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a page event")}}},
 		{typ: "identify", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("property 'userId' is required for an identify event")}}},
 
-		// meergo.track('click'); anonymous
+		// krenalis.track('click'); anonymous
 		{
 			body:         `{"batch":[{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}]}`,
 			connectionId: 830163006,
@@ -132,7 +132,7 @@ func Test_Decoder(t *testing.T) {
 			}},
 		},
 
-		// meergo.identify('bob', {name: 'bob', age: 19})
+		// krenalis.identify('bob', {name: 'bob', age: 19})
 		{
 			body: `{"batch":[{"type":"identify","messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}]}`,
 			expected: []expectedEvent{{
@@ -171,7 +171,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.track('page')
+		// krenalis.track('page')
 		{
 			body: `{"batch":[{"type":"page","context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}]}`,
 			expected: []expectedEvent{{
@@ -210,7 +210,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.screen('login', {}, {traits: {name: 'Bob'}})
+		// krenalis.screen('login', {}, {traits: {name: 'Bob'}})
 		{
 			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}]}`,
 			expected: []expectedEvent{{
@@ -252,7 +252,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.screen('login')
+		// krenalis.screen('login')
 		{
 			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","channel":"web","name":"login"}]}`,
 			expected: []expectedEvent{{
@@ -292,7 +292,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.track('click'); meergo.track('click');
+		// krenalis.track('click'); krenalis.track('click');
 		{
 			// The 'integrations' field is included in the event's body even if
 			// Krenalis ignores it, to test that when an SDK sends this field, no
