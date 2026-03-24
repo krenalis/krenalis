@@ -41,6 +41,7 @@ WITH org AS (
     RETURNING id
 )
 INSERT INTO members (organization, name, avatar, email, password, created_at)
+-- Note: "password" is "meergo-password".
 SELECT id, 'ACME inc', NULL, 'acme@krenalis.com','$2a$10$dGlVroo3N23Vn99edSPe..xo1hhKzGLYafIjFQjazu3faeFizvW7m', now() at time zone 'utc'
 FROM org;
 
