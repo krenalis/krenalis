@@ -12,7 +12,7 @@ const errorMessageByOauthErrorCode = {
 	invalid_request:
 		'An internal error has occurred. Please try again later and if the issue persists contact our support.',
 	unauthorized_client:
-		'It looks like something has been misconfigured in your Meergo instance. Please contact your Meergo administrator to solve the issue.',
+		'It looks like something has been misconfigured in your Krenalis instance. Please contact your Krenalis administrator to solve the issue.',
 	access_denied: 'Permission to complete the authentication has not been given.',
 	unsupported_response_type:
 		'An internal error has occurred. Please try again later and if the issue persists contact our support.',

@@ -104,12 +104,12 @@ const warehouseSectionTexts = {
 	},
 	main: {
 		title: 'Main credentials',
-		description: 'Read and write credentials used by Meergo for accessing the data warehouse',
+		description: 'Read and write credentials used by Krenalis for accessing the data warehouse',
 	},
 	mcp: {
 		title: 'Read-only credentials',
 		description:
-			"Read-only credentials used for AI querying of the data warehouse through Meergo's built-in MCP integration.",
+			"Read-only credentials used for AI querying of the data warehouse through Krenalis's built-in MCP integration.",
 	},
 };
 

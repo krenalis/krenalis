@@ -10,7 +10,7 @@ import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/mapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
-import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
+import { KRENALIS_FUNCTIONS, KrenalisFunction } from '../../../constants/function';
 import appContext from '../../../context/AppContext';
 import { debounceWithAbort } from '../../../utils/debounce';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -433,7 +433,7 @@ const Combobox = ({
 		if (!isExpression) {
 			return [];
 		}
-		return getFunctionsComboboxItems(MEERGO_FUNCTIONS);
+		return getFunctionsComboboxItems(KRENALIS_FUNCTIONS);
 	}, []);
 
 	let fragment = useMemo(() => {
@@ -450,7 +450,7 @@ const Combobox = ({
 		}
 		if (fragment != null && fragment.func != null) {
 			const functionName = fragment.func.name;
-			return MEERGO_FUNCTIONS.find((f) => f.name === functionName);
+			return KRENALIS_FUNCTIONS.find((f) => f.name === functionName);
 		}
 		return null;
 	}, [fragment]);
@@ -774,7 +774,7 @@ const filterItems = (searchTerm: string, items: ComboboxItem[]): ComboboxItem[] 
 	return filtered;
 };
 
-const getFunctionsComboboxItems = (functions: MeergoFunction[]): ComboboxItem[] => {
+const getFunctionsComboboxItems = (functions: KrenalisFunction[]): ComboboxItem[] => {
 	const functionItems: ComboboxItem[] = [];
 
 	for (const func of functions) {

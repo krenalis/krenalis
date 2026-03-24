@@ -15,7 +15,7 @@ const PipelineUpdateOnDuplicates = () => {
 		pipeline.exportMode.includes('Update') && (
 			<div className='pipeline__update-on-duplicates'>
 				<SlCheckbox checked={pipeline.updateOnDuplicates!} onSlChange={onChangeUpdateOnDuplicates}>
-					If a single profile in Meergo matches multiple app users, update them anyway
+					If a single profile in Krenalis matches multiple app users, update them anyway
 				</SlCheckbox>
 			</div>
 		)

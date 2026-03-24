@@ -1,11 +1,11 @@
-interface MeergoFunction {
+interface KrenalisFunction {
 	name: string;
 	params: string[];
 	return: string;
 	description: string;
 }
 
-const MEERGO_FUNCTIONS: MeergoFunction[] = [
+const KRENALIS_FUNCTIONS: KrenalisFunction[] = [
 	{
 		name: 'and',
 		params: ['...args: boolean'],
@@ -116,4 +116,4 @@ const MEERGO_FUNCTIONS: MeergoFunction[] = [
 	},
 ];
 
-export { MEERGO_FUNCTIONS, MeergoFunction };
+export { KRENALIS_FUNCTIONS, KrenalisFunction };

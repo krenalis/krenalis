@@ -190,7 +190,7 @@ const WorkspaceCreate = () => {
 						This is the data warehouse where your user data and events will be stored.
 						<br />
 						<div className='workspace-create__data-warehouse-description-second-p'>
-							It must be an empty database. Meergo will create views and tables.
+							It must be an empty database. Krenalis will create views and tables.
 						</div>
 					</p>
 				}
@@ -222,7 +222,7 @@ const WorkspaceCreate = () => {
 				</SlSelect>
 				{selectedWarehouse === 'PostgreSQL-Docker' ? (
 					<div className='workspace-create__docker-description'>
-						Select this data warehouse to use the PostgreSQL database provided by Meergo's Docker Compose,
+						Select this data warehouse to use the PostgreSQL database provided by Krenalis's Docker Compose,
 						ready for initialization. No additional configuration is required.
 					</div>
 				) : (

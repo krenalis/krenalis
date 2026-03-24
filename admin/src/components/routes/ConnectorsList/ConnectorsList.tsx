@@ -288,7 +288,7 @@ const ConnectorsList = () => {
 						/>
 						{selectedConnector?.oauth != null && !selectedConnector?.oauth.configured && (
 							<div className='connectors-list__oauth-not-configured'>
-								OAuth authentication for this connector is not configured. Please contact your Meergo
+								OAuth authentication for this connector is not configured. Please contact your Krenalis
 								administrator to set it up.{' '}
 								<a href='#' target='_blank'>
 									Our documentation

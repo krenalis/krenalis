@@ -1361,9 +1361,9 @@ interface TransformationPropertyInfo {
 //   properties between the property and that ancestor are create/update
 //   required;
 //
-// This algorithm is based on the principle, imposed by Meergo, that if you pass
-// a value for an object property, then you must also pass a value for each of
-// its sub-properties that are created/update required.
+// This algorithm is based on the principle, imposed by Krenalis, that if you
+// pass a value for an object property, then you must also pass a value for each
+// of its sub-properties that are created/update required.
 const checkMapping = (
 	path: string,
 	pipeline: TransformedPipeline,
@@ -1475,9 +1475,9 @@ const checkMapping = (
 //   properties between the property and that ancestor are create/update
 //   required;
 //
-// This algorithm is based on the principle, imposed by Meergo, that if you pass
-// a value for an object property, then you must also pass a value for each of
-// its sub-properties that are created/update required.
+// This algorithm is based on the principle, imposed by Krenalis, that if you
+// pass a value for an object property, then you must also pass a value for each
+// of its sub-properties that are created/update required.
 const checkFunctionPath = (
 	path: string,
 	pipeline: TransformedPipeline,

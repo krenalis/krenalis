@@ -79,7 +79,7 @@ import appContext from '../../../context/AppContext';
 import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapExpression';
 import { isPlainObject } from '../../../utils/isPlainObject';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
-import { toJavascriptType, toMeergoStringType, toPythonType } from '../../helpers/types';
+import { toJavascriptType, toKrenalisStringType, toPythonType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const updatedAtFormats = {
@@ -915,7 +915,7 @@ const TransformationBox = ({
 				enumValues = ['true', 'false'];
 			}
 
-			const typeName = toMeergoStringType(property.full.type, property.full.nullable);
+			const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
 
 			if (property.type === 'map') {
 				mappings.push(
@@ -2854,7 +2854,7 @@ const MapMapping = ({
 		automaticMapping != null ||
 		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
 
-	const typeName = toMeergoStringType(property.full.type, property.full.nullable);
+	const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
 
 	return (
 		<>
@@ -3327,7 +3327,7 @@ const TransformationProperty = ({
 			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
 			: checkMapping(path, pipeline, pipelineType);
 
-	const meergoTypeName = toMeergoStringType(property.type, property.nullable);
+	const krenalisTypeName = toKrenalisStringType(property.type, property.nullable);
 	let languageTypeName: string | null = null;
 	let languageTypeLabel = '';
 	if (transformationType === 'function' && language !== '') {
@@ -3417,7 +3417,7 @@ const TransformationProperty = ({
 										</span>
 									</span>
 									<span className='fullscreen-transformation__property-type'>
-										<span>{meergoTypeName}</span>
+										<span>{krenalisTypeName}</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
 											<span

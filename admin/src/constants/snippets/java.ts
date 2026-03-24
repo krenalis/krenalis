@@ -1,7 +1,7 @@
-export const INSTALL_COMMAND = 'Add the latest version of `com.meergo.analytics.java` to your `pom.xml`';
+export const INSTALL_COMMAND = 'Add the latest version of `com.krenalis.analytics.java` to your `pom.xml`';
 
-export const SNIPPET = `import com.meergo.analytics.Analytics;
-import com.meergo.analytics.messages.TrackMessage;
+export const SNIPPET = `import com.krenalis.analytics.Analytics;
+import com.krenalis.analytics.messages.TrackMessage;
 
 final Analytics analytics =
     Analytics.builder("writekey")
