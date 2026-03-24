@@ -37,7 +37,7 @@ func Main(assets fs.FS) {
 	var help bool
 	var initDBIfEmpty bool
 	var initDockerMember bool
-	flag.BoolVar(&help, "help", false, "print the help for meergo and exit")
+	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
