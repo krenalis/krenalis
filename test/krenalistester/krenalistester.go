@@ -122,9 +122,10 @@ func NewKrenalisInstance(t *testing.T) *Krenalis {
 		t.Fatal(err)
 	}
 
-	// If Krenalis is run inside the testing process, it is necessary to generate
-	// the assets. If it is run externally, the assets are generated separately,
-	// when Krenalis is compiled, so there is no need to compile them.
+	// If Krenalis is run inside the testing process, it is necessary to
+	// generate the assets. If it is run externally, the assets are generated
+	// separately, when Krenalis is compiled, so there is no need to compile
+	// them.
 	const needToGenerateAssets = !launchKrenalisExternally
 	if needToGenerateAssets {
 		c.assetsGenerated = make(chan struct{}, 1)

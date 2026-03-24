@@ -912,11 +912,11 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		return types.Int(64), nil
 	case parquet.Type_INT96:
 		// Parquet columns with physical type INT96 are treated as 'datetime' in
-		// Krenalis. This is because there does not seem to be any other practical
-		// use, in fact, for such columns. Also, consider that INT96 types are
-		// indeed deprecated, as timestamps are defined with other types, an
-		// they are kept here in the connector on import only, for compatibility
-		// with old Parquet files.
+		// Krenalis. This is because there does not seem to be any other
+		// practical use, in fact, for such columns. Also, consider that INT96
+		// types are indeed deprecated, as timestamps are defined with other
+		// types, an they are kept here in the connector on import only, for
+		// compatibility with old Parquet files.
 		return types.DateTime(), nil
 	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:
 		return types.String(), nil

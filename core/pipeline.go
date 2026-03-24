@@ -1209,7 +1209,8 @@ type PipelineToSet struct {
 	ExportMode ExportMode `json:"exportMode"`
 
 	// Matching defines a relationship between a property in Krenalis ("in") and
-	// a corresponding property in the application ("out") used during an export.
+	// a corresponding property in the application ("out") used during an
+	// export.
 	Matching Matching `json:"matching"`
 
 	// UpdateOnDuplicates indicates whether to proceed with the export even if
