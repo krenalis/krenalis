@@ -33,7 +33,7 @@ test('Try to access a page that requires authentication and check that it redire
 test('Login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
 	await page.getByRole('textbox', { name: 'email' }).fill('test@krenalis.com');
-	await page.getByRole('textbox', { name: 'password' }).fill('meergo-password');
+	await page.getByRole('textbox', { name: 'password' }).fill('krenalis-password');
 	await page.click('sl-button');
 	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();
 	await logout(page);

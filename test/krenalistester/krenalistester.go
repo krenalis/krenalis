@@ -568,7 +568,7 @@ func (c *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 func (c *Krenalis) login() error {
 	body := map[string]any{
 		"email":    "acme@krenalis.com",
-		"password": "meergo-password",
+		"password": "krenalis-password",
 	}
 	return c.call("POST", "/v1/members/login", body, nil)
 }

@@ -26,7 +26,7 @@ const login = async (page: Page) => {
 		async ({ url, workspace, workspaceIDKey }) => {
 			localStorage.setItem(workspaceIDKey, String(workspace));
 			const api = new (window as any).API(url, workspace) as API;
-			await api.login('test@krenalis.com', 'meergo-password');
+			await api.login('test@krenalis.com', 'krenalis-password');
 		},
 		{ url: config.baseURL, workspace: config.workspaceID, workspaceIDKey: WORKSPACE_ID_KEY },
 	);
