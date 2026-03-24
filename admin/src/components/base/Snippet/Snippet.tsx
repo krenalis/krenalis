@@ -101,7 +101,7 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 
 	return (
 		<Section
-			title={`Add Meergo to your ${applicationType}`}
+			title={`Add Krenalis to your ${applicationType}`}
 			className='connection-pipelines__instructions'
 			description={
 				<>

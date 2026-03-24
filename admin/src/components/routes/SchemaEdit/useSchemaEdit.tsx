@@ -12,7 +12,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toMeergoStringType } from '../../helpers/types';
+import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
@@ -532,7 +532,7 @@ const buildRow = (
 			</div>
 		);
 	} else {
-		typeCell = toMeergoStringType(property.type);
+		typeCell = toKrenalisStringType(property.type);
 	}
 	let primarySourceCell: ReactNode;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {

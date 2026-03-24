@@ -1,6 +1,6 @@
 import Type from '../../lib/api/types/types';
 
-function toMeergoStringType(type: Type, nullable?: boolean) {
+function toKrenalisStringType(type: Type, nullable?: boolean) {
 	let t: string;
 
 	if (type.kind === 'string') {
@@ -46,7 +46,7 @@ function toMeergoStringType(type: Type, nullable?: boolean) {
 			t += `, max ${type.maximum}`;
 		}
 	} else if (type.kind === 'array') {
-		t = `${type.kind} of ${toMeergoStringType(type.elementType)}`;
+		t = `${type.kind} of ${toKrenalisStringType(type.elementType)}`;
 		if (type.minElements != null) {
 			t += `, min ${type.minElements} elements`;
 		}
@@ -57,7 +57,7 @@ function toMeergoStringType(type: Type, nullable?: boolean) {
 			t += `, unique elements`;
 		}
 	} else if (type.kind === 'map') {
-		t = `${type.kind} of ${toMeergoStringType(type.elementType)}`;
+		t = `${type.kind} of ${toKrenalisStringType(type.elementType)}`;
 	} else {
 		t = type.kind;
 	}
@@ -203,4 +203,4 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 	return t;
 }
 
-export { toMeergoStringType, toJavascriptType, toPythonType };
+export { toKrenalisStringType, toJavascriptType, toPythonType };
