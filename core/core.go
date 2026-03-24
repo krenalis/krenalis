@@ -308,7 +308,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	// Add the Meergo installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
-			scope.SetTag("meergo_installation_id", core.InstallationID())
+			scope.SetTag("krenalis_installation_id", core.InstallationID())
 		})
 	}
 
