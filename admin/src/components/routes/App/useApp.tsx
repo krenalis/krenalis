@@ -128,7 +128,7 @@ const useApp = (
 					},
 				});
 				// Add the installation ID as tag.
-				Sentry.setTag('meergo_installation_id', publicMetadata.installationID);
+				Sentry.setTag('krenalis_installation_id', publicMetadata.installationID);
 			}
 
 			// Check the current workspace.
