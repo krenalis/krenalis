@@ -46,14 +46,14 @@ func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string,
 
 func (warehouse *Snowflake) alterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 
-	// Retrieve the current version of the "meergo_profiles" table.
+	// Retrieve the current version of the "krenalis_profiles" table.
 	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Determine the alter schema queries.
-	queries := alterProfileSchemaQueries("MEERGO_PROFILES_"+strconv.Itoa(profilesVersion), columns, operations)
+	queries := alterProfileSchemaQueries("KRENALIS_PROFILES_"+strconv.Itoa(profilesVersion), columns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
@@ -77,7 +77,7 @@ func (warehouse *Snowflake) PreviewAlterProfileSchema(ctx context.Context, colum
 	if err != nil {
 		return nil, err
 	}
-	queries := alterProfileSchemaQueries("MEERGO_PROFILES_"+strconv.Itoa(profilesVersion), columns, operations)
+	queries := alterProfileSchemaQueries("KRENALIS_PROFILES_"+strconv.Itoa(profilesVersion), columns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
@@ -88,7 +88,8 @@ func (warehouse *Snowflake) PreviewAlterProfileSchema(ctx context.Context, colum
 
 // alterProfileSchemaQueries returns the queries that perform the given
 // operations. profilesTableName is the current name of the profiles table, for
-// example "meergo_profiles_42". operations must contain at least one operation.
+// example "krenalis_profiles_42". operations must contain at least one
+// operation.
 func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Column, operations []warehouses.AlterOperation) []string {
 
 	// The operations are performed in this order:
@@ -117,7 +118,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 			}
 		}
 		if len(toDrop) > 0 {
-			for _, table := range []string{profilesTableName, "MEERGO_IDENTITIES"} {
+			for _, table := range []string{profilesTableName, "KRENALIS_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, c := range toDrop {
@@ -135,7 +136,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
 			queries = append(queries, `ALTER TABLE `+quoteIdent(profilesTableName)+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
-			queries = append(queries, `ALTER TABLE "MEERGO_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
+			queries = append(queries, `ALTER TABLE "KRENALIS_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
 		}
 	}
 
@@ -148,7 +149,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 			}
 		}
 		if len(toAdd) > 0 {
-			for _, table := range []string{profilesTableName, "MEERGO_IDENTITIES"} {
+			for _, table := range []string{profilesTableName, "KRENALIS_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, op := range toAdd {
@@ -174,7 +175,7 @@ func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Co
 }
 
 // createViewQuery returns the CREATE (OR REPLACE) VIEW query that creates the
-// "profiles" view on the "meergo_profiles" table with the given name.
+// "profiles" view on the "krenalis_profiles" table with the given name.
 // profileColumns contains the columns of such table.
 // replace indicates if the query that creates the VIEW should have the "OR
 // REPLACE" clause to replace the view if it already exists.

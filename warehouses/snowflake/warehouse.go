@@ -203,12 +203,12 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$PURGE" FROM "MEERGO_IDENTITIES" LIMIT 0`)
+	b.WriteString(`FALSE AS "$PURGE" FROM "KRENALIS_IDENTITIES" LIMIT 0`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"MEERGO_IDENTITIES\" AS \"D\"\nUSING \"")
+	b.WriteString("MERGE INTO \"KRENALIS_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString(`" AS "S"` + "\n" + `ON "D"."_PIPELINE" = "S"."_PIPELINE" AND "D"."_IDENTITY_ID" = "S"."_IDENTITY_ID" AND "D"."_IS_ANONYMOUS" = "S"."_IS_ANONYMOUS"`)
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
@@ -325,7 +325,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 // given pipeline.
 func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
 	var b strings.Builder
-	b.WriteString("UPDATE \"MEERGO_IDENTITIES\" SET ")
+	b.WriteString("UPDATE \"KRENALIS_IDENTITIES\" SET ")
 	for i, column := range columns {
 		if i > 0 {
 			b.WriteString(", ")
@@ -374,11 +374,11 @@ func (warehouse *Snowflake) openDB() *sql.DB {
 	return db
 }
 
-// profilesVersion returns the version of the "MEERGO_PROFILES" table.
+// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
 func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
 	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "MEERGO_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
 	if err != nil {
 		return 0, snowflake(err)
 	}

@@ -76,7 +76,7 @@ func (warehouse *Snowflake) Repair(ctx context.Context, profileColumns []warehou
 // internally by the driver, the given profile columns.
 func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 	var b strings.Builder
-	b.WriteString(`CREATE TABLE IF NOT EXISTS "MEERGO_IDENTITIES" (
+	b.WriteString(`CREATE TABLE IF NOT EXISTS "KRENALIS_IDENTITIES" (
 		"_PK" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
 		"_PIPELINE" INT NOT NULL,
 		"_IS_ANONYMOUS" BOOLEAN NOT NULL DEFAULT FALSE,
@@ -103,14 +103,14 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profi
 	queries := []string{
 		createDestinationProfilesTable,
 		createEventsTable,
-		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "MEERGO_EVENTS"`,
+		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "KRENALIS_EVENTS"`,
 		createOperationsTable,
 		createProfileSchemaVersionTable,
 		identitiesSQLSchema(profileColumns),
-		profilesSQLSchema("meergo_profiles_0", profileColumns),
+		profilesSQLSchema("krenalis_profiles_0", profileColumns),
 	}
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
-		queries = append(queries, profilesViewSQLSchema(profileColumns, "meergo_profiles_0"))
+		queries = append(queries, profilesViewSQLSchema(profileColumns, "krenalis_profiles_0"))
 	}
 	db := warehouse.openDB()
 	for _, query := range queries {

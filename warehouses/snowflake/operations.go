@@ -41,7 +41,7 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 	for bo.Next(ctx) {
 		err := warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 			var readID *string
-			rows, err := tx.Query(`SELECT "ID", "COMPLETED_AT", "ERROR" FROM "MEERGO_SYSTEM_OPERATIONS" WHERE "ID" = ?`, opID)
+			rows, err := tx.Query(`SELECT "ID", "COMPLETED_AT", "ERROR" FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`, opID)
 			if err != nil {
 				return snowflake(err)
 			}
@@ -57,7 +57,7 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 			}
 			if readID == nil {
 				// No rows in DB, so the operation can be started.
-				_, err = tx.Exec(`INSERT INTO "MEERGO_SYSTEM_OPERATIONS" ("ID", "OPERATION_TYPE") VALUES (?, ?)`, opID, opType)
+				_, err = tx.Exec(`INSERT INTO "KRENALIS_SYSTEM_OPERATIONS" ("ID", "OPERATION_TYPE") VALUES (?, ?)`, opID, opType)
 				if err != nil {
 					return snowflake(err)
 				}
@@ -98,7 +98,7 @@ func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, opID st
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err := db.ExecContext(ctx, `UPDATE "MEERGO_SYSTEM_OPERATIONS" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
+	_, err := db.ExecContext(ctx, `UPDATE "KRENALIS_SYSTEM_OPERATIONS" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
 		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
 		return snowflake(err)

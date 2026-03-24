@@ -52,24 +52,24 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 
 func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
 
-	// Determine the current version of the "meergo_profiles" table and create a copy
-	// of it with the incremented version.
+	// Determine the current version of the "krenalis_profiles" table and create
+	// a copy of it with the incremented version.
 	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
 	newProfilesVersion := profilesVersion + 1
-	newProfilesName := fmt.Sprintf("MEERGO_PROFILES_%d", newProfilesVersion)
+	newProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", newProfilesVersion)
 
 	// Create a copy of the current profiles table and set its new version in
-	// 'MEERGO_PROFILE_SCHEMA_VERSIONS'.
+	// 'KRENALIS_PROFILE_SCHEMA_VERSIONS'.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		likeTable := fmt.Sprintf(`MEERGO_PROFILES_%d`, profilesVersion)
+		likeTable := fmt.Sprintf(`KRENALIS_PROFILES_%d`, profilesVersion)
 		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteIdent(newProfilesName), quoteIdent(likeTable)))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s) like table %s: %s", quoteIdent(newProfilesName), quoteIdent(likeTable), err)
 		}
-		_, err = tx.Exec(`INSERT INTO "MEERGO_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
+		_, err = tx.Exec(`INSERT INTO "KRENALIS_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
 			` VALUES (?, ?, ?)`, newProfilesVersion, opID, time.Now().UTC())
 		if err != nil {
 			return snowflake(err)
@@ -155,7 +155,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	),`)
 	// Write the "_updated_at" column.
 	mergeProfiles.WriteString(`MAX("_UPDATED_AT")`)
-	mergeProfiles.WriteString(` FROM "MEERGO_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
+	mergeProfiles.WriteString(` FROM "KRENALIS_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
 
 	// If two profiles who were previously one are split, they will end up having
 	// the same MPID, which is incorrect. So this query, in that situation,
@@ -209,7 +209,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 
 	// Drop the 'profiles' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "MEERGO_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
+	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
 	if err != nil {
 		return snowflake(err)
 	}
