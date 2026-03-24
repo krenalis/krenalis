@@ -646,10 +646,10 @@ class Profiles {
 		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	events = async (mpid: string): Promise<ProfileEventsResponse> => {
+	events = async (kpid: string): Promise<ProfileEventsResponse> => {
 		let params = [];
 		let properties = [
-			'mpid',
+			'kpid',
 			'connectionId',
 			'anonymousId',
 			'category',
@@ -671,9 +671,9 @@ class Profiles {
 			logical: 'and',
 			conditions: [
 				{
-					property: 'mpid',
+					property: 'kpid',
 					operator: 'is',
-					values: [mpid],
+					values: [kpid],
 				},
 			],
 		};
@@ -685,13 +685,13 @@ class Profiles {
 		return await call(`${this.apiURL}/events` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	attributes = async (mpid: string): Promise<profileAttributesResponse> => {
-		return await call(`${this.apiURL}/profiles/${encodeURIComponent(mpid)}/attributes`, http.GET, this.workspaceID);
+	attributes = async (kpid: string): Promise<profileAttributesResponse> => {
+		return await call(`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes`, http.GET, this.workspaceID);
 	};
 
-	identities = async (mpid: string, first: number, limit: number): Promise<IdentitiesResponse> => {
+	identities = async (kpid: string, first: number, limit: number): Promise<IdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/profiles/${encodeURIComponent(mpid)}/identities?first=${first}&limit=${limit}`,
+			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/identities?first=${first}&limit=${limit}`,
 			http.GET,
 			this.workspaceID,
 		);

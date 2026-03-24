@@ -91,10 +91,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every profile now should have just one identity associated.
 	totalProfiles := 0
 	for _, profile := range profiles {
-		_, total := c.Identities(profile.MPID, 0, 100)
+		_, total := c.Identities(profile.KPID, 0, 100)
 		const expectedTotal = 1
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.MPID, total)
+			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.KPID, total)
 		}
 		totalProfiles++
 	}
@@ -116,10 +116,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every profile now should have two identities associated.
 	totalProfiles = 0
 	for _, profile := range profiles {
-		_, total := c.Identities(profile.MPID, 0, 100)
+		_, total := c.Identities(profile.KPID, 0, 100)
 		const expectedTotal = 2
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.MPID, total)
+			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.KPID, total)
 		}
 		totalProfiles++
 	}

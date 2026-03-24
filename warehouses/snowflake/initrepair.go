@@ -85,7 +85,7 @@ func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 		"_ANONYMOUS_IDS" ARRAY,
 		"_UPDATED_AT" TIMESTAMP_NTZ NOT NULL,
 		"_RUN" INT,
-		"_MPID" VARCHAR(36),
+		"_KPID" VARCHAR(36),
 		"_CLUSTER" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")
@@ -130,7 +130,7 @@ func profilesSQLSchema(name string, profileColumns []warehouses.Column) string {
 	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
 	b.WriteString(quoteIdent(name))
 	b.WriteString(` (
-		"_MPID" VARCHAR(36),
+		"_KPID" VARCHAR(36),
 		"_IDENTITIES" ARRAY,
 		"_UPDATED_AT" TIMESTAMP NOT NULL`)
 	for _, c := range profileColumns {
@@ -150,7 +150,7 @@ func profilesViewSQLSchema(profileColumns []warehouses.Column, fromProfilesTable
 	var b strings.Builder
 	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS
 		SELECT
-			"_MPID",
+			"_KPID",
 			"_UPDATED_AT"`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")

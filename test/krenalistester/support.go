@@ -569,7 +569,7 @@ func (c *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 	c.MustCall("PUT", "/v1/warehouse", body, nil)
 }
 
-func (c *Krenalis) ProfileEvents(mpid uuid.UUID, properties []string) []map[string]any {
+func (c *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"first":      []string{"0"},
@@ -578,9 +578,9 @@ func (c *Krenalis) ProfileEvents(mpid uuid.UUID, properties []string) []map[stri
 	filter := Filter{
 		Logical: OpAnd,
 		Conditions: []FilterCondition{
-			{Property: "mpid",
+			{Property: "kpid",
 				Operator: OpIs,
-				Values:   []string{mpid.String()}},
+				Values:   []string{kpid.String()}},
 		},
 	}
 	jsonFilter, err := stdjson.Marshal(filter)
@@ -595,12 +595,12 @@ func (c *Krenalis) ProfileEvents(mpid uuid.UUID, properties []string) []map[stri
 	return response.Events
 }
 
-func (c *Krenalis) Identities(mpid uuid.UUID, first, limit int) ([]Identity, int) {
+func (c *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int) {
 	var response struct {
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
 	}
-	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", mpid, first, limit)
+	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", kpid, first, limit)
 	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
 }

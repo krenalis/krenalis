@@ -32,11 +32,11 @@ import (
 )
 
 // eventPipelineSchema defines the event schema for pipelines.
-// It excludes the mpid property.
+// It excludes the kpid property.
 var eventPipelineSchema types.Type
 
 // eventPropertyNames lists all event property names.
-// The first name is always "mpid".
+// The first name is always "kpid".
 var eventPropertyNames []string
 
 func init() {

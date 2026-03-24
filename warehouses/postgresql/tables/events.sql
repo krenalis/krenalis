@@ -18,7 +18,7 @@ BEGIN
 END$$;
 
 CREATE TABLE IF NOT EXISTS krenalis_events (
-    "mpid" UUID,
+    "kpid" UUID,
     "connection_id" integer NOT NULL,
     "anonymous_id" character varying NOT NULL,
     "channel" character varying,

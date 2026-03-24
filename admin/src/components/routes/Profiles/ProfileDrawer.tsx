@@ -169,7 +169,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 								</Link>
 							</div>
 						)}
-					<span className='profile-drawer__mpid'>
+					<span className='profile-drawer__kpid'>
 						<SlTooltip
 							content='Krenalis Profile ID'
 							onSlHide={(e) => {
@@ -180,7 +180,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 						>
 							<SlIcon name='info-circle-fill' />
 						</SlTooltip>
-						MPID: <span className='profile-drawer__mpid-value'>{selectedProfile}</span>
+						KPID: <span className='profile-drawer__kpid-value'>{selectedProfile}</span>
 					</span>
 				</div>
 			</div>

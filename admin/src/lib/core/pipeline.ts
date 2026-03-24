@@ -962,7 +962,7 @@ const transformInPipelineToSet = async (
 					property,
 					path,
 					propertyName,
-					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['mpid'] : null,
+					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null,
 				);
 			} catch (err) {
 				throw err;

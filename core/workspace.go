@@ -232,27 +232,27 @@ const (
 	Day    = MetricUnit(metrics.Day)
 )
 
-// Attributes returns the attributes of a profile, given its MPID.
+// Attributes returns the attributes of a profile, given its KPID.
 //
 // It returns an errors.NotFoundError error, if the profile does not exist.
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value, error) {
+func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
 	ws := this.workspace
 
-	// Validate the MPID.
-	if _, ok := types.ParseUUID(mpid); !ok {
-		return nil, errors.BadRequest("profile %q is not a valid profile identifier", mpid)
+	// Validate the KPID.
+	if _, ok := types.ParseUUID(kpid); !ok {
+		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_mpid"},
+		Property: []string{"_kpid"},
 		Operator: state.OpIs,
-		Values:   []any{mpid},
+		Values:   []any{kpid},
 	}}}
 
 	// Retrieve the profile attributes.
@@ -271,7 +271,7 @@ func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value,
 		return nil, err
 	}
 	if len(profiles) == 0 {
-		return nil, errors.NotFound("profile %q does not exist", mpid)
+		return nil, errors.NotFound("profile %q does not exist", kpid)
 	}
 
 	return types.Marshal(profiles[0], ws.ProfileSchema)
@@ -1010,7 +1010,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
-// Identities returns the identities for the provided MPID, and an estimate of
+// Identities returns the identities for the provided KPID, and an estimate of
 // their total number without applying first and limit.
 //
 // It returns the identities in range [first,first+limit] with first >= 0
@@ -1019,14 +1019,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // Identities are sorted by updated-at time in descending order, so the most
 // recently updated identities come first.
 //
-// If the MPID does not exist, still return an empty slice instead of an error.
+// If the KPID does not exist, still return an empty slice instead of an error.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit int) ([]Identity, int, error) {
+func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(mpid); !ok {
-		return nil, 0, errors.BadRequest("profile %q is not a valid MPID", mpid)
+	if _, ok := types.ParseUUID(kpid); !ok {
+		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
 	}
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
@@ -1035,9 +1035,9 @@ func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_mpid"},
+		Property: []string{"_kpid"},
 		Operator: state.OpIs,
-		Values:   []any{mpid},
+		Values:   []any{kpid},
 	}}}
 	ws := &Workspace{
 		core:      this.core,
@@ -1223,7 +1223,7 @@ func (this *Workspace) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 
 // Profile represents a profile.
 type Profile struct {
-	MPID       string         `json:"mpid"`
+	KPID       string         `json:"kpid"`
 	UpdatedAt  time.Time      `json:"updatedAt"`
 	Attributes map[string]any `json:"attributes"`
 }
@@ -1319,7 +1319,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: append([]string{"_mpid", "_updated_at"}, properties...),
+		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1345,10 +1345,10 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
-		profiles[i].MPID = row["_mpid"].(string)
+		profiles[i].KPID = row["_kpid"].(string)
 		profiles[i].UpdatedAt = row["_updated_at"].(time.Time)
 		profiles[i].Attributes = row
-		delete(row, "_mpid")
+		delete(row, "_kpid")
 		delete(row, "_updated_at")
 	}
 

@@ -88,14 +88,14 @@ func Test_Records(t *testing.T) {
 	profilesTable := warehouses.Table{
 		Name: "krenalis_profiles_0",
 		Columns: []warehouses.Column{
-			{Name: "_mpid", Type: types.UUID()},
+			{Name: "_kpid", Type: types.UUID()},
 			{Name: "_updated_at", Type: types.DateTime()},
 			{Name: "id", Type: types.String()},
 			{Name: "other_id", Type: types.String()},
 			{Name: "name", Type: types.String()},
 			{Name: "age", Type: types.Int(8)},
 		},
-		Keys: []string{"_mpid"},
+		Keys: []string{"_kpid"},
 	}
 
 	destinationsUsersTable := warehouses.Table{
@@ -222,7 +222,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	profileColumnByProperty := map[string]warehouses.Column{
-		"_mpid":    {Name: "_mpid", Type: types.UUID()},
+		"_kpid":    {Name: "_kpid", Type: types.UUID()},
 		"id":       {Name: "id", Type: types.String()},
 		"other.id": {Name: "other_id", Type: types.String()},
 		"name":     {Name: "name", Type: types.String()},
@@ -248,7 +248,7 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, wh, query, "_mpid", profileColumnByProperty, true, matching)
+				r, err := records(ctx, wh, query, "_kpid", profileColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}

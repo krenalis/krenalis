@@ -209,23 +209,23 @@
 }
 
 .profile-drawer__information,
-.profile-drawer__mpid {
+.profile-drawer__kpid {
 	font-size: 14px;
 }
 
-.profile-drawer__mpid sl-icon {
+.profile-drawer__kpid sl-icon {
 	position: relative;
 	top: 1px;
 	color: var(--sl-color-neutral-500);
 }
 
-.profile-drawer__mpid sl-tooltip::part(body) {
+.profile-drawer__kpid sl-tooltip::part(body) {
 	background-color: var(--sl-color-primary-500);
 	padding: 12px;
 	font-size: 13px;
 }
 
-.profile-drawer__mpid sl-tooltip::part(base__arrow) {
+.profile-drawer__kpid sl-tooltip::part(base__arrow) {
 	background-color: var(--sl-color-primary-500);
 }
 
@@ -240,7 +240,7 @@
 	cursor: pointer;
 }
 
-.profile-drawer__mpid-value {
+.profile-drawer__kpid-value {
 	color: #5c5c5c;
 	font-family: var(--monospace-fonts);
 }

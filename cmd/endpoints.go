@@ -75,9 +75,9 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /profiles/schema":                             workspace.ProfileSchema,
 		"GET    /profiles/schema/latest-alter":                workspace.LatestAlterProfileSchema,
 		"GET    /profiles/schema/suitable-as-identifiers":     workspace.ProfilePropertiesSuitableAsIdentifiers, /* only Admin */
-		"GET    /profiles/{mpid}/attributes":                  workspace.Attributes,
-		"GET    /profiles/{mpid}/events":                      workspace.ProfileEvents,
-		"GET    /profiles/{mpid}/identities":                  workspace.Identities,
+		"GET    /profiles/{kpid}/attributes":                  workspace.Attributes,
+		"GET    /profiles/{kpid}/events":                      workspace.ProfileEvents,
+		"GET    /profiles/{kpid}/identities":                  workspace.Identities,
 		"GET    /public/metadata":                             api.PublicMetadata,
 		"GET    /system/transformations/languages":            api.TransformationLanguages,
 		"GET    /warehouse":                                   workspace.Warehouse,

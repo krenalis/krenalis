@@ -101,7 +101,7 @@ func Test_Identities(t *testing.T) {
 
 	for _, profile := range profiles {
 
-		identities, total := c.Identities(profile.MPID, 0, 1000)
+		identities, total := c.Identities(profile.KPID, 0, 1000)
 
 		if total != 1 && total != 2 {
 			t.Fatalf("expected 'total' to be 1 or 2, got %d", total)
@@ -114,9 +114,9 @@ func Test_Identities(t *testing.T) {
 			}
 
 			t.Logf(
-				"the APIs returned an identity for profile with MPID %s that has"+
+				"the APIs returned an identity for profile with KPID %s that has"+
 					" pipeline = %d, user ID = %v and updated at = %q",
-				profile.MPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
+				profile.KPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
 
 			var idPrefix string
 			switch identity.Pipeline {

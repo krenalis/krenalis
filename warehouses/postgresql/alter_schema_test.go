@@ -22,7 +22,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		columns         []warehouses.Column // without "_mpid" and "_updated_at", which are added by the test
+		columns         []warehouses.Column // without "_kpid" and "_updated_at", which are added by the test
 		ops             []warehouses.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
@@ -265,7 +265,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				}
 			}
 			columns = append([]warehouses.Column{
-				{Name: "_mpid", Type: types.Int(32)},
+				{Name: "_kpid", Type: types.Int(32)},
 				{Name: "_updated_at", Type: types.DateTime()},
 			}, columns...)
 			got := alterProfileSchemaQueries("krenalis_profiles_0", columns, test.ops)

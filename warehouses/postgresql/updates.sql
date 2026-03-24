@@ -64,3 +64,39 @@ CREATE OR REPLACE VIEW "events" AS SELECT * FROM "krenalis_events";
 -- Drop the resolve_identities procedure so it is cleanly recreated with the
 -- new table names the next time identity resolution runs.
 DROP PROCEDURE IF EXISTS resolve_identities();
+
+-- === Rename "mpid" to "kpid" in all relevant tables and views. ===
+
+-- Rename column in krenalis_events.
+ALTER TABLE IF EXISTS "krenalis_events" RENAME COLUMN "mpid" TO "kpid";
+
+-- Rename column in krenalis_identities.
+ALTER TABLE IF EXISTS "krenalis_identities" RENAME COLUMN "_mpid" TO "_kpid";
+
+-- Rename column in all versioned profiles tables (e.g. krenalis_profiles_0,
+-- krenalis_profiles_1, ...).
+DO $$
+DECLARE
+    tbl text;
+BEGIN
+    FOR tbl IN
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name LIKE 'krenalis\_profiles\_%'
+          AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+    LOOP
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = tbl
+              AND column_name = '_mpid'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I RENAME COLUMN "_mpid" TO "_kpid"', tbl);
+        END IF;
+    END LOOP;
+END;
+$$;
+
+-- IMPORTANT: now, run the "alter schema" procedure from the Krenalis admin console to recreate the "profiles" view.
