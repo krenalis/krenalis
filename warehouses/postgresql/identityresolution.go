@@ -56,23 +56,23 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		return err
 	}
 
-	// Determine the current version of the "meergo_profiles" table and create a copy
+	// Determine the current version of the "krenalis_profiles" table and create a copy
 	// of it with the incremented version.
 	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
 	newProfilesVersion := profilesVersion + 1
-	newProfilesName := fmt.Sprintf("meergo_profiles_%d", newProfilesVersion)
+	newProfilesName := fmt.Sprintf("krenalis_profiles_%d", newProfilesVersion)
 
 	// Create a copy of the current profiles table and set its new version in
-	// 'meergo_profile_schema_versions'.
+	// 'krenalis_profile_schema_versions'.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "meergo_profiles_%d")`, quoteIdent(newProfilesName), profilesVersion))
+		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "krenalis_profiles_%d")`, quoteIdent(newProfilesName), profilesVersion))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO "meergo_profile_schema_versions" ("version", "operation", "timestamp")`+
+		_, err = tx.Exec(ctx, `INSERT INTO "krenalis_profile_schema_versions" ("version", "operation", "timestamp")`+
 			` VALUES ($1, $2, $3)`, newProfilesVersion, opID, time.Now().UTC())
 		if err != nil {
 			return err
@@ -167,7 +167,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	),`)
 	// Write the "_updated_at" column.
 	mergeProfiles.WriteString(`MAX("_updated_at")`)
-	mergeProfiles.WriteString(` FROM "meergo_identities" GROUP BY "_cluster";` + "\n")
+	mergeProfiles.WriteString(` FROM "krenalis_identities" GROUP BY "_cluster";` + "\n")
 
 	// If two profiles who were previously one are split, they will end up
 	// having the same MPID, which is incorrect. So this query, in that
@@ -216,7 +216,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 
 	// Drop the 'profiles' table that existed before executing this Identity
 	// Resolution.
-	_, err = pool.Exec(ctx, `DROP TABLE IF EXISTS "meergo_profiles_`+strconv.Itoa(profilesVersion)+`"`)
+	_, err = pool.Exec(ctx, `DROP TABLE IF EXISTS "krenalis_profiles_`+strconv.Itoa(profilesVersion)+`"`)
 	if err != nil {
 		return err
 	}

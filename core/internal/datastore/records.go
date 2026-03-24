@@ -84,7 +84,8 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		// Also select the _external_id column.
 		externalIDColumn := warehouses.Column{Name: "_external_id", Type: types.String(), Nullable: true}
 		columns = append(columns, externalIDColumn)
-		// Update the WHERE condition and join the meergo_destination_profiles table.
+		// Update the WHERE condition and join the krenalis_destination_profiles
+		// table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in profile schema", matching.InProperty)
@@ -97,7 +98,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		}
 		joins = []warehouses.Join{
 			{
-				Table: "meergo_destination_profiles",
+				Table: "krenalis_destination_profiles",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
 					warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, matching.Pipeline),
 					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "_out_matching_value", Type: types.String()}),

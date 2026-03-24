@@ -32,7 +32,7 @@ type Identity struct {
 	UpdatedAt   time.Time      // Update time in UTC.
 }
 
-// identityKey represents a key in the meergo_identities table.
+// identityKey represents a key in the krenalis_identities table.
 type identityKey struct {
 	pipeline    int
 	isAnonymous bool
@@ -148,7 +148,7 @@ func (w *BatchIdentityWriter) Close(ctx context.Context) error {
 			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, w.pipeline),
 			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.Int(32)}, warehouses.OpIsNot, w.run),
 		})
-		err = w.store.warehouse().Delete(ctx, "meergo_identities", where)
+		err = w.store.warehouse().Delete(ctx, "krenalis_identities", where)
 	}
 	return err
 }

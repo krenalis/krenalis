@@ -86,7 +86,7 @@ func Test_Records(t *testing.T) {
 	defer wh.Close()
 
 	profilesTable := warehouses.Table{
-		Name: "meergo_profiles_0",
+		Name: "krenalis_profiles_0",
 		Columns: []warehouses.Column{
 			{Name: "_mpid", Type: types.UUID()},
 			{Name: "_updated_at", Type: types.DateTime()},
@@ -99,7 +99,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	destinationsUsersTable := warehouses.Table{
-		Name: "meergo_destination_profiles",
+		Name: "krenalis_destination_profiles",
 		Columns: []warehouses.Column{
 			{Name: "_pipeline", Type: types.Int(32)},
 			{Name: "_external_id", Type: types.String()},

@@ -17,7 +17,7 @@ BEGIN
     END IF;
 END$$;
 
-CREATE TABLE IF NOT EXISTS meergo_events (
+CREATE TABLE IF NOT EXISTS krenalis_events (
     "mpid" UUID,
     "connection_id" integer NOT NULL,
     "anonymous_id" character varying NOT NULL,
@@ -88,4 +88,4 @@ CREATE TABLE IF NOT EXISTS meergo_events (
     PRIMARY KEY ("message_id")
 );
 
-CREATE OR REPLACE VIEW events AS SELECT * FROM meergo_events;
+CREATE OR REPLACE VIEW events AS SELECT * FROM krenalis_events;
