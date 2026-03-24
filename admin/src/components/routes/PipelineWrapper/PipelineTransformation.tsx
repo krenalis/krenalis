@@ -3327,7 +3327,7 @@ const TransformationProperty = ({
 			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
 			: checkMapping(path, pipeline, pipelineType);
 
-	const meergoTypeName = toKrenalisStringType(property.type, property.nullable);
+	const krenalisTypeName = toKrenalisStringType(property.type, property.nullable);
 	let languageTypeName: string | null = null;
 	let languageTypeLabel = '';
 	if (transformationType === 'function' && language !== '') {
@@ -3417,7 +3417,7 @@ const TransformationProperty = ({
 										</span>
 									</span>
 									<span className='fullscreen-transformation__property-type'>
-										<span>{meergoTypeName}</span>
+										<span>{krenalisTypeName}</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
 											<span
