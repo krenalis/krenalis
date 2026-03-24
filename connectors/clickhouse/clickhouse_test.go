@@ -67,7 +67,7 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	table := connectors.Table{
-		Name:    "test_meergo_query",
+		Name:    "test_krenalis_query",
 		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
@@ -81,9 +81,9 @@ func Test_Merge_Query(t *testing.T) {
 
 	// Run the Clickhouse container.
 	const (
-		username = "test_meergo"
-		password = "test_meergo"
-		database = "test_meergo"
+		username = "test_krenalis"
+		password = "test_krenalis"
+		database = "test_krenalis"
 	)
 	ctx := context.Background()
 	clickHouseContainer, err := clickhouse.Run(ctx,
@@ -213,7 +213,7 @@ func Test_Merge_Query(t *testing.T) {
 				}
 			case fmt.Stringer:
 				// Normalize the decimal type in the same way as the normalization does.
-				// This avoids the explicit dependency on "github.com/shopspring/decimal" for the meergo module.
+				// This avoids the explicit dependency on "github.com/shopspring/decimal" for the krenalis module.
 				if typ := cols[i].KrenalisType; typ.Kind() == types.DecimalKind {
 					v, err = decimal.Parse(vt.String(), typ.Precision(), typ.Scale())
 					if err != nil {
