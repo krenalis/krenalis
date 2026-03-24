@@ -25,8 +25,8 @@ import (
 //go:embed static
 var static embed.FS
 
-// Main is the function that executes Meergo. It is designed to be used in
-// executable packages that run Meergo's code, and should be utilized in the
+// Main is the function that executes Krenalis. It is designed to be used in
+// executable packages that run Krenalis's code, and should be utilized in the
 // following form:
 //
 //	func main() {
@@ -66,7 +66,7 @@ func Main(assets fs.FS) {
 		fatal(1, err.Error())
 	}
 
-	// Unset the Meergo environment variables, except for those intended for
+	// Unset the Krenalis environment variables, except for those intended for
 	// connectors, which can be read by them at any time.
 	//
 	// This minimizes the possibility that any point in the code can read the
@@ -77,9 +77,9 @@ func Main(assets fs.FS) {
 			isKrenalisConnectorVar := strings.HasPrefix(key, "KRENALIS_CONNECTOR_")
 			if isKrenalisVar && !isKrenalisConnectorVar {
 				// os.Unsetenv can only fail on Windows if the key is not UTF-8
-				// encoded. But since Meergo only supports UTF-8 keys, and this
-				// is a rare edge case, failing to unset such a variable
-				// shouldn't prevent Meergo from starting.
+				// encoded. But since Krenalis only supports UTF-8 keys, and
+				// this is a rare edge case, failing to unset such a variable
+				// shouldn't prevent Krenalis from starting.
 				_ = os.Unsetenv(key)
 			}
 		}
@@ -108,7 +108,8 @@ func Main(assets fs.FS) {
 			},
 		})
 		if err != nil {
-			// Failing to initialize Sentry shouldn't stop Meergo from starting.
+			// Failing to initialize Sentry shouldn't stop Krenalis from
+			// starting.
 			slog.Warn("krenalis: failed to init Sentry", "error", err)
 		} else {
 			defer sentry.Flush(2 * time.Second)

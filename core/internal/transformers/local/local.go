@@ -109,7 +109,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
+	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Krenalis process.
 	cmd.Stdout = &stdout
 	cmd.Stderr = &prefixSuffixSaver{N: 32 << 10}
 	cmd.Stdin = bytes.NewReader(source)
@@ -248,7 +248,7 @@ def main():
 
 	transform = function_globals["transform"]
 
-	# Names needed to evaluate all expressions that Meergo can provide.
+	# Names needed to evaluate all expressions that Krenalis can provide.
 	eval_globals = {
 		"datetime": datetime,
 		"decimal": decimal,

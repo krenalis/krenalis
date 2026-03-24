@@ -34,7 +34,7 @@ BEGIN
                 AND "I1"."_IDENTITY_ID" = "I2"."_IDENTITY_ID"
                 AND "I1"."_IS_ANONYMOUS" = "I2"."_IS_ANONYMOUS"
             )
-            OR {{ same_profile }} -- This placeholder will be replaced by Meergo.
+            OR {{ same_profile }} -- This placeholder will be replaced by Krenalis.
         )';
 
     -- Reset the identity clusters, as they may have been modified by a previous
@@ -112,7 +112,7 @@ BEGIN
     END LOOP;
     END;
 
-    -- This placeholder will be replaced by Meergo:
+    -- This placeholder will be replaced by Krenalis:
     {{ merge_identities_in_profiles }};
 
     -- Update associations between identities and profiles by updating the MPID

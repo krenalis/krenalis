@@ -280,7 +280,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 			return nil, errors.New(msg.String())
 		}
 
-		// Next, build a new request to be returned to Meergo, in which
+		// Next, build a new request to be returned to Krenalis, in which
 		// sensitive information (such as the API secret) is redacted.
 		u = requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, true, true, ga.settings.MeasurementID)
 		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))

@@ -95,7 +95,7 @@ type PipelineSchemasMatchings struct {
 }
 
 // dummyGroupsSchema is a dummy "groups" schema, that is used until the groups
-// management is properly implemented in Meergo. For now, it serves only as a
+// management is properly implemented in Krenalis. For now, it serves only as a
 // placeholder.
 var dummyGroupsSchema = types.Object([]types.Property{
 	{Name: "id", Type: types.Int(32)},

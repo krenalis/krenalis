@@ -5,8 +5,8 @@
 //  1. go generate
 //  2. go build
 //
-// To add your custom connectors, data warehouses, or choose what connector
-// or data warehouse to build into Meergo:
+// To add your custom connectors, data warehouses, or choose what connector or
+// data warehouse to build into Krenalis:
 //
 //  1. Create a new directory: mkdir meergo
 //  2. Change into it: cd meergo
@@ -21,12 +21,13 @@
 //  8. Build: go build
 //
 // Note: You can provide the '-trimpath' option to the 'go build' command to
-// remove absolute paths from any error stack traces in Meergo. This way, if
+// remove absolute paths from any error stack traces in Krenalis. This way, if
 // telemetry is enabled, the absolute paths will not be sent.
 //
-// Note: Re-execute 'go generate' if you change Meergo module version.
+// Note: Re-execute 'go generate' if you change Krenalis module version.
 //
-// TODO: insert URL which points to the page in the doc for compiling Meergo from sources.
+// TODO: insert URL which points to the page in the doc for compiling Krenalis
+// from sources.
 package main
 
 import (

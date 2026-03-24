@@ -697,7 +697,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	// - as a second and final exception to the first point, in the case of
 	//   exporting users to apps, the output schema contains the output matching
 	//   property, but this property cannot be explicitly transformed, as it is
-	//   managed by Meergo, so again, there is no check to be done.
+	//   managed by Krenalis, so again, there is no check to be done.
 
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).

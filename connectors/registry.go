@@ -299,7 +299,7 @@ func validateCategories(connectorName string, categories Categories) {
 
 // validateApplicationConnector validates the passed application connector,
 // performing checks to detect errors that could cause panic or errors in the
-// Meergo code that uses the connectors.
+// Krenalis code that uses the connectors.
 //
 // In case of a validation error, this function panics.
 func validateApplicationConnector(app ApplicationSpec) {
@@ -416,7 +416,7 @@ func validateApplicationConnector(app ApplicationSpec) {
 }
 
 // validateDatabaseConnector validates the passed database connector, performing
-// checks to detect errors that could cause panic or errors in the Meergo code
+// checks to detect errors that could cause panic or errors in the Krenalis code
 // that uses the connectors.
 //
 // In case of a validation error, this function panics.
@@ -437,7 +437,7 @@ func validateDatabaseConnector(database DatabaseSpec) {
 }
 
 // validateFileConnector validates the passed file connector, performing checks
-// to detect errors that could cause panic or errors in the Meergo code that
+// to detect errors that could cause panic or errors in the Krenalis code that
 // uses the connectors.
 //
 // In case of a validation error, this function panics.
@@ -488,7 +488,7 @@ func validateFileConnector(file FileSpec) {
 
 // validateFileStorageConnector validates the passed file storage connector,
 // performing checks to detect errors that could cause panic or errors in the
-// Meergo code that uses the connectors.
+// Krenalis code that uses the connectors.
 //
 // In case of a validation error, this function panics.
 func validateFileStorageConnector(fileStorage FileStorageSpec) {
@@ -526,7 +526,7 @@ func validateFileStorageConnector(fileStorage FileStorageSpec) {
 
 // validateMessageBrokerConnector validates the passed message broker connector,
 // performing checks to detect errors that could cause panic or errors in the
-// Meergo code that uses the connectors.
+// Krenalis code that uses the connectors.
 //
 // In case of a validation error, this function panics.
 func validateMessageBrokerConnector(broker MessageBrokerSpec) {
@@ -543,7 +543,7 @@ func validateMessageBrokerConnector(broker MessageBrokerSpec) {
 }
 
 // validateSDKConnector validates the passed SDK connector, performing checks to
-// detect errors that could cause panic or errors in the Meergo code that uses
+// detect errors that could cause panic or errors in the Krenalis code that uses
 // the connectors.
 //
 // In case of a validation error, this function panics.
@@ -553,7 +553,7 @@ func validateSDKConnector(sdk SDKSpec) {
 }
 
 // validateWebhookConnector validates the passed webhook connector, performing
-// checks to detect errors that could cause panic or errors in the Meergo code
+// checks to detect errors that could cause panic or errors in the Krenalis code
 // that uses the connectors.
 //
 // In case of a validation error, this function panics.

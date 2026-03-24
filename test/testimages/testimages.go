@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file.
 
 // Package testimages encapsulates in a single point of code the versions of
-// Docker images to be used in Meergo tests, so that they are not scattered
+// Docker images to be used in Krenalis tests, so that they are not scattered
 // throughout the repository and to have a single point to keep them under
 // control.
 //

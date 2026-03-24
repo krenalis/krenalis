@@ -36,7 +36,7 @@ var schema string
 
 // Initialize initializes the provided PostgreSQL database by executing queries
 // in the given transaction, creating all the database objects (tables, types,
-// etc.) needed to run Meergo.
+// etc.) needed to run Krenalis.
 //
 // This function must be called on a transaction opened on an empty database.
 // Otherwise, the behavior is undefined.
@@ -54,9 +54,9 @@ func Initialize(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
 
-// InitializeDockerMember initializes a Meergo member on the given PostgreSQL
+// InitializeDockerMember initializes a Krenalis member on the given PostgreSQL
 // database (by executing queries in the given transaction) for certain
-// scenarios where Meergo is running with Docker, e.g., with the configuration
+// scenarios where Krenalis is running with Docker, e.g., with the configuration
 // we provide in Docker Compose (this user is treated differently, for example,
 // by the Admin).
 //

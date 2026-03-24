@@ -263,7 +263,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		prometheusMetricsLine = fmt.Sprintf("├─ Prometheus metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
 	}
 	msg := fmt.Sprintf(
-		"The Meergo server has been started at %s\n"+
+		"The Krenalis server has been started at %s\n"+
 			"%s"+
 			"├─ MCP server: %s\n"+
 			"├─ REST API:   %s\n"+

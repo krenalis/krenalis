@@ -101,7 +101,7 @@ func TestParquetImport(t *testing.T) {
 		t.Fatalf("expected %d user(s), got %d", len(expectedProfiles), count)
 	}
 
-	// Check that the profiles properties imported in Meergo match the user
+	// Check that the profiles properties imported in Krenalis match the user
 	// properties in the Parquet file.
 	var fail bool
 	for i := range profiles {

@@ -96,7 +96,7 @@ func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings js
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
 // that datastore's warehouse access with these settings is read-only (at least
-// on the Meergo tables), returning a *warehouses.WarehouseSettingsNotReadOnly
+// on the Krenalis tables), returning a *warehouses.WarehouseSettingsNotReadOnly
 // error in case it is not, explaining the reason.
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings json.Value) error {
 	ds.mustBeOpen()
@@ -131,7 +131,7 @@ func (ds *Datastore) Close() {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Meergo. The given profile schema will be used by the
+// make it work with Krenalis. The given profile schema will be used by the
 // initialization to build the profile tables on the warehouse with the
 // corresponding columns.
 //

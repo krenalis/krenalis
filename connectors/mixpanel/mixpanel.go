@@ -409,10 +409,10 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 			}
 			if library, ok := context.Library(); ok {
 				if name, ok := library.Name(); ok {
-					if strings.HasPrefix(name, "meergo") || strings.HasPrefix(name, "Meergo") {
+					if strings.HasPrefix(name, "meergo") || strings.HasPrefix(name, "Krenalis") {
 						properties["mp_lib"] = name
 					} else {
-						properties["mp_lib"] = "Meergo: " + name
+						properties["mp_lib"] = "Krenalis: " + name
 					}
 					if version, ok := library.Version(); ok {
 						properties["$lib_version"] = version

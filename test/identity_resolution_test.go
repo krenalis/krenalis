@@ -21,7 +21,7 @@ import (
 // retrieving the users from the APIs.
 //
 // This works by importing users through a JSON file, which is created (or
-// updated) every time a user is imported, then it's loaded into Meergo by
+// updated) every time a user is imported, then it's loaded into Krenalis by
 // running the import pipeline on the JSON.
 func TestIdentityResolution(t *testing.T) {
 

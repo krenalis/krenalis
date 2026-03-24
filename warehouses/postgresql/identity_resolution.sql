@@ -32,7 +32,7 @@ AS $$
                 AND "i1"."_identity_id" = "i2"."_identity_id"
                 AND "i1"."_is_anonymous" = "i2"."_is_anonymous"
             )
-            OR {{ same_profile }} -- This placeholder will be replaced by Meergo.
+            OR {{ same_profile }} -- This placeholder will be replaced by Krenalis.
         );
 
     -- Reset the identity clusters, as they may have been modified by a previous
@@ -109,7 +109,7 @@ AS $$
 
     END $clustering$;
 
-    -- This placeholder will be replaced by Meergo:
+    -- This placeholder will be replaced by Krenalis:
     {{ merge_identities_in_profiles }};
 
     -- Update associations between identities and profiles by updating the MPID

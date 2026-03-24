@@ -82,7 +82,7 @@ func (c *Krenalis) call(method, path string, body any, response any) error {
 	if err != nil {
 		return err
 	}
-	c.t.Logf("[info] %s %s: Meergo responded with HTTP status %d", method, url, resp.StatusCode)
+	c.t.Logf("[info] %s %s: Krenalis responded with HTTP status %d", method, url, resp.StatusCode)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		text, err := io.ReadAll(resp.Body)

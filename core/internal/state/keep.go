@@ -25,7 +25,7 @@ const logNotifications = false // Set to true to enable logging of received noti
 // It is called in its own goroutine.
 func (state *State) keep() {
 
-	// If sending statistics is enabled, initialize the Meergo analytics client.
+	// If sending statistics is enabled, initialize the Krenalis analytics client.
 	var client analytics.Client
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{

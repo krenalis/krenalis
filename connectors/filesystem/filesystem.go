@@ -138,9 +138,9 @@ func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, setting
 
 	var intro string
 	if role == connectors.Source {
-		intro = "This connector for file system allows Meergo to read files from this directory of your system:"
+		intro = "This connector for file system allows Krenalis to read files from this directory of your system:"
 	} else {
-		intro = "This connector for file system allows Meergo to write files into this directory of your system:"
+		intro = "This connector for file system allows Krenalis to write files into this directory of your system:"
 	}
 
 	confMu.Lock()

@@ -661,7 +661,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// only possible to sort profiles by one property. Therefore,
 					// in the case of profiles with the same email but with
 					// different values for first_name, etc..., the tests may
-					// randomly fail based on how Meergo returned them. For this
+					// randomly fail based on how Krenalis returned them. For this
 					// reason, here the profiles are sorted based on all their string
 					// properties, in ascending order.
 					slices.SortFunc(gotProfiles, func(u1, u2 map[string]any) int {
