@@ -47,7 +47,7 @@ type sessionCookie struct {
 }
 
 const (
-	sessionCookieName = "meergo_session"
+	sessionCookieName = "krenalis_session"
 	sessionCookiePath = "/v1/"
 )
 
