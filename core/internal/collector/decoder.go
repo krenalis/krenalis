@@ -632,7 +632,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 
 	// Message ID.
 	if _, ok := event["messageId"]; !ok {
-		event["messageId"] = "meergo-" + uuid.NewString()
+		event["messageId"] = "krenalis-" + uuid.NewString()
 	}
 
 	// Name.
