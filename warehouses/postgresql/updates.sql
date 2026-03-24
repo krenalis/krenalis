@@ -98,3 +98,5 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+-- IMPORTANT: now, run the "alter schema" procedure from the Krenalis admin console to recreate the "profiles" view.
