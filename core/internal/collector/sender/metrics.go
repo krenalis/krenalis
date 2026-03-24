@@ -10,13 +10,13 @@ import (
 
 // Queue available.
 var queueAvailableMetric = prometheus.RegisterGaugeFuncVec(
-	"meergo_sender_queue_available",
+	"krenalis_sender_queue_available",
 	"Number of available events in the event queue",
 	[]string{"connector", "connection"})
 
 // Queue wait.
 var queueWaitMetric = prometheus.RegisterHistogramBufVec(
-	"meergo_sender_queue_wait",
+	"krenalis_sender_queue_wait",
 	"Time spent waiting in the event queue (in seconds)",
 	[]string{"connector", "connection"},
 	[]float64{
