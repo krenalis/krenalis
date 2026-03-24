@@ -1789,8 +1789,8 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 	return categoryNames
 }
 
-// getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
-// to implement features for the MCP server.
+// getMCPWarehouseInstance returns a warehouses.Warehouse instance that can be
+// used to implement features for the MCP server.
 // platform is the warehouse platform and settings are the settings for
 // connecting to it.
 //
