@@ -29,7 +29,7 @@ func (state *State) keep() {
 	var client analytics.Client
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
-			Endpoint: "https://telemetry.meergo.com/events",
+			Endpoint: "https://telemetry.krenalis.com/events",
 			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
 		})
 		defer func() {
