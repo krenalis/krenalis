@@ -8,14 +8,14 @@
 // To add your custom connectors, data warehouses, or choose what connector or
 // data warehouse to build into Krenalis:
 //
-//  1. Create a new directory: mkdir meergo
-//  2. Change into it: cd meergo
+//  1. Create a new directory: mkdir krenalis
+//  2. Change into it: cd krenalis
 //  3. Copy this file into the new directory
 //  4. (optional) Add a new file for your connectors and warehouse platforms:
-//     package meergo
+//     package krenalis
 //     import _ "github.com/example/connector"
 //     import _ "github.com/example/warehouse"
-//  5. Initialize a Go module: go mod init meergo
+//  5. Initialize a Go module: go mod init krenalis
 //  6. Tidy the module: go mod tidy
 //  7. Generate the Admin console assets: go generate
 //  8. Build: go build
