@@ -1496,8 +1496,8 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 // transformation function.
 func transformationFunctionName(pipeline int) string {
 	if pipeline == 0 {
-		return fmt.Sprintf("meergo_preview_%s", uuid.NewString())
+		return fmt.Sprintf("krenalis_preview_%s", uuid.NewString())
 	}
 	now := time.Now().UTC()
-	return fmt.Sprintf("meergo_pipeline%d_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
+	return fmt.Sprintf("krenalis_pipeline%d_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
 }
