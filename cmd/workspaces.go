@@ -699,7 +699,7 @@ func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *h
 	return map[string][]string{"queries": queries}, nil
 }
 
-// RepairWarehouse repairs the database objects needed by Meergo on a
+// RepairWarehouse repairs the database objects needed by Krenalis on a
 // workspace's data warehouse.
 func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateForbiddenBody(r); err != nil {

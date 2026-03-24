@@ -174,7 +174,7 @@ func New(state *state.State) *Connections {
 func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
-		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Code)}
+		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Krenalis", connector.Code)}
 	}
 	var b strings.Builder
 	b.WriteString(oauth.AuthURL)

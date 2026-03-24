@@ -154,7 +154,7 @@ var errorQuoteReplacer = strings.NewReplacer("»", "≫")
 // QuoteErrorTerm wraps an error term in «...», replacing » with ≫ if present.
 //
 // It can be used to format a property name, property path, setting value,
-// Meergo type name, database, table, or column name in an error message
+// Krenalis type name, database, table, or column name in an error message
 // intended to be shown in a UI.
 func QuoteErrorTerm(s string) string {
 	if !strings.ContainsRune(s, '»') {

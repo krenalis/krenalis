@@ -26,7 +26,7 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 		t.Fatalf("%s", err)
 	}
 
-	// Copy the 'main.go' file, which is the entry point for Meergo.
+	// Copy the 'main.go' file, which is the entry point for Krenalis.
 	err = copyFile(
 		filepath.Join(repo, "main.go"),
 		filepath.Join(tmpdir, "main.go"),
@@ -38,7 +38,7 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 	// Initialize the Go module.
 	execCmd(t, tmpdir, "go", "mod", "init", "krenalis")
 
-	// Edit the go.mod so that the local Meergo sources are used, both for Go
+	// Edit the go.mod so that the local Krenalis sources are used, both for Go
 	// and for the Admin.
 	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/krenalis/krenalis="+repo)
 
@@ -94,7 +94,7 @@ func copyFile(src, dst string) error {
 }
 
 // generateAssets generates the assets necessary for the compilation and
-// execution of Meergo in production mode, which is the mode used by the tests.
+// execution of Krenalis in production mode, which is the mode used by the tests.
 func generateAssets(ctx context.Context, repo string) error {
 	cmd := exec.CommandContext(ctx, "go", "generate")
 	cmd.Stdout = os.Stdout

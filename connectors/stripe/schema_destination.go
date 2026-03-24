@@ -11,7 +11,7 @@ import (
 // https://docs.stripe.com/api/customers/create and
 // https://docs.stripe.com/api/customers/update.
 //
-// The "source" and "test_clock" fields has been excluded because it is not relevant to Meergo.
+// The "source" and "test_clock" fields has been excluded because it is not relevant to Krenalis.
 
 var destinationSchema = types.Object([]types.Property{
 	{

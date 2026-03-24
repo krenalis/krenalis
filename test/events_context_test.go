@@ -32,7 +32,7 @@ func TestEventsContext(t *testing.T) {
 	var webhookID int
 	var webhookEventWriteKey string
 	{
-		webhookID = c.CreateWebhookSource("Meergo API", nil)
+		webhookID = c.CreateWebhookSource("Krenalis API", nil)
 		keys := c.EventWriteKeys(webhookID)
 		if len(keys) != 1 {
 			t.Fatalf("expected one key, got %d keys", len(keys))

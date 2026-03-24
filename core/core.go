@@ -305,7 +305,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		return nil, fmt.Errorf("core: cannot create auth token cipher: %s", err)
 	}
 
-	// Add the Meergo installation ID tag to Sentry.
+	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
 			scope.SetTag("krenalis_installation_id", core.InstallationID())

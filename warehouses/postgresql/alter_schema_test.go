@@ -282,7 +282,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 
 }
 
-// Test_typeToPostgresType verifies the mapping between Meergo types and the
+// Test_typeToPostgresType verifies the mapping between Krenalis types and the
 // PostgreSQL type strings returned by typeToPostgresType.
 func Test_typeToPostgresType(t *testing.T) {
 

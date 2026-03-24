@@ -23,16 +23,16 @@ var (
 
 func init() {
 	// This is only useful if no one has read the env file at startup, so as to
-	// force the reading of the '.env' file immediately upon Meergo
+	// force the reading of the '.env' file immediately upon Krenalis
 	// initialization. Otherwise, theoretically, it could happen later, perhaps
-	// after 1 hour of Meergo running, and this would conflict with the fact
+	// after 1 hour of Krenalis running, and this would conflict with the fact
 	// that the '.env' file must be read at startup.
 	_, _ = GetEnvVars()
 }
 
 // GetEnvVars returns an EnvVars instance that can be used to retrieve the
-// environment variables passed to Meergo. In case of error, this method returns
-// nil and the error.
+// environment variables passed to Krenalis. In case of error, this method
+// returns nil and the error.
 func GetEnvVars() (*EnvVars, error) {
 
 	envVarsMu.Lock()
@@ -71,13 +71,12 @@ func GetEnvVars() (*EnvVars, error) {
 	return envVars, nil
 }
 
-// EnvVars provides the environment variables passed to Meergo.
+// EnvVars provides the environment variables passed to Krenalis.
 type EnvVars struct{}
 
-// Get returns the value of the Meergo environment variable with the given key.
-// If the variable is not present, this method returns the empty string.
-// It is guaranteed that the returned value contains only UTF-8 valid
-// characters.
+// Get returns the value of the Krenalis environment variable with the given
+// key. If the variable is not present, this method returns the empty string. It
+// is guaranteed that the returned value contains only UTF-8 valid characters.
 // If key does not start with "KRENALIS_", this method panics.
 func (env *EnvVars) Get(key string) string {
 	if !strings.HasPrefix(key, "KRENALIS_") {
@@ -86,7 +85,7 @@ func (env *EnvVars) Get(key string) string {
 	return os.Getenv(key)
 }
 
-// Lookup returns the value of the Meergo environment variable with the given
+// Lookup returns the value of the Krenalis environment variable with the given
 // key. If the variable is present, it returns its value and true; otherwise, it
 // returns an empty string and false. It is guaranteed that the returned value
 // contains only valid UTF-8 characters.

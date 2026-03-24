@@ -76,7 +76,7 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]conn
 	}
 
 	// Read the "attTypMods".
-	// They are necessary to build the Meergo type of certain columns with
+	// They are necessary to build the Krenalis type of certain columns with
 	// specific PostgreSQL types.
 	attTypMods := map[string]map[string]*int{}
 	{

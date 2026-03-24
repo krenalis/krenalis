@@ -6,15 +6,15 @@ package krenalistester
 
 // This file has two purposes:
 //
-// (1) to import connectors and warehouses into the Meergo executable of the
-// tests, when the tests are run by compiling Meergo directly inside the test
+// (1) to import connectors and warehouses into the Krenalis executable of the
+// tests, when the tests are run by compiling Krenalis directly inside the test
 // executable. In this first case, this file acts as any other source file in
 // Go.
 //
 // (2) to define the connectors and warehouses needed by the tests IN ADDITION
 // to the ones already imported in 'main.go', so that this file is then copied
-// to the temporary directory where the Meergo executable used in the tests will
-// be compiled, in those cases where the tests are run by running Meergo in a
+// to the temporary directory where the Krenalis executable used in the tests will
+// be compiled, in those cases where the tests are run by running Krenalis in a
 // separate process (which is the default case). So, it is IMPORTANT that this
 // file is not moved or renamed without changing the test execution procedure.
 //

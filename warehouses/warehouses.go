@@ -265,7 +265,7 @@ type Warehouse interface {
 	//
 	// This method should only be called on warehouses that have already been
 	// initialized, with the aim of correcting any extraordinary issues (such as
-	// accidental table deletions) in an attempt to make Meergo functional again.
+	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
 
 	// Settings returns the data warehouse settings.

@@ -368,7 +368,7 @@ def _handler(event, context):
 
 	transform = function_globals["transform"]
 	
-	# Names needed to evaluate all expressions that Meergo can provide.
+	# Names needed to evaluate all expressions that Krenalis can provide.
 	eval_globals = {
 		"datetime": datetime,
 		"decimal": decimal,

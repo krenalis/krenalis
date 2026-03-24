@@ -96,12 +96,12 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Meergo.
+// make it work with Krenalis.
 func (warehouse *PostgreSQL) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, false)
 }
 
-// Repair repairs the database objects on the data warehouse needed by Meergo.
+// Repair repairs the database objects on the data warehouse needed by Krenalis.
 func (warehouse *PostgreSQL) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, true)
 }

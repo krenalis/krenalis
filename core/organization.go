@@ -532,7 +532,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
 	emailToSend := &emailToSend{
 		From:     this.core.memberEmailFrom,
-		Subject:  "You have been invited to Meergo",
+		Subject:  "You have been invited to Krenalis",
 		To:       email,
 		BodyHTML: []byte(t),
 	}
@@ -652,7 +652,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
 	emailToSend := &emailToSend{
 		From:     this.core.memberEmailFrom,
-		Subject:  "Your Meergo password reset",
+		Subject:  "Your Krenalis password reset",
 		To:       email,
 		BodyHTML: []byte(t),
 	}

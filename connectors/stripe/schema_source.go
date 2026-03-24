@@ -11,7 +11,7 @@ import "github.com/krenalis/krenalis/tools/types"
 // Currently, we don't support expanded responses/fields. We have an issue about
 // them: https://github.com/krenalis/krenalis/issues/1818.
 //
-// The "object" and "livemode" fields have been excluded because they are not relevant to Meergo.
+// The "object" and "livemode" fields have been excluded because they are not relevant to Krenalis.
 //
 
 var sourceSchema = types.Object([]types.Property{

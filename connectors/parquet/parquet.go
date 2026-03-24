@@ -339,7 +339,7 @@ func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records
 		return err
 	}
 	fw := goparquet.NewFileWriter(w,
-		goparquet.WithCreator("Meergo"),
+		goparquet.WithCreator("Krenalis"),
 		goparquet.WithSchemaDefinition(schemaDef),
 	)
 	for {
@@ -402,7 +402,7 @@ func convertInt96(v any) (time.Time, error) {
 	return tm.Add(time.Duration(nano)), nil
 }
 
-// convertToParquetData converts the records passed by Meergo into the format
+// convertToParquetData converts the records passed by Krenalis into the format
 // required by the Parquet library for export to file.
 func convertToParquetData(schema types.Type, record map[string]any) (map[string]any, error) {
 	converted := make(map[string]any, len(record))
@@ -456,7 +456,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 					// precision and scale to represent all decimal values
 					// allowed for t. We return error here to avoid strange
 					// errors in the Parquet library.
-					return nil, fmt.Errorf("decimal value read from Meergo cannot be represented with Parquet's INT32")
+					return nil, fmt.Errorf("decimal value read from Krenalis cannot be represented with Parquet's INT32")
 				}
 				converted[p.Name] = int32(i64)
 			case 10 <= prec && prec <= 18:
@@ -464,13 +464,13 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 				if !ok {
 					// This should never happen, see the comment above for more
 					// details.
-					return nil, fmt.Errorf("decimal value read from Meergo cannot be represented with Parquet's INT64")
+					return nil, fmt.Errorf("decimal value read from Krenalis cannot be represented with Parquet's INT64")
 				}
 				converted[p.Name] = i64
 			default:
 				bytes, err := dec.Binary(t.Scale())
 				if err != nil {
-					return nil, fmt.Errorf("cannot convert decimal value read from Meergo to Parquet binary representation: %s", err)
+					return nil, fmt.Errorf("cannot convert decimal value read from Krenalis to Parquet binary representation: %s", err)
 				}
 				converted[p.Name] = bytes
 			}
@@ -559,9 +559,9 @@ func decimalToInt64(d decimal.Decimal, scale int) (int64, bool) {
 	return int64(u64), true
 }
 
-// determineDecimalType determines the Meergo decimal type based on available
+// determineDecimalType determines the Krenalis decimal type based on available
 // Parquet type information. If the decimal type cannot be determined, or the
-// determined type is not valid in Meergo, types.Type{} and false are returned.
+// determined type is not valid in Krenalis, types.Type{} and false are returned.
 func determineDecimalType(precision, scale int, elem *parquet.SchemaElement) (types.Type, bool) {
 	if precision == 0 && scale == 0 {
 		switch *elem.Type {
@@ -590,7 +590,7 @@ func int64ToTimeTime(v int64, unit *parquet.TimeUnit) time.Time {
 }
 
 // schemaToParquetSchema returns the Parquet schema definition corresponding to
-// the given Meergo schema.
+// the given Krenalis schema.
 //
 // This method panics if schema is not an Object.
 func schemaToParquetSchema(schema types.Type) (*parquetschema.SchemaDefinition, error) {
@@ -609,7 +609,7 @@ func schemaToParquetSchema(schema types.Type) (*parquetschema.SchemaDefinition, 
 }
 
 // objectToColumns returns the Parquet column definitions corresponding to the
-// given Meergo object.
+// given Krenalis object.
 //
 // This method panics if obj is not an Object.
 func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) {
@@ -912,7 +912,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		return types.Int(64), nil
 	case parquet.Type_INT96:
 		// Parquet columns with physical type INT96 are treated as 'datetime' in
-		// Meergo. This is because there does not seem to be any other practical
+		// Krenalis. This is because there does not seem to be any other practical
 		// use, in fact, for such columns. Also, consider that INT96 types are
 		// indeed deprecated, as timestamps are defined with other types, an
 		// they are kept here in the connector on import only, for compatibility

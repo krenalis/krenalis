@@ -413,12 +413,12 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
 	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
 }
 
-// Repair repairs the database objects on the data warehouse needed by Meergo.
+// Repair repairs the database objects on the data warehouse needed by Krenalis.
 // The given profile schema will be used to repair the user tables.
 //
 // This method should only be called on warehouses that have already been
 // initialized, with the aim of correcting any extraordinary issues (such as
-// accidental table deletions) in an attempt to make Meergo functional again.
+// accidental table deletions) in an attempt to make Krenalis functional again.
 //
 // If an error occurs with the data warehouse during the repair, it returns an
 // *UnavailableError error.

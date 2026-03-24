@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-// Enabled enables the exposure of the Meergo metrics via the HTTP endpoint
+// Enabled enables the exposure of the Krenalis metrics via the HTTP endpoint
 // /debug/vars.
 const Enabled = false
 

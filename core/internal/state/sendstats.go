@@ -13,7 +13,7 @@ import (
 	"github.com/krenalis/analytics-go"
 )
 
-// sendNotificationStats sends information about notification n to Meergo.
+// sendNotificationStats sends information about notification n to Krenalis.
 func (state *State) sendNotificationStats(client analytics.Client, organization uuid.UUID, n notification) {
 	go func() {
 		err := client.Enqueue(analytics.Track{
@@ -28,13 +28,13 @@ func (state *State) sendNotificationStats(client analytics.Client, organization 
 			Properties: analytics.NewProperties().Set("notification_name", n.Name),
 		})
 		if err != nil {
-			slog.Error("cannot enqueue Track event when sending stats to Meergo", "error", err)
+			slog.Error("cannot enqueue Track event when sending stats to Krenalis", "error", err)
 		}
 	}()
 }
 
-// eventContextOs is the name of the OS on which this Meergo instance is
-// running, in a format accepted by the 'context.os.name' field of the Meergo
+// eventContextOs is the name of the OS on which this Krenalis instance is
+// running, in a format accepted by the 'context.os.name' field of the Krenalis
 // API endpoint that ingests events.
 var eventContextOs string
 

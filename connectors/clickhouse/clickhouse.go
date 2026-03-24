@@ -112,7 +112,7 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (connectors.Rows,
 }
 
 // SQLLiteral returns the SQL literal representation of v according to the
-// provided Meergo type t. It supports nil values and the following Meergo
+// provided Krenalis type t. It supports nil values and the following Krenalis
 // types: string, datetime, date, and json.
 func (ch *ClickHouse) SQLLiteral(value any, typ types.Type) string {
 	if value == nil {

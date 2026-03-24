@@ -161,7 +161,7 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	if len(tooPrivilegedTableNames) > 0 {
 		return &warehouses.SettingsNotReadOnly{
 			Err: fmt.Errorf(
-				"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
+				"the credentials should be read-only, but they allow write operations on the following Krenalis tables: %s",
 				strings.Join(tooPrivilegedTableNames, ", "),
 			)}
 	}

@@ -44,7 +44,7 @@ type databaseConnection interface {
 	Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error)
 
 	// SQLLiteral returns the SQL literal representation of v according to the
-	// provided Meergo type t. It supports nil values and the following Meergo
+	// provided Krenalis type t. It supports nil values and the following Krenalis
 	// types: string, datetime, date, and json.
 	//
 	// Examples:

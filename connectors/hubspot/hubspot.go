@@ -31,7 +31,7 @@ var sourceOverview string
 var destinationOverview string
 
 // TODO(Gianluca): Groups are partially supported by this connector. When they
-// are fully supported by both the connector and Meergo, re-enable the
+// are fully supported by both the connector and Krenalis, re-enable the
 // descriptions that refer to the groups and add the target "Group" where
 // needed.
 

@@ -327,7 +327,7 @@ type Record struct {
 }
 
 // IsCreate reports whether this record should be created when passed to Upsert.
-// In Meergo, a record to be created has an empty ID.
+// In Krenalis, a record to be created has an empty ID.
 func (r Record) IsCreate() bool { return r.ID == "" }
 
 // IsUpdate reports whether this record should be updated when passed to Upsert.

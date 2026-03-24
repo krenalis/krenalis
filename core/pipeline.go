@@ -86,11 +86,11 @@ type Pipeline struct {
 	Incremental        bool            `json:"incremental"`
 }
 
-// Matching establishes a relationship between a property in Meergo (input
+// Matching establishes a relationship between a property in Krenalis (input
 // property) and a corresponding property in the application (output property)
 // used during an export. This relationship determines whether a user or group
-// in Meergo exists in the application and identifies the corresponding user or
-// group in the application.
+// in Krenalis exists in the application and identifies the corresponding user
+// or group in the application.
 //
 // The input property should be a property in the profile schema, while the
 // output property should be a property in the source schema of the connection.
@@ -1208,7 +1208,7 @@ type PipelineToSet struct {
 	// update them, or do both.
 	ExportMode ExportMode `json:"exportMode"`
 
-	// Matching defines a relationship between a property in Meergo ("in") and
+	// Matching defines a relationship between a property in Krenalis ("in") and
 	// a corresponding property in the application ("out") used during an export.
 	Matching Matching `json:"matching"`
 

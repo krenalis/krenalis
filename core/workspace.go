@@ -1385,7 +1385,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 	return err
 }
 
-// RepairWarehouse repairs the database objects needed by Meergo on the
+// RepairWarehouse repairs the database objects needed by Krenalis on the
 // workspace's data warehouse.
 func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()

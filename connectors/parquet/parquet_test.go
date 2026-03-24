@@ -75,7 +75,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "my_uuid", Type: types.UUID(), ReadOptional: true},
 		{Name: "my_json", Type: types.JSON(), ReadOptional: true},
 	}
-	// Values here must have the format documented in the Meergo doc about
+	// Values here must have the format documented in the Krenalis doc about
 	// export values and types (/developers/extend/connectors/data-values).
 	exportedRecords := []map[string]any{
 		{
