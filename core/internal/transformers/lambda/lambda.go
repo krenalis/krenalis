@@ -503,7 +503,7 @@ var recordsMetric *prometheus.Counter
 func init() {
 	// Errors metric.
 	vec := prometheus.RegisterCounterVec(
-		"meergo_lambda_errors_total",
+		"krenalis_lambda_errors_total",
 		"Total number of Lambda errors, classified by type",
 		[]string{"type"},
 	)
@@ -513,14 +513,14 @@ func init() {
 
 	// Duration metric.
 	durationMetric = prometheus.RegisterHistogram(
-		"meergo_lambda_duration_seconds",
+		"krenalis_lambda_duration_seconds",
 		"Duration of successful Lambda executions in seconds",
 		[]float64{0.1, 0.5, 1, 2.5, 5},
 	)
 
 	// Records metric.
 	recordsMetric = prometheus.RegisterCounter(
-		"meergo_lambda_records_total",
+		"krenalis_lambda_records_total",
 		"Total number of input records processed by successful Lambda executions",
 	)
 }
