@@ -36,8 +36,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.String()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"a\" character varying",
 			},
 		},
 		{
@@ -49,8 +49,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"f\" double precision",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
 		},
 		{
@@ -62,8 +62,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"f\" double precision",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
 		},
 		{
@@ -79,8 +79,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.String()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
 			},
 		},
 		{
@@ -93,8 +93,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Array(types.String())},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying[]",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"a\" character varying[]",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"a\" character varying[]",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"a\" character varying[]",
 			},
 		},
 		{
@@ -107,8 +107,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.String()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"a\" character varying",
 			},
 		},
 		{
@@ -123,8 +123,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
 			},
 		},
 		{
@@ -139,8 +139,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
-				"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
 			},
 		},
 		{
@@ -152,8 +152,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationDropColumn, Column: "a"},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tDROP COLUMN \"a\"",
-				"ALTER TABLE \"meergo_identities\"\n\tDROP COLUMN \"a\"",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tDROP COLUMN \"a\"",
+				"ALTER TABLE \"krenalis_identities\"\n\tDROP COLUMN \"a\"",
 			},
 		},
 		{
@@ -166,8 +166,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationDropColumn, Column: "b"},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
-				"ALTER TABLE \"meergo_identities\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
+				"ALTER TABLE \"krenalis_identities\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
 			},
 		},
 		{
@@ -179,8 +179,8 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"\n\tRENAME COLUMN \"a\" TO \"b\"",
-				"ALTER TABLE \"meergo_identities\"\n\tRENAME COLUMN \"a\" TO \"b\"",
+				"ALTER TABLE \"krenalis_profiles_0\"\n\tRENAME COLUMN \"a\" TO \"b\"",
+				"ALTER TABLE \"krenalis_identities\"\n\tRENAME COLUMN \"a\" TO \"b\"",
 			},
 		},
 		{
@@ -220,7 +220,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "ai32", Type: types.Array(types.Int(32))},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"meergo_profiles_0\"" +
+				"ALTER TABLE \"krenalis_profiles_0\"" +
 					"\n\tADD COLUMN \"b\" boolean," +
 					"\n\tADD COLUMN \"i16\" smallint," +
 					"\n\tADD COLUMN \"i32\" integer," +
@@ -236,7 +236,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 					"\n\tADD COLUMN \"t\" character varying," +
 					"\n\tADD COLUMN \"at\" character varying[]," +
 					"\n\tADD COLUMN \"ai32\" integer[]",
-				"ALTER TABLE \"meergo_identities\"" +
+				"ALTER TABLE \"krenalis_identities\"" +
 					"\n\tADD COLUMN \"b\" boolean," +
 					"\n\tADD COLUMN \"i16\" smallint," +
 					"\n\tADD COLUMN \"i32\" integer," +
@@ -268,7 +268,7 @@ func Test_alterProfileSchemaQueries(t *testing.T) {
 				{Name: "_mpid", Type: types.Int(32)},
 				{Name: "_updated_at", Type: types.DateTime()},
 			}, columns...)
-			got := alterProfileSchemaQueries("meergo_profiles_0", columns, test.ops)
+			got := alterProfileSchemaQueries("krenalis_profiles_0", columns, test.ops)
 			// Exclude from the test the queries that drop or create views.
 			got = slices.DeleteFunc(got, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||

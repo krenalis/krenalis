@@ -41,12 +41,12 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 	bo.SetCap(500 * time.Millisecond)
 	for bo.Next(ctx) {
 		err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-			_, err = tx.Exec(ctx, `LOCK "meergo_system_operations"`)
+			_, err = tx.Exec(ctx, `LOCK "krenalis_system_operations"`)
 			if err != nil {
 				return err
 			}
 			var readID *string
-			rows, err := tx.Query(ctx, `SELECT "id", "completed_at", "error" FROM "meergo_system_operations" WHERE "id" = $1`, opID)
+			rows, err := tx.Query(ctx, `SELECT "id", "completed_at", "error" FROM "krenalis_system_operations" WHERE "id" = $1`, opID)
 			if err != nil {
 				return err
 			}
@@ -62,7 +62,7 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 			}
 			if readID == nil {
 				// No rows in DB, so the operation can be started.
-				_, err = tx.Exec(ctx, `INSERT INTO "meergo_system_operations" ("id", "operation_type") VALUES ($1, $2)`, opID, opType)
+				_, err = tx.Exec(ctx, `INSERT INTO "krenalis_system_operations" ("id", "operation_type") VALUES ($1, $2)`, opID, opType)
 				if err != nil {
 					return err
 				}
@@ -106,7 +106,7 @@ func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, opID s
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err = pool.Exec(ctx, `UPDATE "meergo_system_operations" SET "completed_at" = $1, "error" = $2`+
+	_, err = pool.Exec(ctx, `UPDATE "krenalis_system_operations" SET "completed_at" = $1, "error" = $2`+
 		` WHERE "id" = $3 AND "completed_at" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
 		return err

@@ -38,9 +38,9 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
-// destinationsProfilesTable represents the meergo_destination_profiles table.
+// destinationsProfilesTable represents the krenalis_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
-	Name: "meergo_destination_profiles",
+	Name: "krenalis_destination_profiles",
 	Columns: []warehouses.Column{
 		{Name: "_pipeline", Type: types.Int(32)},
 		{Name: "_external_id", Type: types.String()},
@@ -147,7 +147,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline int)
 	defer done()
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, pipeline)
-	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
+	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
 // Events returns the events according to the provided query. The returned
@@ -220,7 +220,7 @@ func (store *Store) Identities(ctx context.Context, query Query) ([]map[string]a
 		return nil, 0, err
 	}
 	defer done()
-	query.table = "meergo_identities"
+	query.table = "krenalis_identities"
 	query.total = true
 	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
@@ -406,11 +406,11 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
 		values[i] = pipeline
 	}
 	where := warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
-	err = store.warehouse().Delete(ctx, "meergo_identities", where)
+	err = store.warehouse().Delete(ctx, "krenalis_identities", where)
 	if err != nil {
 		return err
 	}
-	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
+	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Krenalis.

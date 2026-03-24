@@ -9,7 +9,7 @@ DO $$
     END IF;
 END$$;
 
-CREATE TABLE IF NOT EXISTS meergo_system_operations (
+CREATE TABLE IF NOT EXISTS krenalis_system_operations (
     id uuid NOT NULL,
     operation_type system_operation_type,
     completed_at timestamp(3),

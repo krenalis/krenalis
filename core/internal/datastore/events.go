@@ -133,7 +133,7 @@ func init() {
 	}
 
 	eventsMergeTable = warehouses.Table{
-		Name:    "meergo_events",
+		Name:    "krenalis_events",
 		Columns: eventsColumnsForMerge,
 		Keys:    []string{"message_id"},
 	}
