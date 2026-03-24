@@ -128,7 +128,7 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	table := connectors.Table{
-		Name:    "test_meergo_query",
+		Name:    "test_krenalis_query",
 		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
