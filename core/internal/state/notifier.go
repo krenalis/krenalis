@@ -124,7 +124,7 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 			return 0, err
 		}
 	}
-	const start = "NOTIFY meergo, '"
+	const start = "NOTIFY krenalis, '"
 	b := []byte(start)
 	b, err := appendEncodeNotification(b, notifier.cipher, name, n)
 	if err != nil {
@@ -174,7 +174,7 @@ func (notifier *notifier) init(ctx context.Context) {
 			slog.Info("connection for notifications successfully re-established")
 			acquireFailed = false
 		}
-		_, err = conn.Exec(ctx, "LISTEN meergo")
+		_, err = conn.Exec(ctx, "LISTEN krenalis")
 		if err != nil {
 			// Close and release the connection.
 			_ = conn.Underlying().Close(ctx)
@@ -244,7 +244,7 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 		if err != nil {
 			return err
 		}
-		if n.Channel != "meergo" {
+		if n.Channel != "krenalis" {
 			continue
 		}
 		if strings.HasSuffix(n.Payload, "*") {
