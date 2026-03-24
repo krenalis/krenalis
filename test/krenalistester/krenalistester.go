@@ -38,27 +38,27 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// launchMeergoExternally determines if Meergo should be launched externally
+// launchKrenalisExternally determines if Krenalis should be launched externally
 // when testing.
 //
-//   - Set this to true when testing Meergo using 'go run ./commit' or
+//   - Set this to true when testing Krenalis using 'go run ./commit' or
 //     'go test'.
 //
-//   - Set this to false when debugging a single Meergo test.
-const launchMeergoExternally = true
+//   - Set this to false when debugging a single Krenalis test.
+const launchKrenalisExternally = true
 
-// Meergo represents an instance of Meergo which responds to HTTP requests and
+// Krenalis represents an instance of Krenalis which responds to HTTP requests and
 // exposes methods to make calls to the APIs.
-type Meergo struct {
+type Krenalis struct {
 	cancel func()
 	t      *testing.T
-	// meergoRunning is used as a synchronization mechanism to wait for Meergo
-	// to end its execution.
-	// When Meergo is started -- both as an external process or as a goroutine
-	// --, an empty channel should be assigned to it; when Meergo exits, the
+	// krenalisRunning is used as a synchronization mechanism to wait for
+	// Krenalis to end its execution.
+	// When Krenalis is started -- both as an external process or as a goroutine
+	// --, an empty channel should be assigned to it; when Krenalis exits, the
 	// channel must be closed; this allows the testing framework to wait for
-	// Meergo to correctly exit before finishing the tests.
-	meergoRunning          chan struct{}
+	// Krenalis to correctly exit before finishing the tests.
+	krenalisRunning        chan struct{}
 	transformationsTempDir string
 	httpClient             *http.Client
 	ws                     int
@@ -76,34 +76,34 @@ type Meergo struct {
 }
 
 var assetsAlreadyGenerated bool
-var meergoAlreadyBuilt bool
-var meergoAlreadyLaunched bool
+var krenalisAlreadyBuilt bool
+var krenalisAlreadyLaunched bool
 
-// Addr returns the host (along with the port) on which the Meergo instance
+// Addr returns the host (along with the port) on which the Krenalis instance
 // runs.
-func (c *Meergo) Addr() string {
+func (c *Krenalis) Addr() string {
 	return testsSettings.HTTP.Host + ":" + strconv.Itoa(testsSettings.HTTP.Port)
 }
 
-// NewMeergoInstance initializes a new instance of Meergo for testing.
+// NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
 // [PopulateProfileSchema] and [SetFileSystemRoot]) and finally the instance can be
 // started with the [Start] method.
-func NewMeergoInstance(t *testing.T) *Meergo {
+func NewKrenalisInstance(t *testing.T) *Krenalis {
 
-	if !launchMeergoExternally {
-		if meergoAlreadyLaunched {
-			msg := "aborting tests: you are executing more than one test, consequently the 'launchMeergoExternally'" +
+	if !launchKrenalisExternally {
+		if krenalisAlreadyLaunched {
+			msg := "aborting tests: you are executing more than one test, consequently the 'launchKrenalisExternally'" +
 				" constant cannot be false. It can be false only when executing a single test"
 			t.Fatal(msg)
 		}
-		meergoAlreadyLaunched = true
+		krenalisAlreadyLaunched = true
 	}
 
 	ctx := context.Background()
 
-	c := Meergo{
+	c := Krenalis{
 		t:                     t,
 		populateProfileSchema: true,
 	}
@@ -125,7 +125,7 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 	// If Meergo is run inside the testing process, it is necessary to generate
 	// the assets. If it is run externally, the assets are generated separately,
 	// when Meergo is compiled, so there is no need to compile them.
-	const needToGenerateAssets = !launchMeergoExternally
+	const needToGenerateAssets = !launchKrenalisExternally
 	if needToGenerateAssets {
 		c.assetsGenerated = make(chan struct{}, 1)
 		go func() {
@@ -160,22 +160,22 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 //
 // By default, if this method is not called before calling [Start], the option
 // is considered true.
-func (c *Meergo) PopulateProfileSchema(populate bool) {
+func (c *Krenalis) PopulateProfileSchema(populate bool) {
 	c.populateProfileSchema = populate
 }
 
 // SetFileSystemRoot sets the root of the File System connections; the value set
-// here will be passed to Meergo via the KRENALIS_CONNECTOR_FILESYSTEM_ROOT
+// here will be passed to Krenalis via the KRENALIS_CONNECTOR_FILESYSTEM_ROOT
 // environment variable.
-func (c *Meergo) SetFileSystemRoot(root string) {
+func (c *Krenalis) SetFileSystemRoot(root string) {
 	c.fileSystemRoot = root
 }
 
-// Start starts the Meergo instance.
+// Start starts the Krenalis instance.
 //
 // After calling this method, the [Stop] method must be called to stop the
 // instance and shutdown the server.
-func (c *Meergo) Start() {
+func (c *Krenalis) Start() {
 
 	ctx := context.Background()
 
@@ -313,22 +313,22 @@ func (c *Meergo) Start() {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
 
-	if launchMeergoExternally {
-		// Create, if necessary, the directory that will hold the Meergo
+	if launchKrenalisExternally {
+		// Create, if necessary, the directory that will hold the Krenalis
 		// executable (as well as the other files needed for the execution).
-		meergoDir := filepath.Join(c.repo, "test", "krenalis-executable-for-tests")
-		err = os.Mkdir(meergoDir, 0755)
+		krenalisDir := filepath.Join(c.repo, "test", "krenalis-executable-for-tests")
+		err = os.Mkdir(krenalisDir, 0755)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			c.t.Fatal(err)
 		}
 		// In addition to the environment variables already present for the
-		// process, add those needed to run Meergo.
+		// process, add those needed to run Krenalis.
 		//
 		// It is important to preserve the environment variables already present
-		// because (1) it is the same thing we do when we test Meergo not as an
+		// because (1) it is the same thing we do when we test Krenalis not as an
 		// external process but "embedded" inside the current process, so this
 		// makes the two test modes more consistent and (2) problems can occur
-		// in running Meergo if certain system environment variables are not
+		// in running Krenalis if certain system environment variables are not
 		// provided (this for example gives errors on Windows).
 		env := append(os.Environ(), []string{
 			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
@@ -351,16 +351,16 @@ func (c *Meergo) Start() {
 			"KRENALIS_NATS_USER=" + testsSettings.NATS.User,
 			"KRENALIS_NATS_PASSWORD=" + testsSettings.NATS.Password,
 		}...)
-		if !meergoAlreadyBuilt {
-			buildMeergo(c.t, c.repo, meergoDir)
-			meergoAlreadyBuilt = true
+		if !krenalisAlreadyBuilt {
+			buildKrenalis(c.t, c.repo, krenalisDir)
+			krenalisAlreadyBuilt = true
 		}
 		go func() {
-			c.meergoRunning = make(chan struct{})
+			c.krenalisRunning = make(chan struct{})
 			defer func() {
-				close(c.meergoRunning)
+				close(c.krenalisRunning)
 			}()
-			err := launchMeergo(ctxWithCancel, env)
+			err := launchKrenalis(ctxWithCancel, env)
 			if err != nil && ctxWithCancel.Err() == nil {
 				log.Printf("[error] %s", err)
 			}
@@ -397,9 +397,9 @@ func (c *Meergo) Start() {
 			c.t.Fatal(err)
 		}
 		go func() {
-			c.meergoRunning = make(chan struct{})
+			c.krenalisRunning = make(chan struct{})
 			defer func() {
-				close(c.meergoRunning)
+				close(c.krenalisRunning)
 			}()
 			assets := os.DirFS(filepath.Join(c.repo, "admin", "assets"))
 			{
@@ -429,7 +429,7 @@ func (c *Meergo) Start() {
 	attempts := 0
 	for {
 		select {
-		case <-c.meergoRunning:
+		case <-c.krenalisRunning:
 			c.t.Fatalf("Krenalis has exited")
 		default:
 		}
@@ -479,7 +479,7 @@ func (c *Meergo) Start() {
 
 // CountEventsInWarehouse returns the counts of events stored in the "events"
 // table of the testing data warehouse.
-func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
+func (c *Krenalis) CountEventsInWarehouse(ctx context.Context) int {
 	pool, err := ConnectionPool(ctx, testsSettings.Warehouse)
 	if err != nil {
 		c.t.Fatalf("cannot open warehouse for executing query tests: %s", err)
@@ -493,13 +493,13 @@ func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
 	return count
 }
 
-// Stop stops the execution of Meergo.
-func (c *Meergo) Stop() {
+// Stop stops the execution of Krenalis.
+func (c *Krenalis) Stop() {
 	if c.cancel != nil {
 		c.cancel()
 	}
-	if c.meergoRunning != nil {
-		<-c.meergoRunning
+	if c.krenalisRunning != nil {
+		<-c.krenalisRunning
 	}
 	if c.transformationsTempDir == "" {
 		panic("BUG: transformationsTempDir not set")
@@ -545,7 +545,7 @@ func init() {
 	}
 }
 
-func (c *Meergo) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (int, error) {
+func (c *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (int, error) {
 	req := map[string]any{
 		"name":          name,
 		"profileSchema": profileSchema,
@@ -565,7 +565,7 @@ func (c *Meergo) createWorkspace(name string, profileSchema types.Type, uiPrefer
 	return response.ID, nil
 }
 
-func (c *Meergo) login() error {
+func (c *Krenalis) login() error {
 	body := map[string]any{
 		"email":    "acme@krenalis.com",
 		"password": "meergo-password",
@@ -574,7 +574,7 @@ func (c *Meergo) login() error {
 }
 
 // ExecQueryTestDatabase executes a query on the test database.
-func (c *Meergo) ExecQueryTestDatabase(ctx context.Context, query string, args ...any) {
+func (c *Krenalis) ExecQueryTestDatabase(ctx context.Context, query string, args ...any) {
 	pool, err := ConnectionPool(ctx, testsSettings.Database)
 	if err != nil {
 		c.t.Fatalf("cannot establish connection to database: %s", err)
@@ -588,7 +588,7 @@ func (c *Meergo) ExecQueryTestDatabase(ctx context.Context, query string, args .
 
 // QueryRowTestDatabase queries a row on the test database, scanning it into
 // dest, which must be a pointer.
-func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query string, args ...any) {
+func (c *Krenalis) QueryRowTestDatabase(ctx context.Context, dest any, query string, args ...any) {
 	if reflect.TypeOf(dest).Kind() != reflect.Pointer {
 		panic("dest must be a pointer")
 	}
@@ -603,9 +603,9 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 	}
 }
 
-// WorkspaceID returns the ID of the workspace on which the instance of Meergo
+// WorkspaceID returns the ID of the workspace on which the instance of Krenalis
 // operates.
-func (c *Meergo) WorkspaceID() int {
+func (c *Krenalis) WorkspaceID() int {
 	return c.ws
 }
 

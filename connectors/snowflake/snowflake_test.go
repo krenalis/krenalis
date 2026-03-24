@@ -111,10 +111,10 @@ func Test_Columns(t *testing.T) {
 func Test_Merge_Query(t *testing.T) {
 
 	cols := []struct {
-		DriverType  string
-		DriverValue any
-		MeergoType  types.Type
-		MeergoValue any
+		DriverType    string
+		DriverValue   any
+		KrenalisType  types.Type
+		KrenalisValue any
 	}{
 		{"BOOLEAN", true, types.Boolean(), true},
 		{"FLOAT", 703.219, types.Float(64), 703.219},
@@ -135,7 +135,7 @@ func Test_Merge_Query(t *testing.T) {
 	for i, c := range cols {
 		table.Columns[i] = connectors.Column{
 			Name:     fmt.Sprintf("c%d", i),
-			Type:     c.MeergoType,
+			Type:     c.KrenalisType,
 			Nullable: true,
 		}
 	}
@@ -171,7 +171,7 @@ func Test_Merge_Query(t *testing.T) {
 	}()
 	row := make([]any, len(cols))
 	for i, c := range cols {
-		row[i] = c.MeergoValue
+		row[i] = c.KrenalisValue
 	}
 	err = connector.Merge(context.Background(), table, [][]any{row})
 	if err != nil {

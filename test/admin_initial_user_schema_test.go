@@ -22,7 +22,7 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.PopulateProfileSchema(false)
 	c.Start()
 	defer c.Stop()

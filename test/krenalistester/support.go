@@ -28,7 +28,7 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (c *Meergo) AlterProfileSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
+func (c *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
@@ -55,7 +55,7 @@ func (c *Meergo) AlterProfileSchema(schema types.Type, primarySources map[string
 
 // AlterProfileSchemaErr is like AlterProfileSchema but returns an error instead of
 // panicking.
-func (c *Meergo) AlterProfileSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (c *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
@@ -64,7 +64,7 @@ func (c *Meergo) AlterProfileSchemaErr(schema types.Type, primarySources map[str
 	return c.Call("PUT", "/v1/profiles/schema", req, nil)
 }
 
-func (c *Meergo) AbsolutePath(storage int, path string) string {
+func (c *Krenalis) AbsolutePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
@@ -76,7 +76,7 @@ func (c *Meergo) AbsolutePath(storage int, path string) string {
 	return response.Path
 }
 
-func (c *Meergo) PipelineSchemas(conn int, target core.Target, eventType string) map[string]any {
+func (c *Krenalis) PipelineSchemas(conn int, target core.Target, eventType string) map[string]any {
 	path := fmt.Sprintf("/v1/connections/%d/pipelines/schemas/%s", conn, target)
 	if eventType != "" {
 		path += "?type=" + url.QueryEscape(eventType)
@@ -86,7 +86,7 @@ func (c *Meergo) PipelineSchemas(conn int, target core.Target, eventType string)
 	return schemas
 }
 
-func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]Identity, int) {
+func (c *Krenalis) ConnectionIdentities(conn, first, limit int) ([]Identity, int) {
 	var response struct {
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
@@ -96,14 +96,14 @@ func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]Identity, int) 
 	return response.Identities, response.Total
 }
 
-func (c *Meergo) ConnectionUI(connection int) map[string]any {
+func (c *Krenalis) ConnectionUI(connection int) map[string]any {
 	path := fmt.Sprintf("/v1/connections/%d/ui", connection)
 	var ui map[string]any
 	c.MustCall("GET", path, nil, &ui)
 	return ui
 }
 
-func (c *Meergo) CreatePipeline(conn int, target string, pipeline PipelineToSet) int {
+func (c *Krenalis) CreatePipeline(conn int, target string, pipeline PipelineToSet) int {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -129,7 +129,7 @@ func (c *Meergo) CreatePipeline(conn int, target string, pipeline PipelineToSet)
 
 // CreatePipelineErr is like CreatePipeline but returns an error instead of
 // panicking.
-func (c *Meergo) CreatePipelineErr(conn int, target string, pipeline PipelineToSet) (int, error) {
+func (c *Krenalis) CreatePipelineErr(conn int, target string, pipeline PipelineToSet) (int, error) {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -174,7 +174,7 @@ var DefaultFilterUserFromEvents = &Filter{
 	},
 }
 
-func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
+func (c *Krenalis) CreateConnection(connection ConnectionToCreate) int {
 	var response struct {
 		ID int `json:"id"`
 	}
@@ -182,7 +182,7 @@ func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 	return response.ID
 }
 
-func (c *Meergo) CreateDestinationFilesystem() int {
+func (c *Krenalis) CreateDestinationFilesystem() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "File System",
 		Role:      Destination,
@@ -193,7 +193,7 @@ func (c *Meergo) CreateDestinationFilesystem() int {
 	})
 }
 
-func (c *Meergo) CreateDestinationPostgreSQL() int {
+func (c *Krenalis) CreateDestinationPostgreSQL() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
@@ -209,7 +209,7 @@ func (c *Meergo) CreateDestinationPostgreSQL() int {
 	})
 }
 
-func (c *Meergo) CreateDummy(name string, role Role) int {
+func (c *Krenalis) CreateDummy(name string, role Role) int {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
@@ -223,7 +223,7 @@ func (c *Meergo) CreateDummy(name string, role Role) int {
 	return c.CreateConnection(conn)
 }
 
-func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummySettings) int {
+func (c *Krenalis) CreateDummyWithSettings(name string, role Role, settings DummySettings) int {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
@@ -237,7 +237,7 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 	return c.CreateConnection(conn)
 }
 
-func (c *Meergo) CreateEventPipeline(conn int, eventType string, pipeline PipelineToSet) int {
+func (c *Krenalis) CreateEventPipeline(conn int, eventType string, pipeline PipelineToSet) int {
 	pipelineJSON, err := stdjson.Marshal(pipeline)
 	if err != nil {
 		panic(err)
@@ -257,7 +257,7 @@ func (c *Meergo) CreateEventPipeline(conn int, eventType string, pipeline Pipeli
 	return response.ID
 }
 
-func (c *Meergo) CreateWebhookSource(name string, linkedConnections []int) int {
+func (c *Krenalis) CreateWebhookSource(name string, linkedConnections []int) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
@@ -266,7 +266,7 @@ func (c *Meergo) CreateWebhookSource(name string, linkedConnections []int) int {
 	})
 }
 
-func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) int {
+func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []int) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
@@ -276,7 +276,7 @@ func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) in
 	})
 }
 
-func (c *Meergo) CreateSourceFileSystem() int {
+func (c *Krenalis) CreateSourceFileSystem() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "File System",
 		Role:      Source,
@@ -287,7 +287,7 @@ func (c *Meergo) CreateSourceFileSystem() int {
 	})
 }
 
-func (c *Meergo) CreateSourcePostgreSQL() int {
+func (c *Krenalis) CreateSourcePostgreSQL() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
@@ -303,12 +303,12 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 	})
 }
 
-func (c *Meergo) DeleteConnection(conn int) {
+func (c *Krenalis) DeleteConnection(conn int) {
 	path := fmt.Sprintf("/v1/connections/%d", conn)
 	c.MustCall("DELETE", path, nil, nil)
 }
 
-func (c *Meergo) RunPipeline(pipeline int) int {
+func (c *Krenalis) RunPipeline(pipeline int) int {
 	var response struct {
 		ID int
 	}
@@ -317,13 +317,13 @@ func (c *Meergo) RunPipeline(pipeline int) int {
 	return response.ID
 }
 
-func (c *Meergo) ExternalEventURL() string {
+func (c *Krenalis) ExternalEventURL() string {
 	var metadata map[string]any
 	c.MustCall("GET", "/v1/public/metadata", nil, &metadata)
 	return metadata["externalEventURL"].(string)
 }
 
-func (c *Meergo) Events(properties []string) []map[string]any {
+func (c *Krenalis) Events(properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"first":      []string{"0"},
@@ -336,7 +336,7 @@ func (c *Meergo) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
+func (c *Krenalis) File(storage int, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -354,13 +354,13 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 	return response.Records, response.Schema
 }
 
-func (c *Meergo) JavaScriptSDKURL() string {
+func (c *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
 	c.MustCall("GET", "/v1/public/metadata", nil, &metadata)
 	return metadata["javascriptSDKURL"].(string)
 }
 
-func (c *Meergo) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError *string) {
+func (c *Krenalis) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError *string) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
@@ -370,7 +370,7 @@ func (c *Meergo) LatestAlterProfileSchema() (startTime, endTime *time.Time, alte
 	return response.StartTime, response.EndTime, response.Error
 }
 
-func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
+func (c *Krenalis) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
@@ -379,14 +379,14 @@ func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
-func (c *Meergo) PipelineRun(id int) PipelineRun {
+func (c *Krenalis) PipelineRun(id int) PipelineRun {
 	var run PipelineRun
 	path := fmt.Sprintf("/v1/pipelines/runs/%d", id)
 	c.MustCall("GET", path, nil, &run)
 	return run
 }
 
-func (c *Meergo) PipelineRuns() []PipelineRun {
+func (c *Krenalis) PipelineRuns() []PipelineRun {
 	var response struct {
 		Runs []PipelineRun
 	}
@@ -394,7 +394,7 @@ func (c *Meergo) PipelineRuns() []PipelineRun {
 	return response.Runs
 }
 
-func (c *Meergo) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
+func (c *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -408,7 +408,7 @@ func (c *Meergo) PreviewAlterProfileSchema(schema types.Type, rePaths map[string
 
 // PreviewAlterProfileSchemaErr is like PreviewAlterProfileSchema but returns an
 // error instead of panicking.
-func (c *Meergo) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (c *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -423,13 +423,13 @@ func (c *Meergo) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[str
 	return response.Queries, nil
 }
 
-func (c *Meergo) RepairWarehouse() {
+func (c *Krenalis) RepairWarehouse() {
 	c.MustCall("POST", "/v1/warehouse/repair", nil, nil)
 }
 
 // RunIdentityResolution starts the identity resolution and waits for it to
 // complete.
-func (c *Meergo) RunIdentityResolution() {
+func (c *Krenalis) RunIdentityResolution() {
 	ts := time.Now().UTC()
 	c.MustCall("POST", "/v1/identity-resolution/start", nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
@@ -446,7 +446,7 @@ func (c *Meergo) RunIdentityResolution() {
 	}
 }
 
-func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
+func (c *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 	endpoint := "http://" + c.Addr() + "/v1/events"
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -491,7 +491,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 	s.ch <- err
 }
 
-func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.Value) []string {
+func (c *Krenalis) Sheets(storage int, path string, format string, compression Compression, settings json.Value) []string {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -506,7 +506,7 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 	return response.Sheets
 }
 
-func (c *Meergo) TableSchema(conn int, table string) (types.Type, []string) {
+func (c *Krenalis) TableSchema(conn int, table string) (types.Type, []string) {
 	var response struct {
 		Schema types.Type `json:"schema"`
 		Issues []string   `json:"issues"`
@@ -519,14 +519,14 @@ func (c *Meergo) TableSchema(conn int, table string) (types.Type, []string) {
 	return response.Schema, response.Issues
 }
 
-func (c *Meergo) TestWarehouseUpdate(settings json.Value) {
+func (c *Krenalis) TestWarehouseUpdate(settings json.Value) {
 	body := map[string]any{
 		"settings": settings,
 	}
 	c.MustCall("PUT", "/v1/warehouse/test", body, nil)
 }
 
-func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
+func (c *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 	uiPreferences UIPreferences, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
 	body := map[string]any{
 		"name":          name,
@@ -541,12 +541,12 @@ func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
 	return c.Call("POST", "/v1/workspaces/test", body, nil)
 }
 
-func (c *Meergo) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
+func (c *Krenalis) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
 	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
 	c.MustCall("PUT", path, pipeline, nil)
 }
 
-func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
+func (c *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
@@ -554,14 +554,14 @@ func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []s
 	c.MustCall("PUT", "/v1/identity-resolution/settings", body, nil)
 }
 
-func (c *Meergo) UpdateIdentityResolutionErr(identifiers []string) error {
+func (c *Krenalis) UpdateIdentityResolutionErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
 	return c.Call("PUT", "/v1/identity-resolution/settings", body, nil)
 }
 
-func (c *Meergo) UpdateWarehouse(mode string, settings json.Value) {
+func (c *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 	body := map[string]any{
 		"mode":     mode,
 		"settings": settings,
@@ -569,7 +569,7 @@ func (c *Meergo) UpdateWarehouse(mode string, settings json.Value) {
 	c.MustCall("PUT", "/v1/warehouse", body, nil)
 }
 
-func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string]any {
+func (c *Krenalis) ProfileEvents(mpid uuid.UUID, properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"first":      []string{"0"},
@@ -595,7 +595,7 @@ func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string
 	return response.Events
 }
 
-func (c *Meergo) Identities(mpid uuid.UUID, first, limit int) ([]Identity, int) {
+func (c *Krenalis) Identities(mpid uuid.UUID, first, limit int) ([]Identity, int) {
 	var response struct {
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
@@ -605,13 +605,13 @@ func (c *Meergo) Identities(mpid uuid.UUID, first, limit int) ([]Identity, int) 
 	return response.Identities, response.Total
 }
 
-func (c *Meergo) ProfilePropertiesSuitableAsIdentifiers() types.Type {
+func (c *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	var schema types.Type
 	c.MustCall("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, &schema)
 	return schema
 }
 
-func (c *Meergo) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
+func (c *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
 	queryString := url.Values{
 		"properties": properties,
 		"order":      []string{order},
@@ -628,7 +628,7 @@ func (c *Meergo) Profiles(properties []string, order string, orderDesc bool, fir
 	return response.Profiles, response.Schema, response.Total
 }
 
-func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
+func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
 	bo := backoff.New(200)
 	bo.SetAttempts(20)
 	bo.SetCap(2 * time.Second)
@@ -651,7 +651,7 @@ func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int
 //
 // If you intend to proceed even in the case of one or more "Failed" (but not an
 // error for the entire run), see the method WaitForRunsCompletionAllowFailed.
-func (c *Meergo) WaitRunsCompletion(conn int, runs ...int) {
+func (c *Krenalis) WaitRunsCompletion(conn int, runs ...int) {
 	c.waitForRunsCompletion(false, runs...)
 }
 
@@ -662,11 +662,11 @@ func (c *Meergo) WaitRunsCompletion(conn int, runs ...int) {
 //
 // If you want the method to result in an error even in the case of one or more
 // "Failed", see the method WaitForRunsCompletion.
-func (c *Meergo) WaitForRunsCompletionAllowFailed(conn int, runs ...int) {
+func (c *Krenalis) WaitForRunsCompletionAllowFailed(conn int, runs ...int) {
 	c.waitForRunsCompletion(true, runs...)
 }
 
-func (c *Meergo) EventWriteKeys(conn int) []string {
+func (c *Krenalis) EventWriteKeys(conn int) []string {
 	var res struct {
 		Keys []string `json:"keys"`
 	}
@@ -675,13 +675,13 @@ func (c *Meergo) EventWriteKeys(conn int) []string {
 	return res.Keys
 }
 
-func (c *Meergo) Workspace() Workspace {
+func (c *Krenalis) Workspace() Workspace {
 	var ws Workspace
 	c.MustCall("GET", "/v1/workspaces/current", nil, &ws)
 	return ws
 }
 
-func (c *Meergo) waitForRunsCompletion(allowFailed bool, ids ...int) {
+func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		if len(ids) == 1 {

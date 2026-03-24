@@ -46,7 +46,7 @@ func TestAdmin(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.SetFileSystemRoot(fsTempDir.Root())
 	c.Start()
 	defer c.Stop()

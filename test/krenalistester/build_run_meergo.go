@@ -17,8 +17,8 @@ import (
 	"testing"
 )
 
-// buildMeergo builds Meergo.
-func buildMeergo(t *testing.T, repo, meergoDir string) {
+// buildKrenalis builds Krenalis.
+func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
 	// Create a temporary directory.
 	tmpdir, err := os.MkdirTemp("", "krenalis-build-for-tests-*")
@@ -60,9 +60,9 @@ func buildMeergo(t *testing.T, repo, meergoDir string) {
 	// Generate the assets.
 	execCmd(t, tmpdir, "go", "generate")
 
-	// Build Meergo, putting the output into the meergoDir, where it will be
+	// Build Krenalis, putting the output into the krenalisDir, where it will be
 	// executed by the tests.
-	execCmd(t, tmpdir, "go", "build", "-o", filepath.Join(meergoDir, meergoExecFilename()))
+	execCmd(t, tmpdir, "go", "build", "-o", filepath.Join(krenalisDir, krenalisExecFilename()))
 
 }
 
@@ -107,21 +107,21 @@ func generateAssets(ctx context.Context, repo string) error {
 	return nil
 }
 
-func launchMeergo(ctx context.Context, env []string) error {
+func launchKrenalis(ctx context.Context, env []string) error {
 	repo, err := filepath.Abs("../")
 	if err != nil {
 		return err
 	}
-	meergoDir := filepath.Join(repo, "test", "krenalis-executable-for-tests")
-	cmd := exec.CommandContext(ctx, "./"+meergoExecFilename(), "-init-db-if-empty")
+	krenalisDir := filepath.Join(repo, "test", "krenalis-executable-for-tests")
+	cmd := exec.CommandContext(ctx, "./"+krenalisExecFilename(), "-init-db-if-empty")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	cmd.Dir = meergoDir
+	cmd.Dir = krenalisDir
 	cmd.Env = env
 	return cmd.Run()
 }
 
-func meergoExecFilename() string {
+func krenalisExecFilename() string {
 	if runtime.GOOS == "windows" {
 		return "krenalis.exe"
 	}
