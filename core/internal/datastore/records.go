@@ -84,7 +84,8 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		// Also select the _external_id column.
 		externalIDColumn := warehouses.Column{Name: "_external_id", Type: types.String(), Nullable: true}
 		columns = append(columns, externalIDColumn)
-		// Update the WHERE condition and join the krenalis_destination_profiles table.
+		// Update the WHERE condition and join the krenalis_destination_profiles
+		// table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in profile schema", matching.InProperty)

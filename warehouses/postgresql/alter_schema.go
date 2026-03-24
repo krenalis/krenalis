@@ -89,7 +89,8 @@ func (warehouse *PostgreSQL) PreviewAlterProfileSchema(ctx context.Context, colu
 
 // alterProfileSchemaQueries returns the queries that perform the given
 // operations. profilesTableName is the current name of the profiles table, for
-// example "krenalis_profiles_42". operations must contain at least one operation.
+// example "krenalis_profiles_42". operations must contain at least one
+// operation.
 func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Column, operations []warehouses.AlterOperation) []string {
 
 	// The operations are performed in this order:
