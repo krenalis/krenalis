@@ -319,7 +319,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		properties := map[string]any{
 			"$device_id": event.Received.AnonymousID(),
 			"$insert_id": insertId,
-			"$source":    "meergo",
+			"$source":    "krenalis",
 			"time":       event.Received.Timestamp().UnixMilli(),
 		}
 		if sendBadRequest {
@@ -409,7 +409,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 			}
 			if library, ok := context.Library(); ok {
 				if name, ok := library.Name(); ok {
-					if strings.HasPrefix(name, "meergo") || strings.HasPrefix(name, "Krenalis") {
+					if strings.HasPrefix(name, "krenalis") || strings.HasPrefix(name, "Krenalis") {
 						properties["mp_lib"] = name
 					} else {
 						properties["mp_lib"] = "Krenalis: " + name
