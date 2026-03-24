@@ -479,9 +479,9 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			switch platform.Name {
 			case "PostgreSQL":
 				const (
-					database = "test_meergo"
-					username = "test_meergo"
-					password = "test_meergo"
+					database = "test_krenalis"
+					username = "test_krenalis"
+					password = "test_krenalis"
 				)
 				ctx := context.Background()
 				postgresContainer, err := postgres.Run(ctx,

@@ -85,7 +85,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	table := warehouses.Table{
-		Name:    "test_meergo_merge",
+		Name:    "test_krenalis_merge",
 		Columns: make([]warehouses.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
