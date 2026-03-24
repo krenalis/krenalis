@@ -37,8 +37,8 @@ const (
 func Test_Merge_Query(t *testing.T) {
 
 	cols := []struct {
-		DriverType  string
-		DriverValue any
+		DriverType    string
+		DriverValue   any
 		KrenalisType  types.Type
 		KrenalisValue any
 	}{

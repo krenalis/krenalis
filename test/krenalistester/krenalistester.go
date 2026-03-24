@@ -58,7 +58,7 @@ type Krenalis struct {
 	// --, an empty channel should be assigned to it; when Krenalis exits, the
 	// channel must be closed; this allows the testing framework to wait for
 	// Krenalis to correctly exit before finishing the tests.
-	krenalisRunning          chan struct{}
+	krenalisRunning        chan struct{}
 	transformationsTempDir string
 	httpClient             *http.Client
 	ws                     int
