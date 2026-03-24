@@ -1883,7 +1883,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "input schema must be invalid for pipelines that import identities from events",
 		},
 		{
-			name: "BAD: Source/SDK/User - property 'mpid' does not exist in the event schema",
+			name: "BAD: Source/SDK/User - property 'kpid' does not exist in the event schema",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
@@ -1891,14 +1891,14 @@ func Test_validatePipeline(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
-						"userID": "mpid",
+						"userID": "kpid",
 					},
 				},
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
-			err:                     "invalid mapping: property \"mpid\" does not exist",
+			err:                     "invalid mapping: property \"kpid\" does not exist",
 		},
 		{
 			name: "BAD: Source/Webhook/User - input schema must be invalid",

@@ -128,7 +128,7 @@ func TestEvents(t *testing.T) {
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
-	// Run the identity resolution, so that the events MPID are updated.
+	// Run the identity resolution, so that the events KPID are updated.
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
@@ -138,24 +138,24 @@ func TestEvents(t *testing.T) {
 	if expectedProfilesTotal != total {
 		t.Fatalf("expected %d profiles, got %d", expectedProfilesTotal, total)
 	}
-	var mpid uuid.UUID
+	var kpid uuid.UUID
 	for _, profile := range profiles {
 		email, _ := profile.Attributes["email"].(string)
 		if email == eventProfileEmail {
-			mpid = profile.MPID
+			kpid = profile.KPID
 			break
 		}
 	}
-	if mpid == (uuid.UUID{}) {
+	if kpid == (uuid.UUID{}) {
 		t.Fatalf("profile with email %q not found", eventProfileEmail)
 	}
-	t.Logf("profile imported from event has MPID %s", mpid)
+	t.Logf("profile imported from event has KPID %s", kpid)
 
 	// Retrieve the first event for the profile.
 	var event map[string]any
-	events := c.ProfileEvents(mpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
+	events := c.ProfileEvents(kpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
-		t.Fatalf("expected %d events for profile %s, got %d", expectedEventsCount, mpid, len(events))
+		t.Fatalf("expected %d events for profile %s, got %d", expectedEventsCount, kpid, len(events))
 	}
 	event = events[0] // most recent event.
 

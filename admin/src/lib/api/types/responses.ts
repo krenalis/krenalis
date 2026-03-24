@@ -101,7 +101,7 @@ interface TransformDataResponse {
 }
 
 interface ResponseProfile {
-	mpid: string;
+	kpid: string;
 	updatedAt: string;
 	attributes: Record<string, any>;
 }

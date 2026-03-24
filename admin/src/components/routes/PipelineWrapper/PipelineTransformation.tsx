@@ -280,7 +280,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			updatedAtList: getUpdatedAtComboboxItems(pipelineType.inputSchema),
 			mappingList: getSchemaComboboxItems(
 				pipelineType.inputSchema,
-				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['mpid'] : null,
+				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['kpid'] : null,
 			),
 		};
 	}, [pipelineType]);
@@ -429,7 +429,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			flatInputSchema={flatInputSchema}
 			mapMappingPairs={mapMappingsPairs}
 			setMapMappingPairs={setMapMappingsPairs}
-			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['mpid'] : null}
+			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null}
 		/>
 	);
 
@@ -2017,7 +2017,7 @@ const FullscreenTransformation = ({
 						}
 					}
 					if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-						if (p.name === 'mpid') {
+						if (p.name === 'kpid') {
 							return null;
 						}
 					}
@@ -2426,7 +2426,7 @@ const FullscreenTransformation = ({
 											}
 										}
 										if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-											if (p.name === 'mpid') {
+											if (p.name === 'kpid') {
 												return null;
 											}
 										}

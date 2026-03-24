@@ -153,18 +153,18 @@ const useProfiles = () => {
 		setProfiles(profiles);
 		setProfilesTotal(total);
 
-		// compute the list of profiles MPIDs needed for navigating between profiles.
-		const mpids: string[] = [];
+		// compute the list of profiles KPIDs needed for navigating between profiles.
+		const kpids: string[] = [];
 		for (const profile of profiles) {
-			mpids.push(profile.mpid);
+			kpids.push(profile.kpid);
 		}
-		setProfileIDList(mpids);
+		setProfileIDList(kpids);
 
 		setTimeout(() => {
 			setIsLoading(false);
 		}, 300);
 
-		return mpids;
+		return kpids;
 	};
 
 	return {

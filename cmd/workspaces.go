@@ -238,7 +238,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	mpid := r.PathValue("mpid")
+	kpid := r.PathValue("kpid")
 	var first = 0
 	var limit = 100
 	query := r.URL.Query()
@@ -254,7 +254,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, total, err := ws.Identities(r.Context(), mpid, first, limit)
+	identities, total, err := ws.Identities(r.Context(), kpid, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -790,14 +790,14 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 	return nil, err
 }
 
-// Attributes returns the attributes of a profile, given its MPID.
+// Attributes returns the attributes of a profile, given its KPID.
 func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	mpid := r.PathValue("mpid")
-	attributes, err := ws.Attributes(r.Context(), mpid)
+	kpid := r.PathValue("kpid")
+	attributes, err := ws.Attributes(r.Context(), kpid)
 	if err != nil {
 		return nil, err
 	}
@@ -902,10 +902,10 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 		return nil, err
 	}
 
-	// Parse the MPID.
-	mpid := r.PathValue("mpid")
-	if _, ok := types.ParseUUID(mpid); !ok {
-		return nil, errors.BadRequest("value %q is not a valid MPID", mpid)
+	// Parse the KPID.
+	kpid := r.PathValue("kpid")
+	if _, ok := types.ParseUUID(kpid); !ok {
+		return nil, errors.BadRequest("value %q is not a valid KPID", kpid)
 	}
 
 	q := r.URL.Query()
@@ -926,9 +926,9 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 		Logical: core.OpAnd,
 		Conditions: []core.FilterCondition{
 			{
-				Property: "mpid",
+				Property: "kpid",
 				Operator: core.OpIs,
-				Values:   []string{mpid},
+				Values:   []string{kpid},
 			},
 		},
 	}
@@ -1004,8 +1004,8 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		if i > 0 {
 			b.writeByte(',')
 		}
-		b.writeString(`{"mpid":"`)
-		b.writeString(profile.MPID)
+		b.writeString(`{"kpid":"`)
+		b.writeString(profile.KPID)
 		b.writeString(`","updatedAt":"`)
 		buf := b.availableBuffer()
 		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))

@@ -79,7 +79,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	store.wh.Store(wh)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
-	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
+	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
 	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
@@ -367,7 +367,7 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "_mpid", store.profileColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
 // Profiles returns the profiles according to the provided query.
@@ -523,7 +523,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	}
 	// Count the users on the current warehouse.
 	query := warehouses.RowQuery{
-		Columns: []warehouses.Column{{Name: "_mpid", Type: types.UUID()}},
+		Columns: []warehouses.Column{{Name: "_kpid", Type: types.UUID()}},
 		Table:   "profiles",
 		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
@@ -665,7 +665,7 @@ func (store *Store) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	// Update the profile and the identity columns.
 	store.columnByProperty.mu.Lock()
 	store.columnByProperty.user = profileColumnByProperty(n.Schema)
-	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
+	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
 	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()

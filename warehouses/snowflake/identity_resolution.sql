@@ -115,17 +115,17 @@ BEGIN
     -- This placeholder will be replaced by Krenalis:
     {{ merge_identities_in_profiles }};
 
-    -- Update associations between identities and profiles by updating the MPID
+    -- Update associations between identities and profiles by updating the KPID
     -- of the identities.
     UPDATE "KRENALIS_IDENTITIES" AS "I"
-    SET "_MPID" = "U"."_MPID"
+    SET "_KPID" = "U"."_KPID"
     FROM {{ new_profiles_name }} AS "U"
     WHERE ARRAY_CONTAINS("I"."_PK", "U"."_IDENTITIES");
 
-    -- Update associations between events and profiles by updating the MPID of
+    -- Update associations between events and profiles by updating the KPID of
     -- the events.
-    UPDATE "KRENALIS_EVENTS" SET "MPID" = null;
-    UPDATE "KRENALIS_EVENTS" SET "MPID" = "KRENALIS_IDENTITIES"."_MPID"
+    UPDATE "KRENALIS_EVENTS" SET "KPID" = null;
+    UPDATE "KRENALIS_EVENTS" SET "KPID" = "KRENALIS_IDENTITIES"."_KPID"
     FROM "KRENALIS_IDENTITIES" WHERE
        "KRENALIS_EVENTS"."CONNECTION_ID" = "KRENALIS_IDENTITIES"."_CONNECTION"
            AND

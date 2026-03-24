@@ -7,7 +7,7 @@ const useProfilesGrid = (
 	profiles: ResponseProfile[],
 	profilesProperties: ProfileProperty[],
 	selectedProfile: string,
-	onProfileClick: (mpid: string) => void,
+	onProfileClick: (kpid: string) => void,
 ) => {
 	const profilesRows = useMemo(() => {
 		// compute the rows for the grid component.
@@ -15,7 +15,7 @@ const useProfilesGrid = (
 		for (const profile of profiles) {
 			// copy the profile to prevent changes in-place.
 			let profileCopy = { ...profile };
-			const isSelected = profileCopy.mpid === selectedProfile;
+			const isSelected = profileCopy.kpid === selectedProfile;
 			const attributes = profileCopy.attributes;
 
 			const cells: any[] = [];
@@ -40,7 +40,7 @@ const useProfilesGrid = (
 			}
 
 			const row: GridRow = {
-				onClick: () => onProfileClick(profile.mpid),
+				onClick: () => onProfileClick(profile.kpid),
 				cells: [profileCopy.updatedAt, ...cells],
 				selected: isSelected,
 			};

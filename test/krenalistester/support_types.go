@@ -140,7 +140,7 @@ type KV struct {
 }
 
 type Profile struct {
-	MPID       uuid.UUID      `json:"mpid"`
+	KPID       uuid.UUID      `json:"kpid"`
 	UpdatedAt  time.Time      `json:"updatedAt"`
 	Attributes map[string]any `json:"attributes"`
 }

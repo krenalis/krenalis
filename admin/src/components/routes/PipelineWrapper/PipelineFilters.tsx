@@ -378,7 +378,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 
 			let propertiesToHide = [];
 			if (isEventBasedUserImport || isAppEventsExport || isEventImport) {
-				propertiesToHide = ['mpid'];
+				propertiesToHide = ['kpid'];
 			}
 
 			propertyInput = (

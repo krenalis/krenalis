@@ -199,28 +199,28 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		t.Fatalf("expected 10 users, got %d", total)
 	}
 
-	// Retrieve the MPID of "kbuessen0@example.com".
-	var kBuessenMPID uuid.UUID
+	// Retrieve the KPID of "kbuessen0@example.com".
+	var kBuessenKPID uuid.UUID
 	for _, profile := range profiles {
 		if profile.Attributes["email"] == "kbuessen0@example.com" {
-			kBuessenMPID = profile.MPID
+			kBuessenKPID = profile.KPID
 			break
 		}
 	}
-	if kBuessenMPID == (uuid.UUID{}) {
+	if kBuessenKPID == (uuid.UUID{}) {
 		t.Fatalf("profile with email %q not found", "kbuessen0@example.com")
 	}
 
 	// Ensure that "kbuessen0@example.com" has one event associated.
-	events := c.ProfileEvents(kBuessenMPID, []string{"timestamp"})
+	events := c.ProfileEvents(kBuessenKPID, []string{"timestamp"})
 	if len(events) != 1 {
 		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}
 
 	// Validate the identities.
-	identities, total := c.Identities(kBuessenMPID, 0, 1000)
+	identities, total := c.Identities(kBuessenKPID, 0, 1000)
 	if total != 3 {
-		t.Fatalf("expected profile %s to have 3 identities associated, got %d", kBuessenMPID, total)
+		t.Fatalf("expected profile %s to have 3 identities associated, got %d", kBuessenKPID, total)
 	}
 	assertEqualIdentity := func(got, expected krenalistester.Identity) {
 		if !reflect.DeepEqual(got, expected) {

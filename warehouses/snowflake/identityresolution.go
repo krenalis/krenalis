@@ -112,7 +112,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_IDENTITIES", "_MPID", "_UPDATED_AT"`)
+	mergeProfiles.WriteString(`"_IDENTITIES", "_KPID", "_UPDATED_AT"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -139,16 +139,16 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	}
 	// Write the "_identities" column.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
-	// Write the "_MPID" column.
-	// If all MPIDs are the same - ignoring the NULL ones, which refer to new
-	// identities - then take the common value as the profile's MPID; otherwise,
+	// Write the "_KPID" column.
+	// If all KPIDs are the same - ignoring the NULL ones, which refer to new
+	// identities - then take the common value as the profile's KPID; otherwise,
 	// if we are in a situation where a previously split profile is now merged,
-	// in this case, create a new random MPID. If the identities are all new,
-	// also in this case, create a new random MPID.
+	// in this case, create a new random KPID. If the identities are all new,
+	// also in this case, create a new random KPID.
 	mergeProfiles.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "_MPID" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("_MPID"::text)::varchar
+			WHEN COUNT(CASE WHEN "_KPID" IS NOT NULL THEN 1 ELSE 0 END) > 0
+				THEN MAX("_KPID"::text)::varchar
 			ELSE UUID_STRING()
 		END,
 		UUID_STRING()
@@ -158,21 +158,21 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	mergeProfiles.WriteString(` FROM "KRENALIS_IDENTITIES" GROUP BY "_CLUSTER"';` + "\n")
 
 	// If two profiles who were previously one are split, they will end up having
-	// the same MPID, which is incorrect. So this query, in that situation,
-	// replaces the MPID of both profiles with new random MPIDs.
+	// the same KPID, which is incorrect. So this query, in that situation,
+	// replaces the KPID of both profiles with new random KPIDs.
 	mergeProfiles.WriteString(`UPDATE `)
 	mergeProfiles.WriteString(quoteIdent(newProfilesName))
 	mergeProfiles.WriteString(` "U"
 		SET
-			"_MPID" = UUID_STRING()
+			"_KPID" = UUID_STRING()
 		WHERE
-			"U"."_MPID" IN (
+			"U"."_KPID" IN (
 				SELECT
-					"U2"."_MPID"
+					"U2"."_KPID"
 				FROM
 					` + quoteIdent(newProfilesName) + ` "U2"
 				GROUP BY
-					"U2"."_MPID"
+					"U2"."_KPID"
 				HAVING
 					COUNT(*) > 1
 	)`)
