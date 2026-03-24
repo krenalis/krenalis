@@ -73,9 +73,9 @@ func Main(assets fs.FS) {
 	// configuration passed from the environment.
 	for _, v := range os.Environ() {
 		if key, _, ok := strings.Cut(v, "="); ok {
-			isMeergoVar := strings.HasPrefix(key, "KRENALIS_")
-			isMeergoConnectorVar := strings.HasPrefix(key, "KRENALIS_CONNECTOR_")
-			if isMeergoVar && !isMeergoConnectorVar {
+			isKrenalisVar := strings.HasPrefix(key, "KRENALIS_")
+			isKrenalisConnectorVar := strings.HasPrefix(key, "KRENALIS_CONNECTOR_")
+			if isKrenalisVar && !isKrenalisConnectorVar {
 				// os.Unsetenv can only fail on Windows if the key is not UTF-8
 				// encoded. But since Meergo only supports UTF-8 keys, and this
 				// is a rare edge case, failing to unset such a variable
