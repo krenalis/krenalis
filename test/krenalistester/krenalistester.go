@@ -52,8 +52,8 @@ const launchKrenalisExternally = true
 type Krenalis struct {
 	cancel func()
 	t      *testing.T
-	// krenalisRunning is used as a synchronization mechanism to wait for Krenalis
-	// to end its execution.
+	// krenalisRunning is used as a synchronization mechanism to wait for
+	// Krenalis to end its execution.
 	// When Krenalis is started -- both as an external process or as a goroutine
 	// --, an empty channel should be assigned to it; when Krenalis exits, the
 	// channel must be closed; this allows the testing framework to wait for
