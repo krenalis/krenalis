@@ -98,7 +98,3 @@ BEGIN
     END LOOP;
 END;
 $$;
-
--- Drop the profiles view so it is cleanly recreated (with the renamed column)
--- the next time Krenalis initialises or repairs the warehouse.
-DROP VIEW IF EXISTS "profiles";
