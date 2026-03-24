@@ -1,6 +1,6 @@
-export const INSTALL_COMMAND = 'Install-Package Meergo.Analytics.CSharp';
+export const INSTALL_COMMAND = 'Install-Package Krenalis.Analytics.CSharp';
 
-export const SNIPPET = `using Meergo.Analytics;
+export const SNIPPET = `using Krenalis.Analytics;
 
 var config = new Config()
     .SetEndpoint("endpoint");

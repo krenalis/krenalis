@@ -1,6 +1,6 @@
 export const INSTALL_COMMAND = 'Add the latest version of the SDK to your `Package.swift` or install it via Xcode';
 
-export const SNIPPET = `import Meergo
+export const SNIPPET = `import Krenalis
 
 let analytics = Analytics(configuration: Configuration(writeKey: "writekey")
     .endpoint("endpoint")
