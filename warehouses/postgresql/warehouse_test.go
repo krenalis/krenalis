@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	testDatabase = "meergo"
-	testUser     = "meergo"
-	testPassword = "meergo"
+	testDatabase = "krenalis"
+	testUser     = "krenalis"
+	testPassword = "krenalis"
 )
 
 func Test_Merge(t *testing.T) {
