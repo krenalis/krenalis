@@ -16,7 +16,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/uuid"
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 const logNotifications = false // Set to true to enable logging of received notifications.

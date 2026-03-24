@@ -12,7 +12,7 @@ import (
 
 	"github.com/krenalis/krenalis/test/krenalistester"
 
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 func TestEventsContext(t *testing.T) {

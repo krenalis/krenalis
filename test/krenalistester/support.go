@@ -21,7 +21,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 var defaultStrategy Strategy = "Conversion"

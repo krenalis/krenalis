@@ -538,6 +538,9 @@ github.com/klauspost/cpuid/v2
 # github.com/kr/fs v0.1.0
 ## explicit
 github.com/kr/fs
+# github.com/krenalis/analytics-go v0.0.8
+## explicit; go 1.24
+github.com/krenalis/analytics-go
 # github.com/lufia/plan9stats v0.0.0-20250317134145-8bc96cf8fc35
 ## explicit; go 1.21
 github.com/lufia/plan9stats
@@ -553,9 +556,6 @@ github.com/mailru/easyjson/jwriter
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
 github.com/mark3labs/mcp-go/util
-# github.com/meergo/analytics-go v0.0.7
-## explicit; go 1.24
-github.com/meergo/analytics-go
 # github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8
 ## explicit
 github.com/minio/asm2plan9s

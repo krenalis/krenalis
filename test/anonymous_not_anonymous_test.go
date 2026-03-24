@@ -11,7 +11,7 @@ import (
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 func TestAnonymousNotAnonymous(t *testing.T) {

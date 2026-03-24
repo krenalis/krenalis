@@ -10,7 +10,7 @@ import (
 	"runtime"
 
 	"github.com/google/uuid"
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 // sendNotificationStats sends information about notification n to Meergo.
