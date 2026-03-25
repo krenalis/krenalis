@@ -26,8 +26,7 @@
 //
 // Note: Re-execute 'go generate' if you change Krenalis module version.
 //
-// TODO: insert URL which points to the page in the doc for compiling Krenalis
-// from sources.
+// For detailed instructions, see: https://krenalis.com/docs/ref/build-with-go-tools.
 package main
 
 import (
