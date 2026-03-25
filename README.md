@@ -32,8 +32,8 @@ Meanwhile, **real-time, bidirectional sync** keeps operational tools aligned wit
 The easiest way to collect events is to use one of the official SDKs:
 
 - **JavaScript (Browser)** — https://github.com/krenalis/analytics-javascript  
-- **Android** — https://github.com/krenalis/analytics-android  
-- **Apple** — _coming soon_  
+- **Android** — https://github.com/krenalis/analytics-kotlin
+- **Apple** — https://github.com/krenalis/analytics-swift
 - **Python** — https://github.com/krenalis/analytics-python  
 - **.NET** — https://github.com/krenalis/analytics-dotnet  
 - **Java** — https://github.com/krenalis/analytics-java  
