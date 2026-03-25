@@ -86,20 +86,13 @@ func main() {
 	fmt.Println("Run checks and do operations on the Admin")
 	NewCmd("npm", "ci").InDir(repo, "admin").Run()
 
-	// TODO(Gianluca): there's a bug in npm
-	// (https://github.com/npm/cli/issues/8690#issuecomment-3463552492) that
-	// adds/removes the "peer" field from package-lock.json.
-	//
-	// Calling both npm ci and npm install seems to be a way to "stabilize the
-	// behavior" until we use the fixed npm version, preventing us from
-	// "bouncing" changes to the package-lock.json file, both among us
-	// developers and on the Github Workflow, causing the Workflow to fail
-	// because the repository is modified after running this script.
-	NewCmd("npm", "i").InDir(repo, "admin").Run()
+	// TODO(Gianluca): this is a workaround for this npm bug:
+	// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
 	err = removePeerLines("admin/package-lock.json")
 	if err != nil {
-		panic(err)
+		fatal("cannot remove peer lines from 'admin/package-lock.json': %s", err)
 	}
+
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
@@ -147,6 +140,8 @@ type cliOptions struct {
 	short            bool
 }
 
+// TODO(Gianluca): this function is a workaround for this npm bug:
+// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
 func removePeerLines(filepath string) error {
 	file, err := os.Open(filepath)
 	if err != nil {
