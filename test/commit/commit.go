@@ -84,6 +84,17 @@ func main() {
 	// Run checks and do operations on the Admin.
 	fmt.Println("Run checks and do operations on the Admin")
 	NewCmd("npm", "ci").InDir(repo, "admin").Run()
+	// TODO(Gianluca) due to this bug in npm
+	// (https://github.com/npm/cli/issues/8690#issuecomment-3463552492), running
+	// 'npm install' seems to ensure a "stable" package-lock.json version
+	// (including "peer", which should be removed) until we use the fixed npm
+	// version.
+	//
+	// This at least prevents us from "bouncing" changes to the
+	// package-lock.json file, both among us developers and on the Github
+	// Workflow, causing the Workflow to fail because the repository is modified
+	// after running this script.
+	NewCmd("npm", "i").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
