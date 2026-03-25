@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -95,6 +96,10 @@ func main() {
 	// developers and on the Github Workflow, causing the Workflow to fail
 	// because the repository is modified after running this script.
 	NewCmd("npm", "i").InDir(repo, "admin").Run()
+	err = removePeerLines("admin/package-lock.json")
+	if err != nil {
+		panic(err)
+	}
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
@@ -140,6 +145,41 @@ type cliOptions struct {
 	noConnectorTests bool
 	noGoTest         bool
 	short            bool
+}
+
+func removePeerLines(filepath string) error {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.Contains(line, `"peer": true`) {
+			lines = append(lines, line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	for i := 0; i < len(lines)-1; i++ {
+		trimmed := strings.TrimSpace(lines[i])
+		nextTrimmed := strings.TrimSpace(lines[i+1])
+		if strings.HasSuffix(trimmed, ",") &&
+			(strings.HasPrefix(nextTrimmed, "}") || strings.HasPrefix(nextTrimmed, "]")) {
+			commaIdx := strings.LastIndex(lines[i], ",")
+			lines[i] = lines[i][:commaIdx]
+		}
+	}
+
+	output := strings.Join(lines, "\n") + "\n"
+	return os.WriteFile(filepath, []byte(output), 0644)
 }
 
 func parseCli() cliOptions {
