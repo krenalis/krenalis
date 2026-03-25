@@ -56,7 +56,7 @@ jobs:
           KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY }}
           KRENALIS_TEST_POSTHOG_API_KEY: ${{ secrets.KRENALIS_TEST_POSTHOG_API_KEY }}
           KRENALIS_TEST_POSTHOG_PROJECT_REGION: ${{ secrets.KRENALIS_TEST_POSTHOG_PROJECT_REGION }}
-        run: go run ./test/commit -no-go-test
+        run: go run ./test/commit
 
       - name: Check that the repository is clean
         run: ./test/commit/repo_is_clean.bash
