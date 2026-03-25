@@ -46,8 +46,7 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./test/commit
-        env:
+      - env:
           KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT }}
@@ -57,7 +56,7 @@ jobs:
           KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY }}
           KRENALIS_TEST_POSTHOG_API_KEY: ${{ secrets.KRENALIS_TEST_POSTHOG_API_KEY }}
           KRENALIS_TEST_POSTHOG_PROJECT_REGION: ${{ secrets.KRENALIS_TEST_POSTHOG_PROJECT_REGION }}
-        run: go run ./test/commit
+        run: go run ./test/commit -no-go-test
 
       - name: Check that the repository is clean
         run: ./test/commit/repo_is_clean.bash

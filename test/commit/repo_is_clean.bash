@@ -13,6 +13,7 @@ set -e -o pipefail
 if [[ "$(git status --porcelain)" ]]; then
     echo "The repository is not clean"
     git status
+    git diff
     exit 1
 fi
 
