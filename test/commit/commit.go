@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -84,6 +85,16 @@ func main() {
 	// Run checks and do operations on the Admin.
 	fmt.Println("Run checks and do operations on the Admin")
 	NewCmd("npm", "ci").InDir(repo, "admin").Run()
+
+	// TODO(Gianluca): this is a workaround for this npm bug:
+	// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
+	//
+	// See https://github.com/krenalis/krenalis/issues/2164.
+	err = removePeerLines("admin/package-lock.json")
+	if err != nil {
+		fatal("cannot remove peer lines from 'admin/package-lock.json': %s", err)
+	}
+
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
@@ -129,6 +140,45 @@ type cliOptions struct {
 	noConnectorTests bool
 	noGoTest         bool
 	short            bool
+}
+
+// TODO(Gianluca): this function is a workaround for this npm bug:
+// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
+//
+// See https://github.com/krenalis/krenalis/issues/2164.
+func removePeerLines(filepath string) error {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.Contains(line, `"peer": true`) {
+			lines = append(lines, line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	for i := 0; i < len(lines)-1; i++ {
+		trimmed := strings.TrimSpace(lines[i])
+		nextTrimmed := strings.TrimSpace(lines[i+1])
+		if strings.HasSuffix(trimmed, ",") &&
+			(strings.HasPrefix(nextTrimmed, "}") || strings.HasPrefix(nextTrimmed, "]")) {
+			commaIdx := strings.LastIndex(lines[i], ",")
+			lines[i] = lines[i][:commaIdx]
+		}
+	}
+
+	output := strings.Join(lines, "\n") + "\n"
+	return os.WriteFile(filepath, []byte(output), 0644)
 }
 
 func parseCli() cliOptions {
