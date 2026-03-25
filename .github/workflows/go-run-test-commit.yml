@@ -46,7 +46,8 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - env:
+      - name: go run ./test/commit
+        env:
           KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT }}

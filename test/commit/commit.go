@@ -88,6 +88,8 @@ func main() {
 
 	// TODO(Gianluca): this is a workaround for this npm bug:
 	// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
+	//
+	// See https://github.com/krenalis/krenalis/issues/2164.
 	err = removePeerLines("admin/package-lock.json")
 	if err != nil {
 		fatal("cannot remove peer lines from 'admin/package-lock.json': %s", err)
@@ -142,6 +144,8 @@ type cliOptions struct {
 
 // TODO(Gianluca): this function is a workaround for this npm bug:
 // https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
+//
+// See https://github.com/krenalis/krenalis/issues/2164.
 func removePeerLines(filepath string) error {
 	file, err := os.Open(filepath)
 	if err != nil {
