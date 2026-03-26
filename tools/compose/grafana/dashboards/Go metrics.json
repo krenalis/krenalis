@@ -128,11 +128,11 @@
             "uid": "P55CC9602DBCEADDB"
           },
           "expr": "process_resident_memory_bytes",
-          "legendFormat": "Process RAM Totale",
+          "legendFormat": "Total Process RAM",
           "refId": "B"
         }
       ],
-      "title": "Heap Alloc vs RAM Totale",
+      "title": "Heap Alloc vs Total RAM",
       "type": "timeseries"
     },
     {
@@ -500,7 +500,7 @@
           "useBackend": false
         }
       ],
-      "title": "Goroutine Attive",
+      "title": "Active Goroutines",
       "type": "timeseries"
     }
   ],
