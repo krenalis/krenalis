@@ -1,6 +1,6 @@
-export const INSTALL_COMMAND = 'npm install krenalis-analytics-nodejs --save';
+export const INSTALL_COMMAND = 'npm install @krenalis/nodejs-sdk --save';
 
-export const SNIPPET = `import Analytics from 'krenalis-analytics-nodejs';
+export const SNIPPET = `import Analytics from '@krenalis/nodejs-sdk';'; 
 
 const client = new Analytics("writekey", "endpoint");`;
 
