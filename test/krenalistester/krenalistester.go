@@ -322,15 +322,18 @@ func (c *Krenalis) Start() {
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			c.t.Fatal(err)
 		}
-		// In addition to the environment variables already present for the
-		// process, add those needed to run Krenalis.
+		// Build the environment for the Krenalis process by starting from the
+		// current process's environment (os.Environ()) and adding the
+		// Krenalis-specific variables.
 		//
-		// It is important to preserve the environment variables already present
-		// because (1) it is the same thing we do when we test Krenalis not as an
-		// external process but "embedded" inside the current process, so this
-		// makes the two test modes more consistent and (2) problems can occur
-		// in running Krenalis if certain system environment variables are not
-		// provided (this for example gives errors on Windows).
+		// We must preserve the existing environment variables because:
+		//
+		// (1) it keeps behavior consistent with the "embedded" test mode,
+		//     which also inherits the full environment, and
+		//
+		// (2) Krenalis may fail if certain system environment variables are
+		//     missing (e.g., this causes errors on Windows).
+		//
 		env := append(os.Environ(), []string{
 			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
