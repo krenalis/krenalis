@@ -12,7 +12,7 @@ The following is a set of guidelines for contributing to Krenalis and its reposi
 - [Reporting bugs](#reporting-bugs)
 - [Report security issues](#report-security-issues)
 - [Contributing to the source code](#contributing-to-the-source-code)
-  - [Build a new connector](#build-a-new-connector)
+  - [Create an integration](#create-an-integration)
   - [Development setup](#development-setup)
   - [Pull Requests](#pull-requests)
     - [Before opening a pull request](#before-opening-a-pull-request)
@@ -89,9 +89,9 @@ For security vulnerability reporting see [SECURITY.md](SECURITY.md).
 
 ## Contributing to the source code
 
-### Build a new connector
+### Create an integration
 
-To build a new connector for Krenalis see the [Create new connector](https://www.krenalis.com/docs/create-new-connector) documentation.
+To create an integration for Krenalis see the [Create an integration](https://www.krenalis.com/docs/create-integration/) documentation.
 
 ### Development setup
 
