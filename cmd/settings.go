@@ -379,20 +379,6 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, fmt.Errorf("KRENALIS_PROMETHEUS_METRICS_ENABLED must be a boolean: %s", err)
 	}
 
-	if id := envVars.Get("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID"); id != "" {
-		secret := envVars.Get("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET")
-		if secret == "" {
-			return nil, fmt.Errorf("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET is required when KRENALIS_OAUTH_HUBSPOT_CLIENT_ID is set")
-		}
-		settings.OAuthCredentials = map[string]*core.OAuthCredentials{
-			"hubspot": {
-				ClientID:     id,
-				ClientSecret: secret,
-			}}
-	} else if secret := envVars.Get("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET"); secret != "" {
-		return nil, fmt.Errorf("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID is required when KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET is set")
-	}
-
 	if id := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID"); id != "" {
 		secret := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET")
 		if secret == "" {
