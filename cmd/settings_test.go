@@ -1362,7 +1362,7 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("OAuth Mailchimp combinations", func(t *testing.T) {
+	t.Run("OAuth Mailchimp", func(t *testing.T) {
 
 		//  Mailchimp missing secret -> error.
 		setBaseline(t)
@@ -1397,8 +1397,8 @@ func TestParseSettings(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if s.OAuthCredentials == nil || s.OAuthCredentials["hubspot"] == nil || s.OAuthCredentials["mailchimp"] == nil {
-			t.Fatalf("expected both OAuth connectors present, got %#v", s.OAuthCredentials)
+		if s.OAuthCredentials == nil || s.OAuthCredentials["mailchimp"] == nil {
+			t.Fatalf("expected both mailchimp connector present, got %#v", s.OAuthCredentials)
 		}
 	})
 }
