@@ -26,7 +26,7 @@ import (
 
 func TestEnvLoading(t *testing.T) {
 
-	// Load the environment variables form 'test-env-file.env'.
+	// Load the environment variables from 'test-env-file.env'.
 	err := dotenv.Load("testdata/test-env-file.env")
 	if err != nil {
 		t.Fatal(err)
