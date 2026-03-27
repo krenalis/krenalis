@@ -62,7 +62,7 @@ docker compose up
 
 To build the standalone executable, run `go generate && go build` in the root directory of this repository:
 
-1. [Install Go 1.23+](https://go.dev/doc/install) (*if you haven't already*)
+1. [Install Go 1.26](https://go.dev/doc/install) (*if you haven't already*)
 2. Clone or download this repository
 3. Check out the latest release
 4. Run `go generate`
