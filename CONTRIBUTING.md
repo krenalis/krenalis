@@ -91,7 +91,7 @@ For security vulnerability reporting see [SECURITY.md](SECURITY.md).
 
 ### Create an integration
 
-To create an integration for Krenalis see the [Create an integration](https://www.krenalis.com/docs/create-integration/) documentation.
+To create an integration for Krenalis see the [Create an integration](https://www.krenalis.com/docs/create-integration) documentation.
 
 ### Development setup
 
