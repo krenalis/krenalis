@@ -8,7 +8,7 @@ Using this connector you can read contacts from Mailchimp, import them into your
 ## What does it require?
 
 * An account with [Mailchimp](https://mailchimp.com/).
-* A Mailchimp API key (Account → Extras → API keys).
+* A Mailchimp API key.
 
 > Mailchimp is a trademark of The Rocket Science Group LLC.
 > This connector is not affiliated with or endorsed by The Rocket Science Group LLC.
