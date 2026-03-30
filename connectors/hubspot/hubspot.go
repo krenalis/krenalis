@@ -12,6 +12,7 @@ package hubspot
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -41,14 +42,16 @@ func init() {
 		Label:      "HubSpot",
 		Categories: connectors.CategorySaaS,
 		AsSource: &connectors.AsApplicationSource{
-			Targets: connectors.TargetUser,
+			Targets:     connectors.TargetUser,
+			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &connectors.AsApplicationDestination{
-			Targets: connectors.TargetUser,
+			Targets:     connectors.TargetUser,
+			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,
@@ -59,15 +62,7 @@ func init() {
 			Users:  "Contacts",
 			UserID: "HubSpot ID",
 		},
-		OAuth: connectors.OAuth{
-			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
-			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
-			SourceScopes:      []string{"oauth", "crm.objects.contacts.read", "crm.schemas.contacts.read"},
-			DestinationScopes: []string{"oauth", "crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
-			Disallow127_0_0_1: true,
-		},
 		EndpointGroups: []connectors.EndpointGroup{{
-			RequireOAuth: true,
 			// https://developers.hubspot.com/docs/developer-tooling/platform/usage-guidelines
 			RateLimit: connectors.RateLimit{RequestsPerSecond: 11, Burst: 110},
 			// https://developers.hubspot.com/docs/api-reference/error-handling
@@ -83,27 +78,88 @@ func init() {
 // New returns a new connector instance for HubSpot.
 func New(env *connectors.ApplicationEnv) (*HubSpot, error) {
 	c := HubSpot{env: env}
+	if len(env.Settings) > 0 {
+		err := env.Settings.Unmarshal(&c.settings)
+		if err != nil {
+			return nil, errors.New("cannot unmarshal settings of connector for HubSpot")
+		}
+	}
 	return &c, nil
 }
 
 type HubSpot struct {
-	env *connectors.ApplicationEnv
+	env      *connectors.ApplicationEnv
+	settings *innerSettings
 }
 
-// OAuthAccount returns the API's account associated with the OAuth
-// authorization.
-func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
-	var res struct {
-		PortalId int `json:"portalId"`
+type innerSettings struct {
+	AccessToken string `json:"accessToken"`
+}
+
+// ServeUI serves the connector's user interface.
+func (hs *HubSpot) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+
+	switch event {
+	case "load":
+		var s innerSettings
+		if hs.settings != nil {
+			s = *hs.settings
+		}
+		settings, _ = json.Marshal(s)
+	case "save":
+		return nil, hs.saveSettings(ctx, settings)
+	default:
+		return nil, connectors.ErrUIEventNotExist
 	}
-	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, &res)
+
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{
+				Name:        "accessToken",
+				Label:       "Access Token",
+				Placeholder: "pat-eu1-9b778d75-f746-23fa-81d2-1c627ed11ca4",
+				Type:        "text",
+				MinLength:   1,
+				MaxLength:   255,
+				HelpText:    "Access token generated in HubSpot (Settings → Integrations → Legacy Apps).",
+			},
+		},
+		Settings: settings,
+	}
+
+	return ui, nil
+}
+
+// saveSettings validates and saves the settings.
+func (hs *HubSpot) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
-		return "", err
+		return err
 	}
-	if res.PortalId <= 0 {
-		return "", fmt.Errorf("HubSpot has returned an invalid account (portalId): %d", res.PortalId)
+	if n := len(s.AccessToken); n < 1 || n > 255 {
+		return connectors.NewInvalidSettingsError("Access token length must be in [1, 255]")
 	}
-	return strconv.Itoa(res.PortalId), nil
+	for i := 0; i < len(s.AccessToken); i++ {
+		c := s.AccessToken[i]
+		// ASCII characters with decimal codes from 33 (!) to 126 (~),
+		// inclusive, are printable characters. The space character, having
+		// decimal code 32, is therefore excluded from the range of accepted
+		// characters, and this is intentional.
+		if c < 33 || c > 126 {
+			return connectors.NewInvalidSettingsError("Access token must contain only valid characters")
+		}
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = hs.env.SetSettings(ctx, b)
+	if err != nil {
+		return err
+	}
+	hs.settings = &s
+	return nil
 }
 
 var propertyGroups = []struct {
@@ -390,6 +446,7 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, bb *connectors
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Authorization", "Bearer "+hs.settings.AccessToken)
 	res, err := hs.env.HTTPClient.Do(req)
 	if err != nil {
 		return err

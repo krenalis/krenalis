@@ -8,8 +8,7 @@ Using this connector you can create and update unified Krenalis users from your 
 ## What does it require?
 
 * An account with [HubSpot](https://www.hubspot.com/).
-* A [HubSpot developer account](https://developers.hubspot.com/).
-* The ability to set environment variables when starting Krenalis.
+* A HubSpot private app access token with the `crm.objects.contacts.read`, `crm.objects.contacts.write`, and `crm.schemas.contacts.read` scopes.
 
 > HubSpot is a trademark of HubSpot, Inc.
 > This connector is not affiliated with or endorsed by HubSpot, Inc.

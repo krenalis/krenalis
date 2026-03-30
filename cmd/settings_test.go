@@ -1362,29 +1362,16 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("OAuth HubSpot and Mailchimp combinations", func(t *testing.T) {
-		// HubSpot ID without secret -> error.
-		setBaseline(t)
-		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID", "id")
-		_, err := parseEnvSettings()
-		if err == nil {
-			t.Fatalf("expected error for HubSpot ID without secret, got nil")
-		}
-		want := "KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET is required when KRENALIS_OAUTH_HUBSPOT_CLIENT_ID is set"
-		if err.Error() != want {
-			t.Fatalf("expected %q, got %q", want, err)
-		}
+	t.Run("OAuth Mailchimp", func(t *testing.T) {
 
-		// HubSpot valid, Mailchimp missing secret -> error.
+		//  Mailchimp missing secret -> error.
 		setBaseline(t)
-		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID", "id")
-		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
 		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
-		_, err = parseEnvSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for Mailchimp ID without secret, got nil")
 		}
-		want = "KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is set"
+		want := "KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is set"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -1404,16 +1391,14 @@ func TestParseSettings(t *testing.T) {
 
 		// Both valid.
 		setBaseline(t)
-		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_ID", "id")
-		t.Setenv("KRENALIS_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
 		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
 		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET", "msec")
 		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if s.OAuthCredentials == nil || s.OAuthCredentials["hubspot"] == nil || s.OAuthCredentials["mailchimp"] == nil {
-			t.Fatalf("expected both OAuth connectors present, got %#v", s.OAuthCredentials)
+		if s.OAuthCredentials == nil || s.OAuthCredentials["mailchimp"] == nil {
+			t.Fatalf("expected both mailchimp connector present, got %#v", s.OAuthCredentials)
 		}
 	})
 }
