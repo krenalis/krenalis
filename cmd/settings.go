@@ -379,22 +379,6 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, fmt.Errorf("KRENALIS_PROMETHEUS_METRICS_ENABLED must be a boolean: %s", err)
 	}
 
-	if id := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID"); id != "" {
-		secret := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET")
-		if secret == "" {
-			return nil, fmt.Errorf("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is set")
-		}
-		if settings.OAuthCredentials == nil {
-			settings.OAuthCredentials = make(map[string]*core.OAuthCredentials)
-		}
-		settings.OAuthCredentials["mailchimp"] = &core.OAuthCredentials{
-			ClientID:     id,
-			ClientSecret: secret,
-		}
-	} else if secret := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET"); secret != "" {
-		return nil, fmt.Errorf("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is set")
-	}
-
 	if e := envVars.Get("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION"); e == "" {
 		settings.MaxQueuedEventsPerDestination = 50_000
 	} else {
