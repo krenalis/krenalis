@@ -174,6 +174,11 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	if err != nil {
 		return nil, connectorError(err)
 	}
+	if ui != nil && ui.Buttons == nil {
+		ui.Buttons = []connectors.Button{
+			{Event: "add", Text: "Add", Variant: "primary"},
+		}
+	}
 	return marshalUI(ui, connectors.Role(conf.Role))
 }
 

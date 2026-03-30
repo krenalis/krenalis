@@ -148,6 +148,7 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, settings json.Value, 
 		Settings: settings,
 		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
+			{Event: "add", Text: "Add", Variant: "primary"},
 		},
 	}
 

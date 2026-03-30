@@ -170,6 +170,7 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, settings json.Val
 		Settings: settings,
 		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
+			{Event: "add", Text: "Add", Variant: "primary"},
 		},
 	}
 
