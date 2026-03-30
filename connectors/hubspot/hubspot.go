@@ -98,6 +98,7 @@ type innerSettings struct {
 
 // ServeUI serves the connector's user interface.
 func (hs *HubSpot) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+
 	switch event {
 	case "load":
 		var s innerSettings
