@@ -54,7 +54,7 @@ Navigate to the directory where you want to run Krenalis and execute:
 
 ```
 mkdir -p storage
-curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.26.0/compose.yaml"
+curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.27.0/compose.yaml"
 docker compose up
 ```
 
