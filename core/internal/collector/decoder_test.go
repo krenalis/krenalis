@@ -395,7 +395,31 @@ func Test_Decoder(t *testing.T) {
 				}},
 			},
 		},
-
+		{
+			body:     `{"batch":[{"type":"track","event":"Java Test","messageId":"249e67fd-2236-4e44-b79c-a82fa63ad214","timestamp":"2026-03-31T09:51:27.802Z","anonymousId":"d4c3aee6-00a9-4863-a2c8-dd0f18ef2145","userId":"andrea","properties":{"foo":"bar"}}],"sentAt":"2026-03-31T09:51:27.824Z","context":{"library":{"name":"analytics-java","version":"0.0.2"},"locale":"it-IT"},"writeKey":"8q8MWIB6iWKk2ffU2yyRrnVdoTYicULj"}`,
+			writeKey: "8q8MWIB6iWKk2ffU2yyRrnVdoTYicULj",
+			expected: []expectedEvent{{
+				event: events.Event{
+					"anonymousId": "d4c3aee6-00a9-4863-a2c8-dd0f18ef2145",
+					"context": map[string]any{
+						"ip": ip,
+						"library": map[string]any{
+							"name":    "analytics-java",
+							"version": "0.0.2",
+						},
+						"locale": "it-IT",
+					},
+					"event":             "Java Test",
+					"messageId":         "249e67fd-2236-4e44-b79c-a82fa63ad214",
+					"originalTimestamp": time.Date(2026, 3, 31, 9, 51, 27, 802000000, time.UTC),
+					"properties":        json.Value(`{"foo":"bar"}`),
+					"sentAt":            time.Date(2026, 3, 31, 9, 51, 27, 824000000, time.UTC),
+					"traits":            json.Value(`{}`),
+					"type":              "track",
+					"userId":            "andrea",
+				},
+			}},
+		},
 		// Location.
 		{
 			typ:  "screen",
@@ -558,6 +582,139 @@ func Test_Decoder(t *testing.T) {
 		})
 	}
 
+}
+
+// Test_mergeDefaultContext verifies the merge semantics for event-level and
+// batch-level contexts, including precedence and cloning of nested sections.
+func Test_mergeDefaultContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("clones nested default sections", func(t *testing.T) {
+		t.Parallel()
+
+		defaultContext := map[string]any{
+			"browser": map[string]any{
+				"name":    "chrome",
+				"version": "138.0",
+			},
+			"library": map[string]any{
+				"name":    "analytics-java",
+				"version": "0.0.2",
+			},
+		}
+
+		got := mergeDefaultContext(nil, defaultContext)
+		gotBrowser, ok := got["browser"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected merged browser section, got %T", got["browser"])
+		}
+		gotBrowser["name"] = "firefox"
+		gotBrowser["extra"] = "value"
+
+		defaultBrowser, ok := defaultContext["browser"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected default browser section, got %T", defaultContext["browser"])
+		}
+		if defaultBrowser["name"] != "chrome" {
+			t.Fatalf("expected default browser name to remain %q, got %v", "chrome", defaultBrowser["name"])
+		}
+		if _, ok := defaultBrowser["extra"]; ok {
+			t.Fatalf("expected default browser section to remain untouched, got %v", defaultBrowser)
+		}
+	})
+
+	t.Run("event context overrides default and receives missing nested keys", func(t *testing.T) {
+		t.Parallel()
+
+		eventContext := map[string]any{
+			"browser": map[string]any{
+				"name": "firefox",
+			},
+		}
+		defaultContext := map[string]any{
+			"browser": map[string]any{
+				"name":    "chrome",
+				"version": "138.0",
+			},
+			"library": map[string]any{
+				"name":    "analytics-java",
+				"version": "0.0.2",
+			},
+		}
+
+		got := mergeDefaultContext(eventContext, defaultContext)
+		expected := map[string]any{
+			"browser": map[string]any{
+				"name":    "firefox",
+				"version": "138.0",
+			},
+			"library": map[string]any{
+				"name":    "analytics-java",
+				"version": "0.0.2",
+			},
+		}
+
+		if diff := cmp.Diff(expected, got); diff != "" {
+			t.Fatalf("unexpected merged context (-want +got):\n%s", diff)
+		}
+	})
+}
+
+func TestDecoderDefaultContextNotMutatedAcrossEvents(t *testing.T) {
+	t.Parallel()
+
+	body := `{"batch":[` +
+		`{"type":"track","event":"first","anonymousId":"anon-1"},` +
+		`{"type":"track","event":"second","anonymousId":"anon-2"}` +
+		`],"context":{"browser":{"name":"custombrowser","version":"138.0"}}}`
+
+	requestURL, err := url.Parse("/events")
+	if err != nil {
+		t.Fatalf("failed to parse request URL: %v", err)
+	}
+
+	r := &http.Request{
+		Method: "POST",
+		Header: http.Header{
+			"Content-Type": []string{"application/json; charset=utf-8"},
+			"User-Agent":   []string{"DecoderDefaultContextNotMutatedAcrossEvents/1.0"},
+		},
+		RemoteAddr: "192.168.1.1:7048",
+		URL:        requestURL,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+
+	dec, err := newDecoder(r)
+	if err != nil {
+		t.Fatalf("newDecoder returned error: %v", err)
+	}
+
+	i := 0
+	for event, err := range dec.Events(42, true) {
+		if err != nil {
+			t.Fatalf("unexpected event error: %v", err)
+		}
+		if event == nil {
+			t.Fatal("expected non-nil event, got nil")
+		}
+		i++
+		if i == 1 {
+			browser, ok := dec.context["browser"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected default browser section, got %T", dec.context["browser"])
+			}
+			expected := map[string]any{
+				"name":    "custombrowser",
+				"version": "138.0",
+			}
+			if diff := cmp.Diff(expected, browser); diff != "" {
+				t.Fatalf("default context was mutated after first event (-want +got):\n%s", diff)
+			}
+		}
+	}
+	if i != 2 {
+		t.Fatalf("expected 2 events, got %d", i)
+	}
 }
 
 // TestDecoderContextIPHandling verifies the context.ip normalization and the
