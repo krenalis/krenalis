@@ -46,6 +46,7 @@ Issues for the various SDKs are tracked in the main Krenalis repository, using a
 |------------|--------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
 | JavaScript | [analytics-javascript](https://github.com/krenalis/analytics-javascript) | [javascript-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Ajavascript-sdk) |
 | Android    | [analytics-kotlin](https://github.com/krenalis/analytics-kotlin)         | [android-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Aandroid-sdk)       |
+| iOS        | [analytics-swift](https://github.com/krenalis/analytics-swift)           | [ios-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Aios-sdk)               |
 | Python     | [analytics-python](https://github.com/krenalis/analytics-python)         | [python-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Apython-sdk)         |
 | .NET       | [analytics-dotnet](https://github.com/krenalis/analytics-dotnet)         | [dotnet-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Adotnet-sdk)         |
 | Java       | [analytics-java](https://github.com/krenalis/analytics-java)             | [java-sdk](https://github.com/krenalis/krenalis/issues?q=state%3Aopen%20label%3Ajava-sdk)             |
