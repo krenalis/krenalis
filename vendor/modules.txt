@@ -273,15 +273,9 @@ github.com/aws/smithy-go/tracing
 github.com/aws/smithy-go/transport/http
 github.com/aws/smithy-go/transport/http/internal/io
 github.com/aws/smithy-go/waiter
-# github.com/bahlo/generic-list-go v0.2.0
-## explicit; go 1.18
-github.com/bahlo/generic-list-go
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
-# github.com/buger/jsonparser v1.1.1
-## explicit; go 1.13
-github.com/buger/jsonparser
 # github.com/cenkalti/backoff/v4 v4.3.0
 ## explicit; go 1.18
 github.com/cenkalti/backoff/v4
@@ -471,6 +465,9 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
+# github.com/google/jsonschema-go v0.4.2
+## explicit; go 1.23.0
+github.com/google/jsonschema-go/jsonschema
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
@@ -480,9 +477,6 @@ github.com/gorilla/securecookie
 # github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c
 ## explicit
 github.com/gsterjov/go-libsecret
-# github.com/invopop/jsonschema v0.13.0
-## explicit; go 1.18
-github.com/invopop/jsonschema
 # github.com/itchyny/timefmt-go v0.1.7
 ## explicit; go 1.24
 github.com/itchyny/timefmt-go
@@ -547,11 +541,7 @@ github.com/lufia/plan9stats
 # github.com/magiconair/properties v1.8.10
 ## explicit; go 1.19
 github.com/magiconair/properties
-# github.com/mailru/easyjson v0.7.7
-## explicit; go 1.12
-github.com/mailru/easyjson/buffer
-github.com/mailru/easyjson/jwriter
-# github.com/mark3labs/mcp-go v0.44.0
+# github.com/mark3labs/mcp-go v0.46.0
 ## explicit; go 1.23.0
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
@@ -758,9 +748,6 @@ github.com/twmb/franz-go/pkg/sasl/plain
 ## explicit; go 1.24.0
 github.com/twmb/franz-go/pkg/kmsg
 github.com/twmb/franz-go/pkg/kmsg/internal/kbin
-# github.com/wk8/go-ordered-map/v2 v2.1.8
-## explicit; go 1.18
-github.com/wk8/go-ordered-map/v2
 # github.com/xuri/efp v0.0.1
 ## explicit; go 1.11
 github.com/xuri/efp

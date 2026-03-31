@@ -28,7 +28,7 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/klauspost/compress v1.18.5
 	github.com/krenalis/analytics-go v0.0.8
-	github.com/mark3labs/mcp-go v0.44.0
+	github.com/mark3labs/mcp-go v0.46.0
 	github.com/nats-io/nats.go v1.49.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1
@@ -81,9 +81,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.7 // indirect
-	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -111,8 +109,8 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
-	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
@@ -121,7 +119,6 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20250317134145-8bc96cf8fc35 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -159,7 +156,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.12.0 // indirect
-	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
