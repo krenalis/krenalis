@@ -403,8 +403,8 @@ github.com/gabriel-vasile/mimetype
 github.com/gabriel-vasile/mimetype/internal/charset
 github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/magic
-# github.com/getsentry/sentry-go v0.42.0
-## explicit; go 1.23.0
+# github.com/getsentry/sentry-go v0.44.1
+## explicit; go 1.24.0
 github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/attribute
 github.com/getsentry/sentry-go/internal/debug
@@ -415,6 +415,8 @@ github.com/getsentry/sentry-go/internal/otel/baggage/internal/baggage
 github.com/getsentry/sentry-go/internal/protocol
 github.com/getsentry/sentry-go/internal/ratelimit
 github.com/getsentry/sentry-go/internal/telemetry
+github.com/getsentry/sentry-go/internal/util
+github.com/getsentry/sentry-go/report
 # github.com/go-faster/city v1.0.1
 ## explicit; go 1.17
 github.com/go-faster/city
