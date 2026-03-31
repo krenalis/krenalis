@@ -715,8 +715,9 @@ class Workspaces {
 		this.profiles = new Profiles(apiURL, workspaceID);
 	}
 
+	// Organization-scoped workspace endpoints must not send Krenalis-Workspace.
 	list = async (): Promise<Workspace[]> => {
-		const res = await call(`${this.apiURL}/workspaces`, http.GET, this.workspaceID);
+		const res = await call(`${this.apiURL}/workspaces`, http.GET);
 		return res.workspaces as Workspace[];
 	};
 
@@ -728,7 +729,7 @@ class Workspaces {
 		warehouseSettings: WarehouseSettings,
 		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
-		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
 			profileSchema: profileSchema,
 			warehouse: {
@@ -748,7 +749,7 @@ class Workspaces {
 		warehouseSettings: WarehouseSettings,
 		uiPreferences: UIPreferences,
 	): Promise<void> => {
-		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
 			profileSchema: profileSchema,
 			warehouse: {

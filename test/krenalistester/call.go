@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -35,8 +36,10 @@ func (e *StatusCodeError) Error() string {
 // Returns an error if the calls returns an error, which may be a
 // StatusCodeError error in case of a HTTP request which returned a status code
 // which is not 200, or if the HTTP response cannot be decoded into response.
-func (c *Krenalis) Call(method, path string, body, response any) error {
-	return c.call(method, path, body, response)
+// If headers contains the "Krenalis-Workspace" key, Call does not add it
+// automatically. A nil value suppresses the header.
+func (c *Krenalis) Call(method, path string, headers http.Header, body, response any) error {
+	return c.call(method, path, headers, body, response)
 }
 
 // MustCall calls the API endpoint serializing the given body and deserializing
@@ -45,15 +48,17 @@ func (c *Krenalis) Call(method, path string, body, response any) error {
 // Calls (*testing.T).Fatal if the call returns an error, if the HTTP response
 // cannot be decoded into response, or if the HTTP response's status code is not
 // 200.
-func (c *Krenalis) MustCall(method, path string, body, response any) {
-	err := c.call(method, path, body, response)
+// If headers contains the "Krenalis-Workspace" key, MustCall does not add it
+// automatically. A nil value suppresses the header.
+func (c *Krenalis) MustCall(method, path string, headers http.Header, body, response any) {
+	err := c.call(method, path, headers, body, response)
 	if err != nil {
 		c.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, strings.TrimSpace(err.Error()), body != nil, response != nil, string(debug.Stack()))
 		c.t.Fatal("the test failed. See the error message and the stack trace above")
 	}
 }
 
-func (c *Krenalis) call(method, path string, body any, response any) error {
+func (c *Krenalis) call(method, path string, headers http.Header, body any, response any) error {
 
 	path = strings.TrimLeft(path, "/")
 	url := "http://" + c.Addr() + "/" + path
@@ -73,8 +78,13 @@ func (c *Krenalis) call(method, path string, body any, response any) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if id := c.WorkspaceID(); id > 0 {
-		req.Header.Set("Krenalis-Workspace", strconv.Itoa(id))
+	if _, ok := headers["Krenalis-Workspace"]; !ok {
+		if id := c.WorkspaceID(); id > 0 {
+			req.Header.Set("Krenalis-Workspace", strconv.Itoa(id))
+		}
+	}
+	for key, values := range headers {
+		req.Header[key] = slices.Clone(values)
 	}
 
 	c.t.Logf("[info] %s %s: executing request", method, url)

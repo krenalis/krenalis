@@ -51,6 +51,13 @@ const (
 	SnappyCompression Compression = "Snappy"
 )
 
+type AccessKeyType string
+
+const (
+	AccessKeyTypeAPI AccessKeyType = "API"
+	AccessKeyTypeMCP AccessKeyType = "MCP"
+)
+
 type Strategy string
 
 type ConnectionToCreate struct {

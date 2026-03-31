@@ -26,7 +26,7 @@ func TestConnections(t *testing.T) {
 	var res struct {
 		Connections []any
 	}
-	c.MustCall("GET", "/v1/connections", nil, &res)
+	c.MustCall("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 0 {
 		t.Fatalf("expected 0 connections, got %d", len(res.Connections))
 	}
@@ -36,7 +36,7 @@ func TestConnections(t *testing.T) {
 
 	// Check if the Dummy connection has been created successfully.
 	res.Connections = nil
-	c.MustCall("GET", "/v1/connections", nil, &res)
+	c.MustCall("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 1 {
 		t.Fatalf("expected 1 connections, got %d", len(res.Connections))
 	}
@@ -63,7 +63,7 @@ func TestConnections(t *testing.T) {
 		Connector: "kafka",
 	}
 	var id int
-	err := c.Call("POST", "/v1/connections", broker, &id)
+	err := c.Call("POST", "/v1/connections", nil, broker, &id)
 	if err == nil {
 		t.Fatalf("expected Bad Request error, got no error")
 	}
