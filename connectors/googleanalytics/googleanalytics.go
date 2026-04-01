@@ -74,7 +74,7 @@ type innerSettings struct {
 
 // EventTypes returns the event types.
 func (ga *Analytics) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
-	return krenalisEventTypes, nil
+	return eventTypes, nil
 }
 
 // EventTypeSchema returns the schema of the specified event type.
