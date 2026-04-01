@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // TestValidateReadOnlyStatements verifies statement-level acceptance and

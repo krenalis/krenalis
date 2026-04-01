@@ -58,7 +58,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			queryResult, err := ws.QueryReadOnly(ctx, query)
+			queryResult, err := ws.QueryWarehouseReadOnly(ctx, query)
 			if err != nil {
 				if queryResult != nil {
 					msg := fmt.Sprintf("an error occurred: %s, only the following rows have been read: %s", err, string(queryResult))

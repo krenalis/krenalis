@@ -1357,9 +1357,9 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
 
-// QueryReadOnly executes a read-only query on the warehouse, returning the
-// result as a json.Value representing a JSON Array (representing the rows) of
-// JSON Arrays (representing the values for each column).
+// QueryWarehouseReadOnly executes a read-only query on the warehouse, returning
+// the result as a json.Value representing a JSON Array (representing the rows)
+// of JSON Arrays (representing the values for each column).
 //
 // If the JSON size exceeds the allowed maximum, this method returns a valid
 // JSON array of arrays containing only the rows within the limit, and
@@ -1370,7 +1370,7 @@ const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
 //
 // TODO(Gianluca): the error handling is currently minimal. See the issue
 // https://github.com/krenalis/krenalis/issues/1667.
-func (this *Workspace) QueryReadOnly(ctx context.Context, query string) (json.Value, error) {
+func (this *Workspace) QueryWarehouseReadOnly(ctx context.Context, query string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
