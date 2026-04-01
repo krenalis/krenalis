@@ -15,8 +15,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/tools/backoff"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/backoff"
 )
 
 var debugElection = false
@@ -34,8 +34,8 @@ func (state *State) keepElections() {
 	defer state.close.Done()
 	state.election.lastSeen = time.Now()
 
-	// Check if the MEERGO_DEBUG_ELECTION variable is set.
-	if v := os.Getenv("MEERGO_DEBUG_ELECTION"); v == "true" {
+	// Check if the KRENALIS_DEBUG_ELECTION variable is set.
+	if v := os.Getenv("KRENALIS_DEBUG_ELECTION"); v == "true" {
 		debugElection = true
 	}
 

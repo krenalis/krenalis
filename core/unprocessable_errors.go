@@ -5,7 +5,7 @@
 package core
 
 import (
-	"github.com/meergo/meergo/tools/errors"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 const (

@@ -13,15 +13,15 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 const (
@@ -410,12 +410,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() && !inSchemaIsEventSchema {
-		if err := validatePipelineSchema("input", inSchema, v.connection.role, v.target, v.connection.connector.typ, pipeline.TableKey); err != nil {
+		if err := validatePipelineSchema("input", inSchema, v.connection.role, v.target, v.connection.connector.typ, "", pipeline.TableKey); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
 	if outSchema.Valid() {
-		if err := validatePipelineSchema("output", outSchema, v.connection.role, v.target, v.connection.connector.typ, pipeline.TableKey); err != nil {
+		if err := validatePipelineSchema("output", outSchema, v.connection.role, v.target, v.connection.connector.typ, pipeline.Matching.Out, pipeline.TableKey); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
@@ -697,7 +697,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	// - as a second and final exception to the first point, in the case of
 	//   exporting users to apps, the output schema contains the output matching
 	//   property, but this property cannot be explicitly transformed, as it is
-	//   managed by Meergo, so again, there is no check to be done.
+	//   managed by Krenalis, so again, there is no check to be done.
 
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).
@@ -765,10 +765,15 @@ walk:
 // validatePipelineSchema validates a pipeline schema, returning an error if it
 // is not valid. It is not called if schema is the event schema.
 //
-// io specifies whether the validation relates to "input" or "output", schema is
-// the schema of the input or output pipeline, role and target are the role and
-// target of the pipeline, and typ is the pipeline's connection type.
-func validatePipelineSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType, tableKey string) error {
+//   - io specifies whether the validation relates to "input" or "output"
+//   - schema is the schema of the input or output pipeline
+//   - role is the role of the pipeline
+//   - target is the target of the pipeline
+//   - typ is the pipeline's connection type
+//   - outMatchingProperty is the path of the output matching property; empty if
+//     there is not output-matching property
+//   - tableKey is the key of the table for database pipelines
+func validatePipelineSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType, outMatchingProperty, tableKey string) error {
 
 	isProfileSchema := target == state.TargetUser &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
@@ -837,7 +842,10 @@ func validatePipelineSchema(io string, schema types.Type, role state.Role, targe
 				}
 			}
 			if p.ReadOptional {
-				return fmt.Errorf("output pipeline schema property %q cannot have ReadOptional set to true", path)
+				inMatchingPropertyPath := outMatchingProperty == path || strings.HasPrefix(outMatchingProperty, path) && outMatchingProperty[len(path)] == '.'
+				if !inMatchingPropertyPath {
+					return fmt.Errorf("output pipeline schema property %q cannot have ReadOptional set to true", path)
+				}
 			}
 		}
 	}

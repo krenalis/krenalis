@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/uuid"
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 const logNotifications = false // Set to true to enable logging of received notifications.
@@ -25,11 +25,11 @@ const logNotifications = false // Set to true to enable logging of received noti
 // It is called in its own goroutine.
 func (state *State) keep() {
 
-	// If sending statistics is enabled, initialize the Meergo analytics client.
+	// If sending statistics is enabled, initialize the Krenalis analytics client.
 	var client analytics.Client
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
-			Endpoint: "https://telemetry.meergo.com/events",
+			Endpoint: "https://telemetry.krenalis.com/events",
 			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
 		})
 		defer func() {

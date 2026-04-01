@@ -7,7 +7,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/state"
 )
 
 func TestCompatibleMode(t *testing.T) {

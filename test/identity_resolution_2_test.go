@@ -13,21 +13,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestIdentityResolution2 tests the behavior of Identity Resolution for arrays
 // and primary connections.
 func TestIdentityResolution2(t *testing.T) {
 
-	storage := meergotester.NewTempStorage(t)
+	storage := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.PopulateProfileSchema(false)
 	c.SetFileSystemRoot(storage.Root())
 	c.Start()
@@ -106,7 +106,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Create and run the pipelines.
 
 	addJSONPipeline := func(source int, filename string, properties map[string]bool) int {
-		return c.CreatePipeline(source, "User", meergotester.PipelineToSet{
+		return c.CreatePipeline(source, "User", krenalistester.PipelineToSet{
 			Name:    "Pipeline",
 			Enabled: true,
 			Path:    filename,
@@ -118,10 +118,10 @@ func TestIdentityResolution2(t *testing.T) {
 				{Name: "last_change_time", Type: types.JSON()},
 			}),
 			OutSchema: schema,
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				// This transformation functions returns the user without the
 				// properties that are "null".
-				Function: &meergotester.TransformationFunction{
+				Function: &krenalistester.TransformationFunction{
 					Language: "Python",
 					Source: strings.Join([]string{
 						`def transform(user: dict) -> dict:`,
@@ -135,7 +135,7 @@ func TestIdentityResolution2(t *testing.T) {
 			UpdatedAtColumn: "last_change_time",
 			UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 			Format:          "json",
-			FormatSettings:  meergotester.SettingsProperties(properties),
+			FormatSettings:  krenalistester.SettingsProperties(properties),
 		})
 	}
 

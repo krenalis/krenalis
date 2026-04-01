@@ -79,7 +79,7 @@ import appContext from '../../../context/AppContext';
 import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapExpression';
 import { isPlainObject } from '../../../utils/isPlainObject';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
-import { toJavascriptType, toMeergoStringType, toPythonType } from '../../helpers/types';
+import { toJavascriptType, toKrenalisStringType, toPythonType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const updatedAtFormats = {
@@ -280,7 +280,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			updatedAtList: getUpdatedAtComboboxItems(pipelineType.inputSchema),
 			mappingList: getSchemaComboboxItems(
 				pipelineType.inputSchema,
-				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['mpid'] : null,
+				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['kpid'] : null,
 			),
 		};
 	}, [pipelineType]);
@@ -429,7 +429,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 			flatInputSchema={flatInputSchema}
 			mapMappingPairs={mapMappingsPairs}
 			setMapMappingPairs={setMapMappingsPairs}
-			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['mpid'] : null}
+			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null}
 		/>
 	);
 
@@ -452,7 +452,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 		<>
 			<p>{transformationMainSentence}</p>
 			<p>Use Mappings for simple cases, or switch to JavaScript or Python for advanced logic.</p>
-			<a href='https://www.meergo.com/docs/ref/admin/transformations' target='_blank' rel='noopener'>
+			<a href='https://www.krenalis.com/docs/ref/admin/transformations' target='_blank' rel='noopener'>
 				Learn more about transformations
 			</a>
 		</>
@@ -915,7 +915,7 @@ const TransformationBox = ({
 				enumValues = ['true', 'false'];
 			}
 
-			const typeName = toMeergoStringType(property.full.type, property.full.nullable);
+			const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
 
 			if (property.type === 'map') {
 				mappings.push(
@@ -2017,7 +2017,7 @@ const FullscreenTransformation = ({
 						}
 					}
 					if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-						if (p.name === 'mpid') {
+						if (p.name === 'kpid') {
 							return null;
 						}
 					}
@@ -2426,7 +2426,7 @@ const FullscreenTransformation = ({
 											}
 										}
 										if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-											if (p.name === 'mpid') {
+											if (p.name === 'kpid') {
 												return null;
 											}
 										}
@@ -2854,7 +2854,7 @@ const MapMapping = ({
 		automaticMapping != null ||
 		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
 
-	const typeName = toMeergoStringType(property.full.type, property.full.nullable);
+	const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
 
 	return (
 		<>
@@ -3327,7 +3327,7 @@ const TransformationProperty = ({
 			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
 			: checkMapping(path, pipeline, pipelineType);
 
-	const meergoTypeName = toMeergoStringType(property.type, property.nullable);
+	const krenalisTypeName = toKrenalisStringType(property.type, property.nullable);
 	let languageTypeName: string | null = null;
 	let languageTypeLabel = '';
 	if (transformationType === 'function' && language !== '') {
@@ -3417,7 +3417,7 @@ const TransformationProperty = ({
 										</span>
 									</span>
 									<span className='fullscreen-transformation__property-type'>
-										<span>{meergoTypeName}</span>
+										<span>{krenalisTypeName}</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
 											<span

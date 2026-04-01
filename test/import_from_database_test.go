@@ -7,8 +7,8 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestImportFromDatabase(t *testing.T) {
@@ -17,13 +17,13 @@ func TestImportFromDatabase(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	pgSQL := c.CreateSourcePostgreSQL()
 
-	importUsers := c.CreatePipeline(pgSQL, "User", meergotester.PipelineToSet{
+	importUsers := c.CreatePipeline(pgSQL, "User", krenalistester.PipelineToSet{
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -33,7 +33,7 @@ func TestImportFromDatabase(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},

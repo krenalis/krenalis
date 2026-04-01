@@ -11,8 +11,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
 )
 
 // NOTE: Value is analogous to v1 json.RawMessage.

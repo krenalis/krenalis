@@ -104,12 +104,12 @@ const warehouseSectionTexts = {
 	},
 	main: {
 		title: 'Main credentials',
-		description: 'Read and write credentials used by Meergo for accessing the data warehouse',
+		description: 'Read and write credentials used by Krenalis for accessing the data warehouse',
 	},
 	mcp: {
 		title: 'Read-only credentials',
 		description:
-			"Read-only credentials used for AI querying of the data warehouse through Meergo's built-in MCP integration.",
+			"Read-only credentials used for AI querying of the data warehouse through Krenalis's built-in MCP integration.",
 	},
 };
 
@@ -212,7 +212,7 @@ const WarehouseInfo = ({
 						<>
 							<span>{warehouseSectionTexts.mcp.description}</span>
 							<a
-								href='http://localhost:8080/docs/ref/admin/warehouse-read-only-mcp-credentials'
+								href='https://www.krenalis.com/docs/ref/admin/warehouse-read-only-mcp-credentials'
 								target='_blank'
 								rel='noopener'
 							>

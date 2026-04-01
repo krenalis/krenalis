@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -19,7 +19,7 @@ import (
 // NewMCPServer returns a new MCP server, which servers HTTP requests from MCP
 // clients.
 //
-// An MCP server can be initialized with a nil Meergo core. In that case, only
+// An MCP server can be initialized with a nil Krenalis core. In that case, only
 // operations that do not involve the core (eg. listing the tools, the prompts,
 // etc...) are supported; otherwise, a panic may occur. This is useful in tests.
 //
@@ -28,7 +28,7 @@ import (
 func NewMCPServer(core *core.Core) *MCPServer {
 
 	// Instantiate an MCP server.
-	m := server.NewMCPServer("Meergo MCP server", "0.0.0", server.WithRecovery())
+	m := server.NewMCPServer("Krenalis MCP server", "0.0.0", server.WithRecovery())
 
 	// Register the prompts.
 	m.AddPrompts(prompts...)
@@ -56,7 +56,7 @@ func (mcp *MCPServer) Close(ctx context.Context) error {
 // ServeHTTP serves HTTP requests from MCP clients.
 func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	// Retrieve the Meergo MCP token from the request, otherwise return a Bad
+	// Retrieve the Krenalis MCP token from the request, otherwise return a Bad
 	// Request error to the MCP client.
 	mcpToken, err := mcpTokenFromRequest(r)
 	if err != nil {
@@ -64,11 +64,11 @@ func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Inject the MCP token and the Meergo core into the request's context, so
+	// Inject the MCP token and the Krenalis core into the request's context, so
 	// it is made available to the MCP tools.
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, mcpContextKey("mcp-token"), mcpToken)
-	ctx = context.WithValue(ctx, mcpContextKey("meergo-core"), mcp.core)
+	ctx = context.WithValue(ctx, mcpContextKey("krenalis-core"), mcp.core)
 	r = r.Clone(ctx)
 
 	mcp.server.ServeHTTP(w, r)
@@ -86,7 +86,7 @@ func mcpTokenFromCtx(ctx context.Context) (string, error) {
 	return mcpToken, nil
 }
 
-// mcpTokenFromRequest reads the Meergo MCP token from the request's
+// mcpTokenFromRequest reads the Krenalis MCP token from the request's
 // 'Authorization' header.
 func mcpTokenFromRequest(r *http.Request) (string, error) {
 	auth, ok := r.Header["Authorization"]
@@ -106,12 +106,12 @@ func mcpTokenFromRequest(r *http.Request) (string, error) {
 	return token, nil
 }
 
-// meergoCoreFromCtx extracts the Meergo core from the given context, returning
+// krenalisCoreFromCtx extracts the Krenalis core from the given context, returning
 // error if it is not found.
-func meergoCoreFromCtx(ctx context.Context) (*core.Core, error) {
-	core, ok := ctx.Value(mcpContextKey("meergo-core")).(*core.Core)
+func krenalisCoreFromCtx(ctx context.Context) (*core.Core, error) {
+	core, ok := ctx.Value(mcpContextKey("krenalis-core")).(*core.Core)
 	if !ok {
-		return nil, errors.New("meergo core not found in context")
+		return nil, errors.New("krenalis core not found in context")
 	}
 	return core, nil
 }

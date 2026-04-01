@@ -1,14 +1,14 @@
 # Ignore the '.gitattributes' files within the Go vendor, as they would be read
 # by Git and the files inside the vendor would be modified, which, instead,
 # should be left as they are.
-vendor/**/.gitattributes
+/vendor/**/.gitattributes
 
 # Ignore the binaries produced by `go build`.
-meergo
-meergo.exe
+/krenalis
+/krenalis.exe
 
-# Since '.env' files are used for Meergo configuration and may contain critical
-# information, it's convenient to add this repository-wide exclusion rule here,
-# just as an extra precaution to prevent '.env' files containing sensitive data
-# from ending up on GitHub.
+# Since '.env' files are used for Krenalis configuration and may contain
+# critical information, it's convenient to add this repository-wide exclusion
+# rule here, just as an extra precaution to prevent '.env' files containing
+# sensitive data from ending up on GitHub.
 .env

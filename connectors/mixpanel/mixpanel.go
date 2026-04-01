@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // Mixpanel supports NoEncoding and Gzip for request bodies.
@@ -319,7 +319,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		properties := map[string]any{
 			"$device_id": event.Received.AnonymousID(),
 			"$insert_id": insertId,
-			"$source":    "meergo",
+			"$source":    "krenalis",
 			"time":       event.Received.Timestamp().UnixMilli(),
 		}
 		if sendBadRequest {
@@ -409,10 +409,10 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 			}
 			if library, ok := context.Library(); ok {
 				if name, ok := library.Name(); ok {
-					if strings.HasPrefix(name, "meergo") || strings.HasPrefix(name, "Meergo") {
+					if strings.HasPrefix(name, "krenalis") || strings.HasPrefix(name, "Krenalis") {
 						properties["mp_lib"] = name
 					} else {
-						properties["mp_lib"] = "Meergo: " + name
+						properties["mp_lib"] = "Krenalis: " + name
 					}
 					if version, ok := library.Version(); ok {
 						properties["$lib_version"] = version

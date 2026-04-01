@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Test_ParseTime ensures ParseTime correctly handles valid and invalid inputs.

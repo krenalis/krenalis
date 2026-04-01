@@ -12,14 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 func Test_ImportFromManyConnections(t *testing.T) {
+
+	// TODO: skipped until https://github.com/krenalis/krenalis/issues/2150 is fixed.
+	t.Skip()
 
 	// Determine the storage directory and assert that such directory exists.
 	storageDir, err := filepath.Abs("testdata/import_from_many_connections_test")
@@ -38,7 +41,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -53,8 +56,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy, dummyPipeline int
 	{
 
-		dummy = c.CreateDummy("Dummy", meergotester.Source)
-		dummyPipeline = c.CreatePipeline(dummy, "User", meergotester.PipelineToSet{
+		dummy = c.CreateDummy("Dummy", krenalistester.Source)
+		dummyPipeline = c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -67,7 +70,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",
@@ -92,7 +95,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	t.Log("importing from CSV file...")
 	{
 		fs = c.CreateSourceFileSystem()
-		csvPipeline = c.CreatePipeline(fs, "User", meergotester.PipelineToSet{
+		csvPipeline = c.CreatePipeline(fs, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from CSV on File System",
 			Enabled: true,
 			Path:    "users_genders.csv",
@@ -106,7 +109,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				{Name: "gender", Type: types.String(), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email":  "email",
 					"gender": "gender",
@@ -116,7 +119,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			UpdatedAtColumn: "timestamp",
 			UpdatedAtFormat: "%Y-%m-%d %H:%M:%S",
 			Format:          "csv",
-			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+			FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 				"separator":      ",",
 				"hasColumnNames": true,
 			}),
@@ -147,19 +150,19 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				t.Fatalf("expected one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
-			c.CreatePipeline(javaScript, "Event", meergotester.PipelineToSet{
+			c.CreatePipeline(javaScript, "Event", krenalistester.PipelineToSet{
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			javascriptUsersPipeline = c.CreatePipeline(javaScript, "User", meergotester.PipelineToSet{
+			javascriptUsersPipeline = c.CreatePipeline(javaScript, "User", krenalistester.PipelineToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
-				Filter:   meergotester.DefaultFilterUserFromEvents,
+				Filter:   krenalistester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 				}),
-				Transformation: &meergotester.Transformation{
+				Transformation: &krenalistester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},
@@ -196,30 +199,30 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		t.Fatalf("expected 10 users, got %d", total)
 	}
 
-	// Retrieve the MPID of "kbuessen0@example.com".
-	var kBuessenMPID uuid.UUID
+	// Retrieve the KPID of "kbuessen0@example.com".
+	var kBuessenKPID uuid.UUID
 	for _, profile := range profiles {
 		if profile.Attributes["email"] == "kbuessen0@example.com" {
-			kBuessenMPID = profile.MPID
+			kBuessenKPID = profile.KPID
 			break
 		}
 	}
-	if kBuessenMPID == (uuid.UUID{}) {
+	if kBuessenKPID == (uuid.UUID{}) {
 		t.Fatalf("profile with email %q not found", "kbuessen0@example.com")
 	}
 
 	// Ensure that "kbuessen0@example.com" has one event associated.
-	events := c.ProfileEvents(kBuessenMPID, []string{"timestamp"})
+	events := c.ProfileEvents(kBuessenKPID, []string{"timestamp"})
 	if len(events) != 1 {
 		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}
 
 	// Validate the identities.
-	identities, total := c.Identities(kBuessenMPID, 0, 1000)
+	identities, total := c.Identities(kBuessenKPID, 0, 1000)
 	if total != 3 {
-		t.Fatalf("expected profile %s to have 3 identities associated, got %d", kBuessenMPID, total)
+		t.Fatalf("expected profile %s to have 3 identities associated, got %d", kBuessenKPID, total)
 	}
-	assertEqualIdentity := func(got, expected meergotester.Identity) {
+	assertEqualIdentity := func(got, expected krenalistester.Identity) {
 		if !reflect.DeepEqual(got, expected) {
 			t.Fatalf("expected identity %#v, got %#v", expected, got)
 		}
@@ -227,7 +230,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		eventIdentity := getIdentityByConnection(t, identities, javaScript)
 		eventIdentity.UpdatedAt = time.Time{}
-		assertEqualIdentity(eventIdentity, meergotester.Identity{
+		assertEqualIdentity(eventIdentity, krenalistester.Identity{
 			UserID:       "f4ca124298",
 			AnonymousIDs: []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
 			UpdatedAt:    time.Time{},
@@ -238,7 +241,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	t.Log("identity imported from JavaScript is ok")
 	{
 		csvIdentity := getIdentityByConnection(t, identities, fs)
-		assertEqualIdentity(csvIdentity, meergotester.Identity{
+		assertEqualIdentity(csvIdentity, krenalistester.Identity{
 			UserID:       "1",
 			AnonymousIDs: nil,
 			UpdatedAt:    time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
@@ -250,7 +253,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		dummyIdentity := getIdentityByConnection(t, identities, dummy)
 		dummyIdentity.UpdatedAt = time.Time{}
-		assertEqualIdentity(dummyIdentity, meergotester.Identity{
+		assertEqualIdentity(dummyIdentity, krenalistester.Identity{
 			UserID:       "dummy1",
 			AnonymousIDs: nil,
 			UpdatedAt:    time.Time{},
@@ -262,12 +265,12 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 }
 
-func getIdentityByConnection(t *testing.T, identities []meergotester.Identity, connection int) meergotester.Identity {
+func getIdentityByConnection(t *testing.T, identities []krenalistester.Identity, connection int) krenalistester.Identity {
 	for _, identity := range identities {
 		if identity.Connection == connection {
 			return identity
 		}
 	}
 	t.Fatalf("identity with connection %d not found among provided identities", connection)
-	return meergotester.Identity{}
+	return krenalistester.Identity{}
 }

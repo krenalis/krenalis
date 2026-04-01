@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/google/uuid"
 )
@@ -129,7 +129,7 @@ func TestSendEvents(t *testing.T) {
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
-					"$source":          "meergo",
+					"$source":          "krenalis",
 					"affiliation":      "AP3383",
 					"coupon":           "PROMO",
 					"currency":         "USD",
@@ -229,7 +229,7 @@ func TestSendEvents(t *testing.T) {
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
-					"$source":          "meergo",
+					"$source":          "krenalis",
 					"distinct_id":      event.Received.AnonymousID(),
 					"ip":               "192.0.2.1",
 					"session_id":       sessionID,
@@ -247,7 +247,7 @@ func TestSendEvents(t *testing.T) {
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
-					"$source":          "meergo",
+					"$source":          "krenalis",
 					"distinct_id":      event.Received.AnonymousID(),
 					"ip":               "192.0.2.1",
 					"session_id":       sessionID,
@@ -331,7 +331,7 @@ func TestSendEvents(t *testing.T) {
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
-					"$source":          "meergo",
+					"$source":          "krenalis",
 					"distinct_id":      event.Received.AnonymousID(),
 					"ip":               "192.0.2.1",
 					"product_id":       803916,
@@ -424,7 +424,7 @@ func TestSendEvents(t *testing.T) {
 					"$insert_id":       "2094515358*" + event.Received.MessageID(),
 					"$os":              "macOS",
 					"$os_version":      "15.5",
-					"$source":          "meergo",
+					"$source":          "krenalis",
 					"category":         "Electronics",
 					"currency":         "USD",
 					"distinct_id":      event.Received.AnonymousID(),
@@ -529,7 +529,7 @@ func TestSendEvents(t *testing.T) {
 					"$model":              "iPhone 16 Pro",
 					"$os":                 "iOS",
 					"$os_version":         "18",
-					"$source":             "meergo",
+					"$source":             "krenalis",
 					"$user_id":            "BN8204913066K",
 					"device_id":           "AEBE52E7-03EE-455A-B3C4-E57283966239",
 					"distinct_id":         "BN8204913066K",
@@ -575,21 +575,21 @@ func marshalJSON(data any) json.Value {
 
 func newMixpanelForTests(t *testing.T) *Mixpanel {
 	var s innerSettings
-	s.ProjectID = os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_ID")
+	s.ProjectID = os.Getenv("KRENALIS_TEST_MIXPANEL_PROJECT_ID")
 	if s.ProjectID == "" {
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_ID is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_PROJECT_ID is required but not provided")
 	}
-	s.ProjectToken = os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_TOKEN")
+	s.ProjectToken = os.Getenv("KRENALIS_TEST_MIXPANEL_PROJECT_TOKEN")
 	if s.ProjectToken == "" {
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_TOKEN is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_PROJECT_TOKEN is required but not provided")
 	}
-	s.DataResidency = os.Getenv("MEERGO_TEST_MIXPANEL_DATA_RESIDENCY")
+	s.DataResidency = os.Getenv("KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY")
 	switch s.DataResidency {
 	case "US", "EU", "IN":
 	case "":
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY is required but not provided")
 	default:
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
+		t.Fatal("env var KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
 	}
 	app, err := testconnector.NewApplication("mixpanel", s)
 	if err != nil {

@@ -5,9 +5,9 @@
 package datastore
 
 import (
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // EventColumnByPath returns the warehouses.Column corresponding to the property
@@ -23,7 +23,7 @@ func EventColumnByPath(propertyPath string) warehouses.Column {
 // Note: The "originalTimestamp" property exists in the schema but does not have
 // a corresponding column in the table.
 var eventColumnNameFromPropertyPath = map[string]string{
-	"mpid":                             "mpid",
+	"kpid":                             "kpid",
 	"connectionId":                     "connection_id",
 	"anonymousId":                      "anonymous_id",
 	"channel":                          "channel",
@@ -126,14 +126,14 @@ func init() {
 			Nullable: p.ReadOptional,
 		}
 		eventColumnByProperty[path] = c
-		if path != "mpid" {
+		if path != "kpid" {
 			eventsColumnsForMerge[i] = c
 			i++
 		}
 	}
 
 	eventsMergeTable = warehouses.Table{
-		Name:    "meergo_events",
+		Name:    "krenalis_events",
 		Columns: eventsColumnsForMerge,
 		Keys:    []string{"message_id"},
 	}

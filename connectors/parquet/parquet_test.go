@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/fraugster/parquet-go/parquet"
 )
@@ -75,7 +75,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "my_uuid", Type: types.UUID(), ReadOptional: true},
 		{Name: "my_json", Type: types.JSON(), ReadOptional: true},
 	}
-	// Values here must have the format documented in the Meergo doc about
+	// Values here must have the format documented in the Krenalis doc about
 	// export values and types (/developers/extend/connectors/data-values).
 	exportedRecords := []map[string]any{
 		{
@@ -134,7 +134,7 @@ func TestExportAndImportParquet(t *testing.T) {
 			"my_datetime": time.Date(2012, 12, 21, 15, 30, 2, 123456789, time.UTC),
 			"my_date":     time.Date(2012, 12, 21, 0, 0, 0, 0, time.UTC),
 			// Note that the nanoseconds part is truncated to zero in this test;
-			// this is due to the issue: https://github.com/meergo/meergo/issues/1392.
+			// this is due to the issue: https://github.com/krenalis/krenalis/issues/1392.
 			"my_time": time.Date(1970, 1, 1, 15, 30, 2, 123456000, time.UTC),
 		},
 		{
@@ -153,7 +153,7 @@ func TestExportAndImportParquet(t *testing.T) {
 	// It's useful that this is a physical file on disk (rather than a file in
 	// memory) because this allows you to read the file with external tools to
 	// debug it.
-	parquetFile, err := os.CreateTemp("", "meergo-parquet-test-*.parquet")
+	parquetFile, err := os.CreateTemp("", "krenalis-parquet-test-*.parquet")
 	if err != nil {
 		t.Fatal(err)
 	}

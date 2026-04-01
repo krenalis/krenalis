@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestDummyImportNotRequired(t *testing.T) {
@@ -18,13 +18,13 @@ func TestDummyImportNotRequired(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Import users from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -37,7 +37,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 				{Name: "title", Type: types.String(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"favorite_movie.title": "favourite_movie",
 				"email":                "email",

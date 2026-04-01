@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // ParseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as

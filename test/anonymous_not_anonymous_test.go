@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 func TestAnonymousNotAnonymous(t *testing.T) {
@@ -20,7 +20,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -34,21 +34,21 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	javaScriptKey = keys[0]
 
 	// Create a first pipeline, with a filter.
-	pipeline1 := c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 		Name:     "Pipeline 1",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Filter: &meergotester.Filter{
+		Filter: &krenalistester.Filter{
 			Logical: "or",
-			Conditions: []meergotester.FilterCondition{
+			Conditions: []krenalistester.FilterCondition{
 				{Property: "messageId", Operator: "is", Values: []string{"message1"}}, // message of the anonymous identity
 				{Property: "messageId", Operator: "is", Values: []string{"message3"}}, // message of the not-anonymous identity
 			},
 		},
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -57,20 +57,20 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Create a second pipeline, which imports identities from events with a
 	// different filter than the first pipeline.
-	pipeline2 := c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+	pipeline2 := c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 		Name:     "Pipeline 2",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Filter: &meergotester.Filter{
+		Filter: &krenalistester.Filter{
 			Logical: "or",
-			Conditions: []meergotester.FilterCondition{
+			Conditions: []krenalistester.FilterCondition{
 				{Property: "messageId", Operator: "is", Values: []string{"message2"}}, // message of the anonymous identity
 			},
 		},
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -93,7 +93,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Wait for the 2 identities to be imported successfully.
 	attempts := 0
-	var identities []meergotester.Identity
+	var identities []krenalistester.Identity
 	for {
 		var total int
 		identities, total = c.ConnectionIdentities(javaScriptID, 0, 100)

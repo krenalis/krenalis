@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/core/internal/transformers/embed"
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/prometheus"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/core/internal/transformers/embed"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -368,7 +368,7 @@ def _handler(event, context):
 
 	transform = function_globals["transform"]
 	
-	# Names needed to evaluate all expressions that Meergo can provide.
+	# Names needed to evaluate all expressions that Krenalis can provide.
 	eval_globals = {
 		"datetime": datetime,
 		"decimal": decimal,
@@ -503,7 +503,7 @@ var recordsMetric *prometheus.Counter
 func init() {
 	// Errors metric.
 	vec := prometheus.RegisterCounterVec(
-		"meergo_lambda_errors_total",
+		"krenalis_lambda_errors_total",
 		"Total number of Lambda errors, classified by type",
 		[]string{"type"},
 	)
@@ -513,14 +513,14 @@ func init() {
 
 	// Duration metric.
 	durationMetric = prometheus.RegisterHistogram(
-		"meergo_lambda_duration_seconds",
+		"krenalis_lambda_duration_seconds",
 		"Duration of successful Lambda executions in seconds",
 		[]float64{0.1, 0.5, 1, 2.5, 5},
 	)
 
 	// Records metric.
 	recordsMetric = prometheus.RegisterCounter(
-		"meergo_lambda_records_total",
+		"krenalis_lambda_records_total",
 		"Total number of input records processed by successful Lambda executions",
 	)
 }

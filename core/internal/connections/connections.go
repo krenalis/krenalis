@@ -19,13 +19,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/connections/httpclient"
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/itchyny/timefmt-go"
 	"github.com/relvacode/iso8601"
@@ -174,7 +174,7 @@ func New(state *state.State) *Connections {
 func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
-		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Code)}
+		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Krenalis", connector.Code)}
 	}
 	var b strings.Builder
 	b.WriteString(oauth.AuthURL)

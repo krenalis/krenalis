@@ -25,7 +25,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toMeergoStringType } from '../../helpers/types';
+import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const TYPE_KINDS: TypeKind[] = [
@@ -795,7 +795,7 @@ const PropertyDialog = ({
 					) : (
 						<div className='property-dialog__type'>
 							<div className='property-dialog__type-label'>Type</div>
-							<div className='property-dialog__type-value'>{toMeergoStringType(property.type)}</div>
+							<div className='property-dialog__type-value'>{toKrenalisStringType(property.type)}</div>
 						</div>
 					)}
 					<SlTextarea

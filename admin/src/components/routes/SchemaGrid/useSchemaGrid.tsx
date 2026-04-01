@@ -6,7 +6,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import { FlatSchema, TransformedProperty, flattenSchema } from '../../../lib/core/pipeline';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toMeergoStringType } from '../../helpers/types';
+import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const SCHEMA_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Type' }, { name: 'Primary source' }];
@@ -69,7 +69,7 @@ const getRows = (
 };
 
 const buildRow = (property: TransformedProperty, primarySource?: TransformedConnection | null) => {
-	const typeCell = toMeergoStringType(property.full.type);
+	const typeCell = toKrenalisStringType(property.full.type);
 	let primarySourceCell: ReactNode;
 	if (property.full.type.kind !== 'object' && property.full.type.kind !== 'array') {
 		if (primarySource) {

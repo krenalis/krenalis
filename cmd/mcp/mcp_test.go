@@ -49,7 +49,7 @@ func initMCPClient(t *testing.T, client *http.Client, serverURL string) (*testMC
 			"sampling": map[string]any{},
 		},
 		"clientInfo": map[string]any{
-			"name":    "MeergoTestClient",
+			"name":    "KrenalisTestClient",
 			"version": "1.0.0",
 		},
 	})

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // TestEncodeProperties exercises common and edge cases for encodeProperties.

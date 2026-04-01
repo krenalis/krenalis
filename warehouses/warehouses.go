@@ -15,9 +15,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
 )
@@ -99,7 +99,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("meergo/warehouses: cannot scan a %T value into a warehouses.AlterOperationType value", v)
+		return fmt.Errorf("krenalis/warehouses: cannot scan a %T value into a warehouses.AlterOperationType value", v)
 	}
 	switch s {
 	case "AddColumn":
@@ -109,7 +109,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	case "RenameColumn":
 		*op = OperationRenameColumn
 	default:
-		return fmt.Errorf("meergo/warehouses: invalid warehouses.AlterOperationType: %s", s)
+		return fmt.Errorf("krenalis/warehouses: invalid warehouses.AlterOperationType: %s", s)
 	}
 	return nil
 }
@@ -140,7 +140,7 @@ type Warehouse interface {
 	// the operation ended successfully or with a *OperationError error, that result
 	// is returned again.
 	//
-	// columns contains the columns of the "meergo_profiles" table to obtain (this
+	// columns contains the columns of the "krenalis_profiles" table to obtain (this
 	// parameter is useful for obtaining type information and for creating views),
 	// while operations is the set of operations to apply in order to migrate the
 	// current columns to the given columns.
@@ -292,7 +292,7 @@ type Warehouse interface {
 	//
 	// This method should only be called on warehouses that have already been
 	// initialized, with the aim of correcting any extraordinary issues (such as
-	// accidental table deletions) in an attempt to make Meergo functional again.
+	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
 
 	// Settings returns the data warehouse settings.

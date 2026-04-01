@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 var (
@@ -237,7 +237,7 @@ Expression:
 				n, src, err = parseNumber(src)
 				if err != nil {
 					// For '-' followed by a path, return a clearer and more descriptive error message.
-					// See issue https://github.com/meergo/meergo/issues/1344.
+					// See issue https://github.com/krenalis/krenalis/issues/1344.
 					if c == '-' && len(src) > 1 {
 						if c = src[1]; 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' {
 							if _, _, err := parsePath(src[1:]); err == nil {

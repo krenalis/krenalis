@@ -37,7 +37,7 @@ const ConnectionsList = () => {
 			{
 				name: 'Connector',
 			},
-			/* See issue https://github.com/meergo/meergo/issues/1255.
+			/* See issue https://github.com/krenalis/krenalis/issues/1255.
 			{
 				name: 'Health',
 			},
@@ -81,7 +81,7 @@ const ConnectionsList = () => {
 				</div>,
 				c.connector.type === 'FileStorage' ? 'File storage' : c.connector.type,
 				c.connector.label,
-				/* See issue https://github.com/meergo/meergo/issues/1255.
+				/* See issue https://github.com/krenalis/krenalis/issues/1255.
 				<div className='connections-list__status-cell'>
 					<StatusDot status={c.status} />
 					<div>{c.status.text}</div>
@@ -179,7 +179,7 @@ const ConnectionsList = () => {
 						<Grid columns={connectionsColumns} rows={connectionsRows} />
 						<div className='grid-learn-more'>
 							Learn more about{' '}
-							<a href='https://www.meergo.com/docs/ref/admin/integrations' target='_blank'>
+							<a href='https://www.krenalis.com/docs/ref/admin/integrations' target='_blank'>
 								integrations
 							</a>
 						</div>

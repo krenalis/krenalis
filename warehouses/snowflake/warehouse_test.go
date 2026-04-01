@@ -12,21 +12,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-const settingsEnvKey = "MEERGO_TEST_PATH_SNOWFLAKE"
+const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
 
 func Test_Merge(t *testing.T) {
 
 	cols := []struct {
-		MeergoType  types.Type
-		MeergoValue any
+		KrenalisType  types.Type
+		KrenalisValue any
 	}{
 		{types.String(), "foo"},
 		{types.Boolean(), true},
@@ -77,14 +77,14 @@ func Test_Merge(t *testing.T) {
 	}
 
 	table := warehouses.Table{
-		Name:    "test_meergo_merge",
+		Name:    "test_krenalis_merge",
 		Columns: make([]warehouses.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
 		table.Columns[i] = warehouses.Column{
 			Name:     fmt.Sprintf("c%d", i),
-			Type:     c.MeergoType,
+			Type:     c.KrenalisType,
 			Nullable: true,
 		}
 	}
@@ -117,7 +117,7 @@ func Test_Merge(t *testing.T) {
 		}
 		create.WriteString(quoteIdent(c.Name))
 		create.WriteByte(' ')
-		create.WriteString(typeToSnowflakeType(cols[i].MeergoType))
+		create.WriteString(typeToSnowflakeType(cols[i].KrenalisType))
 	}
 	create.WriteString("\n)")
 	_, err = db.ExecContext(context.Background(), create.String())
@@ -134,7 +134,7 @@ func Test_Merge(t *testing.T) {
 	// Merge the values.
 	row1 := make([]any, len(table.Columns))
 	for i := range table.Columns {
-		row1[i] = cols[i].MeergoValue
+		row1[i] = cols[i].KrenalisValue
 	}
 	row2 := make([]any, len(table.Columns))
 	for i := range table.Columns {
@@ -169,56 +169,56 @@ func Test_Merge(t *testing.T) {
 	}
 	for i, got := range row {
 		c := cols[i]
-		switch c.MeergoType.Kind() {
+		switch c.KrenalisType.Kind() {
 		case types.JSONKind:
 			v, ok := got.(json.Value)
 			if !ok {
-				t.Fatalf("type %s: expected a json.Value value, got %#v (type %T)", c.MeergoType, got, got)
+				t.Fatalf("type %s: expected a json.Value value, got %#v (type %T)", c.KrenalisType, got, got)
 			}
 			v, err = json.Compact(v)
 			if err != nil {
-				t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+				t.Fatalf("type %s: cannot compact JSON value %#v", c.KrenalisType, got)
 			}
 			got = v
 		case types.ArrayKind:
-			if c.MeergoType.Elem().Kind() == types.JSONKind {
+			if c.KrenalisType.Elem().Kind() == types.JSONKind {
 				elements, ok := got.([]any)
 				if !ok {
-					t.Fatalf("type %s: expected a []any value, got %#v (type %T)", c.MeergoType, got, got)
+					t.Fatalf("type %s: expected a []any value, got %#v (type %T)", c.KrenalisType, got, got)
 				}
 				for i, element := range elements {
 					v, ok := element.(json.Value)
 					if !ok {
-						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.MeergoType, element, element)
+						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.KrenalisType, element, element)
 					}
 					v, err = json.Compact(v)
 					if err != nil {
-						t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+						t.Fatalf("type %s: cannot compact JSON value %#v", c.KrenalisType, got)
 					}
 					elements[i] = v
 				}
 			}
 		case types.MapKind:
-			if c.MeergoType.Elem().Kind() == types.JSONKind {
+			if c.KrenalisType.Elem().Kind() == types.JSONKind {
 				elements, ok := got.(map[string]any)
 				if !ok {
-					t.Fatalf("type %s: expected a map[string]any value, got %#v (type %T)", c.MeergoType, got, got)
+					t.Fatalf("type %s: expected a map[string]any value, got %#v (type %T)", c.KrenalisType, got, got)
 				}
 				for key, value := range elements {
 					v, ok := value.(json.Value)
 					if !ok {
-						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.MeergoType, value, value)
+						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.KrenalisType, value, value)
 					}
 					v, err = json.Compact(v)
 					if err != nil {
-						t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+						t.Fatalf("type %s: cannot compact JSON value %#v", c.KrenalisType, got)
 					}
 					elements[key] = v
 				}
 			}
 		}
-		if !cmp.Equal(c.MeergoValue, got) {
-			t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.MeergoType, c.MeergoValue, c.MeergoValue, got, got)
+		if !cmp.Equal(c.KrenalisValue, got) {
+			t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.KrenalisType, c.KrenalisValue, c.KrenalisValue, got, got)
 		}
 	}
 	if !rows.Next() {
@@ -234,7 +234,7 @@ func Test_Merge(t *testing.T) {
 		}
 		c := cols[i]
 		if got != nil {
-			t.Fatalf("type %s: expected nil, got %#v (type %T)", c.MeergoType, got, got)
+			t.Fatalf("type %s: expected nil, got %#v (type %T)", c.KrenalisType, got, got)
 		}
 	}
 	if rows.Next() {

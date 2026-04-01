@@ -20,9 +20,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 //go:embed documentation/overview.md
@@ -74,7 +74,7 @@ type innerSettings struct {
 
 // EventTypes returns the event types.
 func (ga *Analytics) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
-	return meergoEventTypes, nil
+	return eventTypes, nil
 }
 
 // EventTypeSchema returns the schema of the specified event type.
@@ -280,7 +280,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 			return nil, errors.New(msg.String())
 		}
 
-		// Next, build a new request to be returned to Meergo, in which
+		// Next, build a new request to be returned to Krenalis, in which
 		// sensitive information (such as the API secret) is redacted.
 		u = requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, true, true, ga.settings.MeasurementID)
 		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))

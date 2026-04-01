@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/meergo/meergo/core/internal/streams/streamstest"
+	"github.com/krenalis/krenalis/core/internal/streams/streamstest"
 )
 
 type repeatReader struct {

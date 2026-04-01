@@ -11,10 +11,10 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonopts"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonopts"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // This package supports "inlining" a Go struct field, where the contents

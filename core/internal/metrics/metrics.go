@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/backoff"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/backoff"
 )
 
 const (

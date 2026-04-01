@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/meergo/meergo/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/state"
 )
 
 // newModeCoordinator returns a new modeCoordinator, which coordinates the

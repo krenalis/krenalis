@@ -5,12 +5,12 @@
 package schemas
 
 import (
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // Event is the event schema.
 var Event = types.Object([]types.Property{
-	{Name: "mpid", Type: types.UUID(), ReadOptional: true, Description: "Meergo Profile ID"},
+	{Name: "kpid", Type: types.UUID(), ReadOptional: true, Description: "Krenalis Profile ID"},
 	{Name: "connectionId", Type: types.Int(32), Description: "Connection ID"},
 	{Name: "anonymousId", Type: types.String(), Description: "Anonymous ID"},
 	{Name: "channel", Type: types.String(), ReadOptional: true, Description: "Channel"},

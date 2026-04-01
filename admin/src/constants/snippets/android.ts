@@ -1,6 +1,7 @@
-export const INSTALL_COMMAND = 'Add the latest version of `com.meergo.analytics.kotlin:android` to your `build.gradle`';
+export const INSTALL_COMMAND =
+	'Add the latest version of `com.krenalis.analytics.kotlin:android` to your `build.gradle`';
 
-export const SNIPPET = `import com.meergo.analytics.kotlin.android.Analytics
+export const SNIPPET = `import com.krenalis.analytics.kotlin.android.Analytics
 
 val client = Analytics("writekey", applicationContext) {
   endpoint = "endpoint"
@@ -10,4 +11,4 @@ val client = Analytics("writekey", applicationContext) {
   // ...other config options
 }`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/android-sdk';
+export const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/android-sdk';

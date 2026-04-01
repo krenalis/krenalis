@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // renderExpr renders the expression expr returning a fragment of a query
@@ -157,7 +157,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		switch c.Type.Kind() {
 		case types.StringKind:
 			s = " = ''"
-		// See issue https://github.com/meergo/meergo/issues/1804.
+		// See issue https://github.com/krenalis/krenalis/issues/1804.
 		// case types.JSONKind:
 		//	s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
@@ -181,7 +181,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		switch c.Type.Kind() {
 		case types.StringKind:
 			s = " <> ''"
-		// See issue https://github.com/meergo/meergo/issues/1804.
+		// See issue https://github.com/krenalis/krenalis/issues/1804.
 		// case types.JSONKind:
 		//	s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:

@@ -13,12 +13,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // ErrDifferentWarehouse is an error indicating that the data warehouse being
@@ -38,9 +38,9 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
-// destinationsProfilesTable represents the meergo_destination_profiles table.
+// destinationsProfilesTable represents the krenalis_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
-	Name: "meergo_destination_profiles",
+	Name: "krenalis_destination_profiles",
 	Columns: []warehouses.Column{
 		{Name: "_pipeline", Type: types.Int(32)},
 		{Name: "_external_id", Type: types.String()},
@@ -79,7 +79,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	store.wh.Store(wh)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
-	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
+	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
 	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
@@ -100,7 +100,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // TODO(Gianluca): in this method, there is an inconsistency related to the
 // parameters, that is: the schema is passed as properties, while the operations
 // are columns, so there is a mix of different levels of abstraction. This is
-// discussed in the issue https://github.com/meergo/meergo/issues/862.
+// discussed in the issue https://github.com/krenalis/krenalis/issues/862.
 //
 // This method, once called, can then return in four distinct cases:
 //
@@ -147,7 +147,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline int)
 	defer done()
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, pipeline)
-	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
+	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
 // Events returns the events according to the provided query. The returned
@@ -220,7 +220,7 @@ func (store *Store) Identities(ctx context.Context, query Query) ([]map[string]a
 		return nil, 0, err
 	}
 	defer done()
-	query.table = "meergo_identities"
+	query.table = "krenalis_identities"
 	query.total = true
 	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
@@ -315,7 +315,7 @@ func (store *Store) NewEventWriter() *EventWriter {
 // TODO(Gianluca): in this method, there is an inconsistency related to the
 // parameters, that is: the schema is passed as properties, while the operations
 // are columns, so there is a mix of different levels of abstraction. This is
-// discussed in the issue https://github.com/meergo/meergo/issues/862.
+// discussed in the issue https://github.com/krenalis/krenalis/issues/862.
 //
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
@@ -367,7 +367,7 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "_mpid", store.profileColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
 // Profiles returns the profiles according to the provided query.
@@ -406,19 +406,19 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
 		values[i] = pipeline
 	}
 	where := warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
-	err = store.warehouse().Delete(ctx, "meergo_identities", where)
+	err = store.warehouse().Delete(ctx, "krenalis_identities", where)
 	if err != nil {
 		return err
 	}
-	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
+	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
-// Repair repairs the database objects on the data warehouse needed by Meergo.
+// Repair repairs the database objects on the data warehouse needed by Krenalis.
 // The given profile schema will be used to repair the user tables.
 //
 // This method should only be called on warehouses that have already been
 // initialized, with the aim of correcting any extraordinary issues (such as
-// accidental table deletions) in an attempt to make Meergo functional again.
+// accidental table deletions) in an attempt to make Krenalis functional again.
 //
 // If an error occurs with the data warehouse during the repair, it returns an
 // *UnavailableError error.
@@ -458,7 +458,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
 	// actual IR execution. See issue
-	// https://github.com/meergo/meergo/issues/1224.
+	// https://github.com/krenalis/krenalis/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err
@@ -523,7 +523,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	}
 	// Count the users on the current warehouse.
 	query := warehouses.RowQuery{
-		Columns: []warehouses.Column{{Name: "_mpid", Type: types.UUID()}},
+		Columns: []warehouses.Column{{Name: "_kpid", Type: types.UUID()}},
 		Table:   "profiles",
 		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
@@ -665,7 +665,7 @@ func (store *Store) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	// Update the profile and the identity columns.
 	store.columnByProperty.mu.Lock()
 	store.columnByProperty.user = profileColumnByProperty(n.Schema)
-	store.columnByProperty.user["_mpid"] = warehouses.Column{Name: "_mpid", Type: types.UUID()}
+	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
 	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()

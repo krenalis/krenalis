@@ -11,14 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/filters"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/filters"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers"
 )
 
 // importUsers imports the users of the pipeline.
@@ -206,7 +206,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	// TODO(Gianluca): calling Close may return error in case the warehouse mode
 	// does not allow the closing (that is the flushing of users). However,
 	// before handling that error, we should instead address
-	// https://github.com/meergo/meergo/issues/1224.
+	// https://github.com/krenalis/krenalis/issues/1224.
 	err = iw.Close(ctx)
 	if err != nil {
 		if err != datastore.ErrPurgeSkipped {

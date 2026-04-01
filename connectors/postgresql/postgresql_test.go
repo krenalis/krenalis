@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/test/testimages"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	testDatabase = "meergo"
-	testUser     = "meergo"
-	testPassword = "meergo"
+	testDatabase = "krenalis"
+	testUser     = "krenalis"
+	testPassword = "krenalis"
 	testSchema   = "public"
 )
 
@@ -37,10 +37,10 @@ const (
 func Test_Merge_Query(t *testing.T) {
 
 	cols := []struct {
-		DriverType  string
-		DriverValue any
-		MeergoType  types.Type
-		MeergoValue any
+		DriverType    string
+		DriverValue   any
+		KrenalisType  types.Type
+		KrenalisValue any
 	}{
 		{"SERIAL", int64(1), types.Int(32), 1},
 		{"smallint", int64(1), types.Int(16), 1},
@@ -67,14 +67,14 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	table := connectors.Table{
-		Name:    "test_meergo_query",
+		Name:    "test_krenalis_query",
 		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
 		table.Columns[i] = connectors.Column{
 			Name:     fmt.Sprintf("c%d", i),
-			Type:     c.MeergoType,
+			Type:     c.KrenalisType,
 			Nullable: true,
 		}
 	}
@@ -156,7 +156,7 @@ func Test_Merge_Query(t *testing.T) {
 	}()
 	row := make([]any, len(cols))
 	for i, c := range cols {
-		row[i] = c.MeergoValue
+		row[i] = c.KrenalisValue
 	}
 	err = connector.Merge(context.Background(), table, [][]any{row})
 	if err != nil {

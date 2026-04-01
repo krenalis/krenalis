@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // AbsolutePathTest is a test for FileStorage.AbsolutePath.

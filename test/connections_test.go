@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
 func TestConnections(t *testing.T) {
@@ -18,7 +18,7 @@ func TestConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -26,17 +26,17 @@ func TestConnections(t *testing.T) {
 	var res struct {
 		Connections []any
 	}
-	c.MustCall("GET", "/v1/connections", nil, &res)
+	c.MustCall("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 0 {
 		t.Fatalf("expected 0 connections, got %d", len(res.Connections))
 	}
 
 	// Create a Dummy (source) connection.
-	dummyID := c.CreateDummy("Dummy (source)", meergotester.Source)
+	dummyID := c.CreateDummy("Dummy (source)", krenalistester.Source)
 
 	// Check if the Dummy connection has been created successfully.
 	res.Connections = nil
-	c.MustCall("GET", "/v1/connections", nil, &res)
+	c.MustCall("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 1 {
 		t.Fatalf("expected 1 connections, got %d", len(res.Connections))
 	}
@@ -57,17 +57,17 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Check that a message broker connection cannot be created.
-	broker := &meergotester.ConnectionToCreate{
+	broker := &krenalistester.ConnectionToCreate{
 		Name:      "Kafka",
-		Role:      meergotester.Source,
+		Role:      krenalistester.Source,
 		Connector: "kafka",
 	}
 	var id int
-	err := c.Call("POST", "/v1/connections", broker, &id)
+	err := c.Call("POST", "/v1/connections", nil, broker, &id)
 	if err == nil {
 		t.Fatalf("expected Bad Request error, got no error")
 	}
-	errStatusCode, ok := err.(*meergotester.StatusCodeError)
+	errStatusCode, ok := err.(*krenalistester.StatusCodeError)
 	if !ok {
 		t.Fatalf("expected *StatusCodeError error, got %T error", err)
 	}

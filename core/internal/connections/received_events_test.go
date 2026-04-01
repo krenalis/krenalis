@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/tools/decimal"
+	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/tools/decimal"
 )
 
 // Test_ReceivedEvent checks that ReceivedEvent exposes all event fields

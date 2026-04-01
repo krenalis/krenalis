@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/tools/errors"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 func TestParseID(t *testing.T) {

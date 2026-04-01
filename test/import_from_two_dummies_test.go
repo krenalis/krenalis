@@ -7,8 +7,8 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestImportFromTwoDummies(t *testing.T) {
@@ -17,16 +17,16 @@ func TestImportFromTwoDummies(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.CreateDummy("Dummy 1", meergotester.Source)
-	dummy2 := c.CreateDummy("Dummy 2", meergotester.Source)
+	dummy1 := c.CreateDummy("Dummy 1", krenalistester.Source)
+	dummy2 := c.CreateDummy("Dummy 2", krenalistester.Source)
 
 	// Create two identical pipelines for two different connections.
-	pipelineParams := meergotester.PipelineToSet{
+	pipelineParams := krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -39,7 +39,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -91,10 +91,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every profile now should have just one identity associated.
 	totalProfiles := 0
 	for _, profile := range profiles {
-		_, total := c.Identities(profile.MPID, 0, 100)
+		_, total := c.Identities(profile.KPID, 0, 100)
 		const expectedTotal = 1
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.MPID, total)
+			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.KPID, total)
 		}
 		totalProfiles++
 	}
@@ -116,10 +116,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every profile now should have two identities associated.
 	totalProfiles = 0
 	for _, profile := range profiles {
-		_, total := c.Identities(profile.MPID, 0, 100)
+		_, total := c.Identities(profile.KPID, 0, 100)
 		const expectedTotal = 2
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.MPID, total)
+			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.KPID, total)
 		}
 		totalProfiles++
 	}

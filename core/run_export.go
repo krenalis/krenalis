@@ -13,14 +13,14 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/tools/prometheus"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // exportProfiles exports the profiles for the pipeline.
@@ -126,6 +126,10 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			outSchema = types.Prune(outSchema, func(path string) bool {
 				return path != pipeline.Matching.Out
 			})
+		} else if matchingOut.ReadOptional {
+			// Set the out-matching property's read-optional flag to false
+			// before passing it to Application.Writer.
+			outSchema = types.AsRole(outSchema, types.Destination)
 		}
 		writer, err = this.application().Writer(ctx, outSchema, pipeline.ExportMode, pipeline.Target, ack)
 	case state.Database:
@@ -336,12 +340,9 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 			return profile.Err
 		}
 
-		// Store the profile only if the output matching property is not nil.
-		v, ok := getAttribute(profile.Attributes, this.pipeline.Matching.Out)
-		if !ok {
-			panic(fmt.Sprintf("out matching property value of pipeline %d is missing", this.pipeline.ID))
-		}
-		if v != nil {
+		// Store the profile only if the attributes contain a value for
+		// the output matching property and that value is non-nil.
+		if v, ok := getAttribute(profile.Attributes, this.pipeline.Matching.Out); ok && v != nil {
 			profiles = append(profiles, datastore.DestinationProfile{
 				ExternalID:       profile.ID,
 				OutMatchingValue: stringifyMatchingValue(v),

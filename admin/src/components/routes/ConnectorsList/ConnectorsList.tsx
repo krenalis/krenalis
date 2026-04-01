@@ -46,9 +46,9 @@ const ConnectorsList = () => {
 	}, [connectors]);
 
 	const searchedConnectors: any[] = useMemo(() => {
-		const sortedConnectors = connectors.sort((a, b) => (a.label <= b.label ? -1 : 1));
+		const sortedConnectors = connectors.sort((a, b) => (a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1));
 		const sortedAdditionalPotentialConnectors = additionalPotentialConnectors.sort((a, b) =>
-			a.label <= b.label ? -1 : 1,
+			a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1,
 		);
 		let searchedConnectors = [];
 
@@ -207,7 +207,7 @@ const ConnectorsList = () => {
 	const feedbackMessage = (
 		<span className='connectors-list__feedback-message'>
 			Can't find the connector you're looking for?{' '}
-			<a href='mailto:hello@meergo.com' target='_blank'>
+			<a href='mailto:hello@krenalis.com' target='_blank'>
 				Contact us
 			</a>
 		</span>
@@ -288,7 +288,7 @@ const ConnectorsList = () => {
 						/>
 						{selectedConnector?.oauth != null && !selectedConnector?.oauth.configured && (
 							<div className='connectors-list__oauth-not-configured'>
-								OAuth authentication for this connector is not configured. Please contact your Meergo
+								OAuth authentication for this connector is not configured. Please contact your Krenalis
 								administrator to set it up.{' '}
 								<a href='#' target='_blank'>
 									Our documentation

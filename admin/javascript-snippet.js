@@ -1,8 +1,8 @@
 // Minimize this code snippet by running: npm run minify-snippet
-var e = window.meergo = window.meergo || [];
+var e = window.krenalis = window.krenalis || [];
 if (e.load) {
   window.console && console.error &&
-    console.error("The Meergo snippet is included twice");
+    console.error("The Krenalis snippet is included twice");
 } else {
   e.load = function (key, url, options) {
     e.key = key;
@@ -41,5 +41,5 @@ if (e.load) {
       };
     })(methods[i]);
   }
-  meergo.load("writekey", "endpoint");
+  krenalis.load("writekey", "endpoint");
 }

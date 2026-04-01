@@ -10,8 +10,8 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
 )
 
 // NOTE: Token is analogous to v1 json.Token.

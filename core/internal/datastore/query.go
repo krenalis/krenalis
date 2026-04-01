@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Query represents a query on a table of a data warehouse.

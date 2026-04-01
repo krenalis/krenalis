@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -45,7 +45,7 @@ func makeVendor() error {
 	nodeModulesDir := filepath.Join(root, "admin", "node_modules") + string(os.PathSeparator)
 
 	// Create the out directory used by esbuild.
-	outDir, err := os.MkdirTemp("", "meergo-admin-makevendor-*")
+	outDir, err := os.MkdirTemp("", "krenalis-admin-makevendor-*")
 	if err != nil {
 		panic(err)
 	}

@@ -22,10 +22,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/google/uuid"
 )
@@ -131,7 +131,7 @@ func (posthog *PostHog) EventTypeSchema(ctx context.Context, eventType string) (
 	sessionID := types.Property{
 		Name:        "session_id",
 		Type:        types.UUID(),
-		Description: "Session ID (UUIDv7) — if not set, Meergo generates one automatically.",
+		Description: "Session ID (UUIDv7) — if not set, Krenalis generates one automatically.",
 	}
 	switch eventType {
 	case "identify":
@@ -484,7 +484,7 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 }
 
 // makeSessionUUIDv7 deterministically builds a UUIDv7 using the anonymous ID
-// and Meergo session ID. The UUID timestamp is set to sessionID-1000
+// and Krenalis session ID. The UUID timestamp is set to sessionID-1000
 // milliseconds to avoid overlap, and the remaining bits derive from the
 // anonymous ID for deterministic, repeatable results.
 func makeSessionUUIDv7(anonymousID string, sessionID int64) (string, error) {

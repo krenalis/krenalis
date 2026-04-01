@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
 func TestJavaScriptSDKEventURL(t *testing.T) {
@@ -16,11 +16,11 @@ func TestJavaScriptSDKEventURL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
-	const expectedJavaScriptSDKURL = "https://cdn.meergo.com/meergo.min.js"
+	const expectedJavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 	gotJavaScriptSDKURL := c.JavaScriptSDKURL()
 	if gotJavaScriptSDKURL != expectedJavaScriptSDKURL {
 		t.Fatalf("expected JavaScript SDK URL: %q, got: %q", expectedJavaScriptSDKURL, gotJavaScriptSDKURL)

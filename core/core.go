@@ -20,30 +20,30 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/collector"
-	"github.com/meergo/meergo/core/internal/collector/sender"
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	dbpkg "github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/initdb"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/core/internal/streams/nats"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/core/internal/transformers/lambda"
-	"github.com/meergo/meergo/core/internal/transformers/local"
-	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/core/natsopts"
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/tools/datacrypt"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/collector"
+	"github.com/krenalis/krenalis/core/internal/collector/sender"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/initdb"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/core/internal/streams/nats"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/core/internal/transformers/lambda"
+	"github.com/krenalis/krenalis/core/internal/transformers/local"
+	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/core/natsopts"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/datacrypt"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
@@ -305,10 +305,10 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		return nil, fmt.Errorf("core: cannot create auth token cipher: %s", err)
 	}
 
-	// Add the Meergo installation ID tag to Sentry.
+	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
-			scope.SetTag("meergo_installation_id", core.InstallationID())
+			scope.SetTag("krenalis_installation_id", core.InstallationID())
 		})
 	}
 
@@ -1789,8 +1789,8 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 	return categoryNames
 }
 
-// getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
-// to implement features for the MCP server.
+// getMCPWarehouseInstance returns a warehouses.Warehouse instance that can be
+// used to implement features for the MCP server.
 // platform is the warehouse platform and settings are the settings for
 // connecting to it.
 //

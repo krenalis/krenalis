@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // Test the main state transitions and behaviors of the rate limiter.

@@ -10,9 +10,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 func TestDiff(t *testing.T) {
@@ -516,7 +516,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "https://github.com/meergo/meergo/issues/693 (1)",
+			name: "https://github.com/krenalis/krenalis/issues/693 (1)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.String(), Nullable: true},
 				{Name: "b", Type: types.Object([]types.Property{
@@ -540,7 +540,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "https://github.com/meergo/meergo/issues/693 (2)",
+			name: "https://github.com/krenalis/krenalis/issues/693 (2)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.String(), Nullable: true},
 				{Name: "e", Type: types.String(), Nullable: true},

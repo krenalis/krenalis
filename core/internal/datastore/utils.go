@@ -7,8 +7,8 @@ package datastore
 import (
 	"strings"
 
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // IsMetaProperty reports whether the given property name refers to a property
@@ -117,7 +117,7 @@ func identityColumnByProperty(profileColumnByProperty map[string]warehouses.Colu
 		"_connection":    {Name: "_connection", Type: types.Int(32)},
 		"_anonymous_ids": {Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true},
 		"_updated_at":    {Name: "_updated_at", Type: types.DateTime()},
-		"_mpid":          {Name: "_mpid", Type: types.UUID(), Nullable: true},
+		"_kpid":          {Name: "_kpid", Type: types.UUID(), Nullable: true},
 	}
 	for property, column := range profileColumnByProperty {
 		if !IsMetaProperty(property) {

@@ -12,8 +12,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestChangeProfileSchema(t *testing.T) {
@@ -22,7 +22,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
@@ -79,9 +79,9 @@ func TestChangeProfileSchema(t *testing.T) {
 	queries = c.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"profiles\";",
-		"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"new_prop\" character varying;",
-		"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
-		"CREATE VIEW \"profiles\" AS SELECT\n\t\"_mpid\",\n\t\"_updated_at\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"meergo_profiles_0\";",
+		"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"ALTER TABLE \"krenalis_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"_kpid\",\n\t\"_updated_at\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"krenalis_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
@@ -123,11 +123,11 @@ func TestChangeProfileSchema(t *testing.T) {
 	queries = c.PreviewAlterProfileSchema(schema, rePaths)
 	expectedQueries = []string{
 		"BEGIN;",
-		"DROP VIEW \"profiles\";", "ALTER TABLE \"meergo_profiles_0\"\n\tDROP COLUMN \"email\";",
-		"ALTER TABLE \"meergo_identities\"\n\tDROP COLUMN \"email\";",
-		"ALTER TABLE \"meergo_profiles_0\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
-		"ALTER TABLE \"meergo_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
-		"CREATE VIEW \"profiles\" AS SELECT\n\t\"_mpid\",\n\t\"_updated_at\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"meergo_profiles_0\";",
+		"DROP VIEW \"profiles\";", "ALTER TABLE \"krenalis_profiles_0\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"krenalis_identities\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"krenalis_profiles_0\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"ALTER TABLE \"krenalis_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"_kpid\",\n\t\"_updated_at\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"krenalis_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
@@ -180,9 +180,9 @@ func TestChangeProfileSchema(t *testing.T) {
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"profiles\";",
-		"ALTER TABLE \"meergo_profiles_0\"\n\tDROP COLUMN \"android_identifier\";",
-		"ALTER TABLE \"meergo_identities\"\n\tDROP COLUMN \"android_identifier\";",
-		"CREATE VIEW \"profiles\" AS SELECT\n\t\"_mpid\",\n\t\"_updated_at\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"meergo_profiles_0\";",
+		"ALTER TABLE \"krenalis_profiles_0\"\n\tDROP COLUMN \"android_identifier\";",
+		"ALTER TABLE \"krenalis_identities\"\n\tDROP COLUMN \"android_identifier\";",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"_kpid\",\n\t\"_updated_at\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"krenalis_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
@@ -258,7 +258,7 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Create a primary source for the first property.
 	firstProperty := file.Schema.Properties().Names()[0]
-	primarySource := c.CreateDummy("Primary Source", meergotester.Source)
+	primarySource := c.CreateDummy("Primary Source", krenalistester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
 	c.AlterProfileSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()

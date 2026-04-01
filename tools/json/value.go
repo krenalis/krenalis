@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json/internal/json"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json/internal/json"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 var (

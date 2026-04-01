@@ -5,7 +5,7 @@
 package mappings
 
 import (
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // convertMatrix is a matrix which holds information about valid conversions.

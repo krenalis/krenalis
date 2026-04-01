@@ -20,11 +20,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/LumenResearch/uasurfer"
 	"github.com/google/uuid"
@@ -455,10 +455,48 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		}
 	}
 
-	if context == nil {
-		context = map[string]any{}
-		event["context"] = context
+	// Merge the event context with the batch-level default context.
+	context = mergeDefaultContext(context, d.context)
+
+	// Add default values for required properties that are missing from merged
+	// context sections.
+	for name, sec := range context {
+		section, ok := contextSections[name]
+		if !ok {
+			continue
+		}
+		sec := sec.(map[string]any)
+		if len(sec) == len(section.properties) {
+			continue
+		}
+		for _, p := range section.properties {
+			if p.readOptional {
+				continue
+			}
+			if _, ok := sec[p.name]; ok {
+				continue
+			}
+			var v any
+			switch p.typ.Kind() {
+			case types.StringKind:
+				v = ""
+			case types.BooleanKind:
+				v = false
+			case types.IntKind:
+				v = 0
+			case types.FloatKind:
+				v = 0.0
+			case types.DecimalKind:
+				v = decimal.Decimal{}
+			default:
+				panic("unexpected kind")
+			}
+			sec[p.name] = v
+		}
 	}
+
+	// Context.
+	event["context"] = context
 
 	// Type.
 	typ, ok := event["type"].(string)
@@ -632,7 +670,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 
 	// Message ID.
 	if _, ok := event["messageId"]; !ok {
-		event["messageId"] = "meergo-" + uuid.NewString()
+		event["messageId"] = "krenalis-" + uuid.NewString()
 	}
 
 	// Name.
@@ -966,11 +1004,6 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 	var err error
 	var tok json.Token
 	var sec map[string]any
-	if !isDefault && d.context != nil {
-		if v, ok := d.context[section.name].(map[string]any); ok {
-			sec = maps.Clone(v)
-		}
-	}
 
 	for {
 		tok, _ = d.dec.ReadToken()
@@ -1063,37 +1096,6 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 		}
 	}
 
-	if isDefault || sec == nil {
-		return sec, nil
-	}
-	if len(sec) == len(section.properties) {
-		return sec, nil
-	}
-	for _, p := range section.properties {
-		if p.readOptional {
-			continue
-		}
-		if _, ok := sec[p.name]; ok {
-			continue
-		}
-		var v any
-		switch p.typ.Kind() {
-		case types.StringKind:
-			v = ""
-		case types.BooleanKind:
-			v = false
-		case types.IntKind:
-			v = 0
-		case types.FloatKind:
-			v = 0.0
-		case types.DecimalKind:
-			v = decimal.Decimal{}
-		default:
-			panic("unexpected kind")
-		}
-		sec[p.name] = v
-	}
-
 	return sec, nil
 }
 
@@ -1128,6 +1130,36 @@ func errRead(err error) error {
 		return errors.BadRequest("error parsing the request body as JSON: it is not terminated")
 	}
 	return errReadBody
+}
+
+// mergeDefaultContext merges the default context into the event context,
+// preserving values already present in the event context.
+func mergeDefaultContext(c1, c2 map[string]any) map[string]any {
+	if c1 == nil {
+		c1 = map[string]any{}
+	}
+	if c2 == nil {
+		return c1
+	}
+	for name, sec2 := range c2 {
+		switch sec2 := sec2.(type) {
+		case map[string]any:
+			if sec1, ok := c1[name].(map[string]any); ok {
+				for k, v := range sec2 {
+					if _, ok := sec1[k]; !ok {
+						sec1[k] = v
+					}
+				}
+			} else {
+				c1[name] = maps.Clone(sec2)
+			}
+		default:
+			if _, ok := c1[name]; !ok {
+				c1[name] = sec2
+			}
+		}
+	}
+	return c1
 }
 
 // normalizeContextBrowser normalizes the content of 'context.browser' in an

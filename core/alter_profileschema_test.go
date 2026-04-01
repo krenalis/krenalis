@@ -7,7 +7,7 @@ package core
 import (
 	"testing"
 
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func Test_checkAllowedTypesProfileSchema(t *testing.T) {

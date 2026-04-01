@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 //go:embed documentation/source/overview.md
@@ -67,9 +67,9 @@ func New(env *connectors.FileStorageEnv) (*FileSystem, error) {
 		if err != nil {
 			return nil, err
 		}
-		root = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_ROOT"))
-		displayedRoot = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
-		const errMsgPrefix = "File System connector is unavailable because the MEERGO_CONNECTOR_FILESYSTEM_ROOT environment variable"
+		root = strings.TrimSpace(envVars.Get("KRENALIS_CONNECTOR_FILESYSTEM_ROOT"))
+		displayedRoot = strings.TrimSpace(envVars.Get("KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
+		const errMsgPrefix = "File System connector is unavailable because the KRENALIS_CONNECTOR_FILESYSTEM_ROOT environment variable"
 		if root == "" {
 			return nil, fmt.Errorf("%s is not set; please define it with the root directory to enable the connector", errMsgPrefix)
 		}
@@ -138,9 +138,9 @@ func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, setting
 
 	var intro string
 	if role == connectors.Source {
-		intro = "This connector for file system allows Meergo to read files from this directory of your system:"
+		intro = "This connector for file system allows Krenalis to read files from this directory of your system:"
 	} else {
-		intro = "This connector for file system allows Meergo to write files into this directory of your system:"
+		intro = "This connector for file system allows Krenalis to write files into this directory of your system:"
 	}
 
 	confMu.Lock()

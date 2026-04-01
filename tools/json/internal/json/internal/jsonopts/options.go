@@ -5,8 +5,8 @@
 package jsonopts
 
 import (
-	"github.com/meergo/meergo/tools/json/internal/json/internal"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
 )
 
 // Options is the common options type shared across json packages.

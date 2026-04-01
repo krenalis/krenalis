@@ -169,9 +169,9 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 								</Link>
 							</div>
 						)}
-					<span className='profile-drawer__mpid'>
+					<span className='profile-drawer__kpid'>
 						<SlTooltip
-							content='Meergo Profile ID'
+							content='Krenalis Profile ID'
 							onSlHide={(e) => {
 								// Prevent the event from bubbling up and
 								// causing the drawer to close.
@@ -180,7 +180,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 						>
 							<SlIcon name='info-circle-fill' />
 						</SlTooltip>
-						MPID: <span className='profile-drawer__mpid-value'>{selectedProfile}</span>
+						KPID: <span className='profile-drawer__kpid-value'>{selectedProfile}</span>
 					</span>
 				</div>
 			</div>

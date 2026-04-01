@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/meergo/meergo/admin/debugid"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/admin/debugid"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/andybalholm/brotli"
 	"github.com/evanw/esbuild/pkg/api"

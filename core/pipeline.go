@@ -15,28 +15,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	"github.com/meergo/meergo/tools/backoff"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
+	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
 )
 
 // eventPipelineSchema defines the event schema for pipelines.
-// It excludes the mpid property.
+// It excludes the kpid property.
 var eventPipelineSchema types.Type
 
 // eventPropertyNames lists all event property names.
-// The first name is always "mpid".
+// The first name is always "kpid".
 var eventPropertyNames []string
 
 func init() {
@@ -86,11 +86,11 @@ type Pipeline struct {
 	Incremental        bool            `json:"incremental"`
 }
 
-// Matching establishes a relationship between a property in Meergo (input
+// Matching establishes a relationship between a property in Krenalis (input
 // property) and a corresponding property in the application (output property)
 // used during an export. This relationship determines whether a user or group
-// in Meergo exists in the application and identifies the corresponding user or
-// group in the application.
+// in Krenalis exists in the application and identifies the corresponding user
+// or group in the application.
 //
 // The input property should be a property in the profile schema, while the
 // output property should be a property in the source schema of the connection.
@@ -671,7 +671,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/meergo/meergo/issues/2086.
+	// See issue https://github.com/krenalis/krenalis/issues/2086.
 	if this.pipeline.EventType != "" {
 		app := this.application()
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, this.pipeline.EventType)
@@ -1208,8 +1208,9 @@ type PipelineToSet struct {
 	// update them, or do both.
 	ExportMode ExportMode `json:"exportMode"`
 
-	// Matching defines a relationship between a property in Meergo ("in") and
-	// a corresponding property in the application ("out") used during an export.
+	// Matching defines a relationship between a property in Krenalis ("in") and
+	// a corresponding property in the application ("out") used during an
+	// export.
 	Matching Matching `json:"matching"`
 
 	// UpdateOnDuplicates indicates whether to proceed with the export even if
@@ -1495,8 +1496,8 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 // transformation function.
 func transformationFunctionName(pipeline int) string {
 	if pipeline == 0 {
-		return fmt.Sprintf("meergo_preview_%s", uuid.NewString())
+		return fmt.Sprintf("krenalis_preview_%s", uuid.NewString())
 	}
 	now := time.Now().UTC()
-	return fmt.Sprintf("meergo_pipeline%d_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
+	return fmt.Sprintf("krenalis_pipeline%d_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
 }

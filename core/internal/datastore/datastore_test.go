@@ -7,7 +7,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func Test_CheckConflictingProperties(t *testing.T) {

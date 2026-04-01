@@ -19,9 +19,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -84,7 +84,7 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]connectors.C
 		return nil, err
 	}
 	// The "SELECT * FROM table" query does not return MATERIALIZED columns.
-	// See issue https://github.com/meergo/meergo/issues/1417.
+	// See issue https://github.com/krenalis/krenalis/issues/1417.
 	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table+" LIMIT 0", true)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (connectors.Rows,
 }
 
 // SQLLiteral returns the SQL literal representation of v according to the
-// provided Meergo type t. It supports nil values and the following Meergo
+// provided Krenalis type t. It supports nil values and the following Krenalis
 // types: string, datetime, date, and json.
 func (ch *ClickHouse) SQLLiteral(value any, typ types.Type) string {
 	if value == nil {

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // ErrEventTypeNotExist is returned by the EventSender.EventTypeSchema method if
@@ -327,7 +327,7 @@ type Record struct {
 }
 
 // IsCreate reports whether this record should be created when passed to Upsert.
-// In Meergo, a record to be created has an empty ID.
+// In Krenalis, a record to be created has an empty ID.
 func (r Record) IsCreate() bool { return r.ID == "" }
 
 // IsUpdate reports whether this record should be updated when passed to Upsert.

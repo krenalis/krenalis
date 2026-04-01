@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestImportUsersFromFile(t *testing.T) {
@@ -32,7 +32,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -43,7 +43,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.UpdateIdentityResolution(true, []string{"email"})
 
 	// Create a pipeline for the CSV for importing the users.
-	importUsersPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
+	importUsersPipelineID := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -56,7 +56,7 @@ func TestImportUsersFromFile(t *testing.T) {
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "name",
 				"email":      "email",
@@ -64,7 +64,7 @@ func TestImportUsersFromFile(t *testing.T) {
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),

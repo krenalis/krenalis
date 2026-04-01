@@ -129,7 +129,7 @@ const FileConnector = () => {
 									</SlButton>
 								}
 							/>
-							{/* // TODO(Gianluca: https://github.com/meergo/meergo/issues/895
+							{/* // TODO(Gianluca: https://github.com/krenalis/krenalis/issues/895
 							<ListTile
 								key={'groups-pipeline-type'}
 								icon={getConnectorLogo(file.icon)}

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // CanInitialize checks whether the data warehouse can be initialized.
@@ -60,7 +60,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Meergo.
+// make it work with Krenalis.
 func (warehouse *Snowflake) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, false)
 }
@@ -76,7 +76,7 @@ func (warehouse *Snowflake) Repair(ctx context.Context, profileColumns []warehou
 // internally by the driver, the given profile columns.
 func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 	var b strings.Builder
-	b.WriteString(`CREATE TABLE IF NOT EXISTS "MEERGO_IDENTITIES" (
+	b.WriteString(`CREATE TABLE IF NOT EXISTS "KRENALIS_IDENTITIES" (
 		"_PK" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
 		"_PIPELINE" INT NOT NULL,
 		"_IS_ANONYMOUS" BOOLEAN NOT NULL DEFAULT FALSE,
@@ -85,7 +85,7 @@ func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 		"_ANONYMOUS_IDS" ARRAY,
 		"_UPDATED_AT" TIMESTAMP_NTZ NOT NULL,
 		"_RUN" INT,
-		"_MPID" VARCHAR(36),
+		"_KPID" VARCHAR(36),
 		"_CLUSTER" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")
@@ -103,14 +103,14 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profi
 	queries := []string{
 		createDestinationProfilesTable,
 		createEventsTable,
-		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "MEERGO_EVENTS"`,
+		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "KRENALIS_EVENTS"`,
 		createOperationsTable,
 		createProfileSchemaVersionTable,
 		identitiesSQLSchema(profileColumns),
-		profilesSQLSchema("meergo_profiles_0", profileColumns),
+		profilesSQLSchema("krenalis_profiles_0", profileColumns),
 	}
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
-		queries = append(queries, profilesViewSQLSchema(profileColumns, "meergo_profiles_0"))
+		queries = append(queries, profilesViewSQLSchema(profileColumns, "krenalis_profiles_0"))
 	}
 	db := warehouse.openDB()
 	for _, query := range queries {
@@ -130,7 +130,7 @@ func profilesSQLSchema(name string, profileColumns []warehouses.Column) string {
 	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
 	b.WriteString(quoteIdent(name))
 	b.WriteString(` (
-		"_MPID" VARCHAR(36),
+		"_KPID" VARCHAR(36),
 		"_IDENTITIES" ARRAY,
 		"_UPDATED_AT" TIMESTAMP NOT NULL`)
 	for _, c := range profileColumns {
@@ -150,7 +150,7 @@ func profilesViewSQLSchema(profileColumns []warehouses.Column, fromProfilesTable
 	var b strings.Builder
 	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS
 		SELECT
-			"_MPID",
+			"_KPID",
 			"_UPDATED_AT"`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")

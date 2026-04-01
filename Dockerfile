@@ -1,4 +1,4 @@
-# Meergo Building Stage.
+# Krenalis Building Stage.
 
 # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
@@ -8,7 +8,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.23 AS build
 ARG TARGETOS
 ARG TARGETARCH
 
-WORKDIR /meergo
+WORKDIR /krenalis
 
 # Copy the Admin files.
 RUN mkdir admin
@@ -33,11 +33,11 @@ ENV GOCACHE=/root/.cache/go-build
 RUN --mount=type=cache,target="/root/.cache/go-build" go generate
 RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags osusergo,netgo -trimpath
 
-# Stage 1: Meergo Execution Stage.
+# Stage 1: Krenalis Execution Stage.
 
-# Since the Meergo build requires the Go toolchain, while its execution does
+# Since the Krenalis build requires the Go toolchain, while its execution does
 # not, a multi-stage build is used here to have, as the resulting image, an
-# image that contains only the Meergo executable and the Python and JavaScript
+# image that contains only the Krenalis executable and the Python and JavaScript
 # (node) interpreters, for the transformation functions.
 FROM alpine:3.23
 
@@ -45,8 +45,8 @@ FROM alpine:3.23
 RUN apk add --no-cache python3
 RUN apk add --no-cache nodejs
 
-# Copy the Meergo executable from the build stage to stage 1.
-COPY --from=build /meergo/meergo /bin/meergo
+# Copy the Krenalis executable from the build stage to stage 1.
+COPY --from=build /krenalis/krenalis /bin/krenalis
 
 # Install two packages:
 #
@@ -54,9 +54,9 @@ COPY --from=build /meergo/meergo /bin/meergo
 #    shadow  ->   provides the 'useradd' command
 RUN apk add --no-cache doas shadow
 
-# Create the user 'meergouser' (and its home directory): this will be used to
-# run Meergo.
-RUN useradd meergouser -m
+# Create the user 'krenalisuser' (and its home directory): this will be used to
+# run Krenalis.
+RUN useradd krenalisuser -m
 
 # Create a directory that can be mounted to contain the transformation
 # functions.
@@ -64,20 +64,20 @@ RUN useradd meergouser -m
 # It's necessary to create it here, in the Dockerfile, for permissions reasons:
 # otherwise, if it's created later (e.g., by Docker Compose), it will be created
 # for the 'root' user, but since this container's user will be switched to
-# 'meergouser', it won't have sufficient privileges to write to it. Therefore,
+# 'krenalisuser', it won't have sufficient privileges to write to it. Therefore,
 # we'll create it here, with the correct privileges already in place.
 #
 # This part should be simplified (i.e. removed) when we will implement
-# https://github.com/meergo/meergo/issues/1962.
+# https://github.com/krenalis/krenalis/issues/1962.
 #
-RUN mkdir -p /var/meergo/transformation-functions
-RUN chown meergouser:meergouser /var/meergo/transformation-functions
+RUN mkdir -p /var/krenalis/transformation-functions
+RUN chown krenalisuser:krenalisuser /var/krenalis/transformation-functions
 
 # Create an user 'transformeruser' which will be used to run transformation
 # functions executables.
 RUN useradd transformeruser
-RUN echo 'permit nopass meergouser as transformeruser' > /etc/doas.conf
+RUN echo 'permit nopass krenalisuser as transformeruser' > /etc/doas.conf
 
-USER meergouser
-WORKDIR /home/meergouser
-ENTRYPOINT ["/bin/meergo"]
+USER krenalisuser
+WORKDIR /home/krenalisuser
+ENTRYPOINT ["/bin/krenalis"]

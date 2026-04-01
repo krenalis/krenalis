@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/google/uuid"
 )
@@ -146,4 +147,18 @@ func (role Role) String() string {
 // idempotency key.
 func UUID() string {
 	return uuid.NewString()
+}
+
+var errorQuoteReplacer = strings.NewReplacer("»", "≫")
+
+// QuoteErrorTerm wraps an error term in «...», replacing » with ≫ if present.
+//
+// It can be used to format a property name, property path, setting value,
+// Krenalis type name, database, table, or column name in an error message
+// intended to be shown in a UI.
+func QuoteErrorTerm(s string) string {
+	if !strings.ContainsRune(s, '»') {
+		return "«" + s + "»"
+	}
+	return "«" + errorQuoteReplacer.Replace(s) + "»"
 }

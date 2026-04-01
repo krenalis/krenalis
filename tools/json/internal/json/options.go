@@ -7,9 +7,9 @@ package json
 import (
 	"fmt"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonflags"
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonopts"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonflags"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonopts"
 )
 
 // Options configure [Marshal], [MarshalWrite], [MarshalEncode],

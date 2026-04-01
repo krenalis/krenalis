@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // Applies reports whether where matches the given attributes.

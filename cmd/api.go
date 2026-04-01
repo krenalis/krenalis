@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 type api struct {
@@ -137,7 +137,7 @@ func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, nil
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(`{"api":"Meergo API","version":"v1","documentation":"https://www.meergo.com/docs/ref/api"}`))
+	_, _ = w.Write([]byte(`{"api":"Krenalis API","version":"v1","documentation":"https://www.krenalis.com/docs/ref/api"}`))
 	return nil, nil
 }
 
@@ -189,7 +189,7 @@ type publicMetadata struct {
 //   - externalEventURL: external event URL - https://example.com/v1/events
 //   - externalAssetsURLs: external assets URLs.
 //   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
-//   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/meergo.min.js
+//   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/krenalis.min.js
 //   - inviteMembersViaEmail: should new members be added by sending invitation emails??
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all

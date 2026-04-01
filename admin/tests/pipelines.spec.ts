@@ -182,8 +182,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 					"property": "email",
 					"operator": "is one of",
 					"values": [
-						"acme@meergo.com",
-						"test@meergo.com"
+						"acme@krenalis.com",
+						"test@krenalis.com"
 					]
 				},
 				{
@@ -576,8 +576,8 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					"property": "email",
 					"operator": "is one of",
 					"values": [
-						"acme@meergo.com",
-						"test@meergo.com"
+						"acme@krenalis.com",
+						"test@krenalis.com"
 					]
 				},
 				{
@@ -704,15 +704,15 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) => {
 	const connectionID = await addFileSystemSource(page);
 
-	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
+	const tempDir = process.env.KRENALIS_TEST_FS_TEMP_DIR;
 	if (!tempDir) {
-		throw new Error('Missing environment variable: MEERGO_TEST_FS_TEMP_DIR');
+		throw new Error('Missing environment variable: KRENALIS_TEST_FS_TEMP_DIR');
 	}
 
 	// Create a temporary file.
 	const fileName = 'test.csv';
 	const tempFilePath = join(tempDir, fileName);
-	writeFile(tempFilePath, 'first_name, last_name, email\nJohn, Doe, example@meergo.com', (err) => {
+	writeFile(tempFilePath, 'first_name, last_name, email\nJohn, Doe, example@krenalis.com', (err) => {
 		if (err) throw err;
 	});
 
@@ -879,9 +879,9 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) => {
 	const connectionID = await addFileSystemDestination(page);
 
-	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
+	const tempDir = process.env.KRENALIS_TEST_FS_TEMP_DIR;
 	if (!tempDir) {
-		throw new Error('Missing environment variable: MEERGO_TEST_FS_TEMP_DIR');
+		throw new Error('Missing environment variable: KRENALIS_TEST_FS_TEMP_DIR');
 	}
 
 	// Create a temporary file.
@@ -931,8 +931,8 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 						"property": "email",
 						"operator": "is one of",
 						"values": [
-							"acme@meergo.com",
-							"test@meergo.com"
+							"acme@krenalis.com",
+							"test@krenalis.com"
 						]
 					},
 					{

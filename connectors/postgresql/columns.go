@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // pgTypeInfo holds information about a PostgreSQL type, as read from the
@@ -76,7 +76,7 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]conn
 	}
 
 	// Read the "attTypMods".
-	// They are necessary to build the Meergo type of certain columns with
+	// They are necessary to build the Krenalis type of certain columns with
 	// specific PostgreSQL types.
 	attTypMods := map[string]map[string]*int{}
 	{

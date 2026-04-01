@@ -15,14 +15,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/testimages"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	// Import warehouse platforms for TestWarehousesIdentityResolution.
-	_ "github.com/meergo/meergo/warehouses/postgresql"
-	_ "github.com/meergo/meergo/warehouses/snowflake"
+	_ "github.com/krenalis/krenalis/warehouses/postgresql"
+	_ "github.com/krenalis/krenalis/warehouses/snowflake"
 
 	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
@@ -33,7 +33,7 @@ import (
 // This file contains tests on Identity Resolution. These tests are executed on
 // the registered data warehouses, provided that the environment variables:
 //
-//      MEERGO_TEST_PATH_WAREHOUSE_<warehouse-name>
+//      KRENALIS_TEST_PATH_WAREHOUSE_<warehouse-name>
 //
 // are set for the corresponding data warehouse and point to JSON files
 // containing the warehouse settings.
@@ -479,9 +479,9 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			switch platform.Name {
 			case "PostgreSQL":
 				const (
-					database = "test_meergo"
-					username = "test_meergo"
-					password = "test_meergo"
+					database = "test_krenalis"
+					username = "test_krenalis"
+					password = "test_krenalis"
 				)
 				ctx := context.Background()
 				postgresContainer, err := postgres.Run(ctx,
@@ -525,15 +525,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsFile, ok := os.LookupEnv("MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE")
+				settingsFile, ok := os.LookupEnv("KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE")
 				if !ok {
-					t.Skipf("the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
+					t.Skipf("the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
 				}
 				// Read the JSON file with the warehouse settings.
 				var err error
 				settings, err = os.ReadFile(settingsFile)
 				if err != nil {
-					t.Fatalf("cannot open the path %q specified in the MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
+					t.Fatalf("cannot open the path %q specified in the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
 				}
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
@@ -568,8 +568,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// Truncate the existing identities.
 					//
 					// TODO(Gianluca): how should the platforms expose the table names? We
-					// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
-					err = wh.Truncate(ctx, "meergo_identities")
+					// have an issue where we discuss this (https://github.com/krenalis/krenalis/issues/928).
+					err = wh.Truncate(ctx, "krenalis_identities")
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -661,7 +661,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// only possible to sort profiles by one property. Therefore,
 					// in the case of profiles with the same email but with
 					// different values for first_name, etc..., the tests may
-					// randomly fail based on how Meergo returned them. For this
+					// randomly fail based on how Krenalis returned them. For this
 					// reason, here the profiles are sorted based on all their string
 					// properties, in ascending order.
 					slices.SortFunc(gotProfiles, func(u1, u2 map[string]any) int {

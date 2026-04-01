@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // WebhooksPer values indicates if webhooks are per account, connection, or

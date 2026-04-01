@@ -7,8 +7,8 @@ package googleanalytics
 import (
 	"fmt"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 var (
@@ -29,7 +29,7 @@ type eventType struct {
 }
 
 var eventTypeByID map[string]*eventType
-var meergoEventTypes []*connectors.EventType
+var eventTypes []*connectors.EventType
 
 // https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events.
 var measurementProtocolEvents []*eventType
@@ -420,7 +420,7 @@ func init() {
 	eventTypeByID = make(map[string]*eventType, len(measurementProtocolEvents))
 	for _, def := range measurementProtocolEvents {
 		eventTypeByID[def.ID] = def
-		meergoEventTypes = append(meergoEventTypes, &connectors.EventType{
+		eventTypes = append(eventTypes, &connectors.EventType{
 			ID:          def.ID,
 			Name:        def.Name,
 			Description: fmt.Sprintf("Send '%s' events to Google Analytics", def.Name),

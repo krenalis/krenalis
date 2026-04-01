@@ -378,7 +378,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 
 			let propertiesToHide = [];
 			if (isEventBasedUserImport || isAppEventsExport || isEventImport) {
-				propertiesToHide = ['mpid'];
+				propertiesToHide = ['kpid'];
 			}
 
 			propertyInput = (
@@ -571,7 +571,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			description={
 				<>
 					<span>{`Choose which ${targetTerm} to ${actionVerb}. Leave empty to ${actionVerb} all ${targetTerm}.`}</span>
-					<a href='https://www.meergo.com/docs/ref/admin/filters' target='_blank' rel='noopener'>
+					<a href='https://www.krenalis.com/docs/ref/admin/filters' target='_blank' rel='noopener'>
 						Learn more about filters
 					</a>
 				</>

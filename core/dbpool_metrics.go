@@ -5,7 +5,7 @@
 package core
 
 import (
-	"github.com/meergo/meergo/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/db"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -28,27 +28,27 @@ func registerDBPoolMetrics(db *db.DB) *dbPoolMetrics {
 	metrics := &dbPoolMetrics{
 		db: db,
 		acquiredConns: prometheus.NewDesc(
-			"meergo_db_acquired_conns",
+			"krenalis_db_acquired_conns",
 			"Current number of connections in use",
 			nil, nil,
 		),
 		maxConns: prometheus.NewDesc(
-			"meergo_db_max_conns",
+			"krenalis_db_max_conns",
 			"Configured maximum number of simultaneous connections",
 			nil, nil,
 		),
 		acquireDur: prometheus.NewDesc(
-			"meergo_db_acquire_duration_seconds_total",
+			"krenalis_db_acquire_duration_seconds_total",
 			"Cumulative seconds spent acquiring connections",
 			nil, nil,
 		),
 		acquireCount: prometheus.NewDesc(
-			"meergo_db_acquire_count_total",
+			"krenalis_db_acquire_count_total",
 			"Total number of successful connection acquisitions",
 			nil, nil,
 		),
 		newConnsCount: prometheus.NewDesc(
-			"meergo_db_new_conns_count_total",
+			"krenalis_db_new_conns_count_total",
 			"Total number of newly opened connections (pool churn indicator)",
 			nil, nil,
 		),

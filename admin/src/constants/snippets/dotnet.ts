@@ -1,10 +1,10 @@
-export const INSTALL_COMMAND = 'Install-Package Meergo.Analytics.CSharp';
+export const INSTALL_COMMAND = 'Install-Package Krenalis.Analytics.CSharp';
 
-export const SNIPPET = `using Meergo.Analytics;
+export const SNIPPET = `using Krenalis.Analytics;
 
 var config = new Config()
     .SetEndpoint("endpoint");
 
 Analytics.Initialize("writekey", config);`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/dotnet-sdk';
+export const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/dotnet-sdk';

@@ -15,19 +15,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/collector"
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/collector"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 const (
@@ -232,27 +232,27 @@ const (
 	Day    = MetricUnit(metrics.Day)
 )
 
-// Attributes returns the attributes of a profile, given its MPID.
+// Attributes returns the attributes of a profile, given its KPID.
 //
 // It returns an errors.NotFoundError error, if the profile does not exist.
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value, error) {
+func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
 	ws := this.workspace
 
-	// Validate the MPID.
-	if _, ok := types.ParseUUID(mpid); !ok {
-		return nil, errors.BadRequest("profile %q is not a valid profile identifier", mpid)
+	// Validate the KPID.
+	if _, ok := types.ParseUUID(kpid); !ok {
+		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_mpid"},
+		Property: []string{"_kpid"},
 		Operator: state.OpIs,
-		Values:   []any{mpid},
+		Values:   []any{kpid},
 	}}}
 
 	// Retrieve the profile attributes.
@@ -271,7 +271,7 @@ func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value,
 		return nil, err
 	}
 	if len(profiles) == 0 {
-		return nil, errors.NotFound("profile %q does not exist", mpid)
+		return nil, errors.NotFound("profile %q does not exist", kpid)
 	}
 
 	return types.Marshal(profiles[0], ws.ProfileSchema)
@@ -1010,7 +1010,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
-// Identities returns the identities for the provided MPID, and an estimate of
+// Identities returns the identities for the provided KPID, and an estimate of
 // their total number without applying first and limit.
 //
 // It returns the identities in range [first,first+limit] with first >= 0
@@ -1019,14 +1019,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // Identities are sorted by updated-at time in descending order, so the most
 // recently updated identities come first.
 //
-// If the MPID does not exist, still return an empty slice instead of an error.
+// If the KPID does not exist, still return an empty slice instead of an error.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit int) ([]Identity, int, error) {
+func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(mpid); !ok {
-		return nil, 0, errors.BadRequest("profile %q is not a valid MPID", mpid)
+	if _, ok := types.ParseUUID(kpid); !ok {
+		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
 	}
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
@@ -1035,9 +1035,9 @@ func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_mpid"},
+		Property: []string{"_kpid"},
 		Operator: state.OpIs,
-		Values:   []any{mpid},
+		Values:   []any{kpid},
 	}}}
 	ws := &Workspace{
 		core:      this.core,
@@ -1223,7 +1223,7 @@ func (this *Workspace) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 
 // Profile represents a profile.
 type Profile struct {
-	MPID       string         `json:"mpid"`
+	KPID       string         `json:"kpid"`
 	UpdatedAt  time.Time      `json:"updatedAt"`
 	Attributes map[string]any `json:"attributes"`
 }
@@ -1319,7 +1319,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: append([]string{"_mpid", "_updated_at"}, properties...),
+		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1345,10 +1345,10 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
-		profiles[i].MPID = row["_mpid"].(string)
+		profiles[i].KPID = row["_kpid"].(string)
 		profiles[i].UpdatedAt = row["_updated_at"].(time.Time)
 		profiles[i].Attributes = row
-		delete(row, "_mpid")
+		delete(row, "_kpid")
 		delete(row, "_updated_at")
 	}
 
@@ -1474,7 +1474,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 	return err
 }
 
-// RepairWarehouse repairs the database objects needed by Meergo on the
+// RepairWarehouse repairs the database objects needed by Krenalis on the
 // workspace's data warehouse.
 func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()
@@ -1604,7 +1604,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		// TODO(Gianluca): for https://github.com/krenalis/krenalis/issues/1833.
 		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
@@ -1801,7 +1801,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
-		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		// TODO(Gianluca): for https://github.com/krenalis/krenalis/issues/1833.
 		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
@@ -2190,4 +2190,93 @@ func validateUIPreferences(preferences UIPreferences) error {
 		return fmt.Errorf("invalid profile 'extra' %q", n)
 	}
 	return nil
+}
+
+const maxRawQuerySize = 10 * 1024 * 1024 // 10 MiB.
+
+// RawQueryWarehouse executes a query on the warehouse, returning the result as
+// a json.Value representing a JSON Array (representing the rows) of JSON Arrays
+// (representing the values for each column).
+//
+// If the JSON size exceeds the allowed maximum, this method returns a valid
+// JSON array of arrays containing only the rows within the limit, and
+// simultaneously returns an error indicating the issue.
+//
+// If the workspace has no MCP settings configured, this method returns an
+// error.
+//
+// TODO(Gianluca): the error handling is currently minimal. See the issue
+// https://github.com/krenalis/krenalis/issues/1667.
+func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) (json.Value, error) {
+
+	this.core.mustBeOpen()
+
+	// TODO(Gianluca): here the warehouse mode is not checked. The reason is
+	// that the mode is currently stored in the store. We should review all
+	// this. This is discussed in the issue https://github.com/krenalis/krenalis/issues/1224.
+
+	// Retrieve the warehouse instance for the MCP.
+	this.core.mcpMu.Lock()
+	mcp, ok := this.core.mcp[this.workspace.ID]
+	this.core.mcpMu.Unlock()
+	if !ok {
+		return nil, errors.New("workspace not found")
+	}
+	if mcp == nil {
+		return nil, errors.New("the workspace lacks the MCP (Model Context Protocol) user configuration required to access the data warehouse")
+	}
+
+	// Execute the query on the data warehouse.
+	rows, columnCount, err := mcp.RawQuery(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the JSON response.
+	b := json.NewBuffer()
+	defer rows.Close()
+	comma := false
+	b.WriteByte('[')
+	for rows.Next() {
+		row := make([]any, columnCount)
+		for i := range row {
+			var v any
+			row[i] = &v
+		}
+		err := rows.Scan(row...)
+		if err != nil {
+			return nil, err
+		}
+		size := b.Len()
+		if comma {
+			b.WriteByte(',')
+		}
+		err = b.Encode(row)
+		if err != nil {
+			return nil, err
+		}
+		// Truncate the response if it exceeds the limit, simultaneously
+		// returning the truncated response and an error.
+		if b.Len()+len("]") >= maxRawQuerySize {
+			b.Truncate(size)
+			b.WriteByte(']')
+			value, err := b.Value()
+			if err != nil {
+				return nil, err
+			}
+			return value, fmt.Errorf("only a subset of rows was returned because the total size exceeded the %d-byte limit", maxRawQuerySize)
+		}
+		comma = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	b.WriteByte(']')
+
+	value, err := b.Value()
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
 }

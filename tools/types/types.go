@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/decimal"
+	"github.com/krenalis/krenalis/tools/decimal"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -834,10 +834,17 @@ func (t Type) Values() []string {
 	return nil
 }
 
-// WithValues returns t but restricted to some values. t must be a string type.
-// It panics if t is not of string type, if the values is empty or contains an
-// invalid UTF-8 string, or if t already has values, a regular expression, or
-// if it is already restricted by byte or character length.
+// WithValues returns t restricted to the provided values. t must be a string
+// type.
+//
+// It panics if:
+//   - t is not a string type
+//   - no values are provided
+//   - any value is not valid UTF-8
+//   - t already has values or a regular expression
+//   - t is already restricted by byte or character length
+//
+// The empty string is allowed as one of the values.
 func (t Type) WithValues(values ...string) Type {
 	if t.kind != StringKind {
 		panic("cannot set values for a non-string type")

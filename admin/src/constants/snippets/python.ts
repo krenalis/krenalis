@@ -1,8 +1,8 @@
-export const INSTALL_COMMAND = 'pip3 install git+https://github.com/meergo/analytics-python';
+export const INSTALL_COMMAND = 'pip3 install git+https://github.com/krenalis/analytics-python';
 
-export const SNIPPET = `import meergo.analytics as analytics
+export const SNIPPET = `import krenalis.analytics as analytics
 
 analytics.write_key = "writekey"
 analytics.endpoint = "endpoint"`;
 
-export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/ref/admin/python-sdk';
+export const DOCUMENTATION_LINK = 'https://www.krenalis.com/docs/ref/admin/python-sdk';

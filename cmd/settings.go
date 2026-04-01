@@ -17,10 +17,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/natsopts"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/core/natsopts"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // parseEnvSettings parses the settings from the process environment variables.
@@ -35,23 +35,23 @@ func parseEnvSettings() (*Settings, error) {
 
 	settings := &Settings{}
 
-	if delay := envVars.Get("MEERGO_TERMINATION_DELAY"); delay != "" {
+	if delay := envVars.Get("KRENALIS_TERMINATION_DELAY"); delay != "" {
 		delay, err := time.ParseDuration(delay)
 		if err != nil {
-			return nil, fmt.Errorf("invalid duration value specified for MEERGO_TERMINATION_DELAY: %s", err)
+			return nil, fmt.Errorf("invalid duration value specified for KRENALIS_TERMINATION_DELAY: %s", err)
 		}
 		settings.TerminationDelay = delay
 	}
 
-	if url, err := parseEnvURL("MEERGO_JAVASCRIPT_SDK_URL", 0); err != nil {
-		return nil, fmt.Errorf("MEERGO_JAVASCRIPT_SDK_URL must be a valid URL: %s", err)
+	if url, err := parseEnvURL("KRENALIS_JAVASCRIPT_SDK_URL", 0); err != nil {
+		return nil, fmt.Errorf("KRENALIS_JAVASCRIPT_SDK_URL must be a valid URL: %s", err)
 	} else if url == "" {
-		settings.JavaScriptSDKURL = "https://cdn.meergo.com/meergo.min.js"
+		settings.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 	} else {
 		settings.JavaScriptSDKURL = url
 	}
 
-	switch envVars.Get("MEERGO_TELEMETRY_LEVEL") {
+	switch envVars.Get("KRENALIS_TELEMETRY_LEVEL") {
 	case "none":
 		settings.SentryTelemetryLevel = core.TelemetryLevelNone
 	case "errors":
@@ -61,16 +61,16 @@ func parseEnvSettings() (*Settings, error) {
 	case "", "all":
 		settings.SentryTelemetryLevel = core.TelemetryLevelAll
 	default:
-		return nil, fmt.Errorf("invalid MEERGO_TELEMETRY_LEVEL: want one of none, errors, stats, or all")
+		return nil, fmt.Errorf("invalid KRENALIS_TELEMETRY_LEVEL: want one of none, errors, stats, or all")
 	}
 
 	settings.ExternalAssetsURLs = []string{}
-	if assetsURLs := envVars.Get("MEERGO_EXTERNAL_ASSETS_URLS"); assetsURLs != "" {
+	if assetsURLs := envVars.Get("KRENALIS_EXTERNAL_ASSETS_URLS"); assetsURLs != "" {
 		for url := range strings.SplitSeq(assetsURLs, ",") {
 			url = strings.TrimSpace(url) // there may be spaces around commas.
 			url, err := validation.ParseURL(url, validation.NoQuery)
 			if err != nil {
-				return nil, fmt.Errorf("invalid URL specified in environment variable MEERGO_EXTERNAL_ASSETS_URLS: %s", err)
+				return nil, fmt.Errorf("invalid URL specified in environment variable KRENALIS_EXTERNAL_ASSETS_URLS: %s", err)
 			}
 			if url != "" {
 				settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, url)
@@ -78,67 +78,67 @@ func parseEnvSettings() (*Settings, error) {
 		}
 	}
 	if len(settings.ExternalAssetsURLs) == 0 {
-		settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, "https://assets.meergo.com/")
+		settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, "https://assets.krenalis.com/")
 	}
 
-	switch potentialsURL := envVars.Get("MEERGO_POTENTIAL_CONNECTORS_URL"); potentialsURL {
+	switch potentialsURL := envVars.Get("KRENALIS_POTENTIAL_CONNECTORS_URL"); potentialsURL {
 	case "":
-		settings.PotentialConnectorsURL = "https://assets.meergo.com/admin/connectors/potentials.json"
+		settings.PotentialConnectorsURL = "https://assets.krenalis.com/admin/connectors/potentials.json"
 	case "none":
 		settings.PotentialConnectorsURL = ""
 	default:
 		settings.PotentialConnectorsURL, err = validation.ParseURL(potentialsURL, 0)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value specified for environment variable MEERGO_POTENTIAL_CONNECTORS_URL, which is neither empty, the string \"none\" nor a valid URL (%s)", err)
+			return nil, fmt.Errorf("invalid value specified for environment variable KRENALIS_POTENTIAL_CONNECTORS_URL, which is neither empty, the string \"none\" nor a valid URL (%s)", err)
 		}
 	}
 
-	if host := envVars.Get("MEERGO_HTTP_HOST"); host == "" {
+	if host := envVars.Get("KRENALIS_HTTP_HOST"); host == "" {
 		settings.HTTP.Host = "127.0.0.1"
 	} else if err := validation.ValidateHost(host); err != nil {
-		return nil, fmt.Errorf("MEERGO_HTTP_HOST must be a valid host: %s", err)
+		return nil, fmt.Errorf("KRENALIS_HTTP_HOST must be a valid host: %s", err)
 	} else {
 		settings.HTTP.Host = host
 	}
 
-	if port := envVars.Get("MEERGO_HTTP_PORT"); port == "" {
+	if port := envVars.Get("KRENALIS_HTTP_PORT"); port == "" {
 		settings.HTTP.Port = 2022
 	} else if port, err := validation.ValidatePortString(port); err != nil {
-		return nil, fmt.Errorf("MEERGO_HTTP_PORT must be a valid port: %s", err)
+		return nil, fmt.Errorf("KRENALIS_HTTP_PORT must be a valid port: %s", err)
 	} else {
 		settings.HTTP.Port = port
 	}
 
-	if tls, err := boolEnvVar(envVars.Get("MEERGO_HTTP_TLS_ENABLED"), false); err != nil {
-		return nil, fmt.Errorf("MEERGO_HTTP_TLS_ENABLED must be a boolean: %s", err)
+	if tls, err := boolEnvVar(envVars.Get("KRENALIS_HTTP_TLS_ENABLED"), false); err != nil {
+		return nil, fmt.Errorf("KRENALIS_HTTP_TLS_ENABLED must be a boolean: %s", err)
 	} else if tls {
-		certFile, err := resolveFilePath("MEERGO_HTTP_TLS_CERT_FILE")
+		certFile, err := resolveFilePath("KRENALIS_HTTP_TLS_CERT_FILE")
 		if err != nil {
 			return nil, err
 		}
 		if certFile == "" {
-			return nil, fmt.Errorf("MEERGO_HTTP_TLS_CERT_FILE must be set when MEERGO_HTTP_TLS_ENABLED is true")
+			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_CERT_FILE must be set when KRENALIS_HTTP_TLS_ENABLED is true")
 		}
-		keyFile, err := resolveFilePath("MEERGO_HTTP_TLS_KEY_FILE")
+		keyFile, err := resolveFilePath("KRENALIS_HTTP_TLS_KEY_FILE")
 		if err != nil {
 			return nil, err
 		}
 		if keyFile == "" {
-			return nil, fmt.Errorf("MEERGO_HTTP_TLS_KEY_FILE must be set when MEERGO_HTTP_TLS_ENABLED is true")
+			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_KEY_FILE must be set when KRENALIS_HTTP_TLS_ENABLED is true")
 		}
 		settings.HTTP.TLS.Enabled = true
 		settings.HTTP.TLS.CertFile = certFile
 		settings.HTTP.TLS.KeyFile = keyFile
 	} else {
-		if certFile := envVars.Get("MEERGO_HTTP_TLS_CERT_FILE"); certFile != "" {
-			return nil, fmt.Errorf("MEERGO_HTTP_TLS_CERT_FILE must not be set when MEERGO_HTTP_TLS_ENABLED is false")
+		if certFile := envVars.Get("KRENALIS_HTTP_TLS_CERT_FILE"); certFile != "" {
+			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_CERT_FILE must not be set when KRENALIS_HTTP_TLS_ENABLED is false")
 		}
-		if keyFile := envVars.Get("MEERGO_HTTP_TLS_KEY_FILE"); keyFile != "" {
-			return nil, fmt.Errorf("MEERGO_HTTP_TLS_KEY_FILE must not be set when MEERGO_HTTP_TLS_ENABLED is false")
+		if keyFile := envVars.Get("KRENALIS_HTTP_TLS_KEY_FILE"); keyFile != "" {
+			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_KEY_FILE must not be set when KRENALIS_HTTP_TLS_ENABLED is false")
 		}
 	}
 
-	if externalURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_URL", validation.NoPath|validation.NoQuery); err != nil {
+	if externalURL, err := parseEnvURL("KRENALIS_HTTP_EXTERNAL_URL", validation.NoPath|validation.NoQuery); err != nil {
 		return nil, err
 	} else if externalURL == "" {
 		protocol := "http"
@@ -156,7 +156,7 @@ func parseEnvSettings() (*Settings, error) {
 		settings.HTTP.ExternalURL = externalURL
 	}
 
-	if eventURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", validation.NoQuery); err != nil {
+	if eventURL, err := parseEnvURL("KRENALIS_HTTP_EXTERNAL_EVENT_URL", validation.NoQuery); err != nil {
 		return nil, err
 	} else if eventURL == "" {
 		settings.HTTP.ExternalEventURL = settings.HTTP.ExternalURL + "v1/events"
@@ -164,80 +164,80 @@ func parseEnvSettings() (*Settings, error) {
 		settings.HTTP.ExternalEventURL = eventURL
 	}
 
-	if settings.HTTP.ReadHeaderTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
+	if settings.HTTP.ReadHeaderTimeout, err = parseEnvHTTPDuration("KRENALIS_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
 		return nil, err
 	}
 
-	if settings.HTTP.ReadTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_READ_TIMEOUT", 5*time.Second); err != nil {
+	if settings.HTTP.ReadTimeout, err = parseEnvHTTPDuration("KRENALIS_HTTP_READ_TIMEOUT", 5*time.Second); err != nil {
 		return nil, err
 	}
 
-	if settings.HTTP.WriteTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_WRITE_TIMEOUT", 30*time.Second); err != nil {
+	if settings.HTTP.WriteTimeout, err = parseEnvHTTPDuration("KRENALIS_HTTP_WRITE_TIMEOUT", 30*time.Second); err != nil {
 		return nil, err
 	}
 
-	if settings.HTTP.IdleTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_IDLE_TIMEOUT", 120*time.Second); err != nil {
+	if settings.HTTP.IdleTimeout, err = parseEnvHTTPDuration("KRENALIS_HTTP_IDLE_TIMEOUT", 120*time.Second); err != nil {
 		return nil, err
 	}
 
-	if host := envVars.Get("MEERGO_DB_HOST"); host == "" {
+	if host := envVars.Get("KRENALIS_DB_HOST"); host == "" {
 		settings.DB.Host = "127.0.0.1"
 	} else if err := validation.ValidateHost(host); err != nil {
-		return nil, fmt.Errorf("MEERGO_DB_HOST must be a valid host: %s", err)
+		return nil, fmt.Errorf("KRENALIS_DB_HOST must be a valid host: %s", err)
 	} else {
 		settings.DB.Host = host
 	}
 
-	if port := envVars.Get("MEERGO_DB_PORT"); port == "" {
+	if port := envVars.Get("KRENALIS_DB_PORT"); port == "" {
 		settings.DB.Port = 5432
 	} else if port, err := validation.ValidatePortString(port); err != nil {
-		return nil, fmt.Errorf("MEERGO_DB_PORT must be a valid port: %s", err)
+		return nil, fmt.Errorf("KRENALIS_DB_PORT must be a valid port: %s", err)
 	} else {
 		settings.DB.Port = port
 	}
 
-	if username, ok := envVars.Lookup("MEERGO_DB_USERNAME"); !ok {
-		return nil, fmt.Errorf("environment variable MEERGO_DB_USERNAME is missing")
+	if username, ok := envVars.Lookup("KRENALIS_DB_USERNAME"); !ok {
+		return nil, fmt.Errorf("environment variable KRENALIS_DB_USERNAME is missing")
 	} else if username == "" {
-		return nil, fmt.Errorf("MEERGO_DB_USERNAME cannot be empty")
+		return nil, fmt.Errorf("KRENALIS_DB_USERNAME cannot be empty")
 	} else if len(username) > 63 {
-		return nil, fmt.Errorf("invalid MEERGO_DB_USERNAME: length must be 1..63 bytes")
+		return nil, fmt.Errorf("invalid KRENALIS_DB_USERNAME: length must be 1..63 bytes")
 	} else {
 		settings.DB.Username = username
 	}
 
-	settings.DB.Password = envVars.Get("MEERGO_DB_PASSWORD")
+	settings.DB.Password = envVars.Get("KRENALIS_DB_PASSWORD")
 	if n := utf8.RuneCountInString(settings.DB.Password); n > 100 {
-		return nil, fmt.Errorf("invalid MEERGO_DB_PASSWORD: length must be a maximum of 100 characters")
+		return nil, fmt.Errorf("invalid KRENALIS_DB_PASSWORD: length must be a maximum of 100 characters")
 	}
 
-	settings.DB.Database = envVars.Get("MEERGO_DB_DATABASE")
+	settings.DB.Database = envVars.Get("KRENALIS_DB_DATABASE")
 	if n := len(settings.DB.Database); n < 1 || n > 63 {
-		return nil, fmt.Errorf("invalid MEERGO_DB_DATABASE: length must be 1..63 bytes")
+		return nil, fmt.Errorf("invalid KRENALIS_DB_DATABASE: length must be 1..63 bytes")
 	}
 
-	if schema := envVars.Get("MEERGO_DB_SCHEMA"); schema == "" {
+	if schema := envVars.Get("KRENALIS_DB_SCHEMA"); schema == "" {
 		settings.DB.Schema = "public"
 	} else if n := len(schema); n < 1 || n > 63 {
-		return nil, fmt.Errorf("invalid MEERGO_DB_SCHEMA: length must be 1..63 bytes")
+		return nil, fmt.Errorf("invalid KRENALIS_DB_SCHEMA: length must be 1..63 bytes")
 	} else {
 		settings.DB.Schema = schema
 	}
 
-	if c := envVars.Get("MEERGO_DB_MAX_CONNECTIONS"); c == "" {
+	if c := envVars.Get("KRENALIS_DB_MAX_CONNECTIONS"); c == "" {
 		settings.DB.MaxConnections = 8
 	} else {
 		maxConn, err := strconv.ParseInt(c, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("MEERGO_DB_MAX_CONNECTIONS must be an integer")
+			return nil, fmt.Errorf("KRENALIS_DB_MAX_CONNECTIONS must be an integer")
 		}
 		if maxConn < 2 {
-			return nil, fmt.Errorf("MEERGO_DB_MAX_CONNECTIONS must be >= 2, got %d", maxConn)
+			return nil, fmt.Errorf("KRENALIS_DB_MAX_CONNECTIONS must be >= 2, got %d", maxConn)
 		}
 		settings.DB.MaxConnections = int32(maxConn)
 	}
 
-	if s := envVars.Get("MEERGO_NATS_URL"); s == "" {
+	if s := envVars.Get("KRENALIS_NATS_URL"); s == "" {
 		settings.NATS.Servers = []string{"nats://127.0.0.1:4222"}
 	} else {
 		var hasWS bool
@@ -251,7 +251,7 @@ func parseEnvSettings() (*Settings, error) {
 			if strings.Contains(entry, "://") {
 				u, err := url.Parse(entry)
 				if err != nil {
-					return nil, fmt.Errorf("MEERGO_NATS_URL contains an invalid URL: %q", entry)
+					return nil, fmt.Errorf("KRENALIS_NATS_URL contains an invalid URL: %q", entry)
 				}
 				switch u.Scheme {
 				case "nats", "tls":
@@ -259,144 +259,130 @@ func parseEnvSettings() (*Settings, error) {
 				case "ws", "wss":
 					hasWS = true
 				default:
-					return nil, fmt.Errorf("MEERGO_NATS_URL scheme %s is not allowed. Allowed schemes are nats, tls, ws, and wss", u.Scheme)
+					return nil, fmt.Errorf("KRENALIS_NATS_URL scheme %s is not allowed. Allowed schemes are nats, tls, ws, and wss", u.Scheme)
 				}
 			} else {
 				if _, err := url.Parse("nats://" + entry); err != nil {
-					return nil, fmt.Errorf("MEERGO_NATS_URL contains an invalid URL: %q", entry)
+					return nil, fmt.Errorf("KRENALIS_NATS_URL contains an invalid URL: %q", entry)
 				}
 				hasNonWS = true
 			}
 			if hasWS && hasNonWS {
-				return nil, fmt.Errorf("MEERGO_NATS_URL contains both websocket and non-websocket URLs")
+				return nil, fmt.Errorf("KRENALIS_NATS_URL contains both websocket and non-websocket URLs")
 			}
 			settings.NATS.Servers = append(settings.NATS.Servers, entry)
 		}
 		if len(settings.NATS.Servers) == 0 {
-			return nil, fmt.Errorf("MEERGO_NATS_URL does not contain URLs")
+			return nil, fmt.Errorf("KRENALIS_NATS_URL does not contain URLs")
 		}
 	}
-	settings.NATS.User = envVars.Get("MEERGO_NATS_USER")
-	if pw := envVars.Get("MEERGO_NATS_PASSWORD"); pw != "" {
+	settings.NATS.User = envVars.Get("KRENALIS_NATS_USER")
+	if pw := envVars.Get("KRENALIS_NATS_PASSWORD"); pw != "" {
 		if settings.NATS.User == "" {
-			return nil, fmt.Errorf("MEERGO_NATS_USER must be set if MEERGO_NATS_PASSWORD is provided")
+			return nil, fmt.Errorf("KRENALIS_NATS_USER must be set if KRENALIS_NATS_PASSWORD is provided")
 		}
 		settings.NATS.Password = pw
 	}
-	settings.NATS.Token = envVars.Get("MEERGO_NATS_TOKEN")
-	if nkey := envVars.Get("MEERGO_NATS_NKEY"); nkey != "" {
+	settings.NATS.Token = envVars.Get("KRENALIS_NATS_TOKEN")
+	if nkey := envVars.Get("KRENALIS_NATS_NKEY"); nkey != "" {
 		prefix, seed, err := natsopts.DecodeSeed([]byte(nkey))
 		if err != nil || prefix != natsopts.PrefixByteUser || len(seed) != ed25519.SeedSize {
-			return nil, fmt.Errorf("MEERGO_NATS_NKEY value is not a user NKey")
+			return nil, fmt.Errorf("KRENALIS_NATS_NKEY value is not a user NKey")
 		}
 		settings.NATS.NKey = ed25519.NewKeyFromSeed(seed)
 	}
-	switch storage := envVars.Get("MEERGO_NATS_STORAGE"); strings.ToLower(storage) {
+	switch storage := envVars.Get("KRENALIS_NATS_STORAGE"); strings.ToLower(storage) {
 	case "", "file":
 		settings.NATS.Storage = natsopts.FileStorage
 	case "memory":
 		settings.NATS.Storage = natsopts.MemoryStorage
 	default:
-		return nil, fmt.Errorf("MEERGO_NATS_STORAGE value %q is not supported; expected file or memory", storage)
+		return nil, fmt.Errorf("KRENALIS_NATS_STORAGE value %q is not supported; expected file or memory", storage)
 	}
-	switch replicas := envVars.Get("MEERGO_NATS_REPLICAS"); replicas {
+	switch replicas := envVars.Get("KRENALIS_NATS_REPLICAS"); replicas {
 	case "", "1":
 		settings.NATS.Replicas = 1
 	case "2", "3", "4", "5":
 		settings.NATS.Replicas = int(replicas[0] - '0')
 	default:
-		return nil, fmt.Errorf("MEERGO_NATS_REPLICAS value %q is not supported; expected 1, 2, 3, 4, or 5", replicas)
+		return nil, fmt.Errorf("KRENALIS_NATS_REPLICAS value %q is not supported; expected 1, 2, 3, 4, or 5", replicas)
 	}
-	switch compression := envVars.Get("MEERGO_NATS_COMPRESSION"); strings.ToLower(compression) {
+	switch compression := envVars.Get("KRENALIS_NATS_COMPRESSION"); strings.ToLower(compression) {
 	case "":
 		settings.NATS.Compression = natsopts.NoCompression
 	case "s2":
 		settings.NATS.Compression = natsopts.S2Compression
 	default:
-		return nil, fmt.Errorf("MEERGO_NATS_COMPRESSION value %q is not supported; expected s2", compression)
+		return nil, fmt.Errorf("KRENALIS_NATS_COMPRESSION value %q is not supported; expected s2", compression)
 	}
 	if settings.NATS.Compression != natsopts.NoCompression && settings.NATS.Storage != natsopts.FileStorage {
-		return nil, errors.New("MEERGO_NATS_COMPRESSION can be set only when using file storage")
+		return nil, errors.New("KRENALIS_NATS_COMPRESSION can be set only when using file storage")
 	}
 
-	settings.InviteMembersViaEmail, err = boolEnvVar(envVars.Get("MEERGO_INVITE_MEMBERS_VIA_EMAIL"), false)
+	settings.InviteMembersViaEmail, err = boolEnvVar(envVars.Get("KRENALIS_INVITE_MEMBERS_VIA_EMAIL"), false)
 	if err != nil {
-		return nil, fmt.Errorf("MEERGO_INVITE_MEMBERS_VIA_EMAIL must be a boolean: %s", err)
+		return nil, fmt.Errorf("KRENALIS_INVITE_MEMBERS_VIA_EMAIL must be a boolean: %s", err)
 	}
-	settings.MemberEmailFrom = envVars.Get("MEERGO_MEMBER_EMAIL_FROM")
+	settings.MemberEmailFrom = envVars.Get("KRENALIS_MEMBER_EMAIL_FROM")
 
-	if host := envVars.Get("MEERGO_SMTP_HOST"); host != "" {
+	if host := envVars.Get("KRENALIS_SMTP_HOST"); host != "" {
 		if err := validation.ValidateHost(host); err != nil {
-			return nil, fmt.Errorf("MEERGO_SMTP_HOST must be a valid host: %s", err)
+			return nil, fmt.Errorf("KRENALIS_SMTP_HOST must be a valid host: %s", err)
 		}
-		p := envVars.Get("MEERGO_SMTP_PORT")
+		p := envVars.Get("KRENALIS_SMTP_PORT")
 		if p == "" {
-			return nil, fmt.Errorf("MEERGO_SMTP_PORT is required if MEERGO_SMTP_HOST is set")
+			return nil, fmt.Errorf("KRENALIS_SMTP_PORT is required if KRENALIS_SMTP_HOST is set")
 		}
 		port, err := validation.ValidatePortString(p)
 		if err != nil {
-			return nil, fmt.Errorf("MEERGO_SMTP_PORT must be a valid port: %s", err)
+			return nil, fmt.Errorf("KRENALIS_SMTP_PORT must be a valid port: %s", err)
 		}
 		settings.SMTP.Host = host
 		settings.SMTP.Port = port
-		settings.SMTP.Username = envVars.Get("MEERGO_SMTP_USERNAME")
-		settings.SMTP.Password = envVars.Get("MEERGO_SMTP_PASSWORD")
+		settings.SMTP.Username = envVars.Get("KRENALIS_SMTP_USERNAME")
+		settings.SMTP.Password = envVars.Get("KRENALIS_SMTP_PASSWORD")
 	}
 
-	if path, err := resolveFilePath("MEERGO_MAXMIND_DB_PATH"); err != nil {
+	if path, err := resolveFilePath("KRENALIS_MAXMIND_DB_PATH"); err != nil {
 		return nil, err
 	} else if path != "" {
 		settings.MaxMindDBPath = path
 	}
 
-	switch strings.ToLower(envVars.Get("MEERGO_TRANSFORMERS_PROVIDER")) {
+	switch strings.ToLower(envVars.Get("KRENALIS_TRANSFORMERS_PROVIDER")) {
 	case "":
 	case "local":
-		settings.Transformers.Local.NodeJSExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE")
-		settings.Transformers.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")
-		settings.Transformers.Local.FunctionsDir = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR")
-		settings.Transformers.Local.SudoUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER")
-		settings.Transformers.Local.DoasUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_DOAS_USER")
+		settings.Transformers.Local.NodeJSExecutable = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE")
+		settings.Transformers.Local.PythonExecutable = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")
+		settings.Transformers.Local.FunctionsDir = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR")
+		settings.Transformers.Local.SudoUser = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_SUDO_USER")
+		settings.Transformers.Local.DoasUser = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER")
 	case "aws-lambda":
-		settings.Transformers.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
-		settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
-		settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_REGION")
-		settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ROLE")
-		settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
-		settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")
-		settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME")
-		settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER")
+		settings.Transformers.Lambda.AccessKeyID = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
+		settings.Transformers.Lambda.SecretAccessKey = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
+		settings.Transformers.Lambda.Region = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_REGION")
+		settings.Transformers.Lambda.Role = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_ROLE")
+		settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
+		settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")
+		settings.Transformers.Lambda.Python.Runtime = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME")
+		settings.Transformers.Lambda.Python.Layer = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER")
 	default:
-		return nil, fmt.Errorf("invalid MEERGO_TRANSFORMERS_PROVIDER: want one of local or aws-lambda")
+		return nil, fmt.Errorf("invalid KRENALIS_TRANSFORMERS_PROVIDER: want one of local or aws-lambda")
 	}
-	if envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER") != "" && envVars.Get("MEERGO_TRANSFORMERS_LOCAL_DOAS_USER") != "" {
-		return nil, fmt.Errorf("cannot specify a value for both MEERGO_TRANSFORMERS_LOCAL_SUDO_USER" +
-			" and MEERGO_TRANSFORMERS_LOCAL_DOAS_USER: you must specify one of the two, or neither")
+	if envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_SUDO_USER") != "" && envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER") != "" {
+		return nil, fmt.Errorf("cannot specify a value for both KRENALIS_TRANSFORMERS_LOCAL_SUDO_USER" +
+			" and KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER: you must specify one of the two, or neither")
 	}
 
-	settings.PrometheusMetricsEnabled, err = boolEnvVar(envVars.Get("MEERGO_PROMETHEUS_METRICS_ENABLED"), false)
+	settings.PrometheusMetricsEnabled, err = boolEnvVar(envVars.Get("KRENALIS_PROMETHEUS_METRICS_ENABLED"), false)
 	if err != nil {
-		return nil, fmt.Errorf("MEERGO_PROMETHEUS_METRICS_ENABLED must be a boolean: %s", err)
+		return nil, fmt.Errorf("KRENALIS_PROMETHEUS_METRICS_ENABLED must be a boolean: %s", err)
 	}
 
-	if id := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); id != "" {
-		secret := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET")
+	if id := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID"); id != "" {
+		secret := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET")
 		if secret == "" {
-			return nil, fmt.Errorf("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET is required when MEERGO_OAUTH_HUBSPOT_CLIENT_ID is set")
-		}
-		settings.OAuthCredentials = map[string]*core.OAuthCredentials{
-			"hubspot": {
-				ClientID:     id,
-				ClientSecret: secret,
-			}}
-	} else if secret := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET"); secret != "" {
-		return nil, fmt.Errorf("MEERGO_OAUTH_HUBSPOT_CLIENT_ID is required when MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET is set")
-	}
-
-	if id := envVars.Get("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID"); id != "" {
-		secret := envVars.Get("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET")
-		if secret == "" {
-			return nil, fmt.Errorf("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET is required when MEERGO_OAUTH_MAILCHIMP_CLIENT_ID is set")
+			return nil, fmt.Errorf("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is set")
 		}
 		if settings.OAuthCredentials == nil {
 			settings.OAuthCredentials = make(map[string]*core.OAuthCredentials)
@@ -405,19 +391,19 @@ func parseEnvSettings() (*Settings, error) {
 			ClientID:     id,
 			ClientSecret: secret,
 		}
-	} else if secret := envVars.Get("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET"); secret != "" {
-		return nil, fmt.Errorf("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID is required when MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET is set")
+	} else if secret := envVars.Get("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET"); secret != "" {
+		return nil, fmt.Errorf("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is set")
 	}
 
-	if e := envVars.Get("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION"); e == "" {
+	if e := envVars.Get("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION"); e == "" {
 		settings.MaxQueuedEventsPerDestination = 50_000
 	} else {
 		maxEvents, err := strconv.ParseInt(e, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be an integer")
+			return nil, fmt.Errorf("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION must be an integer")
 		}
 		if maxEvents < 1 {
-			return nil, fmt.Errorf("MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got %d", maxEvents)
+			return nil, fmt.Errorf("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got %d", maxEvents)
 		}
 		settings.MaxQueuedEventsPerDestination = int(maxEvents)
 	}

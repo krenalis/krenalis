@@ -28,6 +28,7 @@ const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
 	go: 'Go SDK',
 	java: 'Java SDK',
 	dotnet: '.NET SDK',
+	ios: 'iOS SDK',
 };
 
 const STORAGE_URL_SLUGS: Record<string, string> = {
@@ -37,7 +38,7 @@ const STORAGE_URL_SLUGS: Record<string, string> = {
 	'http-get': 'http-get',
 };
 
-const SDK_CONNECTORS = new Set(['javascript', 'android', 'nodejs', 'python', 'go', 'java', 'dotnet']);
+const SDK_CONNECTORS = new Set(['javascript', 'android', 'nodejs', 'python', 'go', 'java', 'dotnet', 'ios']);
 const EVENTS_ONLY_DESTINATIONS = new Set(['mixpanel', 'google-analytics', 'posthog']);
 const USERS_AND_EVENTS_DESTINATIONS = new Set(['klaviyo']);
 const PREPOSITION_TO = new Set([
@@ -58,7 +59,7 @@ const PREPOSITION_TO = new Set([
 function getConnectionDocLinks(connectorCode: string, role: string): { label: string; url: string }[] {
 	const isSource = role === 'Source';
 	const direction = isSource ? 'sources' : 'destinations';
-	const baseUrl = `https://www.meergo.com/docs/ref/admin/connection-configuration/${direction}-${connectorCode}`;
+	const baseUrl = `https://www.krenalis.com/docs/ref/admin/connection-configuration/${direction}-${connectorCode}`;
 	const name = CONNECTOR_DISPLAY_NAMES[connectorCode];
 	if (name == null) return [];
 
@@ -112,7 +113,7 @@ const DocumentationLinks = ({
 			: `How to export users to ${connectorLabel}`;
 		const direction = isSource ? 'sources' : 'destinations';
 		const storageSlug = STORAGE_URL_SLUGS[storageCode] ?? storageCode;
-		const url = `https://www.meergo.com/docs/ref/admin/pipeline-configuration/${direction}-${connectorCode}-on-${storageSlug}`;
+		const url = `https://www.krenalis.com/docs/ref/admin/pipeline-configuration/${direction}-${connectorCode}-on-${storageSlug}`;
 		links = [{ label, url }];
 	} else {
 		links = getConnectionDocLinks(connectorCode, role);

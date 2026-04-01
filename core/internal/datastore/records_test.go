@@ -13,14 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/test/testimages"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	// Import PostgreSQL warehouse platform package for Test_Records.
-	_ "github.com/meergo/meergo/warehouses/postgresql"
+	_ "github.com/krenalis/krenalis/warehouses/postgresql"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	testDatabase = "meergo"
-	testUser     = "meergo"
-	testPassword = "meergo"
+	testDatabase = "krenalis"
+	testUser     = "krenalis"
+	testPassword = "krenalis"
 )
 
 func Test_Records(t *testing.T) {
@@ -86,20 +86,20 @@ func Test_Records(t *testing.T) {
 	defer wh.Close()
 
 	profilesTable := warehouses.Table{
-		Name: "meergo_profiles_0",
+		Name: "krenalis_profiles_0",
 		Columns: []warehouses.Column{
-			{Name: "_mpid", Type: types.UUID()},
+			{Name: "_kpid", Type: types.UUID()},
 			{Name: "_updated_at", Type: types.DateTime()},
 			{Name: "id", Type: types.String()},
 			{Name: "other_id", Type: types.String()},
 			{Name: "name", Type: types.String()},
 			{Name: "age", Type: types.Int(8)},
 		},
-		Keys: []string{"_mpid"},
+		Keys: []string{"_kpid"},
 	}
 
 	destinationsUsersTable := warehouses.Table{
-		Name: "meergo_destination_profiles",
+		Name: "krenalis_destination_profiles",
 		Columns: []warehouses.Column{
 			{Name: "_pipeline", Type: types.Int(32)},
 			{Name: "_external_id", Type: types.String()},
@@ -222,7 +222,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	profileColumnByProperty := map[string]warehouses.Column{
-		"_mpid":    {Name: "_mpid", Type: types.UUID()},
+		"_kpid":    {Name: "_kpid", Type: types.UUID()},
 		"id":       {Name: "id", Type: types.String()},
 		"other.id": {Name: "other_id", Type: types.String()},
 		"name":     {Name: "name", Type: types.String()},
@@ -248,7 +248,7 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, wh, query, "_mpid", profileColumnByProperty, true, matching)
+				r, err := records(ctx, wh, query, "_kpid", profileColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}

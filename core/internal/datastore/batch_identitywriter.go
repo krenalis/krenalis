@@ -12,10 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 var ErrPipelineNotExist = errors.New("pipeline does not exist")
@@ -32,7 +32,7 @@ type Identity struct {
 	UpdatedAt   time.Time      // Update time in UTC.
 }
 
-// identityKey represents a key in the meergo_identities table.
+// identityKey represents a key in the krenalis_identities table.
 type identityKey struct {
 	pipeline    int
 	isAnonymous bool
@@ -148,7 +148,7 @@ func (w *BatchIdentityWriter) Close(ctx context.Context) error {
 			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, w.pipeline),
 			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.Int(32)}, warehouses.OpIsNot, w.run),
 		})
-		err = w.store.warehouse().Delete(ctx, "meergo_identities", where)
+		err = w.store.warehouse().Delete(ctx, "krenalis_identities", where)
 	}
 	return err
 }

@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/core/internal/transformers/embed"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/core/internal/transformers/embed"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
-const functionsDir = ".meergo-functions"
+const functionsDir = ".krenalis-functions"
 
 type function struct {
 	settings Settings
@@ -109,7 +109,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
+	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Krenalis process.
 	cmd.Stdout = &stdout
 	cmd.Stderr = &prefixSuffixSaver{N: 32 << 10}
 	cmd.Stdin = bytes.NewReader(source)
@@ -248,7 +248,7 @@ def main():
 
 	transform = function_globals["transform"]
 
-	# Names needed to evaluate all expressions that Meergo can provide.
+	# Names needed to evaluate all expressions that Krenalis can provide.
 	eval_globals = {
 		"datetime": datetime,
 		"decimal": decimal,
@@ -433,8 +433,8 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 // versionFromFilename returns the version from the filename relative to a
 // function with the given name.
 //
-// For example, if a function is named "meergo-pipeline12345" and the filename
-// is "meergo-pipeline12345.v10.py", then 10 and true are returned.
+// For example, if a function is named "krenalis-pipeline12345" and the filename
+// is "krenalis-pipeline12345.v10.py", then 10 and true are returned.
 //
 // The boolean value reports whether the filename (and thus the returned
 // version) is valid for the given name or not.

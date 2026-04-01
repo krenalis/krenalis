@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestSendEvents(t *testing.T) {
@@ -23,21 +23,21 @@ func TestSendEvents(t *testing.T) {
 	// Read Google Analytics settings from environment variables, then prepare
 	// the settings that will be passed to the connector.
 	var s innerSettings
-	s.MeasurementID = os.Getenv("MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID")
+	s.MeasurementID = os.Getenv("KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID")
 	if s.MeasurementID == "" {
-		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID is required but not provided")
 	}
-	s.APISecret = os.Getenv("MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET")
+	s.APISecret = os.Getenv("KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET")
 	if s.APISecret == "" {
-		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET is required but not provided")
 	}
-	s.CollectionEndpoint = os.Getenv("MEERGO_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT")
+	s.CollectionEndpoint = os.Getenv("KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT")
 	switch s.CollectionEndpoint {
 	case "Global", "EU":
 	case "":
-		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT is required but not provided")
 	default:
-		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT can only be either Global or EU")
+		t.Fatal("env var KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT can only be either Global or EU")
 
 	}
 	settings, err := json.Marshal(s)

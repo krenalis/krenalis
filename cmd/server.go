@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/cmd/mcp"
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/prometheus"
+	"github.com/krenalis/krenalis/cmd/mcp"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -175,7 +175,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			if r := recover(); r != nil {
 
 				// Log the panic (and the stack trace) using slog.Error.
-				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1", "reason", r, "stacktrace", string(debug.Stack()))
+				slog.Error("cmd: a panic occurred, Krenalis will exit with status code 1", "reason", r, "stacktrace", string(debug.Stack()))
 
 				// Send the panic to Sentry.
 				if settings.SentryTelemetryLevel == telemetryLevelErrors || settings.SentryTelemetryLevel == telemetryLevelAll {
@@ -263,7 +263,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		prometheusMetricsLine = fmt.Sprintf("├─ Prometheus metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
 	}
 	msg := fmt.Sprintf(
-		"The Meergo server has been started at %s\n"+
+		"The Krenalis server has been started at %s\n"+
 			"%s"+
 			"├─ MCP server: %s\n"+
 			"├─ REST API:   %s\n"+

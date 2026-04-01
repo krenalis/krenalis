@@ -18,9 +18,9 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
 )
@@ -312,7 +312,7 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		s.SendEvent(event)
 
 		time.Sleep(maxQueueDelay)
-		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/meergo/meergo/issues/2122
+		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/krenalis/krenalis/issues/2122
 
 		s.Close(t.Context())
 
@@ -349,7 +349,7 @@ func Test_Sender_MinQueuedEvents(t *testing.T) {
 			s.SendEvent(createTestEvent(s, i))
 		}
 
-		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/meergo/meergo/issues/2122
+		time.Sleep(1) // TODO(marco): remove the following line. See issue https://github.com/krenalis/krenalis/issues/2122
 		synctest.Wait()
 		if consumed != total {
 			t.Fatalf("expected %d consumed events, got %d", total, consumed)

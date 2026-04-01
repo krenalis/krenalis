@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func Test_Identities(t *testing.T) {
@@ -25,7 +25,7 @@ func Test_Identities(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
@@ -35,7 +35,7 @@ func Test_Identities(t *testing.T) {
 	fs1 := c.CreateSourceFileSystem()
 	fs2 := c.CreateSourceFileSystem()
 
-	pipeline1 := c.CreatePipeline(fs1, "User", meergotester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
 		Name:    "CSV 1",
 		Enabled: true,
 		Path:    "users1.csv",
@@ -46,20 +46,20 @@ func Test_Identities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),
 	})
 
-	pipeline2 := c.CreatePipeline(fs2, "User", meergotester.PipelineToSet{
+	pipeline2 := c.CreatePipeline(fs2, "User", krenalistester.PipelineToSet{
 		Name:    "CSV 2",
 		Enabled: true,
 		Path:    "users2.csv",
@@ -70,14 +70,14 @@ func Test_Identities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		UserIDColumn: "identity",
 		Format:       "csv",
-		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
+		FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 			"separator":      ",",
 			"hasColumnNames": true,
 		}),
@@ -101,7 +101,7 @@ func Test_Identities(t *testing.T) {
 
 	for _, profile := range profiles {
 
-		identities, total := c.Identities(profile.MPID, 0, 1000)
+		identities, total := c.Identities(profile.KPID, 0, 1000)
 
 		if total != 1 && total != 2 {
 			t.Fatalf("expected 'total' to be 1 or 2, got %d", total)
@@ -114,9 +114,9 @@ func Test_Identities(t *testing.T) {
 			}
 
 			t.Logf(
-				"the APIs returned an identity for profile with MPID %s that has"+
+				"the APIs returned an identity for profile with KPID %s that has"+
 					" pipeline = %d, user ID = %v and updated at = %q",
-				profile.MPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
+				profile.KPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
 
 			var idPrefix string
 			switch identity.Pipeline {
@@ -150,7 +150,7 @@ func Test_Identities(t *testing.T) {
 			Identities []any `json:"identities"`
 			Total      int   `json:"total"`
 		}
-		err := c.Call("GET", "/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
+		err := c.Call("GET", "/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil, &res)
 		if err != nil {
 			t.Fatalf("expected no identities, got error: %q", err)
 		}

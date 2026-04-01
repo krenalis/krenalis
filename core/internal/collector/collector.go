@@ -16,19 +16,19 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/internal/filters"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/prometheus"
-	"github.com/meergo/meergo/tools/validation"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/core/internal/filters"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
 )
@@ -82,7 +82,7 @@ type Collector struct {
 // maxMindDBPath is the path to the MaxMind db file, used for enriching the
 // events with geolocation information; if not provided, the database file is
 // not opened and the geolocation information are not automatically added by
-// Meergo.
+// Krenalis.
 func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
 	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
 
@@ -588,19 +588,19 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !ok || key.Type != state.AccessKeyTypeAPI {
 				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
-			if header, ok := r.Header["Meergo-Workspace"]; ok {
+			if header, ok := r.Header["Krenalis-Workspace"]; ok {
 				if len(header) > 1 {
-					return errors.BadRequest(`request contains multiple "Meergo-Warehouse" headers`)
+					return errors.BadRequest(`request contains multiple "Krenalis-Workspace" headers`)
 				}
 				if key.Workspace > 0 {
-					return errors.BadRequest(`"Meergo-Workspace" header cannot be provided with a workspace restricted key`)
+					return errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
 				}
 				var id int64
 				if header[0] != "" && header[0][0] != '+' {
 					id, _ = strconv.ParseInt(header[0], 10, 32)
 				}
 				if id <= 0 {
-					return errors.BadRequest(`"Meergo-Workspace" header is invalid; use "Meergo-Workspace: <WORKSPACE_ID>"`)
+					return errors.BadRequest(`"Krenalis-Workspace" header is invalid; use "Krenalis-Workspace: <WORKSPACE_ID>"`)
 				}
 				if _, ok = c.state.Workspace(int(id)); !ok {
 					return errors.NotFound("workspace %d does not exist", id)
@@ -820,7 +820,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	_ = json.Encode(w, map[string]any{
 		"strategy": strategy,
 		"integrations": map[string]any{
-			"Meergo": map[string]any{
+			"Krenalis": map[string]any{
 				"apiKey": writeKey,
 			},
 		},

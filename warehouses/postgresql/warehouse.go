@@ -18,10 +18,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/prometheus"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -126,12 +126,12 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	// Determine if there are tables on the data warehouse for which the current
 	// user has too many privileges.
 	tables := []string{
-		"meergo_destination_profiles",
-		"meergo_system_operations",
-		"meergo_identities",
-		"meergo_profile_schema_versions",
-		"meergo_events",
-		fmt.Sprintf("meergo_profiles_%d", profileSchemaVersion),
+		"krenalis_destination_profiles",
+		"krenalis_system_operations",
+		"krenalis_identities",
+		"krenalis_profile_schema_versions",
+		"krenalis_events",
+		fmt.Sprintf("krenalis_profiles_%d", profileSchemaVersion),
 	}
 	var canWriteOnTable []any
 	for range len(tables) {
@@ -161,7 +161,7 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	if len(tooPrivilegedTableNames) > 0 {
 		return &warehouses.SettingsNotReadOnly{
 			Err: fmt.Errorf(
-				"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
+				"the credentials should be read-only, but they allow write operations on the following Krenalis tables: %s",
 				strings.Join(tooPrivilegedTableNames, ", "),
 			)}
 	}
@@ -264,12 +264,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$purge" FROM "meergo_identities"` + "\n" + `WITH NO DATA`)
+	b.WriteString(`FALSE AS "$purge" FROM "krenalis_identities"` + "\n" + `WITH NO DATA`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"meergo_identities\" AS \"d\"\nUSING \"")
+	b.WriteString("MERGE INTO \"krenalis_identities\" AS \"d\"\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString(`" AS "s"` + "\n" + `ON "d"."_pipeline" = "s"."_pipeline" AND "d"."_identity_id" = "s"."_identity_id" AND "d"."_is_anonymous" = "s"."_is_anonymous"`)
 	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  UPDATE SET ")
@@ -366,7 +366,7 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 // given pipeline.
 func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
 	var b strings.Builder
-	b.WriteString("UPDATE \"meergo_identities\" SET ")
+	b.WriteString("UPDATE \"krenalis_identities\" SET ")
 	for i, column := range columns {
 		if i > 0 {
 			b.WriteString(", ")
@@ -436,14 +436,14 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
-// profilesVersion returns the version of the "meergo_profiles" table.
+// profilesVersion returns the version of the "krenalis_profiles" table.
 func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return 0, err
 	}
 	var v int
-	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("version"), 0) FROM "meergo_profile_schema_versions"`).Scan(&v)
+	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("version"), 0) FROM "krenalis_profile_schema_versions"`).Scan(&v)
 	if err != nil {
 		return 0, err
 	}

@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Security vulnerabilities should not be reported publicly. Contact [security@meergo.com](mailto:security@meergo.com).
+Security vulnerabilities should not be reported publicly. Contact [security@krenalis.com](mailto:security@krenalis.com).
 
 If you discover a potential security vulnerability, please follow this process:
 
@@ -10,7 +10,7 @@ If you discover a potential security vulnerability, please follow this process:
    Do not create public GitHub issues, discussions, or pull requests describing the vulnerability.
 
 2. **Contact the security team directly.**  
-   Send a detailed report to **security@meergo.com** including:
+   Send a detailed report to **security@krenalis.com** including:
     - A clear description of the issue
     - Steps to reproduce the vulnerability
     - A minimal proof of concept (if possible)

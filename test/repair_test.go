@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
 func TestRepair(t *testing.T) {
@@ -16,7 +16,7 @@ func TestRepair(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 

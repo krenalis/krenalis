@@ -7,7 +7,7 @@ package sftp
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/testconnector"
+	"github.com/krenalis/krenalis/core/testconnector"
 )
 
 func TestPathConvert(t *testing.T) {

@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

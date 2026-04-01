@@ -8,7 +8,7 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 		'Content-Type': 'application/json',
 	};
 	if (workspaceID != null && workspaceID !== 0) {
-		headers['Meergo-Workspace'] = workspaceID;
+		headers['Krenalis-Workspace'] = workspaceID;
 	}
 	const request: RequestInit = {
 		method: method,
@@ -56,7 +56,7 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 						Sentry.captureException(new Error(message));
 					});
 					console.error(
-						`%c meergo: ${message}${cause ? ' | Cause: ' + cause : ''}`,
+						`%c krenalis: ${message}${cause ? ' | Cause: ' + cause : ''}`,
 						'background:#dc362e;color:#dcdcdc',
 					);
 					throw new Error(

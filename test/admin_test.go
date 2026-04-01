@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/test/testimages"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/test/testimages"
 
 	"github.com/testcontainers/testcontainers-go"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -35,18 +35,18 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
-	// See https://github.com/meergo/meergo/issues/2116.
-	if os.Getenv("MEERGO_TEST_SKIP_ADMIN_TESTS") == "true" {
-		t.Skip("Admin test skipped as MEERGO_TEST_SKIP_ADMIN_TESTS is set to true")
+	// See https://github.com/krenalis/krenalis/issues/2116.
+	if os.Getenv("KRENALIS_TEST_SKIP_ADMIN_TESTS") == "true" {
+		t.Skip("Admin test skipped as KRENALIS_TEST_SKIP_ADMIN_TESTS is set to true")
 	}
 
-	fsTempDir := meergotester.NewTempStorage(t)
+	fsTempDir := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.SetFileSystemRoot(fsTempDir.Root())
 	c.Start()
 	defer c.Stop()
@@ -95,7 +95,7 @@ func TestAdmin(t *testing.T) {
 
 	// Initialize the PostgreSQL database referenced in pipelines.
 	{
-		pool, err := meergotester.ConnectionPool(t.Context(), &meergotester.DBSettings{
+		pool, err := krenalistester.ConnectionPool(t.Context(), &krenalistester.DBSettings{
 			Host:     dbHost,
 			Port:     dbPort,
 			Username: dbUsername,
@@ -153,7 +153,10 @@ func TestAdmin(t *testing.T) {
 
 	// Prepare and run the Admin tests.
 	adminDir := filepath.Join("..", "admin")
-	run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
+
+	// TODO(Gianluca): commented as workaround for https://github.com/krenalis/krenalis/issues/2164.
+	// run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
+
 	run(t, "npx", []string{"playwright", "install", "chromium"}, adminDir, fsTempDir.Root())
 	if passUIFlagToPlaywright {
 		run(t, "npx", []string{"playwright", "test", "--ui"}, adminDir, fsTempDir.Root())
@@ -174,7 +177,7 @@ func run(t *testing.T, name string, args []string, directory, fsTempDir string) 
 	cmd.Dir = directory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "MEERGO_TEST_FS_TEMP_DIR="+fsTempDir)
+	cmd.Env = append(os.Environ(), "KRENALIS_TEST_FS_TEMP_DIR="+fsTempDir)
 	err := cmd.Run()
 	if err != nil {
 		t.Fatalf("error while executing %s: %s", name, err)

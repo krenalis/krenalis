@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // An InvalidPathError value is returned by FileStorage.AbsolutePath when the

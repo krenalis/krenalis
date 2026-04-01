@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Query executes a query and returns the results as Rows.

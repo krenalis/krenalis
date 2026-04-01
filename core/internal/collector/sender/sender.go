@@ -13,20 +13,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/connections"
-	"github.com/meergo/meergo/core/internal/connections/httpclient"
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/tools/prometheus"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/tools/prometheus"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // MaxQueuedEvents defines the maximum number of events allowed in the send
 // queue. When this limit is reached, sender.SendEvent blocks until an event is
 // removed from the queue.
 //
-// This value can be configured via the MEERGO_MAX_QUEUED_EVENTS_PER_DESTINATION
+// This value can be configured via the KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION
 // environment variable. The minimum allowed value is 1. If not set, the default
 // value is 50000.
 var MaxQueuedEvents = 50_000
@@ -638,12 +638,12 @@ func (s *Sender) scheduleIteration() {
 	}
 	// If we have enough events for a batch, send immediately.
 	if s.available >= s.minBatchSize {
-		s.schedule.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+		s.schedule.Reset(1) // TODO(marco): change 1 with 0. See issue https://github.com/krenalis/krenalis/issues/2122
 		return
 	}
 	// Wait until maxQueueDelay has elapsed since the queue became available.
 	elapsed := time.Since(s.availableSince)
-	s.schedule.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/meergo/meergo/issues/2122
+	s.schedule.Reset(max(1, maxQueueDelay-elapsed)) // TODO(marco): change 1 with 0. See issue https://github.com/krenalis/krenalis/issues/2122
 }
 
 // send sends events to the application by calling the connector's SendEvents

@@ -13,7 +13,7 @@ import (
 
 func Test_Build(t *testing.T) {
 
-	t.Skip() // TODO(Gianluca): re-enable. See https://github.com/meergo/meergo/issues/694.
+	t.Skip() // TODO(Gianluca): re-enable. See https://github.com/krenalis/krenalis/issues/694.
 
 	resolve, err := readResolveFile()
 	if err != nil {
@@ -48,7 +48,7 @@ func Test_Build(t *testing.T) {
 
 		if !bytes.Equal(nodeContent, vendorContent) {
 
-			tmpDir, err := os.MkdirTemp("", "meergo-test-build")
+			tmpDir, err := os.MkdirTemp("", "krenalis-test-build")
 			if err != nil {
 				t.Fatalf("cannot create temporary directory: %s", err)
 			}

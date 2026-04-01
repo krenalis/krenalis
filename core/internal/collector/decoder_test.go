@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -28,7 +28,7 @@ func Test_Decoder(t *testing.T) {
 	writeKey := "vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"
 
 	ip := "192.168.1.1"
-	library := map[string]any{"name": "meergo.js", "version": "0.0.0"}
+	library := map[string]any{"name": "krenalis.js", "version": "0.0.0"}
 
 	// These non-read optional properties are not tested if they are not present as expected.
 	var nonReadOptionalProperties = []string{
@@ -84,7 +84,7 @@ func Test_Decoder(t *testing.T) {
 		{typ: "page", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a page event")}}},
 		{typ: "identify", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("property 'userId' is required for an identify event")}}},
 
-		// meergo.track('click'); anonymous
+		// krenalis.track('click'); anonymous
 		{
 			body:         `{"batch":[{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}]}`,
 			connectionId: 830163006,
@@ -132,7 +132,7 @@ func Test_Decoder(t *testing.T) {
 			}},
 		},
 
-		// meergo.identify('bob', {name: 'bob', age: 19})
+		// krenalis.identify('bob', {name: 'bob', age: 19})
 		{
 			body: `{"batch":[{"type":"identify","messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}]}`,
 			expected: []expectedEvent{{
@@ -171,7 +171,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.track('page')
+		// krenalis.track('page')
 		{
 			body: `{"batch":[{"type":"page","context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}]}`,
 			expected: []expectedEvent{{
@@ -210,7 +210,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.screen('login', {}, {traits: {name: 'Bob'}})
+		// krenalis.screen('login', {}, {traits: {name: 'Bob'}})
 		{
 			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}]}`,
 			expected: []expectedEvent{{
@@ -252,7 +252,7 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.screen('login')
+		// krenalis.screen('login')
 		{
 			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","channel":"web","name":"login"}]}`,
 			expected: []expectedEvent{{
@@ -292,14 +292,14 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.track('click'); meergo.track('click');
+		// krenalis.track('click'); krenalis.track('click');
 		{
 			// The 'integrations' field is included in the event's body even if
-			// Meergo ignores it, to test that when an SDK sends this field, no
+			// Krenalis ignores it, to test that when an SDK sends this field, no
 			// errors are returned by the decoder.
 			body: `{"batch":[` +
-				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"browser":{"name":"Chrome","version":"138.0"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
-				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"os":{"name":"macOS","version":"15"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
+				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"browser":{"name":"Chrome","version":"138.0"},"library":{"name":"krenalis.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
+				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"os":{"name":"macOS","version":"15"},"library":{"name":"krenalis.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
 				`],"sentAt":"2024-10-31T14:39:12.647Z","writeKey":"qWqwaP3zGZOazQUmuFRuRMfW3lMCqjUa"}`,
 			connectionId: 830163006,
 			expected: []expectedEvent{{
@@ -395,7 +395,31 @@ func Test_Decoder(t *testing.T) {
 				}},
 			},
 		},
-
+		{
+			body:     `{"batch":[{"type":"track","event":"Java Test","messageId":"249e67fd-2236-4e44-b79c-a82fa63ad214","timestamp":"2026-03-31T09:51:27.802Z","anonymousId":"d4c3aee6-00a9-4863-a2c8-dd0f18ef2145","userId":"andrea","properties":{"foo":"bar"}}],"sentAt":"2026-03-31T09:51:27.824Z","context":{"library":{"name":"analytics-java","version":"0.0.2"},"locale":"it-IT"},"writeKey":"8q8MWIB6iWKk2ffU2yyRrnVdoTYicULj"}`,
+			writeKey: "8q8MWIB6iWKk2ffU2yyRrnVdoTYicULj",
+			expected: []expectedEvent{{
+				event: events.Event{
+					"anonymousId": "d4c3aee6-00a9-4863-a2c8-dd0f18ef2145",
+					"context": map[string]any{
+						"ip": ip,
+						"library": map[string]any{
+							"name":    "analytics-java",
+							"version": "0.0.2",
+						},
+						"locale": "it-IT",
+					},
+					"event":             "Java Test",
+					"messageId":         "249e67fd-2236-4e44-b79c-a82fa63ad214",
+					"originalTimestamp": time.Date(2026, 3, 31, 9, 51, 27, 802000000, time.UTC),
+					"properties":        json.Value(`{"foo":"bar"}`),
+					"sentAt":            time.Date(2026, 3, 31, 9, 51, 27, 824000000, time.UTC),
+					"traits":            json.Value(`{}`),
+					"type":              "track",
+					"userId":            "andrea",
+				},
+			}},
+		},
 		// Location.
 		{
 			typ:  "screen",
@@ -558,6 +582,139 @@ func Test_Decoder(t *testing.T) {
 		})
 	}
 
+}
+
+// Test_mergeDefaultContext verifies the merge semantics for event-level and
+// batch-level contexts, including precedence and cloning of nested sections.
+func Test_mergeDefaultContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("clones nested default sections", func(t *testing.T) {
+		t.Parallel()
+
+		defaultContext := map[string]any{
+			"browser": map[string]any{
+				"name":    "chrome",
+				"version": "138.0",
+			},
+			"library": map[string]any{
+				"name":    "analytics-java",
+				"version": "0.0.2",
+			},
+		}
+
+		got := mergeDefaultContext(nil, defaultContext)
+		gotBrowser, ok := got["browser"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected merged browser section, got %T", got["browser"])
+		}
+		gotBrowser["name"] = "firefox"
+		gotBrowser["extra"] = "value"
+
+		defaultBrowser, ok := defaultContext["browser"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected default browser section, got %T", defaultContext["browser"])
+		}
+		if defaultBrowser["name"] != "chrome" {
+			t.Fatalf("expected default browser name to remain %q, got %v", "chrome", defaultBrowser["name"])
+		}
+		if _, ok := defaultBrowser["extra"]; ok {
+			t.Fatalf("expected default browser section to remain untouched, got %v", defaultBrowser)
+		}
+	})
+
+	t.Run("event context overrides default and receives missing nested keys", func(t *testing.T) {
+		t.Parallel()
+
+		eventContext := map[string]any{
+			"browser": map[string]any{
+				"name": "firefox",
+			},
+		}
+		defaultContext := map[string]any{
+			"browser": map[string]any{
+				"name":    "chrome",
+				"version": "138.0",
+			},
+			"library": map[string]any{
+				"name":    "analytics-java",
+				"version": "0.0.2",
+			},
+		}
+
+		got := mergeDefaultContext(eventContext, defaultContext)
+		expected := map[string]any{
+			"browser": map[string]any{
+				"name":    "firefox",
+				"version": "138.0",
+			},
+			"library": map[string]any{
+				"name":    "analytics-java",
+				"version": "0.0.2",
+			},
+		}
+
+		if diff := cmp.Diff(expected, got); diff != "" {
+			t.Fatalf("unexpected merged context (-want +got):\n%s", diff)
+		}
+	})
+}
+
+func TestDecoderDefaultContextNotMutatedAcrossEvents(t *testing.T) {
+	t.Parallel()
+
+	body := `{"batch":[` +
+		`{"type":"track","event":"first","anonymousId":"anon-1"},` +
+		`{"type":"track","event":"second","anonymousId":"anon-2"}` +
+		`],"context":{"browser":{"name":"custombrowser","version":"138.0"}}}`
+
+	requestURL, err := url.Parse("/events")
+	if err != nil {
+		t.Fatalf("failed to parse request URL: %v", err)
+	}
+
+	r := &http.Request{
+		Method: "POST",
+		Header: http.Header{
+			"Content-Type": []string{"application/json; charset=utf-8"},
+			"User-Agent":   []string{"DecoderDefaultContextNotMutatedAcrossEvents/1.0"},
+		},
+		RemoteAddr: "192.168.1.1:7048",
+		URL:        requestURL,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+
+	dec, err := newDecoder(r)
+	if err != nil {
+		t.Fatalf("newDecoder returned error: %v", err)
+	}
+
+	i := 0
+	for event, err := range dec.Events(42, true) {
+		if err != nil {
+			t.Fatalf("unexpected event error: %v", err)
+		}
+		if event == nil {
+			t.Fatal("expected non-nil event, got nil")
+		}
+		i++
+		if i == 1 {
+			browser, ok := dec.context["browser"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected default browser section, got %T", dec.context["browser"])
+			}
+			expected := map[string]any{
+				"name":    "custombrowser",
+				"version": "138.0",
+			}
+			if diff := cmp.Diff(expected, browser); diff != "" {
+				t.Fatalf("default context was mutated after first event (-want +got):\n%s", diff)
+			}
+		}
+	}
+	if i != 2 {
+		t.Fatalf("expected 2 events, got %d", i)
+	}
 }
 
 // TestDecoderContextIPHandling verifies the context.ip normalization and the

@@ -9,7 +9,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/meergo/meergo/tools/json/internal/json/internal/jsonwire"
+	"github.com/krenalis/krenalis/tools/json/internal/json/internal/jsonwire"
 )
 
 const errorPrefix = "jsontext: "

@@ -18,9 +18,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -138,7 +138,7 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows,
 }
 
 // SQLLiteral returns the SQL literal representation of v according to the
-// provided Meergo type t. It supports nil values and the following Meergo
+// provided Krenalis type t. It supports nil values and the following Krenalis
 // types: string, datetime, date, and json.
 func (ps *PostgreSQL) SQLLiteral(value any, typ types.Type) string {
 	if value == nil {

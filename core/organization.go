@@ -24,14 +24,14 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/uuid"
 	"github.com/jordan-wright/email"
@@ -532,7 +532,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
 	emailToSend := &emailToSend{
 		From:     this.core.memberEmailFrom,
-		Subject:  "You have been invited to Meergo",
+		Subject:  "You have been invited to Krenalis",
 		To:       email,
 		BodyHTML: []byte(t),
 	}
@@ -652,7 +652,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
 	emailToSend := &emailToSend{
 		From:     this.core.memberEmailFrom,
-		Subject:  "Your Meergo password reset",
+		Subject:  "Your Krenalis password reset",
 		To:       email,
 		BodyHTML: []byte(t),
 	}

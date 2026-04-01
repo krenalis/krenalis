@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/meergo/meergo/core"
+	"github.com/krenalis/krenalis/core"
 
 	"github.com/getsentry/sentry-go"
 )
@@ -25,8 +25,8 @@ import (
 //go:embed static
 var static embed.FS
 
-// Main is the function that executes Meergo. It is designed to be used in
-// executable packages that run Meergo's code, and should be utilized in the
+// Main is the function that executes Krenalis. It is designed to be used in
+// executable packages that run Krenalis's code, and should be utilized in the
 // following form:
 //
 //	func main() {
@@ -37,7 +37,7 @@ func Main(assets fs.FS) {
 	var help bool
 	var initDBIfEmpty bool
 	var initDockerMember bool
-	flag.BoolVar(&help, "help", false, "print the help for meergo and exit")
+	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
@@ -66,20 +66,20 @@ func Main(assets fs.FS) {
 		fatal(1, err.Error())
 	}
 
-	// Unset the Meergo environment variables, except for those intended for
+	// Unset the Krenalis environment variables, except for those intended for
 	// connectors, which can be read by them at any time.
 	//
 	// This minimizes the possibility that any point in the code can read the
 	// configuration passed from the environment.
 	for _, v := range os.Environ() {
 		if key, _, ok := strings.Cut(v, "="); ok {
-			isMeergoVar := strings.HasPrefix(key, "MEERGO_")
-			isMeergoConnectorVar := strings.HasPrefix(key, "MEERGO_CONNECTOR_")
-			if isMeergoVar && !isMeergoConnectorVar {
+			isKrenalisVar := strings.HasPrefix(key, "KRENALIS_")
+			isKrenalisConnectorVar := strings.HasPrefix(key, "KRENALIS_CONNECTOR_")
+			if isKrenalisVar && !isKrenalisConnectorVar {
 				// os.Unsetenv can only fail on Windows if the key is not UTF-8
-				// encoded. But since Meergo only supports UTF-8 keys, and this
-				// is a rare edge case, failing to unset such a variable
-				// shouldn't prevent Meergo from starting.
+				// encoded. But since Krenalis only supports UTF-8 keys, and
+				// this is a rare edge case, failing to unset such a variable
+				// shouldn't prevent Krenalis from starting.
 				_ = os.Unsetenv(key)
 			}
 		}
@@ -93,7 +93,7 @@ func Main(assets fs.FS) {
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
 			Debug:            false, // set to "true" to get information about telemetry sent to Sentry.
 			AttachStacktrace: true,
-			SendDefaultPII:   false, // TODO: is it okay to set it to false? See https://github.com/meergo/meergo/issues/1517.
+			SendDefaultPII:   false, // TODO: is it okay to set it to false? See https://github.com/krenalis/krenalis/issues/1517.
 			Integrations: func(integrations []sentry.Integration) []sentry.Integration {
 				// The list of integrations loaded by the Sentry SDK by default
 				// is available here: https://github.com/getsentry/sentry-go/blob/master/integrations.go.
@@ -108,8 +108,9 @@ func Main(assets fs.FS) {
 			},
 		})
 		if err != nil {
-			// Failing to initialize Sentry shouldn't stop Meergo from starting.
-			slog.Warn("meergo: failed to init Sentry", "error", err)
+			// Failing to initialize Sentry shouldn't stop Krenalis from
+			// starting.
+			slog.Warn("krenalis: failed to init Sentry", "error", err)
 		} else {
 			defer sentry.Flush(2 * time.Second)
 		}

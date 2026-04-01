@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/streams"
-	"github.com/meergo/meergo/tools/backoff"
+	"github.com/krenalis/krenalis/core/internal/streams"
+	"github.com/krenalis/krenalis/tools/backoff"
 )
 
 type (

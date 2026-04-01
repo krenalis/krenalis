@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 type connection struct {
@@ -274,7 +274,7 @@ func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Reque
 // PipelineSchemas returns the pipeline schema of a target.
 //
 // TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1266.
+// https://github.com/krenalis/krenalis/issues/1266.
 func (connection connection) PipelineSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, ws, _, err := connection.authenticateAdminRequest(r)
 	if err != nil {
@@ -301,7 +301,7 @@ func (connection connection) PipelineSchemas(_ http.ResponseWriter, r *http.Requ
 // PipelineTypes returns the pipeline types of a connection.
 //
 // TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1265.
+// https://github.com/krenalis/krenalis/issues/1265.
 func (connection connection) PipelineTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, ws, _, err := connection.authenticateAdminRequest(r)
 	if err != nil {

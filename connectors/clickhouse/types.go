@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // columnType returns the types.Type corresponding to the ClickHouse type typ

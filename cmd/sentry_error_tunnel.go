@@ -14,7 +14,7 @@ import (
 )
 
 // This code implements a tunnel for Sentry errors, which are sent first to
-// Meergo and then forwarded to Sentry.
+// Krenalis and then forwarded to Sentry.
 //
 // See the documentation here:
 // https://docs.sentry.io/platforms/javascript/troubleshooting/#using-the-tunnel-option.

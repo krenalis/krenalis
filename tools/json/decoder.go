@@ -7,8 +7,8 @@ package json
 import (
 	"io"
 
-	"github.com/meergo/meergo/tools/json/internal/json"
-	"github.com/meergo/meergo/tools/json/internal/json/jsontext"
+	"github.com/krenalis/krenalis/tools/json/internal/json"
+	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 type Decoder struct {

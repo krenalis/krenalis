@@ -101,7 +101,7 @@ interface ProfileEventContext {
 
 interface ProfileEvent {
 	id?: string;
-	mpid?: string;
+	kpid?: string;
 	connectionId?: number;
 	anonymousId?: string;
 	category?: string;

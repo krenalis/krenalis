@@ -4,7 +4,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 
 ## What can you do with this?
 
-Using this connector you can read users from a ClickHouse database, store them in your data warehouse, and unify them as users within Meergo.
+Using this connector you can read users from a ClickHouse database, store them in your data warehouse, and unify them as users within Krenalis.
 
 ## What does it require?
 

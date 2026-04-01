@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 // merge performs a table merge operation.

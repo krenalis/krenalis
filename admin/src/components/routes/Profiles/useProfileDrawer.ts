@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ProfileTab } from './Profiles.types';
 import { ProfileEvent, Identity } from '../../../lib/api/types/profile';
 
-const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
+const useProfileDrawer = (kpid: string, selectedTab: ProfileTab) => {
 	const [attributes, setAttributes] = useState<Record<string, any>>();
 	const [events, setEvents] = useState<ProfileEvent[]>();
 	const [identities, setIdentities] = useState<Identity[]>();
@@ -19,7 +19,7 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 			// Fetch the profile's attributes.
 			let attributesResponse: profileAttributesResponse;
 			try {
-				attributesResponse = await api.workspaces.profiles.attributes(mpid);
+				attributesResponse = await api.workspaces.profiles.attributes(kpid);
 			} catch (err) {
 				setTimeout(() => setIsLoading(false), 200);
 				if (err instanceof NotFoundError) {
@@ -40,11 +40,11 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 			setTimeout(() => setIsLoading(false), 200);
 			return;
 		};
-		if (mpid === '') {
+		if (kpid === '') {
 			return;
 		}
 		fetchProfileAttributes();
-	}, [mpid]);
+	}, [kpid]);
 
 	useEffect(() => {
 		const fetchProfileTab = async () => {
@@ -53,7 +53,7 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 				// Fetch the profile's events.
 				let eventsResponse: ProfileEventsResponse;
 				try {
-					eventsResponse = await api.workspaces.profiles.events(mpid);
+					eventsResponse = await api.workspaces.profiles.events(kpid);
 				} catch (err) {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
@@ -80,7 +80,7 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 				// Fetch the profile's identities.
 				let identitiesResponse: IdentitiesResponse;
 				try {
-					identitiesResponse = await api.workspaces.profiles.identities(mpid, 0, 1000);
+					identitiesResponse = await api.workspaces.profiles.identities(kpid, 0, 1000);
 				} catch (err) {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
@@ -102,11 +102,11 @@ const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
 				return;
 			}
 		};
-		if (mpid === '') {
+		if (kpid === '') {
 			return;
 		}
 		fetchProfileTab();
-	}, [mpid, selectedTab]);
+	}, [kpid, selectedTab]);
 
 	return { isLoading, attributes, events, identities };
 };

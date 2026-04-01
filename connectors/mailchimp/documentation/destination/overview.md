@@ -3,7 +3,7 @@ Mailchimp is an email marketing platform that helps businesses design and send m
 
 ## What can you do with this?
 
-Using this connector you can you create and update unified Meergo users from your data warehouse in Mailchimp as contacts.
+Using this connector you can you create and update unified Krenalis users from your data warehouse in Mailchimp as contacts.
 
 ## What does it require?
 

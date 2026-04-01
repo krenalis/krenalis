@@ -15,18 +15,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 func TestSendEvents(t *testing.T) {
 
 	// Read Klaviyo settings from environment variables, then prepare
 	// the settings that will be passed to the connector.
-	privateAPIKey := os.Getenv("MEERGO_TEST_KLAVIYO_PRIVATE_API_KEY")
+	privateAPIKey := os.Getenv("KRENALIS_TEST_KLAVIYO_PRIVATE_API_KEY")
 	if privateAPIKey == "" {
-		t.Fatal("env var MEERGO_TEST_KLAVIYO_PRIVATE_API_KEY is required but not provided")
+		t.Fatal("env var KRENALIS_TEST_KLAVIYO_PRIVATE_API_KEY is required but not provided")
 	}
 	sett := innerSettings{
 		PrivateAPIKey: privateAPIKey,

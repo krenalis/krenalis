@@ -7,7 +7,7 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/test/meergotester"
+	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
 func Test_WorkspaceIdentifiers(t *testing.T) {
@@ -16,7 +16,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 

@@ -7,8 +7,8 @@ package mcp
 import (
 	"strings"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // profileSchemaInfoForMCPClient takes the profile schema, a function that maps
@@ -34,13 +34,13 @@ func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescripti
 			},
 		})
 	}
-	// Add information about the "_mpid" and "_updated_at".
+	// Add information about the "_kpid" and "_updated_at".
 	info = append(info, map[string]any{
 		"profileViewColumn": map[string]any{
-			"name":        "_mpid",
+			"name":        "_kpid",
 			"type":        "uuid",
 			"nullable":    true,
-			"description": "The MPID (Meergo Profile ID) uniquely identifies an unified profile within Meergo. It doesn't have a corresponding property in the profile schema. It's used to reference the 'events.mpid' column.",
+			"description": "The KPID (Krenalis Profile ID) uniquely identifies an unified profile within Krenalis. It doesn't have a corresponding property in the profile schema. It's used to reference the 'events.kpid' column.",
 		},
 	})
 	info = append(info, map[string]any{

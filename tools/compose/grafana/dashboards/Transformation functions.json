@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Dashboard per il monitoraggio delle funzioni Lambda tramite metriche Prometheus (meergo_lambda_*)",
+  "description": "Dashboard for monitoring Lambda functions via Prometheus metrics (krenalis_lambda_*)",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -27,7 +27,7 @@
       "datasource": {
         "type": "prometheus"
       },
-      "description": "Mostra rapidamente l'affidabilità complessiva delle chiamate Lambda. Un calo improvviso indica immediatamente problemi generalizzati da investigare rapidamente.",
+      "description": "Quickly shows the overall reliability of Lambda calls. A sudden drop immediately indicates widespread problems to investigate quickly.",
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
@@ -79,7 +79,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(meergo_lambda_duration_seconds_count[5m]))\n/\n(\n  sum(rate(meergo_lambda_duration_seconds_count[5m]))\n  + sum(rate(meergo_lambda_errors_total[5m]))\n)\n* 100",
+          "expr": "sum(rate(krenalis_lambda_duration_seconds_count[5m]))\n/\n(\n  sum(rate(krenalis_lambda_duration_seconds_count[5m]))\n  + sum(rate(krenalis_lambda_errors_total[5m]))\n)\n* 100",
           "legendFormat": "Success Rate",
           "range": true,
           "refId": "A"
@@ -93,7 +93,7 @@
         "type": "prometheus",
         "uid": "P55CC9602DBCEADDB"
       },
-      "description": "Hai sott'occhio i tempi medi e massimi di risposta delle chiamate Lambda. Puoi rapidamente individuare problemi di performance o latenze anomale.",
+      "description": "You have the average and maximum response times of Lambda calls at a glance. You can quickly identify performance problems or anomalous latencies.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -176,7 +176,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.99, sum by(le) (rate(meergo_lambda_duration_seconds_bucket{job=\"meergo\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by(le) (rate(krenalis_lambda_duration_seconds_bucket{job=\"krenalis\"}[5m])))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "p99 latency",
@@ -191,7 +191,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.95, sum by(le) (rate(meergo_lambda_duration_seconds_bucket{job=\"meergo\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by(le) (rate(krenalis_lambda_duration_seconds_bucket{job=\"krenalis\"}[5m])))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -207,7 +207,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.5, sum by(le) (rate(meergo_lambda_duration_seconds_bucket{job=\"meergo\"}[5m])))",
+          "expr": "histogram_quantile(0.5, sum by(le) (rate(krenalis_lambda_duration_seconds_bucket{job=\"krenalis\"}[5m])))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -225,7 +225,7 @@
         "type": "prometheus",
         "uid": "P55CC9602DBCEADDB"
       },
-      "description": "Rende evidente quale tipo di errore sta dominando (es: rete vs esecuzione della funzione). Puoi capire velocemente dove concentrarti (AWS, codice funzione, problemi di rete).",
+      "description": "Makes it clear which type of error is dominant (e.g., network vs function execution). You can quickly understand where to focus (AWS, function code, network problems).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -309,7 +309,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum by(type) (rate(meergo_lambda_errors_total[5m]))",
+          "expr": "sum by(type) (rate(krenalis_lambda_errors_total[5m]))",
           "legendFormat": "{{type}}",
           "refId": "A"
         }
@@ -322,7 +322,7 @@
         "type": "prometheus",
         "uid": "P55CC9602DBCEADDB"
       },
-      "description": "Mostra la frequenza totale degli errori indipendentemente dal tipo. Ti permette di identificare rapidamente situazioni critiche o peggioramenti improvvisi della qualità del servizio.",
+      "description": "Shows the total frequency of errors regardless of type. It allows you to quickly identify critical situations or sudden deterioration in service quality.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -403,7 +403,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum(rate(meergo_lambda_errors_total[5m]))",
+          "expr": "sum(rate(krenalis_lambda_errors_total[5m]))",
           "legendFormat": "Errors/sec",
           "refId": "A"
         }
@@ -416,7 +416,7 @@
         "type": "prometheus",
         "uid": "P55CC9602DBCEADDB"
       },
-      "description": "Numero di record gestiti nel tempo. Ti permette di capire il volume di traffico reale che l'applicazione sta gestendo e come varia nel tempo.",
+      "description": "Number of records handled over time. It allows you to understand the actual traffic volume that the application is handling and how it varies over time.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -500,7 +500,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": true,
-          "expr": "rate(meergo_lambda_records_total{job=\"meergo\"}[5m])",
+          "expr": "rate(krenalis_lambda_records_total{job=\"krenalis\"}[5m])",
           "format": "time_series",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -520,7 +520,7 @@
         "type": "prometheus",
         "uid": "P55CC9602DBCEADDB"
       },
-      "description": "Mostra in media quanti record vengono inviati per ogni invocazione di funzione. Utile per stimare carichi e performance future.",
+      "description": "Shows on average how many records are sent per each function invocation. Useful for estimating loads and future performance.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -601,7 +601,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "rate(meergo_lambda_records_total[5m]) / rate(meergo_lambda_duration_seconds_count[5m])",
+          "expr": "rate(krenalis_lambda_records_total[5m]) / rate(krenalis_lambda_duration_seconds_count[5m])",
           "legendFormat": "Records per call",
           "refId": "A"
         }
@@ -616,7 +616,7 @@
     "lambda",
     "aws",
     "prometheus",
-    "meergo"
+    "krenalis"
   ],
   "templating": {
     "list": []

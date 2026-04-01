@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // Error represents an error with a schema.
@@ -206,11 +206,10 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			min1, max1 := t1.UnsignedRange()
 			min2, max2 := t2.UnsignedRange()
 			return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
-		} else {
-			min1, max1 := t1.IntRange()
-			min2, max2 := t2.IntRange()
-			return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
 		}
+		min1, max1 := t1.IntRange()
+		min2, max2 := t2.IntRange()
+		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
 	case types.FloatKind:
 		if t1.BitSize() != t2.BitSize() {
 			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}

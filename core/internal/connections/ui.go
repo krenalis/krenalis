@@ -11,9 +11,9 @@ import (
 	"reflect"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 type uiHandlerConnection interface {
@@ -281,7 +281,10 @@ func marshalUI(ui *connectors.UI, role connectors.Role) (json.Value, error) {
 			}
 		}
 		b.WriteString(`],"buttons":[`)
-		for _, button := range ui.Buttons {
+		for i, button := range ui.Buttons {
+			if i > 0 {
+				b.WriteByte(',')
+			}
 			b.WriteByte('{')
 			_ = b.EncodeKeyValue("event", button.Event)
 			_ = b.EncodeKeyValue("text", button.Text)

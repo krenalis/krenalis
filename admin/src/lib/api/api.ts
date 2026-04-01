@@ -397,7 +397,7 @@ class Connections {
 	};
 
 	// TODO(Gianluca): this method is deprecated. See the issue
-	// https://github.com/meergo/meergo/issues/1265.
+	// https://github.com/krenalis/krenalis/issues/1265.
 	pipelineTypes = async (connection: number) => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipeline-types`,
@@ -407,7 +407,7 @@ class Connections {
 	};
 
 	// TODO(Gianluca): this method is deprecated. See the issue
-	// https://github.com/meergo/meergo/issues/1266.
+	// https://github.com/krenalis/krenalis/issues/1266.
 	pipelineSchemas = async (
 		connection: number,
 		target: PipelineTarget,
@@ -646,10 +646,10 @@ class Profiles {
 		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	events = async (mpid: string): Promise<ProfileEventsResponse> => {
+	events = async (kpid: string): Promise<ProfileEventsResponse> => {
 		let params = [];
 		let properties = [
-			'mpid',
+			'kpid',
 			'connectionId',
 			'anonymousId',
 			'category',
@@ -671,9 +671,9 @@ class Profiles {
 			logical: 'and',
 			conditions: [
 				{
-					property: 'mpid',
+					property: 'kpid',
 					operator: 'is',
-					values: [mpid],
+					values: [kpid],
 				},
 			],
 		};
@@ -685,13 +685,13 @@ class Profiles {
 		return await call(`${this.apiURL}/events` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	attributes = async (mpid: string): Promise<profileAttributesResponse> => {
-		return await call(`${this.apiURL}/profiles/${encodeURIComponent(mpid)}/attributes`, http.GET, this.workspaceID);
+	attributes = async (kpid: string): Promise<profileAttributesResponse> => {
+		return await call(`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes`, http.GET, this.workspaceID);
 	};
 
-	identities = async (mpid: string, first: number, limit: number): Promise<IdentitiesResponse> => {
+	identities = async (kpid: string, first: number, limit: number): Promise<IdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/profiles/${encodeURIComponent(mpid)}/identities?first=${first}&limit=${limit}`,
+			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/identities?first=${first}&limit=${limit}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -715,8 +715,9 @@ class Workspaces {
 		this.profiles = new Profiles(apiURL, workspaceID);
 	}
 
+	// Organization-scoped workspace endpoints must not send Krenalis-Workspace.
 	list = async (): Promise<Workspace[]> => {
-		const res = await call(`${this.apiURL}/workspaces`, http.GET, this.workspaceID);
+		const res = await call(`${this.apiURL}/workspaces`, http.GET);
 		return res.workspaces as Workspace[];
 	};
 
@@ -728,7 +729,7 @@ class Workspaces {
 		warehouseSettings: WarehouseSettings,
 		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
-		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
 			profileSchema: profileSchema,
 			warehouse: {
@@ -748,7 +749,7 @@ class Workspaces {
 		warehouseSettings: WarehouseSettings,
 		uiPreferences: UIPreferences,
 	): Promise<void> => {
-		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
 			profileSchema: profileSchema,
 			warehouse: {

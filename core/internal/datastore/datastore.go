@@ -14,11 +14,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meergo/meergo/core/internal/metrics"
-	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // ErrWarehousePlatformNotExist is returned by the
@@ -96,7 +96,7 @@ func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings js
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
 // that datastore's warehouse access with these settings is read-only (at least
-// on the Meergo tables), returning a *warehouses.WarehouseSettingsNotReadOnly
+// on the Krenalis tables), returning a *warehouses.WarehouseSettingsNotReadOnly
 // error in case it is not, explaining the reason.
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings json.Value) error {
 	ds.mustBeOpen()
@@ -131,7 +131,7 @@ func (ds *Datastore) Close() {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Meergo. The given profile schema will be used by the
+// make it work with Krenalis. The given profile schema will be used by the
 // initialization to build the profile tables on the warehouse with the
 // corresponding columns.
 //
@@ -241,11 +241,11 @@ func (ds *Datastore) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
 	ds.mu.Lock()
 	store, ok := ds.store[ws.ID]
-	if ok { // see issue https://github.com/meergo/meergo/issues/2051
+	if ok { // see issue https://github.com/krenalis/krenalis/issues/2051
 		delete(ds.store, ws.ID)
 	}
 	ds.mu.Unlock()
-	if !ok { // see issue https://github.com/meergo/meergo/issues/2051
+	if !ok { // see issue https://github.com/krenalis/krenalis/issues/2051
 		return
 	}
 	err := store.close()

@@ -32,7 +32,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/meergo/meergo/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // Code represents an error code in an unprocessable error.

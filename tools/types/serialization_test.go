@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/meergo/meergo/tools/decimal"
+	"github.com/krenalis/krenalis/tools/decimal"
 )
 
 func TestParseErrors(t *testing.T) {

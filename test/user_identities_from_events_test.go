@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 func TestIdentitiesFromEvents(t *testing.T) {
@@ -21,25 +21,25 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	javaScriptKey := c.EventWriteKeys(javaScriptID)[0]
-	c.CreatePipeline(javaScriptID, "Event", meergotester.PipelineToSet{
+	c.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
 		Name:    "JavaScript events",
 		Enabled: true,
 	})
-	importUsersPipeline := c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+	importUsersPipeline := c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
-		Filter:   meergotester.DefaultFilterUserFromEvents,
+		Filter:   krenalistester.DefaultFilterUserFromEvents,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -82,14 +82,14 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Update the pipeline to import identities through a constant mapping.
-	c.UpdatePipeline(importUsersPipeline, meergotester.PipelineToSet{
+	c.UpdatePipeline(importUsersPipeline, krenalistester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email": "'a@b'", // a constant email for every user
 			},
@@ -115,15 +115,15 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Update the pipeline to import identities through a transformation function.
-	c.UpdatePipeline(importUsersPipeline, meergotester.PipelineToSet{
+	c.UpdatePipeline(importUsersPipeline, krenalistester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
-			Function: &meergotester.TransformationFunction{
+		Transformation: &krenalistester.Transformation{
+			Function: &krenalistester.TransformationFunction{
 				Language: "Python",
 				Source: `import random
 

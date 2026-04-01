@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestBadRequest verifies that the Mixpanel connector correctly deserializes
@@ -75,15 +75,15 @@ func TestBadRequest(t *testing.T) {
 	if err == nil {
 		t.Fatal("test should fail, but it returned no errors")
 	}
-	gotMeergoError, ok := err.(connectors.EventsError)
+	gotKrenalisError, ok := err.(connectors.EventsError)
 	if !ok {
 		t.Fatalf("expected a connectors.EventsError error, got %T instead", err)
 	}
-	if len(gotMeergoError) != 2 {
-		t.Fatalf("expected a connectors.EventsError with 2 event(s) inside, have %d instead", len(gotMeergoError))
+	if len(gotKrenalisError) != 2 {
+		t.Fatalf("expected a connectors.EventsError with 2 event(s) inside, have %d instead", len(gotKrenalisError))
 	}
-	gotErr1 := gotMeergoError[0].Error()
-	gotErr2 := gotMeergoError[1].Error()
+	gotErr1 := gotKrenalisError[0].Error()
+	gotErr2 := gotKrenalisError[1].Error()
 	if gotErr1 != gotErr2 {
 		t.Fatal("the two errors should be the same")
 	}

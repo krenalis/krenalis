@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
+	"github.com/krenalis/krenalis/connectors"
 )
 
 func Test_retryStrategy(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 type registrySnapshot struct {
@@ -68,15 +68,15 @@ func replaceRegistryForTest(t *testing.T) {
 func TestValidateConnectorCode(t *testing.T) {
 	valid := []string{"a", "abc", "abc-123", "0", "-", "-a", "a-", "a-b-c", "z9-", "12345", "alpha-0-omega", "postgresql", "http-get"}
 	invalid := map[string]string{
-		"":     "meergo/connectors: code is missing for a connector of type App",
-		"ABC":  `meergo/connectors: connector code "ABC" is not valid; valid codes contain only [a-z0-9-]`,
-		"a_b":  `meergo/connectors: connector code "a_b" is not valid; valid codes contain only [a-z0-9-]`,
-		"a b":  `meergo/connectors: connector code "a b" is not valid; valid codes contain only [a-z0-9-]`,
-		"a.b":  `meergo/connectors: connector code "a.b" is not valid; valid codes contain only [a-z0-9-]`,
-		"a/b":  `meergo/connectors: connector code "a/b" is not valid; valid codes contain only [a-z0-9-]`,
-		"café": `meergo/connectors: connector code "café" is not valid; valid codes contain only [a-z0-9-]`,
-		"ç":    `meergo/connectors: connector code "ç" is not valid; valid codes contain only [a-z0-9-]`,
-		"🙂":    `meergo/connectors: connector code "🙂" is not valid; valid codes contain only [a-z0-9-]`,
+		"":     "krenalis/connectors: code is missing for a connector of type App",
+		"ABC":  `krenalis/connectors: connector code "ABC" is not valid; valid codes contain only [a-z0-9-]`,
+		"a_b":  `krenalis/connectors: connector code "a_b" is not valid; valid codes contain only [a-z0-9-]`,
+		"a b":  `krenalis/connectors: connector code "a b" is not valid; valid codes contain only [a-z0-9-]`,
+		"a.b":  `krenalis/connectors: connector code "a.b" is not valid; valid codes contain only [a-z0-9-]`,
+		"a/b":  `krenalis/connectors: connector code "a/b" is not valid; valid codes contain only [a-z0-9-]`,
+		"café": `krenalis/connectors: connector code "café" is not valid; valid codes contain only [a-z0-9-]`,
+		"ç":    `krenalis/connectors: connector code "ç" is not valid; valid codes contain only [a-z0-9-]`,
+		"🙂":    `krenalis/connectors: connector code "🙂" is not valid; valid codes contain only [a-z0-9-]`,
 	}
 
 	// Valid.

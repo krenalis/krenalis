@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func Test_suitableAsIdentifier(t *testing.T) {

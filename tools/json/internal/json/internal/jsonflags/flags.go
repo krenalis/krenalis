@@ -6,7 +6,7 @@
 // These flags are shared across both "json", "jsontext", and "jsonopts".
 package jsonflags
 
-import "github.com/meergo/meergo/tools/json/internal/json/internal"
+import "github.com/krenalis/krenalis/tools/json/internal/json/internal"
 
 // Bools represents zero or more boolean flags, all set to true or false.
 // The least-significant bit is the boolean value of all flags in the set.

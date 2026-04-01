@@ -7,8 +7,8 @@ package connectors
 import (
 	"reflect"
 
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // DatabaseSpec represents a database connector specification.

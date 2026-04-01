@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/connectors"
-	"github.com/meergo/meergo/tools/decimal"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
-const settingsEnvKey = "MEERGO_TEST_PATH_SNOWFLAKE"
+const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
 
 func Test_Columns(t *testing.T) {
 
@@ -106,15 +106,15 @@ func Test_Columns(t *testing.T) {
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
 //
-// Set the environment variable MEERGO_TEST_PATH_SNOWFLAKE with the path to the
+// Set the environment variable KRENALIS_TEST_PATH_SNOWFLAKE with the path to the
 // database credentials in JSON format for running the test.
 func Test_Merge_Query(t *testing.T) {
 
 	cols := []struct {
-		DriverType  string
-		DriverValue any
-		MeergoType  types.Type
-		MeergoValue any
+		DriverType    string
+		DriverValue   any
+		KrenalisType  types.Type
+		KrenalisValue any
 	}{
 		{"BOOLEAN", true, types.Boolean(), true},
 		{"FLOAT", 703.219, types.Float(64), 703.219},
@@ -128,14 +128,14 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	table := connectors.Table{
-		Name:    "test_meergo_query",
+		Name:    "test_krenalis_query",
 		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
 		table.Columns[i] = connectors.Column{
 			Name:     fmt.Sprintf("c%d", i),
-			Type:     c.MeergoType,
+			Type:     c.KrenalisType,
 			Nullable: true,
 		}
 	}
@@ -171,7 +171,7 @@ func Test_Merge_Query(t *testing.T) {
 	}()
 	row := make([]any, len(cols))
 	for i, c := range cols {
-		row[i] = c.MeergoValue
+		row[i] = c.KrenalisValue
 	}
 	err = connector.Merge(context.Background(), table, [][]any{row})
 	if err != nil {

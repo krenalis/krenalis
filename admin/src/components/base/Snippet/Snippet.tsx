@@ -74,7 +74,7 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 	}, [connectors, connectorCode]);
 
 	let applicationType = 'server';
-	if (connectorCode === 'android' || connectorCode === 'apple') {
+	if (connectorCode === 'android' || connectorCode === 'ios') {
 		applicationType = 'app';
 	} else if (connectorCode === 'javascript') {
 		applicationType = 'website';
@@ -93,11 +93,15 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 		language = 'java';
 	} else if (connectorCode === 'nodejs') {
 		language = 'javascript';
+	} else if (connectorCode === 'ios') {
+		language = 'swift';
 	}
+
+	const hasManualInstallation = connectorCode === 'java' || connectorCode === 'android' || connectorCode === 'ios';
 
 	return (
 		<Section
-			title={`Add Meergo to your ${applicationType}`}
+			title={`Add Krenalis to your ${applicationType}`}
 			className='connection-pipelines__instructions'
 			description={
 				<>
@@ -114,14 +118,12 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 					<>
 						<SyntaxHighlight
 							className='syntax-highlight--install-command'
-							language={connectorCode === 'java' || connectorCode === 'android' ? 'markdown' : 'bash'}
-							icon={connectorCode === 'java' || connectorCode === 'android' ? 'info-circle' : 'terminal'}
+							language={hasManualInstallation ? 'markdown' : 'bash'}
+							icon={hasManualInstallation ? 'info-circle' : 'terminal'}
 						>
 							{installCommand}
 						</SyntaxHighlight>
-						{connectorCode !== 'java' && connectorCode !== 'android' && (
-							<SlCopyButton value={installCommand} />
-						)}
+						{!hasManualInstallation && <SlCopyButton value={installCommand} />}
 					</>
 				)}
 				<SyntaxHighlight className='syntax-highlight--snippet' language={language}>

@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/uuid"
-	"github.com/meergo/analytics-go"
+	"github.com/krenalis/analytics-go"
 )
 
 func TestEvents(t *testing.T) {
@@ -25,13 +25,13 @@ func TestEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.NewMeergoInstance(t)
+	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
 
 	// Load some users in the data warehouse from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
+	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -42,7 +42,7 @@ func TestEvents(t *testing.T) {
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
-		Transformation: &meergotester.Transformation{
+		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -63,19 +63,19 @@ func TestEvents(t *testing.T) {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.CreatePipeline(javaScriptID, "Event", meergotester.PipelineToSet{
+		c.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+		c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
-			Filter:   meergotester.DefaultFilterUserFromEvents,
+			Filter:   krenalistester.DefaultFilterUserFromEvents,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 			}),
-			Transformation: &meergotester.Transformation{
+			Transformation: &krenalistester.Transformation{
 				Mapping: map[string]string{
 					"email": "traits.email",
 				},
@@ -128,7 +128,7 @@ func TestEvents(t *testing.T) {
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
-	// Run the identity resolution, so that the events MPID are updated.
+	// Run the identity resolution, so that the events KPID are updated.
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
@@ -138,24 +138,24 @@ func TestEvents(t *testing.T) {
 	if expectedProfilesTotal != total {
 		t.Fatalf("expected %d profiles, got %d", expectedProfilesTotal, total)
 	}
-	var mpid uuid.UUID
+	var kpid uuid.UUID
 	for _, profile := range profiles {
 		email, _ := profile.Attributes["email"].(string)
 		if email == eventProfileEmail {
-			mpid = profile.MPID
+			kpid = profile.KPID
 			break
 		}
 	}
-	if mpid == (uuid.UUID{}) {
+	if kpid == (uuid.UUID{}) {
 		t.Fatalf("profile with email %q not found", eventProfileEmail)
 	}
-	t.Logf("profile imported from event has MPID %s", mpid)
+	t.Logf("profile imported from event has KPID %s", kpid)
 
 	// Retrieve the first event for the profile.
 	var event map[string]any
-	events := c.ProfileEvents(mpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
+	events := c.ProfileEvents(kpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
-		t.Fatalf("expected %d events for profile %s, got %d", expectedEventsCount, mpid, len(events))
+		t.Fatalf("expected %d events for profile %s, got %d", expectedEventsCount, kpid, len(events))
 	}
 	event = events[0] // most recent event.
 
@@ -217,7 +217,7 @@ func TestEvents(t *testing.T) {
 	// Test importing an identity with a pipeline that has no mapping.
 	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", nil)
 	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
-	c.CreatePipeline(javaScript2ID, "User", meergotester.PipelineToSet{
+	c.CreatePipeline(javaScript2ID, "User", krenalistester.PipelineToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})

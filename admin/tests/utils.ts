@@ -26,7 +26,7 @@ const login = async (page: Page) => {
 		async ({ url, workspace, workspaceIDKey }) => {
 			localStorage.setItem(workspaceIDKey, String(workspace));
 			const api = new (window as any).API(url, workspace) as API;
-			await api.login('test@meergo.com', 'meergo-password');
+			await api.login('test@krenalis.com', 'krenalis-password');
 		},
 		{ url: config.baseURL, workspace: config.workspaceID, workspaceIDKey: WORKSPACE_ID_KEY },
 	);
@@ -238,15 +238,15 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await filters
 		.nth(0)
 		.locator('.pipeline__filters-is-one-of-values > .pipeline__filters-value-input:nth-child(1) >> input')
-		.fill('acme@meergo.com');
+		.fill('acme@krenalis.com');
 	await filters
 		.nth(0)
 		.locator('.pipeline__filters-is-one-of-values > .pipeline__filters-value:nth-child(2) >> input')
-		.fill('test@meergo.com');
+		.fill('test@krenalis.com');
 	await filters
 		.nth(0)
 		.locator('.pipeline__filters-is-one-of-values > .pipeline__filters-value:nth-child(3) >> input')
-		.fill('foo@meergo.com');
+		.fill('foo@krenalis.com');
 	await filters
 		.nth(0)
 		.locator(

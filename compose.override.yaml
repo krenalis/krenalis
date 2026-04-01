@@ -1,10 +1,10 @@
 # This file is intended to be KEPT AS MINIMAL AS POSSIBLE, as its purpose is to
 # test a version as similar as possible to the one executed by 'compose.yaml',
-# with the only difference that here Meergo is compiled directly from the
+# with the only difference that here Krenalis is compiled directly from the
 # repository instead of being retrieved from Docker Hub.
 
 services:
-  meergo:
+  krenalis:
     image: ""
     build:
       context: .

@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/tools/errors"
-	"github.com/meergo/meergo/tools/json"
-	"github.com/meergo/meergo/tools/types"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 type organization struct {
@@ -130,9 +130,12 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	org, _, err := organization.authenticateRequest(r)
+	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
+	}
+	if ws != nil {
+		return nil, errors.Unauthorized("workspaces cannot be created with a workspace restricted API key")
 	}
 	var body struct {
 		Name          string             `json:"name"`
@@ -237,9 +240,12 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	org, _, err := organization.authenticateRequest(r)
+	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
+	}
+	if ws != nil {
+		return nil, errors.Unauthorized("workspace creation cannot be tested with a workspace restricted API key")
 	}
 	var body struct {
 		Name          string             `json:"name"`
@@ -334,9 +340,12 @@ func (organization organization) Workspace(_ http.ResponseWriter, r *http.Reques
 
 // Workspaces returns the workspaces of an organization.
 func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateRequest(r)
+	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
+	}
+	if ws != nil {
+		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
 	}
 	return map[string]any{"workspaces": org.Workspaces()}, nil
 }
