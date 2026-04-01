@@ -126,6 +126,10 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			outSchema = types.Prune(outSchema, func(path string) bool {
 				return path != pipeline.Matching.Out
 			})
+		} else if matchingOut.ReadOptional {
+			// Set the out-matching property's read-optional flag to false
+			// before passing it to Application.Writer.
+			outSchema = types.AsRole(outSchema, types.Destination)
 		}
 		writer, err = this.application().Writer(ctx, outSchema, pipeline.ExportMode, pipeline.Target, ack)
 	case state.Database:
@@ -336,12 +340,9 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 			return profile.Err
 		}
 
-		// Store the profile only if the output matching property is not nil.
-		v, ok := getAttribute(profile.Attributes, this.pipeline.Matching.Out)
-		if !ok {
-			panic(fmt.Sprintf("out matching property value of pipeline %d is missing", this.pipeline.ID))
-		}
-		if v != nil {
+		// Store the profile only if the attributes contain a value for
+		// the output matching property and that value is non-nil.
+		if v, ok := getAttribute(profile.Attributes, this.pipeline.Matching.Out); ok && v != nil {
 			profiles = append(profiles, datastore.DestinationProfile{
 				ExternalID:       profile.ID,
 				OutMatchingValue: stringifyMatchingValue(v),
