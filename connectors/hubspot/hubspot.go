@@ -121,7 +121,6 @@ func (hs *HubSpot) ServeUI(ctx context.Context, event string, settings json.Valu
 				Type:        "text",
 				MinLength:   1,
 				MaxLength:   255,
-				HelpText:    "Access token generated in HubSpot (Settings → Integrations → Legacy Apps).",
 			},
 		},
 		Settings: settings,
