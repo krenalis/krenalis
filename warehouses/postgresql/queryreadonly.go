@@ -8,8 +8,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/meergo/meergo/warehouses"
-	"github.com/meergo/meergo/warehouses/postgresql/internal/readonlysql"
+	"github.com/krenalis/krenalis/warehouses"
+	"github.com/krenalis/krenalis/warehouses/postgresql/internal/readonlysql"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

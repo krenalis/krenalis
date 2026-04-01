@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meergo/meergo/warehouses"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 func reject(reason string) error {
