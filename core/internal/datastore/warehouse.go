@@ -29,8 +29,9 @@ func unavailableError(err error) error {
 	}
 	switch err.(type) {
 	case
-		*warehouses.OperationError,
+		*warehouses.RejectedReadOnlyQueryError,
 		*warehouses.NonInitializableError,
+		*warehouses.OperationError,
 		*warehouses.SettingsError,
 		*warehouses.SettingsNotReadOnly:
 		return err
