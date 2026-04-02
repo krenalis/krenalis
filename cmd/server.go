@@ -7,6 +7,8 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"expvar"
 	"fmt"
@@ -48,6 +50,7 @@ type Settings struct {
 			Enabled  bool
 			CertFile string
 			KeyFile  string
+			DNSNames []string
 		}
 		ExternalURL       string
 		ExternalEventURL  string
@@ -248,12 +251,28 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 		IdleTimeout:       settings.HTTP.IdleTimeout,
 	}
 
+	var cert tls.Certificate
+
+	if settings.HTTP.TLS.Enabled {
+		cert, err = tls.LoadX509KeyPair(settings.HTTP.TLS.CertFile, settings.HTTP.TLS.KeyFile)
+		if err != nil {
+			return err
+		}
+		httpServer.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+	}
+	ln, err := net.Listen("tcp", httpServer.Addr)
+	if err != nil {
+		return err
+	}
+
 	exited := make(chan error)
 	go func() {
 		if settings.HTTP.TLS.Enabled {
-			exited <- httpServer.ListenAndServeTLS(settings.HTTP.TLS.CertFile, settings.HTTP.TLS.KeyFile)
+			exited <- httpServer.ServeTLS(ln, "", "")
 		} else {
-			exited <- httpServer.ListenAndServe()
+			exited <- httpServer.Serve(ln)
 		}
 	}()
 
@@ -278,6 +297,14 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	)
 	slog.Info(msg)
 
+	// Warn if the TLS certificate may not be accepted by clients.
+	for _, name := range settings.HTTP.TLS.DNSNames {
+		err := verifyCertificate(cert, name)
+		if err != nil {
+			slog.Warn(fmt.Sprintf("%s; clients are likely to reject TLS connections", err))
+		}
+	}
+
 	select {
 	case <-ctx.Done():
 		if delay := settings.TerminationDelay; delay == 0 {
@@ -296,6 +323,62 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	}
 	if err != nil && err != http.ErrServerClosed {
 		return err
+	}
+
+	return nil
+}
+
+// verifyCertificate checks the server TLS certificate against system roots
+// and reports issues that may cause clients to reject the connection.
+func verifyCertificate(cert tls.Certificate, dnsName string) error {
+
+	// Note: with GODEBUG=x509keypairleaf=0, cert.Leaf may be nil.
+	if cert.Leaf == nil {
+		return nil
+	}
+
+	var err error
+
+	intermediates := x509.NewCertPool()
+	for _, der := range cert.Certificate[1:] {
+		c, err := x509.ParseCertificate(der)
+		if err != nil {
+			return fmt.Errorf("failed to parse intermediate certificate: %w", err)
+		}
+		intermediates.AddCert(c)
+	}
+
+	roots, err := x509.SystemCertPool()
+	if err != nil {
+		return fmt.Errorf("unable to load system certificate pool: %w", err)
+	}
+
+	opts := x509.VerifyOptions{
+		DNSName:       dnsName,
+		Roots:         roots,
+		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+
+	_, err = cert.Leaf.Verify(opts)
+	if err != nil {
+		var unknownAuthErr x509.UnknownAuthorityError
+		var hostnameErr x509.HostnameError
+		var invalidErr x509.CertificateInvalidError
+
+		switch {
+		case errors.As(err, &hostnameErr):
+			return fmt.Errorf("server TLS certificate is not valid for the hostname %q", dnsName)
+		case errors.As(err, &unknownAuthErr):
+			return fmt.Errorf("server TLS certificate is not trusted by system CA")
+		case errors.As(err, &invalidErr):
+			if invalidErr.Reason == x509.Expired {
+				return fmt.Errorf("server TLS certificate has expired")
+			}
+			return fmt.Errorf("server TLS certificate is not valid")
+		default:
+			return fmt.Errorf("server TLS certificate verification failed: %w", err)
+		}
 	}
 
 	return nil
