@@ -12,11 +12,11 @@ import "strings"
 const maxIdentifierBytes = 63
 
 type scannedName struct {
-	token          string
-	start          int
-	isQualified    bool
-	isFunctionCall bool
-	next           int
+	token           string
+	start           int
+	isQualified     bool
+	followedByParen bool
+	next            int
 }
 
 // isSelect reports whether n is the SELECT keyword.
@@ -107,11 +107,11 @@ func scanIdentifierChain(sql string, start int) (scannedName, error) {
 	}
 
 	return scannedName{
-		token:          sql[start:tokenEnd],
-		start:          start,
-		isQualified:    isQualified,
-		isFunctionCall: callStart < len(sql) && sql[callStart] == '(',
-		next:           lastEnd,
+		token:           sql[start:tokenEnd],
+		start:           start,
+		isQualified:     isQualified,
+		followedByParen: callStart < len(sql) && sql[callStart] == '(',
+		next:            lastEnd,
 	}, nil
 }
 

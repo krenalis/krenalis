@@ -315,7 +315,7 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 				i = next
 				continue
 			}
-			if name.isFunctionCall {
+			if name.followedByParen {
 				if inNonFunctionCallTokenList(name.token) && !name.isQualified {
 					i = name.next
 					continue
@@ -360,7 +360,7 @@ func handleSpecialFormASCIILenSwitch(query string, name scannedName) (handled bo
 	if !inAllowedSpecialFormList(name.token) {
 		return false, 0, nil
 	}
-	if !name.isFunctionCall {
+	if !name.followedByParen {
 		return true, name.next, nil
 	}
 	next, err = parseSpecialFormSuffix(query, name.token, name.next)

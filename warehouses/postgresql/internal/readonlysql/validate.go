@@ -153,7 +153,7 @@ func ValidateReadOnly(query string) error {
 				i = next
 				continue
 			}
-			if name.isFunctionCall {
+			if name.followedByParen {
 				if isNonFunctionCallKeyword(name.token) && !name.isQualified {
 					lastVisibleChar = query[name.next-1]
 					i = name.next

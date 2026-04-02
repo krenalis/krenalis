@@ -68,6 +68,7 @@ var nonFunctionCallTokens = newASCIIWordSet(
 	"in",
 	"join",
 	"lateral",
+	"materialized",
 	"over",
 	"row",
 	"some",
@@ -183,7 +184,7 @@ func handleSpecialForm(sql string, name scannedName) (handled bool, next int, er
 	if !isAllowedSpecialForm(name.token) {
 		return false, 0, nil
 	}
-	if !name.isFunctionCall {
+	if !name.followedByParen {
 		return true, name.next, nil
 	}
 	next, err = parseSpecialFormSuffix(sql, name.token, name.next)

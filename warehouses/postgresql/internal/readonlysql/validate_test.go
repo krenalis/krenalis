@@ -55,6 +55,8 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "insert", sql: "INSERT INTO t VALUES (1)", wantErr: "query rejected: INSERT is not allowed in read-only queries"},
 		{name: "update", sql: "UPDATE t SET x = 1", wantErr: "query rejected: UPDATE is not allowed in read-only queries"},
 		{name: "create table", sql: "CREATE TABLE x (id int)", wantErr: "query rejected: CREATE is not allowed in read-only queries"},
+		{name: "refresh materialized view", sql: "REFRESH MATERIALIZED VIEW mv", wantErr: "query rejected: REFRESH is not allowed in read-only queries"},
+		{name: "refresh materialized view concurrently", sql: "REFRESH MATERIALIZED VIEW CONCURRENTLY mv", wantErr: "query rejected: REFRESH is not allowed in read-only queries"},
 		{name: "for share", sql: "SELECT * FROM t FOR SHARE", wantErr: "query rejected: locking clause FOR SHARE is not allowed in read-only queries"},
 		{name: "for key share", sql: "SELECT * FROM t FOR KEY SHARE", wantErr: "query rejected: locking clause FOR KEY SHARE is not allowed in read-only queries"},
 		{name: "for key share with comments", sql: "SELECT * FROM t FOR /*x*/ KEY /*y*/ SHARE", wantErr: "query rejected: locking clause FOR KEY SHARE is not allowed in read-only queries"},
