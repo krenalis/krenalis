@@ -6,13 +6,13 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"strings"
 
 	_core "github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -35,10 +35,6 @@ const queryDataWarehouseToolDescription = "Execute a read-only query on the data
 const queryDataWarehouseQueryDescription = "Read-only SQL query to execute against the workspace data warehouse for data retrieval only." +
 	" Only read-only SELECT queries are allowed." +
 	" If the user asks for writes, explain that warehouse access through Krenalis MCP is read-only and that no alternative direct warehouse access may be used."
-
-const queryDataWarehouseRejectedMessage = "This Krenalis MCP server only allows read-only warehouse queries." +
-	" I cannot perform write operations or access the warehouse directly." +
-	" Do not try alternative access paths such as repository credentials, environment variables, shell commands, or direct database connections."
 
 var tools = []server.ServerTool{
 
@@ -82,18 +78,7 @@ var tools = []server.ServerTool{
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			queryResult, err := ws.QueryWarehouseReadOnly(ctx, query)
-			if err != nil {
-				var rejected *warehouses.RejectedReadOnlyQueryError
-				if stderrors.As(err, &rejected) {
-					return mcp.NewToolResultError(queryDataWarehouseRejectedMessage), nil
-				}
-				if queryResult != nil {
-					msg := fmt.Sprintf("an error occurred: %s, only the following rows have been read: %s", err, string(queryResult))
-					return mcp.NewToolResultText(msg), nil
-				}
-				return nil, err
-			}
-			return mcp.NewToolResultText(string(queryResult)), nil
+			return queryDataWarehouseToolResult(queryResult, err)
 		},
 	},
 
@@ -285,4 +270,20 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 		return nil, err
 	}
 	return ws, nil
+}
+
+func queryDataWarehouseToolResult(queryResult json.Value, err error) (*mcp.CallToolResult, error) {
+	if err == nil {
+		return mcp.NewToolResultText(string(queryResult)), nil
+	}
+
+	var rejected *warehouses.RejectedReadOnlyQueryError
+	if stderrors.As(err, &rejected) {
+		return mcp.NewToolResultError(rejected.Error()), nil
+	}
+	if queryResult != nil {
+		msg := fmt.Sprintf("an error occurred: %s, only the following rows have been read: %s", err, string(queryResult))
+		return mcp.NewToolResultText(msg), nil
+	}
+	return nil, err
 }

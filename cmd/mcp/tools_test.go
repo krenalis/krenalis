@@ -6,9 +6,13 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/warehouses"
+
+	gmcp "github.com/mark3labs/mcp-go/mcp"
 )
 
 // TestToolsList tests the MCP server method "tools/list".
@@ -129,4 +133,44 @@ func TestQueryDataWarehouseToolMetadata(t *testing.T) {
 	}
 
 	t.Fatal("query-data-warehouse tool not found")
+}
+
+func TestQueryDataWarehouseToolResultRejectedReadOnlyError(t *testing.T) {
+	err := &warehouses.RejectedReadOnlyQueryError{
+		Msg: "query rejected: function or built-in row_number is not allowed in read-only queries",
+	}
+
+	result, gotErr := queryDataWarehouseToolResult(nil, err)
+	if gotErr != nil {
+		t.Fatalf("queryDataWarehouseToolResult returned error: %v", gotErr)
+	}
+	if !result.IsError {
+		t.Fatal("queryDataWarehouseToolResult returned a non-error result")
+	}
+	if len(result.Content) != 1 {
+		t.Fatalf("queryDataWarehouseToolResult returned %d content items, want 1", len(result.Content))
+	}
+	if text := gmcp.GetTextFromContent(result.Content[0]); text != err.Error() {
+		t.Fatalf("queryDataWarehouseToolResult error text = %q, want %q", text, err.Error())
+	}
+}
+
+func TestQueryDataWarehouseToolResultPartialRows(t *testing.T) {
+	queryResult := json.Value(`[[1],[2]]`)
+	err := context.DeadlineExceeded
+
+	result, gotErr := queryDataWarehouseToolResult(queryResult, err)
+	if gotErr != nil {
+		t.Fatalf("queryDataWarehouseToolResult returned error: %v", gotErr)
+	}
+	if result.IsError {
+		t.Fatal("queryDataWarehouseToolResult returned an error result for partial rows")
+	}
+	if len(result.Content) != 1 {
+		t.Fatalf("queryDataWarehouseToolResult returned %d content items, want 1", len(result.Content))
+	}
+	want := "an error occurred: context deadline exceeded, only the following rows have been read: [[1],[2]]"
+	if text := gmcp.GetTextFromContent(result.Content[0]); text != want {
+		t.Fatalf("queryDataWarehouseToolResult text = %q, want %q", text, want)
+	}
 }
