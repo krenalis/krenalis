@@ -59,6 +59,7 @@ func ValidateReadOnly(query string) error {
 	var seenSelect bool
 	var lastVisibleChar byte
 	var lockingClauseState lockingClauseState
+	var expectCTEName bool
 
 	for i := 0; i < len(query); {
 		switch c := query[i]; {
@@ -145,6 +146,17 @@ func ValidateReadOnly(query string) error {
 					lockingClauseState = lockingClauseFor
 				}
 			}
+			if expectCTEName && !name.isQualified {
+				if name.isWord("RECURSIVE") {
+					lastVisibleChar = query[name.next-1]
+					i = name.next
+					continue
+				}
+				expectCTEName = false
+				lastVisibleChar = query[name.next-1]
+				i = name.next
+				continue
+			}
 			if handled, next, err := handleSpecialForm(query, name); handled {
 				if err != nil {
 					return err
@@ -177,6 +189,9 @@ func ValidateReadOnly(query string) error {
 			}
 			if name.isSelect() {
 				seenSelect = true
+			}
+			if !name.isQualified && name.isWord("WITH") {
+				expectCTEName = true
 			}
 			lastVisibleChar = query[name.next-1]
 			if isForbiddenToken(name.token) {

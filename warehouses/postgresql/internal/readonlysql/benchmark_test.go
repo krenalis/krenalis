@@ -254,6 +254,7 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 	query = strings.TrimSuffix(query, ";")
 
 	var seenSelect bool
+	var expectCTEName bool
 
 	for i := 0; i < len(query); {
 		switch c := query[i]; {
@@ -308,6 +309,15 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 			if err != nil {
 				return err
 			}
+			if expectCTEName && !name.isQualified {
+				if name.isWord("RECURSIVE") {
+					i = name.next
+					continue
+				}
+				expectCTEName = false
+				i = name.next
+				continue
+			}
 			if handled, next, err := handleSpecialFormASCIILenSwitch(query, name); handled {
 				if err != nil {
 					return err
@@ -336,6 +346,9 @@ func validateReadOnlyASCIILenSwitch(query string) error {
 				seenSelect = true
 				i = name.next
 				continue
+			}
+			if !name.isQualified && name.isWord("WITH") {
+				expectCTEName = true
 			}
 			if inForbiddenTokenList(name.token) {
 				return rejectForbiddenToken(name.token)

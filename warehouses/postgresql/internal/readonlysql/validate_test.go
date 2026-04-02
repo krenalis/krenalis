@@ -27,6 +27,8 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "share identifier", sql: "SELECT share FROM t"},
 		{name: "unicode prefix separated by operator", sql: `SELECT U & "foo" FROM t`},
 		{name: "with select", sql: "WITH a AS (SELECT 1) SELECT * FROM a"},
+		{name: "with select column list", sql: "WITH a(x) AS (SELECT 1) SELECT * FROM a"},
+		{name: "with recursive column list", sql: "WITH RECURSIVE nums(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM nums WHERE n < 3) SELECT * FROM nums"},
 		{name: "from subquery", sql: "SELECT * FROM (SELECT 1) AS t"},
 		{name: "join subquery", sql: "SELECT * FROM t JOIN (SELECT 1 AS x) AS s ON TRUE"},
 		{name: "lateral subquery", sql: "SELECT * FROM t CROSS JOIN LATERAL (SELECT count(*) AS n) AS x"},
@@ -324,6 +326,12 @@ func TestValidateReadOnlyMixedCases(t *testing.T) {
 
 	t.Run("reject/disallowed function in with", func(t *testing.T) {
 		err := ValidateReadOnly("WITH a AS (SELECT nextval('seq')) SELECT * FROM a")
+		assertExactError(t, err, "query rejected: function or built-in NEXTVAL is not allowed in read-only queries")
+		assertFunctionNotAllowedError(t, err, "nextval")
+	})
+
+	t.Run("reject/disallowed function in recursive with column list", func(t *testing.T) {
+		err := ValidateReadOnly("WITH RECURSIVE nums(n) AS (SELECT nextval('seq')) SELECT * FROM nums")
 		assertExactError(t, err, "query rejected: function or built-in NEXTVAL is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "nextval")
 	})
