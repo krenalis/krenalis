@@ -20,6 +20,7 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		sql  string
 	}{
 		{name: "simple select", sql: "SELECT 1"},
+		{name: "simple select trailing semicolon", sql: "SELECT 1;"},
 		{name: "forbidden token in single quote", sql: "SELECT 'DELETE'"},
 		{name: "forbidden token in quoted identifier", sql: `SELECT "DELETE" FROM t`},
 		{name: "cast operator in string", sql: "SELECT '::'"},
@@ -41,6 +42,11 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 	}{
 		{name: "delete", sql: "DELETE FROM t", wantErr: "rejected: forbidden token DELETE found outside opaque region"},
 		{name: "semicolon multi statement", sql: "SELECT 1; DELETE FROM t", wantErr: "rejected: semicolon found outside opaque region"},
+		{name: "semicolon with trailing whitespace", sql: "SELECT 1;   \t\n", wantErr: "rejected: semicolon found outside opaque region"},
+		{name: "semicolon with trailing line comment", sql: "SELECT 1; -- done", wantErr: "rejected: semicolon found outside opaque region"},
+		{name: "semicolon with trailing block comment", sql: "SELECT 1; /* done */", wantErr: "rejected: semicolon found outside opaque region"},
+		{name: "semicolon second statement after comment", sql: "SELECT 1; /*x*/ DELETE FROM t", wantErr: "rejected: semicolon found outside opaque region"},
+		{name: "double semicolon", sql: "SELECT 1;;", wantErr: "rejected: semicolon found outside opaque region"},
 		{name: "select into", sql: "SELECT * INTO new_table FROM t", wantErr: "rejected: forbidden token INTO found outside opaque region"},
 		{name: "delete inside with", sql: "WITH a AS (DELETE FROM t RETURNING *) SELECT * FROM a", wantErr: "rejected: forbidden token DELETE found outside opaque region"},
 		{name: "insert", sql: "INSERT INTO t VALUES (1)", wantErr: "rejected: forbidden token INSERT found outside opaque region"},
@@ -299,6 +305,7 @@ func TestValidateReadOnlyMixedCases(t *testing.T) {
 		{name: "current date and lower", sql: "SELECT CURRENT_DATE, lower('x')"},
 		{name: "with lower and current timestamp", sql: "WITH a AS (SELECT lower('x'), CURRENT_TIMESTAMP) SELECT * FROM a"},
 		{name: "date trunc and current date", sql: "SELECT date_trunc('day', received_at), CURRENT_DATE FROM meergo_events"},
+		{name: "current date trailing semicolon", sql: "SELECT CURRENT_DATE;"},
 	}
 
 	for _, tt := range acceptTests {

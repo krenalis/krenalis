@@ -250,6 +250,9 @@ func benchmarkValidateReadOnlyCases(b *testing.B, validate func(string) error, c
 }
 
 func validateReadOnlyASCIILenSwitch(query string) error {
+
+	query = strings.TrimSuffix(query, ";")
+
 	var seenSelect bool
 
 	for i := 0; i < len(query); {
