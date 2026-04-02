@@ -47,3 +47,73 @@ func TestToolsList(t *testing.T) {
 	t.Logf("the MCP server correctly returned %d tools", len(got.Result.Tools))
 
 }
+
+func TestQueryDataWarehouseToolMetadata(t *testing.T) {
+	mcpServer := NewMCPServer(nil)
+	defer mcpServer.Close(context.Background())
+
+	testServer := httptest.NewServer(mcpServer)
+	defer testServer.Close()
+
+	mcpClient, err := initMCPClient(t, testServer.Client(), testServer.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := mcpClient.jsonRPCRequest("tools/list", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	var got struct {
+		Result struct {
+			Tools []struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+				InputSchema struct {
+					Properties map[string]struct {
+						Description string `json:"description"`
+					} `json:"properties"`
+				} `json:"inputSchema"`
+				Annotations struct {
+					ReadOnlyHint    *bool `json:"readOnlyHint"`
+					DestructiveHint *bool `json:"destructiveHint"`
+					IdempotentHint  *bool `json:"idempotentHint"`
+				} `json:"annotations"`
+			} `json:"tools"`
+		} `json:"result"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tool := range got.Result.Tools {
+		if tool.Name != "query-data-warehouse" {
+			continue
+		}
+		if tool.Description != queryDataWarehouseToolDescription {
+			t.Fatalf("query-data-warehouse description = %q, want %q", tool.Description, queryDataWarehouseToolDescription)
+		}
+		queryArg, ok := tool.InputSchema.Properties["query"]
+		if !ok {
+			t.Fatal("query-data-warehouse tool is missing the query argument")
+		}
+		if queryArg.Description != queryDataWarehouseQueryDescription {
+			t.Fatalf("query-data-warehouse query description = %q, want %q", queryArg.Description, queryDataWarehouseQueryDescription)
+		}
+		if tool.Annotations.ReadOnlyHint == nil || !*tool.Annotations.ReadOnlyHint {
+			t.Fatalf("query-data-warehouse readOnlyHint = %v, want true", tool.Annotations.ReadOnlyHint)
+		}
+		if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint {
+			t.Fatalf("query-data-warehouse destructiveHint = %v, want false", tool.Annotations.DestructiveHint)
+		}
+		if tool.Annotations.IdempotentHint == nil || !*tool.Annotations.IdempotentHint {
+			t.Fatalf("query-data-warehouse idempotentHint = %v, want true", tool.Annotations.IdempotentHint)
+		}
+		return
+	}
+
+	t.Fatal("query-data-warehouse tool not found")
+}

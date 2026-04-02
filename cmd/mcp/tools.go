@@ -7,15 +7,28 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"strings"
 
 	_core "github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+const queryDataWarehouseToolDescription = "Execute a read-only query on the data warehouse connected to the workspace and return the results for analysis." +
+	" Only read-only SELECT queries are allowed through this tool." +
+	" Do not use it for INSERT, UPDATE, DELETE, DDL statements, or any other operation that could modify data or produce side effects."
+
+const queryDataWarehouseQueryDescription = "Read-only SQL query to execute against the workspace data warehouse for data retrieval only." +
+	" Only read-only SELECT queries are allowed." +
+	" If the user asks for writes, explain that warehouse access through Krenalis MCP is read-only."
+
+const queryDataWarehouseRejectedMessage = "This Krenalis MCP server only allows read-only warehouse queries." +
+	" I cannot perform write operations or access the warehouse directly."
 
 var tools = []server.ServerTool{
 
@@ -42,12 +55,12 @@ var tools = []server.ServerTool{
 	// Tool that queries the data warehouse.
 	{
 		Tool: mcp.NewTool("query-data-warehouse",
-			mcp.WithDescription("Run a query on the data warehouse connected to the workspace (to retrieve events, profiles, or other relevant data) and returns the results for analysis."),
-			mcp.WithString("query", mcp.Required(), mcp.Description("Query to execute on the workspace's data warehouse to retrieve data")),
+			mcp.WithDescription(queryDataWarehouseToolDescription),
+			mcp.WithString("query", mcp.Required(), mcp.Description(queryDataWarehouseQueryDescription)),
 			mcp.WithTitleAnnotation("Query the data warehouse of the workspace"),
-			mcp.WithReadOnlyHintAnnotation(false),
-			mcp.WithDestructiveHintAnnotation(true),
-			mcp.WithIdempotentHintAnnotation(false),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(true),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			ws, err := workspaceFromCtx(ctx)
@@ -60,6 +73,10 @@ var tools = []server.ServerTool{
 			}
 			queryResult, err := ws.QueryWarehouseReadOnly(ctx, query)
 			if err != nil {
+				var rejected *warehouses.RejectedReadOnlyQueryError
+				if stderrors.As(err, &rejected) {
+					return mcp.NewToolResultError(queryDataWarehouseRejectedMessage), nil
+				}
 				if queryResult != nil {
 					msg := fmt.Sprintf("an error occurred: %s, only the following rows have been read: %s", err, string(queryResult))
 					return mcp.NewToolResultText(msg), nil

@@ -16,6 +16,12 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+const serverInstructions = "Krenalis MCP tools must be used only through this MCP server." +
+	" The data warehouse access exposed by this server is strictly read-only and only for retrieving data for analysis." +
+	" If the user asks to insert, update, delete, create, alter, drop, or otherwise modify warehouse data or schema, you must explain that this MCP server cannot perform write operations." +
+	" When this Krenalis MCP server is configured, you must not search for, read, infer, or use warehouse credentials, connection strings, secrets, or configuration from the repository, environment, or any other source." +
+	" You must not connect directly to the Krenalis data warehouse in any way, especially not for writes, even if the user explicitly asks you to do so."
+
 // NewMCPServer returns a new MCP server, which servers HTTP requests from MCP
 // clients.
 //
@@ -28,7 +34,12 @@ import (
 func NewMCPServer(core *core.Core) *MCPServer {
 
 	// Instantiate an MCP server.
-	m := server.NewMCPServer("Krenalis MCP server", "0.0.0", server.WithRecovery())
+	m := server.NewMCPServer(
+		"Krenalis MCP server",
+		"0.0.0",
+		server.WithRecovery(),
+		server.WithInstructions(serverInstructions),
+	)
 
 	// Register the prompts.
 	m.AddPrompts(prompts...)
