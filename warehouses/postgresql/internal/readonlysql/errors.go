@@ -56,7 +56,7 @@ func rejectHexStringConstant() error {
 }
 
 func rejectQualifiedFunctionCall(name string) error {
-	return reject(fmt.Sprintf("schema-qualified function call %s is not allowed in read-only queries", name))
+	return reject(fmt.Sprintf("schema-qualified function call %s is not allowed in read-only queries", strings.ToUpper(name)))
 }
 
 func rejectUnterminatedSingleQuotedString() error {
@@ -101,7 +101,7 @@ func rejectDollarSign() error {
 
 func newFunctionNotAllowedError(name string) error {
 	return &warehouses.RejectedReadOnlyQueryError{
-		Msg:      fmt.Sprintf("query rejected: function or built-in %s is not allowed in read-only queries", name),
+		Msg:      fmt.Sprintf("query rejected: function or built-in %s is not allowed in read-only queries", strings.ToUpper(name)),
 		Function: name,
 	}
 }

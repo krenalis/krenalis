@@ -27,6 +27,9 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		{name: "share identifier", sql: "SELECT share FROM t"},
 		{name: "unicode prefix separated by operator", sql: `SELECT U & "foo" FROM t`},
 		{name: "with select", sql: "WITH a AS (SELECT 1) SELECT * FROM a"},
+		{name: "from subquery", sql: "SELECT * FROM (SELECT 1) AS t"},
+		{name: "join subquery", sql: "SELECT * FROM t JOIN (SELECT 1 AS x) AS s ON TRUE"},
+		{name: "lateral subquery", sql: "SELECT * FROM t CROSS JOIN LATERAL (SELECT count(*) AS n) AS x"},
 	}
 
 	for _, tt := range acceptTests {
@@ -125,6 +128,7 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 		{name: "now in where", sql: "SELECT * FROM meergo_events WHERE received_at > now() - interval '7 days'"},
 		{name: "row number window", sql: "SELECT row_number() OVER (ORDER BY received_at) FROM meergo_events"},
 		{name: "over clause not security validated", sql: "SELECT 1 OVER (ORDER BY x)"},
+		{name: "from lateral information schema query", sql: "SELECT t.table_name, x.column_count FROM (SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = 'public') t CROSS JOIN LATERAL (SELECT COUNT(*) AS column_count FROM information_schema.columns c WHERE c.table_schema = 'public' AND c.table_name = t.table_name) x ORDER BY x.column_count DESC, t.table_name"},
 		{name: "lower with spaces", sql: "SELECT lower    ('ABC')"},
 		{name: "count with spaces", sql: "SELECT count (*) FROM meergo_events"},
 		{name: "date trunc with spaces", sql: "SELECT date_trunc ('day', received_at) FROM meergo_events"},
@@ -148,15 +152,15 @@ func TestValidateReadOnlyFunctionsRejected(t *testing.T) {
 		wantErr string
 		want    string
 	}{
-		{name: "nextval", sql: "SELECT nextval('seq')", wantErr: "query rejected: function or built-in nextval is not allowed in read-only queries", want: "nextval"},
-		{name: "setval", sql: "SELECT setval('seq', 10)", wantErr: "query rejected: function or built-in setval is not allowed in read-only queries", want: "setval"},
-		{name: "pg notify", sql: "SELECT pg_notify('ch', 'msg')", wantErr: "query rejected: function or built-in pg_notify is not allowed in read-only queries", want: "pg_notify"},
-		{name: "pg advisory lock", sql: "SELECT pg_advisory_lock(1)", wantErr: "query rejected: function or built-in pg_advisory_lock is not allowed in read-only queries", want: "pg_advisory_lock"},
-		{name: "resolve identities", sql: "SELECT resolve_identities(1)", wantErr: "query rejected: function or built-in resolve_identities is not allowed in read-only queries", want: "resolve_identities"},
-		{name: "unknown name", sql: "SELECT unknown_name(1)", wantErr: "query rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
-		{name: "mixed case unknown name", sql: "SELECT UnKnOwN_NaMe(1)", wantErr: "query rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
-		{name: "text", sql: "SELECT text(42)", wantErr: "query rejected: function or built-in text is not allowed in read-only queries", want: "text"},
-		{name: "current setting", sql: "SELECT current_setting('search_path')", wantErr: "query rejected: function or built-in current_setting is not allowed in read-only queries", want: "current_setting"},
+		{name: "nextval", sql: "SELECT nextval('seq')", wantErr: "query rejected: function or built-in NEXTVAL is not allowed in read-only queries", want: "nextval"},
+		{name: "setval", sql: "SELECT setval('seq', 10)", wantErr: "query rejected: function or built-in SETVAL is not allowed in read-only queries", want: "setval"},
+		{name: "pg notify", sql: "SELECT pg_notify('ch', 'msg')", wantErr: "query rejected: function or built-in PG_NOTIFY is not allowed in read-only queries", want: "pg_notify"},
+		{name: "pg advisory lock", sql: "SELECT pg_advisory_lock(1)", wantErr: "query rejected: function or built-in PG_ADVISORY_LOCK is not allowed in read-only queries", want: "pg_advisory_lock"},
+		{name: "resolve identities", sql: "SELECT resolve_identities(1)", wantErr: "query rejected: function or built-in RESOLVE_IDENTITIES is not allowed in read-only queries", want: "resolve_identities"},
+		{name: "unknown name", sql: "SELECT unknown_name(1)", wantErr: "query rejected: function or built-in UNKNOWN_NAME is not allowed in read-only queries", want: "unknown_name"},
+		{name: "mixed case unknown name", sql: "SELECT UnKnOwN_NaMe(1)", wantErr: "query rejected: function or built-in UNKNOWN_NAME is not allowed in read-only queries", want: "unknown_name"},
+		{name: "text", sql: "SELECT text(42)", wantErr: "query rejected: function or built-in TEXT is not allowed in read-only queries", want: "text"},
+		{name: "current setting", sql: "SELECT current_setting('search_path')", wantErr: "query rejected: function or built-in CURRENT_SETTING is not allowed in read-only queries", want: "current_setting"},
 	}
 
 	for _, tt := range tests {
@@ -215,31 +219,31 @@ func TestValidateReadOnlyIdentifierChains(t *testing.T) {
 
 	t.Run("reject/mixed case function with digits", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT AbC123(1)")
-		assertExactError(t, err, "query rejected: function or built-in abc123 is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: function or built-in ABC123 is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "abc123")
 	})
 
 	t.Run("reject/leading underscore function", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT _FoO(1)")
-		assertExactError(t, err, "query rejected: function or built-in _foo is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: function or built-in _FOO is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "_foo")
 	})
 
 	t.Run("reject/qualified mixed case exact name", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT Pg_Catalog.LoWeR('ABC')")
-		assertExactError(t, err, "query rejected: schema-qualified function call pg_catalog.lower is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: schema-qualified function call PG_CATALOG.LOWER is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 
 	t.Run("reject/multi part qualified exact name", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT A.B.C(1)")
-		assertExactError(t, err, "query rejected: schema-qualified function call a.b.c is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: schema-qualified function call A.B.C is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 
 	t.Run("reject/multi part qualified with spaces and comments", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT A /*x*/ . /*y*/ B /*z*/ . /*w*/ C(1)")
-		assertExactError(t, err, "query rejected: schema-qualified function call a.b.c is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: schema-qualified function call A.B.C is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 }
@@ -318,7 +322,7 @@ func TestValidateReadOnlyMixedCases(t *testing.T) {
 
 	t.Run("reject/disallowed function in with", func(t *testing.T) {
 		err := ValidateReadOnly("WITH a AS (SELECT nextval('seq')) SELECT * FROM a")
-		assertExactError(t, err, "query rejected: function or built-in nextval is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: function or built-in NEXTVAL is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "nextval")
 	})
 
