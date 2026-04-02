@@ -123,6 +123,8 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 		{name: "to char", sql: "SELECT to_char(received_at, 'YYYY-MM-DD') FROM meergo_events"},
 		{name: "now", sql: "SELECT now()"},
 		{name: "now in where", sql: "SELECT * FROM meergo_events WHERE received_at > now() - interval '7 days'"},
+		{name: "row number window", sql: "SELECT row_number() OVER (ORDER BY received_at) FROM meergo_events"},
+		{name: "over clause not security validated", sql: "SELECT 1 OVER (ORDER BY x)"},
 		{name: "lower with spaces", sql: "SELECT lower    ('ABC')"},
 		{name: "count with spaces", sql: "SELECT count (*) FROM meergo_events"},
 		{name: "date trunc with spaces", sql: "SELECT date_trunc ('day', received_at) FROM meergo_events"},

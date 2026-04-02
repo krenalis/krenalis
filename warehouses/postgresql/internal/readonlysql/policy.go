@@ -65,6 +65,7 @@ var nonFunctionCallTokens = newASCIIWordSet(
 	"exists",
 	"filter",
 	"in",
+	"over",
 	"row",
 	"some",
 )
@@ -114,6 +115,7 @@ var allowedFunctionCalls = newASCIIWordSet(
 	"nullif",
 	"replace",
 	"right",
+	"row_number",
 	"round",
 	"rtrim",
 	"split_part",
