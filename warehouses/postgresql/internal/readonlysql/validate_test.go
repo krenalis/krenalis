@@ -40,45 +40,45 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 		sql     string
 		wantErr string
 	}{
-		{name: "delete", sql: "DELETE FROM t", wantErr: "rejected: forbidden token DELETE found outside opaque region"},
-		{name: "semicolon multi statement", sql: "SELECT 1; DELETE FROM t", wantErr: "rejected: semicolon found outside opaque region"},
-		{name: "semicolon with trailing whitespace", sql: "SELECT 1;   \t\n", wantErr: "rejected: semicolon found outside opaque region"},
-		{name: "semicolon with trailing line comment", sql: "SELECT 1; -- done", wantErr: "rejected: semicolon found outside opaque region"},
-		{name: "semicolon with trailing block comment", sql: "SELECT 1; /* done */", wantErr: "rejected: semicolon found outside opaque region"},
-		{name: "semicolon second statement after comment", sql: "SELECT 1; /*x*/ DELETE FROM t", wantErr: "rejected: semicolon found outside opaque region"},
-		{name: "double semicolon", sql: "SELECT 1;;", wantErr: "rejected: semicolon found outside opaque region"},
-		{name: "select into", sql: "SELECT * INTO new_table FROM t", wantErr: "rejected: forbidden token INTO found outside opaque region"},
-		{name: "delete inside with", sql: "WITH a AS (DELETE FROM t RETURNING *) SELECT * FROM a", wantErr: "rejected: forbidden token DELETE found outside opaque region"},
-		{name: "insert", sql: "INSERT INTO t VALUES (1)", wantErr: "rejected: forbidden token INSERT found outside opaque region"},
-		{name: "update", sql: "UPDATE t SET x = 1", wantErr: "rejected: forbidden token UPDATE found outside opaque region"},
-		{name: "create table", sql: "CREATE TABLE x (id int)", wantErr: "rejected: forbidden token CREATE found outside opaque region"},
-		{name: "for share", sql: "SELECT * FROM t FOR SHARE", wantErr: "rejected: locking clause FOR SHARE is not allowed"},
-		{name: "for key share", sql: "SELECT * FROM t FOR KEY SHARE", wantErr: "rejected: locking clause FOR KEY SHARE is not allowed"},
-		{name: "for key share with comments", sql: "SELECT * FROM t FOR /*x*/ KEY /*y*/ SHARE", wantErr: "rejected: locking clause FOR KEY SHARE is not allowed"},
-		{name: "builtin cast", sql: "SELECT 1::int", wantErr: "rejected: type cast operator :: is not allowed"},
-		{name: "qualified custom cast", sql: "SELECT 'abc'::public.some_type", wantErr: "rejected: type cast operator :: is not allowed"},
-		{name: "empty", sql: "", wantErr: "rejected: no visible SELECT token found"},
-		{name: "comment only", sql: "-- comment only", wantErr: "rejected: no visible SELECT token found"},
-		{name: "unterminated block comment", sql: "SELECT 1 /* unterminated", wantErr: "rejected: unterminated block comment"},
-		{name: "unterminated single quoted string", sql: "SELECT 'unterminated", wantErr: "rejected: unterminated single-quoted string"},
-		{name: "forbidden token in dollar quote", sql: "SELECT $$DELETE$$", wantErr: "rejected: dollar sign syntax is not supported"},
-		{name: "cast operator in dollar quote", sql: "SELECT $$::$$", wantErr: "rejected: dollar sign syntax is not supported"},
-		{name: "unterminated dollar quoted string", sql: "SELECT $$unterminated", wantErr: "rejected: dollar sign syntax is not supported"},
-		{name: "nul in quoted identifier", sql: "SELECT \"a\x00b\" FROM t", wantErr: "rejected: double-quoted identifier contains NUL byte"},
-		{name: "unicode quoted identifier", sql: `SELECT U&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
-		{name: "unicode quoted identifier lowercase", sql: `SELECT u&"d\0061t\+000061" FROM t`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
-		{name: "unterminated unicode quoted identifier", sql: `SELECT U&"unterminated`, wantErr: `rejected: Unicode quoted identifier syntax U&"..." is not supported`},
-		{name: "unicode escape string constant", sql: `SELECT U&'d\0061t\+000061'`, wantErr: `rejected: Unicode escape string syntax U&'...' is not supported`},
-		{name: "unicode escape string constant lowercase", sql: `SELECT u&'d\0061t\+000061'`, wantErr: `rejected: Unicode escape string syntax U&'...' is not supported`},
-		{name: "unterminated unicode escape string constant", sql: `SELECT U&'unterminated`, wantErr: `rejected: Unicode escape string syntax U&'...' is not supported`},
-		{name: "escape string constant", sql: "SELECT E'foo'", wantErr: "rejected: escape string syntax E'...' is not supported"},
-		{name: "escape string constant lowercase", sql: "SELECT e'foo'", wantErr: "rejected: escape string syntax E'...' is not supported"},
-		{name: "bit string constant", sql: "SELECT B'1010'", wantErr: "rejected: bit string syntax B'...' is not supported"},
-		{name: "bit string constant lowercase", sql: "SELECT b'1010'", wantErr: "rejected: bit string syntax B'...' is not supported"},
-		{name: "unterminated bit string constant", sql: "SELECT B'101", wantErr: "rejected: bit string syntax B'...' is not supported"},
-		{name: "hex string constant", sql: "SELECT X'1f'", wantErr: "rejected: hex string syntax X'...' is not supported"},
-		{name: "hex string constant lowercase", sql: "SELECT x'1f'", wantErr: "rejected: hex string syntax X'...' is not supported"},
-		{name: "unterminated hex string constant", sql: "SELECT X'1", wantErr: "rejected: hex string syntax X'...' is not supported"},
+		{name: "delete", sql: "DELETE FROM t", wantErr: "query rejected: DELETE is not allowed in read-only queries"},
+		{name: "semicolon multi statement", sql: "SELECT 1; DELETE FROM t", wantErr: "query rejected: multiple statements are not allowed in read-only queries"},
+		{name: "semicolon with trailing whitespace", sql: "SELECT 1;   \t\n", wantErr: "query rejected: multiple statements are not allowed in read-only queries"},
+		{name: "semicolon with trailing line comment", sql: "SELECT 1; -- done", wantErr: "query rejected: multiple statements are not allowed in read-only queries"},
+		{name: "semicolon with trailing block comment", sql: "SELECT 1; /* done */", wantErr: "query rejected: multiple statements are not allowed in read-only queries"},
+		{name: "semicolon second statement after comment", sql: "SELECT 1; /*x*/ DELETE FROM t", wantErr: "query rejected: multiple statements are not allowed in read-only queries"},
+		{name: "double semicolon", sql: "SELECT 1;;", wantErr: "query rejected: multiple statements are not allowed in read-only queries"},
+		{name: "select into", sql: "SELECT * INTO new_table FROM t", wantErr: "query rejected: INTO is not allowed in read-only queries"},
+		{name: "delete inside with", sql: "WITH a AS (DELETE FROM t RETURNING *) SELECT * FROM a", wantErr: "query rejected: DELETE is not allowed in read-only queries"},
+		{name: "insert", sql: "INSERT INTO t VALUES (1)", wantErr: "query rejected: INSERT is not allowed in read-only queries"},
+		{name: "update", sql: "UPDATE t SET x = 1", wantErr: "query rejected: UPDATE is not allowed in read-only queries"},
+		{name: "create table", sql: "CREATE TABLE x (id int)", wantErr: "query rejected: CREATE is not allowed in read-only queries"},
+		{name: "for share", sql: "SELECT * FROM t FOR SHARE", wantErr: "query rejected: locking clause FOR SHARE is not allowed in read-only queries"},
+		{name: "for key share", sql: "SELECT * FROM t FOR KEY SHARE", wantErr: "query rejected: locking clause FOR KEY SHARE is not allowed in read-only queries"},
+		{name: "for key share with comments", sql: "SELECT * FROM t FOR /*x*/ KEY /*y*/ SHARE", wantErr: "query rejected: locking clause FOR KEY SHARE is not allowed in read-only queries"},
+		{name: "builtin cast", sql: "SELECT 1::int", wantErr: "query rejected: the :: type cast syntax is not allowed in read-only queries"},
+		{name: "qualified custom cast", sql: "SELECT 'abc'::public.some_type", wantErr: "query rejected: the :: type cast syntax is not allowed in read-only queries"},
+		{name: "empty", sql: "", wantErr: "query rejected: a read-only SELECT query is required"},
+		{name: "comment only", sql: "-- comment only", wantErr: "query rejected: a read-only SELECT query is required"},
+		{name: "unterminated block comment", sql: "SELECT 1 /* unterminated", wantErr: "query rejected: unterminated block comment"},
+		{name: "unterminated single quoted string", sql: "SELECT 'unterminated", wantErr: "query rejected: unterminated single-quoted string"},
+		{name: "forbidden token in dollar quote", sql: "SELECT $$DELETE$$", wantErr: "query rejected: dollar-quoted strings are not allowed in read-only queries"},
+		{name: "cast operator in dollar quote", sql: "SELECT $$::$$", wantErr: "query rejected: dollar-quoted strings are not allowed in read-only queries"},
+		{name: "unterminated dollar quoted string", sql: "SELECT $$unterminated", wantErr: "query rejected: dollar-quoted strings are not allowed in read-only queries"},
+		{name: "nul in quoted identifier", sql: "SELECT \"a\x00b\" FROM t", wantErr: "query rejected: double-quoted identifier contains NUL byte"},
+		{name: "unicode quoted identifier", sql: `SELECT U&"d\0061t\+000061" FROM t`, wantErr: `query rejected: Unicode quoted identifiers are not allowed in read-only queries`},
+		{name: "unicode quoted identifier lowercase", sql: `SELECT u&"d\0061t\+000061" FROM t`, wantErr: `query rejected: Unicode quoted identifiers are not allowed in read-only queries`},
+		{name: "unterminated unicode quoted identifier", sql: `SELECT U&"unterminated`, wantErr: `query rejected: Unicode quoted identifiers are not allowed in read-only queries`},
+		{name: "unicode escape string constant", sql: `SELECT U&'d\0061t\+000061'`, wantErr: `query rejected: Unicode escape strings are not allowed in read-only queries`},
+		{name: "unicode escape string constant lowercase", sql: `SELECT u&'d\0061t\+000061'`, wantErr: `query rejected: Unicode escape strings are not allowed in read-only queries`},
+		{name: "unterminated unicode escape string constant", sql: `SELECT U&'unterminated`, wantErr: `query rejected: Unicode escape strings are not allowed in read-only queries`},
+		{name: "escape string constant", sql: "SELECT E'foo'", wantErr: "query rejected: escape strings are not allowed in read-only queries"},
+		{name: "escape string constant lowercase", sql: "SELECT e'foo'", wantErr: "query rejected: escape strings are not allowed in read-only queries"},
+		{name: "bit string constant", sql: "SELECT B'1010'", wantErr: "query rejected: bit strings are not allowed in read-only queries"},
+		{name: "bit string constant lowercase", sql: "SELECT b'1010'", wantErr: "query rejected: bit strings are not allowed in read-only queries"},
+		{name: "unterminated bit string constant", sql: "SELECT B'101", wantErr: "query rejected: bit strings are not allowed in read-only queries"},
+		{name: "hex string constant", sql: "SELECT X'1f'", wantErr: "query rejected: hex strings are not allowed in read-only queries"},
+		{name: "hex string constant lowercase", sql: "SELECT x'1f'", wantErr: "query rejected: hex strings are not allowed in read-only queries"},
+		{name: "unterminated hex string constant", sql: "SELECT X'1", wantErr: "query rejected: hex strings are not allowed in read-only queries"},
 	}
 
 	for _, tt := range rejectTests {
@@ -146,15 +146,15 @@ func TestValidateReadOnlyFunctionsRejected(t *testing.T) {
 		wantErr string
 		want    string
 	}{
-		{name: "nextval", sql: "SELECT nextval('seq')", wantErr: "rejected: function or built-in nextval is not allowed in read-only queries", want: "nextval"},
-		{name: "setval", sql: "SELECT setval('seq', 10)", wantErr: "rejected: function or built-in setval is not allowed in read-only queries", want: "setval"},
-		{name: "pg notify", sql: "SELECT pg_notify('ch', 'msg')", wantErr: "rejected: function or built-in pg_notify is not allowed in read-only queries", want: "pg_notify"},
-		{name: "pg advisory lock", sql: "SELECT pg_advisory_lock(1)", wantErr: "rejected: function or built-in pg_advisory_lock is not allowed in read-only queries", want: "pg_advisory_lock"},
-		{name: "resolve identities", sql: "SELECT resolve_identities(1)", wantErr: "rejected: function or built-in resolve_identities is not allowed in read-only queries", want: "resolve_identities"},
-		{name: "unknown name", sql: "SELECT unknown_name(1)", wantErr: "rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
-		{name: "mixed case unknown name", sql: "SELECT UnKnOwN_NaMe(1)", wantErr: "rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
-		{name: "text", sql: "SELECT text(42)", wantErr: "rejected: function or built-in text is not allowed in read-only queries", want: "text"},
-		{name: "current setting", sql: "SELECT current_setting('search_path')", wantErr: "rejected: function or built-in current_setting is not allowed in read-only queries", want: "current_setting"},
+		{name: "nextval", sql: "SELECT nextval('seq')", wantErr: "query rejected: function or built-in nextval is not allowed in read-only queries", want: "nextval"},
+		{name: "setval", sql: "SELECT setval('seq', 10)", wantErr: "query rejected: function or built-in setval is not allowed in read-only queries", want: "setval"},
+		{name: "pg notify", sql: "SELECT pg_notify('ch', 'msg')", wantErr: "query rejected: function or built-in pg_notify is not allowed in read-only queries", want: "pg_notify"},
+		{name: "pg advisory lock", sql: "SELECT pg_advisory_lock(1)", wantErr: "query rejected: function or built-in pg_advisory_lock is not allowed in read-only queries", want: "pg_advisory_lock"},
+		{name: "resolve identities", sql: "SELECT resolve_identities(1)", wantErr: "query rejected: function or built-in resolve_identities is not allowed in read-only queries", want: "resolve_identities"},
+		{name: "unknown name", sql: "SELECT unknown_name(1)", wantErr: "query rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
+		{name: "mixed case unknown name", sql: "SELECT UnKnOwN_NaMe(1)", wantErr: "query rejected: function or built-in unknown_name is not allowed in read-only queries", want: "unknown_name"},
+		{name: "text", sql: "SELECT text(42)", wantErr: "query rejected: function or built-in text is not allowed in read-only queries", want: "text"},
+		{name: "current setting", sql: "SELECT current_setting('search_path')", wantErr: "query rejected: function or built-in current_setting is not allowed in read-only queries", want: "current_setting"},
 	}
 
 	for _, tt := range tests {
@@ -213,31 +213,31 @@ func TestValidateReadOnlyIdentifierChains(t *testing.T) {
 
 	t.Run("reject/mixed case function with digits", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT AbC123(1)")
-		assertExactError(t, err, "rejected: function or built-in abc123 is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: function or built-in abc123 is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "abc123")
 	})
 
 	t.Run("reject/leading underscore function", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT _FoO(1)")
-		assertExactError(t, err, "rejected: function or built-in _foo is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: function or built-in _foo is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "_foo")
 	})
 
 	t.Run("reject/qualified mixed case exact name", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT Pg_Catalog.LoWeR('ABC')")
-		assertExactError(t, err, "rejected: qualified function call pg_catalog.lower is not allowed")
+		assertExactError(t, err, "query rejected: schema-qualified function call pg_catalog.lower is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 
 	t.Run("reject/multi part qualified exact name", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT A.B.C(1)")
-		assertExactError(t, err, "rejected: qualified function call a.b.c is not allowed")
+		assertExactError(t, err, "query rejected: schema-qualified function call a.b.c is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 
 	t.Run("reject/multi part qualified with spaces and comments", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT A /*x*/ . /*y*/ B /*z*/ . /*w*/ C(1)")
-		assertExactError(t, err, "rejected: qualified function call a.b.c is not allowed")
+		assertExactError(t, err, "query rejected: schema-qualified function call a.b.c is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 }
@@ -276,14 +276,14 @@ func TestValidateReadOnlySpecialForms(t *testing.T) {
 		sql     string
 		wantErr string
 	}{
-		{name: "current user", sql: "SELECT CURRENT_USER", wantErr: "rejected: special form CURRENT_USER is not allowed"},
-		{name: "session user", sql: "SELECT SESSION_USER", wantErr: "rejected: special form SESSION_USER is not allowed"},
-		{name: "user", sql: "SELECT USER", wantErr: "rejected: special form USER is not allowed"},
-		{name: "current role", sql: "SELECT CURRENT_ROLE", wantErr: "rejected: special form CURRENT_ROLE is not allowed"},
-		{name: "current schema", sql: "SELECT CURRENT_SCHEMA", wantErr: "rejected: special form CURRENT_SCHEMA is not allowed"},
-		{name: "current catalog", sql: "SELECT CURRENT_CATALOG", wantErr: "rejected: special form CURRENT_CATALOG is not allowed"},
-		{name: "malformed precision", sql: "SELECT CURRENT_TIMESTAMP(abc)", wantErr: "rejected: malformed precision for special form CURRENT_TIMESTAMP"},
-		{name: "current date with parens", sql: "SELECT CURRENT_DATE()", wantErr: "rejected: special form CURRENT_DATE does not allow parentheses"},
+		{name: "current user", sql: "SELECT CURRENT_USER", wantErr: "query rejected: CURRENT_USER is not allowed in read-only queries"},
+		{name: "session user", sql: "SELECT SESSION_USER", wantErr: "query rejected: SESSION_USER is not allowed in read-only queries"},
+		{name: "user", sql: "SELECT USER", wantErr: "query rejected: USER is not allowed in read-only queries"},
+		{name: "current role", sql: "SELECT CURRENT_ROLE", wantErr: "query rejected: CURRENT_ROLE is not allowed in read-only queries"},
+		{name: "current schema", sql: "SELECT CURRENT_SCHEMA", wantErr: "query rejected: CURRENT_SCHEMA is not allowed in read-only queries"},
+		{name: "current catalog", sql: "SELECT CURRENT_CATALOG", wantErr: "query rejected: CURRENT_CATALOG is not allowed in read-only queries"},
+		{name: "malformed precision", sql: "SELECT CURRENT_TIMESTAMP(abc)", wantErr: "query rejected: invalid precision for CURRENT_TIMESTAMP in read-only queries"},
+		{name: "current date with parens", sql: "SELECT CURRENT_DATE()", wantErr: "query rejected: CURRENT_DATE with parentheses is not allowed in read-only queries"},
 	}
 
 	for _, tt := range rejected {
@@ -316,19 +316,19 @@ func TestValidateReadOnlyMixedCases(t *testing.T) {
 
 	t.Run("reject/disallowed function in with", func(t *testing.T) {
 		err := ValidateReadOnly("WITH a AS (SELECT nextval('seq')) SELECT * FROM a")
-		assertExactError(t, err, "rejected: function or built-in nextval is not allowed in read-only queries")
+		assertExactError(t, err, "query rejected: function or built-in nextval is not allowed in read-only queries")
 		assertFunctionNotAllowedError(t, err, "nextval")
 	})
 
 	t.Run("reject/current timestamp multistatement", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT CURRENT_TIMESTAMP; UPDATE t SET x = 1")
-		assertExactError(t, err, "rejected: semicolon found outside opaque region")
+		assertExactError(t, err, "query rejected: multiple statements are not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 
 	t.Run("reject/current user plus lower", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT CURRENT_USER, lower('x')")
-		assertExactError(t, err, "rejected: special form CURRENT_USER is not allowed")
+		assertExactError(t, err, "query rejected: CURRENT_USER is not allowed in read-only queries")
 		assertNoRejectedFunctionError(t, err)
 	})
 
@@ -380,7 +380,7 @@ func TestValidateReadOnlyIdentifierLength(t *testing.T) {
 
 	t.Run("reject/unquoted over limit", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT " + strings.Repeat("a", 64))
-		assertExactError(t, err, "rejected: identifier exceeds 63 bytes")
+		assertExactError(t, err, "query rejected: identifiers longer than 63 bytes are not allowed in read-only queries")
 		assertRejectedError(t, err)
 		assertNoRejectedFunctionError(t, err)
 	})
@@ -391,7 +391,7 @@ func TestValidateReadOnlyIdentifierLength(t *testing.T) {
 
 	t.Run("reject/quoted over limit", func(t *testing.T) {
 		err := ValidateReadOnly(`SELECT "` + strings.Repeat("a", 64) + `"`)
-		assertExactError(t, err, "rejected: identifier exceeds 63 bytes")
+		assertExactError(t, err, "query rejected: identifiers longer than 63 bytes are not allowed in read-only queries")
 		assertRejectedError(t, err)
 		assertNoRejectedFunctionError(t, err)
 	})
@@ -402,7 +402,7 @@ func TestValidateReadOnlyIdentifierLength(t *testing.T) {
 
 	t.Run("reject/quoted utf8 over byte limit", func(t *testing.T) {
 		err := ValidateReadOnly(`SELECT "` + strings.Repeat("é", 32) + `"`)
-		assertExactError(t, err, "rejected: identifier exceeds 63 bytes")
+		assertExactError(t, err, "query rejected: identifiers longer than 63 bytes are not allowed in read-only queries")
 		assertRejectedError(t, err)
 		assertNoRejectedFunctionError(t, err)
 	})
@@ -413,7 +413,7 @@ func TestValidateReadOnlyIdentifierLength(t *testing.T) {
 func TestValidateReadOnlyIdentifierDollarSign(t *testing.T) {
 	t.Run("reject/unquoted dollar sign", func(t *testing.T) {
 		err := ValidateReadOnly("SELECT foo$bar FROM t")
-		assertExactError(t, err, "rejected: dollar sign syntax is not supported")
+		assertExactError(t, err, "query rejected: dollar-quoted strings are not allowed in read-only queries")
 		assertRejectedError(t, err)
 		assertNoRejectedFunctionError(t, err)
 	})

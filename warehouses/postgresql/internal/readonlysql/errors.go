@@ -12,51 +12,51 @@ import (
 )
 
 func reject(reason string) error {
-	return &warehouses.RejectedReadOnlyQueryError{Msg: fmt.Sprintf("rejected: %s", reason)}
+	return &warehouses.RejectedReadOnlyQueryError{Msg: fmt.Sprintf("query rejected: %s", reason)}
 }
 
 func rejectSemicolon() error {
-	return reject("semicolon found outside opaque region")
+	return reject("multiple statements are not allowed in read-only queries")
 }
 
 func rejectForbiddenToken(token string) error {
-	return reject(fmt.Sprintf("forbidden token %s found outside opaque region", strings.ToUpper(token)))
+	return reject(fmt.Sprintf("%s is not allowed in read-only queries", strings.ToUpper(token)))
 }
 
 func rejectNoVisibleSelect() error {
-	return reject("no visible SELECT token found")
+	return reject("a read-only SELECT query is required")
 }
 
 func rejectQuotedIdentifierFunctionCall() error {
-	return reject("function call with quoted identifier is not supported")
+	return reject("function calls with quoted identifiers are not allowed in read-only queries")
 }
 
 func rejectIdentifierTooLong() error {
-	return reject("identifier exceeds 63 bytes")
+	return reject("identifiers longer than 63 bytes are not allowed in read-only queries")
 }
 
 func rejectUnicodeQuotedIdentifier() error {
-	return reject(`Unicode quoted identifier syntax U&"..." is not supported`)
+	return reject(`Unicode quoted identifiers are not allowed in read-only queries`)
 }
 
 func rejectUnicodeEscapeStringConstant() error {
-	return reject(`Unicode escape string syntax U&'...' is not supported`)
+	return reject(`Unicode escape strings are not allowed in read-only queries`)
 }
 
 func rejectEscapeStringConstant() error {
-	return reject(`escape string syntax E'...' is not supported`)
+	return reject(`escape strings are not allowed in read-only queries`)
 }
 
 func rejectBitStringConstant() error {
-	return reject(`bit string syntax B'...' is not supported`)
+	return reject(`bit strings are not allowed in read-only queries`)
 }
 
 func rejectHexStringConstant() error {
-	return reject(`hex string syntax X'...' is not supported`)
+	return reject(`hex strings are not allowed in read-only queries`)
 }
 
 func rejectQualifiedFunctionCall(name string) error {
-	return reject(fmt.Sprintf("qualified function call %s is not allowed", name))
+	return reject(fmt.Sprintf("schema-qualified function call %s is not allowed in read-only queries", name))
 }
 
 func rejectUnterminatedSingleQuotedString() error {
@@ -76,32 +76,32 @@ func rejectUnterminatedBlockComment() error {
 }
 
 func rejectSpecialFormNotAllowed(name string) error {
-	return reject(fmt.Sprintf("special form %s is not allowed", name))
+	return reject(fmt.Sprintf("%s is not allowed in read-only queries", name))
 }
 
 func rejectSpecialFormDoesNotAllowParentheses(name string) error {
-	return reject(fmt.Sprintf("special form %s does not allow parentheses", name))
+	return reject(fmt.Sprintf("%s with parentheses is not allowed in read-only queries", name))
 }
 
 func rejectMalformedSpecialFormPrecision(name string) error {
-	return reject(fmt.Sprintf("malformed precision for special form %s", name))
+	return reject(fmt.Sprintf("invalid precision for %s in read-only queries", name))
 }
 
 func rejectLockingClause(clause string) error {
-	return reject(fmt.Sprintf("locking clause %s is not allowed", clause))
+	return reject(fmt.Sprintf("locking clause %s is not allowed in read-only queries", clause))
 }
 
 func rejectTypeCast() error {
-	return reject("type cast operator :: is not allowed")
+	return reject("the :: type cast syntax is not allowed in read-only queries")
 }
 
 func rejectDollarSign() error {
-	return reject("dollar sign syntax is not supported")
+	return reject("dollar-quoted strings are not allowed in read-only queries")
 }
 
 func newFunctionNotAllowedError(name string) error {
 	return &warehouses.RejectedReadOnlyQueryError{
-		Msg:      fmt.Sprintf("rejected: function or built-in %s is not allowed in read-only queries", name),
+		Msg:      fmt.Sprintf("query rejected: function or built-in %s is not allowed in read-only queries", name),
 		Function: name,
 	}
 }
