@@ -80,6 +80,7 @@ func TestQueryDataWarehouseToolMetadata(t *testing.T) {
 					ReadOnlyHint    *bool `json:"readOnlyHint"`
 					DestructiveHint *bool `json:"destructiveHint"`
 					IdempotentHint  *bool `json:"idempotentHint"`
+					OpenWorldHint   *bool `json:"openWorldHint"`
 				} `json:"annotations"`
 			} `json:"tools"`
 		} `json:"result"`
@@ -90,6 +91,15 @@ func TestQueryDataWarehouseToolMetadata(t *testing.T) {
 	}
 
 	for _, tool := range got.Result.Tools {
+		if tool.Name == "warehouse-information" {
+			if tool.Description != warehouseInformationToolDescription {
+				t.Fatalf("warehouse-information description = %q, want %q", tool.Description, warehouseInformationToolDescription)
+			}
+			if tool.Annotations.OpenWorldHint == nil || *tool.Annotations.OpenWorldHint {
+				t.Fatalf("warehouse-information openWorldHint = %v, want false", tool.Annotations.OpenWorldHint)
+			}
+			continue
+		}
 		if tool.Name != "query-data-warehouse" {
 			continue
 		}
@@ -111,6 +121,9 @@ func TestQueryDataWarehouseToolMetadata(t *testing.T) {
 		}
 		if tool.Annotations.IdempotentHint == nil || !*tool.Annotations.IdempotentHint {
 			t.Fatalf("query-data-warehouse idempotentHint = %v, want true", tool.Annotations.IdempotentHint)
+		}
+		if tool.Annotations.OpenWorldHint == nil || *tool.Annotations.OpenWorldHint {
+			t.Fatalf("query-data-warehouse openWorldHint = %v, want false", tool.Annotations.OpenWorldHint)
 		}
 		return
 	}

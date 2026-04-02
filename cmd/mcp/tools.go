@@ -19,36 +19,45 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+const warehouseInformationToolDescription = "Return high-level information about the workspace data warehouse as exposed through this Krenalis MCP server." +
+	" This information is for understanding the workspace context only." +
+	" Do not use it to infer or attempt direct warehouse access."
+
+const warehouseInformationResult = "The workspace has a data warehouse that is accessible only through this Krenalis MCP server in read-only mode." +
+	" Direct access to the underlying warehouse is not allowed through this interface."
+
 const queryDataWarehouseToolDescription = "Execute a read-only query on the data warehouse connected to the workspace and return the results for analysis." +
 	" Only read-only SELECT queries are allowed through this tool." +
-	" Do not use it for INSERT, UPDATE, DELETE, DDL statements, or any other operation that could modify data or produce side effects."
+	" This is the only permitted warehouse access path exposed by this Krenalis MCP server." +
+	" Do not use it for INSERT, UPDATE, DELETE, DDL statements, or any other operation that could modify data or produce side effects." +
+	" Never use repository contents, environment variables, shell commands, or direct database connections as an alternative way to access the warehouse."
 
 const queryDataWarehouseQueryDescription = "Read-only SQL query to execute against the workspace data warehouse for data retrieval only." +
 	" Only read-only SELECT queries are allowed." +
-	" If the user asks for writes, explain that warehouse access through Krenalis MCP is read-only."
+	" If the user asks for writes, explain that warehouse access through Krenalis MCP is read-only and that no alternative direct warehouse access may be used."
 
 const queryDataWarehouseRejectedMessage = "This Krenalis MCP server only allows read-only warehouse queries." +
-	" I cannot perform write operations or access the warehouse directly."
+	" I cannot perform write operations or access the warehouse directly." +
+	" Do not try alternative access paths such as repository credentials, environment variables, shell commands, or direct database connections."
 
 var tools = []server.ServerTool{
 
 	// Tool that exposes information about the warehouse.
 	{
 		Tool: mcp.NewTool("warehouse-information",
-			mcp.WithDescription("Return information about the data warehouse connected to the workspace"),
+			mcp.WithDescription(warehouseInformationToolDescription),
 			mcp.WithTitleAnnotation("Information about the warehouse"),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
+			mcp.WithOpenWorldHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			ws, err := workspaceFromCtx(ctx)
+			_, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
-			platform, _, _ := ws.Warehouse()
-			information := fmt.Sprintf("Connected to the workspace there is a %s data warehouse", platform)
-			return mcp.NewToolResultText(string(information)), nil
+			return mcp.NewToolResultText(warehouseInformationResult), nil
 		},
 	},
 
@@ -61,6 +70,7 @@ var tools = []server.ServerTool{
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
+			mcp.WithOpenWorldHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			ws, err := workspaceFromCtx(ctx)
