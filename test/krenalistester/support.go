@@ -6,7 +6,6 @@ package krenalistester
 
 import (
 	"context"
-	"crypto/tls"
 	stdjson "encoding/json"
 	"fmt"
 	"net/http"
@@ -466,16 +465,12 @@ func (c *Krenalis) RunIdentityResolution() {
 
 func (c *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 	endpoint := "http://" + c.Addr() + "/v1/events"
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
 	cb := sendEventCallback{ch: make(chan error, 1)}
 	client, err := analytics.NewWithConfig(
 		writeKey,
 		analytics.Config{
-			Endpoint:  endpoint,
-			Transport: tr,
-			Callback:  cb,
+			Endpoint: endpoint,
+			Callback: cb,
 		},
 	)
 	if err != nil {
