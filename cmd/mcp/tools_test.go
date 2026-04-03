@@ -36,8 +36,8 @@ func TestToolsList(t *testing.T) {
 
 	var got struct {
 		Result struct {
-			Tools []any
-		}
+			Tools []any `json:"tools"`
+		} `json:"result"`
 	}
 	err = json.NewDecoder(resp.Body).Decode(&got)
 	if err != nil {
