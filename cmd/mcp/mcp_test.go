@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/google/uuid"
@@ -122,4 +123,55 @@ func (mcp *testMCPClient) jsonRPCRequest(method string, params map[string]any) (
 	}
 
 	return resp, nil
+}
+
+func TestInitializeIncludesServerInstructions(t *testing.T) {
+	mcpServer := NewMCPServer(nil)
+	defer mcpServer.Close(t.Context())
+
+	testServer := httptest.NewServer(mcpServer)
+	defer testServer.Close()
+
+	body, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      "init",
+		"method":  "initialize",
+		"params": map[string]any{
+			"protocolVersion": "2024-11-05",
+			"capabilities":    map[string]any{},
+			"clientInfo": map[string]any{
+				"name":    "KrenalisTestClient",
+				"version": "1.0.0",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest("POST", testServer.URL, io.NopCloser(bytes.NewReader(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer mcp_C8MdB29AVjo5DMF6dG7tcyR41faJYDkx6lxDL1Djqzo")
+
+	resp, err := testServer.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	var got struct {
+		Result struct {
+			Instructions string `json:"instructions"`
+		} `json:"result"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Result.Instructions != serverInstructions {
+		t.Fatalf("initialize instructions = %q, want %q", got.Result.Instructions, serverInstructions)
+	}
 }
