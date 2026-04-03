@@ -8,7 +8,7 @@ go 1.26
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.44.0
 	github.com/LumenResearch/uasurfer v0.0.0-20260126094926-dace53404a8d
-	github.com/andybalholm/brotli v1.2.0
+	github.com/andybalholm/brotli v1.2.1
 	github.com/aws/aws-sdk-go-v2 v1.41.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.10
 	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.1.5
