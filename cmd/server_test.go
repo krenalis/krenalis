@@ -75,21 +75,22 @@ func Test_httpLogger_Write(t *testing.T) {
 // Test_verifyCertificate checks that verifyCertificate maps certificate
 // validation failures to the expected error messages.
 func Test_verifyCertificate(t *testing.T) {
+
 	t.Run("nil leaf is ignored", func(t *testing.T) {
-		err := verifyCertificate(tls.Certificate{}, "example.com")
+		err := verifyCertificate(tls.Certificate{}, "example.com", nil)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
 	})
 
 	t.Run("hostname mismatch", func(t *testing.T) {
-		cert := newTestTLSCertificate(t, testTLSCertificateOptions{
+		cert, roots := newTestTLSCertificate(t, testTLSCertificateOptions{
 			dnsNames:  []string{"example.com"},
 			notBefore: time.Now().Add(-time.Hour),
 			notAfter:  time.Now().Add(time.Hour),
 		})
 
-		err := verifyCertificate(cert, "wrong.example.com")
+		err := verifyCertificate(cert, "wrong.example.com", roots)
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -100,13 +101,13 @@ func Test_verifyCertificate(t *testing.T) {
 	})
 
 	t.Run("unknown authority", func(t *testing.T) {
-		cert := newTestTLSCertificate(t, testTLSCertificateOptions{
+		cert, _ := newTestTLSCertificate(t, testTLSCertificateOptions{
 			dnsNames:  []string{"example.com"},
 			notBefore: time.Now().Add(-time.Hour),
 			notAfter:  time.Now().Add(time.Hour),
 		})
 
-		err := verifyCertificate(cert, "example.com")
+		err := verifyCertificate(cert, "example.com", x509.NewCertPool())
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -117,13 +118,13 @@ func Test_verifyCertificate(t *testing.T) {
 	})
 
 	t.Run("expired certificate", func(t *testing.T) {
-		cert := newTestTLSCertificate(t, testTLSCertificateOptions{
+		cert, roots := newTestTLSCertificate(t, testTLSCertificateOptions{
 			dnsNames:  []string{"example.com"},
 			notBefore: time.Now().Add(-2 * time.Hour),
 			notAfter:  time.Now().Add(-time.Hour),
 		})
 
-		err := verifyCertificate(cert, "example.com")
+		err := verifyCertificate(cert, "example.com", roots)
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -134,14 +135,14 @@ func Test_verifyCertificate(t *testing.T) {
 	})
 
 	t.Run("malformed intermediate", func(t *testing.T) {
-		cert := newTestTLSCertificate(t, testTLSCertificateOptions{
+		cert, roots := newTestTLSCertificate(t, testTLSCertificateOptions{
 			dnsNames:          []string{"example.com"},
 			notBefore:         time.Now().Add(-time.Hour),
 			notAfter:          time.Now().Add(time.Hour),
 			intermediateBytes: [][]byte{[]byte("not-a-certificate")},
 		})
 
-		err := verifyCertificate(cert, "example.com")
+		err := verifyCertificate(cert, "example.com", roots)
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -158,8 +159,33 @@ type testTLSCertificateOptions struct {
 	intermediateBytes [][]byte
 }
 
-func newTestTLSCertificate(t *testing.T, opts testTLSCertificateOptions) tls.Certificate {
+func newTestTLSCertificate(t *testing.T, opts testTLSCertificateOptions) (tls.Certificate, *x509.CertPool) {
 	t.Helper()
+
+	rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("cannot generate root key: %v", err)
+	}
+
+	rootTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test Root CA"},
+		NotBefore:             time.Now().Add(-24 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+
+	rootDER, err := x509.CreateCertificate(rand.Reader, rootTemplate, rootTemplate, rootKey.Public(), rootKey)
+	if err != nil {
+		t.Fatalf("cannot create root certificate: %v", err)
+	}
+
+	rootCert, err := x509.ParseCertificate(rootDER)
+	if err != nil {
+		t.Fatalf("cannot parse root certificate: %v", err)
+	}
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -177,7 +203,7 @@ func newTestTLSCertificate(t *testing.T, opts testTLSCertificateOptions) tls.Cer
 		BasicConstraintsValid: true,
 	}
 
-	der, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
+	der, err := x509.CreateCertificate(rand.Reader, template, rootCert, key.Public(), rootKey)
 	if err != nil {
 		t.Fatalf("cannot create certificate: %v", err)
 	}
@@ -192,7 +218,11 @@ func newTestTLSCertificate(t *testing.T, opts testTLSCertificateOptions) tls.Cer
 		PrivateKey:  key,
 		Leaf:        leaf,
 	}
-	return cert
+
+	roots := x509.NewCertPool()
+	roots.AddCert(rootCert)
+
+	return cert, roots
 }
 
 // captureHandler is a slog.Handler that records log messages and their levels.
