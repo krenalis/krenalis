@@ -480,7 +480,7 @@ github.com/gorilla/securecookie
 # github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c
 ## explicit
 github.com/gsterjov/go-libsecret
-# github.com/itchyny/timefmt-go v0.1.7
+# github.com/itchyny/timefmt-go v0.1.8
 ## explicit; go 1.24
 github.com/itchyny/timefmt-go
 # github.com/jackc/pgpassfile v1.0.0
