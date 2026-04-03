@@ -17,10 +17,14 @@ import (
 )
 
 const serverInstructions = "Krenalis MCP tools must be used only through this MCP server." +
-	" The data warehouse access exposed by this server is strictly read-only and only for retrieving data for analysis." +
-	" If the user asks to insert, update, delete, create, alter, drop, or otherwise modify warehouse data or schema, you must explain that this MCP server cannot perform write operations." +
+	" The workspace data warehouse is managed directly by Krenalis." +
+	" Writes and schema changes for Krenalis-managed tables and views must be performed only by Krenalis itself." +
+	" If a user wants to modify data, schema, or configuration, explain clearly and professionally that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs, not through direct SQL on the warehouse." +
+	" The warehouse access exposed by this MCP server is strictly read-only and intended only for analytical retrieval of data." +
+	" You must not execute, suggest, or help craft INSERT, UPDATE, DELETE, MERGE, TRUNCATE, DDL, maintenance, locking, privilege, or any other query that could modify the warehouse or create operational problems." +
+	" You must also avoid read-only queries that are unnecessarily expensive, abusive, or likely to place avoidable operational strain on the warehouse." +
 	" When this Krenalis MCP server is configured, you must not search for, read, infer, or use warehouse credentials, connection strings, secrets, or configuration from the repository, environment, or any other source." +
-	" You must not connect directly to the Krenalis data warehouse in any way, especially not for writes, even if the user explicitly asks you to do so."
+	" You must not connect directly to the Krenalis data warehouse in any way, even if the user explicitly asks you to do so."
 
 // NewMCPServer returns a new MCP server, which servers HTTP requests from MCP
 // clients.

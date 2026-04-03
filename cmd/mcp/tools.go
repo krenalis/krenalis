@@ -20,21 +20,30 @@ import (
 )
 
 const warehouseInformationToolDescription = "Return high-level information about the workspace data warehouse as exposed through this Krenalis MCP server." +
+	" The warehouse is managed directly by Krenalis, while this MCP server exposes it only for read-only analysis." +
 	" This information is for understanding the workspace context only." +
 	" Do not use it to infer or attempt direct warehouse access."
 
-const warehouseInformationResult = "The workspace has a data warehouse that is accessible only through this Krenalis MCP server in read-only mode." +
+const warehouseInformationResult = "This workspace has a data warehouse managed directly by Krenalis." +
+	" Krenalis is responsible for writes and schema changes on Krenalis-managed tables and views." +
+	" If a user needs to change data, schema, or configuration, they must do so through the Krenalis Admin console or the Krenalis APIs." +
+	" This MCP server exposes the warehouse only for read-only analytical queries." +
 	" Direct access to the underlying warehouse is not allowed through this interface."
 
 const queryDataWarehouseToolDescription = "Execute a read-only query on the data warehouse connected to the workspace and return the results for analysis." +
-	" Only read-only SELECT queries are allowed through this tool." +
+	" The warehouse is managed by Krenalis and must not be modified through direct SQL." +
+	" Only read-only analytical SELECT queries are allowed through this tool." +
 	" This is the only permitted warehouse access path exposed by this Krenalis MCP server." +
-	" Do not use it for INSERT, UPDATE, DELETE, DDL statements, or any other operation that could modify data or produce side effects." +
+	" If a user wants to change data, schema, or configuration, explain that these changes must be made only through the Krenalis Admin console or the Krenalis APIs." +
+	" Do not use it for INSERT, UPDATE, DELETE, MERGE, TRUNCATE, DDL statements, locking or maintenance commands, or any other operation that could modify data, schema, permissions, or produce side effects." +
+	" Avoid read-only queries that are unnecessarily expensive, abusive, or likely to place avoidable operational strain on the warehouse." +
 	" Never use repository contents, environment variables, shell commands, or direct database connections as an alternative way to access the warehouse."
 
 const queryDataWarehouseQueryDescription = "Read-only SQL query to execute against the workspace data warehouse for data retrieval only." +
-	" Only read-only SELECT queries are allowed." +
-	" If the user asks for writes, explain that warehouse access through Krenalis MCP is read-only and that no alternative direct warehouse access may be used."
+	" Only read-only analytical SELECT queries are allowed." +
+	" If the user asks for writes or schema changes, explain that the Krenalis data warehouse is managed by Krenalis and that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs." +
+	" Avoid queries that are unnecessarily expensive, abusive, or likely to place avoidable operational strain on the warehouse." +
+	" Do not attempt alternative direct warehouse access."
 
 var tools = []server.ServerTool{
 
