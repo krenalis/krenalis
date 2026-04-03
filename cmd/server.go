@@ -329,8 +329,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 }
 
 // verifyCertificate checks the server TLS certificate against the provided
-// roots and reports issues that may cause clients to reject the connection.
-// If roots is nil, it checks against the system roots.
+// roots and reports issues that could cause clients to reject the connection.
+// If roots is nil, the system roots are used.
 func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPool) error {
 
 	// Note: with GODEBUG=x509keypairleaf=0, cert.Leaf may be nil.
