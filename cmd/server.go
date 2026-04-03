@@ -299,7 +299,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	// Warn if the TLS certificate may not be accepted by clients.
 	for _, name := range settings.HTTP.TLS.DNSNames {
-		err := verifyCertificate(cert, name)
+		err := verifyCertificate(cert, name, nil)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("%s; clients are likely to reject TLS connections", err))
 		}
@@ -328,9 +328,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	return nil
 }
 
-// verifyCertificate checks the server TLS certificate against system roots
-// and reports issues that may cause clients to reject the connection.
-func verifyCertificate(cert tls.Certificate, dnsName string) error {
+// verifyCertificate checks the server TLS certificate against the provided
+// roots and reports issues that could cause clients to reject the connection.
+// If roots is nil, the system roots are used.
+func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPool) error {
 
 	// Note: with GODEBUG=x509keypairleaf=0, cert.Leaf may be nil.
 	if cert.Leaf == nil {
@@ -339,6 +340,13 @@ func verifyCertificate(cert tls.Certificate, dnsName string) error {
 
 	var err error
 
+	if roots == nil {
+		roots, err = x509.SystemCertPool()
+		if err != nil {
+			return fmt.Errorf("unable to load system certificate pool: %w", err)
+		}
+	}
+
 	intermediates := x509.NewCertPool()
 	for _, der := range cert.Certificate[1:] {
 		c, err := x509.ParseCertificate(der)
@@ -346,11 +354,6 @@ func verifyCertificate(cert tls.Certificate, dnsName string) error {
 			return fmt.Errorf("failed to parse intermediate certificate: %w", err)
 		}
 		intermediates.AddCert(c)
-	}
-
-	roots, err := x509.SystemCertPool()
-	if err != nil {
-		return fmt.Errorf("unable to load system certificate pool: %w", err)
 	}
 
 	opts := x509.VerifyOptions{
