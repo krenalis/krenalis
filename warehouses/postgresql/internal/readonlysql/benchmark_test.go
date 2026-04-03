@@ -503,15 +503,27 @@ func inAllowedFunctionList(s string) bool {
 			asciiEqualFold(s, "split_part") ||
 			asciiEqualFold(s, "string_agg")
 	case 11:
-		return asciiEqualFold(s, "cardinality")
+		return asciiEqualFold(s, "cardinality") ||
+			asciiEqualFold(s, "json_typeof")
+	case 15:
+		return asciiEqualFold(s, "json_object_agg")
 	case 12:
 		return asciiEqualFold(s, "array_length") ||
 			asciiEqualFold(s, "jsonb_typeof")
+	case 16:
+		return asciiEqualFold(s, "json_object_keys") ||
+			asciiEqualFold(s, "jsonb_object_agg")
 	case 17:
-		return asciiEqualFold(s, "jsonb_object_keys")
+		return asciiEqualFold(s, "json_array_length") ||
+			asciiEqualFold(s, "json_build_object") ||
+			asciiEqualFold(s, "json_extract_path") ||
+			asciiEqualFold(s, "jsonb_object_keys")
 	case 18:
 		return asciiEqualFold(s, "jsonb_array_length") ||
-			asciiEqualFold(s, "jsonb_extract_path")
+			asciiEqualFold(s, "jsonb_extract_path") ||
+			asciiEqualFold(s, "jsonb_build_object")
+	case 22:
+		return asciiEqualFold(s, "json_extract_path_text")
 	case 23:
 		return asciiEqualFold(s, "jsonb_extract_path_text")
 	}

@@ -51,7 +51,6 @@ func ValidateReadOnly(query string) error {
 	// blacklisted for the whole range: it is a real command from 15 onward,
 	// while on 14 it remains a syntax error, which is still conservative for
 	// this classifier. Future PostgreSQL versions require review.
-
 	// As a special case, accept a single trailing statement terminator
 	// only when it is the final byte of the query.
 	query = strings.TrimSuffix(query, ";")
