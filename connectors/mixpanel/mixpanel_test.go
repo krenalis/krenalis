@@ -591,9 +591,9 @@ func newMixpanelForTests(t *testing.T) *Mixpanel {
 	default:
 		t.Fatal("env var KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
 	}
-	app, err := testconnector.NewApplication("mixpanel", s)
+	mp, err := testconnector.NewApplication[*Mixpanel]("mixpanel", s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return app.(*Mixpanel)
+	return mp
 }
