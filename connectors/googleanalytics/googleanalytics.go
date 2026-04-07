@@ -123,6 +123,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 			&connectors.Select{Name: "collectionEndpoint", Label: "Collection endpoint", Options: []connectors.Option{{Text: "Global", Value: "Global"}, {Text: "European Union", Value: "EU"}}},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

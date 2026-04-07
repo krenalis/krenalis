@@ -169,6 +169,7 @@ func (s3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, ro
 			&connectors.Input{Name: "bucket", Label: "Bucket name", Placeholder: "mybucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

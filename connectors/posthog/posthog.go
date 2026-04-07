@@ -217,6 +217,7 @@ func (posthog *PostHog) ServeUI(ctx context.Context, event string, settings json
 			},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil
