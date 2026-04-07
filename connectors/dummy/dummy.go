@@ -315,6 +315,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 			},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

@@ -159,6 +159,7 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 			&connectors.Checkbox{Name: "simulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

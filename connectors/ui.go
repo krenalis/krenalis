@@ -179,6 +179,15 @@ type Button struct {
 	Role    Role
 }
 
+// SaveButton is a convenience button that pre-configures a [Button] with the
+// "save" event. The "save" event is a special event that signals the connector
+// settings should be persisted — both when creating a new connection and
+// updating an existing one.
+var SaveButton = Button{
+	Event: "save",
+	// The remaining fields are not meaningful when the event is "save".
+}
+
 // Alert represents an alert message to be shown in the UI.
 type Alert struct {
 

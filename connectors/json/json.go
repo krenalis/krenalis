@@ -238,6 +238,7 @@ func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, r
 			&connectors.Checkbox{Name: "allowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: connectors.Destination},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil
