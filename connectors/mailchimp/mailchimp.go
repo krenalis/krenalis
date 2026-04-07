@@ -348,27 +348,27 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		settings, _ = json.Marshal(s)
 	case "validate-key-determine-audiences":
 		var req struct {
-			ApiKey string `json:"apiKey"`
+			APIKey string `json:"apiKey"`
 		}
 		if err := settings.Unmarshal(&req); err != nil {
 			return nil, err
 		}
-		if n := len(req.ApiKey); n < 10 || n > 100 {
+		if n := len(req.APIKey); n < 10 || n > 100 {
 			return nil, connectors.NewInvalidSettingsError("API Key length must be in range [10, 100]")
 		}
-		for i := 0; i < len(req.ApiKey); i++ {
-			c := req.ApiKey[i]
+		for i := 0; i < len(req.APIKey); i++ {
+			c := req.APIKey[i]
 			if c < 33 || c > 126 {
 				return nil, connectors.NewInvalidSettingsError("API Key must contain only printable ASCII characters")
 			}
 		}
-		dc := dataCenterFromKey(req.ApiKey)
+		dc := dataCenterFromKey(req.APIKey)
 		if dc == "" {
 			return nil, connectors.NewInvalidSettingsError("API Key has an invalid format: missing datacenter suffix (e.g. \"-us1\")")
 		}
 		tmp := &Mailchimp{
 			env:      mc.env,
-			settings: &innerSettings{APIKey: req.ApiKey, DataCenter: dc},
+			settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
 		}
 		var err error
 		audiences, err = tmp.audiences(ctx)
@@ -388,7 +388,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		Type:        "text",
 		MinLength:   10,
 		MaxLength:   100,
-		HelpText:    "API key generated in Mailchimp (Account & Billing → Extras → API keys).",
+		HelpText:    "API key generated in Mailchimp (Account & billing → Extras → API keys).",
 	}
 
 	if audiences == nil {
