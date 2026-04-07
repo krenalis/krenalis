@@ -179,11 +179,13 @@ type Button struct {
 	Role    Role
 }
 
-// SaveButton is a button common to connectors whose event indicates to save the
-// settings (both when creating a new connection and when updating the settings
-// of an existing connection).
+// SaveButton is a convenience button that pre-configures a [Button] with the
+// "save" event. The "save" event is a special event that signals the connector
+// settings should be persisted — both when creating a new connection and
+// updating an existing one.
 var SaveButton = Button{
 	Event: "save",
+	// The remaining fields are not meaningful when the event is "save".
 }
 
 // Alert represents an alert message to be shown in the UI.
