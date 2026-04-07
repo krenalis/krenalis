@@ -32,12 +32,12 @@ type pgTypeInfo struct {
 // columns returns the columns of the table in schema.
 //
 // If the table does not exist, this method returns an error.
-func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]connectors.Column, error) {
+func (pg *PostgreSQL) columns(ctx context.Context, schema, table string) ([]connectors.Column, error) {
 
-	if err := ps.openDB(ctx); err != nil {
+	if err := pg.openDB(ctx); err != nil {
 		return nil, err
 	}
-	tx, err := ps.pool.Begin(ctx)
+	tx, err := pg.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}

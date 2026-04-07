@@ -73,14 +73,14 @@ type innerSettings struct {
 }
 
 // ContentType returns the content type of the file.
-func (excel *Excel) ContentType(ctx context.Context) string {
+func (xl *Excel) ContentType(ctx context.Context) string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
 var errReadFile = errors.New("document is not a valid Excel (.xlsx) file or may be corrupted")
 
 // Read reads the records from r and writes them to records.
-func (excel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
+func (xl *Excel) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -115,7 +115,7 @@ func (excel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records
 		if first {
 			columns := make([]types.Property, len(record))
 			for i := range columns {
-				if excel.settings.HasColumnNames {
+				if xl.settings.HasColumnNames {
 					header := record[i]
 					name, ok := types.PropertyName(header)
 					if !ok {
@@ -148,7 +148,7 @@ func (excel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records
 				return err
 			}
 			first = false
-			if excel.settings.HasColumnNames {
+			if xl.settings.HasColumnNames {
 				continue
 			}
 		}
@@ -163,17 +163,17 @@ func (excel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records
 }
 
 // ServeUI serves the connector's user interface.
-func (excel *Excel) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (xl *Excel) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
 		var s innerSettings
-		if excel.settings != nil {
-			s = *excel.settings
+		if xl.settings != nil {
+			s = *xl.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, excel.saveSettings(ctx, settings, role)
+		return nil, xl.saveSettings(ctx, settings, role)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
@@ -190,7 +190,7 @@ func (excel *Excel) ServeUI(ctx context.Context, event string, settings json.Val
 }
 
 // Sheets returns the sheets of the file read from r.
-func (excel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
+func (xl *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 	f, err := excelize.OpenReader(r)
 	if err != nil {
 		// Don't return a Zip error because it might be misleading.
@@ -204,7 +204,7 @@ func (excel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 }
 
 // Write writes to w the records read from records.
-func (excel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records connectors.RecordReader) error {
+func (xl *Excel) Write(ctx context.Context, w io.Writer, sheet string, records connectors.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -260,7 +260,7 @@ func (excel *Excel) Write(ctx context.Context, w io.Writer, sheet string, record
 }
 
 // saveSettings saves the settings.
-func (excel *Excel) saveSettings(ctx context.Context, settings json.Value, role connectors.Role) error {
+func (xl *Excel) saveSettings(ctx context.Context, settings json.Value, role connectors.Role) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -273,11 +273,11 @@ func (excel *Excel) saveSettings(ctx context.Context, settings json.Value, role 
 	if err != nil {
 		return err
 	}
-	err = excel.env.SetSettings(ctx, b)
+	err = xl.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
-	excel.settings = &s
+	xl.settings = &s
 	return nil
 }
 
