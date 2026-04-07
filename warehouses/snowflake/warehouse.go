@@ -89,13 +89,12 @@ func New(conf *warehouses.Config) (*Snowflake, error) {
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
 		return nil, warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
 	}
-	return &Snowflake{conf: conf, settings: &s}, nil
+	return &Snowflake{settings: &s}, nil
 }
 
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
-	conf     *warehouses.Config
 	settings *sfSettings
 }
 

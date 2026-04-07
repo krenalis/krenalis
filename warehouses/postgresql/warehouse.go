@@ -84,13 +84,12 @@ func New(conf *warehouses.Config) (*PostgreSQL, error) {
 	if strings.HasPrefix(s.Schema, "pg_") {
 		return nil, warehouses.SettingsErrorf("schema cannot start with 'pg_'")
 	}
-	return &PostgreSQL{conf: conf, settings: &s}, nil
+	return &PostgreSQL{settings: &s}, nil
 }
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
-	conf     *warehouses.Config
 	settings *psSettings
 }
 
