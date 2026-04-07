@@ -97,7 +97,7 @@ Key points:
   - Examples:
     - `"/api/profiles/"` (path prefix)
     - `"GET /3.0/lists/"` (method + path)
-    - `"GET login.mailchimp.com/oauth2/metadata"` (method + host + path)
+    - `"GET login.example.com/oauth2/metadata"` (method + host + path)
 - If `EndpointGroups` is nil, Krenalis defaults to a single `"/"` group (matches all requests) with a conservative rate limit (1 rps, burst 1).
 - Never set `EndpointGroups` to an empty slice (`[]connectors.EndpointGroup{}`): it registers no patterns and requests fail at runtime.
 - `Patterns` must be either nil or contain at least one pattern (an explicit empty slice panics at registration time).
