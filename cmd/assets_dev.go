@@ -88,7 +88,7 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 	}
 
 	// Build the Admin.
-	entryPoint := filepath.Join(moduleRoot, "admin", "src", "index.jsx")
+	entryPoint := filepath.Join(moduleRoot, "admin", "src", "index.tsx")
 	external := []string{"monaco-editor"}
 	h.watchers.index, err = watchAndBuild(entryPoint, outDir, external)
 	if err != nil {

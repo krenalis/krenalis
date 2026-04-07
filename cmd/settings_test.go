@@ -407,6 +407,20 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
+	t.Run("TLS false rejects DNS names", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "false")
+		t.Setenv("KRENALIS_HTTP_TLS_DNS_NAMES", "example.com")
+		_, err := parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error when TLS is false and DNS names are set, got nil")
+		}
+		want := "KRENALIS_HTTP_TLS_DNS_NAMES must not be set when KRENALIS_HTTP_TLS_ENABLED is false"
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+	})
+
 	t.Run("TLS file paths must exist", func(t *testing.T) {
 		setBaseline(t)
 		nonexistentFile := "/no/such/cert.pem"
@@ -438,6 +452,57 @@ func TestParseSettings(t *testing.T) {
 			t.Fatalf("expected error for missing key file, got nil")
 		}
 		want = fmt.Sprintf("KRENALIS_HTTP_TLS_KEY_FILE points to a non-existent file: %q", nonexistentFile)
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+	})
+
+	t.Run("TLS DNS names explicit list is normalized sorted and compacted", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_DNS_NAMES", " API.example.com ,example.com,[2001:db8::1],api.example.com ")
+
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		want := []string{"[2001:db8::1]", "api.example.com", "example.com"}
+		if !reflect.DeepEqual(s.HTTP.TLS.DNSNames, want) {
+			t.Fatalf("expected TLS DNS names %v, got %v", want, s.HTTP.TLS.DNSNames)
+		}
+	})
+
+	t.Run("TLS DNS names reject invalid entries", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_DNS_NAMES", "example.com,,api.example.com")
+
+		_, err := parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for invalid DNS names entry, got nil")
+		}
+		want := `KRENALIS_HTTP_TLS_DNS_NAMES contains an invalid DNS name: `
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+	})
+
+	t.Run("TLS DNS names reject entries made only of spaces", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_DNS_NAMES", "example.com,   ")
+
+		_, err := parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for DNS names entry containing only spaces, got nil")
+		}
+		want := `KRENALIS_HTTP_TLS_DNS_NAMES contains an invalid DNS name: `
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -508,6 +573,79 @@ func TestParseSettings(t *testing.T) {
 		}
 		if s.HTTP.ExternalURL != "https://127.0.0.1/" {
 			t.Errorf("expected https://127.0.0.1/, got %q", s.HTTP.ExternalURL)
+		}
+	})
+
+	t.Run("TLS DNS names default from external URLs", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "https://example.com/")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_EVENT_URL", "https://api.example.com/v1/events")
+
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		want := []string{"example.com", "api.example.com"}
+		if !reflect.DeepEqual(s.HTTP.TLS.DNSNames, want) {
+			t.Fatalf("expected TLS DNS names %v, got %v", want, s.HTTP.TLS.DNSNames)
+		}
+	})
+
+	t.Run("TLS DNS names default are deduplicated when external URLs share the same host", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "https://example.com/")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_EVENT_URL", "https://example.com/v1/events")
+
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		want := []string{"example.com"}
+		if !reflect.DeepEqual(s.HTTP.TLS.DNSNames, want) {
+			t.Fatalf("expected TLS DNS names %v, got %v", want, s.HTTP.TLS.DNSNames)
+		}
+	})
+
+	t.Run("TLS DNS names default to unique https hosts including bracketed IPv6", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "http://example.com/")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_EVENT_URL", "https://[2001:db8::1]:8443/v1/events")
+
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		want := []string{"2001:db8::1"}
+		if !reflect.DeepEqual(s.HTTP.TLS.DNSNames, want) {
+			t.Fatalf("expected TLS DNS names %v, got %v", want, s.HTTP.TLS.DNSNames)
+		}
+	})
+
+	t.Run("TLS DNS names explicit list overrides external URL derived hosts", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_HTTP_TLS_ENABLED", "true")
+		t.Setenv("KRENALIS_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
+		t.Setenv("KRENALIS_HTTP_TLS_DNS_NAMES", "manual.example.com")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_URL", "https://example.com/")
+		t.Setenv("KRENALIS_HTTP_EXTERNAL_EVENT_URL", "https://api.example.com/v1/events")
+
+		s, err := parseEnvSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		want := []string{"manual.example.com"}
+		if !reflect.DeepEqual(s.HTTP.TLS.DNSNames, want) {
+			t.Fatalf("expected TLS DNS names %v, got %v", want, s.HTTP.TLS.DNSNames)
 		}
 	})
 
@@ -1532,6 +1670,77 @@ func TestParseEnvURLFlags(t *testing.T) {
 			t.Fatalf("expected %q, got %v", wantErr, err)
 		}
 	})
+}
+
+// TestHTTPSHost verifies host extraction from valid HTTP(S) URLs.
+func TestHTTPSHost(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+		ok   bool
+	}{
+		{
+			name: "http URL is ignored",
+			url:  "http://example.com/",
+			want: "",
+			ok:   false,
+		},
+		{
+			name: "https hostname without port",
+			url:  "https://example.com",
+			want: "example.com",
+			ok:   true,
+		},
+		{
+			name: "https hostname with port",
+			url:  "https://example.com:8443/path",
+			want: "example.com",
+			ok:   true,
+		},
+		{
+			name: "https IPv4 with port",
+			url:  "https://127.0.0.1:8443/v1/events",
+			want: "127.0.0.1",
+			ok:   true,
+		},
+		{
+			name: "https bracketed IPv6 without port",
+			url:  "https://[2001:db8::1]/",
+			want: "2001:db8::1",
+			ok:   true,
+		},
+		{
+			name: "https bracketed IPv6 with port",
+			url:  "https://[2001:db8::1]:8443/v1/events",
+			want: "2001:db8::1",
+			ok:   true,
+		},
+		{
+			name: "https URL with query and fragment",
+			url:  "https://example.com:8443/path?a=b#frag",
+			want: "example.com",
+			ok:   true,
+		},
+		{
+			name: "malformed bracketed IPv6 is rejected",
+			url:  "https://[2001:db8::1",
+			want: "",
+			ok:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := httpsHost(tt.url)
+			if ok != tt.ok {
+				t.Fatalf("expected ok=%v, got %v", tt.ok, ok)
+			}
+			if got != tt.want {
+				t.Fatalf("expected host %q, got %q", tt.want, got)
+			}
+		})
+	}
 }
 
 // TestParseURLErrors verifies that each distinct error path returns the expected message.

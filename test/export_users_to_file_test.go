@@ -120,7 +120,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/v1/pipelines/"+strconv.Itoa(exportUsersPipelineID), krenalistester.PipelineToSet{
+		c.MustCall("PUT", "/v1/pipelines/"+strconv.Itoa(exportUsersPipelineID), nil, krenalistester.PipelineToSet{
 			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
