@@ -70,17 +70,17 @@ type PostgreSQL struct {
 }
 
 // Close closes the database.
-func (ps *PostgreSQL) Close() error {
-	if ps.pool == nil {
+func (pg *PostgreSQL) Close() error {
+	if pg.pool == nil {
 		return nil
 	}
-	ps.pool.Close()
+	pg.pool.Close()
 	return nil
 }
 
 // Columns returns the columns of the given table.
-func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
-	columns, err := ps.columns(ctx, ps.settings.Schema, table)
+func (pg *PostgreSQL) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
+	columns, err := pg.columns(ctx, pg.settings.Schema, table)
 	if err != nil {
 		return nil, err
 	}
@@ -89,12 +89,12 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]connectors.C
 
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
-func (ps *PostgreSQL) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
-	if err := ps.openDB(ctx); err != nil {
+func (pg *PostgreSQL) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
+	if err := pg.openDB(ctx); err != nil {
 		return err
 	}
 	// Acquire a connection.
-	conn, err := ps.pool.Acquire(ctx)
+	conn, err := pg.pool.Acquire(ctx)
 	if err != nil {
 		return err
 	}
@@ -104,18 +104,18 @@ func (ps *PostgreSQL) Merge(ctx context.Context, table connectors.Table, rows []
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error) {
-	if err := ps.openDB(ctx); err != nil {
+func (pg *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error) {
+	if err := pg.openDB(ctx); err != nil {
 		return nil, nil, err
 	}
-	rows, err := ps.pool.Query(ctx, query)
+	rows, err := pg.pool.Query(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}
 	fieldDescriptions := rows.FieldDescriptions()
 	columns := make([]connectors.Column, len(fieldDescriptions))
 	for i, c := range fieldDescriptions {
-		typ, issue, err := ps.propertyType(ctx, c)
+		typ, issue, err := pg.propertyType(ctx, c)
 		if err != nil {
 			rows.Close()
 			return nil, nil, err
@@ -140,7 +140,7 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows,
 // SQLLiteral returns the SQL literal representation of v according to the
 // provided Krenalis type t. It supports nil values and the following Krenalis
 // types: string, datetime, date, and json.
-func (ps *PostgreSQL) SQLLiteral(value any, typ types.Type) string {
+func (pg *PostgreSQL) SQLLiteral(value any, typ types.Type) string {
 	if value == nil {
 		return "NULL"
 	}
@@ -159,22 +159,22 @@ func (rows withCloseError) Close() error {
 }
 
 // ServeUI serves the connector's user interface.
-func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (pg *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
 		var s innerSettings
-		if ps.settings == nil {
+		if pg.settings == nil {
 			s.Port = 5432
 			s.Schema = "public"
 		} else {
-			s = *ps.settings
+			s = *pg.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ps.saveSettings(ctx, settings, false)
+		return nil, pg.saveSettings(ctx, settings, false)
 	case "test":
-		return nil, ps.saveSettings(ctx, settings, true)
+		return nil, pg.saveSettings(ctx, settings, true)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
@@ -219,11 +219,11 @@ func (s *innerSettings) dsn() string {
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (ps *PostgreSQL) openDB(ctx context.Context) error {
-	if ps.pool != nil {
+func (pg *PostgreSQL) openDB(ctx context.Context) error {
+	if pg.pool != nil {
 		return nil
 	}
-	config, err := pgxpool.ParseConfig(ps.settings.dsn())
+	config, err := pgxpool.ParseConfig(pg.settings.dsn())
 	if err != nil {
 		return err
 	}
@@ -231,13 +231,13 @@ func (ps *PostgreSQL) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	ps.pool = pool
+	pg.pool = pool
 	return nil
 }
 
 // saveSettings validates and saves the settings. If test is true, it validates
 // only the settings without saving it.
-func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, test bool) error {
+func (pg *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, test bool) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -275,11 +275,11 @@ func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	if err != nil {
 		return err
 	}
-	err = ps.env.SetSettings(ctx, b)
+	err = pg.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
-	ps.settings = &s
+	pg.settings = &s
 	return nil
 }
 
@@ -298,7 +298,7 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 // propertyType returns the property type of the column with type t.
 // If the column type is not supported, it returns an invalid type and an issue
 // message.
-func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescription) (types.Type, string, error) {
+func (pg *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescription) (types.Type, string, error) {
 	switch fd.DataTypeOID {
 	case pgtype.BoolOID:
 		return types.Boolean(), "", nil
@@ -348,7 +348,7 @@ func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescripti
 	case pgtype.TextOID, pgtype.ByteaOID:
 		return types.String(), "", nil
 	}
-	conn, err := ps.pool.Acquire(ctx)
+	conn, err := pg.pool.Acquire(ctx)
 	if err != nil {
 		return types.Type{}, "", err
 	}

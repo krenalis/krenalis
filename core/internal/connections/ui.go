@@ -281,7 +281,10 @@ func marshalUI(ui *connectors.UI, role connectors.Role) (json.Value, error) {
 			}
 		}
 		b.WriteString(`],"buttons":[`)
-		for _, button := range ui.Buttons {
+		for i, button := range ui.Buttons {
+			if i > 0 {
+				b.WriteByte(',')
+			}
 			b.WriteByte('{')
 			_ = b.EncodeKeyValue("event", button.Event)
 			_ = b.EncodeKeyValue("text", button.Text)

@@ -33,7 +33,7 @@ The easiest way to collect events is to use one of the official SDKs:
 
 - **JavaScript (Browser)** — https://github.com/krenalis/analytics-javascript  
 - **Android** — https://github.com/krenalis/analytics-kotlin
-- **Apple** — https://github.com/krenalis/analytics-swift
+- **iOS** — https://github.com/krenalis/analytics-swift
 - **Python** — https://github.com/krenalis/analytics-python  
 - **.NET** — https://github.com/krenalis/analytics-dotnet  
 - **Java** — https://github.com/krenalis/analytics-java  
@@ -54,7 +54,7 @@ Navigate to the directory where you want to run Krenalis and execute:
 
 ```
 mkdir -p storage
-curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.26.0/compose.yaml"
+curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.27.0/compose.yaml"
 docker compose up
 ```
 

@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -129,12 +130,29 @@ func parseEnvSettings() (*Settings, error) {
 		settings.HTTP.TLS.Enabled = true
 		settings.HTTP.TLS.CertFile = certFile
 		settings.HTTP.TLS.KeyFile = keyFile
+		// Set settings.HTTP.TLS.DNSNames.
+		if names := envVars.Get("KRENALIS_HTTP_TLS_DNS_NAMES"); names != "" {
+			if dnsNames := strings.Split(names, ","); len(dnsNames) > 0 {
+				for i, name := range dnsNames {
+					name = strings.TrimSpace(name) // there may be spaces around commas.
+					if err := validation.ValidateHost(name); err != nil {
+						return nil, fmt.Errorf("KRENALIS_HTTP_TLS_DNS_NAMES contains an invalid DNS name: %s", name)
+					}
+					dnsNames[i] = strings.ToLower(name)
+				}
+				slices.Sort(dnsNames)
+				settings.HTTP.TLS.DNSNames = slices.Compact(dnsNames)
+			}
+		}
 	} else {
 		if certFile := envVars.Get("KRENALIS_HTTP_TLS_CERT_FILE"); certFile != "" {
 			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_CERT_FILE must not be set when KRENALIS_HTTP_TLS_ENABLED is false")
 		}
 		if keyFile := envVars.Get("KRENALIS_HTTP_TLS_KEY_FILE"); keyFile != "" {
 			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_KEY_FILE must not be set when KRENALIS_HTTP_TLS_ENABLED is false")
+		}
+		if names := envVars.Get("KRENALIS_HTTP_TLS_DNS_NAMES"); names != "" {
+			return nil, fmt.Errorf("KRENALIS_HTTP_TLS_DNS_NAMES must not be set when KRENALIS_HTTP_TLS_ENABLED is false")
 		}
 	}
 
@@ -162,6 +180,18 @@ func parseEnvSettings() (*Settings, error) {
 		settings.HTTP.ExternalEventURL = settings.HTTP.ExternalURL + "v1/events"
 	} else {
 		settings.HTTP.ExternalEventURL = eventURL
+	}
+
+	// Set settings.HTTP.TLS.DNSNames from ExternalURL and ExternalEventURL.
+	if settings.HTTP.TLS.Enabled && settings.HTTP.TLS.DNSNames == nil {
+		dnsNames := make([]string, 0, 2)
+		if name, ok := httpsHost(settings.HTTP.ExternalURL); ok {
+			dnsNames = append(dnsNames, name)
+		}
+		if name, ok := httpsHost(settings.HTTP.ExternalEventURL); ok && (len(dnsNames) == 0 || name != dnsNames[0]) {
+			dnsNames = append(dnsNames, name)
+		}
+		settings.HTTP.TLS.DNSNames = dnsNames
 	}
 
 	if settings.HTTP.ReadHeaderTimeout, err = parseEnvHTTPDuration("KRENALIS_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
@@ -408,6 +438,32 @@ func boolEnvVar(v string, defaultValue bool) (bool, error) {
 	default:
 		return false, fmt.Errorf("value %q is not a valid boolean value (expected true, false or empty string)", v)
 	}
+}
+
+// httpsHost extracts the host from an HTTPS URL and reports whether it
+// succeeded.
+func httpsHost(u string) (string, bool) {
+	const prefix = "https://"
+	if !strings.HasPrefix(u, prefix) {
+		return "", false
+	}
+	s := u[len(prefix):]
+	// Trim path, query, and fragment.
+	if i := strings.IndexAny(s, "/?#"); i != -1 {
+		s = s[:i]
+	}
+	// Handle bracketed IPv6 addresses with an optional port.
+	if strings.HasPrefix(s, "[") {
+		if i := strings.Index(s, "]"); i != -1 {
+			return s[1:i], true // inside brackets
+		}
+		return "", false // malformed
+	}
+	// Strip the port from hostnames and IPv4 addresses.
+	if i := strings.LastIndex(s, ":"); i != -1 {
+		return s[:i], true
+	}
+	return s, true
 }
 
 // parseEnvHTTPDuration parses the value of an HTTP configuration setting into a

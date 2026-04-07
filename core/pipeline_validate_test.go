@@ -2358,6 +2358,64 @@ func Test_validatePipeline(t *testing.T) {
 			provider:                testProvider{},
 		},
 		{
+			name: "GOOD: Destination/Application/User - output matching property can have ReadOptional set to true",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String()},
+					{Name: "app_id", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "app_id",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			provider:                testProvider{},
+		},
+		{
+			name: "GOOD: Destination/Application/User - output matching property path and its parents can have ReadOptional set to true",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String()},
+					{Name: "additional", Type: types.Object([]types.Property{
+						{Name: "first_name", Type: types.String(), ReadOptional: true},
+					}), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "additional.first_name",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			provider:                testProvider{},
+		},
+		{
 			name: "BAD: Source/Application/User - input schema cannot contain a property with a prefilled value",
 			pipeline: PipelineToSet{
 				Name: "Import users",
@@ -2789,6 +2847,96 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			err:                     "output matching property \"email_out\" not found within the output schema",
+		},
+		{
+			name: "BAD: Destination/Application/User - non-matching output property cannot have ReadOptional set to true",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String()},
+					{Name: "app_id", Type: types.String()},
+					{Name: "other_id", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "app_id",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     `output pipeline schema property "other_id" cannot have ReadOptional set to true`,
+		},
+		{
+			name: "BAD: Destination/Application/User - output property on a different path cannot have ReadOptional set to true",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String()},
+					{Name: "additional", Type: types.Object([]types.Property{
+						{Name: "first_name", Type: types.String()},
+						{Name: "last_name", Type: types.String(), ReadOptional: true},
+					})},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "additional.first_name",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     `output pipeline schema property "additional.last_name" cannot have ReadOptional set to true`,
+		},
+		{
+			name: "BAD: Destination/Application/User - lexical prefix of output matching property cannot have ReadOptional set to true",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "email2", Type: types.Object([]types.Property{
+						{Name: "id", Type: types.String()},
+					})},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email2.id",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     `output pipeline schema property "email" cannot have ReadOptional set to true`,
 		},
 		{
 			name: "BAD: Source/Database/User - filters are not allowed",

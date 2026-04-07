@@ -112,15 +112,24 @@ func TestEventsContext(t *testing.T) {
 		t.Fatal("unexpected error while retrieving events")
 	}
 
+	library := map[string]any{
+		"name":    "analytics-go",
+		"version": analytics.Version,
+	}
+
 	// Iterate over the received events and test that their context is the
 	// expected one.
 	for _, event := range events {
 		var expectedContext map[string]any
 		switch event["event"].(string) {
 		case "Test Event 1":
+			expectedContext = map[string]any{
+				"library": library,
+			}
 		case "Test Event 2":
 			expectedContext = map[string]any{
-				"ip": "127.0.0.1",
+				"ip":      "127.0.0.1",
+				"library": library,
 			}
 		case "Test Event 3":
 			expectedContext = map[string]any{
@@ -134,6 +143,7 @@ func TestEventsContext(t *testing.T) {
 					"name":    "Windows",
 					"version": "6.1.0",
 				},
+				"library": library,
 			}
 		case "Test Event 4":
 			expectedContext = map[string]any{
@@ -147,6 +157,7 @@ func TestEventsContext(t *testing.T) {
 					"name":    "Linux",
 					"version": "1",
 				},
+				"library": library,
 			}
 		case "Test Event 5":
 			expectedContext = map[string]any{
@@ -159,6 +170,7 @@ func TestEventsContext(t *testing.T) {
 					"name":    "Linux",
 					"version": "1",
 				},
+				"library": library,
 			}
 		case "Test Event 6":
 			expectedContext = map[string]any{
@@ -171,6 +183,7 @@ func TestEventsContext(t *testing.T) {
 					"name":    "macOS",
 					"version": "12",
 				},
+				"library": library,
 			}
 		default:
 			t.Fatalf("unexpected event %q", event["event"].(string))
