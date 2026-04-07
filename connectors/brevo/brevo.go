@@ -145,7 +145,7 @@ type contactInfo struct {
 }
 
 // EventTypes returns the event types.
-func (brevo *Brevo) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
+func (br *Brevo) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
 	return []*connectors.EventType{{
 		ID:          "create_event",
 		Name:        "Create event",
@@ -156,7 +156,7 @@ func (brevo *Brevo) EventTypes(ctx context.Context) ([]*connectors.EventType, er
 var eventNameRE = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 // EventTypeSchema returns the schema of the specified event type.
-func (brevo *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	if eventType != "create_event" {
 		return types.Type{}, connectors.ErrEventTypeNotExist
 	}
@@ -248,12 +248,12 @@ func (brevo *Brevo) EventTypeSchema(ctx context.Context, eventType string) (type
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
 // events to the API, without actually sending it.
-func (brevo *Brevo) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
-	return brevo.sendEvents(ctx, events, true)
+func (br *Brevo) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
+	return br.sendEvents(ctx, events, true)
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (brevo *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
+func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 
 	var response struct {
 		Attributes []struct {
@@ -268,7 +268,7 @@ func (brevo *Brevo) RecordSchema(ctx context.Context, target connectors.Targets,
 			MultiCategoryOptions []string `json:"multiCategoryOptions"`
 		} `json:"attributes"`
 	}
-	err := brevo.call(ctx, http.MethodGet, apiBaseURL+"/contacts/attributes", nil, http.StatusOK, &response)
+	err := br.call(ctx, http.MethodGet, apiBaseURL+"/contacts/attributes", nil, http.StatusOK, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -431,7 +431,7 @@ func (brevo *Brevo) RecordSchema(ctx context.Context, target connectors.Targets,
 const recordsPageLimit = 1000
 
 // Records returns the records of the specified target.
-func (brevo *Brevo) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+func (br *Brevo) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	offset := 0
 	if cursor != "" {
 		var err error
@@ -454,7 +454,7 @@ func (brevo *Brevo) Records(ctx context.Context, target connectors.Targets, upda
 		Contacts []contactInfo `json:"contacts"`
 		Count    int           `json:"count"`
 	}
-	err := brevo.call(ctx, http.MethodGet, apiBaseURL+"/contacts?"+query.Encode(), nil, http.StatusOK, &response)
+	err := br.call(ctx, http.MethodGet, apiBaseURL+"/contacts?"+query.Encode(), nil, http.StatusOK, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -519,22 +519,22 @@ func (brevo *Brevo) Records(ctx context.Context, target connectors.Targets, upda
 }
 
 // SendEvents sends events to the API.
-func (brevo *Brevo) SendEvents(ctx context.Context, events connectors.Events) error {
-	_, err := brevo.sendEvents(ctx, events, false)
+func (br *Brevo) SendEvents(ctx context.Context, events connectors.Events) error {
+	_, err := br.sendEvents(ctx, events, false)
 	return err
 }
 
 // ServeUI serves the connector's user interface.
-func (brevo *Brevo) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (br *Brevo) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 	switch event {
 	case "load":
 		var s innerSettings
-		if brevo.settings != nil {
-			s = *brevo.settings
+		if br.settings != nil {
+			s = *br.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, brevo.saveSettings(ctx, settings)
+		return nil, br.saveSettings(ctx, settings)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
@@ -555,7 +555,7 @@ func (brevo *Brevo) ServeUI(ctx context.Context, event string, settings json.Val
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (brevo *Brevo) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
+func (br *Brevo) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
 	r := records.First()
 	if r.IsCreate() && !hasCreateIdentifiers(r.Attributes) {
@@ -564,7 +564,7 @@ func (brevo *Brevo) Upsert(ctx context.Context, target connectors.Targets, recor
 
 	var attributes map[string]any
 
-	bb := brevo.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
+	bb := br.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 
 	bb.WriteByte('{')
@@ -598,9 +598,9 @@ func (brevo *Brevo) Upsert(ctx context.Context, target connectors.Targets, recor
 
 	var err error
 	if r.IsCreate() {
-		err = brevo.call(ctx, http.MethodPost, apiBaseURL+"/contacts", bb, http.StatusCreated, nil)
+		err = br.call(ctx, http.MethodPost, apiBaseURL+"/contacts", bb, http.StatusCreated, nil)
 	} else {
-		err = brevo.call(ctx, http.MethodPut, apiBaseURL+"/contacts/"+url.PathEscape(r.ID)+"?identifierType=contact_id", bb, http.StatusNoContent, nil)
+		err = br.call(ctx, http.MethodPut, apiBaseURL+"/contacts/"+url.PathEscape(r.ID)+"?identifierType=contact_id", bb, http.StatusNoContent, nil)
 	}
 	if err != nil {
 		if err, ok := err.(*brevoError); ok {
@@ -617,16 +617,16 @@ func (brevo *Brevo) Upsert(ctx context.Context, target connectors.Targets, recor
 
 // call sends an authenticated request to the Brevo API and decodes the expected
 // response.
-func (brevo *Brevo) call(ctx context.Context, method, url string, body *connectors.BodyBuffer, expectedStatus int, response any) error {
+func (br *Brevo) call(ctx context.Context, method, url string, body *connectors.BodyBuffer, expectedStatus int, response any) error {
 
 	req, err := body.NewRequest(ctx, method, url)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Api-Key", brevo.settings.APIKey)
+	req.Header.Set("Api-Key", br.settings.APIKey)
 
-	res, err := brevo.env.HTTPClient.Do(req)
+	res, err := br.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -648,7 +648,7 @@ func (brevo *Brevo) call(ctx context.Context, method, url string, body *connecto
 }
 
 // saveSettings validates and stores the connector settings.
-func (brevo *Brevo) saveSettings(ctx context.Context, settings json.Value) error {
+func (br *Brevo) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -664,10 +664,10 @@ func (brevo *Brevo) saveSettings(ctx context.Context, settings json.Value) error
 		}
 	}
 	// Check whether the configured API key can access the Brevo account endpoint.
-	previous := brevo.settings
-	brevo.settings = &s
-	if err := brevo.call(ctx, http.MethodGet, apiBaseURL+"/account", nil, http.StatusOK, nil); err != nil {
-		brevo.settings = previous
+	previous := br.settings
+	br.settings = &s
+	if err := br.call(ctx, http.MethodGet, apiBaseURL+"/account", nil, http.StatusOK, nil); err != nil {
+		br.settings = previous
 		if err, ok := err.(*brevoError); ok {
 			if err.StatusCode == http.StatusUnauthorized || err.StatusCode == http.StatusForbidden {
 				return connectors.NewInvalidSettingsError("«api_key» is not valid or cannot access the Brevo API")
@@ -677,11 +677,11 @@ func (brevo *Brevo) saveSettings(ctx context.Context, settings json.Value) error
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
-		brevo.settings = previous
+		br.settings = previous
 		return err
 	}
-	if err := brevo.env.SetSettings(ctx, b); err != nil {
-		brevo.settings = previous
+	if err := br.env.SetSettings(ctx, b); err != nil {
+		br.settings = previous
 		return err
 	}
 	return nil
@@ -694,11 +694,11 @@ const (
 )
 
 // sendEvents sends or previews a batch of Brevo events.
-func (brevo *Brevo) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
+func (br *Brevo) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
 	// See https://developers.brevo.com/docs/event-endpoints and https://developers.brevo.com/docs/event-endpoints#create-events-in-batch.
 
-	bb := brevo.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
+	bb := br.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 
 	bb.WriteString(`{"events":[`)
@@ -807,7 +807,7 @@ Events:
 		return nil, err
 	}
 
-	key := brevo.settings.APIKey
+	key := br.settings.APIKey
 	if preview {
 		key = "[REDACTED]"
 	}
@@ -819,7 +819,7 @@ Events:
 		return req, nil
 	}
 
-	res, err := brevo.env.HTTPClient.Do(req)
+	res, err := br.env.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

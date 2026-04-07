@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
+	fsPkg "io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -98,13 +98,13 @@ type innerSettings struct {
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
-func (filesystem *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	return filesystem.absolutePath(ctx, name, true)
+func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
+	return fs.absolutePath(ctx, name, true)
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
-func (filesystem *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	path, _ := filesystem.absolutePath(ctx, name, false)
+func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	path, _ := fs.absolutePath(ctx, name, false)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, time.Time{}, rewritePathError(err)
@@ -114,24 +114,24 @@ func (filesystem *FileSystem) Reader(ctx context.Context, name string) (io.ReadC
 		return nil, time.Time{}, rewritePathError(err)
 	}
 	var rc io.ReadCloser = f
-	if filesystem.settings.SimulateHighIOLatency {
+	if fs.settings.SimulateHighIOLatency {
 		rc = &highLatencyReadCloser{rc}
 	}
 	return rc, fi.ModTime().UTC(), nil
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
 		var s innerSettings
-		if filesystem.settings != nil {
-			s = *filesystem.settings
+		if fs.settings != nil {
+			s = *fs.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, filesystem.saveSettings(ctx, settings)
+		return nil, fs.saveSettings(ctx, settings)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
@@ -165,8 +165,8 @@ func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, setting
 }
 
 // Write writes the data read from r into the file with the given path name.
-func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	path, _ := filesystem.absolutePath(ctx, name, false)
+func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+	path, _ := fs.absolutePath(ctx, name, false)
 	tmpPath := path + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -180,11 +180,11 @@ func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, cont
 			return
 		}
 	}()
-	if filesystem.settings.SimulateHighIOLatency {
+	if fs.settings.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	_, err = io.Copy(f, r)
-	if filesystem.settings.SimulateHighIOLatency {
+	if fs.settings.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	err2 := f.Close()
@@ -194,7 +194,7 @@ func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, cont
 	if err2 != nil {
 		return rewritePathError(err2)
 	}
-	if filesystem.settings.SimulateHighIOLatency {
+	if fs.settings.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	err = os.Rename(tmpPath, path)
@@ -207,7 +207,7 @@ func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, cont
 // visual context, where it is necessary to use the displayed path, if
 // available, or otherwise whether the returned path must be a real path on the
 // filesystem (e.g. in cases where the connector needs to access files).
-func (filesystem *FileSystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
+func (fs *FileSystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
 	originalName := name
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
@@ -219,7 +219,7 @@ func (filesystem *FileSystem) absolutePath(ctx context.Context, name string, for
 	if name[len(name)-1] == '/' {
 		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
 	}
-	if name == "." || !fs.ValidPath(name) {
+	if name == "." || !fsPkg.ValidPath(name) {
 		return "", connectors.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
 	confMu.Lock()
@@ -231,7 +231,7 @@ func (filesystem *FileSystem) absolutePath(ctx context.Context, name string, for
 }
 
 // saveSettings saves the settings.
-func (filesystem *FileSystem) saveSettings(ctx context.Context, settings json.Value) error {
+func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -241,11 +241,11 @@ func (filesystem *FileSystem) saveSettings(ctx context.Context, settings json.Va
 	if err != nil {
 		return err
 	}
-	err = filesystem.env.SetSettings(ctx, b)
+	err = fs.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
-	filesystem.settings = &s
+	fs.settings = &s
 	return nil
 }
 
@@ -261,13 +261,13 @@ func rewritePathError(err error) error {
 	if displayedRoot == "" {
 		return err
 	}
-	if pErr, ok := err.(*fs.PathError); ok {
+	if pErr, ok := err.(*fsPkg.PathError); ok {
 		// From the path of the fs.PathError, remove the prefix that refers to
 		// the root.
 		path := strings.TrimPrefix(pErr.Path, root)
 		// Prepend the displayed root as prefix.
 		path = filepath.Join(displayedRoot, path)
-		return &fs.PathError{
+		return &fsPkg.PathError{
 			Op:   pErr.Op,
 			Path: path,
 			Err:  pErr.Err,

@@ -85,7 +85,7 @@ func New(env *connectors.ApplicationEnv) (*PostHog, error) {
 }
 
 // EventTypes returns the event types.
-func (posthog *PostHog) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
+func (ph *PostHog) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
 	return []*connectors.EventType{
 		{
 			ID:            "identify",
@@ -127,7 +127,7 @@ func (posthog *PostHog) EventTypes(ctx context.Context) ([]*connectors.EventType
 }
 
 // EventTypeSchema returns the schema of the specified event type.
-func (posthog *PostHog) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+func (ph *PostHog) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	sessionID := types.Property{
 		Name:        "session_id",
 		Type:        types.UUID(),
@@ -167,28 +167,28 @@ func (posthog *PostHog) EventTypeSchema(ctx context.Context, eventType string) (
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
 // events to the API, without actually sending it.
-func (posthog *PostHog) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
-	return posthog.sendEvents(ctx, events, true)
+func (ph *PostHog) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
+	return ph.sendEvents(ctx, events, true)
 }
 
 // SendEvents sends events to the API.
-func (posthog *PostHog) SendEvents(ctx context.Context, events connectors.Events) error {
-	_, err := posthog.sendEvents(ctx, events, false)
+func (ph *PostHog) SendEvents(ctx context.Context, events connectors.Events) error {
+	_, err := ph.sendEvents(ctx, events, false)
 	return err
 }
 
 // ServeUI serves the connector's user interface.
-func (posthog *PostHog) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
+func (ph *PostHog) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
 		var s innerSettings
-		if posthog.settings != nil {
-			s = *posthog.settings
+		if ph.settings != nil {
+			s = *ph.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, posthog.saveSettings(ctx, settings)
+		return nil, ph.saveSettings(ctx, settings)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
@@ -224,7 +224,7 @@ func (posthog *PostHog) ServeUI(ctx context.Context, event string, settings json
 
 // saveSettings validates and saves the settings. If test is true, it validates
 // only the settings without saving it.
-func (posthog *PostHog) saveSettings(ctx context.Context, settings json.Value) error {
+func (ph *PostHog) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -258,11 +258,11 @@ func (posthog *PostHog) saveSettings(ctx context.Context, settings json.Value) e
 	if err != nil {
 		return err
 	}
-	err = posthog.env.SetSettings(ctx, b)
+	err = ph.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
-	posthog.settings = &s
+	ph.settings = &s
 	return nil
 }
 
@@ -274,13 +274,13 @@ const maxEventRequestSize = 20 * 1024 * 1024 // from https://posthog.com/docs/ap
 //
 // If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
-func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
+func (ph *PostHog) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
 	// bb contains newline-delimited JSON objects representing the events.
-	bb := posthog.env.HTTPClient.GetBodyBuffer(contentEncoding)
+	bb := ph.env.HTTPClient.GetBodyBuffer(contentEncoding)
 	defer bb.Close()
 
-	apiKey := posthog.settings.APIKey
+	apiKey := ph.settings.APIKey
 	if preview {
 		apiKey = "[REDACTED]"
 	}
@@ -445,7 +445,7 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 	_, _ = bb.WriteString("]}")
 
 	var u string
-	if cloud := posthog.settings.Cloud; cloud != nil {
+	if cloud := ph.settings.Cloud; cloud != nil {
 		switch cloud.ProjectRegion {
 		case "US":
 			u = "https://us.i.posthog.com/batch/"
@@ -455,7 +455,7 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 			return nil, fmt.Errorf("expected projectRegion to be US or EU, got %q", cloud.ProjectRegion)
 		}
 	} else {
-		u = posthog.settings.SelfHosted.URL + "batch/"
+		u = ph.settings.SelfHosted.URL + "batch/"
 	}
 
 	req, err := bb.NewRequest(ctx, "POST", u)
@@ -470,7 +470,7 @@ func (posthog *PostHog) sendEvents(ctx context.Context, events connectors.Events
 	}
 
 	// Send the request.
-	res, err := posthog.env.HTTPClient.Do(req)
+	res, err := ph.env.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
