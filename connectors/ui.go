@@ -172,9 +172,6 @@ type Text struct {
 
 func (txt *Text) component() {}
 
-// TODO: la label vuota, l'evento è "save", l'UI si basa sull'evento save
-// TODO: tutti i connettori prima o dopo devono tornato della ServeUI
-
 type Button struct {
 	Event   string
 	Text    string
@@ -182,7 +179,12 @@ type Button struct {
 	Role    Role
 }
 
-var SaveButton = Button{}
+// SaveButton is a button common to connectors whose event indicates to save the
+// settings (both when creating a new connection and when updating the settings
+// of an existing connection).
+var SaveButton = Button{
+	Event: "save",
+}
 
 // Alert represents an alert message to be shown in the UI.
 type Alert struct {
