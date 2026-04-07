@@ -719,12 +719,12 @@ func newPostHogForTests(t *testing.T) *PostHog {
 		t.Fatal("expected KRENALIS_TEST_POSTHOG_PROJECT_REGION or KRENALIS_TEST_POSTHOG_SELF_HOSTED_URL to be set, got none")
 	}
 
-	app, err := testconnector.NewApplication("posthog", s)
+	ph, err := testconnector.NewApplication[*PostHog]("posthog", s)
 	if err != nil {
 		t.Fatalf("expected NewApplication to succeed, got %v", err)
 	}
 
-	return app.(*PostHog)
+	return ph
 }
 
 func endpointURLForTests(t *testing.T, settings *innerSettings) string {
