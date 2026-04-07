@@ -359,7 +359,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		}
 		dc := dataCenterFromKey(req.APIKey)
 		if dc == "" {
-			return nil, connectors.NewInvalidSettingsError("API Key has an invalid format: missing datacenter suffix (e.g. \"-us1\")")
+			return nil, connectors.NewInvalidSettingsError("missing datacenter suffix (e.g. \"-us1\")")
 		}
 		tmp := &Mailchimp{
 			env:      mc.env,
@@ -608,14 +608,11 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 	// Extract the datacenter from the API key.
 	dc := dataCenterFromKey(req.APIKey)
 	if dc == "" {
-		return connectors.NewInvalidSettingsError("API Key has an invalid format: missing datacenter suffix (e.g. \"-us1\")")
+		return connectors.NewInvalidSettingsError("missing datacenter suffix (e.g. \"-us1\")")
 	}
 
 	// Validate the audience.
-	if req.Audience == "" {
-		return connectors.NewInvalidSettingsError("click «Validate API key» to load the available audiences, then select one and click Add")
-	}
-	if len(req.Audience) > 100 {
+	if len(req.Audience) == 0 || len(req.Audience) > 100 {
 		return connectors.NewInvalidSettingsError("audience length must be in range [1, 100]")
 	}
 
