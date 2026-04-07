@@ -5,6 +5,7 @@ import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/Fee
 import NotFound from '../NotFound/NotFound';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -140,7 +141,7 @@ const ConnectorSettings = () => {
 		if (hasConfirmationButton) {
 			confirmationButton!.load();
 		}
-		if (eventName === 'add') {
+		if (eventName === 'save') {
 			try {
 				validateConnectorSettings(settings, fields);
 			} catch (err) {
@@ -240,41 +241,33 @@ const ConnectorSettings = () => {
 	const buttonsToRender: ReactNode[] = [];
 	if (buttons) {
 		for (const [i, b] of buttons.entries()) {
-			if (b.event === 'add') {
-				buttonsToRender.push(
-					<div key={b.event} className='connector-settings__save-wrapper'>
-						<FeedbackButton
-							className='connector-settings__save-button'
-							variant={b.variant}
-							onClick={async () => {
-								await onPipelineClick(b.event, i);
-							}}
-							ref={(ref) => {
-								confirmationButtonsRef.current[i] = ref!;
-							}}
-						>
-							{b.text}
-						</FeedbackButton>
-					</div>,
-				);
-			} else {
-				buttonsToRender.push(
-					<FeedbackButton
-						key={b.event}
-						variant={b.variant}
-						onClick={async () => {
-							await onPipelineClick(b.event, i);
-						}}
-						ref={(ref) => {
-							confirmationButtonsRef.current[i] = ref!;
-						}}
-					>
-						{b.text}
-					</FeedbackButton>,
-				);
-			}
+			buttonsToRender.push(
+				<FeedbackButton
+					key={b.event}
+					variant={b.variant}
+					onClick={async () => {
+						await onPipelineClick(b.event, i);
+					}}
+					ref={(ref) => {
+						confirmationButtonsRef.current[i] = ref!;
+					}}
+				>
+					{b.text}
+				</FeedbackButton>,
+			);
 		}
 	}
+	buttonsToRender.push(
+		<div className='connector-settings__save-wrapper'>
+			<SlButton
+				className='connector-settings__save-button'
+				variant='primary'
+				onClick={() => onPipelineClick('save')}
+			>
+				Add
+			</SlButton>
+		</div>,
+	);
 	buttonsToRender.push(
 		<div key='documentation-wrapper' className='connector-settings__documentation'>
 			<hr className='connector-settings__divider' />
@@ -308,9 +301,7 @@ const ConnectorSettings = () => {
 			className='connector-settings'
 			onSubmit={(e) => {
 				e.preventDefault();
-				if (buttons?.some((b) => b.event === 'add')) {
-					onPipelineClick('add');
-				}
+				onPipelineClick('save');
 			}}
 		>
 			<div className='route-content'>
