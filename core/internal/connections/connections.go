@@ -585,11 +585,14 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 		Settings:   settings,
 	}
 	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
+		result, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
 		if err != nil {
 			return nil, err
 		}
-		return n, err
+		if result.RowsAffected() == 0 {
+			return nil, nil
+		}
+		return n, nil
 	})
 	return err
 }
