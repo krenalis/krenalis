@@ -382,7 +382,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		Type:        "text",
 		MinLength:   10,
 		MaxLength:   100,
-		HelpText:    "API key generated in Mailchimp (Account & billing → Extras → API keys).",
+		HelpText:    "API key generated in Mailchimp.",
 	}
 
 	if audiences == nil {
