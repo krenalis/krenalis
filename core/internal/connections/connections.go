@@ -618,9 +618,12 @@ func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, set
 		Settings: settings,
 	}
 	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "UPDATE pipelines SET format_settings = $1 WHERE id = $2", n.Settings, n.Pipeline)
+		result, err := tx.Exec(ctx, "UPDATE pipelines SET format_settings = $1 WHERE id = $2", n.Settings, n.Pipeline)
 		if err != nil {
 			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, nil
 		}
 		return n, nil
 	})
