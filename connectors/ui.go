@@ -172,12 +172,17 @@ type Text struct {
 
 func (txt *Text) component() {}
 
+// TODO: la label vuota, l'evento è "save", l'UI si basa sull'evento save
+// TODO: tutti i connettori prima o dopo devono tornato della ServeUI
+
 type Button struct {
 	Event   string
 	Text    string
 	Variant string // primary|neutral|danger|warning|success
 	Role    Role
 }
+
+var SaveButton = Button{}
 
 // Alert represents an alert message to be shown in the UI.
 type Alert struct {

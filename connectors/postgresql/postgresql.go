@@ -191,7 +191,7 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 		Settings: settings,
 		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
-			{Event: "add", Text: "Add", Variant: "primary"},
+			connectors.SaveButton,
 		},
 	}
 
