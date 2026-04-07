@@ -353,14 +353,9 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		if err := settings.Unmarshal(&req); err != nil {
 			return nil, err
 		}
-		if n := len(req.APIKey); n < 10 || n > 100 {
-			return nil, connectors.NewInvalidSettingsError("API Key length must be in range [10, 100]")
-		}
-		for i := 0; i < len(req.APIKey); i++ {
-			c := req.APIKey[i]
-			if c < 33 || c > 126 {
-				return nil, connectors.NewInvalidSettingsError("API Key must contain only printable ASCII characters")
-			}
+		err := validateAPIKey(req.APIKey)
+		if err != nil {
+			return nil, err
 		}
 		dc := dataCenterFromKey(req.APIKey)
 		if dc == "" {
@@ -370,7 +365,6 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 			env:      mc.env,
 			settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
 		}
-		var err error
 		audiences, err = tmp.audiences(ctx)
 		if err != nil {
 			return nil, err
@@ -408,11 +402,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 	return &connectors.UI{
 		Fields: []connectors.Component{
 			apiKeyField,
-			&connectors.Select{
-				Name:    "audience",
-				Label:   "Audience",
-				Options: options,
-			},
+			&connectors.Select{Name: "audience", Label: "Audience", Options: options},
 		},
 		Settings: settings,
 		Buttons:  []connectors.Button{connectors.SaveButton},
@@ -602,7 +592,7 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) error {
 
 	var req struct {
-		ApiKey   string `json:"apiKey"`
+		APIKey   string `json:"apiKey"`
 		Audience string `json:"audience"`
 	}
 	if err := settings.Unmarshal(&req); err != nil {
@@ -610,18 +600,13 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 	}
 
 	// Validate the API key.
-	if n := len(req.ApiKey); n < 10 || n > 100 {
-		return connectors.NewInvalidSettingsError("API Key length must be in range [10, 100]")
-	}
-	for i := 0; i < len(req.ApiKey); i++ {
-		c := req.ApiKey[i]
-		if c < 33 || c > 126 {
-			return connectors.NewInvalidSettingsError("API Key must contain only printable ASCII characters")
-		}
+	err := validateAPIKey(req.APIKey)
+	if err != nil {
+		return err
 	}
 
 	// Extract the datacenter from the API key.
-	dc := dataCenterFromKey(req.ApiKey)
+	dc := dataCenterFromKey(req.APIKey)
 	if dc == "" {
 		return connectors.NewInvalidSettingsError("API Key has an invalid format: missing datacenter suffix (e.g. \"-us1\")")
 	}
@@ -637,7 +622,7 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 	// Use a temporary connector instance to validate the audience with the new key.
 	tmp := &Mailchimp{
 		env:      mc.env,
-		settings: &innerSettings{APIKey: req.ApiKey, DataCenter: dc},
+		settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
 	}
 	audiences, err := tmp.audiences(ctx)
 	if err != nil {
@@ -655,7 +640,7 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 	}
 
 	s := innerSettings{
-		APIKey:     req.ApiKey,
+		APIKey:     req.APIKey,
 		Audience:   req.Audience,
 		DataCenter: dc,
 	}
@@ -814,6 +799,21 @@ func (mc *Mailchimp) webhooks(ctx context.Context, audience string) ([]webhook, 
 		return nil, err
 	}
 	return response.Webhooks, nil
+}
+
+// validateAPIKey validates a Mailchimp's API Key, returning an error if it is
+// not valid.
+func validateAPIKey(apiKey string) error {
+	if n := len(apiKey); n < 10 || n > 100 {
+		return connectors.NewInvalidSettingsError("API Key length must be in range [10, 100]")
+	}
+	for i := 0; i < len(apiKey); i++ {
+		c := apiKey[i]
+		if c < 33 || c > 126 {
+			return connectors.NewInvalidSettingsError("API Key must contain only printable ASCII characters")
+		}
+	}
+	return nil
 }
 
 // staticProperties contains the static properties of the user schema.
