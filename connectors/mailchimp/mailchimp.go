@@ -355,7 +355,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		}
 		err := validateAPIKey(req.APIKey)
 		if err != nil {
-			return nil, err
+			return nil, connectors.NewInvalidSettingsError(err.Error())
 		}
 		dc := dataCenterFromKey(req.APIKey)
 		if dc == "" {
@@ -382,11 +382,11 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		Type:        "text",
 		MinLength:   10,
 		MaxLength:   100,
-		HelpText:    "API key generated in Mailchimp.",
+		HelpText:    "API Key generated in Mailchimp.",
 	}
 
 	if audiences == nil {
-		// Phase 1: show only the API key field with a button to fetch audiences.
+		// Phase 1: show only the API Key field with a button to fetch audiences.
 		return &connectors.UI{
 			Fields:   []connectors.Component{apiKeyField},
 			Settings: settings,
@@ -394,7 +394,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		}, nil
 	}
 
-	// Phase 2: show the audience selector after the API key has been validated.
+	// Phase 2: show the audience selector after the API Key has been validated.
 	options := make([]connectors.Option, len(audiences))
 	for i, a := range audiences {
 		options[i] = connectors.Option{Text: a.Name, Value: a.ID}
@@ -599,13 +599,13 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 		return err
 	}
 
-	// Validate the API key.
+	// Validate the API Key.
 	err := validateAPIKey(req.APIKey)
 	if err != nil {
-		return err
+		return connectors.NewInvalidSettingsError(err.Error())
 	}
 
-	// Extract the datacenter from the API key.
+	// Extract the datacenter from the API Key.
 	dc := dataCenterFromKey(req.APIKey)
 	if dc == "" {
 		return connectors.NewInvalidSettingsError("missing datacenter suffix (e.g. \"-us1\")")
@@ -652,8 +652,9 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 	return nil
 }
 
-// dataCenterFromKey extracts the datacenter identifier from a Mailchimp API key.
-// Mailchimp API keys have the format "<key>-<dc>" (e.g. "abc123-us1").
+// dataCenterFromKey extracts the datacenter identifier from a Mailchimp API
+// Key.
+// Mailchimp API Keys have the format "<key>-<dc>" (e.g. "abc123-us1").
 // Returns an empty string if the key does not contain a datacenter suffix.
 func dataCenterFromKey(apiKey string) string {
 	i := strings.LastIndex(apiKey, "-")
@@ -692,7 +693,7 @@ func (err *mailchimpError) Error() string {
 func (mc *Mailchimp) call(ctx context.Context, method, path string, params url.Values, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
 	if mc.settings == nil {
-		return errors.New("Mailchimp connector is not configured: API key is missing")
+		return errors.New("Mailchimp connector is not configured: API Key is missing")
 	}
 
 	u := "https://" + mc.settings.DataCenter + ".api.mailchimp.com/3.0/" + path[1:]
