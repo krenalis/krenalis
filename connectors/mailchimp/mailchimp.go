@@ -346,7 +346,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 			}
 		}
 		settings, _ = json.Marshal(s)
-	case "validate-api-key":
+	case "validate-key-determine-audiences":
 		var req struct {
 			ApiKey string `json:"apiKey"`
 		}
@@ -396,7 +396,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		return &connectors.UI{
 			Fields:   []connectors.Component{apiKeyField},
 			Settings: settings,
-			Buttons:  []connectors.Button{{Event: "validate-api-key", Text: "Validate API key", Variant: "neutral"}},
+			Buttons:  []connectors.Button{{Event: "validate-key-determine-audiences", Text: "Next", Variant: "neutral"}},
 		}, nil
 	}
 
