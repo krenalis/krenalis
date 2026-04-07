@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -65,24 +64,15 @@ func init() {
 			User:  "Contact",
 			Users: "Contacts",
 		},
-		OAuth: connectors.OAuth{
-			AuthURL:           "https://login.mailchimp.com/oauth2/authorize?response_type=code",
-			TokenURL:          "https://login.mailchimp.com/oauth2/token",
-			ExpiresIn:         math.MaxInt32,
-			DisallowLocalhost: true,
-		},
 		EndpointGroups: []connectors.EndpointGroup{
 			// Endpoint group used for the Mailchimp API.
 			{
 				Patterns: []string{
-					"GET  login.mailchimp.com/oauth2/metadata", // metadata endpoint
-					"POST login.mailchimp.com/",                // OAuth token endpoint
-					"GET  /3.0/lists",                          // audiences
-					"GET  /3.0/lists/",                         // RecordSchema, Records, and webhooks
-					"GET  /3.0/batches/",                       // Upsert
-					"POST /3.0/batches",                        // Upsert
+					"GET  /3.0/lists",    // audiences
+					"GET  /3.0/lists/",   // RecordSchema, Records, and webhooks
+					"GET  /3.0/batches/", // Upsert
+					"POST /3.0/batches",  // Upsert
 				},
-				RequireOAuth: true,
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
 				RateLimit: connectors.RateLimit{RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
@@ -124,16 +114,10 @@ type Mailchimp struct {
 }
 
 type innerSettings struct {
+	APIKey        string `json:"apiKey"`
 	Audience      string `json:"audience"`
 	DataCenter    string `json:"dataCenter"`
 	WebhookSecret string `json:"webhookSecret"`
-}
-
-// OAuthAccount returns the API's account associated with the OAuth
-// authorization.
-func (mc *Mailchimp) OAuthAccount(ctx context.Context) (string, error) {
-	_, account, err := mc.metadata(ctx)
-	return account, err
 }
 
 // RecordSchema returns the schema of the specified target and role.
@@ -348,41 +332,81 @@ var addressType = types.Object([]types.Property{
 // ServeUI serves the connector's user interface.
 func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
+	var audiences []audience
+
 	switch event {
 	case "load":
 		var s innerSettings
 		if mc.settings != nil {
 			s = *mc.settings
+			var err error
+			audiences, err = mc.audiences(ctx)
+			if err != nil {
+				return nil, err
+			}
 		}
 		settings, _ = json.Marshal(s)
+	case "validate-key-determine-audiences":
+		var req struct {
+			APIKey string `json:"apiKey"`
+		}
+		if err := settings.Unmarshal(&req); err != nil {
+			return nil, err
+		}
+		err := validateAPIKey(req.APIKey)
+		if err != nil {
+			return nil, connectors.NewInvalidSettingsError(err.Error())
+		}
+		dc := dataCenterFromKey(req.APIKey)
+		if dc == "" {
+			return nil, connectors.NewInvalidSettingsError("missing datacenter suffix (e.g. \"-us1\")")
+		}
+		tmp := &Mailchimp{
+			env:      mc.env,
+			settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
+		}
+		audiences, err = tmp.audiences(ctx)
+		if err != nil {
+			return nil, err
+		}
 	case "save":
 		return nil, mc.saveSettings(ctx, settings)
 	default:
 		return nil, connectors.ErrUIEventNotExist
 	}
 
-	// Get the audiences.
-	audiences, err := mc.audiences(ctx)
-	if err != nil {
-		return nil, err
-	}
-	options := make([]connectors.Option, len(audiences))
-	for i, audience := range audiences {
-		options[i] = connectors.Option{
-			Text:  audience.Name,
-			Value: audience.ID,
-		}
+	apiKeyField := &connectors.Input{
+		Name:        "apiKey",
+		Label:       "API Key",
+		Placeholder: "c1f1a2g7f6b61f6173b7e2712f7dfce6-us1",
+		Type:        "text",
+		MinLength:   10,
+		MaxLength:   100,
+		HelpText:    "API Key generated in Mailchimp.",
 	}
 
-	ui := &connectors.UI{
+	if audiences == nil {
+		// Phase 1: show only the API Key field with a button to fetch audiences.
+		return &connectors.UI{
+			Fields:   []connectors.Component{apiKeyField},
+			Settings: settings,
+			Buttons:  []connectors.Button{{Event: "validate-key-determine-audiences", Text: "Next", Variant: "neutral"}},
+		}, nil
+	}
+
+	// Phase 2: show the audience selector after the API Key has been validated.
+	options := make([]connectors.Option, len(audiences))
+	for i, a := range audiences {
+		options[i] = connectors.Option{Text: a.Name, Value: a.ID}
+	}
+	return &connectors.UI{
 		Fields: []connectors.Component{
+			apiKeyField,
 			&connectors.Select{Name: "audience", Label: "Audience", Options: options},
 		},
 		Settings: settings,
 		Buttons:  []connectors.Button{connectors.SaveButton},
-	}
-
-	return ui, nil
+	}, nil
 }
 
 const maxBodyRecordsBytes = 100 * 1024 * 1024
@@ -566,24 +590,44 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 
 // saveSettings validates and saves the settings.
 func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) error {
-	var audience struct {
+
+	var req struct {
+		APIKey   string `json:"apiKey"`
 		Audience string `json:"audience"`
 	}
-	err := settings.Unmarshal(&audience)
-	if err != nil {
+	if err := settings.Unmarshal(&req); err != nil {
 		return err
 	}
-	if audience.Audience == "" || len(audience.Audience) > 100 {
+
+	// Validate the API Key.
+	err := validateAPIKey(req.APIKey)
+	if err != nil {
+		return connectors.NewInvalidSettingsError(err.Error())
+	}
+
+	// Extract the datacenter from the API Key.
+	dc := dataCenterFromKey(req.APIKey)
+	if dc == "" {
+		return connectors.NewInvalidSettingsError("missing datacenter suffix (e.g. \"-us1\")")
+	}
+
+	// Validate the audience.
+	if len(req.Audience) == 0 || len(req.Audience) > 100 {
 		return connectors.NewInvalidSettingsError("audience length must be in range [1, 100]")
 	}
-	// Check if the audience exists.
-	audiences, err := mc.audiences(ctx)
+
+	// Use a temporary connector instance to validate the audience with the new key.
+	tmp := &Mailchimp{
+		env:      mc.env,
+		settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
+	}
+	audiences, err := tmp.audiences(ctx)
 	if err != nil {
 		return err
 	}
 	var found bool
 	for _, l := range audiences {
-		if l.ID == audience.Audience {
+		if l.ID == req.Audience {
 			found = true
 			break
 		}
@@ -591,24 +635,33 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 	if !found {
 		return connectors.NewInvalidSettingsError("audience does not exist")
 	}
-	dataCenter, _, err := mc.metadata(ctx)
-	if err != nil {
-		return err
-	}
+
 	s := innerSettings{
-		Audience:   audience.Audience,
-		DataCenter: dataCenter,
+		APIKey:     req.APIKey,
+		Audience:   req.Audience,
+		DataCenter: dc,
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	err = mc.env.SetSettings(ctx, b)
-	if err != nil {
+	if err := mc.env.SetSettings(ctx, b); err != nil {
 		return err
 	}
 	mc.settings = &s
 	return nil
+}
+
+// dataCenterFromKey extracts the datacenter identifier from a Mailchimp API
+// Key.
+// Mailchimp API Keys have the format "<key>-<dc>" (e.g. "abc123-us1").
+// Returns an empty string if the key does not contain a datacenter suffix.
+func dataCenterFromKey(apiKey string) string {
+	i := strings.LastIndex(apiKey, "-")
+	if i < 0 || i == len(apiKey)-1 {
+		return ""
+	}
+	return apiKey[i+1:]
 }
 
 type mailchimpError struct {
@@ -639,18 +692,11 @@ func (err *mailchimpError) Error() string {
 // call calls the Mailchimp API.
 func (mc *Mailchimp) call(ctx context.Context, method, path string, params url.Values, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
-	var dataCenter string
 	if mc.settings == nil {
-		var err error
-		dataCenter, _, err = mc.metadata(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		dataCenter = mc.settings.DataCenter
+		return errors.New("Mailchimp connector is not configured: API Key is missing")
 	}
 
-	var u = "https://" + dataCenter + ".api.mailchimp.com/3.0/" + path[1:]
+	u := "https://" + mc.settings.DataCenter + ".api.mailchimp.com/3.0/" + path[1:]
 	if params != nil {
 		u += "?" + params.Encode()
 	}
@@ -659,6 +705,7 @@ func (mc *Mailchimp) call(ctx context.Context, method, path string, params url.V
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Authorization", "Bearer "+mc.settings.APIKey)
 
 	res, err := mc.env.HTTPClient.Do(req)
 	if err != nil {
@@ -752,37 +799,19 @@ func (mc *Mailchimp) webhooks(ctx context.Context, audience string) ([]webhook, 
 	return response.Webhooks, nil
 }
 
-// metadata returns the datacenter and the account id.
-func (mc *Mailchimp) metadata(ctx context.Context) (string, string, error) {
-	// Retrieve the datacenter calling the Metadata endpoint.
-	// https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/#implement-the-oauth-2-workflow-on-your-server
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://login.mailchimp.com/oauth2/metadata", nil)
-	if err != nil {
-		return "", "", err
+// validateAPIKey validates a Mailchimp's API Key, returning an error if it is
+// not valid.
+func validateAPIKey(apiKey string) error {
+	if n := len(apiKey); n < 10 || n > 100 {
+		return connectors.NewInvalidSettingsError("API Key length must be in range [10, 100]")
 	}
-	res, err := mc.env.HTTPClient.Do(req)
-	if err != nil {
-		return "", "", err
+	for i := 0; i < len(apiKey); i++ {
+		c := apiKey[i]
+		if c < 33 || c > 126 {
+			return connectors.NewInvalidSettingsError("API Key must contain only printable ASCII characters")
+		}
 	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return "", "", fmt.Errorf("fetching metadata, Mailchimp returned a %d status code", res.StatusCode)
-	}
-	r := struct {
-		DC     string `json:"dc"`
-		UserID int    `json:"user_id"`
-	}{}
-	err = json.Decode(res.Body, &r)
-	if err != nil {
-		return "", "", err
-	}
-	if r.DC == "" {
-		return "", "", errors.New("fetching metadata, Mailchimp returned an empty data center")
-	}
-	if r.UserID <= 0 {
-		return "", "", fmt.Errorf("fetching metadata, Mailchimp returned an invalid user ID: %d", r.UserID)
-	}
-	return r.DC, strconv.Itoa(r.UserID), nil
+	return nil
 }
 
 // staticProperties contains the static properties of the user schema.

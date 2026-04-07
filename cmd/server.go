@@ -74,7 +74,7 @@ type Settings struct {
 		Local  LocalConfig
 	}
 	PrometheusMetricsEnabled      bool
-	OAuthCredentials              map[string]*core.OAuthCredentials
+	OAuthCredentials              map[string]*core.OAuthCredentials // always empty (no connector currently uses OAuth).
 	MaxQueuedEventsPerDestination int
 }
 

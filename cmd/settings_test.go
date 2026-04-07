@@ -1500,45 +1500,6 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("OAuth Mailchimp", func(t *testing.T) {
-
-		//  Mailchimp missing secret -> error.
-		setBaseline(t)
-		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
-		_, err := parseEnvSettings()
-		if err == nil {
-			t.Fatalf("expected error for Mailchimp ID without secret, got nil")
-		}
-		want := "KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is set"
-		if err.Error() != want {
-			t.Fatalf("expected %q, got %q", want, err)
-		}
-
-		// Mailchimp secret without id -> error. Ensure ID is unset.
-		setBaseline(t)
-		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "")
-		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET", "sec")
-		_, err = parseEnvSettings()
-		if err == nil {
-			t.Fatalf("expected error for Mailchimp secret without id, got nil")
-		}
-		want = "KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID is required when KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET is set"
-		if err.Error() != want {
-			t.Fatalf("expected %q, got %q", want, err)
-		}
-
-		// Both valid.
-		setBaseline(t)
-		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
-		t.Setenv("KRENALIS_OAUTH_MAILCHIMP_CLIENT_SECRET", "msec")
-		s, err := parseEnvSettings()
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-		if s.OAuthCredentials == nil || s.OAuthCredentials["mailchimp"] == nil {
-			t.Fatalf("expected both mailchimp connector present, got %#v", s.OAuthCredentials)
-		}
-	})
 }
 
 // TestParseEnvURLSuccess verifies valid inputs and normalization behaviors.
