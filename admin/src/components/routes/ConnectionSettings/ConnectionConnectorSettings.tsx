@@ -5,7 +5,6 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import AppContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
@@ -63,7 +62,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		fetchUI();
 	}, []);
 
-	const onPipelineClick = async (eventName: string, confirmationButtonIndex?: number) => {
+	const onButtonClick = async (eventName: string, confirmationButtonIndex?: number) => {
 		let confirmationButton: FeedbackButtonRef | null = null;
 		if (confirmationButtonIndex != null) {
 			confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
@@ -152,29 +151,23 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	}
 
 	const buttonsToRender: ReactNode[] = [];
-	if (buttons) {
-		for (const [i, b] of buttons.entries()) {
-			buttonsToRender.push(
-				<FeedbackButton
-					key={b.event}
-					variant={b.variant}
-					onClick={async () => {
-						await onPipelineClick(b.event, i);
-					}}
-					ref={(ref) => {
-						confirmationButtonsRef.current[i] = ref!;
-					}}
-				>
-					{b.text}
-				</FeedbackButton>,
-			);
-		}
+	for (const [i, b] of buttons.entries()) {
+		buttonsToRender.push(
+			<FeedbackButton
+				key={b.event}
+				name={b.event}
+				variant={b.event === 'save' ? 'primary' : b.variant}
+				onClick={async () => {
+					await onButtonClick(b.event, i);
+				}}
+				ref={(ref) => {
+					confirmationButtonsRef.current[i] = ref!;
+				}}
+			>
+				{b.event === 'save' ? 'Save' : b.text}
+			</FeedbackButton>,
+		);
 	}
-	buttonsToRender.push(
-		<SlButton variant='primary' onClick={() => onPipelineClick('save')}>
-			Save
-		</SlButton>,
-	);
 
 	if (isLoading) {
 		return (

@@ -16,6 +16,7 @@ interface FeedbackButtonProps {
 	variant?: Variant;
 	onClick?: () => void;
 	disabled?: boolean;
+	name?: string;
 	placement?:
 		| 'bottom'
 		| 'top'
@@ -52,6 +53,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			size = 'medium',
 			hoist = false,
 			disabled,
+			name,
 			placement,
 			...delegated
 		},
@@ -160,6 +162,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				style={{ '--scale-animation-duration': `${halfAnimation / 1.5}ms` } as React.CSSProperties}
 				disabled={disabled || loading || isLoading}
 				loading={loading || isLoading}
+				name={name}
 				{...delegated}
 			>
 				{children}
