@@ -120,7 +120,7 @@ const ConnectorSettings = () => {
 		fetchData();
 	}, []);
 
-	const onPipelineClick = async (eventName: string, confirmationButtonIndex?: number) => {
+	const onButtonClick = async (eventName: string, confirmationButtonIndex?: number) => {
 		let confirmationButton: FeedbackButtonRef | null = null;
 		if (confirmationButtonIndex != null) {
 			confirmationButton = confirmationButtonsRef.current[confirmationButtonIndex];
@@ -239,35 +239,38 @@ const ConnectorSettings = () => {
 	}
 
 	const buttonsToRender: ReactNode[] = [];
-	if (buttons) {
+	if (connector?.hasSettings(connectionRole)) {
 		for (const [i, b] of buttons.entries()) {
 			buttonsToRender.push(
 				<FeedbackButton
 					key={b.event}
-					variant={b.variant}
+					name={b.event}
+					variant={b.event === 'save' ? 'primary' : b.variant}
 					onClick={async () => {
-						await onPipelineClick(b.event, i);
+						await onButtonClick(b.event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
 					}}
 				>
-					{b.text}
+					{b.event === 'save' ? 'Add' : b.text}
 				</FeedbackButton>,
 			);
 		}
+	} else {
+		buttonsToRender.push(
+			<div className='connector-settings__save-wrapper'>
+				<SlButton
+					className='connector-settings__save-button'
+					variant='primary'
+					onClick={() => onButtonClick('save')}
+				>
+					Add
+				</SlButton>
+			</div>,
+		);
 	}
-	buttonsToRender.push(
-		<div className='connector-settings__save-wrapper'>
-			<SlButton
-				className='connector-settings__save-button'
-				variant='primary'
-				onClick={() => onPipelineClick('save')}
-			>
-				Add
-			</SlButton>
-		</div>,
-	);
+
 	buttonsToRender.push(
 		<div key='documentation-wrapper' className='connector-settings__documentation'>
 			<hr className='connector-settings__divider' />
@@ -301,7 +304,7 @@ const ConnectorSettings = () => {
 			className='connector-settings'
 			onSubmit={(e) => {
 				e.preventDefault();
-				onPipelineClick('save');
+				onButtonClick('save');
 			}}
 		>
 			<div className='route-content'>

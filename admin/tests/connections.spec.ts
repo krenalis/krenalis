@@ -13,7 +13,7 @@ test(`Add Dummy source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
 	await page.click(`[data-code="dummy"]`);
 	await page.click('.connectors-list__documentation-add');
-	await page.click('.connector-settings__save-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="save"]');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
 	const url = page.url();
 	const fragments = url.split('/');
@@ -32,7 +32,7 @@ test(`Add Dummy destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
 	await page.click(`[data-code="dummy"]`);
 	await page.click('.connectors-list__documentation-add');
-	await page.click('.connector-settings__save-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="save"]');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
 	const url = page.url();
 	const fragments = url.split('/');
@@ -58,10 +58,10 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.locator('sl-input >> input[name="password"]').fill(config.dbPassword);
 	await page.locator('sl-input >> input[name="database"]').fill(config.dbName);
 
-	await page.click('.feedback-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="test"]');
 	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeAttached();
 
-	await page.click('.connector-settings__save-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="save"]');
 
 	await expect(page.locator('.connection-wrapper__name')).toContainText('PostgreSQL');
 
@@ -91,10 +91,10 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.locator('sl-input >> input[name="password"]').fill(config.dbPassword);
 	await page.locator('sl-input >> input[name="database"]').fill(config.dbName);
 
-	await page.click('.feedback-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="test"]');
 	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeAttached();
 
-	await page.click('.connector-settings__save-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="save"]');
 
 	await expect(page.locator('.connection-wrapper__name')).toContainText('PostgreSQL');
 
@@ -117,7 +117,7 @@ test(`Add File System source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
 	await page.click(`[data-code="filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
-	await page.click('.connector-settings__save-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="save"]');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('File System');
 	const url = page.url();
 	const fragments = url.split('/');
@@ -136,7 +136,7 @@ test(`Add File System destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
 	await page.click(`[data-code="filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
-	await page.click('.connector-settings__save-button');
+	await page.click('.connector-ui__buttons .feedback-button >> button[name="save"]');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('File System');
 	const url = page.url();
 	const fragments = url.split('/');

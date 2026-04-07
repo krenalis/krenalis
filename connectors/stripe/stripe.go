@@ -163,6 +163,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 			&connectors.Input{Name: "apiKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

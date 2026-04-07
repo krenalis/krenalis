@@ -415,6 +415,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 			},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}, nil
 }
 

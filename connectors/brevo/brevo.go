@@ -551,6 +551,7 @@ func (br *Brevo) ServeUI(ctx context.Context, event string, settings json.Value,
 			},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}, nil
 }
 

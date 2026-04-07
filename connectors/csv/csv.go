@@ -178,6 +178,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 			&connectors.Checkbox{Name: "hasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

@@ -124,6 +124,7 @@ func (hs *HubSpot) ServeUI(ctx context.Context, event string, settings json.Valu
 			},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

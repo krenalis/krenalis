@@ -174,6 +174,9 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	if err != nil {
 		return nil, connectorError(err)
 	}
+	if len(ui.Buttons) == 0 {
+		return nil, fmt.Errorf("connector '%s' returned an UI that contains no buttons (at least one button is required)", connector.Code)
+	}
 	return marshalUI(ui, connectors.Role(conf.Role))
 }
 

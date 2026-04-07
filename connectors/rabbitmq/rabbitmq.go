@@ -142,6 +142,7 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Va
 		Settings: settings,
 		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
+			connectors.SaveButton,
 		},
 	}
 

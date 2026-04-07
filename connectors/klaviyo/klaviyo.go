@@ -425,6 +425,7 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 			&connectors.Input{Name: "privateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil

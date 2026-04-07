@@ -167,6 +167,7 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, r
 			},
 		},
 		Settings: settings,
+		Buttons:  []connectors.Button{connectors.SaveButton},
 	}
 
 	return ui, nil
