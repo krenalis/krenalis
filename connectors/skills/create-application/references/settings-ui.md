@@ -17,7 +17,8 @@ Rules:
 
 - Must handle `"load"`:
   - `settings` is nil on first load
-  - return a non-nil UI with fields + initial settings JSON
+  - return a non-nil UI with fields, initial settings JSON, **and at least one button**
+  - the typical case is `Buttons: []connectors.Button{connectors.SaveButton}`
 - Must handle `"save"`:
   - validate settings
   - persist via `env.SetSettings(...)`
@@ -31,6 +32,17 @@ Rules:
   - validate provider-required format/prefix/allowed charset when documented
   - enforce strict URL validation for base URLs
   - reject oversized values explicitly
+
+**Buttons** — every UI response must include at least one button in `Buttons []connectors.Button`.
+Use `connectors.SaveButton` for the standard save action (its event is `"save"`, which is the special event that triggers settings persistence):
+
+```go
+return &connectors.UI{
+    Fields:   fields,
+    Settings: settings,
+    Buttons:  []connectors.Button{connectors.SaveButton},
+}, nil
+```
 
 Use available UI components in `connectors/ui.go`:
 
