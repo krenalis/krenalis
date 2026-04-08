@@ -24,7 +24,7 @@ This prompt is **only** for building **Application connectors** (SaaS HTTP APIs)
 Sometimes the user will only provide the application name (e.g. "Build a connector for <App>"). In that case, you must first **study the application API** to decide:
 
 - whether the connector can be a **Source** (fetch users/records), a **Destination** (upsert users/records), and/or a **Destination (events)** (send events)
-- whether it must support **OAuth 2.0** or can use another auth method (API key, Basic, bearer token, etc.)
+- whether it must support **OAuth 2.0** or can use another auth method (API key, Basic, bearer token, etc.) — note that OAuth is experimental in Krenalis (credentials stored unencrypted via env vars); prefer non-OAuth auth when the provider supports it
 - which endpoints exist, their pagination and rate limits, and the supported data model
 
 ### Discovery workflow (hard requirement)

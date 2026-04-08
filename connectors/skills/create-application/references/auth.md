@@ -4,6 +4,8 @@ Choose one primary authentication mechanism based on the vendor API and desired 
 
 ## OAuth 2.0
 
+> **OAuth is experimental.** OAuth credentials (client ID, client secret) are currently passed to Krenalis via environment variables and are therefore stored unencrypted. Prefer non-OAuth authentication (API keys/tokens) when the provider supports it.
+
 If the application requires OAuth 2.0:
 
 - Populate `connectors.OAuth` with:

@@ -22,7 +22,7 @@ When writing `connectors.ApplicationSpec` (and nested structs like `OAuth`, `End
 - If `HasSettings` is true in `AsSource` or `AsDestination`, your type must implement `ServeUI`.
 - If you implement `ServeUI` but `HasSettings` is false for both roles, registration panics.
 
-OAuth consistency rules:
+OAuth consistency rules (note: OAuth is experimental — see `references/auth.md`):
 
 - If you set `ApplicationSpec.OAuth.AuthURL != ""`, your type must implement `OAuthAccount(ctx) (string, error)`.
 - If OAuth is supported, at least one `EndpointGroup` must have `RequireOAuth: true` (otherwise registration panics).
@@ -166,6 +166,8 @@ For each non-default endpoint group, add a short comment near `EndpointGroups` s
 This keeps future rewrites from silently changing the mapping logic.
 
 ### Recommended endpoint group structure for OAuth connectors
+
+> **Reminder:** OAuth is experimental in Krenalis. See `references/auth.md` for details.
 
 If you enable `ApplicationSpec.OAuth`, it is often useful to separate endpoint groups by whether requests should carry OAuth access tokens:
 
