@@ -1836,7 +1836,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if err == datastore.ErrDifferentWarehouse {
 			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
 		}
-		return nil
+		return err
 	}
 
 	n := state.UpdateWarehouse{
