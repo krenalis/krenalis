@@ -23,8 +23,8 @@ type uiHandlerConnection interface {
 	//
 	// The first time ServeUI is called to display the UI, event is "load" and
 	// settings is nil. The connection saves the settings only when serving the
-	// "save" event; for other events, it returns an updated interface without
-	// saving the settings.
+	// "save" event; in that case, the method returns a nil *connectors.UI. For
+	// other events, it returns an updated interface without saving the settings.
 	//
 	// If event does not exist, it returns an ErrUIEventNotExist.
 	// If the settings are invalid, it returns an InvalidSettingsError error.
@@ -174,7 +174,7 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	if len(ui.Buttons) == 0 {
+	if ui != nil && len(ui.Buttons) == 0 {
 		return nil, fmt.Errorf("connector '%s' returned an UI that contains no buttons (at least one button is required)", connector.Code)
 	}
 	return marshalUI(ui, connectors.Role(conf.Role))
