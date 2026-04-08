@@ -22,7 +22,7 @@
     "recharts": "3.2.0"
   },
   "overrides": {
-    "lodash": "4.17.23"
+    "lodash": "4.18.1"
   },
   "scripts": {
     "makevendor": "go run ./makevendor",
