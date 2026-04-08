@@ -130,12 +130,13 @@ const ConnectorSettings = () => {
 		// remove the errors
 		const fls: ConnectorFieldInterface[] = [];
 		for (const f of fields) {
-			if ('error' in f) {
-				if (f.error) {
-					f.error = '';
+			const fc = structuredClone(f);
+			if ('error' in fc) {
+				if (fc.error) {
+					fc.error = '';
 				}
 			}
-			fls.push(f);
+			fls.push(fc);
 		}
 		setFields(fls);
 		if (hasConfirmationButton) {
