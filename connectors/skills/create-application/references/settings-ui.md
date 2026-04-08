@@ -22,7 +22,7 @@ Rules:
 - Must handle `"save"`:
   - validate settings
   - persist via `env.SetSettings(...)`
-  - return `(nil, err)` on save
+  - always return a nil `*UI` on `"save"`, regardless of outcome: `(nil, nil)` on success and `(nil, err)` on validation/persistence failure
   - update the connector instance's in-memory settings too (so subsequent calls use the newly saved settings)
 - Unknown events: return `connectors.ErrUIEventNotExist`
 - For invalid settings: return `connectors.NewInvalidSettingsError(...)` (or `...Errorf`)
@@ -33,7 +33,7 @@ Rules:
   - enforce strict URL validation for base URLs
   - reject oversized values explicitly
 
-**Buttons** — every UI response must include at least one button in `Buttons []connectors.Button`.
+**Buttons** — whenever you return a non-nil `*UI` (i.e. on `"load"` and on any custom event that renders UI), it must include at least one button in `Buttons []connectors.Button`. This rule does not apply to `"save"`, which always returns a nil `*UI`.
 Use `connectors.SaveButton` for the standard save action (its event is `"save"`, which is the special event that triggers settings persistence):
 
 ```go
