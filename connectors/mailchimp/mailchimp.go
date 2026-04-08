@@ -126,7 +126,17 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 	// Fetch the contact fields, also known as audience fields or merge fields.
 	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
 	// See https://mailchimp.com/developer/marketing/docs/merge-fields/.
-	var res struct {
+	var request = request{
+		apiKey:     mc.settings.APIKey,
+		method:     "GET",
+		dataCenter: mc.settings.DataCenter,
+		path:       "/lists/" + url.PathEscape(mc.settings.Audience) + "/merge-fields",
+		queryString: url.Values{
+			"count":  []string{"1000"},
+			"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
+		},
+	}
+	var response struct {
 		MergeFields []struct {
 			Tag          string `json:"tag"`
 			Name         string `json:"name"`
@@ -138,16 +148,12 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 			} `json:"options"`
 		} `json:"merge_fields"`
 	}
-	params := url.Values{
-		"count":  []string{"1000"},
-		"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
-	}
-	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(mc.settings.Audience)+"/merge-fields", params, nil, 200, &res)
+	err := mc.call(ctx, request, nil, 200, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
-	fields := make([]types.Property, 0, len(res.MergeFields))
-	for _, f := range res.MergeFields {
+	fields := make([]types.Property, 0, len(response.MergeFields))
+	for _, f := range response.MergeFields {
 		if !types.IsValidPropertyName(f.Tag) {
 			continue
 		}
@@ -248,25 +254,31 @@ func (mc *Mailchimp) Records(ctx context.Context, target connectors.Targets, upd
 		fields.WriteString(",members.last_changed")
 	}
 
-	values := url.Values{
+	queryString := url.Values{
 		"fields":     {fields.String()},
 		"sort_field": {"timestamp_signup"},
 		"sort_dir":   {"ASC"},
 		"count":      {"1000"},
 	}
 	if !updatedAt.IsZero() {
-		values.Set("since_last_changed", updatedAt.Format(time.RFC3339))
+		queryString.Set("since_last_changed", updatedAt.Format(time.RFC3339))
 	}
 	if cursor != "" {
-		values.Set("offset", cursor)
+		queryString.Set("offset", cursor)
 	}
 
+	var request = request{
+		apiKey:      mc.settings.APIKey,
+		method:      "GET",
+		dataCenter:  mc.settings.DataCenter,
+		path:        path,
+		queryString: queryString,
+	}
 	var response struct {
 		Members    []map[string]any `json:"members"`
 		TotalItems int              `json:"total_items"`
 	}
-
-	err := mc.call(ctx, "GET", path, values, nil, 200, &response)
+	err := mc.call(ctx, request, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -340,7 +352,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		if mc.settings != nil {
 			s = *mc.settings
 			var err error
-			audiences, err = mc.audiences(ctx)
+			audiences, err = mc.audiences(ctx, s.APIKey, s.DataCenter)
 			if err != nil {
 				return nil, err
 			}
@@ -361,11 +373,7 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 		if dc == "" {
 			return nil, connectors.NewInvalidSettingsError("missing datacenter suffix (e.g. \"-us1\")")
 		}
-		tmp := &Mailchimp{
-			env:      mc.env,
-			settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
-		}
-		audiences, err = tmp.audiences(ctx)
+		audiences, err = mc.audiences(ctx, req.APIKey, dc)
 		if err != nil {
 			return nil, err
 		}
@@ -458,51 +466,61 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 	}
 	bb.WriteString(`]}`)
 
-	type batchResponse struct {
+	var batchRequest = request{
+		apiKey:     mc.settings.APIKey,
+		method:     "POST",
+		dataCenter: mc.settings.DataCenter,
+		path:       "/batches",
+	}
+	var batchResponse struct {
 		ID                string `json:"id"`
 		Status            string `json:"status"`
 		ErroredOperations int    `json:"errored_operations"`
 		ResponseBodyURL   string `json:"response_body_url"`
 	}
-	var batchRes batchResponse
-	err := mc.call(ctx, "POST", "/batches", nil, bb, 200, &batchRes)
+	err := mc.call(ctx, batchRequest, bb, 200, &batchResponse)
 	if err != nil {
 		return err
 	}
-	if batchRes.Status == "finished" && batchRes.ErroredOperations == 0 {
+	if batchResponse.Status == "finished" && batchResponse.ErroredOperations == 0 {
 		return nil
 	}
 
 	// The batch operation is not finished or some operations are failed.
-	if batchRes.Status != "finished" {
+	if batchResponse.Status != "finished" {
 		bo := backoff.New(100)
 		bo.SetCap(1 * time.Minute)
-		batchID := batchRes.ID
+		batchID := batchResponse.ID
 		if batchID == "" {
 			return errors.New("server does not returned the batch identifier")
 		}
-		statusPath := "/batches/" + url.PathEscape(batchID)
-		for batchRes.Status != "finished" && bo.Next(ctx) {
-			err = mc.call(ctx, "GET", statusPath, nil, nil, 200, &batchRes)
+		var request = request{
+			apiKey:     mc.settings.APIKey,
+			method:     "GET",
+			dataCenter: mc.settings.DataCenter,
+			path:       "/batches/" + url.PathEscape(batchID),
+		}
+		for batchResponse.Status != "finished" && bo.Next(ctx) {
+			err = mc.call(ctx, request, nil, 200, &batchResponse)
 			if err != nil {
 				return err
 			}
 		}
-		if batchRes.Status != "finished" {
+		if batchResponse.Status != "finished" {
 			return errors.New("server does not responded in time to batch operation")
 		}
 	}
 
 	// The batch operation has completed; check the status of each operation if errors occurred.
-	if batchRes.ErroredOperations == 0 {
+	if batchResponse.ErroredOperations == 0 {
 		return nil
 	}
 
 	// At least one operation failed. Read the results for all operations.
-	if _, err := url.Parse(batchRes.ResponseBodyURL); err != nil {
+	if _, err := url.Parse(batchResponse.ResponseBodyURL); err != nil {
 		return errors.New("server returned an invalid response body URL")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", batchRes.ResponseBodyURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", batchResponse.ResponseBodyURL, nil)
 	if err != nil {
 		return err
 	}
@@ -616,12 +634,7 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 		return connectors.NewInvalidSettingsError("audience length must be in range [1, 100]")
 	}
 
-	// Use a temporary connector instance to validate the audience with the new key.
-	tmp := &Mailchimp{
-		env:      mc.env,
-		settings: &innerSettings{APIKey: req.APIKey, DataCenter: dc},
-	}
-	audiences, err := tmp.audiences(ctx)
+	audiences, err := mc.audiences(ctx, req.APIKey, dc)
 	if err != nil {
 		return err
 	}
@@ -689,23 +702,28 @@ func (err *mailchimpError) Error() string {
 	return s.String()
 }
 
+// request represents an API request to Mailchimp.
+type request struct {
+	apiKey      string
+	method      string
+	dataCenter  string
+	path        string
+	queryString url.Values
+}
+
 // call calls the Mailchimp API.
-func (mc *Mailchimp) call(ctx context.Context, method, path string, params url.Values, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
+func (mc *Mailchimp) call(ctx context.Context, request request, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
-	if mc.settings == nil {
-		return errors.New("Mailchimp connector is not configured: API Key is missing")
+	u := "https://" + request.dataCenter + ".api.mailchimp.com/3.0/" + request.path[1:]
+	if request.queryString != nil {
+		u += "?" + request.queryString.Encode()
 	}
 
-	u := "https://" + mc.settings.DataCenter + ".api.mailchimp.com/3.0/" + path[1:]
-	if params != nil {
-		u += "?" + params.Encode()
-	}
-
-	req, err := bb.NewRequest(ctx, method, u)
+	req, err := bb.NewRequest(ctx, request.method, u)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+mc.settings.APIKey)
+	req.Header.Set("Authorization", "Bearer "+request.apiKey)
 
 	res, err := mc.env.HTTPClient.Do(req)
 	if err != nil {
@@ -735,8 +753,8 @@ type audience struct {
 }
 
 // audiences returns the audiences.
-func (mc *Mailchimp) audiences(ctx context.Context) ([]audience, error) {
-	params := url.Values{
+func (mc *Mailchimp) audiences(ctx context.Context, apiKey, dataCenter string) ([]audience, error) {
+	queryString := url.Values{
 		"fields":     {"lists.name,lists.id"},
 		"count":      {"1000"},
 		"sort_field": {"date_created"},
@@ -748,9 +766,16 @@ func (mc *Mailchimp) audiences(ctx context.Context) ([]audience, error) {
 	}
 	for {
 		if len(audiences) > 0 {
-			params.Set("offset", strconv.Itoa(len(audiences)))
+			queryString.Set("offset", strconv.Itoa(len(audiences)))
 		}
-		err := mc.call(ctx, "GET", "/lists", params, nil, 200, &response)
+		request := request{
+			apiKey:      apiKey,
+			method:      "GET",
+			dataCenter:  dataCenter,
+			path:        "/lists",
+			queryString: queryString,
+		}
+		err := mc.call(ctx, request, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -786,10 +811,16 @@ var errAudienceNotExist = errors.New("audience does not exist")
 // webhooks returns the webhooks for the provide audience.
 // If audience does not exist, it returns the errAudienceNotExist error.
 func (mc *Mailchimp) webhooks(ctx context.Context, audience string) ([]webhook, error) {
+	var request = request{
+		apiKey:     mc.settings.APIKey,
+		method:     "GET",
+		dataCenter: mc.settings.DataCenter,
+		path:       "/lists/" + url.PathEscape(audience) + "/webhooks",
+	}
 	var response struct {
 		Webhooks []webhook `json:"webhooks"`
 	}
-	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(audience)+"/webhooks", nil, nil, 200, &response)
+	err := mc.call(ctx, request, nil, 200, &response)
 	if err != nil {
 		if err, ok := err.(*mailchimpError); ok && err.Status == 404 {
 			return nil, errAudienceNotExist
