@@ -76,6 +76,10 @@ type Settings struct {
 	PrometheusMetricsEnabled      bool
 	OAuthCredentials              map[string]*core.OAuthCredentials // always empty (no connector currently uses OAuth).
 	MaxQueuedEventsPerDestination int
+	WorkOS                        struct {
+		ClientID string
+		APIKey   string
+	}
 }
 
 type LambdaConfig struct {
@@ -148,7 +152,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL,
 		settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL, settings.ExternalAssetsURLs,
 		settings.PotentialConnectorsURL, settings.InviteMembersViaEmail,
-		settings.SentryTelemetryLevel, sentryErrorTunnel)
+		settings.SentryTelemetryLevel, sentryErrorTunnel, settings.WorkOS.ClientID, settings.WorkOS.APIKey)
 
 	admin, err := newAdmin(assetsFS)
 	if err != nil {

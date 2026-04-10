@@ -17,10 +17,13 @@ import { UnauthorizedError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
 import RootError from '../RootError/RootError';
 import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
+import { AuthKitProvider, useAuth } from '@workos-inc/authkit-react';
+import API from '../../../lib/api/api';
+import { PublicMetadata } from '../../../lib/api/types/responses';
 
 setBasePath('/admin/src/shoelace/dist');
 
-const App = () => {
+const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
@@ -49,6 +52,9 @@ const App = () => {
 		}
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
+		if (onWorkosLogout) {
+			onWorkosLogout();
+		}
 		setSelectedWorkspace(0);
 		setIsLoggedIn(false);
 	};
@@ -109,10 +115,13 @@ const App = () => {
 	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
-		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname)) {
+		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname) && onWorkosLogout == null) {
 			// if the app is initialized but the user is not logged in and they
 			// try to access a non-authentication page, redirect them to the
 			// login form first.
+			//
+			// In WorkOS mode the redirect is handled by WorkOSWrapper, so skip
+			// it.
 			redirect('');
 		}
 	}, [isLoadingState, isLoggedIn, location]);
@@ -134,7 +143,7 @@ const App = () => {
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (isLoadingState || (!isLoggedIn && !isAuthRelatedRoute(location.pathname))) {
+	if (isLoadingState || (!isLoggedIn && (onWorkosLogout != null || !isAuthRelatedRoute(location.pathname)))) {
 		content = (
 			<SlSpinner
 				className='app-spinner'
@@ -195,8 +204,88 @@ const App = () => {
 	);
 };
 
+// WorkOSWrapper handles the WorkOS authentication flow. Once the WorkOS user is
+// available it exchanges the access token for a Krenalis session cookie, then
+// renders <App> as usual.
+const WorkOSWrapper = () => {
+	const [sessionReady, setSessionReady] = useState(false);
+	const [authError, setAuthError] = useState<string | null>(null);
+
+	const { isLoading, user, signIn, signOut, getAccessToken } = useAuth();
+
+	useEffect(() => {
+		if (!isLoading && user == null && authError == null) {
+			signIn();
+		}
+	}, [isLoading, user, authError]);
+
+	useEffect(() => {
+		if (user == null || sessionReady) {
+			return;
+		}
+		const api = new API(window.location.origin, 0);
+		getAccessToken()
+			.then((token) => api.workosLogin(token))
+			.then(() => setSessionReady(true))
+			.catch(() => setAuthError('Authentication failed. Please try again.'));
+	}, [user]);
+
+	if (authError != null) {
+		return <div className='app-error'>{authError}</div>;
+	}
+	if (!sessionReady) {
+		return (
+			<SlSpinner
+				className='app-spinner'
+				style={{ fontSize: '5rem', '--track-width': '6px' } as React.CSSProperties}
+			/>
+		);
+	}
+	return <App onWorkosLogout={signOut} />;
+};
+
+const Root = () => {
+	const [workosClientID, setWorkosClientID] = useState<string | null>(null);
+
+	useEffect(() => {
+		const api = new API(window.location.origin, 0);
+
+		const fetchWorkosClientID = async () => {
+			let publicMetadata: PublicMetadata;
+			try {
+				publicMetadata = await api.publicMetadata();
+			} catch (err) {
+				console.error('error', err);
+				return;
+			}
+			setWorkosClientID(publicMetadata.workosClientID);
+		};
+
+		fetchWorkosClientID();
+	}, []);
+
+	if (workosClientID == null) {
+		return (
+			<SlSpinner
+				className='app-spinner'
+				style={{ fontSize: '5rem', '--track-width': '6px' } as React.CSSProperties}
+			/>
+		);
+	}
+
+	if (workosClientID !== '') {
+		return (
+			<AuthKitProvider clientId={workosClientID} redirectUri={`${window.location.origin}/admin`}>
+				<WorkOSWrapper />
+			</AuthKitProvider>
+		);
+	}
+
+	return <App />;
+};
+
 const isAuthRelatedRoute = (path: string): boolean => {
 	return path === UI_BASE_PATH || path.startsWith(SIGN_UP_PATH) || path.startsWith(RESET_PASSWORD_PATH);
 };
 
-export default App;
+export default Root;

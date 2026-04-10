@@ -66,6 +66,7 @@ type apisServer struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
 	}
+	workos *workosAuth // nil when WorkOS authentication is not configured.
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
@@ -74,7 +75,7 @@ type apisServer struct {
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
 	inviteMembersViaEmail bool, sentryTelemetryLevel core.TelemetryLevel,
-	sentryErrorTunnel *sentryErrorTunnel,
+	sentryErrorTunnel *sentryErrorTunnel, workosClientID, workosAPIKey string,
 ) *apisServer {
 
 	s := &apisServer{
@@ -89,6 +90,9 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
+	if workosClientID != "" {
+		s.workos = &workosAuth{clientID: workosClientID, apiKey: workosAPIKey}
+	}
 
 	encryptionKey := core.EncryptionKey()
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
@@ -401,6 +405,56 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	}
 	writeSessionCookie(w, c)
 	return nil, nil
+}
+
+// workosLogin exchanges a WorkOS access token for a Krenalis session cookie.
+// It verifies the token's JWT signature using the WorkOS JWKS, retrieves the
+// member by email, and sets the same encrypted session cookie as a normal login.
+func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos == nil {
+		return nil, errors.Unauthorized("WorkOS authentication is not enabled")
+	}
+
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		AccessToken string `json:"accessToken"`
+	}
+	if err := json.Decode(r.Body, &body); err != nil || body.AccessToken == "" {
+		return nil, errors.BadRequest("")
+	}
+
+	email, err := s.workos.verifyToken(body.AccessToken)
+	if err != nil {
+		return nil, errors.Unauthorized("invalid WorkOS token")
+	}
+
+	organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
+	if len(organizations) == 0 {
+		return nil, errors.New("there are no organizations")
+	}
+	org := organizations[0]
+
+	memberID, err := org.MemberByEmail(r.Context(), email)
+	if err != nil {
+		return nil, errors.Unauthorized("no Krenalis member found for this WorkOS account")
+	}
+
+	sc := &sessionCookie{Organization: org.ID, Member: memberID}
+	value, err := s.secureCookie.Encode(sessionCookieName, sc)
+	if err != nil {
+		return nil, err
+	}
+	writeSessionCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    value,
+		Path:     sessionCookiePath,
+		Secure:   s.runsOnHTTPS,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return []any{memberID, nil}, nil
 }
 
 // parseID parses a decimal identifier in the form /^[1-9][0-9]*$/.

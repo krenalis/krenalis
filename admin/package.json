@@ -9,6 +9,7 @@
     "@dnd-kit/sortable": "10.0.0",
     "@sentry/react": "10.3.0",
     "@shoelace-style/shoelace": "2.20.1",
+    "@workos-inc/authkit-react": "0.16.1",
     "esbuild": "0.25.8",
     "json-bigint": "1.0.0",
     "marked": "16.1.2",
