@@ -85,7 +85,7 @@ type OAuthCredentials struct {
 // New returns a state given the database, and the OAuth client credentials for
 // connectors.
 // sendStats indicates whether the state should send statistics or not.
-func New(db *db.DB, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
+func New(ctx context.Context, db *db.DB, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -114,7 +114,7 @@ func New(db *db.DB, credentials map[string]*OAuthCredentials, sendStats bool) (*
 	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
 
 	// Load the state.
-	err = state.load(credentials)
+	err = state.load(ctx, credentials)
 	if err != nil {
 		state.notifications.Close()
 		return nil, err

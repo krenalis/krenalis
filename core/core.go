@@ -262,7 +262,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			}
 		}
 	}
-	core.state, err = state.New(db, connectorsOAuth, sendStats)
+	core.state, err = state.New(ctx, db, connectorsOAuth, sendStats)
 	if err != nil {
 		return nil, err
 	}

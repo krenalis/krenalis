@@ -6,6 +6,7 @@ package state
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -20,7 +21,7 @@ import (
 )
 
 // load loads the state.
-func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
+func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
 	conns := connectors.Connectors()
@@ -192,8 +193,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			Name: platform.Name,
 		}
 	}
-
-	ctx := state.close.ctx
 
 	tx, err := state.db.Begin(ctx)
 	if err != nil {
