@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -597,7 +598,26 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("state: cannot create notifier cipher: %s", err)
 	}
 
-	return state.notifications.CommitAndStartListening(ctx, tx, cipher)
+	// Read the last notification ID.
+	var latest int64
+	err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
+	if err != nil {
+		return err
+	}
+	if latest == math.MaxInt64 {
+		return errors.New("maximum limit for the auto-increment 'notifications.id' column has been reached")
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	state.notifications.cipher = cipher
+	state.notifications.next = latest + 1
+	state.notifications.loaded <- struct{}{}
+
+	return nil
 }
 
 // article returns "a" or "an" based on the first letter of the name.

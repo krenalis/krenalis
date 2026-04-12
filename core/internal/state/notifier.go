@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -67,30 +66,6 @@ func (notifier *notifier) Close() {
 		return
 	}
 	notifier.closed.cancel()
-}
-
-// CommitAndStartListening commits the transaction tx, which has read the state,
-// then starts listening for state change notifications.
-// key is the encryption key that will be set and used in the notifier; it must
-// be 32 bytes long.
-func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx, cipher *datacrypt.Cipher) error {
-	// Read the last notification ID.
-	var latest int64
-	err := tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
-	if err != nil {
-		return err
-	}
-	if latest == math.MaxInt64 {
-		return errors.New("maximum limit for the auto-increment 'notifications.id' column has been reached")
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-	notifier.cipher = cipher
-	notifier.next = latest + 1
-	notifier.loaded <- struct{}{}
-	return nil
 }
 
 // Notify sends the notification n within the transaction tx and returns its
