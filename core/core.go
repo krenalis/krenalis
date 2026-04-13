@@ -213,36 +213,9 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	// Initializes the PostgreSQL database if it is empty and the option to
 	// initialize it is provided.
 	if conf.DatabaseInitialization.InitIfEmpty {
-		isEmpty, err := initdb.DatabaseIsEmpty(ctx, db)
+		err = initdb.InitIfEmpty(ctx, db, conf.DatabaseInitialization.InitDockerMember)
 		if err != nil {
-			return nil, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
-		}
-		if isEmpty {
-			slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
-			// Initialize the PostgreSQL database in a transaction, so if it is
-			// fails, there is no need to manually empty the database.
-			err := db.Transaction(ctx, func(tx *dbpkg.Tx) error {
-				err := initdb.Initialize(ctx, tx)
-				if err != nil {
-					return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
-				}
-				slog.Info("PostgreSQL database initialized correctly")
-				// Also initialize the Docker member, if requested.
-				if conf.DatabaseInitialization.InitDockerMember {
-					slog.Info("initializing Docker member...")
-					err := initdb.InitializeDockerMember(ctx, tx)
-					if err != nil {
-						return fmt.Errorf("cannot initialize the Docker member: %s", err)
-					}
-					slog.Info("Docker member initialized")
-				}
-				return nil
-			})
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			slog.Info("the PostgreSQL database is not empty, so it won't be initialized")
+			return nil, err
 		}
 	}
 
@@ -289,7 +262,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			}
 		}
 	}
-	core.state, err = state.New(db, connectorsOAuth, sendStats)
+	core.state, err = state.New(ctx, db, connectorsOAuth, sendStats)
 	if err != nil {
 		return nil, err
 	}

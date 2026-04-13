@@ -6,9 +6,11 @@ package state
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -20,7 +22,7 @@ import (
 )
 
 // load loads the state.
-func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
+func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
 	conns := connectors.Connectors()
@@ -192,8 +194,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			Name: platform.Name,
 		}
 	}
-
-	ctx := state.close.ctx
 
 	tx, err := state.db.Begin(ctx)
 	if err != nil {
@@ -598,7 +598,26 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		return fmt.Errorf("state: cannot create notifier cipher: %s", err)
 	}
 
-	return state.notifications.CommitAndStartListening(ctx, tx, cipher)
+	// Read the last notification ID.
+	var latest int64
+	err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
+	if err != nil {
+		return err
+	}
+	if latest == math.MaxInt64 {
+		return errors.New("maximum limit for the auto-increment 'notifications.id' column has been reached")
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	state.notifications.cipher = cipher
+	state.notifications.next = latest + 1
+	state.notifications.loaded <- struct{}{}
+
+	return nil
 }
 
 // article returns "a" or "an" based on the first letter of the name.
