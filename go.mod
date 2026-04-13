@@ -6,7 +6,7 @@ module github.com/krenalis/krenalis
 go 1.26
 
 require (
-	github.com/ClickHouse/clickhouse-go/v2 v2.44.0
+	github.com/ClickHouse/clickhouse-go/v2 v2.45.0
 	github.com/LumenResearch/uasurfer v0.0.0-20260126094926-dace53404a8d
 	github.com/andybalholm/brotli v1.2.1
 	github.com/aws/aws-sdk-go-v2 v1.41.5
