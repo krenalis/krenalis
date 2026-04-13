@@ -130,7 +130,7 @@ func Test_Merge(t *testing.T) {
 
 	settings, err := json.Marshal(map[string]any{
 		"host":     testHost,
-		"port":     testPort.Int(),
+		"port":     testPort.Num(),
 		"username": testUser,
 		"password": testPassword,
 		"database": testDatabase,
@@ -568,7 +568,7 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 
 	settings, err := json.Marshal(map[string]any{
 		"host":     testHost,
-		"port":     testPort.Int(),
+		"port":     testPort.Num(),
 		"username": testUser,
 		"password": testPassword,
 		"database": testDatabase,

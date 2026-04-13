@@ -110,7 +110,7 @@ func Test_Merge_Query(t *testing.T) {
 
 	settings, err := json.Marshal(innerSettings{
 		Host:     host,
-		Port:     port.Int(),
+		Port:     int(port.Num()),
 		Username: testUser,
 		Password: testPassword,
 		Database: testDatabase,

@@ -136,7 +136,7 @@ func Test_Merge_Query(t *testing.T) {
 	// Open the MySQL connector.
 	settings, err := json.Marshal(innerSettings{
 		Host:     host,
-		Port:     port.Int(),
+		Port:     int(port.Num()),
 		Username: username,
 		Password: password,
 		Database: database,

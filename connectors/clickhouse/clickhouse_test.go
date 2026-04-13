@@ -112,7 +112,7 @@ func Test_Merge_Query(t *testing.T) {
 	// Open connector.
 	settings, err := json.Marshal(innerSettings{
 		Host:     testHost,
-		Port:     testPort.Int(),
+		Port:     int(testPort.Num()),
 		Username: username,
 		Password: password,
 		Database: database,

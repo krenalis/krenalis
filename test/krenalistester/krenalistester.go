@@ -211,7 +211,7 @@ func (c *Krenalis) Start() {
 		testsSettingsMu.Lock()
 		testsSettings.NATS = &NATSSettings{
 			URL:      natsHost,
-			Port:     natsPort.Int(),
+			Port:     int(natsPort.Num()),
 			User:     natsContainer.User,
 			Password: natsContainer.Password,
 		}
@@ -247,7 +247,7 @@ func (c *Krenalis) Start() {
 		}
 		testsSettingsMu.Lock()
 		testsSettings.Database.Host = postgresHost
-		testsSettings.Database.Port = postgresPort.Int()
+		testsSettings.Database.Port = int(postgresPort.Num())
 		testsSettingsMu.Unlock()
 		containersStarted.Done()
 	}()
@@ -280,7 +280,7 @@ func (c *Krenalis) Start() {
 		}
 		testsSettingsMu.Lock()
 		testsSettings.Warehouse.Host = warehouseHost
-		testsSettings.Warehouse.Port = warehousePort.Int()
+		testsSettings.Warehouse.Port = int(warehousePort.Num())
 		testsSettingsMu.Unlock()
 		containersStarted.Done()
 	}()
