@@ -28,7 +28,7 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/klauspost/compress v1.18.5
 	github.com/krenalis/analytics-go v0.0.8
-	github.com/mark3labs/mcp-go v0.46.0
+	github.com/mark3labs/mcp-go v0.47.1
 	github.com/nats-io/nats.go v1.49.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1

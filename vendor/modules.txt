@@ -547,7 +547,7 @@ github.com/lufia/plan9stats
 # github.com/magiconair/properties v1.8.10
 ## explicit; go 1.19
 github.com/magiconair/properties
-# github.com/mark3labs/mcp-go v0.46.0
+# github.com/mark3labs/mcp-go v0.47.1
 ## explicit; go 1.23.0
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
