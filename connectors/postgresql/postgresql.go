@@ -10,7 +10,6 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -53,20 +52,12 @@ func init() {
 
 // New returns a new connector instance for PostgreSQL.
 func New(env *connectors.DatabaseEnv) (*PostgreSQL, error) {
-	c := PostgreSQL{env: env}
-	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for PostgreSQL")
-		}
-	}
-	return &c, nil
+	return &PostgreSQL{env: env}, nil
 }
 
 type PostgreSQL struct {
-	env      *connectors.DatabaseEnv
-	settings *innerSettings
-	pool     *pgxpool.Pool
+	env  *connectors.DatabaseEnv
+	pool *pgxpool.Pool
 }
 
 // Close closes the database.
@@ -80,7 +71,12 @@ func (pg *PostgreSQL) Close() error {
 
 // Columns returns the columns of the given table.
 func (pg *PostgreSQL) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
-	columns, err := pg.columns(ctx, pg.settings.Schema, table)
+	var s innerSettings
+	err := pg.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	columns, err := pg.columns(ctx, s.Schema, table)
 	if err != nil {
 		return nil, err
 	}
@@ -164,11 +160,13 @@ func (pg *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 	switch event {
 	case "load":
 		var s innerSettings
-		if pg.settings == nil {
+		err := pg.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Port == 0 {
 			s.Port = 5432
 			s.Schema = "public"
-		} else {
-			s = *pg.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -208,7 +206,7 @@ type innerSettings struct {
 }
 
 // dsn returns the connection string, from s, in the URL format.
-func (s *innerSettings) dsn() string {
+func dsn(s *innerSettings) string {
 	u := url.URL{
 		Scheme:   "postgres",
 		User:     url.UserPassword(s.Username, s.Password),
@@ -224,7 +222,12 @@ func (pg *PostgreSQL) openDB(ctx context.Context) error {
 	if pg.pool != nil {
 		return nil
 	}
-	config, err := pgxpool.ParseConfig(pg.settings.dsn())
+	var s innerSettings
+	err := pg.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	config, err := pgxpool.ParseConfig(dsn(&s))
 	if err != nil {
 		return err
 	}
@@ -272,22 +275,13 @@ func (pg *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = pg.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	pg.settings = &s
-	return nil
+	return pg.env.Settings.Store(ctx, s)
 }
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *innerSettings) error {
-	db, err := sql.Open("pgx", settings.dsn())
+	db, err := sql.Open("pgx", dsn(settings))
 	if err != nil {
 		return err
 	}

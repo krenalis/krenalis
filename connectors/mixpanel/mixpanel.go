@@ -59,8 +59,7 @@ func init() {
 }
 
 type Mixpanel struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type innerSettings struct {
@@ -71,14 +70,7 @@ type innerSettings struct {
 
 // New returns a new connector instance for Mixpanel.
 func New(env *connectors.ApplicationEnv) (*Mixpanel, error) {
-	c := Mixpanel{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Mixpanel")
-		}
-	}
-	return &c, nil
+	return &Mixpanel{env: env}, nil
 }
 
 // EventTypes returns the event types.
@@ -202,8 +194,9 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 	switch event {
 	case "load":
 		var s innerSettings
-		if mp.settings != nil {
-			s = *mp.settings
+		err := mp.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -260,16 +253,7 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	default:
 		return connectors.NewInvalidSettingsError("Data Residency must be set to US, EU, or IN")
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = mp.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	mp.settings = &s
-	return nil
+	return mp.env.Settings.Store(ctx, s)
 }
 
 const (
@@ -556,14 +540,20 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		}
 	}
 
+	var s innerSettings
+	err := mp.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+
 	u := "https://api.mixpanel.com/"
-	switch mp.settings.DataResidency {
+	switch s.DataResidency {
 	case "EU":
 		u = "https://api-eu.mixpanel.com/"
 	case "IN":
 		u = "https://api-in.mixpanel.com/"
 	}
-	u += "import?strict=1&project_id=" + mp.settings.ProjectID
+	u += "import?strict=1&project_id=" + s.ProjectID
 
 	req, err := bb.NewRequest(ctx, "POST", u)
 	if err != nil {
@@ -575,7 +565,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 	if preview {
 		req.Header.Set("Authorization", "Basic [REDACTED]")
 	} else {
-		req.SetBasicAuth(mp.settings.ProjectToken, "")
+		req.SetBasicAuth(s.ProjectToken, "")
 	}
 
 	if preview {

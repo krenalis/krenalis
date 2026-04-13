@@ -12,7 +12,6 @@ package hubspot
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -77,19 +76,11 @@ func init() {
 
 // New returns a new connector instance for HubSpot.
 func New(env *connectors.ApplicationEnv) (*HubSpot, error) {
-	c := HubSpot{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for HubSpot")
-		}
-	}
-	return &c, nil
+	return &HubSpot{env: env}, nil
 }
 
 type HubSpot struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type innerSettings struct {
@@ -102,8 +93,9 @@ func (hs *HubSpot) ServeUI(ctx context.Context, event string, settings json.Valu
 	switch event {
 	case "load":
 		var s innerSettings
-		if hs.settings != nil {
-			s = *hs.settings
+		err := hs.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -150,16 +142,7 @@ func (hs *HubSpot) saveSettings(ctx context.Context, settings json.Value) error 
 			return connectors.NewInvalidSettingsError("Access token must contain only valid characters")
 		}
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = hs.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	hs.settings = &s
-	return nil
+	return hs.env.Settings.Store(ctx, s)
 }
 
 var propertyGroups = []struct {
@@ -442,11 +425,16 @@ func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, record
 }
 
 func (hs *HubSpot) call(ctx context.Context, method, path string, bb *connectors.BodyBuffer, response any) error {
+	var s innerSettings
+	err := hs.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
 	req, err := bb.NewRequest(ctx, method, "https://api.hubapi.com/"+path[1:])
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+hs.settings.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
 	res, err := hs.env.HTTPClient.Do(req)
 	if err != nil {
 		return err

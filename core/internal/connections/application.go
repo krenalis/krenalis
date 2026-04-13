@@ -91,8 +91,7 @@ func (c *Connections) Application(connection *state.Connection) *Application {
 		accountCode = a.Code
 	}
 	app.inner, app.err = connectors.RegisteredApplication(app.connector).New(&connectors.ApplicationEnv{
-		Settings:     connection.Settings,
-		SetSettings:  setConnectionSettingsFunc(c.state, connection),
+		Settings:     newConnectionSettingStore(c.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   app.httpClient,
 		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks

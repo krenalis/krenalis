@@ -37,6 +37,7 @@ const telemetryLevelErrors = core.TelemetryLevelErrors
 const telemetryLevelAll = core.TelemetryLevelAll
 
 type Settings struct {
+	Kms                    string
 	TerminationDelay       time.Duration
 	JavaScriptSDKURL       string
 	SentryTelemetryLevel   core.TelemetryLevel
@@ -110,6 +111,7 @@ type LocalConfig struct {
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
 	config := core.Config{
+		Kms:                           settings.Kms,
 		DB:                            settings.DB,
 		NATS:                          settings.NATS,
 		MaxMindDBPath:                 settings.MaxMindDBPath,

@@ -10,7 +10,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -52,19 +51,11 @@ func init() {
 
 // New returns a new connector instance for CSV.
 func New(env *connectors.FileEnv) (*CSV, error) {
-	c := CSV{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for CSV")
-		}
-	}
-	return &c, nil
+	return &CSV{env: env}, nil
 }
 
 type CSV struct {
-	env      *connectors.FileEnv
-	settings *innerSettings
+	env *connectors.FileEnv
 }
 
 type innerSettings struct {
@@ -84,12 +75,18 @@ func (c *CSV) ContentType(ctx context.Context) string {
 // Read reads the records from r and writes them to records.
 func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
 
+	var settings innerSettings
+	err := c.env.Settings.Load(ctx, &settings)
+	if err != nil {
+		return err
+	}
+
 	// Create a CSV reader.
 	v := csv.NewReader(r)
-	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Separator)
-	v.FieldsPerRecord = c.settings.NumberOfColumns
-	v.LazyQuotes = c.settings.LazyQuotes
-	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
+	v.Comma, _ = utf8.DecodeRuneInString(settings.Separator)
+	v.FieldsPerRecord = settings.NumberOfColumns
+	v.LazyQuotes = settings.LazyQuotes
+	v.TrimLeadingSpace = settings.TrimLeadingSpace
 
 	var nameOfHeader map[string]string
 
@@ -107,7 +104,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records conne
 		if first {
 			columns := make([]types.Property, len(record))
 			for i := range columns {
-				if c.settings.HasColumnNames {
+				if settings.HasColumnNames {
 					header := record[i]
 					name, ok := types.PropertyName(header)
 					if !ok {
@@ -137,7 +134,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records conne
 				return err
 			}
 			first = false
-			if c.settings.HasColumnNames {
+			if settings.HasColumnNames {
 				continue
 			}
 		}
@@ -157,10 +154,12 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 	switch event {
 	case "load":
 		var s innerSettings
-		if c.settings == nil {
+		err := c.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Separator == "" {
 			s.Separator = ","
-		} else {
-			s = *c.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -187,9 +186,15 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 // Write writes to w the records read from records.
 func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records connectors.RecordReader) error {
 
+	var settings innerSettings
+	err := c.env.Settings.Load(ctx, &settings)
+	if err != nil {
+		return err
+	}
+
 	v := csv.NewWriter(w)
-	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Separator)
-	v.UseCRLF = c.settings.UseCRLF
+	v.Comma, _ = utf8.DecodeRuneInString(settings.Separator)
+	v.UseCRLF = settings.UseCRLF
 
 	// Write the column names.
 	columns := records.Columns()
@@ -197,7 +202,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records connecto
 	for i, c := range columns {
 		recordString[i] = c.Name
 	}
-	err := v.Write(recordString)
+	err = v.Write(recordString)
 	if err != nil {
 		return err
 	}
@@ -250,16 +255,7 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role connec
 		s.TrimLeadingSpace = false
 		s.HasColumnNames = false
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = c.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	c.settings = &s
-	return nil
+	return c.env.Settings.Store(ctx, s)
 }
 
 // columnNumberToName returns a column name from a column number.

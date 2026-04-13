@@ -48,19 +48,11 @@ func init() {
 
 // New returns a new connector instance for JSON.
 func New(env *connectors.FileEnv) (*JSON, error) {
-	c := JSON{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for JSON")
-		}
-	}
-	return &c, nil
+	return &JSON{env: env}, nil
 }
 
 type JSON struct {
-	env      *connectors.FileEnv
-	settings *innerSettings
+	env *connectors.FileEnv
 }
 
 type innerSettings struct {
@@ -81,8 +73,14 @@ func (j *JSON) ContentType(ctx context.Context) string {
 // Read reads the records from r and writes them to records.
 func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records connectors.RecordWriter) error {
 
-	columns := make([]types.Property, 0, len(j.settings.Properties))
-	for _, property := range j.settings.Properties {
+	var s innerSettings
+	err := j.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+
+	columns := make([]types.Property, 0, len(s.Properties))
+	for _, property := range s.Properties {
 		c := types.Property{
 			Name: property.Key,
 			Type: types.JSON(),
@@ -92,7 +90,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records connecto
 		}
 		columns = append(columns, c)
 	}
-	err := records.Columns(columns)
+	err = records.Columns(columns)
 	if err != nil {
 		return err
 	}
@@ -212,8 +210,9 @@ func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, r
 	switch event {
 	case "load":
 		var s innerSettings
-		if j.settings != nil {
-			s = *j.settings
+		err := j.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = jsonstd.Marshal(s)
 	case "save":
@@ -246,9 +245,12 @@ func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, r
 
 // Write writes to w the records read from records.
 func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records connectors.RecordReader) error {
-	s := j.settings
+	var s innerSettings
+	err := j.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
-	var err error
 	var record map[string]any
 	var comma bool
 	b := make([]byte, 0, 4096)
@@ -325,14 +327,5 @@ func (j *JSON) saveSettings(ctx context.Context, settings json.Value, role conne
 	} else {
 		s.Properties = nil
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = j.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	j.settings = &s
-	return nil
+	return j.env.Settings.Store(ctx, s)
 }

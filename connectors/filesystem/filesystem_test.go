@@ -7,9 +7,12 @@
 package filesystem
 
 import (
+	"context"
 	"testing"
 
+	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 func TestPathConvert(t *testing.T) {
@@ -18,7 +21,7 @@ func TestPathConvert(t *testing.T) {
 		// Mutex access to 'root' is not necessary as it is essential that these
 		// tests are run non-concurrently.
 		root = "/"
-		fs := &FileSystem{settings: &innerSettings{}}
+		fs := &FileSystem{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{})}}
 		tests := []testconnector.AbsolutePathTest{
 			{Name: "a", Expected: "/a"},
 			{Name: "a.e", Expected: "/a.e"},
@@ -42,7 +45,7 @@ func TestPathConvert(t *testing.T) {
 		// Mutex access to 'root' is not necessary as it is essential that these
 		// tests are run non-concurrently.
 		root = "/root"
-		fs := &FileSystem{settings: &innerSettings{}}
+		fs := &FileSystem{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{})}}
 		tests := []testconnector.AbsolutePathTest{
 			{Name: "a", Expected: "/root/a"},
 			{Name: "/a", Expected: "/root/a"},
@@ -53,4 +56,31 @@ func TestPathConvert(t *testing.T) {
 		}
 	})
 
+}
+
+type testSettingsStore struct {
+	settings json.Value
+}
+
+func newTestSettingsStore(t *testing.T, settings any) *testSettingsStore {
+	t.Helper()
+
+	data, err := json.Marshal(settings)
+	if err != nil {
+		t.Fatalf("cannot marshal test settings: %s", err)
+	}
+	return &testSettingsStore{settings: data}
+}
+
+func (s *testSettingsStore) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(s.settings, dst)
+}
+
+func (s *testSettingsStore) Store(ctx context.Context, src any) error {
+	data, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	s.settings = data
+	return nil
 }

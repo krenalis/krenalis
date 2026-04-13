@@ -16,7 +16,10 @@ import (
 
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	rows, err := db.QueryContext(ctx, "SHOW TERSE OBJECTS")
 	if err != nil {
 		return snowflake(err)
@@ -112,7 +115,10 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profi
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
 		queries = append(queries, profilesViewSQLSchema(profileColumns, "krenalis_profiles_0"))
 	}
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	for _, query := range queries {
 		_, err := db.ExecContext(ctx, query)
 		if err != nil {

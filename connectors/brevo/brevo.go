@@ -69,14 +69,7 @@ func init() {
 
 // New returns a new connector instance for Brevo.
 func New(env *connectors.ApplicationEnv) (*Brevo, error) {
-	b := Brevo{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&b.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Brevo")
-		}
-	}
-	return &b, nil
+	return &Brevo{env: env}, nil
 }
 
 type Brevo struct {
@@ -529,8 +522,9 @@ func (br *Brevo) ServeUI(ctx context.Context, event string, settings json.Value,
 	switch event {
 	case "load":
 		var s innerSettings
-		if br.settings != nil {
-			s = *br.settings
+		err := br.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -676,16 +670,7 @@ func (br *Brevo) saveSettings(ctx context.Context, settings json.Value) error {
 		}
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		br.settings = previous
-		return err
-	}
-	if err := br.env.SetSettings(ctx, b); err != nil {
-		br.settings = previous
-		return err
-	}
-	return nil
+	return br.env.Settings.Store(ctx, s)
 }
 
 const (

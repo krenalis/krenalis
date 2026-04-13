@@ -5,6 +5,7 @@
 package state
 
 import (
+	"bytes"
 	stdjson "encoding/json"
 	"log/slog"
 	"strings"
@@ -353,7 +354,8 @@ type CreateConnection struct {
 	SendingMode       *SendingMode // sending mode
 	LinkedConnections []int        // linked connections
 	EventWriteKey     string       // event write key to add
-	Settings          json.Value
+	Settings          []byte
+	SettingsKey       []byte
 }
 
 // createConnection creates a new connection.
@@ -404,7 +406,8 @@ func (state *State) createConnection(n notification) uuid.UUID {
 		Strategy:          e.Strategy,
 		SendingMode:       e.SendingMode,
 		LinkedConnections: e.LinkedConnections,
-		Settings:          e.Settings,
+		settings:          e.Settings,
+		settingsKey:       state.cipher.Key(e.SettingsKey),
 		pipelines:         map[int]*Pipeline{},
 	}
 	if e.EventWriteKey != "" {
@@ -532,9 +535,11 @@ type CreateWorkspace struct {
 	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Platform string
-		Mode     WarehouseMode
-		Settings json.Value
+		Platform       string
+		Mode           WarehouseMode
+		Settings       []byte
+		SettingsKey    []byte
+		MCPSettingsKey []byte
 	}
 	UIPreferences UIPreferences
 }
@@ -563,7 +568,9 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 	}
 	ws.Warehouse.Platform = e.Warehouse.Platform
 	ws.Warehouse.Mode = e.Warehouse.Mode
-	ws.Warehouse.Settings = e.Warehouse.Settings
+	ws.Warehouse.settings = e.Warehouse.Settings
+	ws.Warehouse.settingsKey = state.cipher.Key(e.Warehouse.SettingsKey)
+	ws.Warehouse.mcpSettingsKey = state.cipher.Key(e.Warehouse.MCPSettingsKey)
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
 	state.mu.Unlock()
@@ -1111,7 +1118,7 @@ func (state *State) setAccount(n notification) uuid.UUID {
 // changed.
 type SetConnectionSettings struct {
 	Connection int
-	Settings   json.Value
+	Settings   []byte
 }
 
 // setConnectionSettings sets the settings of a connection.
@@ -1120,9 +1127,10 @@ func (state *State) setConnectionSettings(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	c := state.replaceConnection(e.Connection, func(c *Connection) {
-		c.Settings = e.Settings
-	})
+	c := state.connections[e.Connection]
+	c.mu.Lock()
+	c.settings = e.Settings
+	c.mu.Unlock()
 	dispatchNotification(state, e)
 	return c.organization.ID
 }
@@ -1403,9 +1411,21 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 type UpdateWarehouse struct {
 	Workspace                    int
 	Mode                         WarehouseMode
-	Settings                     json.Value
-	MCPSettings                  json.Value // it can be a JSON object or json.Value(nil).
+	Settings                     []byte
+	MCPSettings                  []byte
 	CancelIncompatibleOperations bool
+	settingsHaveChanged          bool
+	mcpSettingsHaveChanged       bool
+}
+
+// SettingsHaveChanged reports whether settings have changed.
+func (n UpdateWarehouse) SettingsHaveChanged() bool {
+	return n.settingsHaveChanged
+}
+
+// MCPSettingsHaveChanged reports whether MCP settings have changed.
+func (n UpdateWarehouse) MCPSettingsHaveChanged() bool {
+	return n.mcpSettingsHaveChanged
 }
 
 // updateWarehouse updates a warehouse.
@@ -1414,16 +1434,14 @@ func (state *State) updateWarehouse(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.Value(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.Value("null"), so this code converts it
-	// back to json.Value(nil).
-	if e.MCPSettings.IsNull() {
-		e.MCPSettings = nil
-	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse.Mode = e.Mode
-		w.Warehouse.Settings = e.Settings
-		w.Warehouse.MCPSettings = e.MCPSettings
+		if e.settingsHaveChanged = !bytes.Equal(w.Warehouse.settings, e.Settings); e.settingsHaveChanged {
+			w.Warehouse.settings = e.Settings
+		}
+		if e.mcpSettingsHaveChanged = !bytes.Equal(w.Warehouse.mcpSettings, e.MCPSettings); e.mcpSettingsHaveChanged {
+			w.Warehouse.mcpSettings = e.MCPSettings
+		}
 	})
 	dispatchNotification(state, e)
 	return ws.organization.ID

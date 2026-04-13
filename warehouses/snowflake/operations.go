@@ -93,12 +93,15 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 // If an operation has already been set as completed, this method does
 // nothing.
 func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, opID string, opError error) error {
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	var opErrorStr string
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err := db.ExecContext(ctx, `UPDATE "KRENALIS_SYSTEM_OPERATIONS" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
+	_, err = db.ExecContext(ctx, `UPDATE "KRENALIS_SYSTEM_OPERATIONS" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
 		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
 		return snowflake(err)

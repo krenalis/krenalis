@@ -16,7 +16,7 @@ import (
 // Query executes a query and returns the results as Rows.
 func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return nil, 0, err
 	}

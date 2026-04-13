@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	stderrors "errors"
 	"io"
 	"math"
@@ -125,7 +126,88 @@ func TestWriteSessionCookie(t *testing.T) {
 
 }
 
-// TestValidateForbiddenBody tests the validateForbiddenBody function.
+func TestNewAPIsServerInitializesCookieKeys(t *testing.T) {
+	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil)
+	if s.cookieKeys == nil {
+		t.Fatal("expected newAPIsServer to initialize cookieKeys")
+	}
+}
+
+func TestSecureCookieCachesResult(t *testing.T) {
+	kms := &cookieTestKMS{
+		load: func(context.Context) ([]byte, []byte, error) {
+			return make([]byte, 32), make([]byte, 32), nil
+		},
+	}
+
+	s := &apisServer{cookieKeys: kms.Load}
+
+	first, err := s.secureCookie(context.Background())
+	if err != nil {
+		t.Fatalf("expected nil error from first secureCookie call, got %v", err)
+	}
+	second, err := s.secureCookie(context.Background())
+	if err != nil {
+		t.Fatalf("expected nil error from second secureCookie call, got %v", err)
+	}
+	if first != second {
+		t.Fatal("expected secureCookie to cache and reuse the same SecureCookie instance")
+	}
+	if kms.calls != 1 {
+		t.Fatalf("expected CookieKeys loading to be performed once, got %d", kms.calls)
+	}
+}
+
+func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+
+	kms := &cookieTestKMS{
+		load: func(ctx context.Context) ([]byte, []byte, error) {
+			select {
+			case <-started:
+			default:
+				close(started)
+			}
+			select {
+			case <-release:
+				return make([]byte, 32), make([]byte, 32), nil
+			case <-ctx.Done():
+				return nil, nil, ctx.Err()
+			}
+		},
+	}
+	s := &apisServer{cookieKeys: kms.Load}
+
+	firstCtx, cancelFirst := context.WithCancel(context.Background())
+	firstDone := make(chan error, 1)
+	go func() {
+		_, err := s.secureCookie(firstCtx)
+		firstDone <- err
+	}()
+
+	<-started
+	cancelFirst()
+
+	err := <-firstDone
+	if !stderrors.Is(err, context.Canceled) {
+		t.Fatalf("expected %v, got %v", context.Canceled, err)
+	}
+
+	close(release)
+
+	secureCookie, err := s.secureCookie(context.Background())
+	if err != nil {
+		t.Fatalf("expected retry after canceled load to succeed, got %v", err)
+	}
+	if secureCookie == nil {
+		t.Fatal("expected secureCookie retry to return a SecureCookie instance, got nil")
+	}
+	if kms.calls != 2 {
+		t.Fatalf("expected CookieKeys loading to be retried once, got %d calls", kms.calls)
+	}
+}
+
 func TestValidateForbiddenBody(t *testing.T) {
 
 	t.Run("allows empty body with zero content length", func(t *testing.T) {
@@ -160,24 +242,24 @@ func TestValidateForbiddenBody(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects unknown-length body and keeps payload intact", func(t *testing.T) {
-		const payload = "payload"
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
+	t.Run("rejects unknown-length non-empty body and preserves it for downstream", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(strings.NewReader("abc")))
 		req.ContentLength = -1
 
 		err := validateForbiddenBody(req)
 		if err == nil {
-			t.Fatalf("expected error, got nil")
+			t.Fatal("expected error, got nil")
 		}
 		if err.Error() != "request body not allowed" {
 			t.Fatalf("expected request body not allowed, got %q", err.Error())
 		}
+
 		body, readErr := io.ReadAll(req.Body)
 		if readErr != nil {
-			t.Fatalf("expected to read body, got %v", readErr)
+			t.Fatalf("expected body to remain readable, got %v", readErr)
 		}
-		if string(body) != payload {
-			t.Fatalf("expected body %q, got %q", payload, string(body))
+		if string(body) != "abc" {
+			t.Fatalf("expected preserved body %q, got %q", "abc", string(body))
 		}
 	})
 
@@ -191,6 +273,16 @@ func TestValidateForbiddenBody(t *testing.T) {
 			t.Fatalf("expected %v, got %v", testErr, err)
 		}
 	})
+}
+
+type cookieTestKMS struct {
+	calls int
+	load  func(context.Context) ([]byte, []byte, error)
+}
+
+func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, []byte, error) {
+	k.calls++
+	return k.load(ctx)
 }
 
 // TestValidateRequiredBody tests the validateRequiredBody function.

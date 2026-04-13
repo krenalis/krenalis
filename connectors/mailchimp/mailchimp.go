@@ -94,23 +94,11 @@ func init() {
 // New returns a new connector instance for Mailchimp.
 func New(env *connectors.ApplicationEnv) (*Mailchimp, error) {
 	c := Mailchimp{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Mailchimp")
-		}
-		// TODO(marco): re-enable webhooks when a public IP is used.
-		//err = c.initWebhooks()
-		//if err != nil {
-		//		return nil, err
-		//}
-	}
 	return &c, nil
 }
 
 type Mailchimp struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type innerSettings struct {
@@ -123,14 +111,20 @@ type innerSettings struct {
 // RecordSchema returns the schema of the specified target and role.
 func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 
+	var s innerSettings
+	err := mc.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return types.Type{}, err
+	}
+
 	// Fetch the contact fields, also known as audience fields or merge fields.
 	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
 	// See https://mailchimp.com/developer/marketing/docs/merge-fields/.
 	var request = request{
-		apiKey:     mc.settings.APIKey,
+		apiKey:     s.APIKey,
 		method:     "GET",
-		dataCenter: mc.settings.DataCenter,
-		path:       "/lists/" + url.PathEscape(mc.settings.Audience) + "/merge-fields",
+		dataCenter: s.DataCenter,
+		path:       "/lists/" + url.PathEscape(s.Audience) + "/merge-fields",
 		queryString: url.Values{
 			"count":  []string{"1000"},
 			"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
@@ -148,7 +142,7 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 			} `json:"options"`
 		} `json:"merge_fields"`
 	}
-	err := mc.call(ctx, request, nil, 200, &response)
+	err = mc.call(ctx, request, nil, 200, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -225,7 +219,13 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 // Records returns the records of the specified target.
 func (mc *Mailchimp) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
-	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
+	var s innerSettings
+	err := mc.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, "", err
+	}
+
+	path := "/lists/" + url.PathEscape(s.Audience) + "/members"
 
 	hasID := false
 	hasLastChanged := false
@@ -268,9 +268,9 @@ func (mc *Mailchimp) Records(ctx context.Context, target connectors.Targets, upd
 	}
 
 	var request = request{
-		apiKey:      mc.settings.APIKey,
+		apiKey:      s.APIKey,
 		method:      "GET",
-		dataCenter:  mc.settings.DataCenter,
+		dataCenter:  s.DataCenter,
 		path:        path,
 		queryString: queryString,
 	}
@@ -278,7 +278,7 @@ func (mc *Mailchimp) Records(ctx context.Context, target connectors.Targets, upd
 		Members    []map[string]any `json:"members"`
 		TotalItems int              `json:"total_items"`
 	}
-	err := mc.call(ctx, request, nil, 200, &response)
+	err = mc.call(ctx, request, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -349,9 +349,11 @@ func (mc *Mailchimp) ServeUI(ctx context.Context, event string, settings json.Va
 	switch event {
 	case "load":
 		var s innerSettings
-		if mc.settings != nil {
-			s = *mc.settings
-			var err error
+		err := mc.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Audience != "" {
 			audiences, err = mc.audiences(ctx, s.APIKey, s.DataCenter)
 			if err != nil {
 				return nil, err
@@ -423,7 +425,13 @@ const maxBodyRecords = 5000
 // Upsert updates or creates records in the API for the specified target.
 func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
-	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
+	var s innerSettings
+	err := mc.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+
+	basePath := "/lists/" + url.PathEscape(s.Audience) + "/members"
 
 	bb := mc.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
@@ -467,9 +475,9 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 	bb.WriteString(`]}`)
 
 	var batchRequest = request{
-		apiKey:     mc.settings.APIKey,
+		apiKey:     s.APIKey,
 		method:     "POST",
-		dataCenter: mc.settings.DataCenter,
+		dataCenter: s.DataCenter,
 		path:       "/batches",
 	}
 	var batchResponse struct {
@@ -478,7 +486,7 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 		ErroredOperations int    `json:"errored_operations"`
 		ResponseBodyURL   string `json:"response_body_url"`
 	}
-	err := mc.call(ctx, batchRequest, bb, 200, &batchResponse)
+	err = mc.call(ctx, batchRequest, bb, 200, &batchResponse)
 	if err != nil {
 		return err
 	}
@@ -495,9 +503,9 @@ func (mc *Mailchimp) Upsert(ctx context.Context, target connectors.Targets, reco
 			return errors.New("server does not returned the batch identifier")
 		}
 		var request = request{
-			apiKey:     mc.settings.APIKey,
+			apiKey:     s.APIKey,
 			method:     "GET",
-			dataCenter: mc.settings.DataCenter,
+			dataCenter: s.DataCenter,
 			path:       "/batches/" + url.PathEscape(batchID),
 		}
 		for batchResponse.Status != "finished" && bo.Next(ctx) {
@@ -654,15 +662,8 @@ func (mc *Mailchimp) saveSettings(ctx context.Context, settings json.Value) erro
 		Audience:   req.Audience,
 		DataCenter: dc,
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	if err := mc.env.SetSettings(ctx, b); err != nil {
-		return err
-	}
-	mc.settings = &s
-	return nil
+
+	return mc.env.Settings.Store(ctx, s)
 }
 
 // dataCenterFromKey extracts the datacenter identifier from a Mailchimp API
@@ -811,16 +812,21 @@ var errAudienceNotExist = errors.New("audience does not exist")
 // webhooks returns the webhooks for the provide audience.
 // If audience does not exist, it returns the errAudienceNotExist error.
 func (mc *Mailchimp) webhooks(ctx context.Context, audience string) ([]webhook, error) {
+	var s innerSettings
+	err := mc.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
 	var request = request{
-		apiKey:     mc.settings.APIKey,
+		apiKey:     s.APIKey,
 		method:     "GET",
-		dataCenter: mc.settings.DataCenter,
+		dataCenter: s.DataCenter,
 		path:       "/lists/" + url.PathEscape(audience) + "/webhooks",
 	}
 	var response struct {
 		Webhooks []webhook `json:"webhooks"`
 	}
-	err := mc.call(ctx, request, nil, 200, &response)
+	err = mc.call(ctx, request, nil, 200, &response)
 	if err != nil {
 		if err, ok := err.(*mailchimpError); ok && err.Status == 404 {
 			return nil, errAudienceNotExist

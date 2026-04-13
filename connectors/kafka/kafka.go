@@ -14,7 +14,6 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
-	"errors"
 	"net"
 	"strconv"
 	"time"
@@ -46,21 +45,13 @@ func init() {
 
 // New returns a new connector instance for Kafka.
 func New(env *connectors.MessageBrokerEnv) (*Kafka, error) {
-	c := Kafka{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Kafka")
-		}
-	}
-	return &c, nil
+	return &Kafka{env: env}, nil
 }
 
 type Kafka struct {
-	env      *connectors.MessageBrokerEnv
-	settings *innerSettings
-	client   *kgo.Client
-	iter     *fetchesRecordIter
+	env    *connectors.MessageBrokerEnv
+	client *kgo.Client
+	iter   *fetchesRecordIter
 }
 
 // Close closes the message broker.
@@ -75,7 +66,12 @@ func (kafka *Kafka) Close() error {
 
 // Receive receives an event from the message broker.
 func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
-	err := kafka.connect()
+	var s innerSettings
+	err := kafka.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = kafka.connect(&s)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -98,7 +94,12 @@ func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 
 // Send sends an event to the message broker.
 func (kafka *Kafka) Send(ctx context.Context, event []byte, options connectors.SendOptions, ack func(err error)) error {
-	err := kafka.connect()
+	var s innerSettings
+	err := kafka.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	err = kafka.connect(&s)
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func (kafka *Kafka) Send(ctx context.Context, event []byte, options connectors.S
 	record := &kgo.Record{
 		Key:   key,
 		Value: event,
-		Topic: kafka.settings.Topic,
+		Topic: s.Topic,
 	}
 	var promise func(*kgo.Record, error)
 	if ack != nil {
@@ -126,10 +127,12 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, settings json.Val
 	switch event {
 	case "load":
 		var s innerSettings
-		if kafka.settings == nil {
+		err := kafka.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Kafka == nil {
 			s.Kafka = &kafkaSettings{Port: 9092}
-		} else {
-			s = *kafka.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -223,16 +226,7 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = kafka.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	kafka.settings = &s
-	return nil
+	return kafka.env.Settings.Store(ctx, s)
 }
 
 type kafkaSettings struct {
@@ -255,7 +249,7 @@ type innerSettings struct {
 }
 
 // opts returns s as options to configure a client.
-func (s *innerSettings) opts() []kgo.Opt {
+func opts(s *innerSettings) []kgo.Opt {
 	var user, pass, broker string
 	switch {
 	case s.Kafka != nil:
@@ -279,11 +273,11 @@ func (s *innerSettings) opts() []kgo.Opt {
 }
 
 // connect establishes a connection to Kafka.
-func (kafka *Kafka) connect() error {
+func (kafka *Kafka) connect(s *innerSettings) error {
 	if kafka.client != nil {
 		return nil
 	}
-	cl, err := kgo.NewClient(kafka.settings.opts()...)
+	cl, err := kgo.NewClient(opts(s)...)
 	if err != nil {
 		return err
 	}
@@ -293,8 +287,8 @@ func (kafka *Kafka) connect() error {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings) error {
-	cl, err := kgo.NewClient(settings.opts()...)
+func testConnection(ctx context.Context, s *innerSettings) error {
+	cl, err := kgo.NewClient(opts(s)...)
 	if err != nil {
 		return err
 	}

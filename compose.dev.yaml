@@ -66,6 +66,7 @@
 # Recommended env vars in your Krenalis .env file
 # -----------------------------------------------------------------------------
 #
+#     KRENALIS_KMS=local:<base64-encoded 32-byte key without '=' padding>
 #     KRENALIS_HTTP_HOST=0.0.0.0 # necessary for Prometheus (which must connect from a container)
 #     KRENALIS_HTTP_EXTERNAL_URL=http://127.0.0.1:2022
 #     KRENALIS_DB_PORT=15432

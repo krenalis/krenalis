@@ -120,13 +120,13 @@ func Test_Merge_Query(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	env := connectors.DatabaseEnv{Settings: settings}
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings)}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer connector.Close()
-	if err = connector.openDB(); err != nil {
+	if err = connector.openDB(context.Background()); err != nil {
 		t.Fatalf("cannot open the database: %s", err)
 	}
 
@@ -230,6 +230,27 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatalf("cannot scan row: %s", err)
 	}
 
+}
+
+type testSettingsStore struct {
+	settings json.Value
+}
+
+func newTestSettingsStore(settings json.Value) *testSettingsStore {
+	return &testSettingsStore{settings: settings}
+}
+
+func (s *testSettingsStore) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(s.settings, dst)
+}
+
+func (s *testSettingsStore) Store(ctx context.Context, src any) error {
+	settings, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	s.settings = settings
+	return nil
 }
 
 // scanner implements the sql.Scanner interface to read the database values.

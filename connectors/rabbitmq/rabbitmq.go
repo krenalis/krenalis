@@ -42,19 +42,11 @@ func init() {
 
 // New returns a new connector instance for RabbitMQ.
 func New(env *connectors.MessageBrokerEnv) (*RabbitMQ, error) {
-	c := RabbitMQ{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for RabbitMQ")
-		}
-	}
-	return &c, nil
+	return &RabbitMQ{env: env}, nil
 }
 
 type RabbitMQ struct {
 	env        *connectors.MessageBrokerEnv
-	settings   *innerSettings
 	conn       *amqp.Connection
 	ch         *amqp.Channel
 	deliveries <-chan amqp.Delivery
@@ -77,7 +69,12 @@ func (rmq *RabbitMQ) Close() error {
 
 // Receive receives an event from the message broker.
 func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
-	err := rmq.connect(ctx, true)
+	var s innerSettings
+	err := rmq.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = rmq.connect(ctx, &s, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,12 +92,17 @@ func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 
 // Send sends an event to the message broker.
 func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options connectors.SendOptions, ack func(err error)) error {
-	err := rmq.connect(ctx, true)
+	var s innerSettings
+	err := rmq.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	err = rmq.connect(ctx, &s, true)
 	if err != nil {
 		return err
 	}
 	msg := amqp.Publishing{Body: event}
-	dc, err := rmq.ch.PublishWithDeferredConfirmWithContext(ctx, "", rmq.settings.Queue, false, false, msg)
+	dc, err := rmq.ch.PublishWithDeferredConfirmWithContext(ctx, "", s.Queue, false, false, msg)
 	if err != nil {
 		return err
 	}
@@ -122,8 +124,9 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Va
 	switch event {
 	case "load":
 		var s innerSettings
-		if rmq.settings != nil {
-			s = *rmq.settings
+		err := rmq.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -158,7 +161,7 @@ const defaultConnectionTimeout = 30 * time.Second
 
 // connect establishes a connection to RabbitMQ. If deliveries is true, it also
 // sets the deliveries channel.
-func (rmq *RabbitMQ) connect(ctx context.Context, deliveries bool) (err error) {
+func (rmq *RabbitMQ) connect(ctx context.Context, settings *innerSettings, deliveries bool) (err error) {
 	if rmq.conn != nil {
 		return nil
 	}
@@ -182,7 +185,7 @@ func (rmq *RabbitMQ) connect(ctx context.Context, deliveries bool) (err error) {
 			return netConn, nil
 		},
 	}
-	conn, err := amqp.DialConfig(rmq.settings.URL, config)
+	conn, err := amqp.DialConfig(settings.URL, config)
 	if err != nil {
 		return err
 	}
@@ -192,7 +195,7 @@ func (rmq *RabbitMQ) connect(ctx context.Context, deliveries bool) (err error) {
 		return err
 	}
 	if deliveries {
-		rmq.deliveries, err = ch.Consume(rmq.settings.Queue, "", false, false, false, false, nil)
+		rmq.deliveries, err = ch.Consume(settings.Queue, "", false, false, false, false, nil)
 		if err != nil {
 			_ = ch.Close()
 			_ = conn.Close()
@@ -235,25 +238,16 @@ func (rmq *RabbitMQ) saveSettings(ctx context.Context, options json.Value, test 
 	if strings.HasPrefix(s.Queue, "amq.") {
 		return connectors.NewInvalidSettingsError("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
-	err = rmq.testConnection(ctx)
+	err = rmq.testConnection(ctx, &s)
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = rmq.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	rmq.settings = &s
-	return nil
+	return rmq.env.Settings.Store(ctx, &s)
 }
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func (rmq *RabbitMQ) testConnection(ctx context.Context) error {
-	return rmq.connect(ctx, false) // TO FIX
+func (rmq *RabbitMQ) testConnection(ctx context.Context, settings *innerSettings) error {
+	return rmq.connect(ctx, settings, false) // TO FIX
 
 }

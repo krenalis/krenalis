@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -130,11 +129,8 @@ func (app ApplicationSpec) New(env *ApplicationEnv) (any, error) {
 // ApplicationEnv is the environment for an application connector.
 type ApplicationEnv struct {
 
-	// Settings holds the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 
 	// OAuthAccount is the OAuth account identifier for authentication.
 	OAuthAccount string

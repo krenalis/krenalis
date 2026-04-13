@@ -53,8 +53,10 @@ CREATE TABLE workspaces (
     name varchar(100) NOT NULL,
     warehouse_name varchar NOT NULL,
     warehouse_mode warehouse_mode NOT NULL,
-    warehouse_settings jsonb NOT NULL,
-    warehouse_mcp_settings jsonb NOT NULL DEFAULT 'null'::jsonb,
+    warehouse_settings bytea NOT NULL,
+    warehouse_mcp_settings bytea DEFAULT NULL,
+    kms_encrypted_warehouse_settings_key bytea NOT NULL,
+    kms_encrypted_warehouse_mcp_settings_key bytea NOT NULL,
     alter_profile_schema_id uuid,
     alter_profile_schema_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     alter_profile_schema_primary_sources jsonb,
@@ -109,7 +111,8 @@ CREATE TABLE connections (
     strategy strategy,
     sending_mode sending_mode,
     linked_connections integer[],
-    settings jsonb,
+    settings bytea,
+    kms_encrypted_settings_key bytea NOT NULL,
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );
@@ -312,11 +315,21 @@ CREATE TABLE notifications (
 );
 
 CREATE TABLE metadata (
-    key text,
-    value text,
-    PRIMARY KEY (key)
+    singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    installation_id text UNIQUE NOT NULL,
+    kms_encrypted_cookie_key bytea NOT NULL,
+    kms_encrypted_oauth_key bytea NOT NULL,
+    kms_encrypted_notification_key bytea NOT NULL
 );
 
-INSERT INTO metadata (key, value) VALUES
-    ('encryption_key', encode(gen_random_bytes(64), 'base64')),
-    ('installation_id', gen_random_uuid());
+INSERT INTO metadata (
+    installation_id,
+    kms_encrypted_cookie_key,
+    kms_encrypted_oauth_key,
+    kms_encrypted_notification_key
+) VALUES (
+    gen_random_uuid(),
+    '\x'::bytea,
+    '\x'::bytea,
+    '\x'::bytea
+);

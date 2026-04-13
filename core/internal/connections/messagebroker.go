@@ -57,8 +57,7 @@ func (c *Connections) MessageBroker(connection *state.Connection) (*MessageBroke
 		connector: connection.Connector().Code,
 	}
 	inner, err := connectors.RegisteredMessageBroker(connection.Connector().Code).New(&connectors.MessageBrokerEnv{
-		Settings:    connection.Settings,
-		SetSettings: setConnectionSettingsFunc(c.state, connection),
+		Settings: newConnectionSettingStore(c.state, connection),
 	})
 	if err != nil {
 		return nil, connectorError(err)

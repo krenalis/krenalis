@@ -7,8 +7,6 @@ package connectors
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/krenalis/krenalis/tools/json"
 )
 
 // An InvalidPathError value is returned by FileStorage.AbsolutePath when the
@@ -68,11 +66,8 @@ func (spec FileStorageSpec) New(env *FileStorageEnv) (any, error) {
 // FileStorageEnv is the environment for a file storage connector.
 type FileStorageEnv struct {
 
-	// Settings is the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 }
 
 // FileStorageNewFunc represents functions that create new file storage

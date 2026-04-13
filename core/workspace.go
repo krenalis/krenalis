@@ -454,7 +454,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		ExpiresIn:    auth.ExpiresIn,
 	}
 
-	return this.core.encryptAuthorizedOAuthAccount(account)
+	return this.core.encryptAuthorizedOAuthAccount(ctx, account)
 }
 
 // Connection returns the connection with identifier id of the workspace.
@@ -667,7 +667,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 
 	// Set the OAuth account. It can be an existing account or an account that needs to be created.
 	if authToken != "" {
-		account, err := this.core.decryptAuthorizedOAuthAccount(authToken)
+		account, err := this.core.decryptAuthorizedOAuthAccount(ctx, authToken)
 		if err != nil {
 			return 0, errors.BadRequest("authorization token is not valid")
 		}
@@ -692,6 +692,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		if connection.Role == Source && c.HasSourceSettings || connection.Role == Destination && c.HasDestinationSettings {
 			return 0, errors.BadRequest("settings must be provided because connector %s has %s settings", c.Code, strings.ToLower(connection.Role.String()))
 		}
+		n.SettingsKey, err = this.core.state.GenerateKmsDataKey(ctx)
+		if err != nil {
+			return 0, err
+		}
 	} else {
 		if connection.Role == Source && !c.HasSourceSettings || connection.Role == Destination && !c.HasDestinationSettings {
 			return 0, errors.BadRequest("settings cannot be provided because connector %s has no %s settings", c.Code, strings.ToLower(connection.Role.String()))
@@ -706,7 +710,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
 		conf.OAuth.AccessToken = n.Account.AccessToken
-		n.Settings, err = this.core.connections.UpdatedSettings(ctx, c, conf, settings)
+		settings, err = this.core.connections.UpdatedSettings(ctx, c, conf, settings)
 		if err != nil {
 			switch err.(type) {
 			case *connectors.InvalidSettingsError:
@@ -714,6 +718,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
+			return 0, err
+		}
+		n.Settings, n.SettingsKey, err = this.core.state.EncryptSettings(ctx, settings)
+		if err != nil {
 			return 0, err
 		}
 	}
@@ -768,10 +776,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, connector, role, account,"+
-			" strategy, sending_mode, linked_connections, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+			" strategy, sending_mode, linked_connections, settings, kms_encrypted_settings_key)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
 			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
-			n.SendingMode, n.LinkedConnections, n.Settings)
+			n.SendingMode, n.LinkedConnections, n.Settings, n.SettingsKey)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
@@ -1528,7 +1536,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	var account authorizedOAuthAccount
 	if authToken != "" {
 		var err error
-		account, err = this.core.decryptAuthorizedOAuthAccount(authToken)
+		account, err = this.core.decryptAuthorizedOAuthAccount(ctx, authToken)
 		if err != nil {
 			return nil, errors.BadRequest("authorization token is not valid")
 		}
@@ -1596,7 +1604,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings json.Value) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1608,7 +1616,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1792,7 +1800,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1805,8 +1813,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if this.workspace.Warehouse.Platform == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
-		var err error
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1842,20 +1849,22 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	n := state.UpdateWarehouse{
 		Workspace:                    ws.ID,
 		Mode:                         state.WarehouseMode(mode),
-		Settings:                     settings,
-		MCPSettings:                  mcpSettings,
 		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
-
-	var mcp string
-	if n.MCPSettings != nil {
-		mcp = string(n.MCPSettings)
-	} else {
-		mcp = "null"
+	n.Settings, err = ws.EncryptWarehouseSettings(ctx, settings)
+	if err != nil {
+		return err
 	}
+	if mcpSettings != nil {
+		n.MCPSettings, err = ws.EncryptWarehouseMCPSettings(ctx, mcpSettings)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2, warehouse_mcp_settings = $3 WHERE id = $4",
-			n.Mode, n.Settings, mcp, n.Workspace)
+			n.Mode, n.Settings, n.MCPSettings, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -1923,17 +1932,19 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 
 // Warehouse returns platform, settings and MCP settings of the data warehouse
 // for the workspace.
-func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
+func (this *Workspace) Warehouse(ctx context.Context) (string, json.Value, json.Value, error) {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings := slices.Clone(ws.Warehouse.Settings)
-	var mcpSettings json.Value
-	if ws.Warehouse.MCPSettings != nil {
-		mcpSettings = slices.Clone(ws.Warehouse.MCPSettings)
-	} else {
-		mcpSettings = json.Value("null")
+	settings, err := ws.WarehouseSettings(ctx)
+	if err != nil {
+		return "", nil, nil, err
 	}
-	return ws.Warehouse.Platform, settings, mcpSettings
+	mcpSettings, err := ws.WarehouseMCPSettings(ctx)
+	if err != nil {
+		clear(settings)
+		return "", nil, nil, err
+	}
+	return ws.Warehouse.Platform, settings, mcpSettings, nil
 }
 
 // identities returns the identities matching the provided where condition and

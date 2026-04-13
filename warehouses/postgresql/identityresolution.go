@@ -51,7 +51,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 
 func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
 
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
