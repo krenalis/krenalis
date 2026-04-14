@@ -65,7 +65,7 @@ func Test_UpgradeToKMS(t *testing.T) {
 
 	conn, err := db.Open(&db.Options{
 		Host:           host,
-		Port:           port.Int(),
+		Port:           int(port.Num()),
 		Username:       upgradeTestUser,
 		Password:       upgradeTestPassword,
 		Database:       upgradeTestDatabase,
