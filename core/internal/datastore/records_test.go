@@ -67,7 +67,7 @@ func Test_Records(t *testing.T) {
 	// Open the data warehouse.
 	settings, err := json.Marshal(map[string]any{
 		"host":     testHost,
-		"port":     testPort.Int(),
+		"port":     testPort.Num(),
 		"username": testUser,
 		"password": testPassword,
 		"database": testDatabase,

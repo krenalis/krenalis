@@ -525,7 +525,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 				settings, err = json.Marshal(map[string]any{
 					"host":     host,
-					"port":     port.Int(),
+					"port":     port.Num(),
 					"username": username,
 					"password": password,
 					"database": database,

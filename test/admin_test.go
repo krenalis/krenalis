@@ -90,7 +90,7 @@ func TestAdmin(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		dbPort = postgresPort.Int()
+		dbPort = int(postgresPort.Num())
 	}
 
 	// Initialize the PostgreSQL database referenced in pipelines.
