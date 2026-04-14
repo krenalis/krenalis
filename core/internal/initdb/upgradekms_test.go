@@ -18,7 +18,6 @@ import (
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/kms"
 
-	"github.com/docker/docker/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -31,8 +30,6 @@ const (
 )
 
 func Test_UpgradeToKMS(t *testing.T) {
-	requireDocker(t)
-
 	ctx := context.Background()
 
 	postgresContainer, err := postgres.Run(ctx,
@@ -105,18 +102,6 @@ func Test_UpgradeToKMS(t *testing.T) {
 	assertWorkspaceSettings(t, ctx, conn, c)
 	assertConnectionSettings(t, ctx, conn, c, keyManager)
 	assertMetadata(t, ctx, conn, keyManager)
-}
-
-func requireDocker(t *testing.T) {
-	t.Helper()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		t.Skipf("skipping test because Docker client initialization failed: %s", err)
-	}
-	defer cli.Close()
-	if _, err := cli.Info(context.Background()); err != nil {
-		t.Skipf("skipping test because Docker is not available: %s", err)
-	}
 }
 
 func seedLegacyUpgradeSchema(ctx context.Context, conn *db.DB) error {

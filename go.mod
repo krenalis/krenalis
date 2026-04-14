@@ -17,7 +17,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.89.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.0
 	github.com/aws/smithy-go v1.24.3
-	github.com/docker/docker v28.5.2+incompatible
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/evanw/esbuild v0.28.0
 	github.com/fraugster/parquet-go v0.12.0
