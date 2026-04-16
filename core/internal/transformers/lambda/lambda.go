@@ -24,7 +24,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	"github.com/aws/aws-sdk-go-v2/credentials"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/aws/smithy-go"
@@ -36,11 +36,8 @@ type function struct {
 }
 
 type Settings struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Role            string
-	NodeJS          struct {
+	Role   string
+	NodeJS struct {
 		Runtime string
 		Layer   string
 	}
@@ -75,7 +72,10 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 
-	client := fn.lambdaClient()
+	client, err := fn.lambdaClient(ctx)
+	if err != nil {
+		return err
+	}
 
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
@@ -194,7 +194,10 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 	if err != nil {
 		return "", "", err
 	}
-	client := fn.lambdaClient()
+	client, err := fn.lambdaClient(ctx)
+	if err != nil {
+		return "", "", err
+	}
 	var runtime string
 	var layers []string
 	switch language {
@@ -249,7 +252,10 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	client := fn.lambdaClient()
+	client, err := fn.lambdaClient(ctx)
+	if err != nil {
+		return err
+	}
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &arn,
 	})
@@ -283,7 +289,10 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	client := fn.lambdaClient()
+	client, err := fn.lambdaClient(ctx)
+	if err != nil {
+		return "", err
+	}
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
 		FunctionName: &arn,
 		Publish:      true,
@@ -405,23 +414,18 @@ def _handler(event, context):
 	return b.Bytes(), nil
 }
 
-// lambdaClient returns the Lambda client.
-func (fn *function) lambdaClient() *lambda.Client {
+// lambdaClient returns the Lambda client, loading the AWS configuration from
+// the environment (IAM role, instance metadata, etc.) on first use.
+func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	if fn.client != nil {
-		return fn.client
+		return fn.client, nil
 	}
-	cfg := aws.Config{
-		Region: fn.settings.Region,
-		Credentials: aws.NewCredentialsCache(
-			credentials.NewStaticCredentialsProvider(
-				fn.settings.AccessKeyID,
-				fn.settings.SecretAccessKey,
-				"",
-			),
-		),
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
 	}
 	fn.client = lambda.NewFromConfig(cfg)
-	return fn.client
+	return fn.client, nil
 }
 
 // pythonEscaper is used by escapePythonSourceCode.
