@@ -415,7 +415,7 @@ def _handler(event, context):
 }
 
 // lambdaClient returns the Lambda client, loading the AWS configuration from
-// the environment (IAM role, instance metadata, etc.) on first use.
+// the environment (IAM role, etc.) on first call.
 func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	if fn.client != nil {
 		return fn.client, nil
