@@ -80,11 +80,8 @@ type Settings struct {
 }
 
 type LambdaConfig struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Role            string
-	NodeJS          struct {
+	Role   string
+	NodeJS struct {
 		Runtime string
 		Layer   string
 	}

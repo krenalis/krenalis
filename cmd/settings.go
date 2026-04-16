@@ -416,9 +416,6 @@ func parseEnvSettings() (*Settings, error) {
 		settings.Transformers.Local.SudoUser = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_SUDO_USER")
 		settings.Transformers.Local.DoasUser = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER")
 	case "aws-lambda":
-		settings.Transformers.Lambda.AccessKeyID = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
-		settings.Transformers.Lambda.SecretAccessKey = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
-		settings.Transformers.Lambda.Region = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_REGION")
 		settings.Transformers.Lambda.Role = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_ROLE")
 		settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
 		settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")
