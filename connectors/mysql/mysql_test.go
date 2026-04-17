@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
@@ -134,7 +135,7 @@ func Test_Merge_Query(t *testing.T) {
 	}
 
 	// Open the MySQL connector.
-	settings, err := json.Marshal(innerSettings{
+	connector, err := testconnector.NewDatabase[*MySQL]("mysql", innerSettings{
 		Host:     host,
 		Port:     int(port.Num()),
 		Username: username,
@@ -144,13 +145,8 @@ func Test_Merge_Query(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	env := connectors.DatabaseEnv{Settings: settings}
-	connector, err := New(&env)
-	if err != nil {
-		t.Fatal(err)
-	}
 	defer connector.Close()
-	if err = connector.openDB(); err != nil {
+	if err = connector.openDB(ctx); err != nil {
 		t.Fatalf("cannot open the database: %s", err)
 	}
 

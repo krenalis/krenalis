@@ -102,9 +102,9 @@ func main() {
 
 	// Validate the Docker Compose files.
 	fmt.Println("Validate Docker Compose files")
-	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()                           // compose.yaml with overriding (default).
-	NewCmd("docker", "compose", "-f", "compose.yaml", "config", "--quiet").InDir(repo).Run()     // compose.yaml without overriding.
-	NewCmd("docker", "compose", "-f", "compose.dev.yaml", "config", "--quiet").InDir(repo).Run() // compose.dev.yaml.
+	NewCmd("docker", "compose", "config", "--quiet").WithEnv("KRENALIS_KMS", "local:test-master-key").InDir(repo).Run()                           // compose.yaml with overriding (default).
+	NewCmd("docker", "compose", "-f", "compose.yaml", "config", "--quiet").WithEnv("KRENALIS_KMS", "local:test-master-key").InDir(repo).Run()     // compose.yaml without overriding.
+	NewCmd("docker", "compose", "-f", "compose.dev.yaml", "config", "--quiet").WithEnv("KRENALIS_KMS", "local:test-master-key").InDir(repo).Run() // compose.dev.yaml.
 
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {

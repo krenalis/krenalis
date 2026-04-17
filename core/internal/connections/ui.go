@@ -6,7 +6,6 @@ package connections
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"unicode/utf8"
@@ -44,8 +43,7 @@ func (c *Connections) ServePipelineUI(ctx context.Context, pipeline *state.Pipel
 	role := connectors.Role(pipeline.Connection().Role)
 	format := pipeline.Format()
 	inner, err := connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
-		Settings:    pipeline.FormatSettings,
-		SetSettings: setPipelineSettingsFunc(c.state, pipeline),
+		Settings: newPipelineSettingStore(c.state, pipeline),
 	})
 	if err != nil {
 		return nil, connectorError(err)
@@ -75,11 +73,11 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	}
 	var inner any
 	var err error
+	settingsStore := newConnectionSettingStore(c.state, connection)
 	switch connector := connection.Connector(); connector.Type {
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
-			Settings:     connection.Settings,
-			SetSettings:  setConnectionSettingsFunc(c.state, connection),
+			Settings:     settingsStore,
 			OAuthAccount: accountCode,
 			HTTPClient:   c.http.ConnectionClient(connection),
 			// WebhookURL:   webhookURL(connection, accountID) // TODO(marco): implement webhooks
@@ -87,30 +85,25 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	case state.Database:
 		var database any
 		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(c.state, connection),
+			Settings: settingsStore,
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(c.state, connection),
+			Settings: settingsStore,
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(c.state, connection),
+			Settings: settingsStore,
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(connector.Code).New(&connectors.SDKEnv{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(c.state, connection),
+			Settings: settingsStore,
 		})
 	case state.Webhook:
 		inner, err = connectors.RegisteredWebhook(connector.Code).New(&connectors.WebhookEnv{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(c.state, connection),
+			Settings: settingsStore,
 		})
 	}
 	if err != nil {
@@ -144,28 +137,30 @@ type ConnectorConfig struct {
 func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
 	var inner any
 	var err error
+	settingStore := newUISettingStore(nil)
 	code := connector.Code
 	switch connector.Type {
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
+			Settings:     settingStore,
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
-		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{})
+		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
 	case state.SDK:
-		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{})
+		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:
-		inner, err = connectors.RegisteredWebhook(code).New(&connectors.WebhookEnv{})
+		inner, err = connectors.RegisteredWebhook(code).New(&connectors.WebhookEnv{Settings: settingStore})
 	}
 	if err != nil {
 		return nil, connectorError(err)
@@ -187,43 +182,33 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 // and an *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
+func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) (json.Value, error) {
 	var inner any
 	var err error
-	var updatedSettings json.Value
-	setSettings := func(_ context.Context, innerSettings json.Value) error {
-		if !json.Valid(innerSettings) {
-			return errors.New("inner settings is not valid JSON")
-		}
-		if len(innerSettings) > maxSettingsLen && utf8.RuneCount(innerSettings) > maxSettingsLen {
-			return fmt.Errorf("inner settings is longer than %d runes", maxSettingsLen)
-		}
-		updatedSettings = innerSettings
-		return nil
-	}
+	settingStore := newUISettingStore(nil)
 	code := connector.Code
 	switch connector.Type {
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
-			SetSettings:  setSettings,
+			Settings:     settingStore,
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{SetSettings: setSettings})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
-		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
 	case state.SDK:
-		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:
-		inner, err = connectors.RegisteredWebhook(code).New(&connectors.WebhookEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredWebhook(code).New(&connectors.WebhookEnv{Settings: settingStore})
 	}
 	if err != nil {
 		return nil, connectorError(err)
@@ -232,7 +217,10 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	return updatedSettings, nil
+	if len(settingStore.settings) > maxSettingsLen && utf8.RuneCount(settingStore.settings) > maxSettingsLen {
+		return nil, fmt.Errorf("inner settings is longer than %d runes", maxSettingsLen)
+	}
+	return settingStore.settings, nil
 }
 
 // marshalUI marshals the provided UI, in the given role, into JSON format.

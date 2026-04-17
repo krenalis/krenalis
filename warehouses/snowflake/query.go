@@ -16,7 +16,10 @@ import (
 // Query executes a query and returns the results as Rows.
 func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return nil, 0, snowflake(err)
+	}
 
 	// Build the WHERE expression, if necessary.
 	var whereExpr string
@@ -62,7 +65,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 	b.WriteString(` FROM `)
 	b.WriteString(quoteIdent(query.Table))
 
-	err := appendJoins(&b, query.Joins)
+	err = appendJoins(&b, query.Joins)
 	if err != nil {
 		return nil, 0, err
 	}

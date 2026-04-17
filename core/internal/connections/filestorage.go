@@ -62,8 +62,7 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 		storage:   storage,
 	}
 	s.inner, s.err = connectors.RegisteredFileStorage(storage.Connector().Code).New(&connectors.FileStorageEnv{
-		Settings:    storage.Settings,
-		SetSettings: setConnectionSettingsFunc(c.state, storage),
+		Settings: newConnectionSettingStore(c.state, storage),
 	})
 	s.err = connectorError(s.err)
 	return s
@@ -140,9 +139,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
-	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{
-		SetSettings: func(ctx context.Context, innerSettings json.Value) error { return nil },
-	})
+	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{Settings: newUISettingStore(settings)})
 	if err != nil {
 		return nil, nil, nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
@@ -200,9 +197,7 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, storage.err
 	}
 
-	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{
-		SetSettings: func(ctx context.Context, settings json.Value) error { return nil },
-	})
+	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{Settings: newUISettingStore(settings)})
 	if err != nil {
 		return nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}

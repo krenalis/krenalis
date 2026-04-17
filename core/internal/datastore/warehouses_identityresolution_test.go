@@ -65,6 +65,18 @@ type identity struct {
 	attributes   map[string]any
 }
 
+type testSettingsLoader struct {
+	settings json.Value
+}
+
+func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
+	return &testSettingsLoader{settings: settings}
+}
+
+func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(loader.settings, dst)
+}
+
 // TestWarehousesIdentityResolution tests the Identity Resolution.
 func TestWarehousesIdentityResolution(t *testing.T) {
 
@@ -540,22 +552,17 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Open the warehouse.
-			wh, err := platform.New(&warehouses.Config{
-				Settings: settings,
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
+			dw := platform.New(newTestSettingsLoader(settings))
 
 			ctx := context.Background()
 
 			// Determine if the warehouse can be initialized (returning an error
 			// otherwise), then initialize it.
-			err = wh.CanInitialize(ctx)
+			err := dw.CanInitialize(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = wh.Initialize(ctx, columns)
+			err = dw.Initialize(ctx, columns)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -569,7 +576,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					//
 					// TODO(Gianluca): how should the platforms expose the table names? We
 					// have an issue where we discuss this (https://github.com/krenalis/krenalis/issues/928).
-					err = wh.Truncate(ctx, "krenalis_identities")
+					err = dw.Truncate(ctx, "krenalis_identities")
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -600,7 +607,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						maps.Copy(row, profile.attributes)
 						rows = append(rows, row)
 					}
-					err = wh.MergeIdentities(ctx, mergeColumns, rows)
+					err = dw.MergeIdentities(ctx, mergeColumns, rows)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -617,7 +624,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// Call ResolveIdentities several times, just to do a
 					// minimal idempotency test.
 					for range 5 {
-						err = wh.ResolveIdentities(ctx, opID.String(), identifiers, columns, test.primarySources)
+						err = dw.ResolveIdentities(ctx, opID.String(), identifiers, columns, test.primarySources)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -632,7 +639,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							Table:   "profiles",
 							OrderBy: []warehouses.Column{columnByName["email"]},
 						}
-						r, _, err := wh.Query(ctx, query, true)
+						r, _, err := dw.Query(ctx, query, true)
 						if err != nil {
 							t.Fatal(err)
 						}

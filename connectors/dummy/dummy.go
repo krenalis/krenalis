@@ -69,19 +69,11 @@ func init() {
 
 // New returns a new connector instance for testing.
 func New(env *connectors.ApplicationEnv) (*Dummy, error) {
-	c := Dummy{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Dummy connector")
-		}
-	}
-	return &c, nil
+	return &Dummy{env: env}, nil
 }
 
 type Dummy struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 var (
@@ -103,7 +95,12 @@ func newDummyId() string {
 
 // EventTypeSchema returns the schema of the specified event type.
 func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
-	dummy.simulateHTTPDelay()
+	var s innerSettings
+	err := dummy.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return types.Type{}, err
+	}
+	dummy.simulateHTTPDelay(&s)
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
@@ -137,7 +134,12 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 
 // EventTypes returns the event types.
 func (dummy *Dummy) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
-	dummy.simulateHTTPDelay()
+	var s innerSettings
+	err := dummy.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	dummy.simulateHTTPDelay(&s)
 	return []*connectors.EventType{
 		{
 			ID:          "send_add_to_cart",
@@ -175,7 +177,12 @@ func (dummy *Dummy) PreviewSendEvents(ctx context.Context, events connectors.Eve
 
 // RecordSchema returns the schema of the specified target and role.
 func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
-	dummy.simulateHTTPDelay()
+	var s innerSettings
+	err := dummy.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return types.Type{}, err
+	}
+	dummy.simulateHTTPDelay(&s)
 	var properties []types.Property
 	if role == connectors.Source {
 		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), Description: "Dummy ID"})
@@ -204,7 +211,12 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 // Records returns the records of the specified target.
 func (dummy *Dummy) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	prometheus.Increment("Dummy.Records.calls", 1)
-	dummy.simulateHTTPDelay()
+	var s innerSettings
+	err := dummy.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, "", err
+	}
+	dummy.simulateHTTPDelay(&s)
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -280,8 +292,9 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 	switch event {
 	case "load":
 		var s innerSettings
-		if dummy.settings != nil {
-			s = *dummy.settings
+		err := dummy.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -328,7 +341,13 @@ var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName
 // Upsert updates or creates records in the API for the specified target.
 func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
-	dummy.simulateHTTPDelay()
+	var s innerSettings
+	err := dummy.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+
+	dummy.simulateHTTPDelay(&s)
 
 	recordsError := make(connectors.RecordsError)
 
@@ -340,7 +359,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 
 		prometheus.Increment("Dummy.Upsert.records_read_from_iterator", 1)
 
-		if dummy.customerExportRandomlyFails() {
+		if dummy.customerExportRandomlyFails(&s) {
 			prometheus.Increment("Dummy.Upsert.export_failed", 1)
 			recordsError[n] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
 			n++
@@ -399,8 +418,8 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 
 // customerExportRandomlyFails determines whether exporting (i.e., writing to
 // Dummy) a customer should randomly fail, based on the settings.
-func (dummy *Dummy) customerExportRandomlyFails() bool {
-	switch failPerc := dummy.settings.CustomerExportFailPercentage; failPerc {
+func (dummy *Dummy) customerExportRandomlyFails(s *innerSettings) bool {
+	switch failPerc := s.CustomerExportFailPercentage; failPerc {
 	case 0:
 		return false
 	case 100:
@@ -420,22 +439,13 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	if s.CustomerExportFailPercentage < 0 || s.CustomerExportFailPercentage > 100 {
 		return connectors.NewInvalidSettingsError("percentage must be in range [0, 100]")
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = dummy.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	dummy.settings = &s
-	return nil
+	return dummy.env.Settings.Store(ctx, s)
 }
 
 // simulateHTTPDelay simulates an HTTP delay. If the settings indicate not to
 // simulate delay, this method does nothing.
-func (dummy *Dummy) simulateHTTPDelay() {
-	if !dummy.settings.SimulateHTTPDelay {
+func (dummy *Dummy) simulateHTTPDelay(s *innerSettings) {
+	if !s.SimulateHTTPDelay {
 		return
 	}
 	latency := rand.Float64()*1.3 + 1.5 // seconds.
@@ -459,7 +469,12 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events connectors.Events, pr
 			return nil, err
 		}
 	}
-	url := dummy.settings.URLForDispatchingEvents
+	var s innerSettings
+	err := dummy.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	url := s.URLForDispatchingEvents
 	if url == "" {
 		return nil, errors.New("no event dispatch URL has been set in Dummy's settings")
 	}

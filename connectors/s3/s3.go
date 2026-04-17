@@ -13,7 +13,6 @@ package s3
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"io"
 	"regexp"
 	"strings"
@@ -54,19 +53,11 @@ func init() {
 
 // New returns a new connector instance for S3.
 func New(env *connectors.FileStorageEnv) (*S3, error) {
-	c := S3{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for S3")
-		}
-	}
-	return &c, nil
+	return &S3{env: env}, nil
 }
 
 type S3 struct {
-	env      *connectors.FileStorageEnv
-	settings *innerSettings
+	env *connectors.FileStorageEnv
 }
 
 type innerSettings struct {
@@ -84,7 +75,12 @@ func (s3 *S3) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if name[0] == '/' {
 		name = name[1:]
 	}
-	return "s3://" + s3.settings.Bucket + "/" + name, nil
+	var s innerSettings
+	err := s3.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return "", err
+	}
+	return "s3://" + s.Bucket + "/" + name, nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
@@ -92,9 +88,14 @@ func (s3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time
 	if len(name) > 1024 {
 		return nil, time.Time{}, connectors.NewInvalidSettingsError("object key cannot be longer than 1024 bytes")
 	}
-	client := s3.client()
+	var s innerSettings
+	err := s3.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	client := s3.client(&s)
 	res, err := client.GetObject(ctx, &s3pkg.GetObjectInput{
-		Bucket: aws.String(s3.settings.Bucket),
+		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(name),
 	})
 	if err != nil {
@@ -117,8 +118,9 @@ func (s3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, ro
 	switch event {
 	case "load":
 		var s innerSettings
-		if s3.settings != nil {
-			s = *s3.settings
+		err := s3.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -180,16 +182,21 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	if len(name) > 1024 {
 		return connectors.NewInvalidSettingsError("object key cannot be longer than 1024 bytes")
 	}
+	var s innerSettings
+	err := s3.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
 	if name[0] == '/' {
 		name = name[1:]
 	}
-	client := s3.client()
+	client := s3.client(&s)
 	tm := transfermanager.New(client, func(opts *transfermanager.Options) {
 		opts.PartSizeBytes = 8 * 1024 * 1024
 		opts.Concurrency = 2
 	})
-	_, err := tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
-		Bucket:      aws.String(s3.settings.Bucket),
+	_, err = tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
+		Bucket:      aws.String(s.Bucket),
 		Key:         aws.String(name),
 		Body:        p,
 		ContentType: aws.String(contentType),
@@ -198,13 +205,13 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 }
 
 // client returns a S3 client.
-func (s3 *S3) client() *s3pkg.Client {
+func (s3 *S3) client(s *innerSettings) *s3pkg.Client {
 	cfg := aws.Config{
-		Region: s3.settings.Region,
+		Region: s.Region,
 		Credentials: aws.NewCredentialsCache(
 			credentials.NewStaticCredentialsProvider(
-				s3.settings.AccessKeyID,
-				s3.settings.SecretAccessKey,
+				s.AccessKeyID,
+				s.SecretAccessKey,
 				"",
 			),
 		),
@@ -243,14 +250,5 @@ func (s3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
 		strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
 		return connectors.NewInvalidSettingsError("bucket value is not allowed")
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = s3.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	s3.settings = &s
-	return nil
+	return s3.env.Settings.Store(ctx, s)
 }

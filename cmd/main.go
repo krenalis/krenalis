@@ -37,11 +37,14 @@ func Main(assets fs.FS) {
 	var help bool
 	var initDBIfEmpty bool
 	var initDockerMember bool
+	var upgradeDBKMS bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
+	flag.BoolVar(&upgradeDBKMS, "upgrade-db-kms", false,
+		"upgrade an existing PostgreSQL database from the legacy JSON settings format to the KMS-backed encrypted format")
 	flag.Parse()
 	if help {
 		flag.Usage()
@@ -51,8 +54,12 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
+	if upgradeDBKMS && (initDBIfEmpty || initDockerMember) {
+		flag.Usage()
+		fatal(1, "the -upgrade-db-kms flag cannot be combined with -init-db-if-empty or -init-docker-member")
+	}
 
-	if !devMode && assets != nil {
+	if !upgradeDBKMS && !devMode && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
@@ -64,6 +71,25 @@ func Main(assets fs.FS) {
 	settings, err := parseEnvSettings()
 	if err != nil {
 		fatal(1, err.Error())
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
+	if upgradeDBKMS {
+		err = core.UpgradeDBToKMS(ctx, &core.Config{
+			DB:  settings.DB,
+			Kms: settings.Kms,
+		})
+		if err != nil {
+			fatal(1, err.Error())
+		}
+		return
 	}
 
 	// Unset the Krenalis environment variables, except for those intended for
@@ -115,14 +141,6 @@ func Main(assets fs.FS) {
 			defer sentry.Flush(2 * time.Second)
 		}
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigs
-		cancel()
-	}()
 
 	err = Run(ctx, settings, assets, initDBIfEmpty, initDockerMember)
 	if err != nil {

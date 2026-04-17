@@ -8,7 +8,6 @@ package uisample
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"io"
 	"time"
 
@@ -46,19 +45,11 @@ func init() {
 
 // New returns a new connector instance for UI sample.
 func New(env *connectors.ApplicationEnv) (*UISample, error) {
-	c := UISample{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for UI Sample")
-		}
-	}
-	return &c, nil
+	return &UISample{env: env}, nil
 }
 
 type UISample struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 // RecordSchema returns the schema of the specified target and role.
@@ -77,8 +68,9 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 	switch event {
 	case "load":
 		var s innerSettings
-		if uiSample.settings != nil {
-			s = *uiSample.settings
+		err := uiSample.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -163,12 +155,7 @@ func (uiSample *UISample) saveSettings(ctx context.Context, options json.Value) 
 	if err != nil {
 		return err
 	}
-	err = uiSample.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	uiSample.settings = &s
-	return nil
+	return uiSample.env.Settings.Store(ctx, b)
 }
 
 type innerSettings struct {

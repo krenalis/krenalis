@@ -77,8 +77,7 @@ func (c *Connections) File(pipeline *state.Pipeline) *File {
 		timeLayouts: &format.TimeLayouts,
 	}
 	file.inner, file.err = connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
-		Settings:    pipeline.FormatSettings,
-		SetSettings: setPipelineSettingsFunc(c.state, pipeline),
+		Settings: newPipelineSettingStore(c.state, pipeline),
 	})
 	file.err = connectorError(file.err)
 	return file
@@ -198,11 +197,9 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 
 // storage returns the inner storage connection of the file.
 func (file *File) storage() (any, error) {
-	conn := file.pipeline.Connection()
 	connector := file.pipeline.Connection().Connector()
 	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
-		Settings:    conn.Settings,
-		SetSettings: setConnectionSettingsFunc(file.state, conn),
+		Settings: newPipelineSettingStore(file.state, file.pipeline),
 	})
 }
 

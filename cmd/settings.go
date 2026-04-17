@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"crypto/ed25519"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -35,6 +36,33 @@ func parseEnvSettings() (*Settings, error) {
 	}
 
 	settings := &Settings{}
+
+	if kms, ok := envVars.Lookup("KRENALIS_KMS"); ok {
+		backend, rawValue, found := strings.Cut(kms, ":")
+		if !found {
+			return nil, errors.New("KRENALIS_KMS must be in the form 'local:<base64>' or 'aws:<kms-key-id-or-arn>'")
+		}
+		switch backend {
+		case "local":
+			decodedValue, err := base64.RawStdEncoding.DecodeString(rawValue)
+			if err != nil {
+				return nil, errors.New("KRENALIS_KMS local value is not valid base64")
+			}
+			if n := len(decodedValue); n != 32 {
+				clear(decodedValue)
+				return nil, fmt.Errorf("KRENALIS_KMS local value decodes to %d bytes, expected 32", n)
+			}
+		case "aws":
+			if rawValue == "" {
+				return nil, errors.New("KRENALIS_KMS aws value is empty")
+			}
+		default:
+			return nil, errors.New("KRENALIS_KMS must be in the form 'local:<base64>' or 'aws:<kms-key-id-or-arn>'")
+		}
+		settings.Kms = kms
+	} else {
+		return nil, errors.New("KRENALIS_KMS is not set")
+	}
 
 	if delay := envVars.Get("KRENALIS_TERMINATION_DELAY"); delay != "" {
 		delay, err := time.ParseDuration(delay)

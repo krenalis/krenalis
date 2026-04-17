@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/testconnector"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
@@ -108,7 +109,7 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	settings, err := json.Marshal(innerSettings{
+	connector, err := testconnector.NewDatabase[*PostgreSQL]("postgresql", innerSettings{
 		Host:     host,
 		Port:     int(port.Num()),
 		Username: testUser,
@@ -116,12 +117,6 @@ func Test_Merge_Query(t *testing.T) {
 		Database: testDatabase,
 		Schema:   testSchema,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env := connectors.DatabaseEnv{Settings: settings}
-	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
 	}

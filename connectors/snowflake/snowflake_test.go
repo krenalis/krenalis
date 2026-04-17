@@ -234,12 +234,12 @@ func newSnowflakeFromENV(t *testing.T) *Snowflake {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	env := connectors.DatabaseEnv{Settings: settings}
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings)}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
 	}
-	if err = connector.openDB(); err != nil {
+	if err = connector.openDB(context.Background()); err != nil {
 		t.Fatalf("cannot open the database: %s", err)
 	}
 	return connector
@@ -260,4 +260,25 @@ func (sv *scanner) Scan(src any) error {
 
 func (sv *scanner) reset() {
 	sv.index = 0
+}
+
+type testSettingsStore struct {
+	settings json.Value
+}
+
+func newTestSettingsStore(settings json.Value) *testSettingsStore {
+	return &testSettingsStore{settings: settings}
+}
+
+func (s *testSettingsStore) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(s.settings, dst)
+}
+
+func (s *testSettingsStore) Store(ctx context.Context, src any) error {
+	settings, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	s.settings = settings
+	return nil
 }

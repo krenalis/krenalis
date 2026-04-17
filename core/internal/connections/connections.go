@@ -17,11 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
-	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -570,72 +568,6 @@ func rewriteColumnErrors(err error) error {
 		err = fmt.Errorf("the names of the %s and %s columns are the same: %q", ordinal(e.Index1+1), ordinal(e.Index2+1), e.Name)
 	}
 	return err
-}
-
-// setConnectionSettings sets the settings of the provided connection.
-func setConnectionSettings(ctx context.Context, st *state.State, connection int, settings json.Value) error {
-	if !json.Valid(settings) {
-		return errors.New("settings is not valid JSON")
-	}
-	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
-		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
-	}
-	n := state.SetConnectionSettings{
-		Connection: connection,
-		Settings:   settings,
-	}
-	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
-		if err != nil {
-			return nil, err
-		}
-		if result.RowsAffected() == 0 {
-			return nil, nil
-		}
-		return n, nil
-	})
-	return err
-}
-
-// setConnectionSettingsFunc returns a connectors.SetSettingsFunc that sets the
-// settings for the connection.
-func setConnectionSettingsFunc(st *state.State, c *state.Connection) connectors.SetSettingsFunc {
-	return func(ctx context.Context, settings json.Value) error {
-		return setConnectionSettings(ctx, st, c.ID, settings)
-	}
-}
-
-// setPipelineSettings sets the settings of the provided pipeline.
-func setPipelineSettings(ctx context.Context, st *state.State, pipeline int, settings json.Value) error {
-	if !json.Valid(settings) {
-		return errors.New("settings is not valid JSON")
-	}
-	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
-		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
-	}
-	n := state.SetPipelineFormatSettings{
-		Pipeline: pipeline,
-		Settings: settings,
-	}
-	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE pipelines SET format_settings = $1 WHERE id = $2", n.Settings, n.Pipeline)
-		if err != nil {
-			return nil, err
-		}
-		if result.RowsAffected() == 0 {
-			return nil, nil
-		}
-		return n, nil
-	})
-	return err
-}
-
-// setPipelineSettingsFunc returns a connector.SetSettingsFunc function that
-// sets the settings for the pipeline.
-func setPipelineSettingsFunc(st *state.State, p *state.Pipeline) connectors.SetSettingsFunc {
-	return func(ctx context.Context, settings json.Value) error {
-		return setPipelineSettings(ctx, st, p.ID, settings)
-	}
 }
 
 // validateUpdatedAt validates the update time t, returning an error if it is

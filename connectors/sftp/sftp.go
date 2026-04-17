@@ -54,19 +54,11 @@ func init() {
 
 // New returns a new connector instance for SFTP.
 func New(env *connectors.FileStorageEnv) (*SFTP, error) {
-	c := SFTP{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for SFTP")
-		}
-	}
-	return &c, nil
+	return &SFTP{env: env}, nil
 }
 
 type SFTP struct {
-	env      *connectors.FileStorageEnv
-	settings *innerSettings
+	env *connectors.FileStorageEnv
 }
 
 type innerSettings struct {
@@ -79,9 +71,14 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (sf *SFTP) AbsolutePath(ctx context.Context, name string) (string, error) {
+	var s innerSettings
+	err := sf.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return "", err
+	}
 	u := url.URL{
 		Scheme: "sftp",
-		Host:   net.JoinHostPort(sf.settings.Host, strconv.Itoa(sf.settings.Port)),
+		Host:   net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
 		Path:   name,
 	}
 	return u.String(), nil
@@ -89,7 +86,12 @@ func (sf *SFTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	client, err := openClient(ctx, sf.settings)
+	var s innerSettings
+	err := sf.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	client, err := openClient(ctx, &s)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -123,10 +125,12 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, settings json.Value, 
 	switch event {
 	case "load":
 		var s innerSettings
-		if sf.settings == nil {
+		err := sf.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Port == 0 {
 			s.Port = 22
-		} else {
-			s = *sf.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -157,7 +161,12 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, settings json.Value, 
 
 // Write writes the data read from r into the file with the given path name.
 func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
-	client, err := openClient(ctx, sf.settings)
+	var s innerSettings
+	err := sf.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	client, err := openClient(ctx, &s)
 	if err != nil {
 		return err
 	}
@@ -165,7 +174,7 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	if name[0] != '/' {
 		name = "/" + name
 	}
-	if sf.settings.TempPath == "" {
+	if s.TempPath == "" {
 		var f *sftp.File
 		f, err = client.sftp.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 		if err != nil {
@@ -183,7 +192,7 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	// Create the file atomically.
 	base := path.Base(name)
 	ext := path.Ext(name)
-	tempPath := sf.settings.TempPath
+	tempPath := s.TempPath
 	if tempPath[0] != '/' {
 		tempPath = "/" + tempPath
 	}
@@ -246,16 +255,7 @@ func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role conn
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = sf.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	sf.settings = &s
-	return nil
+	return sf.env.Settings.Store(ctx, &s)
 }
 
 type reader struct {

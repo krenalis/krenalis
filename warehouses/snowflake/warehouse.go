@@ -47,55 +47,15 @@ func init() {
 	}, New)
 }
 
-// accountFormat is the format of the account identifier in the settings.
-var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
-
 // New returns a new Snowflake data warehouse instance.
-// It returns a *warehouses.SettingsError if the settings are not valid.
-func New(conf *warehouses.Config) (*Snowflake, error) {
-	var s sfSettings
-	err := json.Unmarshal(conf.Settings, &s)
-	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
-	}
-	// Validate Account.
-	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return nil, warehouses.SettingsErrorf("account identifier length must be in range [3,255]")
-	}
-	if !accountFormat.MatchString(s.Account) {
-		return nil, warehouses.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
-	}
-	// Validate Username.
-	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("user name length must be in range [1,255]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("password length must be in range [1,255]")
-	}
-	// Validate Role.
-	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("role length must be in range [1,255]")
-	}
-	// Validate Database.
-	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("database length must be in range [1,255]")
-	}
-	// Validate Schema.
-	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("schema length must be in range [1,255]")
-	}
-	// Validate Warehouse.
-	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
-	}
-	return &Snowflake{settings: &s}, nil
+func New(settings warehouses.SettingsLoader) *Snowflake {
+	return &Snowflake{settings: settings}
 }
 
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
-	settings *sfSettings
+	settings warehouses.SettingsLoader
 }
 
 type sfSettings struct {
@@ -147,7 +107,10 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where ware
 	if err != nil {
 		return fmt.Errorf("cannot build WHERE expression: %s", err)
 	}
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	_, err = db.ExecContext(ctx, s.String())
 	if err != nil {
 		return snowflake(err)
@@ -158,7 +121,10 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where ware
 // Merge performs a table merge operation.
 func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 	// Acquire a connection.
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
@@ -259,7 +225,10 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	}
 
 	// Acquire a connection.
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return snowflake(err)
@@ -304,16 +273,13 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	return nil
 }
 
-// Settings returns the data warehouse settings.
-func (warehouse *Snowflake) Settings() json.Value {
-	s, _ := json.Marshal(warehouse.settings)
-	return s
-}
-
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
-	db := warehouse.openDB()
-	_, err := db.ExecContext(ctx, "TRUNCATE TABLE "+quoteIdent(table))
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
+	_, err = db.ExecContext(ctx, "TRUNCATE TABLE "+quoteIdent(table))
 	if err != nil {
 		return snowflake(err)
 	}
@@ -334,16 +300,133 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline i
 	}
 	b.WriteString(" WHERE \"_PIPELINE\" = ")
 	b.WriteString(strconv.Itoa(pipeline))
-	db := warehouse.openDB()
-	_, err := db.ExecContext(ctx, b.String())
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
+	_, err = db.ExecContext(ctx, b.String())
 	if err != nil {
 		return snowflake(err)
 	}
 	return nil
 }
 
+// ValidateSettings validates the settings.
+func (warehouse *Snowflake) ValidateSettings(ctx context.Context) (json.Value, error) {
+	var s sfSettings
+	err := warehouse.settings.Load(ctx, &s)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
+	}
+	err = validateSettings(&s)
+	if err != nil {
+		return nil, err
+	}
+	v, _ := json.Marshal(s)
+	return v, nil
+}
+
+// execTransaction executes the function f within a transaction. If f returns an
+// error or panics, the transaction will be rolled back.
+func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx) error) error {
+	// TODO(Gianluca): is the use of the context in this method correct?
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return snowflake(err)
+	}
+	defer tx.Rollback()
+	err = f(tx)
+	if err != nil {
+		return snowflake(err)
+	}
+	err = tx.Commit()
+	if err != nil && !errors.Is(err, sql.ErrTxDone) {
+		return snowflake(err)
+	}
+	return nil
+}
+
+// openDB opens a Snowflake database and returns it.
+func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
+	warehouse.mu.Lock()
+	defer warehouse.mu.Unlock()
+	if warehouse.db != nil {
+		return warehouse.db, nil
+	}
+	var s sfSettings
+	err := warehouse.settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	err = validateSettings(&s)
+	if err != nil {
+		return nil, err
+	}
+	db := sql.OpenDB(connector(&s))
+	warehouse.db = db
+	return db, nil
+}
+
+// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
+func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	var v int
+	err = db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	return v, nil
+}
+
+// accountFormat is the format of the account identifier in the settings.
+var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
+
+// validateSettings validates the settings.
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func validateSettings(s *sfSettings) error {
+	// Validate Account.
+	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
+		return warehouses.SettingsErrorf("account identifier length must be in range [3,255]")
+	}
+	if !accountFormat.MatchString(s.Account) {
+		return warehouses.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+	}
+	// Validate Username.
+	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
+		return warehouses.SettingsErrorf("user name length must be in range [1,255]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
+		return warehouses.SettingsErrorf("password length must be in range [1,255]")
+	}
+	// Validate Role.
+	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
+		return warehouses.SettingsErrorf("role length must be in range [1,255]")
+	}
+	// Validate Database.
+	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
+		return warehouses.SettingsErrorf("database length must be in range [1,255]")
+	}
+	// Validate Schema.
+	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
+		return warehouses.SettingsErrorf("schema length must be in range [1,255]")
+	}
+	// Validate Warehouse.
+	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
+		return warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
+	}
+	return nil
+}
+
 // connector returns a driver.Connector from the settings.
-func (s *sfSettings) connector() driver.Connector {
+func connector(s *sfSettings) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -359,50 +442,6 @@ func (s *sfSettings) connector() driver.Connector {
 		Params:           make(map[string]*string),
 		DisableTelemetry: true,
 	})
-}
-
-// openDB opens a Snowflake database and returns it.
-func (warehouse *Snowflake) openDB() *sql.DB {
-	warehouse.mu.Lock()
-	defer warehouse.mu.Unlock()
-	if warehouse.db != nil {
-		return warehouse.db
-	}
-	db := sql.OpenDB(warehouse.settings.connector())
-	warehouse.db = db
-	return db
-}
-
-// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
-func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
-	db := warehouse.openDB()
-	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
-	if err != nil {
-		return 0, snowflake(err)
-	}
-	return v, nil
-}
-
-// execTransaction executes the function f within a transaction. If f returns an
-// error or panics, the transaction will be rolled back.
-func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx) error) error {
-	// TODO(Gianluca): is the use of the context in this method correct?
-	db := warehouse.openDB()
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return snowflake(err)
-	}
-	defer tx.Rollback()
-	err = f(tx)
-	if err != nil {
-		return snowflake(err)
-	}
-	err = tx.Commit()
-	if err != nil && !errors.Is(err, sql.ErrTxDone) {
-		return snowflake(err)
-	}
-	return nil
 }
 
 // serializeIdentitiesToCSV serializes identities as CSV, using columns as

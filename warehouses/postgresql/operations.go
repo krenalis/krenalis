@@ -98,7 +98,7 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 // If an operation has already been set as completed, this method does
 // nothing.
 func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, opID string, opError error) error {
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}

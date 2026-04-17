@@ -51,19 +51,11 @@ func init() {
 
 // New returns a new connector instance for Google Analytics.
 func New(env *connectors.ApplicationEnv) (*Analytics, error) {
-	c := Analytics{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Google Analytics")
-		}
-	}
-	return &c, nil
+	return &Analytics{env: env}, nil
 }
 
 type Analytics struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type innerSettings struct {
@@ -104,10 +96,12 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 	switch event {
 	case "load":
 		var s innerSettings
-		if ga.settings == nil {
+		err := ga.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.CollectionEndpoint == "" {
 			s.CollectionEndpoint = "Global"
-		} else {
-			s = *ga.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -164,16 +158,7 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	default:
 		return connectors.NewInvalidSettingsError("collection endpoint must be set to Global or EU")
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = ga.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	ga.settings = &s
-	return nil
+	return ga.env.Settings.Store(ctx, s)
 }
 
 const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
@@ -245,12 +230,18 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 	}
 	bb.WriteString("]}")
 
+	var s innerSettings
+	err := ga.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+
 	if preview {
 
 		// First, it performs an actual send to the Google Analytics debug
 		// server to validate the request, returning an error in case of
 		// validation issues.
-		u := requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, true, false, ga.settings.MeasurementID)
+		u := requestURL(s.CollectionEndpoint, s.APISecret, true, false, s.MeasurementID)
 		req, err := bb.NewRequest(ctx, "POST", u)
 		if err != nil {
 			return nil, err
@@ -283,7 +274,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 
 		// Next, build a new request to be returned to Krenalis, in which
 		// sensitive information (such as the API secret) is redacted.
-		u = requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, true, true, ga.settings.MeasurementID)
+		u = requestURL(s.CollectionEndpoint, s.APISecret, true, true, s.MeasurementID)
 		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
@@ -295,7 +286,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, p
 	}
 
 	// Build the request to send to Google Analytics.
-	u := requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, false, false, ga.settings.MeasurementID)
+	u := requestURL(s.CollectionEndpoint, s.APISecret, false, false, s.MeasurementID)
 	req, err := bb.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return nil, err

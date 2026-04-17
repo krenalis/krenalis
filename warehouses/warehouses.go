@@ -37,20 +37,20 @@ func (platform Platform) ReflectType() reflect.Type {
 }
 
 // New returns a new data warehouse instance.
-func (platform Platform) New(conf *Config) (Warehouse, error) {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (platform Platform) New(settings SettingsLoader) Warehouse {
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
-	err, _ := reflect.TypeAssert[error](out[1])
-	return d, err
+	return d
 }
 
-// Config represents the configuration of a data warehouse.
-type Config struct {
-	Settings json.Value
+type SettingsLoader interface {
+
+	// Load decrypts settings and stores the result in the value pointed to by dst.
+	Load(ctx context.Context, dst any) error
 }
 
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(*Config) (T, error)
+type NewFunc[T Warehouse] func(SettingsLoader) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.
@@ -295,9 +295,6 @@ type Warehouse interface {
 	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
 
-	// Settings returns the data warehouse settings.
-	Settings() json.Value
-
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error
 
@@ -305,6 +302,10 @@ type Warehouse interface {
 	// given pipeline. columns must not be empty. If the provided pipeline does not
 	// exist, it does nothing.
 	UnsetIdentityColumns(ctx context.Context, pipeline int, columns []Column) error
+
+	// ValidateSettings validates the settings.
+	// If validation succeeds, it returns the settings in the canonical JSON form.
+	ValidateSettings(ctx context.Context) (json.Value, error)
 }
 
 // Table represents a database table.

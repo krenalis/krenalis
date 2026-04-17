@@ -12,7 +12,6 @@ package clickhouse
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -52,20 +51,12 @@ func init() {
 
 // New returns a new connector instance for ClickHouse.
 func New(env *connectors.DatabaseEnv) (*ClickHouse, error) {
-	c := ClickHouse{env: env}
-	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for ClickHouse")
-		}
-	}
-	return &c, nil
+	return &ClickHouse{env: env}, nil
 }
 
 type ClickHouse struct {
-	env      *connectors.DatabaseEnv
-	settings *innerSettings
-	db       driver.Conn
+	env *connectors.DatabaseEnv
+	db  driver.Conn
 }
 
 // Close closes the database.
@@ -99,7 +90,7 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]connectors.C
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (ch *ClickHouse) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
-	if err := ch.openDB(); err != nil {
+	if err := ch.openDB(ctx); err != nil {
 		return err
 	}
 	// Merge rows.
@@ -129,10 +120,12 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.V
 	switch event {
 	case "load":
 		var s innerSettings
-		if ch.settings == nil {
+		err := ch.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Port == 0 {
 			s.Port = 9000
-		} else {
-			s = *ch.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -162,11 +155,16 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.V
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (ch *ClickHouse) openDB() error {
+func (ch *ClickHouse) openDB(ctx context.Context) error {
 	if ch.db != nil {
 		return nil
 	}
-	db, err := clickhouse.Open(ch.settings.options())
+	var settings innerSettings
+	err := ch.env.Settings.Load(ctx, &settings)
+	if err != nil {
+		return err
+	}
+	db, err := clickhouse.Open(options(&settings))
 	if err != nil {
 		return err
 	}
@@ -178,7 +176,7 @@ func (ch *ClickHouse) openDB() error {
 // writable indicates whether the resulting columns should be marked as
 // writable.
 func (ch *ClickHouse) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
-	if err := ch.openDB(); err != nil {
+	if err := ch.openDB(ctx); err != nil {
 		return nil, nil, err
 	}
 	rows, err := ch.db.Query(ctx, query)
@@ -237,16 +235,7 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = ch.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	ch.settings = &s
-	return nil
+	return ch.env.Settings.Store(ctx, s)
 }
 
 type innerSettings struct {
@@ -258,7 +247,7 @@ type innerSettings struct {
 }
 
 // options returns the connection options, from s.
-func (s *innerSettings) options() *clickhouse.Options {
+func options(s *innerSettings) *clickhouse.Options {
 	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
@@ -284,7 +273,7 @@ func propertyType(t driver.ColumnType) (types.Type, bool, string) {
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *innerSettings) error {
-	conn, err := clickhouse.Open(settings.options())
+	conn, err := clickhouse.Open(options(settings))
 	if err != nil {
 		return err
 	}

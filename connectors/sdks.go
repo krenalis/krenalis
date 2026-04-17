@@ -6,8 +6,6 @@ package connectors
 
 import (
 	"reflect"
-
-	"github.com/krenalis/krenalis/tools/json"
 )
 
 // SDKSpec represents an SDK connector specification.
@@ -40,11 +38,8 @@ func (spec SDKSpec) New(env *SDKEnv) (any, error) {
 // SDKEnv is the environment for an SDK connector.
 type SDKEnv struct {
 
-	// Settings is the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 }
 
 // SDKNewFunc represents functions that create new SDK connector instances.

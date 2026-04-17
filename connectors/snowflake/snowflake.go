@@ -52,20 +52,12 @@ func init() {
 
 // New returns a new connector instance for Snowflake.
 func New(env *connectors.DatabaseEnv) (*Snowflake, error) {
-	c := Snowflake{env: env}
-	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Snowflake")
-		}
-	}
-	return &c, nil
+	return &Snowflake{env: env}, nil
 }
 
 type Snowflake struct {
-	env      *connectors.DatabaseEnv
-	settings *innerSettings
-	db       *sql.DB
+	env *connectors.DatabaseEnv
+	db  *sql.DB
 }
 
 // Close closes the database.
@@ -92,7 +84,7 @@ func (sf *Snowflake) Columns(ctx context.Context, table string) ([]connectors.Co
 // Merge performs batch insert, update, and delete operations on the specified
 // table.
 func (sf *Snowflake) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
-	if err := sf.openDB(); err != nil {
+	if err := sf.openDB(ctx); err != nil {
 		return err
 	}
 	// Acquire a connection.
@@ -128,8 +120,9 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Va
 	switch event {
 	case "load":
 		var s innerSettings
-		if sf.settings != nil {
-			s = *sf.settings
+		err := sf.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -171,7 +164,7 @@ type innerSettings struct {
 }
 
 // connector returns a driver.Connector from the settings.
-func (s *innerSettings) connector() driver.Connector {
+func connector(s *innerSettings) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -190,11 +183,16 @@ func (s *innerSettings) connector() driver.Connector {
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (sf *Snowflake) openDB() error {
+func (sf *Snowflake) openDB(ctx context.Context) error {
 	if sf.db != nil {
 		return nil
 	}
-	db := sql.OpenDB(sf.settings.connector())
+	var s innerSettings
+	err := sf.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	db := sql.OpenDB(connector(&s))
 	db.SetMaxIdleConns(0)
 	sf.db = db
 	return nil
@@ -204,7 +202,7 @@ func (sf *Snowflake) openDB() error {
 // writable indicates whether the resulting columns should be marked as
 // writable.
 func (sf *Snowflake) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
-	if err := sf.openDB(); err != nil {
+	if err := sf.openDB(ctx); err != nil {
 		return nil, nil, err
 	}
 	rows, err := sf.db.QueryContext(ctx, query)
@@ -286,22 +284,13 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = sf.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	sf.settings = &s
-	return nil
+	return sf.env.Settings.Store(ctx, s)
 }
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *innerSettings) error {
-	db := sql.OpenDB(settings.connector())
+	db := sql.OpenDB(connector(settings))
 	defer db.Close()
 	db.SetMaxIdleConns(0)
 	return db.PingContext(ctx)

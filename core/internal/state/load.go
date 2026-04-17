@@ -7,7 +7,7 @@ package state
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math"
@@ -15,7 +15,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/db"
-	json "github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/uuid"
@@ -204,6 +204,41 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		_ = tx.Rollback(ctx)
 	}()
 
+	// Read the installation ID and the KMS-encrypted cookie and notification keys.
+	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey []byte
+	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key FROM metadata").Scan(
+		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedOAuthKey, &kmsEncryptedNotificationKey)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("row is missing from table 'metadata'")
+		}
+		return err
+	}
+	defer clear(kmsEncryptedOAuthKey)
+	defer clear(kmsEncryptedNotificationKey)
+	if state.metadata.installationID == "" {
+		return errors.New("missing installation ID in metadata table")
+	}
+	// Cookie key.
+	if len(kmsEncryptedCookieKey) == 0 {
+		return errors.New("missing KMS encrypted cookie key in metadata table")
+	}
+	state.metadata.kmsEncryptedCookieKey = kmsEncryptedCookieKey
+	// OAuth key.
+	state.metadata.oAuthKey = state.cipher.Key(kmsEncryptedOAuthKey)
+	clear(kmsEncryptedOAuthKey)
+	// Notification key.
+	if len(kmsEncryptedNotificationKey) == 0 {
+		return errors.New("missing notification key in metadata table")
+	}
+	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
+	validNotificationKeyCh := make(chan error)
+	go func() {
+		validNotificationKeyCh <- notificationKey.IsValid(ctx)
+	}()
+
+	clear(kmsEncryptedNotificationKey)
+
 	// Read the latest election.
 	err = tx.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
 		Scan(&state.election.number, &state.election.leader)
@@ -258,20 +293,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_name,"+
-		" warehouse_mode, warehouse_settings, warehouse_mcp_settings, alter_profile_schema_id,"+
-		" alter_profile_schema_schema, alter_profile_schema_primary_sources, alter_profile_schema_operations,"+
-		" alter_profile_schema_start_time, alter_profile_schema_end_time,"+
-		" alter_profile_schema_error, profile_schema, resolve_identities_on_batch_import,"+
-		" identifiers, ir_id, ir_start_time, ir_end_time, ui_profile_image,"+
-		" ui_profile_first_name, ui_profile_last_name, ui_profile_extra, pipelines_to_purge "+
-		"FROM workspaces",
+		" warehouse_mode, warehouse_settings, kms_encrypted_warehouse_settings_key, warehouse_mcp_settings,"+
+		" kms_encrypted_warehouse_mcp_settings_key, alter_profile_schema_id, alter_profile_schema_schema,"+
+		" alter_profile_schema_primary_sources, alter_profile_schema_operations,"+
+		" alter_profile_schema_start_time, alter_profile_schema_end_time, alter_profile_schema_error,"+
+		" profile_schema, resolve_identities_on_batch_import, identifiers, ir_id, ir_start_time,"+
+		" ir_end_time, ui_profile_image, ui_profile_first_name, ui_profile_last_name, ui_profile_extra,"+
+		" pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID uuid.UUID
 			var warehousePlatform string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterProfileSchemaSchema []byte
-			var warehouseSettings, warehouseMCPSettings json.Value
 			for rows.Next() {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
@@ -279,15 +313,17 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					runs:        map[int]*PipelineRun{},
 					accounts:    map[int]*Account{},
 				}
+				var settingsKey, mcpSettingsKey []byte
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
-					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterProfileSchema.ID,
-					&alterProfileSchemaSchema, &ws.AlterProfileSchema.PrimarySources,
-					&ws.AlterProfileSchema.Operations, &ws.AlterProfileSchema.StartTime,
-					&ws.AlterProfileSchema.EndTime, &ws.AlterProfileSchema.Err, &userSchema,
-					&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers, &ws.IR.ID,
-					&ws.IR.StartTime, &ws.IR.EndTime, &ws.UIPreferences.Profile.Image,
-					&ws.UIPreferences.Profile.FirstName, &ws.UIPreferences.Profile.LastName,
-					&ws.UIPreferences.Profile.Extra, &ws.pipelinesToPurge); err != nil {
+					&warehouseMode, &ws.Warehouse.settings, &settingsKey, &ws.Warehouse.mcpSettings, &mcpSettingsKey,
+					&ws.AlterProfileSchema.ID, &alterProfileSchemaSchema,
+					&ws.AlterProfileSchema.PrimarySources, &ws.AlterProfileSchema.Operations,
+					&ws.AlterProfileSchema.StartTime, &ws.AlterProfileSchema.EndTime,
+					&ws.AlterProfileSchema.Err, &userSchema, &ws.ResolveIdentitiesOnBatchImport,
+					&ws.Identifiers, &ws.IR.ID, &ws.IR.StartTime, &ws.IR.EndTime,
+					&ws.UIPreferences.Profile.Image, &ws.UIPreferences.Profile.FirstName,
+					&ws.UIPreferences.Profile.LastName, &ws.UIPreferences.Profile.Extra,
+					&ws.pipelinesToPurge); err != nil {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
@@ -296,12 +332,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				}
 				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
-				ws.Warehouse.Settings = warehouseSettings
-				if warehouseMCPSettings.IsNull() {
-					ws.Warehouse.MCPSettings = nil
-				} else {
-					ws.Warehouse.MCPSettings = warehouseMCPSettings
-				}
+				ws.Warehouse.settingsKey = state.cipher.Key(settingsKey)
+				ws.Warehouse.mcpSettingsKey = state.cipher.Key(mcpSettingsKey)
 				err = json.Unmarshal(userSchema, &ws.ProfileSchema)
 				if err != nil {
 					return err
@@ -367,13 +399,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	state.connections = map[int]*Connection{}
 	err = tx.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
 		" account, strategy, sending_mode, linked_connections, settings,"+
-		" health FROM connections", func(rows *db.Rows) error {
+		" kms_encrypted_settings_key, health FROM connections", func(rows *db.Rows) error {
 		for rows.Next() {
 			var workspaceID, account int
 			var connector string
+			var settingsKey []byte
 			c := Connection{}
 			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &connector, &c.Role,
-				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.Settings, &c.Health,
+				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.settings,
+				&settingsKey, &c.Health,
 			); err != nil {
 				return err
 			}
@@ -406,6 +440,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					c.LinkedConnections = []int{}
 				}
 			}
+			c.settingsKey = state.cipher.Key(settingsKey)
 			connection, ok := state.connections[c.ID]
 			if ok {
 				*connection = c
@@ -556,48 +591,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return err
 	}
 
-	// Read the metadata, which include the installation ID and the encryption
-	// key.
-	err = tx.QueryScan(ctx, "SELECT key, value FROM metadata",
-		func(rows *db.Rows) error {
-			for rows.Next() {
-				var key, value string
-				err := rows.Scan(&key, &value)
-				if err != nil {
-					return err
-				}
-				switch key {
-				case "encryption_key":
-					state.metadata.encryptionKey, err = base64.StdEncoding.DecodeString(value)
-					if err != nil {
-						return fmt.Errorf("cannot decode value for 'encryption_key' as Base64: %s", err)
-					}
-				case "installation_id":
-					state.metadata.installationID = value
-				default:
-					return fmt.Errorf("unexpected key %q in metadata", key)
-				}
-			}
-			return nil
-		})
-	if err != nil {
-		return err
-	}
-	if state.metadata.encryptionKey == nil {
-		return errors.New("missing key 'encryption_key' in table 'metadata'")
-	}
-	if len(state.metadata.encryptionKey) != 64 {
-		return errors.New("value for 'encryption_key' must be a Base64 string that encodes 64 bytes")
-	}
-	if state.metadata.installationID == "" {
-		return errors.New("missing key 'installation_id' in table 'metadata'")
-	}
-
-	cipher, err := state.NewCipher("state.notifier")
-	if err != nil {
-		return fmt.Errorf("state: cannot create notifier cipher: %s", err)
-	}
-
 	// Read the last notification ID.
 	var latest int64
 	err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
@@ -613,7 +606,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return err
 	}
 
-	state.notifications.cipher = cipher
+	// Verify that the MKS key validation completed successfully.
+	if err = <-validNotificationKeyCh; err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	}
+
+	state.notifications.key = notificationKey
 	state.notifications.next = latest + 1
 	state.notifications.loaded <- struct{}{}
 

@@ -64,6 +64,7 @@ func Test_Records(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Open the data warehouse.
 	settings, err := json.Marshal(map[string]any{
 		"host":     testHost,
 		"port":     testPort.Num(),
@@ -75,15 +76,8 @@ func Test_Records(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Open the data warehouse.
-	wh, err := warehouses.Registered("PostgreSQL").New(&warehouses.Config{
-		Settings: settings,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wh.Close()
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	defer dw.Close()
 
 	profilesTable := warehouses.Table{
 		Name: "krenalis_profiles_0",
@@ -108,7 +102,7 @@ func Test_Records(t *testing.T) {
 		Keys: []string{"_pipeline", "_external_id"},
 	}
 
-	err = wh.Initialize(ctx, profilesTable.Columns[2:])
+	err = dw.Initialize(ctx, profilesTable.Columns[2:])
 	if err != nil {
 		t.Fatalf("cannot initialize the warehouse: %s", err)
 	}
@@ -124,7 +118,7 @@ func Test_Records(t *testing.T) {
 		{"ce8f366d-7144-4ec0-96e7-d0dc35597c02", now, "7", "7", "James Williams", 77},
 		{"a415976f-279e-4653-ab6a-64ea7f74e174", now, "7", "7", "Daniel Brown", 12},
 	}
-	err = wh.Merge(ctx, profilesTable, initUsers, nil)
+	err = dw.Merge(ctx, profilesTable, initUsers, nil)
 	if err != nil {
 		t.Fatalf("cannot merge profiles: %s", err)
 	}
@@ -143,7 +137,7 @@ func Test_Records(t *testing.T) {
 		{719, "034", "a"},
 		{719, "089", "b"},
 	}
-	err = wh.Merge(ctx, destinationsUsersTable, initDestinations, nil)
+	err = dw.Merge(ctx, destinationsUsersTable, initDestinations, nil)
 	if err != nil {
 		t.Fatalf("cannot merge profiles: %s", err)
 	}
@@ -248,7 +242,7 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, wh, query, "_kpid", profileColumnByProperty, true, matching)
+				r, err := records(ctx, dw, query, "_kpid", profileColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}

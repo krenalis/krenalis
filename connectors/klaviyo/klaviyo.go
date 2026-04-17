@@ -90,19 +90,11 @@ const apiRevision = "2024-07-15"
 
 // New returns a new connector instance for Klaviyo.
 func New(env *connectors.ApplicationEnv) (*Klaviyo, error) {
-	c := Klaviyo{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Klaviyo")
-		}
-	}
-	return &c, nil
+	return &Klaviyo{env: env}, nil
 }
 
 type Klaviyo struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type innerSettings struct {
@@ -410,8 +402,9 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 	switch event {
 	case "load":
 		var s innerSettings
-		if ky.settings != nil {
-			s = *ky.settings
+		err := ky.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -485,16 +478,7 @@ func (ky *Klaviyo) saveSettings(ctx context.Context, settings json.Value) error 
 			return connectors.NewInvalidSettingsError("private API key after 'pk_' must contain only alphanumeric characters")
 		}
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = ky.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	ky.settings = &s
-	return nil
+	return ky.env.Settings.Store(ctx, s)
 }
 
 type klaviyoError struct {
@@ -524,12 +508,18 @@ func (err *klaviyoError) Error() string {
 
 func (ky *Klaviyo) call(ctx context.Context, method, url string, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
+	var s innerSettings
+	err := ky.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+
 	req, err := bb.NewRequest(ctx, method, url)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Klaviyo-API-Key "+ky.settings.PrivateAPIKey)
+	req.Header.Set("Authorization", "Klaviyo-API-Key "+s.PrivateAPIKey)
 	req.Header.Set("Revision", apiRevision)
 
 	res, err := ky.env.HTTPClient.Do(req)
@@ -680,12 +670,18 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events connectors.Events, pre
 		return nil, nil
 	}
 
+	var s innerSettings
+	err := ky.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := bb.NewRequest(ctx, "POST", "https://a.klaviyo.com/api/event-bulk-create-jobs")
 	if err != nil {
 		return nil, err
 	}
 
-	key := ky.settings.PrivateAPIKey
+	key := s.PrivateAPIKey
 	if preview {
 		key = "[REDACTED]"
 	}
