@@ -440,12 +440,18 @@ func (core *Core) AddOrganization(ctx context.Context, name string) (uuid.UUID, 
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return uuid.Nil, errors.BadRequest("%s", err)
 	}
-	var id uuid.UUID
-	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&id)
+	n := state.CreateOrganization{Name: name}
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+		err := tx.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&n.ID)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return id, nil
+	return n.ID, nil
 }
 
 // AccessKey returns the organization and workspace identifiers associated with

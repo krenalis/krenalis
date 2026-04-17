@@ -68,6 +68,8 @@ func (state *State) keep() {
 			org = state.createAccessKey(n)
 		case "CreateConnection":
 			org = state.createConnection(n)
+		case "CreateOrganization":
+			state.createOrganization(n)
 		case "CreatePipeline":
 			org = state.createPipeline(n)
 		case "CreateWorkspace":
@@ -82,6 +84,8 @@ func (state *State) keep() {
 			org = state.deleteEventWriteKey(n)
 		case "DeleteMember":
 			org = state.deleteMember(n)
+		case "DeleteOrganization":
+			state.deleteOrganization(n)
 		case "DeletePipeline":
 			org = state.deletePipeline(n)
 		case "DeleteWorkspace":
@@ -124,6 +128,8 @@ func (state *State) keep() {
 			org = state.unlinkConnection(n)
 		case "UpdateConnection":
 			org = state.updateConnection(n)
+		case "UpdateOrganization":
+			org = state.updateOrganization(n)
 		case "UpdateIdentityPropertiesToUnset":
 			org = state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
@@ -525,6 +531,102 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	dispatchNotification(state, e)
 
 	return c.organization.ID
+}
+
+// CreateOrganization is the event sent when an organization is created.
+type CreateOrganization struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// createOrganization creates an organization.
+func (state *State) createOrganization(n notification) {
+	e := CreateOrganization{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	org := &Organization{
+		mu:         &sync.Mutex{},
+		workspaces: map[int]*Workspace{},
+		members:    map[int]struct{}{},
+		ID:         e.ID,
+		Name:       e.Name,
+	}
+	state.mu.Lock()
+	state.organizations[e.ID] = org
+	state.mu.Unlock()
+	dispatchNotification(state, e)
+}
+
+// DeleteOrganization is the event sent when an organization is deleted.
+type DeleteOrganization struct {
+	ID           uuid.UUID
+	organization *Organization
+}
+
+func (n DeleteOrganization) Organization() *Organization {
+	return n.organization
+}
+
+// deleteOrganization deletes an organization.
+func (state *State) deleteOrganization(n notification) {
+	e := DeleteOrganization{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.mu.Lock()
+	e.organization = state.organizations[e.ID]
+	delete(state.organizations, e.ID)
+	// Delete all workspaces belonging to the organization.
+	for id, ws := range e.organization.workspaces {
+		for _, c := range ws.connections {
+			for _, key := range c.Keys {
+				delete(state.connectionsByKey, key)
+			}
+			delete(state.connections, c.ID)
+		}
+		delete(state.workspaces, id)
+	}
+	state.mu.Unlock()
+	dispatchNotification(state, e)
+}
+
+// UpdateOrganization is the event sent when an organization is updated.
+type UpdateOrganization struct {
+	Organization uuid.UUID
+	Name         string
+}
+
+// replaceOrganization calls the function f passing a copy of the organization
+// with identifier id. After f returns, it replaces the organization with its
+// copy in the state and updates all workspace back-pointers.
+func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Organization {
+	org := state.organizations[id]
+	newOrg := new(Organization)
+	*newOrg = *org
+	f(newOrg)
+	state.mu.Lock()
+	state.organizations[id] = newOrg
+	state.mu.Unlock()
+	for _, ws := range newOrg.workspaces {
+		ws.mu.Lock()
+		ws.organization = newOrg
+		ws.mu.Unlock()
+	}
+	return newOrg
+}
+
+// updateOrganization updates an organization.
+func (state *State) updateOrganization(n notification) uuid.UUID {
+	e := UpdateOrganization{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	state.replaceOrganization(e.Organization, func(org *Organization) {
+		org.Name = e.Name
+	})
+	dispatchNotification(state, e)
+	return e.Organization
 }
 
 // CreateWorkspace is the event sent when a workspace is created.

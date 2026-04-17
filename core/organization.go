@@ -471,14 +471,17 @@ func (this *Organization) DeleteAccessKey(ctx context.Context, id int) error {
 // Delete deletes the organization.
 func (this *Organization) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
-	result, err := this.core.db.Exec(ctx, "DELETE FROM organizations WHERE id = $1", this.organization.ID)
-	if err != nil {
-		return err
-	}
-	if result.RowsAffected() == 0 {
-		return errors.NotFound("organization %s does not exist", this.organization.ID)
-	}
-	return nil
+	n := state.DeleteOrganization{ID: this.organization.ID}
+	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "DELETE FROM organizations WHERE id = $1", this.organization.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("organization %s does not exist", this.organization.ID)
+		}
+		return n, nil
+	})
 }
 
 // DeleteMember deletes a member of the organization with identifier id.
@@ -785,14 +788,17 @@ func (this *Organization) Update(ctx context.Context, name string) error {
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	result, err := this.core.db.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
-	if err != nil {
-		return err
-	}
-	if result.RowsAffected() == 0 {
-		return errors.NotFound("organization %s does not exist", this.organization.ID)
-	}
-	return nil
+	n := state.UpdateOrganization{Organization: this.organization.ID, Name: name}
+	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("organization %s does not exist", this.organization.ID)
+		}
+		return n, nil
+	})
 }
 
 // Workspace returns the organization's workspace with identifier id.
