@@ -13,6 +13,8 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+
+	"github.com/google/uuid"
 )
 
 type organization struct {
@@ -155,6 +157,23 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	return map[string]int{"id": id}, nil
+}
+
+// Delete deletes the organization with the given identifier.
+func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
+	}
+	org, err := organization.core.Organization(id)
+	if err != nil {
+		return nil, err
+	}
+	err = org.Delete(r.Context())
+	return nil, err
 }
 
 // DeleteAccessKey deletes an access key of an organization.
@@ -323,6 +342,30 @@ func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Req
 	if _, ok := err.(*errors.NotFoundError); ok {
 		err = errInvalidSessionCookie
 	}
+	return nil, err
+}
+
+// Update updates the name of the organization with the given identifier.
+func (organization organization) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	org, err := organization.core.Organization(id)
+	if err != nil {
+		return nil, err
+	}
+	err = org.Update(r.Context(), body.Name)
 	return nil, err
 }
 

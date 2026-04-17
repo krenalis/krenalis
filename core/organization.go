@@ -468,6 +468,19 @@ func (this *Organization) DeleteAccessKey(ctx context.Context, id int) error {
 	return err
 }
 
+// Delete deletes the organization.
+func (this *Organization) Delete(ctx context.Context) error {
+	this.core.mustBeOpen()
+	result, err := this.core.db.Exec(ctx, "DELETE FROM organizations WHERE id = $1", this.organization.ID)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.NotFound("organization %s does not exist", this.organization.ID)
+	}
+	return nil
+}
+
 // DeleteMember deletes a member of the organization with identifier id.
 // If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) DeleteMember(ctx context.Context, id int) error {
@@ -764,6 +777,22 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 		return nil, err
 	})
 	return err
+}
+
+// Update updates the name of the organization.
+func (this *Organization) Update(ctx context.Context, name string) error {
+	this.core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 45); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	result, err := this.core.db.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.NotFound("organization %s does not exist", this.organization.ID)
+	}
+	return nil
 }
 
 // Workspace returns the organization's workspace with identifier id.

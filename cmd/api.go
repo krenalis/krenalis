@@ -9,12 +9,15 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+
+	"github.com/google/uuid"
 )
 
 type api struct {
@@ -57,6 +60,25 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 	}
 	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
 	return nil, err
+}
+
+// CreateOrganization creates a new organization.
+func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	id, err := api.core.AddOrganization(r.Context(), body.Name)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id.String()}, nil
 }
 
 // Connector returns a connector.
@@ -168,6 +190,41 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 		return nil, err
 	}
 	return map[string]any{"email": email, "organization": organization}, nil
+}
+
+// Organization returns the organization with the given identifier.
+func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
+	}
+	return api.core.Organization(id)
+}
+
+// Organizations returns the organizations.
+func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
+	q := r.URL.Query()
+	first := 0
+	if v := q.Get("first"); v != "" {
+		var err error
+		first, err = strconv.Atoi(v)
+		if err != nil {
+			return nil, errors.BadRequest("first is not valid")
+		}
+	}
+	limit := 100
+	if v := q.Get("limit"); v != "" {
+		var err error
+		limit, err = strconv.Atoi(v)
+		if err != nil {
+			return nil, errors.BadRequest("limit is not valid")
+		}
+	}
+	orgs, err := api.core.Organizations(core.SortByName, first, limit)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"organizations": orgs}, nil
 }
 
 type publicMetadata struct {
