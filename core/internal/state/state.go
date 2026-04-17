@@ -235,7 +235,7 @@ func (state *State) Connectors() []*Connector {
 
 // EncryptSettings encrypts the provided settings.
 func (state *State) EncryptSettings(ctx context.Context, settings json.Value) ([]byte, []byte, error) {
-	return state.cipher.Encrypt(ctx, settings, 32)
+	return state.cipher.Encrypt(ctx, settings)
 }
 
 // Freeze freezes the state. If the state is updating, the calling goroutine

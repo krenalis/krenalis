@@ -27,12 +27,19 @@ import (
 	"github.com/krenalis/krenalis/tools/kms/internal/local"
 )
 
-var InvalidKeyError = errors.New("invalid key")
-
 // Kms provides data key generation and decryption operations.
+// It is safe for concurrent use by multiple goroutines.
 type Kms interface {
+
+	// DecryptDataKey decrypts encryptedDataKey and returns the plaintext data key.
 	DecryptDataKey(ctx context.Context, encryptedDataKey []byte) (dataKey []byte, err error)
+
+	// GenerateDataKey generates and returns a plaintext data key together with its
+	// encrypted form.
 	GenerateDataKey(ctx context.Context, keyLen int) (dataKey []byte, encryptedDataKey []byte, err error)
+
+	// GenerateDataKeyWithoutPlaintext generates and returns an encrypted data key
+	// without returning its plaintext form.
 	GenerateDataKeyWithoutPlaintext(ctx context.Context, keyLen int) (encryptedDataKey []byte, err error)
 }
 
@@ -41,7 +48,7 @@ type Kms interface {
 func New(ctx context.Context, uri string) (Kms, error) {
 	backend, identifier, found := strings.Cut(uri, ":")
 	if !found {
-		return nil, errors.New("kms: dns is invalid")
+		return nil, errors.New("kms: uri is invalid")
 	}
 	var kms Kms
 	var err error

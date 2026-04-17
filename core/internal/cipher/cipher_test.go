@@ -42,15 +42,17 @@ func (k *testKMS) GenerateDataKeyWithoutPlaintext(ctx context.Context, keyLen in
 	panic("unexpected GenerateDataKeyWithoutPlaintext call")
 }
 
-// TestEncryptDecryptRoundTrip verifies round-trip encryption for supported key sizes.
+// TestEncryptDecryptRoundTrip verifies round-trip encryption with a generated
+// 32-byte data key.
 func TestEncryptDecryptRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	c := New(&testKMS{})
+	t.Cleanup(c.Close)
 	ctx := context.Background()
 	plaintext := []byte("secret")
 
-	ciphertext, encryptedDataKey, err := c.Encrypt(ctx, plaintext, 32)
+	ciphertext, encryptedDataKey, err := c.Encrypt(ctx, plaintext)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -72,6 +74,7 @@ func TestKeyEncryptDecryptRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	c := New(&testKMS{})
+	t.Cleanup(c.Close)
 	ctx := context.Background()
 	plaintext := []byte("payload")
 
@@ -95,18 +98,20 @@ func TestKeyEncryptDecryptRoundTrip(t *testing.T) {
 	}
 }
 
-// TestEncryptRejects64ByteDataKeys rejects 64-byte decrypted data keys.
-func TestEncryptRejects64ByteDataKeys(t *testing.T) {
+// TestEncryptUses32ByteDataKey verifies Encrypt always requests a 32-byte data
+// key from the KMS.
+func TestEncryptUses32ByteDataKey(t *testing.T) {
 	t.Parallel()
 
 	c := New(&testKMS{})
+	t.Cleanup(c.Close)
 
-	_, _, err := c.Encrypt(context.Background(), []byte("payload"), 64)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	_, encryptedDataKey, err := c.Encrypt(context.Background(), []byte("payload"))
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
 	}
-	if err.Error() != "data key must be 32 bytes" {
-		t.Fatalf("expected error %q, got %q", "data key must be 32 bytes", err.Error())
+	if !bytes.Equal(encryptedDataKey, []byte{32}) {
+		t.Fatalf("expected encrypted data key %v, got %v", []byte{32}, encryptedDataKey)
 	}
 }
 
@@ -120,14 +125,15 @@ func TestEncryptWithInvalidDataKey(t *testing.T) {
 			"64":  make([]byte, 64),
 		},
 	})
+	t.Cleanup(c.Close)
 
 	for _, encryptedDataKey := range [][]byte{[]byte("bad"), []byte("64")} {
 		_, err := c.EncryptWithExistingKey(context.Background(), []byte("payload"), encryptedDataKey)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
-		if err.Error() != "data key must be 32 bytes" {
-			t.Fatalf("expected error %q, got %q", "data key must be 32 bytes", err.Error())
+		if err.Error() != "cipher: data key must be 32 bytes" {
+			t.Fatalf("expected error %q, got %q", "cipher: data key must be 32 bytes", err.Error())
 		}
 	}
 }

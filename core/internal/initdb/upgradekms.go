@@ -339,7 +339,7 @@ func migrateWorkspaceSettings(ctx context.Context, tx *db.Tx, c *cipher.Cipher) 
 		return err
 	}
 	for _, row := range rows {
-		settingsCiphertext, settingsKey, err := c.Encrypt(ctx, []byte(row.SettingsJSON), 32)
+		settingsCiphertext, settingsKey, err := c.Encrypt(ctx, []byte(row.SettingsJSON))
 		if err != nil {
 			return fmt.Errorf("failed while upgrading workspace %d: %w", row.ID, err)
 		}
@@ -348,7 +348,7 @@ func migrateWorkspaceSettings(ctx context.Context, tx *db.Tx, c *cipher.Cipher) 
 		if row.MCPJSON == "null" {
 			mcpKey, err = generateEncryptedDataKey(ctx, c.KeyManager(), 32)
 		} else {
-			mcpCiphertext, mcpKey, err = c.Encrypt(ctx, []byte(row.MCPJSON), 32)
+			mcpCiphertext, mcpKey, err = c.Encrypt(ctx, []byte(row.MCPJSON))
 		}
 		if err != nil {
 			return fmt.Errorf("failed while upgrading workspace %d: %w", row.ID, err)
@@ -395,7 +395,7 @@ func migrateConnectionSettings(ctx context.Context, tx *db.Tx, c *cipher.Cipher)
 		var settingsKey []byte
 		if row.SettingsJSON.Valid {
 			var err error
-			settingsCiphertext, settingsKey, err = c.Encrypt(ctx, []byte(row.SettingsJSON.String), 32)
+			settingsCiphertext, settingsKey, err = c.Encrypt(ctx, []byte(row.SettingsJSON.String))
 			if err != nil {
 				return fmt.Errorf("failed while upgrading connection %d: %w", row.ID, err)
 			}

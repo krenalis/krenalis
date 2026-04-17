@@ -16,7 +16,7 @@ func TestNewErrors(t *testing.T) {
 		uri  string
 		want string
 	}{
-		{name: "invalid URI", uri: "local", want: "kms: dns is invalid"},
+		{name: "invalid URI", uri: "local", want: "kms: uri is invalid"},
 		{name: "unsupported backend", uri: "gcp:key", want: "kms: unsupported backend"},
 		{name: "empty AWS key ID", uri: "aws:", want: "kms/aws: empty key ID"},
 	} {
