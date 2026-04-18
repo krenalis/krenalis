@@ -18,14 +18,14 @@ import (
 // Cipher encrypts and decrypts values using KMS-managed data keys.
 // It is safe for concurrent use by multiple goroutines.
 type Cipher struct {
-	keyManager kms.Kms
-	cache      *cache
+	kms   kms.Kms
+	cache *cache
 }
 
 // New creates a cipher that encrypts and decrypts state values using the given
-// key manager.
-func New(keyManager kms.Kms) *Cipher {
-	return &Cipher{keyManager: keyManager, cache: newCache()}
+// KMS.
+func New(kms kms.Kms) *Cipher {
+	return &Cipher{kms: kms, cache: newCache()}
 }
 
 // Close releases resources and clears any remaining cached keys.
@@ -40,7 +40,7 @@ func (c *Cipher) Close() {
 // It returns the ciphertext and the KMS-encrypted data key.
 func (c *Cipher) Encrypt(ctx context.Context, plaintext []byte) ([]byte, []byte, error) {
 
-	dataKey, encryptedDataKey, err := c.keyManager.GenerateDataKey(ctx, 32)
+	dataKey, encryptedDataKey, err := c.kms.GenerateDataKey(ctx, 32)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,18 +80,18 @@ func (c *Cipher) Decrypt(ctx context.Context, ciphertext, encryptedDataKey []byt
 	return decryptWithDataKey(ciphertext, clearKey.Value)
 }
 
+// KMS returns the KMS used by the cipher.
+func (c *Cipher) KMS() kms.Kms {
+	return c.kms
+}
+
 // Key returns a Key that uses the data key, that must be 32 bytes long,
 // represented by encryptedDataKey.
 func (c *Cipher) Key(encryptedDataKey []byte) *Key {
 	return &Key{slices.Clone(encryptedDataKey), c}
 }
 
-// KeyManager returns the KMS used by the cipher.
-func (c *Cipher) KeyManager() kms.Kms {
-	return c.keyManager
-}
-
-// decryptDataKey decrypts encryptedDataKey through the configured key manager.
+// decryptDataKey decrypts encryptedDataKey through the configured KMS.
 func (c *Cipher) decryptDataKey(ctx context.Context, encryptedDataKey []byte) (*clearKey, error) {
 	if len(encryptedDataKey) == 0 {
 		return nil, errors.New("cipher: encrypted data key is empty")
@@ -99,7 +99,7 @@ func (c *Cipher) decryptDataKey(ctx context.Context, encryptedDataKey []byte) (*
 	if clearKey, ok := c.cache.Get(encryptedDataKey); ok {
 		return clearKey, nil
 	}
-	key, err := c.keyManager.DecryptDataKey(ctx, encryptedDataKey)
+	key, err := c.kms.DecryptDataKey(ctx, encryptedDataKey)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (k *Key) IsValid(ctx context.Context) error {
 		}
 		return nil
 	}
-	dataKey, err := k.cipher.keyManager.DecryptDataKey(ctx, k.key)
+	dataKey, err := k.cipher.kms.DecryptDataKey(ctx, k.key)
 	if err != nil {
 		return err
 	}

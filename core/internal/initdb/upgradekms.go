@@ -346,7 +346,7 @@ func migrateWorkspaceSettings(ctx context.Context, tx *db.Tx, c *cipher.Cipher) 
 		var mcpCiphertext []byte
 		var mcpKey []byte
 		if row.MCPJSON == "null" {
-			mcpKey, err = generateEncryptedDataKey(ctx, c.KeyManager(), 32)
+			mcpKey, err = generateEncryptedDataKey(ctx, c.KMS(), 32)
 		} else {
 			mcpCiphertext, mcpKey, err = c.Encrypt(ctx, []byte(row.MCPJSON))
 		}
@@ -401,7 +401,7 @@ func migrateConnectionSettings(ctx context.Context, tx *db.Tx, c *cipher.Cipher)
 			}
 		} else {
 			var err error
-			settingsKey, err = generateEncryptedDataKey(ctx, c.KeyManager(), 32)
+			settingsKey, err = generateEncryptedDataKey(ctx, c.KMS(), 32)
 			if err != nil {
 				return fmt.Errorf("failed while upgrading connection %d: %w", row.ID, err)
 			}

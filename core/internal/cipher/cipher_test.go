@@ -78,7 +78,7 @@ func TestKeyEncryptDecryptRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	plaintext := []byte("payload")
 
-	_, encryptedDataKey, err := c.keyManager.GenerateDataKey(ctx, 32)
+	_, encryptedDataKey, err := c.KMS().GenerateDataKey(ctx, 32)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

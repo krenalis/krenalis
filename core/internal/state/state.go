@@ -166,7 +166,7 @@ func (state *State) Close() {
 // CookieKeys decrypts and returns the two 32-byte keys stored in the cookie
 // key material.
 func (state *State) CookieKeys(ctx context.Context) ([]byte, []byte, error) {
-	dataKey, err := state.cipher.KeyManager().DecryptDataKey(ctx, state.metadata.kmsEncryptedCookieKey)
+	dataKey, err := state.cipher.KMS().DecryptDataKey(ctx, state.metadata.kmsEncryptedCookieKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -248,7 +248,7 @@ func (state *State) Freeze() {
 
 // GenerateKmsDataKey returns a KMS-encrypted data key.
 func (state *State) GenerateKmsDataKey(ctx context.Context) ([]byte, error) {
-	return state.cipher.KeyManager().GenerateDataKeyWithoutPlaintext(ctx, 32)
+	return state.cipher.KMS().GenerateDataKeyWithoutPlaintext(ctx, 32)
 }
 
 // ID returns the node identifier.
