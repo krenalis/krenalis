@@ -29,8 +29,7 @@ type cache struct {
 type clearKey struct {
 	cache        *cache    // it is nil if the key is not in cache.
 	Value        []byte    // immutable Value
-	lastAccessed time.Time // access must be protected by cache.mu
-	evictAfter   time.Time // access must be protected by cache.mu
+	lastAccessed time.Time // protected by cache.mu; entries expire ttl after lastAccessed
 	uses         int       // access must be protected by cache.mu
 }
 
@@ -63,8 +62,7 @@ func newCache() *cache {
 	go func() {
 		for {
 			select {
-			case <-c.timer.C:
-				now := time.Now()
+			case now := <-c.timer.C:
 				c.mu.Lock()
 				c.prune(now)
 				c.mu.Unlock()
@@ -112,7 +110,6 @@ func (c *cache) Exists(encryptedKey []byte) (int, bool) {
 // The caller must call Done on the returned key when no longer needed.
 func (c *cache) Get(encryptedKey []byte) (*clearKey, bool) {
 	now := time.Now()
-	evictAfter := now.Add(ttl)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	ck, ok := c.keys[string(encryptedKey)]
@@ -120,7 +117,6 @@ func (c *cache) Get(encryptedKey []byte) (*clearKey, bool) {
 		return nil, false
 	}
 	ck.lastAccessed = now
-	ck.evictAfter = evictAfter
 	ck.uses++
 	if ck.uses < 0 {
 		panic("cipher: key usage limit exceeded")
@@ -137,12 +133,10 @@ func (c *cache) Get(encryptedKey []byte) (*clearKey, bool) {
 // The caller must call Done on the returned key when no longer needed.
 func (c *cache) Put(encryptedKey, value []byte) *clearKey {
 	now := time.Now()
-	evictAfter := now.Add(ttl)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if ck, ok := c.keys[string(encryptedKey)]; ok {
 		ck.lastAccessed = now
-		ck.evictAfter = evictAfter
 		ck.uses++
 		if ck.uses < 0 {
 			panic("cipher: key usage limit exceeded")
@@ -158,7 +152,6 @@ func (c *cache) Put(encryptedKey, value []byte) *clearKey {
 			cache:        c,
 			Value:        value,
 			lastAccessed: now,
-			evictAfter:   evictAfter,
 			uses:         1,
 		}
 		c.keys[string(encryptedKey)] = ck
@@ -171,13 +164,14 @@ func (c *cache) Put(encryptedKey, value []byte) *clearKey {
 // entries; otherwise, it removes the least recently accessed entry with no
 // active uses. It reports whether an entry was removed.
 func (c *cache) evictOne(now time.Time) bool {
+	expiredBefore := now.Add(-ttl)
 	var victimKey string
 	var victim *clearKey
 	for key, ck := range c.keys {
 		if ck.uses > 0 {
 			continue
 		}
-		if !ck.evictAfter.After(now) {
+		if !ck.lastAccessed.After(expiredBefore) {
 			victimKey = key
 			victim = ck
 			break
@@ -199,9 +193,10 @@ func (c *cache) evictOne(now time.Time) bool {
 // It must be called with c.mu held.
 // It is invoked automatically and is not intended to be called by callers.
 func (c *cache) prune(now time.Time) bool {
+	expiredBefore := now.Add(-ttl)
 	pruned := false
 	for key, ck := range c.keys {
-		if ck.uses == 0 && !ck.evictAfter.After(now) {
+		if ck.uses == 0 && !ck.lastAccessed.After(expiredBefore) {
 			clear(ck.Value)
 			delete(c.keys, key)
 			pruned = true

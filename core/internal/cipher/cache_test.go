@@ -95,7 +95,6 @@ func TestCachePutExistingKeyReusesEntryAndClearsInput(t *testing.T) {
 	originalKey.Done()
 
 	originalLastAccessed := originalKey.lastAccessed
-	originalEvictAfter := originalKey.evictAfter
 	replacementValue := []byte("replacement")
 
 	reusedKey := c.Put(encryptedKey, replacementValue)
@@ -110,9 +109,6 @@ func TestCachePutExistingKeyReusesEntryAndClearsInput(t *testing.T) {
 	}
 	if reusedKey.lastAccessed.Before(originalLastAccessed) {
 		t.Fatalf("expected lastAccessed at or after %v, got %v", originalLastAccessed, reusedKey.lastAccessed)
-	}
-	if reusedKey.evictAfter.Before(originalEvictAfter) {
-		t.Fatalf("expected evictAfter at or after %v, got %v", originalEvictAfter, reusedKey.evictAfter)
 	}
 	if !bytes.Equal(replacementValue, make([]byte, len(replacementValue))) {
 		t.Fatalf("expected cleared replacement value, got %v", replacementValue)
@@ -133,17 +129,17 @@ func TestCachePruneRemovesOnlyExpiredUnusedKeys(t *testing.T) {
 	c := &cache{
 		keys: map[string]*clearKey{
 			"expired-unused": {
-				Value:      expiredUnusedValue,
-				evictAfter: now.Add(-time.Second),
+				Value:        expiredUnusedValue,
+				lastAccessed: now.Add(-ttl - time.Second),
 			},
 			"expired-in-use": {
-				Value:      expiredInUseValue,
-				evictAfter: now.Add(-time.Second),
-				uses:       1,
+				Value:        expiredInUseValue,
+				lastAccessed: now.Add(-ttl - time.Second),
+				uses:         1,
 			},
 			"fresh-unused": {
-				Value:      freshUnusedValue,
-				evictAfter: now.Add(time.Second),
+				Value:        freshUnusedValue,
+				lastAccessed: now.Add(-ttl + time.Second),
 			},
 		},
 	}
@@ -180,13 +176,11 @@ func TestCacheEvictOnePrefersExpiredOtherwiseLRU(t *testing.T) {
 			keys: map[string]*clearKey{
 				"expired": {
 					Value:        expiredValue,
-					lastAccessed: now.Add(-time.Second),
-					evictAfter:   now.Add(-time.Millisecond),
+					lastAccessed: now.Add(-ttl - time.Second),
 				},
 				"fresh": {
 					Value:        freshValue,
-					lastAccessed: now.Add(-time.Hour),
-					evictAfter:   now.Add(time.Hour),
+					lastAccessed: now.Add(-ttl + time.Second),
 				},
 			},
 		}
@@ -215,12 +209,10 @@ func TestCacheEvictOnePrefersExpiredOtherwiseLRU(t *testing.T) {
 				"lru": {
 					Value:        lruValue,
 					lastAccessed: now.Add(-2 * time.Hour),
-					evictAfter:   now.Add(time.Hour),
 				},
 				"newer": {
 					Value:        newerValue,
 					lastAccessed: now.Add(-time.Hour),
-					evictAfter:   now.Add(time.Hour),
 				},
 			},
 		}
@@ -257,7 +249,6 @@ func TestCachePutWhenFullAndNothingEvictableReturnsUncachedKey(t *testing.T) {
 				cache:        nil,
 				Value:        existingValue,
 				lastAccessed: time.Now(),
-				evictAfter:   time.Now().Add(time.Hour),
 				uses:         1,
 			},
 		},
