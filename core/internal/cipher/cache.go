@@ -18,10 +18,11 @@ var (
 // cache stores plaintext data keys in memory for a limited time.
 // It is safe for concurrent use by multiple goroutines.
 type cache struct {
-	mu    sync.Mutex
-	keys  map[string]*clearKey
-	timer *time.Timer
-	done  chan struct{}
+	mu      sync.Mutex
+	keys    map[string]*clearKey
+	timer   *time.Timer
+	stop    chan struct{}
+	stopped chan struct{}
 }
 
 // clearKey is a plaintext data key, optionally tracked by a cache.
@@ -54,9 +55,10 @@ func (ck *clearKey) Done() {
 // newCache returns a new cache instance.
 func newCache() *cache {
 	c := &cache{
-		keys:  make(map[string]*clearKey),
-		timer: time.NewTimer(pruneFrequency),
-		done:  make(chan struct{}),
+		keys:    make(map[string]*clearKey),
+		timer:   time.NewTimer(pruneFrequency),
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
 	}
 	go func() {
 		for {
@@ -67,8 +69,8 @@ func newCache() *cache {
 				c.prune(now)
 				c.mu.Unlock()
 				c.timer.Reset(pruneFrequency)
-			case <-c.done:
-				close(c.done)
+			case <-c.stop:
+				close(c.stopped)
 				return
 			}
 		}
@@ -82,10 +84,8 @@ func newCache() *cache {
 // must be called at most once. The cache must not be used after Close.
 func (c *cache) Close() {
 	// Terminate the prune goroutine.
-	c.done <- struct{}{}
-	select {
-	case <-c.done:
-	}
+	close(c.stop)
+	<-c.stopped
 	// Clear the cached keys.
 	for _, clearKey := range c.keys {
 		clear(clearKey.Value[:])
