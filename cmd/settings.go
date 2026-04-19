@@ -44,7 +44,7 @@ func parseEnvSettings() (*Settings, error) {
 		}
 		switch backend {
 		case "local":
-			decodedValue, err := base64.RawStdEncoding.DecodeString(rawValue)
+			decodedValue, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(rawValue, "="))
 			if err != nil {
 				return nil, errors.New("KRENALIS_KMS local value is not valid base64")
 			}
