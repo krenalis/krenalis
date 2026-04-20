@@ -64,6 +64,9 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 
 // CreateOrganization creates a new organization.
 func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := api.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
@@ -194,6 +197,9 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 
 // Organization returns the organization with the given identifier.
 func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := api.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
@@ -203,6 +209,9 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 
 // Organizations returns the organizations.
 func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := api.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
 	q := r.URL.Query()
 	first := 0
 	if v := q.Get("first"); v != "" {

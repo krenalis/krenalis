@@ -318,6 +318,31 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 	return org, ws, nil
 }
 
+// organizationsAPIKey is the API key required to call the organizations API.
+//
+// TODO: read this value from external configuration (e.g. AWS Secrets Manager or Parameter Store).
+const organizationsAPIKey = "organizations-api-key-change-me"
+
+// authenticateOrganizationsRequest authenticates a request to the organizations
+// API. Authorization is provided via the "Authorization: Bearer <key>" header.
+func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
+	auth, ok := r.Header["Authorization"]
+	if !ok {
+		return errors.Unauthorized("Authorization header with the API key is not present in the request")
+	}
+	if len(auth) > 1 {
+		return errors.BadRequest("request contains multiple Authorization headers")
+	}
+	token, found := validation.ParseBearer(auth[0])
+	if !found {
+		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
+	}
+	if token != organizationsAPIKey {
+		return errors.Unauthorized("API key in the Authorization header of the request is not valid")
+	}
+	return nil
+}
+
 // forwardSentryError forwards a telemetry error from a client to Sentry.
 // If not authorized, this method does nothing.
 func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) (any, error) {

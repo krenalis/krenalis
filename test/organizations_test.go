@@ -20,7 +20,10 @@ func TestOrganizationsAPI(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	orgHeaders := http.Header{"Krenalis-Workspace": nil}
+	orgHeaders := http.Header{
+		"Krenalis-Workspace": nil,
+		"Authorization":      []string{"Bearer organizations-api-key-change-me"},
+	}
 
 	// Create a new organization before running the subtests.
 	var createResp struct {

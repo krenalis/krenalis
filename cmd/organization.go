@@ -161,6 +161,9 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 
 // Delete deletes the organization with the given identifier.
 func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := organization.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
@@ -347,6 +350,9 @@ func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Req
 
 // Update updates the name of the organization with the given identifier.
 func (organization organization) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := organization.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
