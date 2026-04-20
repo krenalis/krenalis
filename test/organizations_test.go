@@ -5,7 +5,6 @@
 package test
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -20,27 +19,11 @@ func TestOrganizationsAPI(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	orgHeaders := http.Header{
-		"Krenalis-Workspace": nil,
-		"Authorization":      []string{"Bearer organizations-api-key-change-me"},
-	}
-
 	// Create a new organization before running the subtests.
-	var createResp struct {
-		ID string `json:"id"`
-	}
-	c.MustCall("POST", "/v1/organizations", orgHeaders, map[string]any{"name": "Test Org"}, &createResp)
-	orgID := createResp.ID
-	if orgID == "" {
-		t.Fatal("expected a non-empty organization ID")
-	}
+	orgID := c.CreateOrganization("Test Org")
 
 	t.Run("read organization by ID", func(t *testing.T) {
-		var org struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		}
-		c.MustCall("GET", fmt.Sprintf("/v1/organization/%s", orgID), orgHeaders, nil, &org)
+		org := c.Organization(orgID)
 		if org.ID != orgID {
 			t.Fatalf("expected ID %q, got %q", orgID, org.ID)
 		}
@@ -50,15 +33,9 @@ func TestOrganizationsAPI(t *testing.T) {
 	})
 
 	t.Run("list organizations includes new organization", func(t *testing.T) {
-		var resp struct {
-			Organizations []struct {
-				ID   string `json:"id"`
-				Name string `json:"name"`
-			} `json:"organizations"`
-		}
-		c.MustCall("GET", "/v1/organizations", orgHeaders, nil, &resp)
+		orgs := c.Organizations(0, 100)
 		found := false
-		for _, org := range resp.Organizations {
+		for _, org := range orgs {
 			if org.ID == orgID {
 				found = true
 				if org.Name != "Test Org" {
@@ -73,22 +50,16 @@ func TestOrganizationsAPI(t *testing.T) {
 	})
 
 	t.Run("update organization name", func(t *testing.T) {
-		c.MustCall("PUT", fmt.Sprintf("/v1/organization/%s", orgID), orgHeaders, map[string]any{"name": "Updated Org"}, nil)
-
-		var org struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		}
-		c.MustCall("GET", fmt.Sprintf("/v1/organization/%s", orgID), orgHeaders, nil, &org)
+		c.UpdateOrganization(orgID, "Updated Org")
+		org := c.Organization(orgID)
 		if org.Name != "Updated Org" {
 			t.Fatalf("expected name %q after update, got %q", "Updated Org", org.Name)
 		}
 	})
 
 	t.Run("delete organization", func(t *testing.T) {
-		c.MustCall("DELETE", fmt.Sprintf("/v1/organization/%s", orgID), orgHeaders, nil, nil)
-
-		err := c.Call("GET", fmt.Sprintf("/v1/organization/%s", orgID), orgHeaders, nil, nil)
+		c.DeleteOrganization(orgID)
+		err := c.OrganizationErr(orgID)
 		if err == nil {
 			t.Fatal("expected error when reading deleted organization, got nil")
 		}
