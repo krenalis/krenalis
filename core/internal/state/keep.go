@@ -599,7 +599,8 @@ type UpdateOrganization struct {
 
 // replaceOrganization calls the function f passing a copy of the organization
 // with identifier id. After f returns, it replaces the organization with its
-// copy in the state and updates all workspace back-pointers.
+// copy in the state and updates all workspace back-pointers. Returns the copy
+// of the organization.
 func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Organization {
 	o := state.organizations[id]
 	oo := new(Organization)
