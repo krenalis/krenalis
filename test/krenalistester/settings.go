@@ -19,12 +19,13 @@ import (
 )
 
 type TestsSettings struct {
-	HTTP              *HTTPSettings
-	Database          *DBSettings
-	NATS              *NATSSettings
-	PythonExecutable  string
-	WarehousePlatform string
-	Warehouse         *DBSettings
+	HTTP                *HTTPSettings
+	Database            *DBSettings
+	NATS                *NATSSettings
+	PythonExecutable    string
+	WarehousePlatform   string
+	Warehouse           *DBSettings
+	OrganizationsAPIKey string
 }
 
 type HTTPSettings struct {
@@ -90,6 +91,7 @@ func init() {
 			Password: "test_warehouse",
 			Schema:   "public",
 		},
+		OrganizationsAPIKey: "org_TgLrbS9Si51e3KSzPN6g4Zr5NUgbx8q7TCWtVtiFvR2",
 	}
 	pyExecutable, err := lookupPythonExecPath()
 	if err != nil {

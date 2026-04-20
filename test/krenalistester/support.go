@@ -283,35 +283,30 @@ func (c *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 	return response.Token
 }
 
-// organizationsAPIKey is the key used to authenticate requests to the
-// organizations API. It must match the value defined in cmd/apis_server.go.
-//
-// TODO: This is a temporary solution, until we put the API key for
-// organizations in a safe place.
-const organizationsAPIKey = "organizations-api-key-change-me"
-
-var organizationsHeaders = http.Header{
-	"Krenalis-Workspace": nil, // so that MustCall does not add automatically the header.
-	"Authorization":      []string{"Bearer " + organizationsAPIKey},
+func organizationsHeaders() http.Header {
+	return http.Header{
+		"Krenalis-Workspace": nil, // so that MustCall does not add automatically the header.
+		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
+	}
 }
 
 func (c *Krenalis) CreateOrganization(name string) uuid.UUID {
 	var response struct {
 		ID uuid.UUID `json:"id"`
 	}
-	c.MustCall("POST", "/v1/organizations", organizationsHeaders, map[string]any{"name": name}, &response)
+	c.MustCall("POST", "/v1/organizations", organizationsHeaders(), map[string]any{"name": name}, &response)
 	return response.ID
 }
 
 func (c *Krenalis) Organization(id uuid.UUID) Organization {
 	var org Organization
-	c.MustCall("GET", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders, nil, &org)
+	c.MustCall("GET", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders(), nil, &org)
 	return org
 }
 
 // OrganizationErr is like Organization but returns an error instead of failing the test.
 func (c *Krenalis) OrganizationErr(id uuid.UUID) error {
-	return c.Call("GET", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders, nil, nil)
+	return c.Call("GET", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders(), nil, nil)
 }
 
 func (c *Krenalis) Organizations(first, limit int) []Organization {
@@ -319,16 +314,16 @@ func (c *Krenalis) Organizations(first, limit int) []Organization {
 		Organizations []Organization `json:"organizations"`
 	}
 	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
-	c.MustCall("GET", path, organizationsHeaders, nil, &response)
+	c.MustCall("GET", path, organizationsHeaders(), nil, &response)
 	return response.Organizations
 }
 
 func (c *Krenalis) UpdateOrganization(id uuid.UUID, name string) {
-	c.MustCall("PUT", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders, map[string]any{"name": name}, nil)
+	c.MustCall("PUT", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
 }
 
 func (c *Krenalis) DeleteOrganization(id uuid.UUID) {
-	c.MustCall("DELETE", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders, nil, nil)
+	c.MustCall("DELETE", fmt.Sprintf("/v1/organization/%s", id), organizationsHeaders(), nil, nil)
 }
 
 func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []int) int {

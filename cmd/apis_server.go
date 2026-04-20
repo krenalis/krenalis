@@ -84,7 +84,7 @@ type apisServer struct {
 // runsOnHTTPs indicates if the server runs on HTTPS.
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
-	inviteMembersViaEmail bool, sentryTelemetryLevel core.TelemetryLevel,
+	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
 	sentryErrorTunnel *sentryErrorTunnel,
 ) *apisServer {
 
@@ -98,6 +98,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 		externalAssetsURLs:     externalAssetsURLs,
 		potentialConnectorsURL: potentialConnectorsURL,
 		inviteMembersViaEmail:  inviteMembersViaEmail,
+		organizationsAPIKey:    organizationsAPIKey,
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
