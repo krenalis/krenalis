@@ -584,6 +584,10 @@ func (state *State) deleteOrganization(n notification) {
 				delete(state.connectionsByKey, key)
 			}
 			delete(state.connections, c.ID)
+			// Delete the connection's pipelines.
+			for _, p := range c.pipelines {
+				delete(state.pipelines, p.ID)
+			}
 		}
 		delete(state.workspaces, id)
 	}
