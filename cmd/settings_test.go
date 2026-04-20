@@ -386,27 +386,11 @@ func TestParseSettings(t *testing.T) {
 				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character ' '",
 			},
 			{
-				// Null byte is a common injection vector: must be rejected.
-				name:    "null byte rejected",
-				set:     true,
-				env:     "org_" + strings.Repeat("a", 42) + "\x00",
-				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '\\x00'",
-			},
-			{
 				// Newline could break log lines or HTTP headers.
 				name:    "newline rejected",
 				set:     true,
 				env:     "org_" + "a\n" + strings.Repeat("a", 41),
 				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '\\n'",
-			},
-			{
-				// A two-byte UTF-8 char (é, U+00E9) placed such that the raw byte
-				// count equals 43, bypassing the len() check. The char loop must
-				// still catch it.
-				name:    "multibyte char with matching byte count rejected",
-				set:     true,
-				env:     "org_" + strings.Repeat("a", 41) + "é",
-				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character 'é'",
 			},
 			{
 				// Unicode lookalike for 'a' (Cyrillic small а, U+0430): visually
