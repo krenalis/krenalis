@@ -52,7 +52,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 		}
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
-		if (onWorkosLogout) {
+		if (onWorkosLogout != null) {
 			onWorkosLogout();
 		}
 		setSelectedWorkspace(0);
@@ -205,35 +205,38 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 };
 
 // WorkOSWrapper handles the WorkOS authentication flow. Once the WorkOS user is
-// available it exchanges the access token for a Krenalis session cookie, then
-// renders <App> as usual.
+// available it exchanges the WorkOS access token for a Krenalis session cookie,
+// then renders the app as usual.
 const WorkOSWrapper = () => {
-	const [sessionReady, setSessionReady] = useState(false);
-	const [authError, setAuthError] = useState<string | null>(null);
+	const [isLoggedInViaWorkos, setIsLoggedInViaWorkos] = useState(false);
 
-	const { isLoading, user, signIn, signOut, getAccessToken } = useAuth();
+	const { isLoading, user: workosUser, signIn, signOut, getAccessToken } = useAuth();
 
 	useEffect(() => {
-		if (!isLoading && user == null && authError == null) {
+		if (!isLoading && workosUser == null) {
 			signIn();
 		}
-	}, [isLoading, user, authError]);
+	}, [isLoading, workosUser]);
 
 	useEffect(() => {
-		if (user == null || sessionReady) {
+		const loginViaWorkos = async () => {
+			const api = new API(window.location.origin, 0);
+			try {
+				const token = await getAccessToken();
+				await api.workosLogin(token);
+			} catch (err) {
+				signOut();
+				return;
+			}
+			setIsLoggedInViaWorkos(true);
+		};
+		if (workosUser == null || isLoggedInViaWorkos) {
 			return;
 		}
-		const api = new API(window.location.origin, 0);
-		getAccessToken()
-			.then((token) => api.workosLogin(token))
-			.then(() => setSessionReady(true))
-			.catch(() => setAuthError('Authentication failed. Please try again.'));
-	}, [user]);
+		loginViaWorkos();
+	}, [workosUser]);
 
-	if (authError != null) {
-		return <div className='app-error'>{authError}</div>;
-	}
-	if (!sessionReady) {
+	if (!isLoggedInViaWorkos) {
 		return (
 			<SlSpinner
 				className='app-spinner'
