@@ -54,8 +54,7 @@ func init() {
 }
 
 type PostHog struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type cloudSettings struct {
@@ -74,14 +73,7 @@ type innerSettings struct {
 
 // New returns a new connector instance for PostHog.
 func New(env *connectors.ApplicationEnv) (*PostHog, error) {
-	c := PostHog{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for PostHog")
-		}
-	}
-	return &c, nil
+	return &PostHog{env: env}, nil
 }
 
 // EventTypes returns the event types.
@@ -183,8 +175,9 @@ func (ph *PostHog) ServeUI(ctx context.Context, event string, settings json.Valu
 	switch event {
 	case "load":
 		var s innerSettings
-		if ph.settings != nil {
-			s = *ph.settings
+		err := ph.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -255,16 +248,7 @@ func (ph *PostHog) saveSettings(ctx context.Context, settings json.Value) error 
 			return connectors.NewInvalidSettingsErrorf("self-hosted URL is not valid: %s", err)
 		}
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = ph.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	ph.settings = &s
-	return nil
+	return ph.env.Settings.Store(ctx, s)
 }
 
 const maxEventRequestSize = 20 * 1024 * 1024 // from https://posthog.com/docs/api/capture?#batch-events
@@ -277,11 +261,17 @@ const maxEventRequestSize = 20 * 1024 * 1024 // from https://posthog.com/docs/ap
 // and the error are returned.
 func (ph *PostHog) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
+	var s innerSettings
+	err := ph.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+
 	// bb contains newline-delimited JSON objects representing the events.
 	bb := ph.env.HTTPClient.GetBodyBuffer(contentEncoding)
 	defer bb.Close()
 
-	apiKey := ph.settings.APIKey
+	apiKey := s.APIKey
 	if preview {
 		apiKey = "[REDACTED]"
 	}
@@ -446,7 +436,7 @@ func (ph *PostHog) sendEvents(ctx context.Context, events connectors.Events, pre
 	_, _ = bb.WriteString("]}")
 
 	var u string
-	if cloud := ph.settings.Cloud; cloud != nil {
+	if cloud := s.Cloud; cloud != nil {
 		switch cloud.ProjectRegion {
 		case "US":
 			u = "https://us.i.posthog.com/batch/"
@@ -456,7 +446,7 @@ func (ph *PostHog) sendEvents(ctx context.Context, events connectors.Events, pre
 			return nil, fmt.Errorf("expected projectRegion to be US or EU, got %q", cloud.ProjectRegion)
 		}
 	} else {
-		u = ph.settings.SelfHosted.URL + "batch/"
+		u = s.SelfHosted.URL + "batch/"
 	}
 
 	req, err := bb.NewRequest(ctx, "POST", u)

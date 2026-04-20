@@ -32,6 +32,18 @@ const (
 	testPassword = "krenalis"
 )
 
+type testSettingsLoader struct {
+	settings json.Value
+}
+
+func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
+	return &testSettingsLoader{settings: settings}
+}
+
+func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(loader.settings, dst)
+}
+
 func Test_Merge(t *testing.T) {
 
 	cols := []struct {
@@ -130,7 +142,7 @@ func Test_Merge(t *testing.T) {
 
 	settings, err := json.Marshal(map[string]any{
 		"host":     testHost,
-		"port":     testPort.Int(),
+		"port":     testPort.Num(),
 		"username": testUser,
 		"password": testPassword,
 		"database": testDatabase,
@@ -141,15 +153,10 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	wh, err := warehouses.Registered("PostgreSQL").New(&warehouses.Config{
-		Settings: settings,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wh.Close()
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	defer dw.Close()
 
-	pool, err := wh.(*PostgreSQL).connectionPool(context.Background())
+	pool, _, err := dw.(*PostgreSQL).connectionPool(context.Background(), false)
 	if err != nil {
 		t.Fatalf("cannot open the warehouse: %s", err)
 	}
@@ -192,7 +199,7 @@ func Test_Merge(t *testing.T) {
 		}
 		row2[i] = nil
 	}
-	err = wh.Merge(context.Background(), table, [][]any{row1, row2}, nil)
+	err = dw.Merge(context.Background(), table, [][]any{row1, row2}, nil)
 	if err != nil {
 		t.Fatalf("cannot merge: %s", err)
 	}
@@ -202,7 +209,7 @@ func Test_Merge(t *testing.T) {
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
-	rows, count, err := wh.Query(context.Background(), query, true)
+	rows, count, err := dw.Query(context.Background(), query, true)
 	if err != nil {
 		t.Fatalf("cannot query: %s", err)
 	}
@@ -568,7 +575,7 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 
 	settings, err := json.Marshal(map[string]any{
 		"host":     testHost,
-		"port":     testPort.Int(),
+		"port":     testPort.Num(),
 		"username": testUser,
 		"password": testPassword,
 		"database": testDatabase,
@@ -578,23 +585,18 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 
-	warehouse, err := warehouses.Registered("PostgreSQL").New(&warehouses.Config{
-		Settings: settings,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
 	t.Cleanup(func() {
-		if err := warehouse.Close(); err != nil {
+		if err := dw.Close(); err != nil {
 			t.Error(err)
 		}
 	})
 
-	wh, ok := warehouse.(*PostgreSQL)
+	wh, ok := dw.(*PostgreSQL)
 	if !ok {
-		t.Fatalf("expected *PostgreSQL, got %T", warehouse)
+		t.Fatalf("expected *PostgreSQL, got %T", dw)
 	}
-	pool, err := wh.connectionPool(ctx)
+	pool, _, err := wh.connectionPool(ctx, false)
 	if err != nil {
 		t.Fatalf("cannot open the warehouse: %s", err)
 	}

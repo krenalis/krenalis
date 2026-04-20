@@ -211,7 +211,7 @@ func (c *Krenalis) Start() {
 		testsSettingsMu.Lock()
 		testsSettings.NATS = &NATSSettings{
 			URL:      natsHost,
-			Port:     natsPort.Int(),
+			Port:     int(natsPort.Num()),
 			User:     natsContainer.User,
 			Password: natsContainer.Password,
 		}
@@ -247,7 +247,7 @@ func (c *Krenalis) Start() {
 		}
 		testsSettingsMu.Lock()
 		testsSettings.Database.Host = postgresHost
-		testsSettings.Database.Port = postgresPort.Int()
+		testsSettings.Database.Port = int(postgresPort.Num())
 		testsSettingsMu.Unlock()
 		containersStarted.Done()
 	}()
@@ -280,7 +280,7 @@ func (c *Krenalis) Start() {
 		}
 		testsSettingsMu.Lock()
 		testsSettings.Warehouse.Host = warehouseHost
-		testsSettings.Warehouse.Port = warehousePort.Int()
+		testsSettings.Warehouse.Port = int(warehousePort.Num())
 		testsSettingsMu.Unlock()
 		containersStarted.Done()
 	}()
@@ -338,6 +338,7 @@ func (c *Krenalis) Start() {
 			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
 			"KRENALIS_TELEMETRY_LEVEL=none",
+			"KRENALIS_KMS=" + testKMS(),
 			"KRENALIS_PROMETHEUS_METRICS_ENABLED=true",
 			"KRENALIS_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"KRENALIS_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
@@ -373,6 +374,7 @@ func (c *Krenalis) Start() {
 		// Krenalis settings.
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Settings{}
+		setts.Kms = testKMS()
 		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.ExternalAssetsURLs = []string{"https://assets.krenalis.com/"}

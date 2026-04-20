@@ -60,27 +60,43 @@ func DecodeNDJSON(r io.Reader, enc connectors.ContentEncoding) ([]json.Value, er
 }
 
 // NewApplication returns an instance of the application connector with the
-// specified code for testing purposes. Settings are the connector settings
-// passed to the connector instance.
+// specified code for testing purposes. Settings are the connection settings.
 //
 // It panics if no application connector with the specified code has been
 // registered.
 func NewApplication[T any](code string, settings any) (T, error) {
 	registeredApplications := connectors.RegisteredApplication(code)
-	connector := &state.Connector{
-		Code:           code,
-		EndpointGroups: registeredApplications.EndpointGroups,
-	}
 	s, err := json.Marshal(settings)
 	if err != nil {
 		var t T
 		return t, fmt.Errorf("cannot marshal settings: %s", err)
 	}
+	connector := &state.Connector{
+		Code:           code,
+		EndpointGroups: registeredApplications.EndpointGroups,
+	}
 	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
 	app, err := registeredApplications.New(&connectors.ApplicationEnv{
-		Settings:    s,
-		SetSettings: func(ctx context.Context, v json.Value) error { return nil },
-		HTTPClient:  httpClient,
+		Settings:   newSettingsStore(s),
+		HTTPClient: httpClient,
+	})
+	return app.(T), err
+}
+
+// NewDatabase returns an instance of the database connector with the specified
+// code for testing purposes. Settings are the connection settings.
+//
+// It panics if no database connector with the specified code has been
+// registered.
+func NewDatabase[T any](code string, settings any) (T, error) {
+	registeredDatabases := connectors.RegisteredDatabase(code)
+	s, err := json.Marshal(settings)
+	if err != nil {
+		var t T
+		return t, fmt.Errorf("cannot marshal settings: %s", err)
+	}
+	app, err := registeredDatabases.New(&connectors.DatabaseEnv{
+		Settings: newSettingsStore(s),
 	})
 	return app.(T), err
 }
@@ -112,4 +128,26 @@ func TransformEvent(schema types.Type, event map[string]any, mapping map[string]
 		return nil, err
 	}
 	return m.Transform(event, mappings.Create)
+}
+
+// settingsStore implements connectors.SettingsStore.
+type settingsStore struct {
+	settings json.Value
+}
+
+func newSettingsStore(settings json.Value) *settingsStore {
+	return &settingsStore{settings: settings}
+}
+
+func (s *settingsStore) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(s.settings, dst)
+}
+
+func (s *settingsStore) Store(ctx context.Context, src any) error {
+	settings, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	s.settings = settings
+	return nil
 }

@@ -34,7 +34,7 @@ func (warehouse *PostgreSQL) QueryReadOnly(ctx context.Context, query string) (w
 	if err := readonlysql.ValidateReadOnly(query); err != nil {
 		return nil, 0, err
 	}
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return nil, 0, err
 	}

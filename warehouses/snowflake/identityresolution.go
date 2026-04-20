@@ -186,7 +186,10 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	if err != nil {
 		return snowflake(err)
 	}
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
 	_, err = db.ExecContext(ctxMulti, query)
 	if err != nil {
 		return snowflake(err)

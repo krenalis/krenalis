@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"crypto/ed25519"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -35,6 +36,33 @@ func parseEnvSettings() (*Settings, error) {
 	}
 
 	settings := &Settings{}
+
+	if kms, ok := envVars.Lookup("KRENALIS_KMS"); ok {
+		backend, rawValue, found := strings.Cut(kms, ":")
+		if !found {
+			return nil, errors.New("KRENALIS_KMS must be in the form 'local:<base64>' or 'aws:<kms-key-id-or-arn>'")
+		}
+		switch backend {
+		case "local":
+			decodedValue, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(rawValue, "="))
+			if err != nil {
+				return nil, errors.New("KRENALIS_KMS local value is not valid base64")
+			}
+			if n := len(decodedValue); n != 32 {
+				clear(decodedValue)
+				return nil, fmt.Errorf("KRENALIS_KMS local value decodes to %d bytes, expected 32", n)
+			}
+		case "aws":
+			if rawValue == "" {
+				return nil, errors.New("KRENALIS_KMS aws value is empty")
+			}
+		default:
+			return nil, errors.New("KRENALIS_KMS must be in the form 'local:<base64>' or 'aws:<kms-key-id-or-arn>'")
+		}
+		settings.Kms = kms
+	} else {
+		return nil, errors.New("KRENALIS_KMS is not set")
+	}
 
 	if delay := envVars.Get("KRENALIS_TERMINATION_DELAY"); delay != "" {
 		delay, err := time.ParseDuration(delay)
@@ -388,9 +416,6 @@ func parseEnvSettings() (*Settings, error) {
 		settings.Transformers.Local.SudoUser = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_SUDO_USER")
 		settings.Transformers.Local.DoasUser = envVars.Get("KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER")
 	case "aws-lambda":
-		settings.Transformers.Lambda.AccessKeyID = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
-		settings.Transformers.Lambda.SecretAccessKey = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
-		settings.Transformers.Lambda.Region = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_REGION")
 		settings.Transformers.Lambda.Role = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_ROLE")
 		settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
 		settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")

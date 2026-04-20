@@ -15,7 +15,10 @@ import (
 func (warehouse *Snowflake) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
 	// TODO(Gianluca): this should be tested on a Snowflake warehouse. See
 	// https://github.com/krenalis/krenalis/issues/1665.
-	db := warehouse.openDB()
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return nil, 0, snowflake(err)
+	}
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, 0, snowflake(err)

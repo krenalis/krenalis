@@ -7,6 +7,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"io"
 	"log/slog"
 	"math"
@@ -14,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -46,14 +48,22 @@ type sessionCookie struct {
 	Member       int
 }
 
+// cookieKeysFunc loads the hash key and block key used to sign and encrypt
+// session cookies.
+type cookieKeysFunc func(context.Context) ([]byte, []byte, error)
+
 const (
 	sessionCookieName = "krenalis_session"
 	sessionCookiePath = "/v1/"
 )
 
 type apisServer struct {
-	core                   *core.Core
-	secureCookie           *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+	core    *core.Core
+	cookies struct {
+		sync.Mutex
+		*securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+	}
+	cookieKeys             cookieKeysFunc
 	mux                    *http.ServeMux
 	runsOnHTTPS            bool
 	javaScriptSDKURL       string
@@ -80,6 +90,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 
 	s := &apisServer{
 		core:                   core,
+		cookieKeys:             core.CookieKeys,
 		runsOnHTTPS:            runsOnHTTPS,
 		javaScriptSDKURL:       javaScriptSDKURL,
 		externalURL:            externalURL,
@@ -93,11 +104,6 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	if workosClientID != "" {
 		s.workos = &workosAuth{clientID: workosClientID, apiKey: workosAPIKey}
 	}
-
-	encryptionKey := core.EncryptionKey()
-	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
-	s.secureCookie = securecookie.New(hashKey, blockKey)
-	s.secureCookie.MaxAge(sessionMaxAge)
 
 	s.mux = http.NewServeMux()
 	for pattern, handler := range endpoints(s) {
@@ -196,7 +202,11 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		return nil, nil, 0, errors.Unauthorized("Authorization header with the API key is not present in the request")
 	}
 	session := &sessionCookie{}
-	err = s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
+	se, err := s.secureCookie(r.Context())
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	err = se.Decode(sessionCookieName, cookie.Value, session)
 	if err != nil {
 		return nil, nil, 0, errInvalidSessionCookie
 	}
@@ -366,7 +376,11 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 
 	// Store the session.
 	sc := &sessionCookie{Organization: org.ID, Member: memberID}
-	value, err := s.secureCookie.Encode(sessionCookieName, sc)
+	se, err := s.secureCookie(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	value, err := se.Encode(sessionCookieName, sc)
 	if err != nil {
 		return nil, err
 	}
@@ -441,20 +455,43 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 		return nil, errors.Unauthorized("no Krenalis member found for this WorkOS account")
 	}
 
+	// Store the session.
 	sc := &sessionCookie{Organization: org.ID, Member: memberID}
-	value, err := s.secureCookie.Encode(sessionCookieName, sc)
+	se, err := s.secureCookie(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	writeSessionCookie(w, &http.Cookie{
+	value, err := se.Encode(sessionCookieName, sc)
+	if err != nil {
+		return nil, err
+	}
+
+	c := &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    value,
 		Path:     sessionCookiePath,
 		Secure:   s.runsOnHTTPS,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-	})
+	}
+	writeSessionCookie(w, c)
 	return []any{memberID, nil}, nil
+}
+
+// secureCookie returns the *securecookie.SecureCookie instance.
+func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCookie, error) {
+	s.cookies.Lock()
+	defer s.cookies.Unlock()
+	if s.cookies.SecureCookie != nil {
+		return s.cookies.SecureCookie, nil
+	}
+	hashKey, blockKey, err := s.cookieKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.cookies.SecureCookie = securecookie.New(hashKey, blockKey)
+	s.cookies.SecureCookie.MaxAge(sessionMaxAge)
+	return s.cookies.SecureCookie, nil
 }
 
 // parseID parses a decimal identifier in the form /^[1-9][0-9]*$/.

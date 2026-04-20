@@ -99,15 +99,13 @@ func Test_Merge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	wh, err := warehouses.Registered("Snowflake").New(&warehouses.Config{
-		Settings: settings,
-	})
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(settings))
+	defer dw.Close()
+
+	db, err := dw.(*Snowflake).openDB(t.Context())
 	if err != nil {
 		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
 	}
-	defer wh.Close()
-
-	db := wh.(*Snowflake).openDB()
 
 	// Create the table.
 	create := bytes.NewBufferString("CREATE TABLE " + quoteIdent(table.Name) + " (\n\t")
@@ -140,7 +138,7 @@ func Test_Merge(t *testing.T) {
 	for i := range table.Columns {
 		row2[i] = nil
 	}
-	err = wh.Merge(context.Background(), table, [][]any{row1, row2}, nil)
+	err = dw.Merge(context.Background(), table, [][]any{row1, row2}, nil)
 	if err != nil {
 		t.Fatalf("cannot merge: %s", err)
 	}
@@ -150,7 +148,7 @@ func Test_Merge(t *testing.T) {
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
-	rows, count, err := wh.Query(context.Background(), query, true)
+	rows, count, err := dw.Query(context.Background(), query, true)
 	if err != nil {
 		t.Fatalf("cannot query: %s", err)
 	}
@@ -243,4 +241,16 @@ func Test_Merge(t *testing.T) {
 	if err = rows.Err(); err != nil {
 		t.Fatalf("unexpected error scanning rows: %s", err)
 	}
+}
+
+type testSettingsLoader struct {
+	settings json.Value
+}
+
+func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
+	return &testSettingsLoader{settings: settings}
+}
+
+func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(loader.settings, dst)
 }

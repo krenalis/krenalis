@@ -6,8 +6,6 @@ package connectors
 
 import (
 	"reflect"
-
-	"github.com/krenalis/krenalis/tools/json"
 )
 
 // WebhookSpec represents a webhook connector specification.
@@ -38,11 +36,8 @@ func (spec WebhookSpec) New(env *WebhookEnv) (any, error) {
 // WebhookEnv is the environment for a webhook connector.
 type WebhookEnv struct {
 
-	// Settings is the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 }
 
 // WebhookNewFunc represents functions that create new webhook connector

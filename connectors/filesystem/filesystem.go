@@ -78,19 +78,11 @@ func New(env *connectors.FileStorageEnv) (*FileSystem, error) {
 		}
 	}
 
-	c := FileSystem{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for file system")
-		}
-	}
-	return &c, nil
+	return &FileSystem{env: env}, nil
 }
 
 type FileSystem struct {
-	env      *connectors.FileStorageEnv
-	settings *innerSettings
+	env *connectors.FileStorageEnv
 }
 
 type innerSettings struct {
@@ -114,7 +106,12 @@ func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, t
 		return nil, time.Time{}, rewritePathError(err)
 	}
 	var rc io.ReadCloser = f
-	if fs.settings.SimulateHighIOLatency {
+	var s innerSettings
+	err = fs.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	if s.SimulateHighIOLatency {
 		rc = &highLatencyReadCloser{rc}
 	}
 	return rc, fi.ModTime().UTC(), nil
@@ -126,8 +123,9 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 	switch event {
 	case "load":
 		var s innerSettings
-		if fs.settings != nil {
-			s = *fs.settings
+		err := fs.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -181,11 +179,16 @@ func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType 
 			return
 		}
 	}()
-	if fs.settings.SimulateHighIOLatency {
+	var s innerSettings
+	err = fs.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	if s.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	_, err = io.Copy(f, r)
-	if fs.settings.SimulateHighIOLatency {
+	if s.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	err2 := f.Close()
@@ -195,7 +198,7 @@ func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType 
 	if err2 != nil {
 		return rewritePathError(err2)
 	}
-	if fs.settings.SimulateHighIOLatency {
+	if s.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	err = os.Rename(tmpPath, path)
@@ -238,16 +241,7 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 	if err != nil {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = fs.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	fs.settings = &s
-	return nil
+	return fs.env.Settings.Store(ctx, s)
 }
 
 // rewritePathError, if err is a *fs.PathError error, returns a new

@@ -53,19 +53,11 @@ func init() {
 
 // New returns a new connector instance for Excel.
 func New(env *connectors.FileEnv) (*Excel, error) {
-	c := Excel{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Excel")
-		}
-	}
-	return &c, nil
+	return &Excel{env: env}, nil
 }
 
 type Excel struct {
-	env      *connectors.FileEnv
-	settings *innerSettings
+	env *connectors.FileEnv
 }
 
 type innerSettings struct {
@@ -102,6 +94,12 @@ func (xl *Excel) Read(ctx context.Context, r io.Reader, sheet string, records co
 	}
 	defer rows.Close()
 
+	var s innerSettings
+	err = xl.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+
 	var nameOfHeader map[string]string
 
 	first := true
@@ -115,7 +113,7 @@ func (xl *Excel) Read(ctx context.Context, r io.Reader, sheet string, records co
 		if first {
 			columns := make([]types.Property, len(record))
 			for i := range columns {
-				if xl.settings.HasColumnNames {
+				if s.HasColumnNames {
 					header := record[i]
 					name, ok := types.PropertyName(header)
 					if !ok {
@@ -148,7 +146,7 @@ func (xl *Excel) Read(ctx context.Context, r io.Reader, sheet string, records co
 				return err
 			}
 			first = false
-			if xl.settings.HasColumnNames {
+			if s.HasColumnNames {
 				continue
 			}
 		}
@@ -168,8 +166,9 @@ func (xl *Excel) ServeUI(ctx context.Context, event string, settings json.Value,
 	switch event {
 	case "load":
 		var s innerSettings
-		if xl.settings != nil {
-			s = *xl.settings
+		err := xl.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -269,16 +268,7 @@ func (xl *Excel) saveSettings(ctx context.Context, settings json.Value, role con
 	if role != connectors.Source {
 		s.HasColumnNames = false
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = xl.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	xl.settings = &s
-	return nil
+	return xl.env.Settings.Store(ctx, s)
 }
 
 // columnNumberToName returns a column name from a column number.

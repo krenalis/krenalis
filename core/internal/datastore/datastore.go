@@ -5,7 +5,6 @@
 package datastore
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -19,10 +18,11 @@ import (
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // ErrWarehousePlatformNotExist is returned by the
-// Datastore.NormalizeWarehouseSettings method when the provided warehouse
+// Datastore.ValidateWarehouseSettings method when the provided warehouse
 // platform does not exist.
 var ErrWarehousePlatformNotExist = errors.New("warehouse platform does not exist")
 
@@ -73,43 +73,37 @@ func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 	return ds, nil
 }
 
-// CanInitialize indicates whether the warehouse with the provided name and
+// CanInitialize indicates whether the warehouse with the provided platform and
 // settings can be initialized.
 //
 // It returns a *warehouses.WarehouseSettingsError error if the settings are not
 // valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
 // not initializable, and *UnavailableError if an error occurred with the data
 // warehouse.
-func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings json.Value) error {
+func (ds *Datastore) CanInitialize(ctx context.Context, platform string, settings json.Value) error {
 	ds.mustBeOpen()
-	dw, err := getWarehouseInstance(name, settings)
-	if err != nil {
-		return err
-	}
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
 	defer dw.Close()
-	err = dw.CanInitialize(ctx)
+	err := dw.CanInitialize(ctx)
 	if err != nil {
-		return err
+		return unavailableError(err)
 	}
-	return dw.Close()
+	return unavailableError(dw.Close())
 }
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
 // that datastore's warehouse access with these settings is read-only (at least
 // on the Krenalis tables), returning a *warehouses.WarehouseSettingsNotReadOnly
 // error in case it is not, explaining the reason.
-func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings json.Value) error {
+func (ds *Datastore) CheckMCPSettings(ctx context.Context, platform string, settings json.Value) error {
 	ds.mustBeOpen()
-	dw, err := getWarehouseInstance(name, settings)
-	if err != nil {
-		return err
-	}
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
 	defer dw.Close()
-	err = dw.CheckReadOnlyAccess(ctx)
+	err := dw.CheckReadOnlyAccess(ctx)
 	if err != nil {
-		return err
+		return unavailableError(err)
 	}
-	return dw.Close()
+	return unavailableError(dw.Close())
 }
 
 // Close closes the datastore. When Close is called, no other calls to
@@ -137,42 +131,16 @@ func (ds *Datastore) Close() {
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *datastore.UnavailableError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, name string, settings json.Value, profileSchema types.Type) error {
+func (ds *Datastore) Initialize(ctx context.Context, platform string, settings json.Value, profileSchema types.Type) error {
 	ds.mustBeOpen()
-	dw, err := getWarehouseInstance(name, settings)
-	if err != nil {
-		return err
-	}
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
 	defer dw.Close()
 	profileColumns := util.PropertiesToColumns(profileSchema.Properties())
-	err = dw.Initialize(ctx, profileColumns)
+	err := dw.Initialize(ctx, profileColumns)
 	if err != nil {
-		return err
+		return unavailableError(err)
 	}
-	return dw.Close()
-}
-
-// NormalizeWarehouseSettings returns data warehouse settings in a canonical
-// form.
-//
-// It returns the ErrWarehousePlatformNotExist error if the given warehouse
-// platform does not exist, and it returns a SettingsError error if the settings
-// are not valid.
-func (ds *Datastore) NormalizeWarehouseSettings(platform string, settings json.Value) (json.Value, error) {
-	ds.mustBeOpen()
-	if _, ok := ds.state.WarehousePlatform(platform); !ok {
-		return nil, ErrWarehousePlatformNotExist
-	}
-	dw, err := getWarehouseInstance(platform, settings)
-	if err != nil {
-		return nil, err
-	}
-	settings = dw.Settings()
-	err = dw.Close()
-	if err != nil {
-		return nil, err
-	}
-	return settings, nil
+	return unavailableError(dw.Close())
 }
 
 func (ds *Datastore) Store(workspace int) *Store {
@@ -181,6 +149,29 @@ func (ds *Datastore) Store(workspace int) *Store {
 	store := ds.store[workspace]
 	ds.mu.Unlock()
 	return store
+}
+
+// ValidateWarehouseSettings validates data warehouse settings and returns them
+// in canonical form.
+//
+// It returns ErrWarehousePlatformNotExist if the given warehouse platform does
+// not exist, and *warehouses.SettingsError if the settings are invalid.
+func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, platform string, settings json.Value) (json.Value, error) {
+	ds.mustBeOpen()
+	if _, ok := ds.state.WarehousePlatform(platform); !ok {
+		return nil, ErrWarehousePlatformNotExist
+	}
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
+	defer dw.Close()
+	s, err := dw.ValidateSettings(ctx)
+	if err != nil {
+		return nil, unavailableError(err)
+	}
+	err = dw.Close()
+	if err != nil {
+		return nil, unavailableError(err)
+	}
+	return s, nil
 }
 
 // mustBeOpen panics if the datastore has been closed.
@@ -285,8 +276,8 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	// Update the warehouse if the settings have changed.
 	prevWarehouse := store.warehouse()
 	ws, _ := ds.state.Workspace(n.Workspace)
-	nextWarehouse, _ := getWarehouseInstance(ws.Warehouse.Platform, n.Settings)
-	if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
+	nextWarehouse := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
+	if n.SettingsHaveChanged() {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.
 		go func(workspace int) {
@@ -323,4 +314,16 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 		names[name] = struct{}{}
 	}
 	return nil
+}
+
+type settingsLoader struct {
+	settings json.Value
+}
+
+func newSettingsLoader(settings json.Value) *settingsLoader {
+	return &settingsLoader{settings: settings}
+}
+
+func (store *settingsLoader) Load(_ context.Context, dst any) error {
+	return store.settings.Unmarshal(dst)
 }

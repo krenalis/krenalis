@@ -19,9 +19,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/backoff"
-	"github.com/krenalis/krenalis/tools/datacrypt"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
@@ -37,7 +37,7 @@ type notification struct {
 type notifier struct {
 	db     *db.DB
 	ch     chan<- notification
-	cipher *datacrypt.Cipher
+	key    *cipher.Key
 	next   int64
 	loaded chan struct{}
 	closed struct {
@@ -101,7 +101,7 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 	}
 	const start = "NOTIFY krenalis, '"
 	b := []byte(start)
-	b, err := appendEncodeNotification(b, notifier.cipher, name, n)
+	b, err := appendEncodeNotification(ctx, b, notifier.key, name, n)
 	if err != nil {
 		return 0, err
 	}
@@ -235,7 +235,7 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 			if err != nil {
 				continue
 			}
-			data, err := notifier.cipher.Decrypt(encrypted)
+			data, err := notifier.key.Decrypt(ctx, encrypted)
 			if err != nil {
 				continue
 			}
@@ -282,7 +282,11 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 // encrypts the compressed data using AES-GCM. Finally, it Base64-encodes the
 // encrypted data, appends it to the provided byte slice, and returns the
 // extended slice.
-func appendEncodeNotification(b []byte, cipher *datacrypt.Cipher, name string, n any) ([]byte, error) {
+type payloadEncryptor interface {
+	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
+}
+
+func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEncryptor, name string, n any) ([]byte, error) {
 	var z bytes.Buffer
 	zw := gzip.NewWriter(&z)
 	defer zw.Close()
@@ -297,7 +301,7 @@ func appendEncodeNotification(b []byte, cipher *datacrypt.Cipher, name string, n
 	if err = zw.Close(); err != nil {
 		return nil, err
 	}
-	encryptedData, err := cipher.Encrypt(z.Bytes())
+	encryptedData, err := encryptor.Encrypt(ctx, z.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("cannot encrypt notification payload: %s", err)
 	}

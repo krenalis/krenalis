@@ -39,9 +39,9 @@ import (
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/core/natsopts"
 	"github.com/krenalis/krenalis/tools/backoff"
-	"github.com/krenalis/krenalis/tools/datacrypt"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -60,7 +60,6 @@ type Core struct {
 	metrics           *metrics.Collector
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
-	authTokenCipher   *datacrypt.Cipher
 	pipelineCleaner   *pipelineCleaner
 	pipelineScheduler *pipelineScheduler
 	memberEmailFrom   string
@@ -87,6 +86,7 @@ var coreActive atomic.Bool
 type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
+	Kms                           string
 	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
@@ -125,11 +125,8 @@ type OAuthCredentials struct {
 }
 
 type LambdaConfig struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
-	Role            string
-	NodeJS          struct {
+	Role   string
+	NodeJS struct {
 		Runtime string
 		Layer   string
 	}
@@ -210,10 +207,16 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
+	// Initialize the key manager.
+	kms, err := kms.New(ctx, conf.Kms)
+	if err != nil {
+		return nil, err
+	}
+
 	// Initializes the PostgreSQL database if it is empty and the option to
 	// initialize it is provided.
 	if conf.DatabaseInitialization.InitIfEmpty {
-		err = initdb.InitIfEmpty(ctx, db, conf.DatabaseInitialization.InitDockerMember)
+		err = initdb.InitIfEmpty(ctx, db, kms, conf.DatabaseInitialization.InitDockerMember)
 		if err != nil {
 			return nil, err
 		}
@@ -262,7 +265,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			}
 		}
 	}
-	core.state, err = state.New(ctx, db, connectorsOAuth, sendStats)
+	core.state, err = state.New(ctx, db, kms, connectorsOAuth, sendStats)
 	if err != nil {
 		return nil, err
 	}
@@ -271,12 +274,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			core.state.Close()
 		}
 	}()
-
-	// Create a Cipher to encrypt and decrypt auth tokens.
-	core.authTokenCipher, err = core.state.NewCipher("core.authcode")
-	if err != nil {
-		return nil, fmt.Errorf("core: cannot create auth token cipher: %s", err)
-	}
 
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
@@ -351,11 +348,11 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
 	core.mcp = map[int]warehouses.Warehouse{}
 	for _, ws := range core.state.Workspaces() {
-		var wh warehouses.Warehouse
-		if ws.Warehouse.MCPSettings != nil {
-			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
+		var dw warehouses.Warehouse
+		if ws.HasWarehouseMCPSettings() {
+			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
 		}
-		core.mcp[ws.ID] = wh
+		core.mcp[ws.ID] = dw
 	}
 	defer func() {
 		if err != nil {
@@ -551,6 +548,12 @@ func (core *Core) Close(ctx context.Context) {
 	coreActive.Store(false)
 }
 
+// CookieKeys decrypts and returns the two 32-byte keys stored in the cookie
+// key material.
+func (core *Core) CookieKeys(ctx context.Context) ([]byte, []byte, error) {
+	return core.state.CookieKeys(ctx)
+}
+
 // Connector returns the connector with the provided code.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
@@ -693,11 +696,6 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 // InstallationID returns the installation ID.
 func (core *Core) InstallationID() string {
 	return core.state.InstallationID()
-}
-
-// EncryptionKey returns the encryption key. It is 64 bytes long.
-func (core *Core) EncryptionKey() []byte {
-	return core.state.EncryptionKey()
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a
@@ -1061,14 +1059,14 @@ func (core *Core) WarehousePlatforms() []WarehousePlatform {
 	return warehousePlatforms
 }
 
-// decryptAuthorizedOAuthAccount decrypts an authorized oAuth account encrypted
+// decryptAuthorizedOAuthAccount decrypts an authorized OAuth account encrypted
 // with encryptAuthorizedOAuthAccount.
-func (core *Core) decryptAuthorizedOAuthAccount(account string) (authorizedOAuthAccount, error) {
+func (core *Core) decryptAuthorizedOAuthAccount(ctx context.Context, account string) (authorizedOAuthAccount, error) {
 	data, err := base64.RawURLEncoding.DecodeString(account)
 	if err != nil {
 		return authorizedOAuthAccount{}, err
 	}
-	data, err = core.authTokenCipher.Decrypt(data)
+	data, err = core.state.OAuthKey().Decrypt(ctx, data)
 	if err != nil {
 		return authorizedOAuthAccount{}, err
 	}
@@ -1082,12 +1080,12 @@ func (core *Core) decryptAuthorizedOAuthAccount(account string) (authorizedOAuth
 
 // encryptAuthorizedOAuthAccount encrypts an authorized oAuth account.
 // Use decryptAuthorizedOAuthAccount to decrypt it.
-func (core *Core) encryptAuthorizedOAuthAccount(account authorizedOAuthAccount) (string, error) {
+func (core *Core) encryptAuthorizedOAuthAccount(ctx context.Context, account authorizedOAuthAccount) (string, error) {
 	token, err := json.Marshal(account)
 	if err != nil {
 		return "", err
 	}
-	encrypted, err := core.authTokenCipher.Encrypt(token)
+	encrypted, err := core.state.OAuthKey().Encrypt(ctx, token)
 	if err != nil {
 		return "", err
 	}
@@ -1491,12 +1489,12 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 // onCreateWorkspace is called when a workspace is created.
 func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
-	var wh warehouses.Warehouse
-	if ws.Warehouse.MCPSettings != nil {
-		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.MCPSettings)
+	var dw warehouses.Warehouse
+	if ws.HasWarehouseMCPSettings() {
+		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
 	}
 	core.mcpMu.Lock()
-	core.mcp[ws.ID] = wh
+	core.mcp[ws.ID] = dw
 	core.mcpMu.Unlock()
 }
 
@@ -1556,61 +1554,29 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 
 // onUpdateWarehouse is called when a warehouse is updated.
 func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
-
-	// Update the MCP warehouse if the settings have changed.
-	core.mcpMu.Lock()
-	prevWarehouse := core.mcp[n.Workspace]
-	core.mcpMu.Unlock()
+	if !n.MCPSettingsHaveChanged() {
+		return
+	}
+	var newWarehouse, oldWarehouse warehouses.Warehouse
 	ws, _ := core.state.Workspace(n.Workspace)
-
-	// The MCP settings were and have remained unset (nil).
-	if prevWarehouse == nil && n.MCPSettings == nil {
-		// Nothing to do.
-		return
+	if ws.HasWarehouseMCPSettings() {
+		// Open the new warehouse.
+		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
 	}
-
-	// The MCP settings changed from set to unset (nil).
-	if prevWarehouse != nil && n.MCPSettings == nil {
-		core.mcpMu.Lock()
-		core.mcp[n.Workspace] = nil
-		core.mcpMu.Unlock()
-		// Close the previous warehouse.
-		go func(workspace int) {
-			err := prevWarehouse.Close()
-			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
-			}
-		}(ws.ID)
-		return
-	}
-
-	// The MCP settings were unset (nil) and have now been set.
-	if prevWarehouse == nil && n.MCPSettings != nil {
-		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
-		core.mcpMu.Lock()
-		core.mcp[n.Workspace] = nextWarehouse
-		core.mcpMu.Unlock()
-		return
-	}
-
-	// The MCP settings were set and have been set again with the same value.
-	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Platform, n.MCPSettings)
-	if bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
-		return
-	}
-
-	// The MCP settings were set and have been set with a different value.
 	core.mcpMu.Lock()
-	core.mcp[n.Workspace] = nextWarehouse
+	oldWarehouse = core.mcp[n.Workspace]
+	core.mcp[n.Workspace] = newWarehouse
 	core.mcpMu.Unlock()
-	// Close the previous warehouse.
+	if oldWarehouse == nil {
+		return
+	}
+	// Close the old warehouse.
 	go func(workspace int) {
-		err := prevWarehouse.Close()
+		err := oldWarehouse.Close()
 		if err != nil {
 			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 		}
 	}(ws.ID)
-
 }
 
 // startAlterProfileSchema starts the alter of the profile schema.
@@ -1762,21 +1728,6 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 	return categoryNames
 }
 
-// getMCPWarehouseInstance returns a warehouses.Warehouse instance that can be
-// used to implement features for the MCP server.
-// platform is the warehouse platform and settings are the settings for
-// connecting to it.
-//
-// The caller must call Close on the returned instance to release any associated
-// resources when it is no longer needed.
-func getMCPWarehouseInstance(platform string, settings json.Value) (warehouses.Warehouse, error) {
-	wh, err := warehouses.Registered(platform).New(&warehouses.Config{Settings: settings})
-	if err != nil {
-		return nil, err
-	}
-	return wh, nil
-}
-
 func isValidMemberToken(token string) bool {
 	if len(token) != 44 {
 		return false
@@ -1811,4 +1762,24 @@ func (s OrganizationSort) String() string {
 		return "name"
 	}
 	panic("invalid organization sort")
+}
+
+// mcpSettingsLoader is a workspaces.SettingsLoader that load the MCP settings
+// from the state.
+type mcpSettingsLoader struct {
+	ws *state.Workspace
+}
+
+func newMCPStateSettingsLoader(ws *state.Workspace) *mcpSettingsLoader {
+	return &mcpSettingsLoader{ws: ws}
+}
+
+// Load decrypts MCP settings and stores the result in the value pointed to by
+// dst. If
+func (loader *mcpSettingsLoader) Load(ctx context.Context, dst any) error {
+	s, err := loader.ws.WarehouseMCPSettings(ctx)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(s, dst)
 }

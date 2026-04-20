@@ -47,53 +47,17 @@ func init() {
 }
 
 // New returns a new PostgreSQL data warehouse instance.
-// It returns a *warehouses.SettingsError if the settings are not valid.
-func New(conf *warehouses.Config) (*PostgreSQL, error) {
-	var s psSettings
-	err := json.Unmarshal(conf.Settings, &s)
-	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
-	}
-	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
-	}
-	// Validate Port.
-	if s.Port < 1 || s.Port > 65535 {
-		return nil, warehouses.SettingsErrorf("port must be in range [1,65535]")
-	}
-	// Validate Username.
-	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
-	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n > 100 {
-		return nil, warehouses.SettingsErrorf("password cannot be longer than 100 characters")
-	}
-	// Validate Database.
-	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, warehouses.SettingsErrorf("database length in bytes must be in range [1,63]")
-	}
-	// Validate Schema.
-	if n := len(s.Schema); n < 1 || n > 63 {
-		return nil, warehouses.SettingsErrorf("schema length in bytes must be in range [1,63]")
-	}
-	if !warehouses.IsValidSchemaName(s.Schema) {
-		return nil, warehouses.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
-	}
-	if strings.HasPrefix(s.Schema, "pg_") {
-		return nil, warehouses.SettingsErrorf("schema cannot start with 'pg_'")
-	}
-	return &PostgreSQL{settings: &s}, nil
+func New(settings warehouses.SettingsLoader) *PostgreSQL {
+	return &PostgreSQL{settings: settings}
 }
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
-	settings *psSettings
+	settings warehouses.SettingsLoader
 }
 
-type psSettings struct {
+type pgSettings struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
 	Username string `json:"username"`
@@ -107,7 +71,7 @@ type psSettings struct {
 // additional details.
 func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -190,7 +154,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 	if where == nil {
 		return errors.New("where is nil")
 	}
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -211,7 +175,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 	prometheus.Increment("warehouses.PostgreSQL.Merge.calls", 1)
 	prometheus.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -241,7 +205,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
 	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
 
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -345,15 +309,9 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	return nil
 }
 
-// Settings returns the data warehouse settings.
-func (warehouse *PostgreSQL) Settings() json.Value {
-	s, _ := json.Marshal(warehouse.settings)
-	return s
-}
-
 // Truncate truncates the specified table.
 func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -375,7 +333,7 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline 
 	}
 	b.WriteString(" WHERE \"_pipeline\" = ")
 	b.WriteString(strconv.Itoa(pipeline))
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -383,14 +341,45 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline 
 	return err
 }
 
-// connection returns the PostgreSQL connection pool.
-func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool, error) {
+// ValidateSettings validates the settings.
+func (warehouse *PostgreSQL) ValidateSettings(ctx context.Context) (json.Value, error) {
+	var s pgSettings
+	err := warehouse.settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
+	err = validateSettings(&s)
+	if err != nil {
+		return nil, err
+	}
+	v, _ := json.Marshal(s)
+	return v, nil
+}
+
+// connectionPool returns the PostgreSQL connection pool.
+// If returnSchema is true, it also returns the database schema.
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bool) (*pgxpool.Pool, string, error) {
+
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
-	if warehouse.pool != nil {
-		return warehouse.pool, nil
+
+	var s pgSettings
+	if warehouse.pool == nil || returnSchema {
+		err := warehouse.settings.Load(ctx, &s)
+		if err != nil {
+			return nil, "", err
+		}
+		err = validateSettings(&s)
+		if err != nil {
+			return nil, "", err
+		}
 	}
-	s := warehouse.settings
+
+	if warehouse.pool != nil {
+		return warehouse.pool, s.Schema, nil
+	}
+
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(s.Username, s.Password),
@@ -402,20 +391,21 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool,
 	}
 	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	warehouse.pool = pool
-	return pool, nil
+
+	return pool, s.Schema, nil
 }
 
 // execTransaction executes the function f within a transaction. If f returns an
 // error or panics, the transaction will be rolled back.
 func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx) error) error {
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -437,7 +427,7 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 
 // profilesVersion returns the version of the "krenalis_profiles" table.
 func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return 0, err
 	}
@@ -447,6 +437,42 @@ func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return v, nil
+}
+
+// validateSettings validates the settings.
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func validateSettings(s *pgSettings) error {
+	// Validate Host.
+	if n := len(s.Host); n == 0 || n > 253 {
+		return warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
+	}
+	// Validate Port.
+	if s.Port < 1 || s.Port > 65535 {
+		return warehouses.SettingsErrorf("port must be in range [1,65535]")
+	}
+	// Validate Username.
+	if n := len(s.Username); n < 1 || n > 63 {
+		return warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
+	}
+	// Validate Password.
+	if n := utf8.RuneCountInString(s.Password); n > 100 {
+		return warehouses.SettingsErrorf("password cannot be longer than 100 characters")
+	}
+	// Validate Database.
+	if n := len(s.Database); n < 1 || n > 63 {
+		return warehouses.SettingsErrorf("database length in bytes must be in range [1,63]")
+	}
+	// Validate Schema.
+	if n := len(s.Schema); n < 1 || n > 63 {
+		return warehouses.SettingsErrorf("schema length in bytes must be in range [1,63]")
+	}
+	if !warehouses.IsValidSchemaName(s.Schema) {
+		return warehouses.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+	}
+	if strings.HasPrefix(s.Schema, "pg_") {
+		return warehouses.SettingsErrorf("schema cannot start with 'pg_'")
+	}
+	return nil
 }
 
 // copyForIdentities implements the pgx.CopyFromSource interface.

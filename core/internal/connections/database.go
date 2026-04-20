@@ -85,8 +85,7 @@ func (c *Connections) Database(connection *state.Connection) *Database {
 		timeLayouts: &connector.TimeLayouts,
 	}
 	inner, err := connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
-		Settings:    connection.Settings,
-		SetSettings: setConnectionSettingsFunc(c.state, connection),
+		Settings: newConnectionSettingStore(c.state, connection),
 	})
 	database.inner = inner.(databaseConnection)
 	database.err = connectorError(err)

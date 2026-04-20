@@ -7,17 +7,20 @@ package initdb
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/kms"
 )
 
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
 // If dockerMember is true, it also initializes the Docker member.
-func InitIfEmpty(ctx context.Context, db *db.DB, dockerMember bool) error {
+func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool) error {
+
 	isEmpty, err := databaseIsEmpty(ctx, db)
 	if err != nil {
 		return fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
@@ -27,6 +30,28 @@ func InitIfEmpty(ctx context.Context, db *db.DB, dockerMember bool) error {
 		return nil
 	}
 	slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
+
+	// Generate the kms-encrypted data keys.
+	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey []byte
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	done := make(chan error, 3)
+	go func() {
+		var err error
+		kmsEncryptedCookieKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 64)
+		done <- err
+	}()
+	go func() {
+		var err error
+		kmsEncryptedOAuthKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
+		done <- err
+	}()
+	go func() {
+		var err error
+		kmsEncryptedNotificationKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
+		done <- err
+	}()
+
 	// Initialize the PostgreSQL database in a transaction, so if it is
 	// fails, there is no need to manually empty the database.
 	err = db.Transaction(ctx, func(tx *dbpkg.Tx) error {
@@ -44,8 +69,19 @@ func InitIfEmpty(ctx context.Context, db *db.DB, dockerMember bool) error {
 			}
 			slog.Info("Docker member initialized")
 		}
+		for range 3 {
+			if err = <-done; err != nil {
+				return fmt.Errorf("failed to generate key using KMS: %s", err)
+			}
+		}
+		err = initializeKmsEncryptedKeys(ctx, tx, kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey)
+		if err != nil {
+			return err
+		}
+		slog.Info("Admin console and notifications keys created")
 		return nil
 	})
+
 	return err
 }
 
@@ -119,4 +155,18 @@ func initializeDockerMember(ctx context.Context, tx *db.Tx) error {
 		return err
 	}
 	return err
+}
+
+// initializeKmsEncryptedKeys initializes the KMS-encrypted data keys
+// used for cookies, OAuth, and notifications.
+func initializeKmsEncryptedKeys(ctx context.Context, tx *db.Tx, cookieKey, oauthKey, notificationKey []byte) error {
+	const query = `UPDATE metadata SET kms_encrypted_cookie_key = $1, kms_encrypted_oauth_key = $2, kms_encrypted_notification_key = $3 WHERE singleton`
+	result, err := tx.Exec(ctx, query, cookieKey, oauthKey, notificationKey)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() != 1 {
+		return errors.New("row is missing from table 'metadata'")
+	}
+	return nil
 }

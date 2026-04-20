@@ -15,7 +15,7 @@ import (
 // RawQuery executes a query and returns the results and the number of columns
 // in each row.
 func (warehouse *PostgreSQL) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -17,10 +17,6 @@ import (
 
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return err
-	}
 	const query = `SELECT
 		CASE
 			"c"."relkind"
@@ -40,7 +36,11 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		AND "n"."nspname" NOT LIKE 'pg\_toast%'
 	ORDER BY
 		"c"."relname"`
-	rows, err := pool.Query(ctx, query, warehouse.settings.Schema)
+	pool, schema, err := warehouse.connectionPool(ctx, true)
+	if err != nil {
+		return err
+	}
+	rows, err := pool.Query(ctx, query, schema)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ var sortedErrObjects = []string{"table", "index", "type", "view", "materialized 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
 // tables, types, etc...) on the data warehouse.
 func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, profileColumns []warehouses.Column, repair bool) error {
-	pool, err := warehouse.connectionPool(ctx)
+	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}

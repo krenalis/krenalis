@@ -51,20 +51,12 @@ func init() {
 
 // New returns a new connector instance for MySQL.
 func New(env *connectors.DatabaseEnv) (*MySQL, error) {
-	c := MySQL{env: env}
-	if len(env.Settings) > 0 {
-		err := json.Value(env.Settings).Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for MySQL")
-		}
-	}
-	return &c, nil
+	return &MySQL{env: env}, nil
 }
 
 type MySQL struct {
-	env      *connectors.DatabaseEnv
-	settings *innerSettings
-	db       *sql.DB
+	env *connectors.DatabaseEnv
+	db  *sql.DB
 }
 
 // Close closes the database.
@@ -96,7 +88,7 @@ func (my *MySQL) Columns(ctx context.Context, table string) ([]connectors.Column
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (my *MySQL) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
-	if err := my.openDB(); err != nil {
+	if err := my.openDB(ctx); err != nil {
 		return err
 	}
 	// Acquire a connection.
@@ -132,10 +124,12 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value,
 	switch event {
 	case "load":
 		var s innerSettings
-		if my.settings == nil {
+		err := my.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Port == 0 {
 			s.Port = 3306
-		} else {
-			s = *my.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -165,11 +159,16 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value,
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (my *MySQL) openDB() error {
+func (my *MySQL) openDB(ctx context.Context) error {
 	if my.db != nil {
 		return nil
 	}
-	mysqlConnector, err := mysql.NewConnector(my.settings.config())
+	var s innerSettings
+	err := my.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
+	mysqlConnector, err := mysql.NewConnector(config(&s))
 	if err != nil {
 		return err
 	}
@@ -183,7 +182,7 @@ func (my *MySQL) openDB() error {
 // writable indicates whether the resulting columns should be marked as
 // writable.
 func (my *MySQL) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
-	if err := my.openDB(); err != nil {
+	if err := my.openDB(ctx); err != nil {
 		return nil, nil, err
 	}
 	rows, err := my.db.QueryContext(ctx, query)
@@ -253,16 +252,7 @@ func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test boo
 	if err != nil || test {
 		return err
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = my.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	my.settings = &s
-	return nil
+	return my.env.Settings.Store(ctx, &s)
 }
 
 type innerSettings struct {
@@ -273,7 +263,7 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-func (s *innerSettings) config() *mysql.Config {
+func config(s *innerSettings) *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
@@ -287,7 +277,7 @@ func (s *innerSettings) config() *mysql.Config {
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *innerSettings) error {
-	mysqlConnector, err := mysql.NewConnector(settings.config())
+	mysqlConnector, err := mysql.NewConnector(config(settings))
 	if err != nil {
 		return err
 	}

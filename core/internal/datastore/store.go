@@ -38,6 +38,32 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
+// UnavailableError represents an error with the data warehouse.
+type UnavailableError struct {
+	Err error
+}
+
+func (err *UnavailableError) Error() string {
+	return fmt.Sprintf("data warehouse: %s", err.Err)
+}
+
+// unavailableError wraps err in *UnavailableError if it is an internal error.
+func unavailableError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch err.(type) {
+	case
+		*warehouses.RejectedReadOnlyQueryError,
+		*warehouses.NonInitializableError,
+		*warehouses.OperationError,
+		*warehouses.SettingsError,
+		*warehouses.SettingsNotReadOnly:
+		return err
+	}
+	return &UnavailableError{Err: err}
+}
+
 // destinationsProfilesTable represents the krenalis_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
 	Name: "krenalis_destination_profiles",
@@ -73,16 +99,31 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		eventIdentityWriters: map[int]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	wh, err := getWarehouseInstance(ws.Warehouse.Platform, ws.Warehouse.Settings)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
-	}
-	store.wh.Store(wh)
+	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
+	store.wh.Store(dw)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
 	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
 	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
+}
+
+// stateSettingsLoader is a workspaces.SettingsLoader that load the settings
+// from the state.
+type stateSettingsLoader struct {
+	ws *state.Workspace
+}
+
+func newStateSettingsLoader(ws *state.Workspace) *stateSettingsLoader {
+	return &stateSettingsLoader{ws: ws}
+}
+
+func (loader *stateSettingsLoader) Load(ctx context.Context, settings any) error {
+	s, err := loader.ws.WarehouseSettings(ctx)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(s, settings)
 }
 
 // AlterProfileSchema alters the profile schema.
@@ -536,11 +577,9 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	if err != nil {
 		return err
 	}
+
 	// Count the users on the warehouse that will be connected.
-	dw, err := getWarehouseInstance(ws.Warehouse.Platform, toSettings)
-	if err != nil {
-		return err
-	}
+	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
 	defer func() {
 		err := dw.Close()
 		if err != nil {
@@ -550,11 +589,11 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	// Even if rows is not read, it is assigned because it must be closed.
 	rows, count2, err := dw.Query(ctx, query, true)
 	if err != nil {
-		return err
+		return unavailableError(err)
 	}
 	err = rows.Close()
 	if err != nil {
-		return err
+		return unavailableError(err)
 	}
 	// If the number of users is different, it means (except for the "unlucky"
 	// cases where Identity Resolution is in progress) that an attempt is being
@@ -774,5 +813,5 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 
 // warehouse returns the store's warehouse.
 func (store *Store) warehouse() warehouses.Warehouse {
-	return warehouse{inner: store.wh.Load().(warehouses.Warehouse)}
+	return store.wh.Load().(warehouses.Warehouse)
 }

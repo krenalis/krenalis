@@ -7,7 +7,6 @@ package connectors
 import (
 	"reflect"
 
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -41,11 +40,8 @@ func (spec DatabaseSpec) New(env *DatabaseEnv) (any, error) {
 // DatabaseEnv is the environment for a database connector.
 type DatabaseEnv struct {
 
-	// Settings holds the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 }
 
 // DatabaseNewFunc represents functions that create new database connector

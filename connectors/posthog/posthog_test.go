@@ -27,8 +27,8 @@ import (
 
 func TestSendEvents(t *testing.T) {
 
-	posthog := newPostHogForTests(t)
-	endpoint := endpointURLForTests(t, posthog.settings)
+	posthog, settings := newPostHogForTests(t)
+	endpoint := endpointURLForTests(t, settings)
 
 	timestamp := time.Now().UTC().Truncate(time.Millisecond)
 	const sessionID int64 = 1736972405123
@@ -125,7 +125,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
-			"api_key": posthog.settings.APIKey,
+			"api_key": settings.APIKey,
 			"batch": []any{
 				map[string]any{
 					"event":       "$identify",
@@ -206,7 +206,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
-			"api_key": posthog.settings.APIKey,
+			"api_key": settings.APIKey,
 			"batch": []any{
 				map[string]any{
 					"event":       "$groupidentify",
@@ -280,7 +280,7 @@ func TestSendEvents(t *testing.T) {
 		event.Type.Values["session_id"] = explicitSessionID
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
-			"api_key": posthog.settings.APIKey,
+			"api_key": settings.APIKey,
 			"batch": []any{
 				map[string]any{
 					"event":       "Checkout Started",
@@ -355,7 +355,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
-			"api_key": posthog.settings.APIKey,
+			"api_key": settings.APIKey,
 			"batch": []any{
 				map[string]any{
 					"event":       "$pageview",
@@ -429,7 +429,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
-			"api_key": posthog.settings.APIKey,
+			"api_key": settings.APIKey,
 			"batch": []any{
 				map[string]any{
 					"event":       "$screen",
@@ -496,7 +496,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		expectedBody := marshalCanonicalJSON(map[string]any{
-			"api_key": posthog.settings.APIKey,
+			"api_key": settings.APIKey,
 			"batch": []any{
 				map[string]any{
 					"event":       "$create_alias",
@@ -685,13 +685,13 @@ func decodeRequestBody(t *testing.T, body io.Reader) json.Value {
 	return v
 }
 
-func newPostHogForTests(t *testing.T) *PostHog {
+func newPostHogForTests(t *testing.T) (*PostHog, *innerSettings) {
 	t.Helper()
 
 	var s innerSettings
 	s.APIKey = os.Getenv("KRENALIS_TEST_POSTHOG_API_KEY")
 	if s.APIKey == "" {
-		t.Fatal("expected env var KRENALIS_TEST_POSTHOG_API_KEY to be set, got empty")
+		t.Skip("the KRENALIS_TEST_POSTHOG_API_KEY environment variable is not present")
 	}
 	if len(s.APIKey) != 47 || !strings.HasPrefix(s.APIKey, "phc_") {
 		t.Fatalf("expected KRENALIS_TEST_POSTHOG_API_KEY to look like a PostHog project API key, got %q", s.APIKey)
@@ -716,7 +716,7 @@ func newPostHogForTests(t *testing.T) *PostHog {
 		}
 		s.SelfHosted = &selfHostedSettings{URL: url}
 	default:
-		t.Fatal("expected KRENALIS_TEST_POSTHOG_PROJECT_REGION or KRENALIS_TEST_POSTHOG_SELF_HOSTED_URL to be set, got none")
+		t.Skip("the KRENALIS_TEST_POSTHOG_PROJECT_REGION and KRENALIS_TEST_POSTHOG_SELF_HOSTED_URL environment variables are not present")
 	}
 
 	ph, err := testconnector.NewApplication[*PostHog]("posthog", s)
@@ -724,7 +724,7 @@ func newPostHogForTests(t *testing.T) *PostHog {
 		t.Fatalf("expected NewApplication to succeed, got %v", err)
 	}
 
-	return ph
+	return ph, &s
 }
 
 func endpointURLForTests(t *testing.T, settings *innerSettings) string {

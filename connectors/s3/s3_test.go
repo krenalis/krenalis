@@ -5,14 +5,17 @@
 package s3
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 func TestPathConvert(t *testing.T) {
-	s3 := &S3{settings: &innerSettings{Bucket: "my-example-bucket"}}
+	s3 := &S3{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{Bucket: "my-example-bucket"})}}
 	tests := []testconnector.AbsolutePathTest{
 		{Name: "a", Expected: "s3://my-example-bucket/a"},
 		{Name: "a/b", Expected: "s3://my-example-bucket/a/b"},
@@ -26,4 +29,31 @@ func TestPathConvert(t *testing.T) {
 	if err != nil {
 		t.Errorf("S3 connector: %s", err)
 	}
+}
+
+type testSettingsStore struct {
+	settings json.Value
+}
+
+func newTestSettingsStore(t *testing.T, settings any) *testSettingsStore {
+	t.Helper()
+
+	data, err := json.Marshal(settings)
+	if err != nil {
+		t.Fatalf("cannot marshal test settings: %s", err)
+	}
+	return &testSettingsStore{settings: data}
+}
+
+func (s *testSettingsStore) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(s.settings, dst)
+}
+
+func (s *testSettingsStore) Store(ctx context.Context, src any) error {
+	data, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	s.settings = data
+	return nil
 }

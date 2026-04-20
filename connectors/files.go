@@ -9,7 +9,6 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -62,11 +61,8 @@ func (spec FileSpec) New(env *FileEnv) (any, error) {
 // FileEnv is the environment for a file connector.
 type FileEnv struct {
 
-	// Settings is the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 }
 
 // FileNewFunc represents functions that create new file connector instances.

@@ -6,8 +6,6 @@ package connectors
 
 import (
 	"reflect"
-
-	"github.com/krenalis/krenalis/tools/json"
 )
 
 // MessageBrokerSpec represents a message broker connector specification.
@@ -38,11 +36,8 @@ func (spec MessageBrokerSpec) New(env *MessageBrokerEnv) (any, error) {
 // MessageBrokerEnv is the environment for a message broker connector.
 type MessageBrokerEnv struct {
 
-	// Settings is the raw settings data.
-	Settings json.Value
-
-	// SetSettings is the function used to update the settings.
-	SetSettings SetSettingsFunc
+	// Settings holds the settings.
+	Settings SettingsStore
 }
 
 // MessageBrokerNewFunc represents functions that create new message broker

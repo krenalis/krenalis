@@ -1033,7 +1033,10 @@ func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (an
 	if err != nil {
 		return nil, err
 	}
-	platform, settings, mcpSettings := ws.Warehouse()
+	platform, settings, mcpSettings, err := ws.Warehouse(r.Context())
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"platform":    platform,
 		"settings":    settings,

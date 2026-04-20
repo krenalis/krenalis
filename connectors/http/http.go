@@ -9,7 +9,6 @@ package http
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -55,19 +54,11 @@ func init() {
 
 // New returns a new connection instance for HTTP GET/HTTP POST requests.
 func New(env *connectors.FileStorageEnv) (*HTTP, error) {
-	c := HTTP{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for HTTP GET/HTTP POST")
-		}
-	}
-	return &c, nil
+	return &HTTP{env: env}, nil
 }
 
 type HTTP struct {
-	env      *connectors.FileStorageEnv
-	settings *innerSettings
+	env *connectors.FileStorageEnv
 }
 
 type innerSettings struct {
@@ -96,9 +87,14 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 			parsingQuery = true
 		}
 	}
-	host := h.settings.Host
-	if h.settings.Port != 443 {
-		host = net.JoinHostPort(host, strconv.Itoa(h.settings.Port))
+	var s innerSettings
+	err := h.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return "", err
+	}
+	host := s.Host
+	if s.Port != 443 {
+		host = net.JoinHostPort(host, strconv.Itoa(s.Port))
 	}
 	u := url.URL{
 		Scheme:   "https",
@@ -145,10 +141,12 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, r
 	switch event {
 	case "load":
 		var s innerSettings
-		if h.settings == nil {
+		err := h.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
+		}
+		if s.Port == 0 {
 			s.Port = 443
-		} else {
-			s = *h.settings
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -179,12 +177,17 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	if err != nil {
 		return err
 	}
+	var s innerSettings
+	err = h.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", u, r)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", contentType)
-	for _, header := range h.settings.Headers {
+	for _, header := range s.Headers {
 		req.Header[header.Key] = []string{header.Value}
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)
@@ -223,16 +226,7 @@ func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 			return connectors.NewInvalidSettingsError("header value length must be in range [1,10000]")
 		}
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = h.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	h.settings = &s
-	return nil
+	return h.env.Settings.Store(ctx, s)
 }
 
 func ishex(c byte) bool {

@@ -5,6 +5,8 @@
 package krenalistester
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -61,6 +63,11 @@ func PostgresWarehouseSettings() json.Value {
 
 var testsSettings *TestsSettings
 var testsSettingsMu sync.Mutex
+
+func testKMS() string {
+	key := bytes.Repeat([]byte{1}, 32)
+	return "local:" + base64.RawStdEncoding.EncodeToString(key)
+}
 
 func init() {
 	testsSettings = &TestsSettings{

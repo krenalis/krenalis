@@ -411,7 +411,14 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	}
 	n.Warehouse.Platform = warehouse.Platform
 	n.Warehouse.Mode = state.WarehouseMode(warehouse.Mode)
-	n.Warehouse.Settings = settings
+	n.Warehouse.Settings, n.Warehouse.SettingsKey, err = this.core.state.EncryptSettings(ctx, settings)
+	if err != nil {
+		return 0, err
+	}
+	n.Warehouse.MCPSettingsKey, err = this.core.state.GenerateKmsDataKey(ctx)
+	if err != nil {
+		return 0, err
+	}
 
 	// Generate the identifier.
 	n.ID, err = generateRandomID()
@@ -427,14 +434,14 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name, "+
-			" ui_profile_last_name, ui_profile_extra, warehouse_name, "+
-			"warehouse_mode, warehouse_settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+			" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
+			" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
+			" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
 			n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
 			n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
-			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra,
-			n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings)
+			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Warehouse.Platform,
+			n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
@@ -835,9 +842,9 @@ func (this *Organization) Workspaces() []*Workspace {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid.
-//   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
+//   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (json.Value, error) {
 
 	// Validate the parameters.
@@ -867,14 +874,17 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		return nil, errors.BadRequest("%s", err)
 	}
 
-	// Normalize the warehouse settings.
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(warehouse.Platform, warehouse.Settings)
+	// Validate the warehouse settings.
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, warehouse.Platform, warehouse.Settings)
 	if err != nil {
 		if err == datastore.ErrWarehousePlatformNotExist {
 			return nil, errors.Unprocessable(WarehousePlatformNotExist, "warehouse platform %s does not exist", warehouse.Platform)
 		}
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
 	}

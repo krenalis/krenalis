@@ -77,19 +77,11 @@ func init() {
 
 // New returns a new connector instance for Stripe.
 func New(env *connectors.ApplicationEnv) (*Stripe, error) {
-	c := Stripe{env: env}
-	if len(env.Settings) > 0 {
-		err := env.Settings.Unmarshal(&c.settings)
-		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of connector for Stripe")
-		}
-	}
-	return &c, nil
+	return &Stripe{env: env}, nil
 }
 
 type Stripe struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 }
 
 type innerSettings struct {
@@ -148,8 +140,9 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 	switch event {
 	case "load":
 		var s innerSettings
-		if stripe.settings != nil {
-			s = *stripe.settings
+		err := stripe.env.Settings.Load(ctx, &s)
+		if err != nil {
+			return nil, err
 		}
 		settings, _ = json.Marshal(s)
 	case "save":
@@ -301,12 +294,17 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 }
 
 func (stripe *Stripe) call(ctx context.Context, method, path string, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
+	var s innerSettings
+	err := stripe.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return err
+	}
 	req, err := bb.NewRequest(ctx, method, baseURL+path)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
+	req.Header.Set("Authorization", "Bearer "+s.APIKey)
 	req.Header.Set("Stripe-Version", "2025-08-27.basil")
 
 	if req.Method == "POST" {
@@ -354,16 +352,7 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 			return connectors.NewInvalidSettingsError("API key must contain only valid characters")
 		}
 	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = stripe.env.SetSettings(ctx, b)
-	if err != nil {
-		return err
-	}
-	stripe.settings = &s
-	return nil
+	return stripe.env.Settings.Store(ctx, s)
 }
 
 type stripeErrorResponse struct {
