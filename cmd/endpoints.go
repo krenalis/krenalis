@@ -29,7 +29,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* only Admin */
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* only Admin */
-		"DELETE /organization/{id}":                           organization.Delete,
+		"DELETE /organizations/{id}":                          organization.Delete,
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
 		"GET    /{$}":                                         api.Index,
@@ -64,7 +64,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                             api.Member,                           /* only Admin */
 		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* only Admin */
-		"GET    /organization/{id}":                           api.Organization,
+		"GET    /organizations/{id}":                          api.Organization,
 		"GET    /organizations":                               api.Organizations,
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
 		"GET    /pipelines/metrics/dates/{start}/{end}":       workspace.PipelineMetricsPerDate,
@@ -122,7 +122,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* only Admin */
 		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* only Admin */
 		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* only Admin */
-		"PUT    /organization/{id}":                           organization.Update,
+		"PUT    /organizations/{id}":                          organization.Update,
 		"PUT    /pipelines/{id}":                              pipeline.Update,
 		"PUT    /pipelines/{id}/schedule":                     pipeline.SetSchedulePeriod,
 		"PUT    /pipelines/{id}/status":                       pipeline.SetStatus,
