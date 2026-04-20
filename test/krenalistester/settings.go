@@ -66,7 +66,7 @@ var testsSettingsMu sync.Mutex
 
 func testKMS() string {
 	key := bytes.Repeat([]byte{1}, 32)
-	return "local:" + base64.RawStdEncoding.EncodeToString(key)
+	return "key:" + base64.RawStdEncoding.EncodeToString(key)
 }
 
 func init() {

@@ -16,7 +16,7 @@ func TestNewErrors(t *testing.T) {
 		uri  string
 		want string
 	}{
-		{name: "invalid URI", uri: "local", want: "kms: uri is invalid"},
+		{name: "invalid URI", uri: "key", want: "kms: uri is invalid"},
 		{name: "unsupported backend", uri: "gcp:key", want: "kms: unsupported backend"},
 		{name: "empty AWS key ID", uri: "aws:", want: "kms/aws: empty key ID"},
 	} {
@@ -35,15 +35,15 @@ func TestNewErrors(t *testing.T) {
 	}
 }
 
-// TestNewLocalSuccess verifies New returns a working local backend.
-func TestNewLocalSuccess(t *testing.T) {
+// TestNewKeySuccess verifies New returns a working key backend.
+func TestNewKeySuccess(t *testing.T) {
 
-	kms, err := New(context.Background(), "local:DJ0UMRTROH4pjY/Esh3fAErsPbdYmvsnfDCZtc9K4iU")
+	kms, err := New(context.Background(), "key:DJ0UMRTROH4pjY/Esh3fAErsPbdYmvsnfDCZtc9K4iU")
 	if err != nil {
-		t.Fatalf("expected nil error from New(local), got %v", err)
+		t.Fatalf("expected nil error from New(key), got %v", err)
 	}
 	if kms == nil {
-		t.Fatal("expected non-nil Kms from New(local), got nil")
+		t.Fatal("expected non-nil Kms from New(key), got nil")
 	}
 
 	dataKey, encryptedDataKey, err := kms.GenerateDataKey(context.Background(), 32)

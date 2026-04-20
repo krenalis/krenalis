@@ -11,7 +11,7 @@
 // plaintext key.
 //
 // The package selects an implementation from a URI of the form
-// "<backend>:<identifier>". The standard backends are "local", for a
+// "<backend>:<identifier>". The standard backends are "key", for a
 // process-local key, and "aws", for AWS KMS.
 //
 // Package kms does not encrypt application data itself; it only manages data
@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/krenalis/krenalis/tools/kms/internal/aws"
-	"github.com/krenalis/krenalis/tools/kms/internal/local"
+	"github.com/krenalis/krenalis/tools/kms/internal/key"
 )
 
 // Kms provides data key generation and decryption operations.
@@ -53,8 +53,8 @@ func New(ctx context.Context, uri string) (Kms, error) {
 	var kms Kms
 	var err error
 	switch backend {
-	case "local":
-		kms, err = local.New(identifier)
+	case "key":
+		kms, err = key.New(identifier)
 	case "aws":
 		kms, err = aws.New(ctx, identifier)
 	default:
