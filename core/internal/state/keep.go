@@ -564,10 +564,6 @@ type DeleteOrganization struct {
 	organization *Organization
 }
 
-func (n DeleteOrganization) Organization() *Organization {
-	return n.organization
-}
-
 // deleteOrganization deletes an organization.
 func (state *State) deleteOrganization(n notification) {
 	e := DeleteOrganization{}
