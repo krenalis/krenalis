@@ -87,7 +87,8 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	Kms                           string
-	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
+	OrganizationsAPIKey           string // can be empty (which means that organizations APIs cannot be used)
+	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
 	SMTP                          SMTPConfig

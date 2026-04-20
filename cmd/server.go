@@ -38,6 +38,7 @@ const telemetryLevelAll = core.TelemetryLevelAll
 
 type Settings struct {
 	Kms                    string
+	OrganizationsAPIKey    string
 	TerminationDelay       time.Duration
 	JavaScriptSDKURL       string
 	SentryTelemetryLevel   core.TelemetryLevel
@@ -109,6 +110,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	config := core.Config{
 		Kms:                           settings.Kms,
+		OrganizationsAPIKey:           settings.OrganizationsAPIKey,
 		DB:                            settings.DB,
 		NATS:                          settings.NATS,
 		MaxMindDBPath:                 settings.MaxMindDBPath,

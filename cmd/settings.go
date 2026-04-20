@@ -64,6 +64,24 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, errors.New("KRENALIS_KMS is not set")
 	}
 
+	if orgAPIKey, ok := envVars.Lookup("KRENALIS_ORGANIZATIONS_API_KEY"); ok {
+		apiKey := strings.TrimPrefix(orgAPIKey, "org_")
+		if apiKey == orgAPIKey {
+			return nil, errors.New("KRENALIS_ORGANIZATIONS_API_KEY must start with 'org_'")
+		}
+		if len(apiKey) != 32 {
+			return nil, fmt.Errorf("expected a length of KRENALIS_ORGANIZATIONS_API_KEY of 32 characters, instead it is %d characters long", len(apiKey))
+		}
+		for _, c := range apiKey {
+			switch {
+			case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9':
+			default:
+				return nil, fmt.Errorf("invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character %v", c)
+			}
+		}
+		settings.OrganizationsAPIKey = orgAPIKey
+	}
+
 	if delay := envVars.Get("KRENALIS_TERMINATION_DELAY"); delay != "" {
 		delay, err := time.ParseDuration(delay)
 		if err != nil {
