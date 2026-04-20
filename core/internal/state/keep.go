@@ -605,19 +605,19 @@ type UpdateOrganization struct {
 // with identifier id. After f returns, it replaces the organization with its
 // copy in the state and updates all workspace back-pointers.
 func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Organization {
-	org := state.organizations[id]
-	newOrg := new(Organization)
-	*newOrg = *org
-	f(newOrg)
+	o := state.organizations[id]
+	oo := new(Organization)
+	*oo = *o
+	f(oo)
 	state.mu.Lock()
-	state.organizations[id] = newOrg
+	state.organizations[id] = oo
 	state.mu.Unlock()
-	for _, ws := range newOrg.workspaces {
+	for _, ws := range oo.workspaces {
 		ws.mu.Lock()
-		ws.organization = newOrg
+		ws.organization = oo
 		ws.mu.Unlock()
 	}
-	return newOrg
+	return oo
 }
 
 // updateOrganization updates an organization.
