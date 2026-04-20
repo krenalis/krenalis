@@ -208,11 +208,11 @@ func TestCacheEvictOnePrefersExpiredOtherwiseLRU(t *testing.T) {
 			keys: map[string]*clearKey{
 				"lru": {
 					Value:        lruValue,
-					lastAccessed: now.Add(-2 * time.Hour),
+					lastAccessed: now.Add(-2 * time.Second),
 				},
 				"newer": {
 					Value:        newerValue,
-					lastAccessed: now.Add(-time.Hour),
+					lastAccessed: now.Add(-time.Second),
 				},
 			},
 		}
