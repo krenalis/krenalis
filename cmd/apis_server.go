@@ -320,7 +320,8 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 
 // organizationsAPIKey is the API key required to call the organizations API.
 //
-// TODO: read this value from external configuration (e.g. AWS Secrets Manager or Parameter Store).
+// TODO: read this value from external configuration (e.g. AWS Secrets
+// Manager/Parameter Store or local env).
 const organizationsAPIKey = "organizations-api-key-change-me"
 
 // authenticateOrganizationsRequest authenticates a request to the organizations
