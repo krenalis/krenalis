@@ -16,8 +16,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 type api struct {
@@ -200,8 +198,8 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
 	}
-	id, err := uuid.Parse(r.PathValue("id"))
-	if err != nil {
+	id, ok := parseOrganizationUUID(r.PathValue("id"))
+	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
 	}
 	return api.core.Organization(id)
