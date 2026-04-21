@@ -439,6 +439,31 @@ func (state *State) createConnection(n notification) uuid.UUID {
 	return ws.organization.ID
 }
 
+// CreateOrganization is the event sent when an organization is created.
+type CreateOrganization struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// createOrganization creates an organization.
+func (state *State) createOrganization(n notification) {
+	e := CreateOrganization{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	org := &Organization{
+		mu:         &sync.Mutex{},
+		workspaces: map[int]*Workspace{},
+		members:    map[int]struct{}{},
+		ID:         e.ID,
+		Name:       e.Name,
+	}
+	state.mu.Lock()
+	state.organizations[e.ID] = org
+	state.mu.Unlock()
+	dispatchNotification(state, e)
+}
+
 // CreatePipeline is the event sent when a pipeline is created.
 type CreatePipeline struct {
 	ID                 int
@@ -531,31 +556,6 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	dispatchNotification(state, e)
 
 	return c.organization.ID
-}
-
-// CreateOrganization is the event sent when an organization is created.
-type CreateOrganization struct {
-	ID   uuid.UUID
-	Name string
-}
-
-// createOrganization creates an organization.
-func (state *State) createOrganization(n notification) {
-	e := CreateOrganization{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	org := &Organization{
-		mu:         &sync.Mutex{},
-		workspaces: map[int]*Workspace{},
-		members:    map[int]struct{}{},
-		ID:         e.ID,
-		Name:       e.Name,
-	}
-	state.mu.Lock()
-	state.organizations[e.ID] = org
-	state.mu.Unlock()
-	dispatchNotification(state, e)
 }
 
 // DeleteOrganization is the event sent when an organization is deleted.
