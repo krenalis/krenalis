@@ -481,7 +481,6 @@ func (state *State) createOrganization(n notification) uuid.UUID {
 	state.mu.Lock()
 	state.organizations[e.ID] = org
 	state.mu.Unlock()
-	dispatchNotification(state, e)
 	return e.ID
 }
 
@@ -634,7 +633,6 @@ func (state *State) updateOrganization(n notification) uuid.UUID {
 	state.replaceOrganization(e.ID, func(org *Organization) {
 		org.Name = e.Name
 	})
-	dispatchNotification(state, e)
 	return e.ID
 }
 
