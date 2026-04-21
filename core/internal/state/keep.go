@@ -601,8 +601,8 @@ func (state *State) deleteOrganization(n notification) uuid.UUID {
 
 // UpdateOrganization is the event sent when an organization is updated.
 type UpdateOrganization struct {
-	Organization uuid.UUID
-	Name         string
+	ID   uuid.UUID
+	Name string
 }
 
 // replaceOrganization calls the function f passing a copy of the organization
@@ -631,11 +631,11 @@ func (state *State) updateOrganization(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	state.replaceOrganization(e.Organization, func(org *Organization) {
+	state.replaceOrganization(e.ID, func(org *Organization) {
 		org.Name = e.Name
 	})
 	dispatchNotification(state, e)
-	return e.Organization
+	return e.ID
 }
 
 // CreateWorkspace is the event sent when a workspace is created.

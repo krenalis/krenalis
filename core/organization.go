@@ -788,7 +788,7 @@ func (this *Organization) Update(ctx context.Context, name string) error {
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	n := state.UpdateOrganization{Organization: this.organization.ID, Name: name}
+	n := state.UpdateOrganization{ID: this.organization.ID, Name: name}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
 		if err != nil {
