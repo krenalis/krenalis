@@ -335,7 +335,7 @@ func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
 		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_ORGANIZATIONS_API_KEY>'")
 	}
 	if !strings.HasPrefix(token, "org_") {
-		return errors.BadRequest("organization API endpoints require specific keys to manage organizations, which are keys that start with 'org_'")
+		return errors.BadRequest("organizations APIs require specific keys for authentication (these are keys that begin with 'org_')")
 	}
 	if s.organizationsAPIKey == "" || token != s.organizationsAPIKey {
 		return errors.Unauthorized("organizations API key in the Authorization header of the request is not valid")
