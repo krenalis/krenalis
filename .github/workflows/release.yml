@@ -2,7 +2,7 @@ name: Release Krenalis
 
 on:
   release:
-    types: [published]
+    types: [ published ]
 
 permissions: {}
 
@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
