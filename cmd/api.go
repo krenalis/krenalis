@@ -228,6 +228,9 @@ func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error
 		if err != nil {
 			return nil, errors.BadRequest("limit is not valid")
 		}
+		if limit > 1000 {
+			return nil, errors.BadRequest("limit exceeds the maximum allowed value of 1000")
+		}
 	}
 	orgs, err := api.core.Organizations(core.SortByName, first, limit)
 	if err != nil {
