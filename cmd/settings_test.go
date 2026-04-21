@@ -313,7 +313,7 @@ func TestParseSettings(t *testing.T) {
 				want: "org_" + strings.Repeat("Z", 43),
 			},
 			{
-				name: "mixed case and digits accepted",
+				name: "mixed case accepted",
 				set:  true,
 				env:  "org_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
 				want: "org_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
