@@ -78,7 +78,7 @@ func Test_UpgradeToKMS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyManager, err := kms.New(ctx, "local:"+base64.RawStdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
+	keyManager, err := kms.New(ctx, "key:"+base64.RawStdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
 	if err != nil {
 		t.Fatal(err)
 	}

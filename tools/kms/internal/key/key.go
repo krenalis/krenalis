@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package local
+package key
 
 import (
 	"context"
@@ -22,19 +22,19 @@ type Kms struct {
 func New(base64Key string) (*Kms, error) {
 	key, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(base64Key, "="))
 	if err != nil {
-		return nil, errors.New("kms/local: key is not valid Base64")
+		return nil, errors.New("kms/key: key is not valid Base64")
 	}
 	defer clear(key)
 	if len(key) != 32 {
-		return nil, errors.New("kms/local: key must be 32 bytes long")
+		return nil, errors.New("kms/key: key must be 32 bytes long")
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, fmt.Errorf("kms/local: %s", err)
+		return nil, fmt.Errorf("kms/key: %s", err)
 	}
 	aead, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, fmt.Errorf("kms/local: %s", err)
+		return nil, fmt.Errorf("kms/key: %s", err)
 	}
 	return &Kms{aead: aead}, nil
 }
@@ -42,7 +42,7 @@ func New(base64Key string) (*Kms, error) {
 func (k *Kms) GenerateDataKey(_ context.Context, keyLen int) ([]byte, []byte, error) {
 
 	if keyLen != 32 && keyLen != 64 {
-		return nil, nil, errors.New("kms/local: invalid key length")
+		return nil, nil, errors.New("kms/key: invalid key length")
 	}
 
 	nonceSize := k.aead.NonceSize()
@@ -74,14 +74,14 @@ func (k *Kms) DecryptDataKey(_ context.Context, encryptedDataKey []byte) ([]byte
 	nonceSize := k.aead.NonceSize()
 	overhead := k.aead.Overhead()
 	if len(encryptedDataKey) < nonceSize+overhead {
-		return nil, errors.New("kms/local: encrypted key too short")
+		return nil, errors.New("kms/key: encrypted key too short")
 	}
 
 	nonce := encryptedDataKey[:nonceSize]
 	ciphertext := encryptedDataKey[nonceSize:]
 	dataKeyLen := len(ciphertext) - overhead
 	if dataKeyLen != 32 && dataKeyLen != 64 {
-		return nil, errors.New("kms/local: unexpected plaintext data key length")
+		return nil, errors.New("kms/key: unexpected plaintext data key length")
 	}
 
 	dataKey := make([]byte, dataKeyLen)

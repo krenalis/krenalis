@@ -844,6 +844,10 @@ func (state *State) deleteWorkspace(n notification) uuid.UUID {
 			delete(state.connectionsByKey, key)
 		}
 		delete(state.connections, c.ID)
+		// Delete the connection's pipelines.
+		for _, p := range c.pipelines {
+			delete(state.pipelines, p.ID)
+		}
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)

@@ -54,8 +54,8 @@ Navigate to the directory where you want to run Krenalis and execute:
 
 ```
 mkdir -p storage
-curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.27.0/compose.yaml"
-if [ ! -f .env ]; then printf "KRENALIS_KMS=local:%s\n" "$(openssl rand -base64 32 | tr -d '\n=')" > .env; fi
+curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.28.0/compose.yaml"
+if [ ! -f .env ]; then printf "KRENALIS_KMS=key:%s\n" "$(openssl rand -base64 32)" > .env; fi
 docker compose up
 ```
 
@@ -72,7 +72,7 @@ To build the standalone executable, run `go generate && go build` in the root di
 
 To run the executable, provide an empty PostgreSQL database on first run, starting the `krenalis` command:
 
-1. Generate and set `KRENALIS_KMS`, together with your PostgreSQL credentials, using the recommended [environment variables](https://www.krenalis.com/docs/configuration/environment-variables). For a local key, use `local:<base64-encoded 32-byte key without '=' padding>` and keep the same value for the lifetime of the installation.
+1. Generate and set `KRENALIS_KMS`, together with your PostgreSQL credentials, using the recommended [environment variables](https://www.krenalis.com/docs/configuration/environment-variables). For a key-based KMS provider, use `key:<base64-encoded 32-byte key>` and keep the same value for the lifetime of the installation.
 2. Run `./krenalis -init-db-if-empty`
 
 ## Security

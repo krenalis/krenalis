@@ -98,7 +98,7 @@ func TestParseSettings(t *testing.T) {
 	// helper to set a minimal valid baseline env that lets settingsFromEnv succeed.
 	setBaseline := func(t *testing.T) {
 		t.Helper()
-		t.Setenv("KRENALIS_KMS", "local:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+		t.Setenv("KRENALIS_KMS", "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
 		t.Setenv("KRENALIS_DB_USERNAME", "u")
 		t.Setenv("KRENALIS_DB_PASSWORD", "p")
 		t.Setenv("KRENALIS_DB_DATABASE", "db")
@@ -117,30 +117,30 @@ func TestParseSettings(t *testing.T) {
 			t.Fatalf("expected missing KMS setting error, got %q", got)
 		}
 
-		t.Setenv("KRENALIS_KMS", "local:not-base64")
+		t.Setenv("KRENALIS_KMS", "key:not-base64")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatal("expected invalid Base64 error, got nil")
 		}
-		if got := err.Error(); got != "KRENALIS_KMS local value is not valid base64" {
+		if got := err.Error(); got != "KRENALIS_KMS key value is not valid base64" {
 			t.Fatalf("unexpected error: %q", got)
 		}
 
-		t.Setenv("KRENALIS_KMS", "local:"+base64.RawStdEncoding.EncodeToString(make([]byte, 31)))
+		t.Setenv("KRENALIS_KMS", "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 31)))
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatal("expected invalid length error, got nil")
 		}
-		if got := err.Error(); got != "KRENALIS_KMS local value decodes to 31 bytes, expected 32" {
+		if got := err.Error(); got != "KRENALIS_KMS key value decodes to 31 bytes, expected 32" {
 			t.Fatalf("unexpected error: %q", got)
 		}
 
-		t.Setenv("KRENALIS_KMS", "local")
+		t.Setenv("KRENALIS_KMS", "key")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatal("expected invalid format error, got nil")
 		}
-		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'local:<base64>' or 'aws:<kms-key-id-or-arn>'" {
+		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'" {
 			t.Fatalf("unexpected error: %q", got)
 		}
 
@@ -149,7 +149,7 @@ func TestParseSettings(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected unsupported backend error, got nil")
 		}
-		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'local:<base64>' or 'aws:<kms-key-id-or-arn>'" {
+		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'" {
 			t.Fatalf("unexpected error: %q", got)
 		}
 
@@ -179,7 +179,7 @@ func TestParseSettings(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if want := "local:" + base64.RawStdEncoding.EncodeToString(make([]byte, 32)); s.Kms != want {
+		if want := "key:" + base64.RawStdEncoding.EncodeToString(make([]byte, 32)); s.Kms != want {
 			t.Fatalf("expected KMS setting %q, got %q", want, s.Kms)
 		}
 
