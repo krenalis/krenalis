@@ -247,6 +247,29 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	return org, ws, session.Member, nil
 }
 
+// authenticateOrganizationsRequest authenticates a request to the organizations
+// API. Authorization is provided via the "Authorization: Bearer <key>" header.
+func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
+	auth, ok := r.Header["Authorization"]
+	if !ok {
+		return errors.Unauthorized("Authorization header with the organizations API key is not present in the request")
+	}
+	if len(auth) > 1 {
+		return errors.BadRequest("request contains multiple Authorization headers")
+	}
+	token, found := validation.ParseBearer(auth[0])
+	if !found {
+		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_ORGANIZATIONS_API_KEY>'")
+	}
+	if !strings.HasPrefix(token, "org_") {
+		return errors.BadRequest("organizations APIs require specific keys for authentication (these are keys that begin with 'org_')")
+	}
+	if s.organizationsAPIKey == "" || token != s.organizationsAPIKey {
+		return errors.Unauthorized("organizations API key in the Authorization header of the request is not valid")
+	}
+	return nil
+}
+
 // authenticateRequest authenticates the request r and returns the associated
 // organization and optional workspace.
 //
@@ -318,29 +341,6 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 	}
 
 	return org, ws, nil
-}
-
-// authenticateOrganizationsRequest authenticates a request to the organizations
-// API. Authorization is provided via the "Authorization: Bearer <key>" header.
-func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
-	auth, ok := r.Header["Authorization"]
-	if !ok {
-		return errors.Unauthorized("Authorization header with the organizations API key is not present in the request")
-	}
-	if len(auth) > 1 {
-		return errors.BadRequest("request contains multiple Authorization headers")
-	}
-	token, found := validation.ParseBearer(auth[0])
-	if !found {
-		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_ORGANIZATIONS_API_KEY>'")
-	}
-	if !strings.HasPrefix(token, "org_") {
-		return errors.BadRequest("organizations APIs require specific keys for authentication (these are keys that begin with 'org_')")
-	}
-	if s.organizationsAPIKey == "" || token != s.organizationsAPIKey {
-		return errors.Unauthorized("organizations API key in the Authorization header of the request is not valid")
-	}
-	return nil
 }
 
 // forwardSentryError forwards a telemetry error from a client to Sentry.
