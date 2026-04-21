@@ -3,10 +3,6 @@ name: Run go run ./test/commit
 on:
   workflow_dispatch:
 
-  # push:
-  #   branches:
-  #     - main
-
 permissions: {}
 
 jobs:
