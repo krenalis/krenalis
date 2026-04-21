@@ -65,8 +65,8 @@ func parseEnvSettings() (*Settings, error) {
 	}
 
 	if orgAPIKey, ok := envVars.Lookup("KRENALIS_ORGANIZATIONS_API_KEY"); ok {
-		apiKey := strings.TrimPrefix(orgAPIKey, "org_")
-		if apiKey == orgAPIKey {
+		apiKey, ok := strings.CutPrefix(orgAPIKey, "org_")
+		if !ok {
 			return nil, errors.New("KRENALIS_ORGANIZATIONS_API_KEY must start with 'org_'")
 		}
 		if utf8.RuneCountInString(apiKey) != 43 {
