@@ -273,6 +273,26 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 	return ww
 }
 
+// replaceOrganization calls the function f passing a copy of the organization
+// with identifier id. After f returns, it replaces the organization with its
+// copy in the state and updates all workspace back-pointers. Returns the copy
+// of the organization.
+func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Organization {
+	o := state.organizations[id]
+	oo := new(Organization)
+	*oo = *o
+	f(oo)
+	state.mu.Lock()
+	state.organizations[id] = oo
+	state.mu.Unlock()
+	for _, ws := range oo.workspaces {
+		ws.mu.Lock()
+		ws.organization = oo
+		ws.mu.Unlock()
+	}
+	return oo
+}
+
 // AcceptInvitation is the event sent when a member accept an invitation.
 type AcceptInvitation struct {
 	Member       int
@@ -603,26 +623,6 @@ func (state *State) deleteOrganization(n notification) uuid.UUID {
 type UpdateOrganization struct {
 	ID   uuid.UUID
 	Name string
-}
-
-// replaceOrganization calls the function f passing a copy of the organization
-// with identifier id. After f returns, it replaces the organization with its
-// copy in the state and updates all workspace back-pointers. Returns the copy
-// of the organization.
-func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Organization {
-	o := state.organizations[id]
-	oo := new(Organization)
-	*oo = *o
-	f(oo)
-	state.mu.Lock()
-	state.organizations[id] = oo
-	state.mu.Unlock()
-	for _, ws := range oo.workspaces {
-		ws.mu.Lock()
-		ws.organization = oo
-		ws.mu.Unlock()
-	}
-	return oo
 }
 
 // updateOrganization updates an organization.
