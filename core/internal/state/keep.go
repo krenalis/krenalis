@@ -85,7 +85,7 @@ func (state *State) keep() {
 		case "DeleteMember":
 			org = state.deleteMember(n)
 		case "DeleteOrganization":
-			state.deleteOrganization(n)
+			org = state.deleteOrganization(n)
 		case "DeletePipeline":
 			org = state.deletePipeline(n)
 		case "DeleteWorkspace":
@@ -566,10 +566,10 @@ type DeleteOrganization struct {
 }
 
 // deleteOrganization deletes an organization.
-func (state *State) deleteOrganization(n notification) {
+func (state *State) deleteOrganization(n notification) uuid.UUID {
 	e := DeleteOrganization{}
 	if !decodeNotification(n, &e) {
-		return
+		return uuid.Nil
 	}
 	state.mu.Lock()
 	e.organization = state.organizations[e.ID]
@@ -596,6 +596,7 @@ func (state *State) deleteOrganization(n notification) {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
+	return e.ID
 }
 
 // UpdateOrganization is the event sent when an organization is updated.
