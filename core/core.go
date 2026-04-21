@@ -780,7 +780,7 @@ func (core *Core) Organization(id uuid.UUID) (*Organization, error) {
 	}
 	org, ok := core.state.Organization(id)
 	if !ok {
-		return nil, errors.NotFound("organization %d does not exist", id)
+		return nil, errors.NotFound("organization %q does not exist", id)
 	}
 	organization := Organization{
 		core:         core,
