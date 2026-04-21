@@ -75,7 +75,7 @@ func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := api.core.AddOrganization(r.Context(), body.Name)
+	id, err := api.core.CreateOrganization(r.Context(), body.Name)
 	if err != nil {
 		return nil, err
 	}

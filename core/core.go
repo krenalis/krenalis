@@ -434,9 +434,9 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	return err
 }
 
-// AddOrganization adds a new organization and returns its identifier.
+// CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) AddOrganization(ctx context.Context, name string) (uuid.UUID, error) {
+func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return uuid.Nil, errors.BadRequest("%s", err)
