@@ -211,20 +211,25 @@ func allColumnsMatch(ctx context.Context, conn db.Connection, expected map[[2]st
 
 func hasValidUpgradedMetadata(ctx context.Context, conn db.Connection) (bool, error) {
 	var count int
-	var installationID string
-	var cookieKey, oAuthKey, notificationKey []byte
-	err := conn.QueryRow(ctx, `SELECT
-		COUNT(*),
-		COALESCE(MIN("installation_id"), ''),
-		COALESCE(MIN("kms_encrypted_cookie_key"), '\x'::bytea),
-		COALESCE(MIN("kms_encrypted_oauth_key"), '\x'::bytea),
-		COALESCE(MIN("kms_encrypted_notification_key"), '\x'::bytea)
-		FROM "metadata"`).Scan(&count, &installationID, &cookieKey, &oAuthKey, &notificationKey)
+	err := conn.QueryRow(ctx, `SELECT COUNT(*) FROM "metadata"`).Scan(&count)
 	if err != nil {
 		return false, err
 	}
-	return count == 1 &&
-		installationID != "" &&
+	if count != 1 {
+		return false, nil
+	}
+	var installationID string
+	var cookieKey, oAuthKey, notificationKey []byte
+	err = conn.QueryRow(ctx, `SELECT
+		"installation_id",
+		"kms_encrypted_cookie_key",
+		"kms_encrypted_oauth_key",
+		"kms_encrypted_notification_key"
+		FROM "metadata"`).Scan(&installationID, &cookieKey, &oAuthKey, &notificationKey)
+	if err != nil {
+		return false, err
+	}
+	return installationID != "" &&
 		len(cookieKey) > 0 &&
 		len(oAuthKey) > 0 &&
 		len(notificationKey) > 0, nil

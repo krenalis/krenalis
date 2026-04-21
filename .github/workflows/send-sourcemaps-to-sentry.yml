@@ -26,12 +26,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
       - name: Setup Go (needed for building assets)
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
           # Keep in sync with the version within "Dockerfile".
