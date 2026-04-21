@@ -69,7 +69,7 @@ func (state *State) keep() {
 		case "CreateConnection":
 			org = state.createConnection(n)
 		case "CreateOrganization":
-			state.createOrganization(n)
+			org = state.createOrganization(n)
 		case "CreatePipeline":
 			org = state.createPipeline(n)
 		case "CreateWorkspace":
@@ -446,10 +446,10 @@ type CreateOrganization struct {
 }
 
 // createOrganization creates an organization.
-func (state *State) createOrganization(n notification) {
+func (state *State) createOrganization(n notification) uuid.UUID {
 	e := CreateOrganization{}
 	if !decodeNotification(n, &e) {
-		return
+		return uuid.Nil
 	}
 	org := &Organization{
 		mu:         &sync.Mutex{},
@@ -462,6 +462,7 @@ func (state *State) createOrganization(n notification) {
 	state.organizations[e.ID] = org
 	state.mu.Unlock()
 	dispatchNotification(state, e)
+	return e.ID
 }
 
 // CreatePipeline is the event sent when a pipeline is created.
