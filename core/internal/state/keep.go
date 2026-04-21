@@ -587,6 +587,12 @@ func (state *State) deleteOrganization(n notification) {
 		}
 		delete(state.workspaces, id)
 	}
+	// Delete all access keys belonging to the organization.
+	for token, key := range state.accessKeyByToken {
+		if key.Organization == e.ID {
+			delete(state.accessKeyByToken, token)
+		}
+	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
 }
