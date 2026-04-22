@@ -104,6 +104,7 @@ func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onCreateWorkspace)
 	st.AddListener(c.onDeleteConnection)
 	st.AddListener(c.onDeletePipeline)
+	st.AddListener(c.onDeleteOrganization)
 	st.AddListener(c.onDeleteWorkspace)
 	st.AddListener(c.onLinkConnection)
 	st.AddListener(c.onSetPipelineStatus)
@@ -353,6 +354,32 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 		}
 	}
 	c.stopConnectionWorker(connection)
+}
+
+// onDeleteOrganization is called when an organization is deleted.
+func (c *Collector) onDeleteOrganization(n state.DeleteOrganization) {
+	for _, ws := range n.Organization().Workspaces() {
+		c.observers.Delete(ws.ID)
+		for _, connection := range ws.Connections() {
+			if connection.LinkedConnections == nil {
+				continue
+			}
+			if connection.Role == state.Source {
+				for _, p := range connection.Pipelines() {
+					if p.Enabled {
+						c.stopPipelineWorker(p)
+					}
+				}
+			} else if len(connection.LinkedConnections) > 0 {
+				c.stopConnectionWorker(connection)
+			}
+		}
+		ew, _ := c.eventWriters.LoadAndDelete(ws.ID)
+		// Close using a canceled context to abort any in-flight flush.
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_ = ew.(*datastore.EventWriter).Close(ctx)
+	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.

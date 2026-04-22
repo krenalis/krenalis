@@ -5,3 +5,7 @@
 
 ALTER TABLE pipelines
     RENAME COLUMN identity_column TO user_id_column;
+
+ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateOrganization' AFTER 'CreateEventWriteKey';
+ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteOrganization' AFTER 'DeleteMember';
+ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateOrganization' AFTER 'UpdateIdentityResolutionSettings';

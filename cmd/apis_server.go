@@ -72,6 +72,7 @@ type apisServer struct {
 	externalAssetsURLs     []string
 	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
 	inviteMembersViaEmail  bool
+	organizationsAPIKey    string // can be empty (which means that organizations APIs cannot be used)
 	sentryTelemetry        struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
@@ -83,7 +84,7 @@ type apisServer struct {
 // runsOnHTTPs indicates if the server runs on HTTPS.
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
-	inviteMembersViaEmail bool, sentryTelemetryLevel core.TelemetryLevel,
+	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
 	sentryErrorTunnel *sentryErrorTunnel,
 ) *apisServer {
 
@@ -97,6 +98,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 		externalAssetsURLs:     externalAssetsURLs,
 		potentialConnectorsURL: potentialConnectorsURL,
 		inviteMembersViaEmail:  inviteMembersViaEmail,
+		organizationsAPIKey:    organizationsAPIKey,
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
@@ -243,6 +245,29 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	}
 
 	return org, ws, session.Member, nil
+}
+
+// authenticateOrganizationsRequest authenticates a request to the organizations
+// API. Authorization is provided via the "Authorization: Bearer <key>" header.
+func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
+	auth, ok := r.Header["Authorization"]
+	if !ok {
+		return errors.Unauthorized("Authorization header with the organizations API key is not present in the request")
+	}
+	if len(auth) > 1 {
+		return errors.BadRequest("request contains multiple Authorization headers")
+	}
+	token, found := validation.ParseBearer(auth[0])
+	if !found {
+		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_ORGANIZATIONS_API_KEY>'")
+	}
+	if !strings.HasPrefix(token, "org_") {
+		return errors.BadRequest("organizations APIs require specific keys for authentication (these are keys that begin with 'org_')")
+	}
+	if s.organizationsAPIKey == "" || token != s.organizationsAPIKey {
+		return errors.Unauthorized("organizations API key in the Authorization header of the request is not valid")
+	}
+	return nil
 }
 
 // authenticateRequest authenticates the request r and returns the associated

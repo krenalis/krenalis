@@ -68,6 +68,8 @@ func (state *State) keep() {
 			org = state.createAccessKey(n)
 		case "CreateConnection":
 			org = state.createConnection(n)
+		case "CreateOrganization":
+			org = state.createOrganization(n)
 		case "CreatePipeline":
 			org = state.createPipeline(n)
 		case "CreateWorkspace":
@@ -82,6 +84,8 @@ func (state *State) keep() {
 			org = state.deleteEventWriteKey(n)
 		case "DeleteMember":
 			org = state.deleteMember(n)
+		case "DeleteOrganization":
+			org = state.deleteOrganization(n)
 		case "DeletePipeline":
 			org = state.deletePipeline(n)
 		case "DeleteWorkspace":
@@ -128,6 +132,8 @@ func (state *State) keep() {
 			org = state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
 			org = state.updateIdentityResolutionSettings(n)
+		case "UpdateOrganization":
+			org = state.updateOrganization(n)
 		case "UpdatePipeline":
 			org = state.updatePipeline(n)
 		case "UpdateWarehouse":
@@ -265,6 +271,31 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 		}
 	}
 	return ww
+}
+
+// replaceOrganization calls the function f passing a copy of the organization
+// with identifier id. After f returns, it replaces the organization with its
+// copy in the state and updates all workspace back-pointers. Returns the copy
+// of the organization.
+func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Organization {
+	o := state.organizations[id]
+	oo := new(Organization)
+	*oo = *o
+	f(oo)
+	state.mu.Lock()
+	state.organizations[id] = oo
+	state.mu.Unlock()
+	for _, ws := range oo.workspaces {
+		ws.mu.Lock()
+		ws.organization = oo
+		ws.mu.Unlock()
+		for _, connection := range ws.connections {
+			connection.mu.Lock()
+			connection.organization = oo
+			connection.mu.Unlock()
+		}
+	}
+	return oo
 }
 
 // AcceptInvitation is the event sent when a member accept an invitation.
@@ -431,6 +462,31 @@ func (state *State) createConnection(n notification) uuid.UUID {
 	}
 	dispatchNotification(state, e)
 	return ws.organization.ID
+}
+
+// CreateOrganization is the event sent when an organization is created.
+type CreateOrganization struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// createOrganization creates an organization.
+func (state *State) createOrganization(n notification) uuid.UUID {
+	e := CreateOrganization{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	org := &Organization{
+		mu:         &sync.Mutex{},
+		workspaces: map[int]*Workspace{},
+		members:    map[int]struct{}{},
+		ID:         e.ID,
+		Name:       e.Name,
+	}
+	state.mu.Lock()
+	state.organizations[e.ID] = org
+	state.mu.Unlock()
+	return e.ID
 }
 
 // CreatePipeline is the event sent when a pipeline is created.
@@ -779,6 +835,50 @@ func (state *State) deleteMember(n notification) uuid.UUID {
 	delete(org.members, e.ID)
 	org.mu.Unlock()
 	return e.Organization
+}
+
+// DeleteOrganization is the event sent when an organization is deleted.
+type DeleteOrganization struct {
+	ID           uuid.UUID
+	organization *Organization
+}
+
+func (n DeleteOrganization) Organization() *Organization {
+	return n.organization
+}
+
+// deleteOrganization deletes an organization.
+func (state *State) deleteOrganization(n notification) uuid.UUID {
+	e := DeleteOrganization{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	state.mu.Lock()
+	e.organization = state.organizations[e.ID]
+	delete(state.organizations, e.ID)
+	// Delete all workspaces belonging to the organization.
+	for id, ws := range e.organization.workspaces {
+		for _, c := range ws.connections {
+			for _, key := range c.Keys {
+				delete(state.connectionsByKey, key)
+			}
+			delete(state.connections, c.ID)
+			// Delete the connection's pipelines.
+			for _, p := range c.pipelines {
+				delete(state.pipelines, p.ID)
+			}
+		}
+		delete(state.workspaces, id)
+	}
+	// Delete all access keys belonging to the organization.
+	for token, key := range state.accessKeyByToken {
+		if key.Organization == e.ID {
+			delete(state.accessKeyByToken, token)
+		}
+	}
+	state.mu.Unlock()
+	dispatchNotification(state, e)
+	return e.ID
 }
 
 // DeletePipeline is the event sent when a pipeline is deleted.
@@ -1335,6 +1435,24 @@ func (state *State) updateIdentityResolutionSettings(n notification) uuid.UUID {
 		w.Identifiers = e.Identifiers
 	})
 	return ws.organization.ID
+}
+
+// UpdateOrganization is the event sent when an organization is updated.
+type UpdateOrganization struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// updateOrganization updates an organization.
+func (state *State) updateOrganization(n notification) uuid.UUID {
+	e := UpdateOrganization{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	state.replaceOrganization(e.ID, func(org *Organization) {
+		org.Name = e.Name
+	})
+	return e.ID
 }
 
 // UpdatePipeline is the event sent when a pipeline is updated.

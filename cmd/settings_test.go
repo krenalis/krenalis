@@ -278,6 +278,160 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
+	t.Run("organizations API key setting", func(t *testing.T) {
+		validKey := "org_" + strings.Repeat("a", 43)
+
+		cases := []struct {
+			name    string
+			env     string
+			set     bool
+			want    string
+			wantErr string
+		}{
+			// Valid inputs.
+			{
+				name: "not set is optional",
+				set:  false,
+				want: "",
+			},
+			{
+				name: "valid key accepted",
+				set:  true,
+				env:  validKey,
+				want: validKey,
+			},
+			{
+				name: "all digits accepted",
+				set:  true,
+				env:  "org_" + strings.Repeat("9", 43),
+				want: "org_" + strings.Repeat("9", 43),
+			},
+			{
+				name: "all uppercase accepted",
+				set:  true,
+				env:  "org_" + strings.Repeat("Z", 43),
+				want: "org_" + strings.Repeat("Z", 43),
+			},
+			{
+				name: "mixed case accepted",
+				set:  true,
+				env:  "org_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
+				want: "org_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
+			},
+
+			// Invalid: wrong prefix.
+			{
+				name:    "missing org_ prefix rejected",
+				set:     true,
+				env:     strings.Repeat("a", 47),
+				wantErr: "KRENALIS_ORGANIZATIONS_API_KEY must start with 'org_'",
+			},
+			{
+				name:    "empty value rejected",
+				set:     true,
+				env:     "",
+				wantErr: "KRENALIS_ORGANIZATIONS_API_KEY must start with 'org_'",
+			},
+			{
+				// The double prefix looks like a plausible copy-paste mistake.
+				name:    "double org_ prefix rejected",
+				set:     true,
+				env:     "org_org_" + strings.Repeat("a", 39),
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '_'",
+			},
+
+			// Invalid: wrong length.
+			{
+				name:    "too short by one rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 42),
+				wantErr: "KRENALIS_ORGANIZATIONS_API_KEY has an invalid length (expected 'org_' + 43 alphanumeric characters)",
+			},
+			{
+				name:    "too long by one rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 44),
+				wantErr: "KRENALIS_ORGANIZATIONS_API_KEY has an invalid length (expected 'org_' + 43 alphanumeric characters)",
+			},
+			{
+				name:    "very long key rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 1000),
+				wantErr: "KRENALIS_ORGANIZATIONS_API_KEY has an invalid length (expected 'org_' + 43 alphanumeric characters)",
+			},
+
+			// Invalid: bad characters.
+			{
+				name:    "exclamation mark rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 42) + "!",
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '!'",
+			},
+			{
+				name:    "hyphen rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 42) + "-",
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '-'",
+			},
+			{
+				name:    "underscore in suffix rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 42) + "_",
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '_'",
+			},
+			{
+				name:    "space rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 42) + " ",
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character ' '",
+			},
+			{
+				// Newline could break log lines or HTTP headers.
+				name:    "newline rejected",
+				set:     true,
+				env:     "org_" + "a\n" + strings.Repeat("a", 41),
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character '\\n'",
+			},
+			{
+				// Unicode lookalike for 'a' (Cyrillic small а, U+0430): visually
+				// identical but not ASCII — must be rejected.
+				name:    "cyrillic lookalike rejected",
+				set:     true,
+				env:     "org_" + strings.Repeat("a", 42) + "а",
+				wantErr: "invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character 'а'",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				if tc.set {
+					t.Setenv("KRENALIS_ORGANIZATIONS_API_KEY", tc.env)
+				} else {
+					if err := os.Unsetenv("KRENALIS_ORGANIZATIONS_API_KEY"); err != nil {
+						t.Fatalf("failed to unset KRENALIS_ORGANIZATIONS_API_KEY: %v", err)
+					}
+				}
+				s, err := parseEnvSettings()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if s.OrganizationsAPIKey != tc.want {
+					t.Fatalf("expected OrganizationsAPIKey %q, got %q", tc.want, s.OrganizationsAPIKey)
+				}
+			})
+		}
+	})
+
 	t.Run("termination delay valid and invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("KRENALIS_TERMINATION_DELAY", "150ms")
