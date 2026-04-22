@@ -192,6 +192,7 @@ func (s *Store) normalizeParameter(p types.Parameter) (string, string, error) {
 // unmarshalDatabaseSecret decodes a database secret into config values.
 func unmarshalDatabaseSecret(values map[string]string, secret string) error {
 	var db struct {
+		Engine   string `json:"engine"`
 		Host     string `json:"host"`
 		Port     int    `json:"port"`
 		DBName   string `json:"dbname"`
@@ -199,7 +200,10 @@ func unmarshalDatabaseSecret(values map[string]string, secret string) error {
 		Password string `json:"password"`
 	}
 	if err := json.Unmarshal([]byte(secret), &db); err != nil {
-		return fmt.Errorf("config/aws: invalid /db secret JSON: %s", err)
+		return fmt.Errorf("config/aws: invalid '/db' secret JSON: %s", err)
+	}
+	if db.Engine != "postgres" {
+		return fmt.Errorf("config/aws: invalid '/db' secret engine %q", db.Engine)
 	}
 	values["DB_HOST"] = db.Host
 	if db.Port != 0 {
@@ -305,15 +309,15 @@ var parameters = map[string]string{
 	"/smtp/username":                          "SMTP_USERNAME",
 	"/telemetry-level":                        "TELEMETRY_LEVEL",
 	"/termination-delay":                      "TERMINATION_DELAY",
-	"/transformers/aws-lambda/nodejs-layer":   "TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER",
-	"/transformers/aws-lambda/nodejs-runtime": "TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME",
-	"/transformers/aws-lambda/python-layer":   "TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER",
-	"/transformers/aws-lambda/python-runtime": "TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME",
+	"/transformers/aws-lambda/nodejs/layer":   "TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER",
+	"/transformers/aws-lambda/nodejs/runtime": "TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME",
+	"/transformers/aws-lambda/python/layer":   "TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER",
+	"/transformers/aws-lambda/python/runtime": "TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME",
 	"/transformers/aws-lambda/role":           "TRANSFORMERS_AWS_LAMBDA_ROLE",
 	"/transformers/local/doas-user":           "TRANSFORMERS_LOCAL_DOAS_USER",
 	"/transformers/local/functions-dir":       "TRANSFORMERS_LOCAL_FUNCTIONS_DIR",
-	"/transformers/local/nodejs-executable":   "TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE",
-	"/transformers/local/python-executable":   "TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE",
+	"/transformers/local/nodejs/executable":   "TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE",
+	"/transformers/local/python/executable":   "TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE",
 	"/transformers/local/sudo-user":           "TRANSFORMERS_LOCAL_SUDO_USER",
 	"/transformers/provider":                  "TRANSFORMERS_PROVIDER",
 }

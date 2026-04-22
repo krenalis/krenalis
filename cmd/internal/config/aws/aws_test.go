@@ -78,11 +78,11 @@ func TestValidatePrefix(t *testing.T) {
 		name   string
 		prefix string
 		want   string
-		}{
-			{name: "valid", prefix: "/krenalis/prod"},
-			{name: "valid trailing slash", prefix: "/krenalis/prod/"},
-			{name: "valid multiple trailing slashes", prefix: "/krenalis/prod//"},
-			{name: "empty", prefix: "", want: "prefix must not be empty"},
+	}{
+		{name: "valid", prefix: "/krenalis/prod"},
+		{name: "valid trailing slash", prefix: "/krenalis/prod/"},
+		{name: "valid multiple trailing slashes", prefix: "/krenalis/prod//"},
+		{name: "empty", prefix: "", want: "prefix must not be empty"},
 		{name: "missing slash", prefix: "krenalis/prod", want: "prefix must start with '/'"},
 		{name: "root only", prefix: "/", want: "prefix must not be '/'"},
 		{name: "empty path element", prefix: "/krenalis//prod", want: "prefix must not contain empty path elements"},
@@ -180,7 +180,7 @@ func TestStoreLoadPagesRequestsAndLoadsDatabaseSecret(t *testing.T) {
 				Parameters: []types.Parameter{
 					{
 						Name:  stringPtr("/aws/reference/secretsmanager/prod/db"),
-						Value: stringPtr(`{"host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
+						Value: stringPtr(`{"engine":"postgres","host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
 					},
 				},
 			},
@@ -364,7 +364,7 @@ func TestStoreLoadReturnsErrorWhenDatabaseConfigIsMixed(t *testing.T) {
 					Parameters: []types.Parameter{
 						{
 							Name:  stringPtr("/aws/reference/secretsmanager/prod/db"),
-							Value: stringPtr(`{"host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
+							Value: stringPtr(`{"engine":"postgres","host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
 						},
 					},
 				},
@@ -410,7 +410,7 @@ func TestStoreLoadReturnsErrorOnInvalidDatabaseSecretJSON(t *testing.T) {
 		t.Fatal("Load() error = nil, want non-nil")
 	}
 
-	const wantPrefix = "config/aws: invalid /db secret JSON: "
+	const wantPrefix = "config/aws: invalid '/db' secret JSON: "
 	if got := err.Error(); !strings.HasPrefix(got, wantPrefix) {
 		t.Fatalf("Load() error = %q, want prefix %q", got, wantPrefix)
 	}
