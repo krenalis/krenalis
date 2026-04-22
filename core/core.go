@@ -371,6 +371,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	// Listen to state changes.
 	core.state.Freeze()
 	core.state.AddListener(core.onCreateWorkspace)
+	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onExecutePipeline)
@@ -1503,6 +1504,24 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
 	core.mcpMu.Unlock()
+}
+
+// onDeleteOrganization is called when an organization is deleted.
+func (core *Core) onDeleteOrganization(n state.DeleteOrganization) {
+	for _, ws := range n.Organization().Workspaces() {
+		core.mcpMu.Lock()
+		wh, ok := core.mcp[ws.ID]
+		delete(core.mcp, ws.ID)
+		core.mcpMu.Unlock()
+		if ok && wh != nil {
+			go func(workspace int) {
+				err := wh.Close()
+				if err != nil {
+					slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
+				}
+			}(ws.ID)
+		}
+	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.

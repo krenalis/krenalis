@@ -62,6 +62,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 	d.state.AddListener(d.onCreatePipeline)
 	d.state.AddListener(d.onDeleteConnection)
 	d.state.AddListener(d.onDeletePipeline)
+	d.state.AddListener(d.onDeleteOrganization)
 	d.state.AddListener(d.onDeleteWorkspace)
 	d.state.AddListener(d.onSetConnectionSettings)
 	d.state.AddListener(d.onSetPipelineStatus)
@@ -230,6 +231,34 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
 	go dp.Close(errors.New("pipeline has been deleted"))
+}
+
+// onDeleteOrganization is called when an organization is deleted.
+func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
+	for _, ws := range n.Organization().Workspaces() {
+		var pipelines []*destinationPipeline
+		for _, c := range ws.Connections() {
+			if c.Role != state.Destination {
+				continue
+			}
+			connector := c.Connector()
+			if !connector.DestinationTargets.Contains(state.TargetEvent) {
+				continue
+			}
+			delete(d.senders, c.ID)
+			pipelines = append(pipelines, d.pipelines[c.ID]...) // No lock needed for reads while the state is frozen.
+			d.mu.Lock()
+			delete(d.pipelines, c.ID)
+			d.mu.Unlock()
+		}
+		if len(pipelines) > 0 {
+			go func() {
+				for _, pipeline := range pipelines {
+					pipeline.Close(errors.New("workspace has been deleted"))
+				}
+			}()
+		}
+	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
