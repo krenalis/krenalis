@@ -128,12 +128,12 @@ func (state *State) keep() {
 			org = state.unlinkConnection(n)
 		case "UpdateConnection":
 			org = state.updateConnection(n)
-		case "UpdateOrganization":
-			org = state.updateOrganization(n)
 		case "UpdateIdentityPropertiesToUnset":
 			org = state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
 			org = state.updateIdentityResolutionSettings(n)
+		case "UpdateOrganization":
+			org = state.updateOrganization(n)
 		case "UpdatePipeline":
 			org = state.updatePipeline(n)
 		case "UpdateWarehouse":
