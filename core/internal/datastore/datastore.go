@@ -247,7 +247,7 @@ func (ds *Datastore) onDeletePipeline(n state.DeletePipeline) {
 	store.onDeletePipeline(n)
 }
 
-// onDeleteWarkspace is called when a workspace is deleted.
+// onDeleteWorkspace is called when a workspace is deleted.
 func (ds *Datastore) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
 	ds.mu.Lock()

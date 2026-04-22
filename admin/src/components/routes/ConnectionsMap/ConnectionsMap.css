@@ -111,8 +111,10 @@
 }
 
 .connections-map__central-logo > img {
-	max-width: 50px;
+	max-width: 80px;
 	height: auto;
+	position: relative;
+	top: 1px;
 }
 
 .connections-map__databases {
