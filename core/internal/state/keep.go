@@ -583,24 +583,6 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	return c.organization.ID
 }
 
-// UpdateOrganization is the event sent when an organization is updated.
-type UpdateOrganization struct {
-	ID   uuid.UUID
-	Name string
-}
-
-// updateOrganization updates an organization.
-func (state *State) updateOrganization(n notification) uuid.UUID {
-	e := UpdateOrganization{}
-	if !decodeNotification(n, &e) {
-		return uuid.Nil
-	}
-	state.replaceOrganization(e.ID, func(org *Organization) {
-		org.Name = e.Name
-	})
-	return e.ID
-}
-
 // CreateWorkspace is the event sent when a workspace is created.
 type CreateWorkspace struct {
 	ID                             int
@@ -1453,6 +1435,24 @@ func (state *State) updateIdentityResolutionSettings(n notification) uuid.UUID {
 		w.Identifiers = e.Identifiers
 	})
 	return ws.organization.ID
+}
+
+// UpdateOrganization is the event sent when an organization is updated.
+type UpdateOrganization struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// updateOrganization updates an organization.
+func (state *State) updateOrganization(n notification) uuid.UUID {
+	e := UpdateOrganization{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	state.replaceOrganization(e.ID, func(org *Organization) {
+		org.Name = e.Name
+	})
+	return e.ID
 }
 
 // UpdatePipeline is the event sent when a pipeline is updated.
