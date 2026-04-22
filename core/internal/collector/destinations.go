@@ -235,8 +235,8 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
+	var pipelines []*destinationPipeline
 	for _, ws := range n.Organization().Workspaces() {
-		var pipelines []*destinationPipeline
 		for _, c := range ws.Connections() {
 			if c.Role != state.Destination {
 				continue
@@ -251,13 +251,13 @@ func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
 			delete(d.pipelines, c.ID)
 			d.mu.Unlock()
 		}
-		if len(pipelines) > 0 {
-			go func() {
-				for _, pipeline := range pipelines {
-					pipeline.Close(errors.New("workspace has been deleted"))
-				}
-			}()
-		}
+	}
+	if len(pipelines) > 0 {
+		go func() {
+			for _, pipeline := range pipelines {
+				pipeline.Close(errors.New("workspace has been deleted"))
+			}
+		}()
 	}
 }
 
