@@ -289,6 +289,11 @@ func (state *State) replaceOrganization(id uuid.UUID, f func(*Organization)) *Or
 		ws.mu.Lock()
 		ws.organization = oo
 		ws.mu.Unlock()
+		for _, connection := range ws.connections {
+			connection.mu.Lock()
+			connection.organization = oo
+			connection.mu.Unlock()
+		}
 	}
 	return oo
 }
