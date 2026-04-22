@@ -611,7 +611,7 @@ func Test_timeTimeToInt64(t *testing.T) {
 func lookupPythonExecPath() (string, error) {
 	// TODO: Keep in sync with other copies of this function, scattered
 	// throughout the code, that have the same name.
-	pythonNames := []string{"python", "python3", "python3.13"}
+	pythonNames := []string{"python", "python3", "python3.14"}
 	for _, name := range pythonNames {
 		path, err := exec.LookPath(name)
 		if err == nil {
