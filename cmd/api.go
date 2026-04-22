@@ -60,28 +60,6 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 	return nil, err
 }
 
-// CreateOrganization creates a new organization.
-func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
-		return nil, err
-	}
-	if err := validateRequiredBody(r, false); err != nil {
-		return nil, err
-	}
-	var body struct {
-		Name string `json:"name"`
-	}
-	err := json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	id, err := api.core.CreateOrganization(r.Context(), body.Name)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]string{"id": id.String()}, nil
-}
-
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.authenticateRequest(r); err != nil {
@@ -104,6 +82,28 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, err
 	}
 	return map[string]any{"connectors": api.core.Connectors()}, nil
+}
+
+// CreateOrganization creates a new organization.
+func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := api.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	id, err := api.core.CreateOrganization(r.Context(), body.Name)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id.String()}, nil
 }
 
 // EventSchema returns the event schema.

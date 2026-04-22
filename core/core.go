@@ -435,27 +435,6 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	return err
 }
 
-// CreateOrganization creates a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
-	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
-		return uuid.Nil, errors.BadRequest("%s", err)
-	}
-	n := state.CreateOrganization{Name: name}
-	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-		err := tx.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&n.ID)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
-	})
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return n.ID, nil
-}
-
 // AccessKey returns the organization and workspace identifiers associated with
 // the provided access key token and type. If the access key is not restricted
 // to a workspace, the workspace identifier will be 0. The boolean return value
@@ -699,6 +678,27 @@ func (core *Core) Connectors() []*Connector {
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
 	return len(core.state.Organizations())
+}
+
+// CreateOrganization creates a new organization and returns its identifier.
+// name cannot be empty and cannot be longer than 45 runes.
+func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
+	core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 45); err != nil {
+		return uuid.Nil, errors.BadRequest("%s", err)
+	}
+	n := state.CreateOrganization{Name: name}
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+		err := tx.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&n.ID)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return n.ID, nil
 }
 
 // InstallationID returns the installation ID.
