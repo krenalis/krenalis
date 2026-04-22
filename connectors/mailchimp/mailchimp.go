@@ -978,8 +978,8 @@ func init() {
 		{
 			Name: "location",
 			Type: types.Object([]types.Property{
-				{Name: "latitude", Type: types.Int(32), Description: "Latitude"},
-				{Name: "longitude", Type: types.Int(32), Description: "Longitude"},
+				{Name: "latitude", Type: types.Decimal(14, 2), Description: "Latitude"},
+				{Name: "longitude", Type: types.Decimal(14, 2), Description: "Longitude"},
 				{Name: "gmtoff", Type: types.Int(32), Description: "GMT offset"},
 				{Name: "dstoff", Type: types.Int(32), Description: "DST offset"},
 				{Name: "country_code", Type: types.String().WithMaxLength(2), Description: "Country code"},
