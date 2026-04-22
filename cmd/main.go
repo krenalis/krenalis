@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/krenalis/krenalis/cmd/internal/config/aws"
 	"github.com/krenalis/krenalis/core"
 
 	"github.com/getsentry/sentry-go"
@@ -35,9 +36,12 @@ var static embed.FS
 func Main(assets fs.FS) {
 
 	var help bool
+	var configStore string
 	var initDBIfEmpty bool
 	var initDockerMember bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
+	flag.StringVar(&configStore, "config-store", "env:",
+		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<prefix>' to read from AWS Parameter Store under <prefix> (default: 'env:')")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
@@ -46,6 +50,25 @@ func Main(assets fs.FS) {
 	if help {
 		flag.Usage()
 		os.Exit(0)
+	}
+	if configStore != "env:" {
+		store, options, found := strings.Cut(configStore, ":")
+		if !found || (store != "env" && store != "aws") {
+			fatal(1, "invalid -config-store value: expected 'env:' or 'aws:<prefix>'")
+		}
+		switch store {
+		case "env":
+			if options != "" {
+				fatal(1, "invalid -config-store value: 'env' does not accept options; use 'env:' only")
+			}
+		case "aws":
+			if options == "" {
+				fatal(1, "invalid -config-store value: 'aws' requires a prefix, for example 'aws:/krenalis/prod/'")
+			}
+			if err := aws.ValidatePrefix(options); err != nil {
+				fatal(1, "invalid -config-store value: AWS "+err.Error())
+			}
+		}
 	}
 	if initDockerMember && !initDBIfEmpty {
 		flag.Usage()
@@ -60,8 +83,16 @@ func Main(assets fs.FS) {
 		}
 	}
 
-	// Parse the settings from the environment variables.
-	settings, err := parseEnvSettings()
+	ctx, cancel := context.WithCancel(context.Background())
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
+	// Load the configuration from the environment variables.
+	conf, err := loadConfig(ctx, configStore)
 	if err != nil {
 		fatal(1, err.Error())
 	}
@@ -86,8 +117,8 @@ func Main(assets fs.FS) {
 	}
 
 	// Configure Sentry, if necessary.
-	if settings.SentryTelemetryLevel == core.TelemetryLevelErrors ||
-		settings.SentryTelemetryLevel == core.TelemetryLevelAll {
+	if conf.SentryTelemetryLevel == core.TelemetryLevelErrors ||
+		conf.SentryTelemetryLevel == core.TelemetryLevelAll {
 		// Configure Sentry.
 		err = sentry.Init(sentry.ClientOptions{
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
@@ -116,15 +147,7 @@ func Main(assets fs.FS) {
 		}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigs
-		cancel()
-	}()
-
-	err = Run(ctx, settings, assets, initDBIfEmpty, initDockerMember)
+	err = Run(ctx, conf, assets, initDBIfEmpty, initDockerMember)
 	if err != nil {
 		fatal(1, err.Error())
 	}
