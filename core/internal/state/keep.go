@@ -583,50 +583,6 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	return c.organization.ID
 }
 
-// DeleteOrganization is the event sent when an organization is deleted.
-type DeleteOrganization struct {
-	ID           uuid.UUID
-	organization *Organization
-}
-
-func (n DeleteOrganization) Organization() *Organization {
-	return n.organization
-}
-
-// deleteOrganization deletes an organization.
-func (state *State) deleteOrganization(n notification) uuid.UUID {
-	e := DeleteOrganization{}
-	if !decodeNotification(n, &e) {
-		return uuid.Nil
-	}
-	state.mu.Lock()
-	e.organization = state.organizations[e.ID]
-	delete(state.organizations, e.ID)
-	// Delete all workspaces belonging to the organization.
-	for id, ws := range e.organization.workspaces {
-		for _, c := range ws.connections {
-			for _, key := range c.Keys {
-				delete(state.connectionsByKey, key)
-			}
-			delete(state.connections, c.ID)
-			// Delete the connection's pipelines.
-			for _, p := range c.pipelines {
-				delete(state.pipelines, p.ID)
-			}
-		}
-		delete(state.workspaces, id)
-	}
-	// Delete all access keys belonging to the organization.
-	for token, key := range state.accessKeyByToken {
-		if key.Organization == e.ID {
-			delete(state.accessKeyByToken, token)
-		}
-	}
-	state.mu.Unlock()
-	dispatchNotification(state, e)
-	return e.ID
-}
-
 // UpdateOrganization is the event sent when an organization is updated.
 type UpdateOrganization struct {
 	ID   uuid.UUID
@@ -897,6 +853,50 @@ func (state *State) deleteMember(n notification) uuid.UUID {
 	delete(org.members, e.ID)
 	org.mu.Unlock()
 	return e.Organization
+}
+
+// DeleteOrganization is the event sent when an organization is deleted.
+type DeleteOrganization struct {
+	ID           uuid.UUID
+	organization *Organization
+}
+
+func (n DeleteOrganization) Organization() *Organization {
+	return n.organization
+}
+
+// deleteOrganization deletes an organization.
+func (state *State) deleteOrganization(n notification) uuid.UUID {
+	e := DeleteOrganization{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	state.mu.Lock()
+	e.organization = state.organizations[e.ID]
+	delete(state.organizations, e.ID)
+	// Delete all workspaces belonging to the organization.
+	for id, ws := range e.organization.workspaces {
+		for _, c := range ws.connections {
+			for _, key := range c.Keys {
+				delete(state.connectionsByKey, key)
+			}
+			delete(state.connections, c.ID)
+			// Delete the connection's pipelines.
+			for _, p := range c.pipelines {
+				delete(state.pipelines, p.ID)
+			}
+		}
+		delete(state.workspaces, id)
+	}
+	// Delete all access keys belonging to the organization.
+	for token, key := range state.accessKeyByToken {
+		if key.Organization == e.ID {
+			delete(state.accessKeyByToken, token)
+		}
+	}
+	state.mu.Unlock()
+	dispatchNotification(state, e)
+	return e.ID
 }
 
 // DeletePipeline is the event sent when a pipeline is deleted.
