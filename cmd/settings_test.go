@@ -140,7 +140,7 @@ func TestParseSettings(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected invalid format error, got nil")
 		}
-		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'" {
+		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<region>:<key-id>'" {
 			t.Fatalf("unexpected error: %q", got)
 		}
 
@@ -149,14 +149,14 @@ func TestParseSettings(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected unsupported backend error, got nil")
 		}
-		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'" {
+		if got := err.Error(); got != "KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<region>:<key-id>'" {
 			t.Fatalf("unexpected error: %q", got)
 		}
 
 		t.Setenv("KRENALIS_KMS", "aws:")
 		_, err = parseEnvSettings()
 		if err == nil {
-			t.Fatal("expected empty aws identifier error, got nil")
+			t.Fatal("expected invalid aws identifier error, got nil")
 		}
 		if got := err.Error(); got != "KRENALIS_KMS aws value is empty" {
 			t.Fatalf("unexpected error: %q", got)

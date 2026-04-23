@@ -10,9 +10,9 @@
 // form of the data key, and later decrypt that stored key to recover the same
 // plaintext key.
 //
-// The package selects an implementation from a URI of the form
-// "<backend>:<identifier>". The standard backends are "key", for a
-// process-local key, and "aws", for AWS KMS.
+// The package selects an implementation from a URI. The standard backends are
+// "key:<base64>", for a process-local key, and "aws:<region>:<key-id>", for AWS
+// KMS.
 //
 // Package kms does not encrypt application data itself; it only manages data
 // encryption keys.
@@ -43,8 +43,7 @@ type Kms interface {
 	GenerateDataKeyWithoutPlaintext(ctx context.Context, keyLen int) (encryptedDataKey []byte, err error)
 }
 
-// New returns a Kms selected by uri, which must have the form
-// "<backend>:<identifier>".
+// New returns a Kms selected by uri.
 func New(ctx context.Context, uri string) (Kms, error) {
 	backend, identifier, found := strings.Cut(uri, ":")
 	if !found {
