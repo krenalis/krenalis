@@ -29,6 +29,9 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 	const [title, setTitle] = useState<ReactNode>('');
 	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
+	// TODO(remove)
+	// test comment
+
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
