@@ -123,13 +123,13 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 	settings := &Config{}
 
 	if kms, ok := conf.Lookup("KRENALIS_KMS"); ok {
-		backend, rawValue, found := strings.Cut(kms, ":")
+		backend, options, found := strings.Cut(kms, ":")
 		if !found {
-			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'")
+			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<region>:<key-id>'")
 		}
 		switch backend {
 		case "key":
-			decodedValue, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(rawValue, "="))
+			decodedValue, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(options, "="))
 			if err != nil {
 				return nil, errors.New("KRENALIS_KMS key value is not valid base64")
 			}
@@ -138,11 +138,11 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 				return nil, fmt.Errorf("KRENALIS_KMS key value decodes to %d bytes, expected 32", n)
 			}
 		case "aws":
-			if rawValue == "" {
+			if options == "" {
 				return nil, errors.New("KRENALIS_KMS aws value is empty")
 			}
 		default:
-			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'")
+			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<region>:<key-id>'")
 		}
 		settings.KMS = kms
 	} else {

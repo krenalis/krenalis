@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
@@ -21,16 +22,24 @@ type Kms struct {
 
 // New creates an AWS KMS-backed implementation of the Kms interface.
 //
-// It builds the AWS KMS client using the AWS SDK default configuration chain,
-// so credentials, region, and related settings are resolved through the
-// standard AWS mechanisms.
+// It builds the AWS KMS client using the provided region and the AWS SDK
+// default configuration chain, so credentials and related settings are resolved
+// through the standard AWS mechanisms.
 //
-// keyID identifies the AWS KMS key used to manage data keys.
-func New(ctx context.Context, keyID string) (*Kms, error) {
+// options has the form <region>:<key-id> where <region> is the AWS region and
+// <key-id> identifies the AWS KMS key used to manage data keys.
+func New(ctx context.Context, options string) (*Kms, error) {
+	region, keyID, found := strings.Cut(options, ":")
+	if !found {
+		return nil, errors.New("kms/aws: options must be in the form '<region>:<key-id>'")
+	}
+	if err := validateRegion(region); err != nil {
+		return nil, fmt.Errorf("kms/aws: %s", err)
+	}
 	if keyID == "" {
 		return nil, errors.New("kms/aws: empty key ID")
 	}
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("kms/aws: %s", err)
 	}
@@ -114,4 +123,20 @@ func (k *Kms) DecryptDataKey(ctx context.Context, encryptedDataKey []byte) ([]by
 	}
 
 	return out.Plaintext, nil
+}
+
+func validateRegion(region string) error {
+	if region == "" {
+		return errors.New("region must not be empty")
+	}
+	for _, r := range region {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= '0' && r <= '9':
+		case r == '-':
+		default:
+			return errors.New("region must be an AWS region code such as 'us-east-1'")
+		}
+	}
+	return nil
 }
