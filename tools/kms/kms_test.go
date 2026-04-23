@@ -19,6 +19,8 @@ func TestNewErrors(t *testing.T) {
 		{name: "invalid URI", uri: "key", want: "kms: uri is invalid"},
 		{name: "unsupported backend", uri: "gcp:key", want: "kms: unsupported backend"},
 		{name: "empty AWS options", uri: "aws:", want: "kms/aws: options must be in the form '<region>:<key-id>'"},
+		{name: "empty AWS region", uri: "aws::test-key", want: "kms/aws: region must not be empty"},
+		{name: "invalid AWS region", uri: "aws:us/east/1:test-key", want: "kms/aws: region must be an AWS region code such as 'us-east-1'"},
 		{name: "empty AWS key ID", uri: "aws:us-east-1:", want: "kms/aws: empty key ID"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
