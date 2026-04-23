@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/krenalis/krenalis/cmd/internal/config/aws"
 	"github.com/krenalis/krenalis/core"
 
 	"github.com/getsentry/sentry-go"
@@ -41,7 +40,7 @@ func Main(assets fs.FS) {
 	var initDockerMember bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.StringVar(&configStore, "config-store", "env:",
-		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<prefix>' to read from AWS Parameter Store under <prefix> (default: 'env:')")
+		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<region>:<prefix>' to read from AWS Parameter Store (default: 'env:')")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
@@ -54,7 +53,7 @@ func Main(assets fs.FS) {
 	if configStore != "env:" {
 		store, options, found := strings.Cut(configStore, ":")
 		if !found || (store != "env" && store != "aws") {
-			fatal(1, "invalid -config-store value: expected 'env:' or 'aws:<prefix>'")
+			fatal(1, "invalid -config-store value: expected 'env:' or 'aws:<region>:<prefix>'")
 		}
 		switch store {
 		case "env":
@@ -63,10 +62,7 @@ func Main(assets fs.FS) {
 			}
 		case "aws":
 			if options == "" {
-				fatal(1, "invalid -config-store value: 'aws' requires a prefix, for example 'aws:/krenalis/prod/'")
-			}
-			if err := aws.ValidatePrefix(options); err != nil {
-				fatal(1, "invalid -config-store value: AWS "+err.Error())
+				fatal(1, "invalid -config-store value: 'aws' config store requires a region and a prefix, for example 'aws:us-east-1:/krenalis/prod/'")
 			}
 		}
 	}

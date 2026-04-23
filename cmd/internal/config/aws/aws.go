@@ -6,8 +6,8 @@
 // Store.
 //
 // The package reads supported parameters recursively under a common path
-// prefix, for example "/prod". Each supported setting is mapped from a
-// Parameter Store path such as:
+// prefix, for example "/prod", in the configured AWS region. Each supported
+// setting is mapped from a Parameter Store path such as:
 //
 //	/prod/http/host
 //	/prod/http/port
@@ -61,11 +61,12 @@ func normalizePrefix(prefix string) string {
 	return strings.TrimRight(prefix, "/")
 }
 
-func New(ctx context.Context, prefix string) (*Store, error) {
-	if err := ValidatePrefix(prefix); err != nil {
+func New(ctx context.Context, options string) (*Store, error) {
+	region, prefix, err := validateOptions(options)
+	if err != nil {
 		return nil, fmt.Errorf("config/aws: %s", err)
 	}
-	cfg, err := awscfg.LoadDefaultConfig(ctx)
+	cfg, err := awscfg.LoadDefaultConfig(ctx, awscfg.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("config/aws: %s", err)
 	}
@@ -236,8 +237,22 @@ func (c *Config) Lookup(name string) (string, bool) {
 	return v, ok
 }
 
-// ValidatePrefix reports whether prefix is a valid Parameter Store path prefix.
-func ValidatePrefix(prefix string) error {
+// validateOptions validates and splits AWS store options.
+func validateOptions(options string) (string, string, error) {
+	region, prefix, found := strings.Cut(options, ":")
+	if !found {
+		return "", "", errors.New("options must be in the form '<region>:<prefix>'")
+	}
+	if err := validateRegion(region); err != nil {
+		return "", "", err
+	}
+	if err := validatePrefix(prefix); err != nil {
+		return "", "", err
+	}
+	return region, prefix, nil
+}
+
+func validatePrefix(prefix string) error {
 	if prefix == "" {
 		return errors.New("prefix must not be empty")
 	}
@@ -260,6 +275,22 @@ func ValidatePrefix(prefix string) error {
 		case r == '_', r == '.', r == '-':
 		default:
 			return fmt.Errorf("prefix contains invalid character %q", r)
+		}
+	}
+	return nil
+}
+
+func validateRegion(region string) error {
+	if region == "" {
+		return errors.New("region must not be empty")
+	}
+	for _, r := range region {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= '0' && r <= '9':
+		case r == '-':
+		default:
+			return errors.New("region must be an AWS region code such as 'us-east-1'")
 		}
 	}
 	return nil

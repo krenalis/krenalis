@@ -49,10 +49,9 @@ func TestConfigGetAndLookup(t *testing.T) {
 }
 
 func TestNewNormalizesPrefix(t *testing.T) {
-	t.Setenv("AWS_REGION", "eu-west-1")
 	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
 
-	store, err := New(context.Background(), "/prod/")
+	store, err := New(context.Background(), "us-east-1:/prod/")
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -61,7 +60,7 @@ func TestNewNormalizesPrefix(t *testing.T) {
 		t.Fatalf("store.prefix = %q, want %q", store.prefix, "/prod")
 	}
 
-	store, err = New(context.Background(), "/prod//")
+	store, err = New(context.Background(), "us-east-1:/prod//")
 	if err != nil {
 		t.Fatalf("New() with multiple trailing slashes error = %v", err)
 	}
@@ -70,41 +69,50 @@ func TestNewNormalizesPrefix(t *testing.T) {
 	}
 }
 
-// TestValidatePrefix verifies prefix validation rules.
-func TestValidatePrefix(t *testing.T) {
+// TestValidateOptions verifies AWS store option validation rules.
+func TestValidateOptions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		prefix string
-		want   string
+		name    string
+		options string
+		want    string
 	}{
-		{name: "valid", prefix: "/krenalis/prod"},
-		{name: "valid trailing slash", prefix: "/krenalis/prod/"},
-		{name: "valid multiple trailing slashes", prefix: "/krenalis/prod//"},
-		{name: "empty", prefix: "", want: "prefix must not be empty"},
-		{name: "missing slash", prefix: "krenalis/prod", want: "prefix must start with '/'"},
-		{name: "root only", prefix: "/", want: "prefix must not be '/'"},
-		{name: "empty path element", prefix: "/krenalis//prod", want: "prefix must not contain empty path elements"},
-		{name: "invalid character", prefix: "/krenalis/prod?", want: `prefix contains invalid character '?'`},
+		{name: "valid", options: "us-east-1:/krenalis/prod"},
+		{name: "valid trailing slash", options: "us-east-1:/krenalis/prod/"},
+		{name: "valid multiple trailing slashes", options: "us-east-1:/krenalis/prod//"},
+		{name: "missing separator", options: "us-east-1", want: "options must be in the form '<region>:<prefix>'"},
+		{name: "empty region", options: ":/krenalis/prod", want: "region must not be empty"},
+		{name: "region with invalid character", options: "us/east/1:/krenalis/prod", want: "region must be an AWS region code such as 'us-east-1'"},
+		{name: "empty prefix", options: "us-east-1:", want: "prefix must not be empty"},
+		{name: "missing slash", options: "us-east-1:krenalis/prod", want: "prefix must start with '/'"},
+		{name: "root only", options: "us-east-1:/", want: "prefix must not be '/'"},
+		{name: "empty path element", options: "us-east-1:/krenalis//prod", want: "prefix must not contain empty path elements"},
+		{name: "invalid character", options: "us-east-1:/krenalis/prod?", want: `prefix contains invalid character '?'`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidatePrefix(tt.prefix)
+			region, prefix, err := validateOptions(tt.options)
 			if tt.want == "" {
 				if err != nil {
-					t.Fatalf("ValidatePrefix(%q) error = %v, want nil", tt.prefix, err)
+					t.Fatalf("validateOptions(%q) error = %v, want nil", tt.options, err)
+				}
+				if region != "us-east-1" {
+					t.Fatalf("validateOptions(%q) region = %q, want %q", tt.options, region, "us-east-1")
+				}
+				if !strings.HasPrefix(prefix, "/krenalis/prod") {
+					t.Fatalf("validateOptions(%q) prefix = %q, want prefix /krenalis/prod", tt.options, prefix)
 				}
 				return
 			}
 			if err == nil {
-				t.Fatalf("ValidatePrefix(%q) error = nil, want %q", tt.prefix, tt.want)
+				t.Fatalf("validateOptions(%q) error = nil, want %q", tt.options, tt.want)
 			}
 			if err.Error() != tt.want {
-				t.Fatalf("ValidatePrefix(%q) error = %q, want %q", tt.prefix, err.Error(), tt.want)
+				t.Fatalf("validateOptions(%q) error = %q, want %q", tt.options, err.Error(), tt.want)
 			}
 		})
 	}
