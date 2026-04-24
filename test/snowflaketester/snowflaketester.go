@@ -28,7 +28,7 @@ type Settings struct {
 	Warehouse string
 }
 
-func New() (*SnowflakeTester, error) {
+func CreateTestDatabase() (*SnowflakeTester, error) {
 
 	settings := Settings{
 		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),

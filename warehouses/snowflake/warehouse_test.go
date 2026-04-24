@@ -87,11 +87,16 @@ func Test_Merge(t *testing.T) {
 		}
 	}
 
-	st, err := snowflaketester.New()
+	st, err := snowflaketester.CreateTestDatabase()
 	if err != nil {
 		panic(err)
 	}
-	defer st.Teardown()
+	defer func() {
+		err := st.Teardown()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	dw := warehouses.Registered("Snowflake").New(st.WarehouseSettingsLoader())
 	defer dw.Close()

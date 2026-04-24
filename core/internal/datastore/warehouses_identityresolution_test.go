@@ -549,20 +549,25 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatalf("cannot open the path %q specified in the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
 				}
 
-				st, err := snowflaketester.New()
+				testDB, err := snowflaketester.CreateTestDatabase()
 				if err != nil {
 					panic(err)
 				}
-				stSettings := st.Settings()
+				defer func() {
+					err := testDB.Teardown()
+					if err != nil {
+						t.Logf("cannot teardown test Snowflake database: %s", err)
+					}
+				}()
 
 				settings, err = json.Marshal(map[string]any{
-					"username":  stSettings.User,
-					"password":  stSettings.Password,
-					"account":   stSettings.Account,
-					"warehouse": stSettings.Warehouse,
-					"database":  stSettings.Database,
-					"schema":    stSettings.Schema,
-					"role":      stSettings.Role,
+					"username":  testDB.Settings().User,
+					"password":  testDB.Settings().Password,
+					"account":   testDB.Settings().Account,
+					"warehouse": testDB.Settings().Warehouse,
+					"database":  testDB.Settings().Database,
+					"schema":    testDB.Settings().Schema,
+					"role":      testDB.Settings().Role,
 				})
 
 			default:
