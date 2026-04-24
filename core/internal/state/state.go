@@ -1518,6 +1518,16 @@ func (lang Language) String() string {
 	panic("invalid language")
 }
 
+func (lang Language) Value() (driver.Value, error) {
+	switch lang {
+	case JavaScript:
+		return "JavaScript", nil
+	case Python:
+		return "Python", nil
+	}
+	return nil, fmt.Errorf("state: invalid language: %d", lang)
+}
+
 // Transformation represents a transformation.
 type Transformation struct {
 	Mapping  map[string]string
