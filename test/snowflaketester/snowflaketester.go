@@ -1,3 +1,7 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
 package snowflaketester
 
 import (
@@ -5,6 +9,7 @@ import (
 	"database/sql/driver"
 	"os"
 
+	"github.com/krenalis/krenalis/warehouses"
 	"github.com/snowflakedb/gosnowflake"
 )
 
@@ -23,11 +28,29 @@ func New() (*SnowflakeTester, error) {
 		Warehouse:        os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
 		DisableTelemetry: true,
 	})
+
 	db := sql.OpenDB(connector)
+
+	// TODO
+
 	return &SnowflakeTester{
 		connector: connector,
 		db:        db,
 	}, nil
 }
 
-func (st *SnowflakeTester) Teardown()
+func (st *SnowflakeTester) WarehouseSettingsLoader() warehouses.SettingsLoader {
+	// TODO
+	return nil
+}
+
+func (st *SnowflakeTester) DB() *sql.DB { // TODO: is this necessary?
+	return st.db
+}
+
+func (st *SnowflakeTester) Teardown() error {
+
+	// TODO
+
+	return nil
+}

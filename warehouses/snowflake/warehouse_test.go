@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -89,17 +89,13 @@ func Test_Merge(t *testing.T) {
 		}
 	}
 
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
-	}
-
-	// Open the data warehouse.
-	settings, err := os.ReadFile(settingsFile)
+	st, err := snowflaketester.New()
 	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+		panic(err)
 	}
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(settings))
+	defer st.Teardown()
+
+	dw := warehouses.Registered("Snowflake").New(st.WarehouseSettingsLoader())
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
@@ -241,16 +237,4 @@ func Test_Merge(t *testing.T) {
 	if err = rows.Err(); err != nil {
 		t.Fatalf("unexpected error scanning rows: %s", err)
 	}
-}
-
-type testSettingsLoader struct {
-	settings json.Value
-}
-
-func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
-	return &testSettingsLoader{settings: settings}
-}
-
-func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
-	return json.Unmarshal(loader.settings, dst)
 }
