@@ -155,7 +155,7 @@ func (s *Store) loadSecretsManagerReferences(ctx context.Context, values map[str
 			// Reject mixed database parameters.
 			for _, name := range dbSecretNames {
 				if _, ok := values[name]; ok {
-					return errors.New("config/aws: both the /db Secrets Manager reference and /db/... parameters are configured; only one database configuration source is allowed")
+					return errors.New("config/aws: both the '/db' Secrets Manager secret and '/db/...' parameters are configured; only one database configuration source is allowed")
 				}
 			}
 			err := unmarshalDatabaseSecret(values, *p.Value)
