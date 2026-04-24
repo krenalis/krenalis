@@ -387,7 +387,7 @@ func TestStoreLoadReturnsErrorWhenDatabaseConfigIsMixed(t *testing.T) {
 		t.Fatal("Load() error = nil, want non-nil")
 	}
 
-	want := "config/aws: both the '/db' Secrets Manager secret and '/db/...' parameters are configured; only one database configuration source is allowed"
+	want := "config/aws: both the '/prod/db' Secrets Manager secret and '/prod/db/...' parameters are configured; only one database configuration source is allowed"
 	if err.Error() != want {
 		t.Fatalf("Load() error = %q, want %q", err.Error(), want)
 	}
