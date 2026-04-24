@@ -169,17 +169,17 @@ func TestStoreLoadPagesRequestsAndLoadsDatabaseSecret(t *testing.T) {
 		byPathOutputs: []*ssm.GetParametersByPathOutput{
 			{
 				Parameters: []types.Parameter{
-					{Name: stringPtr("/prod/db/schema"), Value: stringPtr("public")},
-					{Name: stringPtr("/prod/db/max-connections"), Value: stringPtr("16")},
-					{Name: stringPtr("/prod/http/host"), Value: stringPtr("0.0.0.0")},
-					{Name: stringPtr("/prod/http/port"), Value: stringPtr("2022")},
-					{Name: stringPtr("/prod/http/external-url"), Value: stringPtr("https://example.com/")},
+					{Name: new("/prod/db/schema"), Value: new("public")},
+					{Name: new("/prod/db/max-connections"), Value: new("16")},
+					{Name: new("/prod/http/host"), Value: new("0.0.0.0")},
+					{Name: new("/prod/http/port"), Value: new("2022")},
+					{Name: new("/prod/http/external-url"), Value: new("https://example.com/")},
 				},
-				NextToken: stringPtr("page-2"),
+				NextToken: new("page-2"),
 			},
 			{
 				Parameters: []types.Parameter{
-					{Name: stringPtr("/prod/kms"), Value: stringPtr("aws:test-key")},
+					{Name: new("/prod/kms"), Value: new("aws:test-key")},
 				},
 			},
 		},
@@ -187,8 +187,8 @@ func TestStoreLoadPagesRequestsAndLoadsDatabaseSecret(t *testing.T) {
 			{
 				Parameters: []types.Parameter{
 					{
-						Name:  stringPtr("/aws/reference/secretsmanager/prod/db"),
-						Value: stringPtr(`{"engine":"postgres","host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
+						Name:  new("/aws/reference/secretsmanager/prod/db"),
+						Value: new(`{"engine":"postgres","host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
 					},
 				},
 			},
@@ -271,7 +271,7 @@ func TestStoreLoadReturnsErrorOnUnexpectedParameterName(t *testing.T) {
 			byPathOutputs: []*ssm.GetParametersByPathOutput{
 				{
 					Parameters: []types.Parameter{
-						{Name: stringPtr("/prod/unexpected"), Value: stringPtr("value")},
+						{Name: new("/prod/unexpected"), Value: new("value")},
 					},
 				},
 			},
@@ -303,7 +303,7 @@ func TestStoreLoadReturnsErrorOnNilNameOrValue(t *testing.T) {
 			name: "nil name",
 			out: &ssm.GetParametersByPathOutput{
 				Parameters: []types.Parameter{
-					{Value: stringPtr("value")},
+					{Value: new("value")},
 				},
 			},
 			want: "config/aws: AWS has returned a nil parameter name",
@@ -312,7 +312,7 @@ func TestStoreLoadReturnsErrorOnNilNameOrValue(t *testing.T) {
 			name: "nil value",
 			out: &ssm.GetParametersByPathOutput{
 				Parameters: []types.Parameter{
-					{Name: stringPtr("/db/host")},
+					{Name: new("/db/host")},
 				},
 			},
 			want: "config/aws: AWS has returned a nil parameter value",
@@ -363,7 +363,7 @@ func TestStoreLoadReturnsErrorWhenDatabaseConfigIsMixed(t *testing.T) {
 			byPathOutputs: []*ssm.GetParametersByPathOutput{
 				{
 					Parameters: []types.Parameter{
-						{Name: stringPtr("/prod/db/host"), Value: stringPtr("db.internal")},
+						{Name: new("/prod/db/host"), Value: new("db.internal")},
 					},
 				},
 			},
@@ -371,8 +371,8 @@ func TestStoreLoadReturnsErrorWhenDatabaseConfigIsMixed(t *testing.T) {
 				{
 					Parameters: []types.Parameter{
 						{
-							Name:  stringPtr("/aws/reference/secretsmanager/prod/db"),
-							Value: stringPtr(`{"engine":"postgres","host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
+							Name:  new("/aws/reference/secretsmanager/prod/db"),
+							Value: new(`{"engine":"postgres","host":"db.internal","port":5432,"dbname":"krenalis","username":"app","password":"secret"}`),
 						},
 					},
 				},
@@ -387,7 +387,7 @@ func TestStoreLoadReturnsErrorWhenDatabaseConfigIsMixed(t *testing.T) {
 		t.Fatal("Load() error = nil, want non-nil")
 	}
 
-	want := "config/aws: both the /db Secrets Manager reference and /db/... parameters are configured; only one database configuration source is allowed"
+	want := "config/aws: both the '/db' Secrets Manager secret and '/db/...' parameters are configured; only one database configuration source is allowed"
 	if err.Error() != want {
 		t.Fatalf("Load() error = %q, want %q", err.Error(), want)
 	}
@@ -402,8 +402,8 @@ func TestStoreLoadReturnsErrorOnInvalidDatabaseSecretJSON(t *testing.T) {
 				{
 					Parameters: []types.Parameter{
 						{
-							Name:  stringPtr("/aws/reference/secretsmanager/prod/db"),
-							Value: stringPtr(`{`),
+							Name:  new("/aws/reference/secretsmanager/prod/db"),
+							Value: new(`{`),
 						},
 					},
 				},
@@ -424,6 +424,7 @@ func TestStoreLoadReturnsErrorOnInvalidDatabaseSecretJSON(t *testing.T) {
 	}
 }
 
+//go:fix inline
 func stringPtr(s string) *string {
-	return &s
+	return new(s)
 }
