@@ -348,7 +348,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
 				case "access_keys_organization_fkey":
-					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
+					err = errors.Unprocessable(OrganizationNotExist, "organization %q does not exist", n.Organization)
 				case "access_keys_workspace_fkey":
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
@@ -445,7 +445,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
-					return nil, errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
+					return nil, errors.Unprocessable(OrganizationNotExist, "organization %q does not exist", n.Organization)
 				}
 			}
 			return nil, err
@@ -481,6 +481,22 @@ func (this *Organization) DeleteAccessKey(ctx context.Context, id int) error {
 		return n, nil
 	})
 	return err
+}
+
+// Delete deletes the organization.
+func (this *Organization) Delete(ctx context.Context) error {
+	this.core.mustBeOpen()
+	n := state.DeleteOrganization{ID: this.organization.ID}
+	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "DELETE FROM organizations WHERE id = $1", this.organization.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("organization %q does not exist", this.organization.ID)
+		}
+		return n, nil
+	})
 }
 
 // DeleteMember deletes a member of the organization with identifier id.
@@ -779,6 +795,25 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 		return nil, err
 	})
 	return err
+}
+
+// Update updates the name of the organization.
+func (this *Organization) Update(ctx context.Context, name string) error {
+	this.core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 45); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	n := state.UpdateOrganization{ID: this.organization.ID, Name: name}
+	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("organization %q does not exist", this.organization.ID)
+		}
+		return n, nil
+	})
 }
 
 // Workspace returns the organization's workspace with identifier id.

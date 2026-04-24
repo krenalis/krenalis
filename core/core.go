@@ -87,7 +87,8 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	Kms                           string
-	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
+	OrganizationsAPIKey           string // can be empty (which means that organizations APIs cannot be used)
+	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
 	SMTP                          SMTPConfig
@@ -370,6 +371,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	// Listen to state changes.
 	core.state.Freeze()
 	core.state.AddListener(core.onCreateWorkspace)
+	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onExecutePipeline)
@@ -431,21 +433,6 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		return n, nil
 	})
 	return err
-}
-
-// AddOrganization adds a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) AddOrganization(ctx context.Context, name string) (uuid.UUID, error) {
-	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
-		return uuid.Nil, errors.BadRequest("%s", err)
-	}
-	var id uuid.UUID
-	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&id)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return id, nil
 }
 
 // AccessKey returns the organization and workspace identifiers associated with
@@ -693,6 +680,27 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 	return len(core.state.Organizations())
 }
 
+// CreateOrganization creates a new organization and returns its identifier.
+// name cannot be empty and cannot be longer than 45 runes.
+func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
+	core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 45); err != nil {
+		return uuid.Nil, errors.BadRequest("%s", err)
+	}
+	n := state.CreateOrganization{Name: name}
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+		err := tx.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&n.ID)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return n.ID, nil
+}
+
 // InstallationID returns the installation ID.
 func (core *Core) InstallationID() string {
 	return core.state.InstallationID()
@@ -773,7 +781,7 @@ func (core *Core) Organization(id uuid.UUID) (*Organization, error) {
 	}
 	org, ok := core.state.Organization(id)
 	if !ok {
-		return nil, errors.NotFound("organization %d does not exist", id)
+		return nil, errors.NotFound("organization %q does not exist", id)
 	}
 	organization := Organization{
 		core:         core,
@@ -1496,6 +1504,24 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
 	core.mcpMu.Unlock()
+}
+
+// onDeleteOrganization is called when an organization is deleted.
+func (core *Core) onDeleteOrganization(n state.DeleteOrganization) {
+	for _, ws := range n.Organization().Workspaces() {
+		core.mcpMu.Lock()
+		wh, ok := core.mcp[ws.ID]
+		delete(core.mcp, ws.ID)
+		core.mcpMu.Unlock()
+		if ok && wh != nil {
+			go func(workspace int) {
+				err := wh.Close()
+				if err != nil {
+					slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
+				}
+			}(ws.ID)
+		}
+	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.

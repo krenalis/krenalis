@@ -55,6 +55,7 @@ func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 	ds.state.AddListener(ds.onCreatePipeline)
 	ds.state.AddListener(ds.onCreateWorkspace)
 	ds.state.AddListener(ds.onDeleteConnection)
+	ds.state.AddListener(ds.onDeleteOrganization)
 	ds.state.AddListener(ds.onDeletePipeline)
 	ds.state.AddListener(ds.onDeleteWorkspace)
 	ds.state.AddListener(ds.onEndAlterProfileSchema)
@@ -215,6 +216,25 @@ func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) {
 	store.onDeleteConnection(n)
 }
 
+// onDeleteOrganization is called when an organization is deleted.
+func (ds *Datastore) onDeleteOrganization(n state.DeleteOrganization) {
+	for _, ws := range n.Organization().Workspaces() {
+		ds.mu.Lock()
+		store, ok := ds.store[ws.ID]
+		if ok { // see issue https://github.com/krenalis/krenalis/issues/2051
+			delete(ds.store, ws.ID)
+		}
+		ds.mu.Unlock()
+		if !ok { // see issue https://github.com/krenalis/krenalis/issues/2051
+			return
+		}
+		err := store.close()
+		if err != nil {
+			slog.Warn("core/internal/datastore: cannot close store", "error", err)
+		}
+	}
+}
+
 // onDeletePipeline is called when a pipeline is deleted.
 func (ds *Datastore) onDeletePipeline(n state.DeletePipeline) {
 	ws := n.Pipeline().Connection().Workspace()
@@ -227,7 +247,7 @@ func (ds *Datastore) onDeletePipeline(n state.DeletePipeline) {
 	store.onDeletePipeline(n)
 }
 
-// onDeleteWarkspace is called when a workspace is deleted.
+// onDeleteWorkspace is called when a workspace is deleted.
 func (ds *Datastore) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
 	ds.mu.Lock()

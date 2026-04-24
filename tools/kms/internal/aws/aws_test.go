@@ -24,32 +24,44 @@ import (
 
 const testKeyID = "test-key"
 
-// TestNewEmptyKeyID rejects empty AWS KMS key identifiers.
-func TestNewEmptyKeyID(t *testing.T) {
-	kms, err := New(context.Background(), "")
-	if err == nil {
-		t.Fatal("expected error from New with empty key ID, got nil")
-	}
-	if err.Error() != "kms/aws: empty key ID" {
-		t.Fatalf("expected empty key ID error, got %v", err)
-	}
-	if kms != nil {
-		t.Fatalf("expected nil Kms from New with empty key ID, got %#v", kms)
+// TestNewInvalidOptions rejects invalid AWS KMS options.
+func TestNewInvalidOptions(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		options string
+		want    string
+	}{
+		{name: "missing separator", options: "", want: "kms/aws: options must be in the form '<region>:<key-id>'"},
+		{name: "empty region", options: ":test-key", want: "kms/aws: region must not be empty"},
+		{name: "invalid region", options: "us/east/1:test-key", want: "kms/aws: region must be an AWS region code such as 'us-east-1'"},
+		{name: "empty key ID", options: "us-east-1:", want: "kms/aws: empty key ID"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kms, err := New(context.Background(), tc.options)
+			if err == nil {
+				t.Fatalf("expected error from New(%q), got nil", tc.options)
+			}
+			if err.Error() != tc.want {
+				t.Fatalf("expected error %q from New(%q), got %v", tc.want, tc.options, err)
+			}
+			if kms != nil {
+				t.Fatalf("expected nil Kms from New(%q), got %#v", tc.options, kms)
+			}
+		})
 	}
 }
 
-// TestNewSuccessWithEnv builds a client from minimal AWS environment settings.
-func TestNewSuccessWithEnv(t *testing.T) {
+// TestNewSuccess builds a client from explicit options and AWS credentials.
+func TestNewSuccess(t *testing.T) {
 
 	configDir := t.TempDir()
-	t.Setenv("AWS_REGION", "eu-west-1")
 	t.Setenv("AWS_ACCESS_KEY_ID", "test-access-key")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret-key")
 	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
 	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(configDir, "credentials"))
 	t.Setenv("AWS_CONFIG_FILE", filepath.Join(configDir, "config"))
 
-	kms, err := New(context.Background(), testKeyID)
+	kms, err := New(context.Background(), "us-east-1:"+testKeyID)
 	if err != nil {
 		t.Fatalf("expected nil error from New, got %v", err)
 	}

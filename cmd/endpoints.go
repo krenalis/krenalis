@@ -29,6 +29,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* only Admin */
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* only Admin */
+		"DELETE /organizations/{id}":                          organization.Delete,
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
 		"GET    /{$}":                                         api.Index,
@@ -63,6 +64,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                             api.Member,                           /* only Admin */
 		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* only Admin */
+		"GET    /organizations/{id}":                          api.Organization,
+		"GET    /organizations":                               api.Organizations,
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
 		"GET    /pipelines/metrics/dates/{start}/{end}":       workspace.PipelineMetricsPerDate,
 		"GET    /pipelines/metrics/days/{days}":               workspace.PipelineMetricsPerDay,
@@ -101,6 +104,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/login":                               s.login,                      /* only Admin */
 		"POST   /members/logout":                              s.logout,                     /* only Admin */
 		"POST   /members/workos-login":                        s.workosLogin,                /* only Admin */
+		"POST   /organizations":                               api.CreateOrganization,
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
 		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* only Admin */
@@ -119,6 +123,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* only Admin */
 		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* only Admin */
 		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* only Admin */
+		"PUT    /organizations/{id}":                          organization.Update,
 		"PUT    /pipelines/{id}":                              pipeline.Update,
 		"PUT    /pipelines/{id}/schedule":                     pipeline.SetSchedulePeriod,
 		"PUT    /pipelines/{id}/status":                       pipeline.SetStatus,

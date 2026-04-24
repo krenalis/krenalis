@@ -38,13 +38,13 @@ func parseEnvSettings() (*Settings, error) {
 	settings := &Settings{}
 
 	if kms, ok := envVars.Lookup("KRENALIS_KMS"); ok {
-		backend, rawValue, found := strings.Cut(kms, ":")
+		backend, options, found := strings.Cut(kms, ":")
 		if !found {
-			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'")
+			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<region>:<key-id>'")
 		}
 		switch backend {
 		case "key":
-			decodedValue, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(rawValue, "="))
+			decodedValue, err := base64.RawStdEncoding.DecodeString(strings.TrimSuffix(options, "="))
 			if err != nil {
 				return nil, errors.New("KRENALIS_KMS key value is not valid base64")
 			}
@@ -53,15 +53,33 @@ func parseEnvSettings() (*Settings, error) {
 				return nil, fmt.Errorf("KRENALIS_KMS key value decodes to %d bytes, expected 32", n)
 			}
 		case "aws":
-			if rawValue == "" {
+			if options == "" {
 				return nil, errors.New("KRENALIS_KMS aws value is empty")
 			}
 		default:
-			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<kms-key-id-or-arn>'")
+			return nil, errors.New("KRENALIS_KMS must be in the form 'key:<base64>' or 'aws:<region>:<key-id>'")
 		}
 		settings.Kms = kms
 	} else {
 		return nil, errors.New("KRENALIS_KMS is not set")
+	}
+
+	if orgAPIKey, ok := envVars.Lookup("KRENALIS_ORGANIZATIONS_API_KEY"); ok {
+		apiKey, ok := strings.CutPrefix(orgAPIKey, "org_")
+		if !ok {
+			return nil, errors.New("KRENALIS_ORGANIZATIONS_API_KEY must start with 'org_'")
+		}
+		if utf8.RuneCountInString(apiKey) != 43 {
+			return nil, fmt.Errorf("KRENALIS_ORGANIZATIONS_API_KEY has an invalid length (expected 'org_' + 43 alphanumeric characters)")
+		}
+		for _, c := range apiKey {
+			switch {
+			case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9':
+			default:
+				return nil, fmt.Errorf("invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character %q", c)
+			}
+		}
+		settings.OrganizationsAPIKey = orgAPIKey
 	}
 
 	if delay := envVars.Get("KRENALIS_TERMINATION_DELAY"); delay != "" {

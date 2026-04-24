@@ -347,6 +347,11 @@ const (
 	Maintenance WarehouseMode = "Maintenance"
 )
 
+type Organization struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
 type Workspace struct {
 	ID                             int            `json:"id"`
 	Name                           string         `json:"name"`
