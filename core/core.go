@@ -86,7 +86,7 @@ var coreActive atomic.Bool
 type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
-	Kms                           string
+	KMS                           string
 	OrganizationsAPIKey           string // can be empty (which means that organizations APIs cannot be used)
 	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
@@ -209,7 +209,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	// Initialize the key manager.
-	kms, err := kms.New(ctx, conf.Kms)
+	kms, err := kms.New(ctx, conf.KMS)
 	if err != nil {
 		return nil, err
 	}

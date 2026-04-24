@@ -15,4 +15,6 @@ Requirements for the File System connector:
 * The running Krenalis instance must have the `KRENALIS_CONNECTOR_FILESYSTEM_ROOT` environment variable, which points to the file system directory that will be accessed by the connector.
 * Optionally, the `KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT` environment variable controls the root displayed in the admin.
 
+The File System connector reads `KRENALIS_CONNECTOR_FILESYSTEM_*` directly from the process environment. These settings are not loaded from AWS Parameter Store.
+
 💡 **Note:** When running Krenalis with Docker Compose, the File System connector is automatically configured by default and you can skip this section.

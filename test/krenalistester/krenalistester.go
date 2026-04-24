@@ -374,8 +374,8 @@ func (c *Krenalis) Start() {
 	} else {
 		// Krenalis settings.
 		// Keep these in sync with the environment variables set above.
-		setts := cmd.Settings{}
-		setts.Kms = testKMS()
+		setts := cmd.Config{}
+		setts.KMS = testKMS()
 		setts.OrganizationsAPIKey = testsSettings.OrganizationsAPIKey
 		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
