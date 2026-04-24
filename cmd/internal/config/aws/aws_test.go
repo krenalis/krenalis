@@ -423,8 +423,3 @@ func TestStoreLoadReturnsErrorOnInvalidDatabaseSecretJSON(t *testing.T) {
 		t.Fatalf("Load() error = %q, want prefix %q", got, wantPrefix)
 	}
 }
-
-//go:fix inline
-func stringPtr(s string) *string {
-	return new(s)
-}
