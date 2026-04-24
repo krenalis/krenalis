@@ -87,18 +87,31 @@ func Test_Merge(t *testing.T) {
 		}
 	}
 
-	st, err := snowflaketester.CreateTestDatabase()
+	testDB, err := snowflaketester.CreateTestDatabase()
 	if err != nil {
 		panic(err)
 	}
 	defer func() {
-		err := st.Teardown()
+		err := testDB.Teardown()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(st.WarehouseSettingsLoader())
+	settings, err := json.Marshal(map[string]any{
+		"username":  testDB.Settings().User,
+		"password":  testDB.Settings().Password,
+		"account":   testDB.Settings().Account,
+		"warehouse": testDB.Settings().Warehouse,
+		"database":  testDB.Settings().Database,
+		"schema":    testDB.Settings().Schema,
+		"role":      testDB.Settings().Role,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(settings))
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
@@ -240,4 +253,16 @@ func Test_Merge(t *testing.T) {
 	if err = rows.Err(); err != nil {
 		t.Fatalf("unexpected error scanning rows: %s", err)
 	}
+}
+
+type testSettingsLoader struct {
+	settings json.Value
+}
+
+func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
+	return &testSettingsLoader{settings: settings}
+}
+
+func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
+	return json.Unmarshal(loader.settings, dst)
 }

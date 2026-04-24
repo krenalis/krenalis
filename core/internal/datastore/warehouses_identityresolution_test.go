@@ -569,6 +569,9 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					"schema":    testDB.Settings().Schema,
 					"role":      testDB.Settings().Role,
 				})
+				if err != nil {
+					panic(err)
+				}
 
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
