@@ -20,8 +20,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
-
 func Test_Merge(t *testing.T) {
 
 	cols := []struct {
@@ -100,7 +98,7 @@ func Test_Merge(t *testing.T) {
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
 	if err != nil {
-		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
+		panic(err)
 	}
 
 	// Create the table.

@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -547,6 +548,23 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				if err != nil {
 					t.Fatalf("cannot open the path %q specified in the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
 				}
+
+				st, err := snowflaketester.New()
+				if err != nil {
+					panic(err)
+				}
+				stSettings := st.Settings()
+
+				settings, err = json.Marshal(map[string]any{
+					"username":  stSettings.User,
+					"password":  stSettings.Password,
+					"account":   stSettings.Account,
+					"warehouse": stSettings.Warehouse,
+					"database":  stSettings.Database,
+					"schema":    stSettings.Schema,
+					"role":      stSettings.Role,
+				})
+
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}
