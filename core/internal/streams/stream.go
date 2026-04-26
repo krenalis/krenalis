@@ -6,40 +6,59 @@ package streams
 
 import "context"
 
-// Connection represents a connection to an event stream.
-type Connection interface {
+// Stream is an interface for event streams.
+//
+// A Stream is safe for concurrent use by multiple goroutines, except that
+// Consume must not be called concurrently with another Consume call.
+type Stream interface {
 
-	// Close closes the connection. When Close is called, no other calls to
-	// Connection's methods should be in progress and no other shall be made.
+	// Close closes the stream. When Close is called, no other calls to
+	// Stream's methods should be in progress and no other shall be made.
 	Close() error
-
-	// Stream returns the stream. It waits until the stream has been created.
-	// It returns an error only if ctx is canceled or if c has been closed.
-	Stream(context.Context) (Stream, error)
 
 	// WaitUp blocks until the connection is up and the stream is available.
 	// It returns false if the context is canceled, the connection is closed,
 	// or the connection remains down for too long.
 	WaitUp(context.Context) bool
+
+	// Batch returns a batch publisher for the stream.
+	//
+	// It waits until the stream has been created. It returns an error only if ctx
+	//	is canceled or if the stream has been closed.
+	Batch(ctx context.Context) (BatchPublisher, error)
+
+	// Consume returns a buffered channel of the given size that streams events for
+	// the specified topic. Events belonging to the same shard are sent on the
+	// channel in order, ensuring per-user ordering is preserved.
+	Consume(topic string, size int) Consumer
 }
 
 // Consumer receives events for a pipeline.
+//
+// A Consumer must not be used concurrently by multiple goroutines. Different
+// Consumers may be used concurrently.
 type Consumer interface {
 
 	// Close closes the consumer and closes the events channel.
 	Close()
 
 	// Events returns the channel of events.
-	Events() <-chan Event
+	//
+	// It waits until the stream has been created. It returns an error only if ctx
+	//	is canceled or if the stream has been closed.
+	Events(ctx context.Context) (<-chan Event, error)
 }
 
 // BatchPublisher publishes events in batches.
+//
+// A BatchPublisher must not be used concurrently by multiple goroutines.
+// Different BatchPublishers may be used concurrently.
 type BatchPublisher interface {
 
 	// Publish adds an event to the current batch for the given topic.
 	// If the topic begins with "connection-", destinations contains the destination
 	// pipelines the event is sent to.
-	Publish(topics []string, event map[string]any, destinations []int) error
+	Publish(ctx context.Context, topics []string, event map[string]any, destinations []int) error
 
 	// Done publishes all buffered events.
 	//
@@ -49,18 +68,6 @@ type BatchPublisher interface {
 	//
 	// After Done returns, the BatchPublisher must not be reused.
 	Done(ctx context.Context) error
-}
-
-// Stream is an interface for event streams.
-type Stream interface {
-
-	// Batch returns a batch publisher for the stream.
-	Batch() BatchPublisher
-
-	// Consume returns a buffered channel of the given size that streams events for
-	// the specified topic. Events belonging to the same shard are sent on the
-	// channel in order, ensuring per-user ordering is preserved.
-	Consume(topic string, size int) Consumer
 }
 
 // Ack acknowledges an event.

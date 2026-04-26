@@ -85,7 +85,7 @@ type streamOptions struct {
 // kept only inside the authentication callbacks. The copied key material is
 // wiped on a best-effort basis when the connection is definitively closed, or
 // if the initial connection attempt fails.
-func Connect(options natsopts.Options) (conn streams.Connection, err error) {
+func Connect(options natsopts.Options) (stream streams.Stream, err error) {
 
 	c := &connection{}
 	c.js.wait = make(chan struct{})
@@ -180,7 +180,7 @@ func Connect(options natsopts.Options) (conn streams.Connection, err error) {
 			}
 		}
 		defer func() {
-			if conn == nil {
+			if stream == nil {
 				destroy()
 			}
 		}()
@@ -251,22 +251,6 @@ func (c *connection) Close() error {
 	return err
 }
 
-// Stream returns the stream. It waits until the stream has been created.
-// It returns an error only if ctx is canceled or if c has been closed.
-func (c *connection) Stream(ctx context.Context) (streams.Stream, error) {
-	select {
-	case <-c.js.wait:
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.closed {
-		return nil, errors.New("connection has been closed")
-	}
-	return &stream{c}, nil
-}
-
 // WaitUp blocks until the connection is up and the stream is available.
 // It returns false if the context is canceled, the connection is closed,
 // or the connection remains down for too long.
@@ -286,6 +270,22 @@ func (c *connection) WaitUp(ctx context.Context) bool {
 	case <-wait:
 		return c.up.Load()
 	}
+}
+
+// waitStream waits until the stream has been created. It returns an error only
+// if ctx is canceled or if c has been closed.
+func (c *connection) waitStream(ctx context.Context) error {
+	select {
+	case <-c.js.wait:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.closed {
+		return errors.New("connection has been closed")
+	}
+	return nil
 }
 
 // ensureEventStream initializes the JetStream context and ensures that the
@@ -419,22 +419,22 @@ func (c *connection) refreshUpState() {
 	})
 }
 
-// stream implements the streams.Stream interface.
-type stream struct {
-	c *connection
-}
-
 // Batch returns a batch publisher for the stream.
-func (s *stream) Batch() streams.BatchPublisher {
-	return &batch{conn: s.c, futures: make([]jetstream.PubAckFuture, 0, 1)}
+func (c *connection) Batch(ctx context.Context) (streams.BatchPublisher, error) {
+	err := c.waitStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &batch{conn: c, futures: make([]jetstream.PubAckFuture, 0, 1)}, nil
 }
 
 // Consume returns a buffered channel of the given size that streams events for
 // the specified topic. Events belonging to the same shard are sent on the
 // channel in order, ensuring per-user ordering is preserved.
-func (s *stream) Consume(topic string, size int) streams.Consumer {
+func (c *connection) Consume(topic string, size int) streams.Consumer {
 	ctx, cancel := context.WithCancel(context.Background())
 	consumer := &consumer{
+		stream: c,
 		events: make(chan streams.Event, size),
 		cancel: cancel,
 	}
@@ -449,13 +449,17 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 			// The channel is closed only after the consumers have been stopped.
 			close(consumer.events)
 		}()
+		err := c.waitStream(ctx)
+		if err != nil {
+			return
+		}
 		for shard := range numShards {
 			consumerName := "EVENTS_" + topic + "_" + strconv.Itoa(shard)
 			filterSubject := "events.v1." + topic + "." + strconv.Itoa(shard)
 			var cc jetstream.ConsumeContext
 			bo := backoff.New(10)
 			for bo.Next(ctx) {
-				c, err := s.c.js.jetStream.CreateOrUpdateConsumer(ctx, "EVENTS", jetstream.ConsumerConfig{
+				jsConsumer, err := c.js.jetStream.CreateOrUpdateConsumer(ctx, "EVENTS", jetstream.ConsumerConfig{
 					Name:          consumerName,
 					Durable:       consumerName,
 					FilterSubject: filterSubject,
@@ -469,7 +473,7 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 					slog.Warn("cannot create or update a NATS consumer", "name", consumerName)
 					continue
 				}
-				cc, err = c.Consume(func(msg jetstream.Msg) {
+				cc, err = jsConsumer.Consume(func(msg jetstream.Msg) {
 					var event streams.Event
 					var err error
 					defer func() {
@@ -533,6 +537,7 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 
 // consumer implements the streams.Consumer interface.
 type consumer struct {
+	stream *connection
 	events chan streams.Event
 	cancel context.CancelFunc
 }
@@ -543,8 +548,12 @@ func (c *consumer) Close() {
 }
 
 // Events returns the channel of events.
-func (c *consumer) Events() <-chan streams.Event {
-	return c.events
+func (c *consumer) Events(ctx context.Context) (<-chan streams.Event, error) {
+	err := c.stream.waitStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.events, nil
 }
 
 // batch implements the streams.Batch interface.
@@ -578,7 +587,7 @@ func (batch *batch) Done(ctx context.Context) error {
 // Publish adds an event to the current batch for the given topic.
 // If the topic begins with "connection-", destinations contains the destination
 // pipelines the event is sent to.
-func (batch *batch) Publish(topics []string, event map[string]any, destinations []int) error {
+func (batch *batch) Publish(ctx context.Context, topics []string, event map[string]any, destinations []int) error {
 	shard := shardOf(event["anonymousId"].(string))
 	data, err := types.Marshal(event, schemas.Event)
 	if err != nil {

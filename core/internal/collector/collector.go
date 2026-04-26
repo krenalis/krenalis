@@ -33,7 +33,7 @@ import (
 	"github.com/oschwald/maxminddb-golang/v2"
 )
 
-var errNoStreamConnection = errors.New("no stream connection")
+var errStreamUnavailable = errors.New("stream unavailable")
 
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
@@ -58,7 +58,7 @@ type ValidationError interface {
 // apps.
 type Collector struct {
 	db               *db.DB
-	sc               streams.Connection
+	stream           streams.Stream
 	state            *state.State
 	datastore        *datastore.Datastore
 	metrics          *metrics.Collector
@@ -83,12 +83,12 @@ type Collector struct {
 // events with geolocation information; if not provided, the database file is
 // not opened and the geolocation information are not automatically added by
 // Krenalis.
-func New(db *db.DB, sc streams.Connection, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
+func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
 	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
 
 	var c = &Collector{
 		db:               db,
-		sc:               sc,
+		stream:           stream,
 		state:            st,
 		datastore:        ds,
 		metrics:          metrics,
@@ -227,7 +227,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Allow", "POST, OPTIONS")
 			}
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		case errNoStreamConnection:
+		case errStreamUnavailable:
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		case errPayloadTooLarge:
 			http.Error(w, "Request Entity Too Large", http.StatusRequestEntityTooLarge)
@@ -494,17 +494,15 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	c.stopConnectionWorker(connection)
 }
 
-// processIdentityEvents reads events from the pipeline, extracts identities,
+// processIdentityEvents reads events from the consumer, extracts identities,
 // and persists them using the provided identity writer.
 //
 // It is called in its own goroutine and runs until the context is canceled.
-func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter, pipeline int) {
-	stream, err := c.sc.Stream(ctx)
+func (c *Collector) processIdentityEvents(ctx context.Context, consumer streams.Consumer, w *identityWriter) {
+	events, err := consumer.Events(ctx)
 	if err != nil {
-		return // ctx has been canceled or c.sc has been closed.
+		return // ctx has been canceled or the stream has been closed.
 	}
-	consumer := stream.Consume("pipeline-"+strconv.Itoa(pipeline), 1000)
-	events := consumer.Events()
 	done := ctx.Done()
 	for {
 		select {
@@ -514,23 +512,20 @@ func (c *Collector) processIdentityEvents(ctx context.Context, w *identityWriter
 			}
 			_ = w.Write(event)
 		case <-done:
-			consumer.Close()
 			return
 		}
 	}
 }
 
-// processForwardedEvents reads events from the connection and forwards them to
+// processForwardedEvents reads events from the consumer and forwards them to
 // its destination pipelines.
 //
 // It is called in its own goroutine and runs until the context is canceled.
-func (c *Collector) processForwardedEvents(ctx context.Context, destinations *destinations, connection int) {
-	stream, err := c.sc.Stream(ctx)
+func (c *Collector) processForwardedEvents(ctx context.Context, consumer streams.Consumer, destinations *destinations, connection int) {
+	events, err := consumer.Events(ctx)
 	if err != nil {
-		return // ctx has been canceled or c.sc has been closed.
+		return // ctx has been canceled or the stream has been closed.
 	}
-	consumer := stream.Consume("connection-"+strconv.Itoa(connection), 1000)
-	events := consumer.Events()
 	done := ctx.Done()
 	for {
 		select {
@@ -540,23 +535,20 @@ func (c *Collector) processForwardedEvents(ctx context.Context, destinations *de
 			}
 			destinations.QueueEvent(connection, event)
 		case <-done:
-			consumer.Close()
 			return
 		}
 	}
 }
 
-// processWarehouseEvents processes events for the given pipeline and persists
+// processWarehouseEvents processes events from the given consumer and persists
 // them to the data warehouse using the provided event writer.
 //
 // It is called in its own goroutine and runs until the context is canceled.
-func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.EventWriter, pipeline int) {
-	stream, err := c.sc.Stream(ctx)
+func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams.Consumer, w *datastore.EventWriter, pipeline int) {
+	events, err := consumer.Events(ctx)
 	if err != nil {
-		return // ctx has been canceled or c.sc has been closed.
+		return // ctx has been canceled or the stream has been closed.
 	}
-	consumer := stream.Consume("pipeline-"+strconv.Itoa(pipeline), 1000)
-	events := consumer.Events()
 	done := ctx.Done()
 	for {
 		select {
@@ -566,7 +558,6 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, w *datastore.Eve
 			}
 			_ = w.Write(ctx, event, pipeline)
 		case <-done:
-			consumer.Close()
 			return
 		}
 	}
@@ -589,8 +580,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	// WaitUp returns false if the request context is canceled or if the stream
 	// remains unavailable beyond a short, predefined timeout.
 	//
-	if !c.sc.WaitUp(r.Context()) {
-		return errNoStreamConnection
+	if !c.stream.WaitUp(r.Context()) {
+		return errStreamUnavailable
 	}
 
 	var err error
@@ -707,11 +698,10 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
-	stream, err := c.sc.Stream(r.Context())
+	batch, err := c.stream.Batch(r.Context())
 	if err != nil {
-		return errNoStreamConnection
+		return errStreamUnavailable
 	}
-	batch := stream.Batch()
 
 	var topics []string
 	var destinations []int
@@ -798,7 +788,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Publish the event.
-		err = batch.Publish(topics, event, destinations)
+		err = batch.Publish(r.Context(), topics, event, destinations)
 		if err != nil {
 			return err
 		}
@@ -865,8 +855,10 @@ func (c *Collector) startConnectionWorker(connection *state.Connection) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c.workers.cancelConnection[connection.ID] = cancel
+	consumer := c.stream.Consume("connection-"+strconv.Itoa(connection.ID), 1000)
 	c.workers.Go(func() {
-		c.processForwardedEvents(ctx, c.destinations, connection.ID)
+		defer consumer.Close()
+		c.processForwardedEvents(ctx, consumer, c.destinations, connection.ID)
 	})
 }
 
@@ -885,15 +877,19 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 		// Import the identity into the data warehouse.
 		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
 		c.identityWriters.Store(pipeline.ID, iw)
+		consumer := c.stream.Consume("pipeline-"+strconv.Itoa(pipeline.ID), 1000)
 		c.workers.Go(func() {
-			c.processIdentityEvents(ctx, iw, pipeline.ID)
+			defer consumer.Close()
+			c.processIdentityEvents(ctx, consumer, iw)
 		})
 	case state.TargetEvent:
 		// Store the event into the data warehouse.
 		ws := pipeline.Connection().Workspace()
 		ew, _ := c.eventWriters.Load(ws.ID)
+		consumer := c.stream.Consume("pipeline-"+strconv.Itoa(pipeline.ID), 1000)
 		c.workers.Go(func() {
-			c.processWarehouseEvents(ctx, ew.(*datastore.EventWriter), pipeline.ID)
+			defer consumer.Close()
+			c.processWarehouseEvents(ctx, consumer, ew.(*datastore.EventWriter), pipeline.ID)
 		})
 	default:
 		panic("unreachable")

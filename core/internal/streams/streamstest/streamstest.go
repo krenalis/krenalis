@@ -11,61 +11,48 @@ import (
 	"github.com/krenalis/krenalis/core/internal/streams"
 )
 
-// Connection is a mock for streams.Connection.
-type Connection struct {
-	CloseFunc  func() error
-	StreamFunc func(context.Context) (streams.Stream, error)
-	WaitUpFunc func(context.Context) bool
+// Stream is a mock for streams.Stream.
+type Stream struct {
+	CloseFunc   func() error
+	WaitUpFunc  func(context.Context) bool
+	BatchFunc   func(context.Context) (streams.BatchPublisher, error)
+	ConsumeFunc func(string, int) streams.Consumer
 
-	StreamValue streams.Stream
-	WaitUpValue bool
+	WaitUpValue  bool
+	BatchValue   streams.BatchPublisher
+	BatchError   error
+	ConsumeValue streams.Consumer
+	EventsError  error
 }
 
-// Close implements streams.Connection.
-func (c *Connection) Close() error {
-	if c.CloseFunc != nil {
-		return c.CloseFunc()
+// Close implements streams.Stream.
+func (s *Stream) Close() error {
+	if s.CloseFunc != nil {
+		return s.CloseFunc()
 	}
 	return nil
 }
 
-// Stream implements streams.Connection.
-func (c *Connection) Stream(ctx context.Context) (streams.Stream, error) {
-	if c.StreamFunc != nil {
-		return c.StreamFunc(ctx)
+// WaitUp implements streams.Stream.
+func (s *Stream) WaitUp(ctx context.Context) bool {
+	if s.WaitUpFunc != nil {
+		return s.WaitUpFunc(ctx)
 	}
-	if c.StreamValue != nil {
-		return c.StreamValue, nil
-	}
-	return &Stream{}, nil
-}
-
-// WaitUp implements streams.Connection.
-func (c *Connection) WaitUp(ctx context.Context) bool {
-	if c.WaitUpFunc != nil {
-		return c.WaitUpFunc(ctx)
-	}
-	return c.WaitUpValue
-}
-
-// Stream is a mock for streams.Stream.
-type Stream struct {
-	BatchFunc   func() streams.BatchPublisher
-	ConsumeFunc func(topic string, size int) streams.Consumer
-
-	BatchValue   streams.BatchPublisher
-	ConsumeValue streams.Consumer
+	return s.WaitUpValue
 }
 
 // Batch implements streams.Stream.
-func (s *Stream) Batch() streams.BatchPublisher {
+func (s *Stream) Batch(ctx context.Context) (streams.BatchPublisher, error) {
 	if s.BatchFunc != nil {
-		return s.BatchFunc()
+		return s.BatchFunc(ctx)
+	}
+	if s.BatchError != nil {
+		return nil, s.BatchError
 	}
 	if s.BatchValue != nil {
-		return s.BatchValue
+		return s.BatchValue, nil
 	}
-	return &batchPublisher{}
+	return &batchPublisher{}, nil
 }
 
 // Consume implements streams.Stream.
@@ -76,19 +63,19 @@ func (s *Stream) Consume(topic string, size int) streams.Consumer {
 	if s.ConsumeValue != nil {
 		return s.ConsumeValue
 	}
-	return &consumer{EventsCh: closedEvents}
+	return &consumer{EventsCh: closedEvents, EventsError: s.EventsError}
 }
 
 // batchPublisher is a mock for streams.BatchPublisher.
 type batchPublisher struct {
-	PublishFunc func(topics []string, attributes map[string]any, destinations []int) error
+	PublishFunc func(context.Context, []string, map[string]any, []int) error
 	DoneFunc    func(context.Context) error
 }
 
 // Publish implements streams.BatchPublisher.
-func (b *batchPublisher) Publish(topics []string, attributes map[string]any, destinations []int) error {
+func (b *batchPublisher) Publish(ctx context.Context, topics []string, attributes map[string]any, destinations []int) error {
 	if b.PublishFunc != nil {
-		return b.PublishFunc(topics, attributes, destinations)
+		return b.PublishFunc(ctx, topics, attributes, destinations)
 	}
 	return nil
 }
@@ -103,8 +90,10 @@ func (b *batchPublisher) Done(ctx context.Context) error {
 
 // consumer is a mock for streams.Consumer.
 type consumer struct {
-	CloseFunc func()
-	EventsCh  <-chan streams.Event
+	CloseFunc   func()
+	EventsFunc  func(context.Context) (<-chan streams.Event, error)
+	EventsCh    <-chan streams.Event
+	EventsError error
 }
 
 // Close implements streams.Consumer.
@@ -115,11 +104,17 @@ func (c *consumer) Close() {
 }
 
 // Events implements streams.Consumer.
-func (c *consumer) Events() <-chan streams.Event {
-	if c.EventsCh != nil {
-		return c.EventsCh
+func (c *consumer) Events(ctx context.Context) (<-chan streams.Event, error) {
+	if c.EventsFunc != nil {
+		return c.EventsFunc(ctx)
 	}
-	return closedEvents
+	if c.EventsError != nil {
+		return nil, c.EventsError
+	}
+	if c.EventsCh != nil {
+		return c.EventsCh, nil
+	}
+	return closedEvents, nil
 }
 
 // closedEvents provides a reusable closed channel for consumers with no events.
