@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -79,6 +80,33 @@ func CreateTestDatabase() (*SnowflakeTester, error) {
 
 func (st *SnowflakeTester) Settings() Settings {
 	return st.settings
+}
+
+// JSONSettings returns the settings as JSON, in the form:
+//
+//	{
+//	    "username": "...",
+//	    "password": "...",
+//	    "account": "...",
+//	    "warehouse": "...",
+//	    "database": "...",
+//	    "schema": "...",
+//	    "role": "..."
+//	}
+func (st *SnowflakeTester) JSONSettings() []byte {
+	settings, err := json.Marshal(map[string]any{
+		"username":  st.settings.User,
+		"password":  st.settings.Password,
+		"account":   st.settings.Account,
+		"warehouse": st.settings.Warehouse,
+		"database":  st.settings.Database,
+		"schema":    st.settings.Schema,
+		"role":      st.settings.Role,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return settings
 }
 
 func (st *SnowflakeTester) Teardown() error {

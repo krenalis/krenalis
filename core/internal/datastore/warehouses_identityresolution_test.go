@@ -545,18 +545,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						t.Logf("cannot teardown test Snowflake database: %s", err)
 					}
 				}()
-				settings, err = json.Marshal(map[string]any{
-					"username":  testDB.Settings().User,
-					"password":  testDB.Settings().Password,
-					"account":   testDB.Settings().Account,
-					"warehouse": testDB.Settings().Warehouse,
-					"database":  testDB.Settings().Database,
-					"schema":    testDB.Settings().Schema,
-					"role":      testDB.Settings().Role,
-				})
-				if err != nil {
-					panic(err)
-				}
+				settings = testDB.JSONSettings()
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}

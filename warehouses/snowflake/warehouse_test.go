@@ -98,20 +98,7 @@ func Test_Merge(t *testing.T) {
 		}
 	}()
 
-	settings, err := json.Marshal(map[string]any{
-		"username":  testDB.Settings().User,
-		"password":  testDB.Settings().Password,
-		"account":   testDB.Settings().Account,
-		"warehouse": testDB.Settings().Warehouse,
-		"database":  testDB.Settings().Database,
-		"schema":    testDB.Settings().Schema,
-		"role":      testDB.Settings().Role,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(settings))
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testDB.JSONSettings()))
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())

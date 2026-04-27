@@ -8,13 +8,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -24,13 +24,32 @@ const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
 
 func Test_Columns(t *testing.T) {
 
-	// Open connector.
-	connector := newSnowflakeFromENV(t)
+	// Create a test database on Snowflake.
+	testDB, err := snowflaketester.CreateTestDatabase()
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		err := testDB.Teardown()
+		if err != nil {
+			t.Logf("cannot teardown test Snowflake database: %s", err)
+		}
+	}()
+
+	// Open the Snowflake connector.
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(testDB.JSONSettings())}
+	connector, err := New(&env)
+	if err != nil {
+		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
+	}
 	defer func() {
 		if err := connector.Close(); err != nil {
 			t.Fatalf("unexpected error closing the database: %s", err)
 		}
 	}()
+	if err = connector.openDB(context.Background()); err != nil {
+		t.Fatalf("cannot open the database: %s", err)
+	}
 
 	// Create the table
 	tableName := "test_columns"
@@ -46,7 +65,7 @@ func Test_Columns(t *testing.T) {
 		"i" VARCHAR(50),
 		"j" ARRAY NOT NULL
 	)`
-	_, err := connector.db.ExecContext(context.Background(), create)
+	_, err = connector.db.ExecContext(context.Background(), create)
 	if err != nil {
 		t.Fatalf("cannot create table: %s", err)
 	}
@@ -140,13 +159,32 @@ func Test_Merge_Query(t *testing.T) {
 		}
 	}
 
-	// Open connector.
-	connector := newSnowflakeFromENV(t)
+	// Create a test database on Snowflake.
+	testDB, err := snowflaketester.CreateTestDatabase()
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		err := testDB.Teardown()
+		if err != nil {
+			t.Logf("cannot teardown test Snowflake database: %s", err)
+		}
+	}()
+
+	// Open the Snowflake connector.
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(testDB.JSONSettings())}
+	connector, err := New(&env)
+	if err != nil {
+		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
+	}
 	defer func() {
 		if err := connector.Close(); err != nil {
 			t.Fatalf("unexpected error closing the database: %s", err)
 		}
 	}()
+	if err = connector.openDB(context.Background()); err != nil {
+		t.Fatalf("cannot open the database: %s", err)
+	}
 
 	// Create the table and add a row.
 	create := bytes.NewBufferString(`CREATE TABLE "` + table.Name + "\" (\n\t\"")
@@ -159,7 +197,7 @@ func Test_Merge_Query(t *testing.T) {
 		create.WriteString(cols[i].DriverType)
 	}
 	create.WriteString("\n)")
-	_, err := connector.db.ExecContext(context.Background(), create.String())
+	_, err = connector.db.ExecContext(context.Background(), create.String())
 	if err != nil {
 		t.Fatalf("cannot create table: %s", err)
 	}
@@ -224,26 +262,26 @@ func Test_Merge_Query(t *testing.T) {
 
 }
 
-func newSnowflakeFromENV(t *testing.T) *Snowflake {
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
-	}
-	// Open connector.
-	settings, err := os.ReadFile(settingsFile)
-	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
-	}
-	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings)}
-	connector, err := New(&env)
-	if err != nil {
-		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
-	}
-	if err = connector.openDB(context.Background()); err != nil {
-		t.Fatalf("cannot open the database: %s", err)
-	}
-	return connector
-}
+// func newSnowflakeFromENV(t *testing.T) *Snowflake {
+// 	settingsFile, ok := os.LookupEnv(settingsEnvKey)
+// 	if !ok {
+// 		t.Skipf("the %s environment variable is not present", settingsEnvKey)
+// 	}
+// 	// Open connector.
+// 	settings, err := os.ReadFile(settingsFile)
+// 	if err != nil {
+// 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+// 	}
+// 	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings)}
+// 	connector, err := New(&env)
+// 	if err != nil {
+// 		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
+// 	}
+// 	if err = connector.openDB(context.Background()); err != nil {
+// 		t.Fatalf("cannot open the database: %s", err)
+// 	}
+// 	return connector
+// }
 
 // scanner implements the sql.Scanner interface to read the database values.
 type scanner struct {
