@@ -9,7 +9,7 @@ import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
-import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
+import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';

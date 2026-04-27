@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "jsx": "react",
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

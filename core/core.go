@@ -52,7 +52,7 @@ import (
 
 type Core struct {
 	db                *dbpkg.DB
-	sc                streams.Connection
+	stream            streams.Stream
 	dbPoolMetrics     *dbPoolMetrics
 	state             *state.State
 	datastore         *datastore.Datastore
@@ -86,7 +86,7 @@ var coreActive atomic.Bool
 type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
-	Kms                           string
+	KMS                           string
 	OrganizationsAPIKey           string // can be empty (which means that organizations APIs cannot be used)
 	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
@@ -209,7 +209,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	// Initialize the key manager.
-	kms, err := kms.New(ctx, conf.Kms)
+	kms, err := kms.New(ctx, conf.KMS)
 	if err != nil {
 		return nil, err
 	}
@@ -306,19 +306,19 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.connections = connections.New(core.state)
 
 	// Connect to the NATS server.
-	core.sc, err = nats.Connect(conf.NATS.Options)
+	core.stream, err = nats.Connect(conf.NATS.Options)
 	if err != nil {
 		return nil, fmt.Errorf("core: cannot connect to NATS server: %s", err)
 	}
 	defer func() {
 		if err != nil {
-			_ = core.sc.Close()
+			_ = core.stream.Close()
 		}
 	}()
 
 	// Init the event collector.
 	sender.MaxQueuedEvents = conf.MaxQueuedEventsPerDestination
-	core.collector, err = collector.New(db, core.sc, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	core.collector, err = collector.New(db, core.stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -529,7 +529,7 @@ func (core *Core) Close(ctx context.Context) {
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
 	// Close NATS connection.
-	_ = core.sc.Close()
+	_ = core.stream.Close()
 	// Close PostgreSQL connections.
 	core.db.Close()
 	coreActive.Store(false)
@@ -1244,7 +1244,10 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		// Starts the run.
 		c := pipeline.Connection()
 		ws := c.Workspace()
-		store := core.datastore.Store(ws.ID)
+		store, ok := core.datastore.Store(ws.ID)
+		if !ok {
+			return
+		}
 		connection := &Connection{core: core, store: store, connection: c}
 		p := &Pipeline{core: core, pipeline: pipeline, connection: connection}
 
@@ -1283,7 +1286,10 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema types.Type,
 	primarySources map[string]int, operations []warehouses.AlterOperation) {
 	ctx := core.close.ctx
-	store := core.datastore.Store(workspace)
+	store, ok := core.datastore.Store(workspace)
+	if !ok {
+		return
+	}
 	ws, ok := core.state.Workspace(workspace)
 	if !ok {
 		return
@@ -1423,7 +1429,10 @@ Identifiers:
 // until it has completed (with success or with an operation error).
 func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	ctx := core.close.ctx
-	store := core.datastore.Store(workspace)
+	store, ok := core.datastore.Store(workspace)
+	if !ok {
+		return
+	}
 	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
 	// (2) returns with a *warehouses.OperationError, or (3) the context is
 	// canceled.

@@ -5,7 +5,7 @@ import TransformedConnection from '../lib/core/connection';
 import { Status } from '../components/routes/App/App.types';
 import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
-import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
+import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert.js';
 import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
 import { Member, PublicMetadata } from '../lib/api/types/responses';
 import { PipelineTarget } from '../lib/api/types/pipeline';
