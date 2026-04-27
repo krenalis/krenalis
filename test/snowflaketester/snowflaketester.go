@@ -2,6 +2,24 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
+// snowflaketester provides an interface for creating temporary databases on
+// Snowflake, which can be used for testing.
+//
+// # Environment variables
+//
+// The credentials for accessing Snowflake are read from these environment
+// variables:
+//
+//	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
+//	KRENALIS_SNOWFLAKE_TESTER_ROLE
+//	KRENALIS_SNOWFLAKE_TESTER_SCHEMA
+//	KRENALIS_SNOWFLAKE_TESTER_USER
+//	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
+//
+// # Creating a test database on Snowflake
+//
+// See the function [CreateTestDatabase].
 package snowflaketester
 
 import (
@@ -127,7 +145,7 @@ func (testDB *TestDB) JSONSettings() []byte {
 }
 
 // Teardown deletes the Snowflake test database. This method must be called for
-// any database initialized with [CreateTestDatabase]. Once [Teardown] is
+// any database initialized with [CreateTestDatabase]. Once this method is
 // called, the test database can no longer be used.
 func (testDB *TestDB) Teardown() error {
 	_, err := testDB.db.Exec("DROP DATABASE \"%s\"", testDB.settings.Database)
