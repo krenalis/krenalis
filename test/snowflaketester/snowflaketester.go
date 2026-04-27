@@ -18,23 +18,21 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
-type SnowflakeTester struct {
-	connector driver.Connector
-	db        *sql.DB
-	settings  Settings
-}
-
-type Settings struct {
-	Account   string
-	User      string
-	Password  string
-	Database  string
-	Role      string
-	Schema    string
-	Warehouse string
-}
-
-func CreateTestDatabase() (*SnowflakeTester, error) {
+// CreateTestDatabase creates a test database on Snowflake with an unique name.
+//
+// Once created, you need to call the [TestDB.Teardown] method to
+// delete it.
+//
+// The configuration for Snowflake access is read from these environment
+// variables:
+//
+//	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
+//	KRENALIS_SNOWFLAKE_TESTER_ROLE
+//	KRENALIS_SNOWFLAKE_TESTER_SCHEMA
+//	KRENALIS_SNOWFLAKE_TESTER_USER
+//	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
+func CreateTestDatabase() (*TestDB, error) {
 
 	// Read the Snowflake settings from the environment.
 	settings := Settings{
@@ -71,15 +69,34 @@ func CreateTestDatabase() (*SnowflakeTester, error) {
 	slog.Info("test Snowflake database created", "dbName", dbName)
 
 	settings.Database = dbName
-	return &SnowflakeTester{
+	return &TestDB{
 		connector: connector,
 		db:        db,
 		settings:  settings,
 	}, nil
 }
 
-func (st *SnowflakeTester) Settings() Settings {
-	return st.settings
+// TestDB represents an instance of a test database on Snowflake.
+type TestDB struct {
+	connector driver.Connector
+	db        *sql.DB
+	settings  Settings
+}
+
+// Settings represents the settings for accessing a test database on Snowflake.
+type Settings struct {
+	Account   string
+	User      string
+	Password  string
+	Database  string // something like: "KRENALIS_TEST_1777297109_e1ddc97e0b7b9d71005affc2325c10b3"
+	Role      string
+	Schema    string
+	Warehouse string
+}
+
+// Settings returns the settings of the test database.
+func (testDB *TestDB) Settings() Settings {
+	return testDB.settings
 }
 
 // JSONSettings returns the settings as JSON, in the form:
@@ -93,15 +110,15 @@ func (st *SnowflakeTester) Settings() Settings {
 //	    "schema": "...",
 //	    "role": "..."
 //	}
-func (st *SnowflakeTester) JSONSettings() []byte {
+func (testDB *TestDB) JSONSettings() []byte {
 	settings, err := json.Marshal(map[string]any{
-		"username":  st.settings.User,
-		"password":  st.settings.Password,
-		"account":   st.settings.Account,
-		"warehouse": st.settings.Warehouse,
-		"database":  st.settings.Database,
-		"schema":    st.settings.Schema,
-		"role":      st.settings.Role,
+		"username":  testDB.settings.User,
+		"password":  testDB.settings.Password,
+		"account":   testDB.settings.Account,
+		"warehouse": testDB.settings.Warehouse,
+		"database":  testDB.settings.Database,
+		"schema":    testDB.settings.Schema,
+		"role":      testDB.settings.Role,
 	})
 	if err != nil {
 		panic(err)
@@ -109,12 +126,15 @@ func (st *SnowflakeTester) JSONSettings() []byte {
 	return settings
 }
 
-func (st *SnowflakeTester) Teardown() error {
-	_, err := st.db.Exec("DROP DATABASE \"%s\"", st.settings.Database)
+// Teardown deletes the Snowflake test database. This method must be called for
+// any database initialized with [CreateTestDatabase]. Once [Teardown] is
+// called, the test database can no longer be used.
+func (testDB *TestDB) Teardown() error {
+	_, err := testDB.db.Exec("DROP DATABASE \"%s\"", testDB.settings.Database)
 	if err != nil {
-		return fmt.Errorf("cannot drop test Snowflake database %q: %s", st.settings.Database, err)
+		return fmt.Errorf("cannot drop test Snowflake database %q: %s", testDB.settings.Database, err)
 	}
-	slog.Info("test Snowflake database dropped", "dbName", st.settings.Database)
+	slog.Info("test Snowflake database dropped", "dbName", testDB.settings.Database)
 	return nil
 }
 
