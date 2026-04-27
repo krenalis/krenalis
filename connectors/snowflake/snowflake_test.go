@@ -37,7 +37,7 @@ func Test_Columns(t *testing.T) {
 	}()
 
 	// Open the Snowflake connector.
-	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(testDB.JSONSettings())}
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(testDB.Settings().JSON())}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
@@ -172,7 +172,7 @@ func Test_Merge_Query(t *testing.T) {
 	}()
 
 	// Open the Snowflake connector.
-	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(testDB.JSONSettings())}
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(testDB.Settings().JSON())}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)

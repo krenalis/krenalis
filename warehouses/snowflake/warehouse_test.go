@@ -98,7 +98,7 @@ func Test_Merge(t *testing.T) {
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testDB.JSONSettings()))
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testDB.Settings().JSON()))
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())

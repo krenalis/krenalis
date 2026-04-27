@@ -117,7 +117,7 @@ func (testDB *TestDB) Settings() Settings {
 	return testDB.settings
 }
 
-// JSONSettings returns the settings as JSON, in the form:
+// JSON returns the settings as JSON, in the form:
 //
 //	{
 //	    "username": "...",
@@ -128,20 +128,20 @@ func (testDB *TestDB) Settings() Settings {
 //	    "schema": "...",
 //	    "role": "..."
 //	}
-func (testDB *TestDB) JSONSettings() []byte {
-	settings, err := json.Marshal(map[string]any{
-		"username":  testDB.settings.User,
-		"password":  testDB.settings.Password,
-		"account":   testDB.settings.Account,
-		"warehouse": testDB.settings.Warehouse,
-		"database":  testDB.settings.Database,
-		"schema":    testDB.settings.Schema,
-		"role":      testDB.settings.Role,
+func (settings Settings) JSON() []byte {
+	encoded, err := json.Marshal(map[string]any{
+		"username":  settings.User,
+		"password":  settings.Password,
+		"account":   settings.Account,
+		"warehouse": settings.Warehouse,
+		"database":  settings.Database,
+		"schema":    settings.Schema,
+		"role":      settings.Role,
 	})
 	if err != nil {
 		panic(err)
 	}
-	return settings
+	return encoded
 }
 
 // Teardown deletes the Snowflake test database. This method must be called for
