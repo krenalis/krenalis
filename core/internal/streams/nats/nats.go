@@ -152,7 +152,7 @@ func Connect(options natsopts.Options) (conn streams.Connection, err error) {
 	}
 
 	// DisconnectedErrCB is invoked whenever a disconnection occurs.
-	opts.DisconnectedErrCB = func(*nats.Conn, error) {
+	opts.DisconnectedErrCB = func(_ *nats.Conn, err error) {
 		const msg = "disconnected from NATS server; retrying"
 		if err == nil {
 			slog.Info(msg)
