@@ -5,17 +5,25 @@
 package cmd
 
 import (
+	"bytes"
 	"crypto"
+	"crypto/hmac"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+const workosBaseURL = "https://api.workos.com"
 
 // workosClientIDString returns the WorkOS client ID, or an empty string if
 // WorkOS authentication is not configured.
@@ -26,10 +34,18 @@ func (s *apisServer) workosClientIDString() string {
 	return s.workos.clientID
 }
 
-// workosAuth handles WorkOS JWT verification and user lookup.
-type workosAuth struct {
-	clientID string
-	apiKey   string
+type workos struct {
+	clientID      string
+	apiKey        string
+	webhookSecret string
+}
+
+// workosUser holds the user information returned by WorkOS after token
+// verification.
+type workosUser struct {
+	Email     string
+	FirstName string
+	LastName  string
 }
 
 type workosJWKS struct {
@@ -41,96 +57,25 @@ type workosJWKS struct {
 	} `json:"keys"`
 }
 
-// verifyToken verifies the WorkOS access token JWT and returns the authenticated
-// user's email. It verifies the RS256 signature using the WorkOS JWKS and then
-// calls the WorkOS API to retrieve the user's email by the sub claim.
-func (wa *workosAuth) verifyToken(tokenString string) (string, error) {
-	// Split the JWT into header, payload and signature.
-	parts := strings.SplitN(tokenString, ".", 3)
-	if len(parts) != 3 {
-		return "", fmt.Errorf("invalid JWT format")
+func NewWorkOS(clientID, apiKey, webhookSecret string) *workos {
+	return &workos{
+		clientID:      clientID,
+		apiKey:        apiKey,
+		webhookSecret: webhookSecret,
 	}
-	headerB64, payloadB64, sigB64 := parts[0], parts[1], parts[2]
-
-	// Decode and parse the header to get the algorithm and key ID.
-	headerJSON, err := base64.RawURLEncoding.DecodeString(headerB64)
-	if err != nil {
-		return "", fmt.Errorf("invalid JWT header encoding: %w", err)
-	}
-	var header struct {
-		Alg string `json:"alg"`
-		Kid string `json:"kid"`
-	}
-	if err := json.Unmarshal(headerJSON, &header); err != nil {
-		return "", fmt.Errorf("invalid JWT header: %w", err)
-	}
-	if header.Alg != "RS256" {
-		return "", fmt.Errorf("unexpected JWT algorithm %q, expected RS256", header.Alg)
-	}
-
-	// Fetch the RSA public key matching the key ID.
-	pubKey, err := wa.publicKey(header.Kid)
-	if err != nil {
-		return "", err
-	}
-
-	// Verify the RS256 signature over "headerB64.payloadB64".
-	sigBytes, err := base64.RawURLEncoding.DecodeString(sigB64)
-	if err != nil {
-		return "", fmt.Errorf("invalid JWT signature encoding: %w", err)
-	}
-	digest := sha256.Sum256([]byte(headerB64 + "." + payloadB64))
-	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest[:], sigBytes); err != nil {
-		return "", fmt.Errorf("invalid JWT signature: %w", err)
-	}
-
-	// Decode and parse the payload.
-	payloadJSON, err := base64.RawURLEncoding.DecodeString(payloadB64)
-	if err != nil {
-		return "", fmt.Errorf("invalid JWT payload encoding: %w", err)
-	}
-	var claims struct {
-		Sub string `json:"sub"`
-		Exp int64  `json:"exp"`
-		Nbf int64  `json:"nbf"`
-	}
-	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
-		return "", fmt.Errorf("invalid JWT payload: %w", err)
-	}
-
-	// Validate time-based claims.
-	now := time.Now().Unix()
-	if claims.Exp > 0 && now > claims.Exp {
-		return "", fmt.Errorf("JWT has expired")
-	}
-	if claims.Nbf > 0 && now < claims.Nbf {
-		return "", fmt.Errorf("JWT is not yet valid")
-	}
-	if claims.Sub == "" {
-		return "", fmt.Errorf("missing sub claim in JWT")
-	}
-
-	return wa.userEmail(claims.Sub)
 }
 
 // publicKey fetches the WorkOS JWKS and returns the RSA public key for the
 // given key ID.
-func (wa *workosAuth) publicKey(kid string) (*rsa.PublicKey, error) {
-	resp, err := http.Get("https://api.workos.com/sso/jwks/" + wa.clientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("WorkOS JWKS endpoint returned status %d", resp.StatusCode)
-	}
-
+func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
 	var jwks workosJWKS
-	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
-		return nil, fmt.Errorf("failed to decode WorkOS JWKS: %w", err)
+	status, err := wo.call(http.MethodGet, "/sso/jwks/"+wo.clientID, nil, &jwks)
+	if err != nil {
+		return nil, err
 	}
-
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("WorkOS JWKS endpoint returned status %d", status)
+	}
 	for _, k := range jwks.Keys {
 		if k.Kid != kid || k.Kty != "RSA" {
 			continue
@@ -151,33 +96,177 @@ func (wa *workosAuth) publicKey(kid string) (*rsa.PublicKey, error) {
 	return nil, fmt.Errorf("WorkOS JWKS does not contain key %q", kid)
 }
 
-// userEmail calls the WorkOS User Management API to get the email of the user
-// with the given WorkOS user ID.
-func (wa *workosAuth) userEmail(userID string) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://api.workos.com/user_management/users/"+userID, nil)
-	if err != nil {
-		return "", err
+// verifyToken verifies the WorkOS JWT and returns the authenticated user's
+// information and their organization external ID.
+func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, error) {
+	// Split the JWT into header, payload and signature.
+	parts := strings.SplitN(tokenString, ".", 3)
+	if len(parts) != 3 {
+		return nil, nil, fmt.Errorf("invalid JWT format")
 	}
-	req.Header.Set("Authorization", "Bearer "+wa.apiKey)
+	headerB64, payloadB64, sigB64 := parts[0], parts[1], parts[2]
+
+	// Decode and parse the header to get the algorithm and key ID.
+	headerJSON, err := base64.RawURLEncoding.DecodeString(headerB64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid JWT header encoding: %w", err)
+	}
+	var header struct {
+		Alg string `json:"alg"`
+		Kid string `json:"kid"`
+	}
+	if err := json.Unmarshal(headerJSON, &header); err != nil {
+		return nil, nil, fmt.Errorf("invalid JWT header: %w", err)
+	}
+	if header.Alg != "RS256" {
+		return nil, nil, fmt.Errorf("unexpected JWT algorithm %q, expected RS256", header.Alg)
+	}
+
+	// Fetch the RSA public key matching the key ID.
+	pubKey, err := wo.publicKey(header.Kid)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Verify the RS256 signature over "headerB64.payloadB64".
+	sigBytes, err := base64.RawURLEncoding.DecodeString(sigB64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid JWT signature encoding: %w", err)
+	}
+	digest := sha256.Sum256([]byte(headerB64 + "." + payloadB64))
+	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest[:], sigBytes); err != nil {
+		return nil, nil, fmt.Errorf("invalid JWT signature: %w", err)
+	}
+
+	// Decode and parse the payload.
+	payloadJSON, err := base64.RawURLEncoding.DecodeString(payloadB64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid JWT payload encoding: %w", err)
+	}
+	var claims struct {
+		Sub   string `json:"sub"`
+		Exp   int64  `json:"exp"`
+		OrgID string `json:"org_id"`
+	}
+	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
+		return nil, nil, fmt.Errorf("invalid JWT payload: %w", err)
+	}
+
+	// Validate time-based claims.
+	now := time.Now().Unix()
+	if claims.Exp > 0 && now > claims.Exp {
+		return nil, nil, fmt.Errorf("JWT has expired")
+	}
+	if claims.Sub == "" {
+		return nil, nil, fmt.Errorf("missing sub claim in JWT")
+	}
+	if claims.OrgID == "" {
+		return nil, nil, fmt.Errorf("missing organization ID in JWT")
+	}
+
+	userID := claims.Sub
+
+	var userRes struct {
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+	}
+
+	status, err := wo.call(http.MethodGet, "/user_management/users/"+userID, nil, &userRes)
+	if err != nil {
+		return nil, nil, err
+	}
+	if status != http.StatusOK {
+		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
+	}
+
+	orgID := claims.OrgID
+
+	var orgRes struct {
+		ExternalID string `json:"external_id"`
+	}
+	status, err = wo.call(http.MethodGet, "/organizations/"+orgID, nil, &orgRes)
+	if err != nil {
+		return nil, nil, err
+	}
+	if status != http.StatusOK {
+		return nil, nil, fmt.Errorf("WorkOS API returned status %d for organization %s", status, orgID)
+	}
+	if orgRes.ExternalID == "" {
+		return nil, nil, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
+	}
+	organizationID, err := uuid.Parse(orgRes.ExternalID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("WorkOS organization %s has invalid external ID", orgID)
+	}
+
+	return &workosUser{Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, &organizationID, nil
+}
+
+// call executes an HTTP request to the WorkOS API and returns the HTTP status
+// code.
+func (wo *workos) call(method, path string, body any, out any) (int, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return 0, fmt.Errorf("workos: failed to encode request body: %w", err)
+		}
+		bodyReader = bytes.NewReader(b)
+	}
+
+	req, err := http.NewRequest(method, workosBaseURL+path, bodyReader)
+	if err != nil {
+		return 0, err
+	}
+	if wo.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+wo.apiKey)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("WorkOS API request failed: %w", err)
+		return 0, fmt.Errorf("workos: %s %s failed: %w", method, path, err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("WorkOS API returned status %d for user %q", resp.StatusCode, userID)
+	if out != nil {
+		err := json.NewDecoder(resp.Body).Decode(out)
+		if err != nil {
+			return resp.StatusCode, fmt.Errorf("workos: failed to decode response from %s %s: %w", method, path, err)
+		}
 	}
+	return resp.StatusCode, nil
+}
 
-	var user struct {
-		Email string `json:"email"`
+// verifyWebhookSignature verifies the HMAC-SHA256 signature of an incoming
+// WorkOS webhook request. sigHeader is the value of the "WorkOS-Signature"
+// header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
+// message is "<timestamp>.<rawBody>".
+func (wo *workos) verifyWebhookSignature(rawBody []byte, sigHeader string) error {
+	var timestamp, signature string
+	for part := range strings.SplitSeq(sigHeader, ",") {
+		if v, ok := strings.CutPrefix(part, "t="); ok {
+			timestamp = v
+		} else if v, ok := strings.CutPrefix(part, "v1="); ok {
+			signature = v
+		}
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return "", fmt.Errorf("failed to decode WorkOS user response: %w", err)
+	if timestamp == "" || signature == "" {
+		return fmt.Errorf("workos: missing t or v1 in WorkOS-Signature header")
 	}
-	if user.Email == "" {
-		return "", fmt.Errorf("WorkOS user %q has no email", userID)
+	sigBytes, err := hex.DecodeString(signature)
+	if err != nil {
+		return fmt.Errorf("workos: invalid hex in WorkOS-Signature header: %w", err)
 	}
-	return user.Email, nil
+	mac := hmac.New(sha256.New, []byte(wo.webhookSecret))
+	mac.Write([]byte(timestamp))
+	mac.Write([]byte("."))
+	mac.Write(rawBody)
+	if !hmac.Equal(mac.Sum(nil), sigBytes) {
+		return fmt.Errorf("workos: webhook signature mismatch")
+	}
+	return nil
 }

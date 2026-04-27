@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	stdJSON "encoding/json"
 	"io"
 	"log/slog"
 	"math"
@@ -72,12 +73,12 @@ type apisServer struct {
 	externalAssetsURLs     []string
 	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
 	inviteMembersViaEmail  bool
-	organizationsAPIKey    string // can be empty (which means that organizations APIs cannot be used)
+	organizationsAPIKey    string  // can be empty (which means that organizations APIs cannot be used)
+	workos                 *workos // nil when WorkOS authentication is not configured.
 	sentryTelemetry        struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
 	}
-	workos *workosAuth // nil when WorkOS authentication is not configured.
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
@@ -86,8 +87,8 @@ type apisServer struct {
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
 	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
-	sentryErrorTunnel *sentryErrorTunnel, workosClientID, workosAPIKey string,
-) *apisServer {
+	sentryErrorTunnel *sentryErrorTunnel, workosClientID string, workosAPIKey string,
+	workosWebhookSecret string) *apisServer {
 
 	s := &apisServer{
 		core:                   core,
@@ -101,11 +102,13 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 		inviteMembersViaEmail:  inviteMembersViaEmail,
 		organizationsAPIKey:    organizationsAPIKey,
 	}
+
+	if workosClientID != "" {
+		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret)
+	}
+
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
-	if workosClientID != "" {
-		s.workos = &workosAuth{clientID: workosClientID, apiKey: workosAPIKey}
-	}
 
 	s.mux = http.NewServeMux()
 	for pattern, handler := range endpoints(s) {
@@ -446,9 +449,10 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	return nil, nil
 }
 
-// workosLogin exchanges a WorkOS access token for a Krenalis session cookie.
-// It verifies the token's JWT signature using the WorkOS JWKS, retrieves the
-// member by email, and sets the same encrypted session cookie as a normal login.
+// workosLogin exchanges a WorkOS access token for a Krenalis session cookie. It
+// verifies the WorkOS JWT, retrieves the member by email, auto-provision them
+// if they are not already registered in Krenalis, and sets the same encrypted
+// session cookie as a normal login.
 func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, error) {
 	if s.workos == nil {
 		return nil, errors.Unauthorized("WorkOS authentication is not enabled")
@@ -464,20 +468,25 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 		return nil, errors.BadRequest("")
 	}
 
-	email, err := s.workos.verifyToken(body.AccessToken)
+	workosUser, workosExternalOrganizationID, err := s.workos.verifyToken(body.AccessToken)
 	if err != nil {
 		return nil, errors.Unauthorized("invalid WorkOS token")
 	}
 
-	organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
-	if len(organizations) == 0 {
-		return nil, errors.New("there are no organizations")
-	}
-	org := organizations[0]
-
-	memberID, err := org.MemberByEmail(r.Context(), email)
+	org, err := s.core.Organization(*workosExternalOrganizationID)
 	if err != nil {
-		return nil, errors.Unauthorized("no Krenalis member found for this WorkOS account")
+		return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
+	}
+
+	memberID, err := org.MemberByEmail(r.Context(), workosUser.Email)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			memberID, err = org.ProvisionMember(r.Context(), workosUser.FirstName+" "+workosUser.LastName, workosUser.Email)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return nil, err
 	}
 
 	// Store the session.

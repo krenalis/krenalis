@@ -209,6 +209,47 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	return err
 }
 
+// ProvisionMember adds a member provisioned from an external identity provider.
+//
+// The added member doesn't have a password, since its authentication is managed
+// by the external identity provider.
+//
+// It returns an errors.UnprocessableError error with code MemberEmailExists if
+// the email is already used by another member.
+func (this *Organization) ProvisionMember(ctx context.Context, name, email string) (int, error) {
+	this.core.mustBeOpen()
+	if name != "" {
+		if err := util.ValidateStringField("name", name, 45); err != nil {
+			return 0, errors.BadRequest("%s", err)
+		}
+	}
+	if err := validateMemberEmail(email); err != nil {
+		return 0, errors.BadRequest("%s", err)
+	}
+	n := state.AddMember{Organization: this.organization.ID}
+	now := time.Now().UTC()
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+		}
+		err = tx.QueryRow(ctx,
+			"INSERT INTO members (name, email, organization, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+			name, email, this.organization.ID, now).Scan(&n.ID)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return n.ID, nil
+}
+
 // AccessKeys returns the access keys of the organization ordered by creation
 // time.
 func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) {
