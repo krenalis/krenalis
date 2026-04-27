@@ -12,18 +12,6 @@ import (
 // Only Batch and WaitUp are safe for concurrent use by multiple goroutines.
 type Stream interface {
 
-	// Batch returns a batch publisher for the stream.
-	//
-	// It waits until the stream has been created. It returns an error only if ctx
-	// is canceled or the stream has been closed.
-	//
-	// It is safe for concurrent use by multiple goroutines.
-	Batch(ctx context.Context) (BatchPublisher, error)
-
-	// Close closes the stream. When Close is called, no other calls to the
-	// Stream's methods should be in progress, and no further calls should be made.
-	Close() error
-
 	// Consume returns a buffered channel of the given size that streams events for
 	// the specified topic. Events belonging to the same shard are sent on the
 	// channel in order, ensuring per-user ordering is preserved.
@@ -35,19 +23,31 @@ type Stream interface {
 	//
 	// It is safe for concurrent use by multiple goroutines.
 	WaitUp(context.Context) bool
+
+	// Batch returns a batch publisher for the stream.
+	//
+	// It waits until the stream has been created. It returns an error only if ctx
+	// is canceled or the stream has been closed.
+	//
+	// It is safe for concurrent use by multiple goroutines.
+	Batch(ctx context.Context) (BatchPublisher, error)
+
+	// Close closes the stream. When Close is called, no other calls to the
+	// Stream's methods should be in progress, and no further calls should be made.
+	Close() error
 }
 
 // Consumer receives events for a pipeline.
 type Consumer interface {
-
-	// Close closes the consumer and its events channel.
-	Close()
 
 	// Events returns the channel of events.
 	//
 	// It waits until the stream has been created. It returns an error only if ctx
 	// is canceled or the stream has been closed.
 	Events(ctx context.Context) (<-chan Event, error)
+
+	// Close closes the consumer and its events channel.
+	Close()
 }
 
 // BatchPublisher publishes events in batches.

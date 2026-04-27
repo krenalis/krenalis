@@ -13,10 +13,10 @@ import (
 
 // Stream is a mock for streams.Stream.
 type Stream struct {
-	CloseFunc   func() error
+	ConsumeFunc func(string, int) streams.Consumer
 	WaitUpFunc  func(context.Context) bool
 	BatchFunc   func(context.Context) (streams.BatchPublisher, error)
-	ConsumeFunc func(string, int) streams.Consumer
+	CloseFunc   func() error
 
 	WaitUpValue  bool
 	BatchValue   streams.BatchPublisher
@@ -25,23 +25,6 @@ type Stream struct {
 	EventsError  error
 }
 
-// Close implements streams.Stream.
-func (s *Stream) Close() error {
-	if s.CloseFunc != nil {
-		return s.CloseFunc()
-	}
-	return nil
-}
-
-// WaitUp implements streams.Stream.
-func (s *Stream) WaitUp(ctx context.Context) bool {
-	if s.WaitUpFunc != nil {
-		return s.WaitUpFunc(ctx)
-	}
-	return s.WaitUpValue
-}
-
-// Batch implements streams.Stream.
 func (s *Stream) Batch(ctx context.Context) (streams.BatchPublisher, error) {
 	if s.BatchFunc != nil {
 		return s.BatchFunc(ctx)
@@ -55,7 +38,13 @@ func (s *Stream) Batch(ctx context.Context) (streams.BatchPublisher, error) {
 	return &batchPublisher{}, nil
 }
 
-// Consume implements streams.Stream.
+func (s *Stream) Close() error {
+	if s.CloseFunc != nil {
+		return s.CloseFunc()
+	}
+	return nil
+}
+
 func (s *Stream) Consume(topic string, size int) streams.Consumer {
 	if s.ConsumeFunc != nil {
 		return s.ConsumeFunc(topic, size)
@@ -64,6 +53,13 @@ func (s *Stream) Consume(topic string, size int) streams.Consumer {
 		return s.ConsumeValue
 	}
 	return &consumer{EventsCh: closedEvents, EventsError: s.EventsError}
+}
+
+func (s *Stream) WaitUp(ctx context.Context) bool {
+	if s.WaitUpFunc != nil {
+		return s.WaitUpFunc(ctx)
+	}
+	return s.WaitUpValue
 }
 
 // batchPublisher is a mock for streams.BatchPublisher.
@@ -90,10 +86,10 @@ func (b *batchPublisher) Done(ctx context.Context) error {
 
 // consumer is a mock for streams.Consumer.
 type consumer struct {
-	CloseFunc   func()
 	EventsFunc  func(context.Context) (<-chan streams.Event, error)
 	EventsCh    <-chan streams.Event
 	EventsError error
+	CloseFunc   func()
 }
 
 // Close implements streams.Consumer.
