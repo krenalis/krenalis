@@ -74,21 +74,23 @@ type streamOptions struct {
 	compression jetstream.StoreCompression
 }
 
-// Connect creates and opens a connection to the configured NATS servers.
+// Connect establishes a connection to the configured NATS servers and returns
+// a stream backed by that connection.
 //
-// The connection uses the configured User/Password/Token authentication fields
-// when present. If conf.NKey is set, the connection also uses NKey
-// authentication with a challenge–response signature based on the provided
-// Ed25519 private key.
+// The connection uses the configured User, Password, or Token authentication
+// fields when present. If options.NKey is set, NKey authentication is also
+// used, performing a challenge-response signature with the provided Ed25519
+// private key.
 //
-// When NKey authentication is used, the private key is defensively copied and
-// kept only inside the authentication callbacks. The copied key material is
-// wiped on a best-effort basis when the connection is definitively closed, or
-// if the initial connection attempt fails.
-func Connect(options natsopts.Options) (stream streams.Stream, err error) {
+// When NKey authentication is enabled, the private key is defensively copied
+// and retained only within the authentication callbacks. The copied key
+// material is wiped on a best-effort basis when the connection is definitively
+// closed or if the initial connection attempt fails.
+func Connect(options natsopts.Options) (streams.Stream, error) {
 
 	c := &connection{}
 	c.js.wait = make(chan struct{})
+	nKeyConnected := false
 
 	opts := nats.Options{
 		Servers:  options.Servers,
@@ -152,7 +154,7 @@ func Connect(options natsopts.Options) (stream streams.Stream, err error) {
 	}
 
 	// DisconnectedErrCB is invoked whenever a disconnection occurs.
-	opts.DisconnectedErrCB = func(*nats.Conn, error) {
+	opts.DisconnectedErrCB = func(_ *nats.Conn, err error) {
 		const msg = "disconnected from NATS server; retrying"
 		if err == nil {
 			slog.Info(msg)
@@ -180,7 +182,7 @@ func Connect(options natsopts.Options) (stream streams.Stream, err error) {
 			}
 		}
 		defer func() {
-			if stream == nil {
+			if !nKeyConnected {
 				destroy()
 			}
 		}()
@@ -216,6 +218,9 @@ func Connect(options natsopts.Options) (stream streams.Stream, err error) {
 		c.nc = nc
 	}
 	c.mu.Unlock()
+	if options.NKey != nil {
+		nKeyConnected = true
+	}
 
 	return c, nil
 }
