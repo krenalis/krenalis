@@ -14,6 +14,8 @@ import { validateMemberToSet } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
 import { useLocation } from 'react-router-dom';
 import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
+import { UserProfile, WorkOsWidgets, UserSecurity } from '@workos-inc/widgets'; // TODO: vedi come risolvere questo errore
+import { useAuth } from '@workos-inc/authkit-react';
 
 const Member = () => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
@@ -47,6 +49,8 @@ const Member = () => {
 	const isUpdate = useMemo(() => {
 		return location.pathname.endsWith('current');
 	}, [location]);
+
+	const hasWorkos = publicMetadata.workosClientID !== '';
 
 	useLayoutEffect(() => {
 		if (!isUpdate) {
@@ -205,6 +209,10 @@ const Member = () => {
 		}, 300);
 	};
 
+	if (hasWorkos) {
+		return <WorkOSMember />;
+	}
+
 	return (
 		<div className='member'>
 			<div className={`member__content${isUpdate ? ' member__content--update' : ''}`}>
@@ -319,6 +327,21 @@ const Member = () => {
 				)}
 			</div>
 		</div>
+	);
+};
+
+const WorkOSMember = () => {
+	const { isLoading, user, getAccessToken } = useAuth();
+
+	if (isLoading || !user) {
+		return null;
+	}
+
+	return (
+		<WorkOsWidgets>
+			<UserProfile authToken={getAccessToken} />
+			<UserSecurity authToken={getAccessToken} />
+		</WorkOsWidgets>
 	);
 };
 

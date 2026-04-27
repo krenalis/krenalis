@@ -20,6 +20,8 @@ import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
 import { AuthKitProvider, useAuth } from '@workos-inc/authkit-react';
 import API from '../../../lib/api/api';
 import { PublicMetadata } from '../../../lib/api/types/responses';
+import '@radix-ui/themes/styles.css';
+import '@workos-inc/widgets/styles.css';
 
 setBasePath('/admin/src/shoelace/dist');
 
@@ -32,6 +34,8 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
+
+	const hasWorkOS = onWorkosLogout != null;
 
 	const showStatus = (status: Status) => {
 		if (toastRef.current == null) return;
@@ -52,7 +56,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 		}
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
-		if (onWorkosLogout != null) {
+		if (hasWorkOS) {
 			onWorkosLogout();
 		}
 		setSelectedWorkspace(0);
@@ -115,7 +119,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
-		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname) && onWorkosLogout == null) {
+		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname) && !hasWorkOS) {
 			// if the app is initialized but the user is not logged in and they
 			// try to access a non-authentication page, redirect them to the
 			// login form first.
@@ -143,7 +147,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (isLoadingState || (!isLoggedIn && (onWorkosLogout != null || !isAuthRelatedRoute(location.pathname)))) {
+	if (isLoadingState || (!isLoggedIn && (hasWorkOS || !isAuthRelatedRoute(location.pathname)))) {
 		content = (
 			<SlSpinner
 				className='app-spinner'
@@ -276,7 +280,8 @@ const Root = () => {
 		);
 	}
 
-	if (workosClientID !== '') {
+	const hasWorkOS = workosClientID !== '';
+	if (hasWorkOS) {
 		return (
 			<AuthKitProvider clientId={workosClientID} redirectUri={`${window.location.origin}/admin`}>
 				<WorkOSWrapper />

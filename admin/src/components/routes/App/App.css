@@ -381,7 +381,7 @@ sl-icon::part(svg) {
 	background-color: var(--sl-color-primary-600) !important;
 }
 
-/* schema combobox items */
+/* || Schema combobox items */
 
 .combobox-list sl-menu-item::part(checked-icon) {
 	display: none;
@@ -407,4 +407,14 @@ sl-icon::part(svg) {
 .schema-combobox-item__name {
 	opacity: 0.8;
 	font-family: var(--monospace-fonts);
+}
+
+/* || Radix overlay for WorkOS */
+
+.rt-BaseDialogOverlay {
+	z-index: 9999;
+}
+
+.rt-BaseDialogScrollPadding {
+	padding-left: var(--sidebar-width) !important;
 }

@@ -11,6 +11,7 @@ import { Link } from '..//Link/Link';
 import appContext from '../../../context/AppContext';
 import { useLocation } from 'react-router-dom';
 import { Member } from '../../../lib/api/types/responses';
+import { useAuth } from '@workos-inc/authkit-react';
 
 interface HeaderProps {
 	title: ReactNode;
@@ -20,7 +21,7 @@ interface HeaderProps {
 const Header = ({ title, member }: HeaderProps) => {
 	const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
 
-	const { isPasswordless, logout, isFullscreen } = useContext(appContext);
+	const { isPasswordless, logout, isFullscreen, publicMetadata } = useContext(appContext);
 
 	const location = useLocation();
 
@@ -49,6 +50,8 @@ const Header = ({ title, member }: HeaderProps) => {
 		}
 		dropdownRef.current.hide();
 	};
+
+	const hasWorkos = publicMetadata.workosClientID !== '';
 
 	return (
 		<header>
@@ -126,10 +129,11 @@ const Header = ({ title, member }: HeaderProps) => {
 								<SlIcon className='header__account-menu-item-icon' name='building' />
 								Your organization
 							</Link>
-							<Link className='header__account-menu-item' path='organization/members' onClick={closeMenu}>
-								<SlIcon className='header__account-menu-item-icon' name='people' />
-								Team members
-							</Link>
+							{hasWorkos ? (
+								<WorkOSMembersLink closeMenu={closeMenu} />
+							) : (
+								<MembersLink closeMenu={closeMenu} />
+							)}
 							<Link
 								className='header__account-menu-item'
 								path='organization/access-keys'
@@ -171,6 +175,31 @@ const Header = ({ title, member }: HeaderProps) => {
 				</SlDropdown>
 			</div>
 		</header>
+	);
+};
+
+interface MembersLinkProps {
+	closeMenu: () => void;
+}
+
+const WorkOSMembersLink = ({ closeMenu }: MembersLinkProps) => {
+	const { isLoading, user, role } = useAuth();
+
+	if (isLoading || !user) {
+		return null;
+	}
+
+	if (role === 'admin') {
+		return <MembersLink closeMenu={closeMenu} />;
+	}
+};
+
+const MembersLink = ({ closeMenu }: MembersLinkProps) => {
+	return (
+		<Link className='header__account-menu-item' path='organization/members' onClick={closeMenu}>
+			<SlIcon className='header__account-menu-item-icon' name='people' />
+			Team members
+		</Link>
 	);
 };
 

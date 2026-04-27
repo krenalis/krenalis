@@ -14,6 +14,9 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberEmail } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
+import { useAuth } from '@workos-inc/authkit-react';
+import { UsersManagement, WorkOsWidgets } from '@workos-inc/widgets';
+import appContext from '../../../context/AppContext';
 
 const Members = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -24,6 +27,8 @@ const Members = () => {
 	const { api, handleError, member: loggedMember, logout, publicMetadata } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
+
+	const hasWorkos = publicMetadata.workosClientID !== ''
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -41,6 +46,11 @@ const Members = () => {
 		};
 
 		if (!isLoading) {
+			return;
+		}
+
+		if (hasWorkos) {
+			setIsLoading(false);
 			return;
 		}
 
@@ -90,6 +100,8 @@ const Members = () => {
 				</div>
 			</div>
 		);
+	} else if (publicMetadata.workosClientID !== '') {
+		return <WorkOSMembers />;
 	} else {
 		return (
 			<div className='members'>
@@ -191,6 +203,28 @@ const Members = () => {
 			</div>
 		);
 	}
+};
+
+const WorkOSMembers = () => {
+	const { isLoading, user, role, getAccessToken } = useAuth();
+
+	const { redirect } = useContext(appContext);
+
+	useEffect(() => {
+		if (user != null && role !== 'admin') {
+			redirect('organization');
+		}
+	}, [user, role]);
+
+	if (isLoading || !user) {
+		return null;
+	}
+
+	return (
+		<WorkOsWidgets>
+			<UsersManagement authToken={getAccessToken} />
+		</WorkOsWidgets>
+	);
 };
 
 interface InviteMemberDialogProps {
