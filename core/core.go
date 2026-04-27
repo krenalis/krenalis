@@ -270,7 +270,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	if err != nil {
 		// Return a clear error if the database has not been initialized.
 		if dbpkg.IsUndefinedTable(err) {
-			return nil, errors.New("Krenalis's internal PostgreSQL database has not been initialized. Start Krenalis with the -init-db-if-empty flag to initialize it")
+			return nil, fmt.Errorf("%s (Krenalis's internal PostgreSQL may not be initialized. Try starting Krenalis with the -init-db-if-empty flag)", err)
 		}
 		return nil, err
 	}
