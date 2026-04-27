@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -536,19 +535,6 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "Snowflake":
-				// Read the warehouse settings, if the env variable is set,
-				// otherwise skip this warehouse.
-				settingsFile, ok := os.LookupEnv("KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE")
-				if !ok {
-					t.Skipf("the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
-				}
-				// Read the JSON file with the warehouse settings.
-				var err error
-				settings, err = os.ReadFile(settingsFile)
-				if err != nil {
-					t.Fatalf("cannot open the path %q specified in the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
-				}
-
 				testDB, err := snowflaketester.CreateTestDatabase()
 				if err != nil {
 					panic(err)
@@ -559,7 +545,6 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						t.Logf("cannot teardown test Snowflake database: %s", err)
 					}
 				}()
-
 				settings, err = json.Marshal(map[string]any{
 					"username":  testDB.Settings().User,
 					"password":  testDB.Settings().Password,
@@ -572,7 +557,6 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				if err != nil {
 					panic(err)
 				}
-
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}

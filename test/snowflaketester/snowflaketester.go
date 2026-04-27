@@ -5,9 +5,14 @@
 package snowflaketester
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/hex"
+	"fmt"
+	"log/slog"
 	"os"
+	"time"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -30,6 +35,7 @@ type Settings struct {
 
 func CreateTestDatabase() (*SnowflakeTester, error) {
 
+	// Read the Snowflake settings from the environment.
 	settings := Settings{
 		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),
 		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
@@ -40,6 +46,7 @@ func CreateTestDatabase() (*SnowflakeTester, error) {
 		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
 	}
 
+	// Instantiate a Snowflake connector.
 	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
 		Account:          settings.Account,
 		User:             settings.User,
@@ -50,10 +57,19 @@ func CreateTestDatabase() (*SnowflakeTester, error) {
 		DisableTelemetry: true,
 	})
 
+	// Generate the name and create the test database.
 	db := sql.OpenDB(connector)
+	dbName, err := generateTestDatabaseName()
+	if err != nil {
+		return nil, fmt.Errorf("cannot generate test database name: %s", err)
+	}
+	_, err = db.Exec("CREATE DATABASE \"%s\"", dbName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create test database on Snowflake: %s", err)
+	}
+	slog.Info("test Snowflake database created", "dbName", dbName)
 
-	// TODO
-
+	settings.Database = dbName
 	return &SnowflakeTester{
 		connector: connector,
 		db:        db,
@@ -70,8 +86,25 @@ func (st *SnowflakeTester) DB() *sql.DB { // TODO: is this necessary?
 }
 
 func (st *SnowflakeTester) Teardown() error {
-
-	// TODO
-
+	_, err := st.db.Exec("DROP DATABASE \"%s\"", st.settings.Database)
+	if err != nil {
+		return fmt.Errorf("cannot drop test Snowflake database %q: %s", st.settings.Database, err)
+	}
+	slog.Info("test Snowflake database dropped", "dbName", st.settings.Database)
 	return nil
+}
+
+// generateTestDatabaseName generates the name of a Snowflake database to use
+// for testing.
+// The returned name does not contain quotes.
+func generateTestDatabaseName() (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("KRENALIS_TEST_%d_%s",
+		time.Now().UTC().Unix(),
+		hex.EncodeToString(b),
+	), nil
 }
