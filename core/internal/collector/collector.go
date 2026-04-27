@@ -497,7 +497,7 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 // processIdentityEvents reads events from the consumer, extracts identities,
 // and persists them using the provided identity writer.
 //
-// It is called in its own goroutine and runs until the context is canceled.
+// It runs in its own goroutine and exits when the context is canceled.
 func (c *Collector) processIdentityEvents(ctx context.Context, consumer streams.Consumer, w *identityWriter) {
 	events, err := consumer.Events(ctx)
 	if err != nil {
@@ -518,9 +518,9 @@ func (c *Collector) processIdentityEvents(ctx context.Context, consumer streams.
 }
 
 // processForwardedEvents reads events from the consumer and forwards them to
-// its destination pipelines.
+// their destination pipelines.
 //
-// It is called in its own goroutine and runs until the context is canceled.
+// It runs in its own goroutine and exits when the context is canceled.
 func (c *Collector) processForwardedEvents(ctx context.Context, consumer streams.Consumer, destinations *destinations, connection int) {
 	events, err := consumer.Events(ctx)
 	if err != nil {
@@ -543,7 +543,7 @@ func (c *Collector) processForwardedEvents(ctx context.Context, consumer streams
 // processWarehouseEvents processes events from the given consumer and persists
 // them to the data warehouse using the provided event writer.
 //
-// It is called in its own goroutine and runs until the context is canceled.
+// It runs in its own goroutine and exits when the context is canceled.
 func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams.Consumer, w *datastore.EventWriter, pipeline int) {
 	events, err := consumer.Events(ctx)
 	if err != nil {
