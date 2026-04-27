@@ -452,12 +452,6 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, fmt.Errorf("KRENALIS_PROMETHEUS_METRICS_ENABLED must be a boolean: %s", err)
 	}
 
-	settings.WorkOS.ClientID = envVars.Get("KRENALIS_WORKOS_CLIENT_ID")
-	settings.WorkOS.APIKey = envVars.Get("KRENALIS_WORKOS_API_KEY")
-	if settings.WorkOS.ClientID != "" && settings.WorkOS.APIKey == "" {
-		return nil, fmt.Errorf("KRENALIS_WORKOS_API_KEY must be set when KRENALIS_WORKOS_CLIENT_ID is set")
-	}
-
 	if e := envVars.Get("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION"); e == "" {
 		settings.MaxQueuedEventsPerDestination = 50_000
 	} else {
@@ -469,6 +463,34 @@ func parseEnvSettings() (*Settings, error) {
 			return nil, fmt.Errorf("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got %d", maxEvents)
 		}
 		settings.MaxQueuedEventsPerDestination = int(maxEvents)
+	}
+
+	if workosClientID, ok := envVars.Lookup("KRENALIS_WORKOS_CLIENT_ID"); ok {
+		if workosClientID == "" {
+			return nil, errors.New("KRENALIS_WORKOS_CLIENT_ID cannot be an empty string")
+		}
+		if !strings.HasPrefix(workosClientID, "client_") {
+			return nil, errors.New("KRENALIS_WORKOS_CLIENT_ID must start with 'client_'")
+		}
+		settings.WorkOS.ClientID = workosClientID
+
+		apiKey, ok := envVars.Lookup("KRENALIS_WORKOS_API_KEY")
+		if !ok {
+			return nil, errors.New("KRENALIS_WORKOS_API_KEY must be set when KRENALIS_WORKOS_CLIENT_ID is set")
+		}
+		if apiKey == "" {
+			return nil, errors.New("KRENALIS_WORKOS_API_KEY cannot be an empty string")
+		}
+		settings.WorkOS.APIKey = apiKey
+
+		webhookSecret, ok := envVars.Lookup("KRENALIS_WORKOS_WEBHOOK_SECRET")
+		if !ok {
+			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
+		}
+		if webhookSecret == "" {
+			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET cannot be an empty string")
+		}
+		settings.WorkOS.WebhookSecret = webhookSecret
 	}
 
 	return settings, nil
