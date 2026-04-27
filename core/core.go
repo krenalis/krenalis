@@ -47,7 +47,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -270,8 +269,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state, err = state.New(ctx, db, kms, connectorsOAuth, sendStats)
 	if err != nil {
 		// Return a clear error if the database has not been initialized.
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
+		if dbpkg.IsUndefinedTable(err) {
 			return nil, errors.New("Krenalis's internal PostgreSQL database has not been initialized. Start Krenalis with the -init-db-if-empty flag to initialize it")
 		}
 		return nil, err
