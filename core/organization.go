@@ -328,7 +328,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	createdAt := time.Now().UTC().Truncate(time.Second)
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, token, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7)", n.ID, n.Organization, n.Workspace, name, typ, n.Token, createdAt)
+			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7)", n.ID, n.Organization, n.Workspace, name, n.Type, n.Token, createdAt)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
@@ -473,6 +473,18 @@ func (this *Organization) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
 	n := state.DeleteOrganization{ID: this.organization.ID}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		// Mark the organization's pipeline functions as discontinued.
+		now := time.Now().UTC()
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
+			"SELECT p.transformation_id, $1\n"+
+			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
+			"WHERE p.transformation_id != '' AND w.organization = $2\n"+
+			"ON CONFLICT (id) DO NOTHING", now, n.ID)
+		if err != nil {
+			return nil, err
+		}
 		result, err := tx.Exec(ctx, "DELETE FROM organizations WHERE id = $1", this.organization.ID)
 		if err != nil {
 			return nil, err
@@ -813,10 +825,14 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 	if !ok {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
+	store, ok := this.core.datastore.Store(id)
+	if !ok {
+		return nil, errors.NotFound("workspace %d does not exist", id)
+	}
 	workspace := Workspace{
 		core:                           this.core,
 		organization:                   this,
-		store:                          this.core.datastore.Store(id),
+		store:                          store,
 		workspace:                      ws,
 		ID:                             ws.ID,
 		Name:                           ws.Name,
@@ -834,12 +850,16 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 func (this *Organization) Workspaces() []*Workspace {
 	this.core.mustBeOpen()
 	workspaces := this.organization.Workspaces()
-	infos := make([]*Workspace, len(workspaces))
-	for i, ws := range workspaces {
+	infos := make([]*Workspace, 0, len(workspaces))
+	for _, ws := range workspaces {
+		store, ok := this.core.datastore.Store(ws.ID)
+		if !ok {
+			continue
+		}
 		workspace := Workspace{
 			core:                           this.core,
 			organization:                   this,
-			store:                          this.core.datastore.Store(ws.ID),
+			store:                          store,
 			workspace:                      ws,
 			ID:                             ws.ID,
 			Name:                           ws.Name,
@@ -850,7 +870,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
 			UIPreferences:                  UIPreferences(ws.UIPreferences),
 		}
-		infos[i] = &workspace
+		infos = append(infos, &workspace)
 	}
 	return infos
 }

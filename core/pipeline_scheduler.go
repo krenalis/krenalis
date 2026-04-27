@@ -236,7 +236,10 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 							continue
 						}
 						connection := pipeline.Connection()
-						store := pe.core.datastore.Store(connection.Workspace().ID)
+						store, ok := pe.core.datastore.Store(connection.Workspace().ID)
+						if !ok {
+							continue
+						}
 						c := &Connection{core: pe.core, connection: connection, store: store}
 						p := &Pipeline{core: pe.core, pipeline: pipeline, connection: c}
 						wg.Go(func() {

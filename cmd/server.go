@@ -36,120 +36,56 @@ import (
 const telemetryLevelErrors = core.TelemetryLevelErrors
 const telemetryLevelAll = core.TelemetryLevelAll
 
-type Settings struct {
-	Kms                    string
-	OrganizationsAPIKey    string
-	TerminationDelay       time.Duration
-	JavaScriptSDKURL       string
-	SentryTelemetryLevel   core.TelemetryLevel
-	ExternalAssetsURLs     []string // always non nil, can be empty.
-	PotentialConnectorsURL string   // must be a valid URL or empty string (which means: do not load the JSON file).
-	InviteMembersViaEmail  bool
-	HTTP                   struct {
-		Host string
-		Port int
-		TLS  struct {
-			Enabled  bool
-			CertFile string
-			KeyFile  string
-			DNSNames []string
-		}
-		ExternalURL       string
-		ExternalEventURL  string
-		ReadHeaderTimeout time.Duration
-		ReadTimeout       time.Duration
-		WriteTimeout      time.Duration
-		IdleTimeout       time.Duration
-	}
-	DB              core.DBConfig
-	NATS            core.NATSConfig
-	MaxMindDBPath   string
-	MemberEmailFrom string
-	SMTP            struct {
-		Host     string
-		Port     int
-		Username string
-		Password string
-	}
-	Transformers struct {
-		Lambda LambdaConfig
-		Local  LocalConfig
-	}
-	PrometheusMetricsEnabled      bool
-	OAuthCredentials              map[string]*core.OAuthCredentials // always empty (no connector currently uses OAuth).
-	MaxQueuedEventsPerDestination int
-}
-
-type LambdaConfig struct {
-	Role   string
-	NodeJS struct {
-		Runtime string
-		Layer   string
-	}
-	Python struct {
-		Runtime string
-		Layer   string
-	}
-}
-
-type LocalConfig struct {
-	NodeJSExecutable string
-	PythonExecutable string
-	FunctionsDir     string
-	SudoUser         string
-	DoasUser         string
-}
-
 // Run runs the server.
 // Cancel ctx to terminate the execution. If ctx is canceled, Run does not
 // return any error.
 // initDBIfEmpty controls whether the PostgreSQL database should be initialized
 // in case it is empty; if initDockerMember is true in addition to
 // initDBIfEmpty, a member specific for Docker scenarios is initialized.
-func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
+func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
-	config := core.Config{
-		Kms:                           settings.Kms,
-		OrganizationsAPIKey:           settings.OrganizationsAPIKey,
-		DB:                            settings.DB,
-		NATS:                          settings.NATS,
-		MaxMindDBPath:                 settings.MaxMindDBPath,
-		MemberEmailFrom:               settings.MemberEmailFrom,
-		SMTP:                          settings.SMTP,
-		OAuthCredentials:              maps.Clone(settings.OAuthCredentials),
-		SentryTelemetryLevel:          settings.SentryTelemetryLevel,
-		MaxQueuedEventsPerDestination: settings.MaxQueuedEventsPerDestination,
+	conf := core.Config{
+		KMS:                           config.KMS,
+		OrganizationsAPIKey:           config.OrganizationsAPIKey,
+		DB:                            config.DB,
+		NATS:                          config.NATS,
+		MaxMindDBPath:                 config.MaxMindDBPath,
+		MemberEmailFrom:               config.MemberEmailFrom,
+		SMTP:                          config.SMTP,
+		OAuthCredentials:              maps.Clone(config.OAuthCredentials),
+		SentryTelemetryLevel:          config.SentryTelemetryLevel,
+		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
 	}
-	config.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
-	config.DatabaseInitialization.InitDockerMember = initDockerMember
+	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
+	conf.DatabaseInitialization.InitDockerMember = initDockerMember
 
 	// Choose the transformation function provider setting.
-	if settings.Transformers.Lambda.NodeJS.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "" {
-		config.FunctionProvider = core.LambdaConfig(settings.Transformers.Lambda)
+	if config.Transformers.Lambda.NodeJS.Runtime != "" || config.Transformers.Lambda.Python.Runtime != "" {
+		conf.FunctionProvider = core.LambdaConfig(config.Transformers.Lambda)
 	}
-	if settings.Transformers.Local.NodeJSExecutable != "" || settings.Transformers.Local.PythonExecutable != "" {
-		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
+	if config.Transformers.Local.NodeJSExecutable != "" || config.Transformers.Local.PythonExecutable != "" {
+		conf.FunctionProvider = core.LocalConfig(config.Transformers.Local)
 	}
 
-	core, err := core.New(ctx, &config)
+	core, err := core.New(ctx, &conf)
 	if err != nil {
 		return err
 	}
 	defer core.Close(ctx)
 
 	// Destroy the NATS private key.
-	for i := range config.NATS.NKey {
-		config.NATS.NKey[i] = 0
+	for i := range conf.NATS.NKey {
+		conf.NATS.NKey[i] = 0
 	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
 	defer sentryErrorTunnel.Close()
 
-	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(settings.HTTP.ExternalURL, "https://")
-	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL,
-		settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL, settings.ExternalAssetsURLs,
-		settings.PotentialConnectorsURL, settings.InviteMembersViaEmail, settings.OrganizationsAPIKey,
-		settings.SentryTelemetryLevel, sentryErrorTunnel)
+	runsOnHTTPS := config.HTTP.TLS.Enabled || strings.HasPrefix(config.HTTP.ExternalURL, "https://")
+	apisServer := newAPIsServer(core, runsOnHTTPS, config.JavaScriptSDKURL,
+		config.HTTP.ExternalURL, config.HTTP.ExternalEventURL, config.ExternalAssetsURLs,
+		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.OrganizationsAPIKey,
+		config.SentryTelemetryLevel, sentryErrorTunnel)
 
 	admin, err := newAdmin(assetsFS)
 	if err != nil {
@@ -168,7 +104,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	// Instantiate the Prometheus metrics handler.
 	var prometheusMetricsHandler http.Handler
-	if settings.PrometheusMetricsEnabled {
+	if config.PrometheusMetricsEnabled {
 		prometheusMetricsHandler = promhttp.Handler()
 	}
 
@@ -182,7 +118,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 				slog.Error("cmd: a panic occurred, Krenalis will exit with status code 1", "reason", r, "stacktrace", string(debug.Stack()))
 
 				// Send the panic to Sentry.
-				if settings.SentryTelemetryLevel == telemetryLevelErrors || settings.SentryTelemetryLevel == telemetryLevelAll {
+				if config.SentryTelemetryLevel == telemetryLevelErrors || config.SentryTelemetryLevel == telemetryLevelAll {
 					sentry.CurrentHub().Recover(r)
 					flushCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 					defer cancel()
@@ -218,7 +154,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":
-			if settings.PrometheusMetricsEnabled {
+			if config.PrometheusMetricsEnabled {
 				prometheusMetricsHandler.ServeHTTP(w, r)
 				return
 			}
@@ -234,28 +170,28 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	c := http.NewCrossOriginProtection()
 	c.AddInsecureBypassPattern("POST /v1/events")
-	origin := strings.TrimSuffix(settings.HTTP.ExternalURL, "/")
+	origin := strings.TrimSuffix(config.HTTP.ExternalURL, "/")
 	err = c.AddTrustedOrigin(origin)
 	if err != nil {
 		return fmt.Errorf("unexpected error calling CrossOriginProtection.AddTrustedOrigin with %q", origin)
 	}
 
-	addr := net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port))
+	addr := net.JoinHostPort(config.HTTP.Host, strconv.Itoa(config.HTTP.Port))
 
 	httpServer := http.Server{
 		Addr:              addr,
 		Handler:           c.Handler(handler),
 		ErrorLog:          log.New(&httpLogger{}, "", 0),
-		ReadHeaderTimeout: settings.HTTP.ReadHeaderTimeout,
-		ReadTimeout:       settings.HTTP.ReadTimeout,
-		WriteTimeout:      settings.HTTP.WriteTimeout,
-		IdleTimeout:       settings.HTTP.IdleTimeout,
+		ReadHeaderTimeout: config.HTTP.ReadHeaderTimeout,
+		ReadTimeout:       config.HTTP.ReadTimeout,
+		WriteTimeout:      config.HTTP.WriteTimeout,
+		IdleTimeout:       config.HTTP.IdleTimeout,
 	}
 
 	var cert tls.Certificate
 
-	if settings.HTTP.TLS.Enabled {
-		cert, err = tls.LoadX509KeyPair(settings.HTTP.TLS.CertFile, settings.HTTP.TLS.KeyFile)
+	if config.HTTP.TLS.Enabled {
+		cert, err = tls.LoadX509KeyPair(config.HTTP.TLS.CertFile, config.HTTP.TLS.KeyFile)
 		if err != nil {
 			return err
 		}
@@ -270,7 +206,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	exited := make(chan error)
 	go func() {
-		if settings.HTTP.TLS.Enabled {
+		if config.HTTP.TLS.Enabled {
 			exited <- httpServer.ServeTLS(ln, "", "")
 		} else {
 			exited <- httpServer.Serve(ln)
@@ -279,8 +215,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	// Log a human-readable overview of all externally exposed server endpoints.
 	prometheusMetricsLine := ""
-	if settings.PrometheusMetricsEnabled {
-		prometheusMetricsLine = fmt.Sprintf("├─ Prometheus metrics:  %s\n", settings.HTTP.ExternalURL+"metrics")
+	if config.PrometheusMetricsEnabled {
+		prometheusMetricsLine = fmt.Sprintf("├─ Prometheus metrics:  %s\n", config.HTTP.ExternalURL+"metrics")
 	}
 	msg := fmt.Sprintf(
 		"The Krenalis server has been started at %s\n"+
@@ -291,15 +227,15 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 			" > Admin console: %s\n\n",
 		addr,
 		prometheusMetricsLine,
-		settings.HTTP.ExternalURL+"mcp",
-		settings.HTTP.ExternalURL+"v1/",
-		settings.HTTP.ExternalEventURL,
-		settings.HTTP.ExternalURL+"admin",
+		config.HTTP.ExternalURL+"mcp",
+		config.HTTP.ExternalURL+"v1/",
+		config.HTTP.ExternalEventURL,
+		config.HTTP.ExternalURL+"admin",
 	)
 	slog.Info(msg)
 
 	// Warn if the TLS certificate may not be accepted by clients.
-	for _, name := range settings.HTTP.TLS.DNSNames {
+	for _, name := range config.HTTP.TLS.DNSNames {
 		err := verifyCertificate(cert, name, nil)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("%s; clients are likely to reject TLS connections", err))
@@ -308,7 +244,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS, initDBIfEmpty,
 
 	select {
 	case <-ctx.Done():
-		if delay := settings.TerminationDelay; delay == 0 {
+		if delay := config.TerminationDelay; delay == 0 {
 			slog.Info("cmd: received termination signal, shutting down")
 		} else {
 			slog.Info("cmd: received termination signal; waiting for before proceeding", "delay", delay)

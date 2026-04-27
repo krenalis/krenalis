@@ -63,12 +63,8 @@ func New(env *connectors.FileStorageEnv) (*FileSystem, error) {
 	// been read from the environment variables, and therefore needs to be read
 	// now.
 	if root == "" {
-		envVars, err := connectors.GetEnvVars()
-		if err != nil {
-			return nil, err
-		}
-		root = strings.TrimSpace(envVars.Get("KRENALIS_CONNECTOR_FILESYSTEM_ROOT"))
-		displayedRoot = strings.TrimSpace(envVars.Get("KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
+		root = strings.TrimSpace(os.Getenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT"))
+		displayedRoot = strings.TrimSpace(os.Getenv("KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
 		const errMsgPrefix = "File System connector is unavailable because the KRENALIS_CONNECTOR_FILESYSTEM_ROOT environment variable"
 		if root == "" {
 			return nil, fmt.Errorf("%s is not set; please define it with the root directory to enable the connector", errMsgPrefix)
