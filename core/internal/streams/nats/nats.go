@@ -174,16 +174,9 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 
 		// Copy the private key bytes so future modifications to conf.NKey by caller won't affect the signer.
 		pk := slices.Clone(options.NKey)
-
-		// destroy wipes key material best-effort (in-place overwrite).
-		destroy := func() {
-			for i := range pk {
-				pk[i] = 0
-			}
-		}
 		defer func() {
 			if !nKeyConnected {
-				destroy()
+				clear(pk)
 			}
 		}()
 
@@ -199,7 +192,7 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 			}
 			return ed25519.Sign(pk, nonce), nil
 		}
-		opts.ClosedCB = func(_ *nats.Conn) { destroy() }
+		opts.ClosedCB = func(_ *nats.Conn) { clear(pk) }
 
 	}
 
