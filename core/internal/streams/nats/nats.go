@@ -418,6 +418,9 @@ func (s *stream) refreshUpState() {
 }
 
 // Batch returns a batch publisher for the stream.
+//
+// It blocks until the stream has been created. It returns an error only if ctx
+// is canceled or the stream has been closed.
 func (s *stream) Batch(ctx context.Context) (streams.BatchPublisher, error) {
 	err := s.waitStream(ctx)
 	if err != nil {
@@ -545,7 +548,10 @@ func (c *consumer) Close() {
 	c.cancel()
 }
 
-// Events returns the channel of events.
+// Events returns the events channel.
+//
+// It blocks until the stream has been created. It returns an error only if ctx
+// is canceled or the stream has been closed.
 func (c *consumer) Events(ctx context.Context) (<-chan streams.Event, error) {
 	err := c.stream.waitStream(ctx)
 	if err != nil {
