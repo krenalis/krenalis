@@ -92,7 +92,11 @@ func (st *SnowflakeTester) Teardown() error {
 
 // generateTestDatabaseName generates the name of a Snowflake database to use
 // for testing.
-// The returned name does not contain quotes.
+// The returned name has the form:
+//
+//	KRENALIS_TEST_1777297109_e1ddc97e0b7b9d71005affc2325c10b3
+//
+// and it is not quoted by this function.
 func generateTestDatabaseName() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
