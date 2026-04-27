@@ -272,7 +272,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		// Return a clear error if the database has not been initialized.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
-			return nil, errors.New("the PostgreSQL database has not been initialized; start Krenalis with the -init-db-if-empty flag to initialize it")
+			return nil, errors.New("Krenalis's internal PostgreSQL database has not been initialized. Start Krenalis with the -init-db-if-empty flag to initialize it")
 		}
 		return nil, err
 	}
