@@ -252,7 +252,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // It is called from New and onCreateWorkspace.
 func (c *Collector) addWorkspace(id int) {
 	c.observers.Store(id, newObserver())
-	store := c.datastore.Store(id)
+	store, _ := c.datastore.Store(id)
 	c.eventWriters.Store(id, store.NewEventWriter())
 }
 

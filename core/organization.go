@@ -813,10 +813,14 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 	if !ok {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
+	store, ok := this.core.datastore.Store(id)
+	if !ok {
+		return nil, errors.NotFound("workspace %d does not exist", id)
+	}
 	workspace := Workspace{
 		core:                           this.core,
 		organization:                   this,
-		store:                          this.core.datastore.Store(id),
+		store:                          store,
 		workspace:                      ws,
 		ID:                             ws.ID,
 		Name:                           ws.Name,
@@ -834,12 +838,16 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 func (this *Organization) Workspaces() []*Workspace {
 	this.core.mustBeOpen()
 	workspaces := this.organization.Workspaces()
-	infos := make([]*Workspace, len(workspaces))
-	for i, ws := range workspaces {
+	infos := make([]*Workspace, 0, len(workspaces))
+	for _, ws := range workspaces {
+		store, ok := this.core.datastore.Store(ws.ID)
+		if !ok {
+			continue
+		}
 		workspace := Workspace{
 			core:                           this.core,
 			organization:                   this,
-			store:                          this.core.datastore.Store(ws.ID),
+			store:                          store,
 			workspace:                      ws,
 			ID:                             ws.ID,
 			Name:                           ws.Name,
@@ -850,7 +858,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
 			UIPreferences:                  UIPreferences(ws.UIPreferences),
 		}
-		infos[i] = &workspace
+		infos = append(infos, &workspace)
 	}
 	return infos
 }
