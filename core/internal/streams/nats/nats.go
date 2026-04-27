@@ -32,21 +32,21 @@ import (
 
 const numShards = 1
 
-// connection implements the stream.Connection interface.
-type connection struct {
+// stream implements streams.Stream.
+type stream struct {
 	nc *nats.Conn
 
 	mu sync.RWMutex
 
-	// up tracks whether the connection is considered up and the stream exists.
+	// up tracks whether the stream is considered up and available.
 	//
 	// It combines:
-	//   - an atomic boolean indicating whether the stream exists and the connection is up;
-	//   - a wait channel on which goroutines calling WaitUp block while the connection is down;
+	//   - an atomic boolean indicating whether the stream exists and the NATS connection is up;
+	//   - a wait channel on which goroutines calling WaitUp block while the stream is down;
 	//   - a timer used to close the wait channel after a short grace period since the last
 	//     transition to the down state.
 	up struct {
-		atomic.Bool               // true if the stream exists and the connection is up
+		atomic.Bool               // true if the stream exists and the NATS connection is up
 		wait        chan struct{} // channel used by WaitUp callers
 		timer       *time.Timer   // wakes WaitUp callers after a short delay
 	}
@@ -55,7 +55,7 @@ type connection struct {
 		jetStream jetstream.JetStream
 		stream    jetstream.Stream
 		// Channel used by Stream callers to wait for the stream to become available.
-		// It is closed when the stream is ready or the connection is closed.
+		// It is closed when the stream is ready or the stream is closed.
 		wait chan struct{}
 		// cancel stops the goroutine running ensureEventStream.
 		// If it is nil, ensureEventStream has not been called yet.
@@ -74,22 +74,22 @@ type streamOptions struct {
 	compression jetstream.StoreCompression
 }
 
-// Connect establishes a connection to the configured NATS servers and returns
-// a stream backed by that connection.
+// Connect establishes a NATS connection to the configured servers and returns
+// corresponding stream.
 //
-// The connection uses the configured User, Password, or Token authentication
-// fields when present. If options.NKey is set, NKey authentication is also
-// used, performing a challenge-response signature with the provided Ed25519
-// private key.
+// The NATS connection uses the configured User, Password, or Token
+// authentication fields when present. If options.NKey is set, NKey
+// authentication is also used, performing a challenge-response signature with
+// the provided Ed25519 private key.
 //
 // When NKey authentication is enabled, the private key is defensively copied
 // and retained only within the authentication callbacks. The copied key
-// material is wiped on a best-effort basis when the connection is definitively
-// closed or if the initial connection attempt fails.
+// material is wiped on a best-effort basis when the NATS connection is
+// definitively closed or if the initial connection attempt fails.
 func Connect(options natsopts.Options) (streams.Stream, error) {
 
-	c := &connection{}
-	c.js.wait = make(chan struct{})
+	s := &stream{}
+	s.js.wait = make(chan struct{})
 	nKeyConnected := false
 
 	opts := nats.Options{
@@ -99,7 +99,7 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 		Token:    options.Token,
 
 		// With these options enabled (provided at least one valid server URL is configured),
-		// the NATS client retries indefinitely, including on ErrNoServers and authentication failures.
+		// the NATS connection retries indefinitely, including on ErrNoServers and authentication failures.
 		RetryOnFailedConnect: true,
 		IgnoreAuthErrorAbort: true,
 		AllowReconnect:       true,
@@ -125,23 +125,23 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 
 	opts.ConnectedCB = func(nc *nats.Conn) {
 		slog.Info("connected to NATS server")
-		c.mu.Lock()
-		if c.closed {
-			c.mu.Unlock()
+		s.mu.Lock()
+		if s.closed {
+			s.mu.Unlock()
 			return
 		}
 		// ConnectedCB may be called before nats.Options.Connect returns,
 		// so set nc now because ensureEventStream depends on it.
-		c.nc = nc
-		// Start ensureEventStream on first connection, unless the connection
+		s.nc = nc
+		// Start ensureEventStream on first connection, unless the stream
 		// has already been closed or the goroutine is already running.
-		if c.js.cancel == nil {
+		if s.js.cancel == nil {
 			ctx, cancel := context.WithCancel(context.Background())
-			c.js.cancel = cancel
-			go c.ensureEventStream(ctx, streamOpts)
+			s.js.cancel = cancel
+			go s.ensureEventStream(ctx, streamOpts)
 		}
-		c.mu.Unlock()
-		c.refreshUpState()
+		s.mu.Unlock()
+		s.refreshUpState()
 	}
 
 	// ReconnectErrCB is invoked before the first successful connection,
@@ -161,13 +161,13 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 		} else {
 			slog.Info(msg, "error", err)
 		}
-		c.refreshUpState()
+		s.refreshUpState()
 	}
 
 	// ReconnectedCB is invoked whenever a reconnection occurs.
 	opts.ReconnectedCB = func(*nats.Conn) {
 		slog.Info("reconnected to NATS server")
-		c.refreshUpState()
+		s.refreshUpState()
 	}
 
 	if options.NKey != nil {
@@ -197,7 +197,7 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 	}
 
 	// Update "up" to create the wait channel.
-	c.refreshUpState()
+	s.refreshUpState()
 
 	// Connect to the NATS server.
 	nc, err := opts.Connect()
@@ -206,59 +206,59 @@ func Connect(options natsopts.Options) (streams.Stream, error) {
 	}
 	// After Connect returns, callbacks and stream-creation goroutines may run
 	// concurrently, so all access to shared fields must be mutex-protected.
-	c.mu.Lock()
-	if c.nc == nil {
-		c.nc = nc
+	s.mu.Lock()
+	if s.nc == nil {
+		s.nc = nc
 	}
-	c.mu.Unlock()
+	s.mu.Unlock()
 	if options.NKey != nil {
 		nKeyConnected = true
 	}
 
-	return c, nil
+	return s, nil
 }
 
-// Close closes the connection. When Close is called, no other calls to
-// connection's methods should be in progress and no other shall be made.
-func (c *connection) Close() error {
-	c.mu.Lock()
-	if c.closed {
-		c.mu.Unlock()
+// Close closes the stream. When Close is called, no other calls to the
+// stream's methods should be in progress and no other shall be made.
+func (s *stream) Close() error {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
 		return nil
 	}
-	c.closed = true
+	s.closed = true
 	// If the stream is not yet created and goroutines may still be waiting,
 	// close the channel to unblock them (do not set it to nil).
-	if c.js.stream == nil {
-		close(c.js.wait)
+	if s.js.stream == nil {
+		close(s.js.wait)
 		// If ensureEventStream has been called, cancel it if it is still running.
-		if c.js.cancel != nil {
-			c.js.cancel()
+		if s.js.cancel != nil {
+			s.js.cancel()
 		}
 	}
-	if c.up.wait != nil {
-		close(c.up.wait)
-		c.up.timer.Stop()
-		c.up.timer = nil
+	if s.up.wait != nil {
+		close(s.up.wait)
+		s.up.timer.Stop()
+		s.up.timer = nil
 	}
 	// Drain and close the NATS connection.
-	err := c.nc.Drain()
-	c.nc.Close()
-	c.mu.Unlock()
+	err := s.nc.Drain()
+	s.nc.Close()
+	s.mu.Unlock()
 	slog.Info("NATS connection closed")
 	return err
 }
 
-// WaitUp blocks until the connection is up and the stream is available.
-// It returns false if the context is canceled, the connection is closed,
-// or the connection remains down for too long.
-func (c *connection) WaitUp(ctx context.Context) bool {
-	if c.up.Load() {
+// WaitUp blocks until the stream is up and available.
+// It returns false if the context is canceled, the stream is closed, or the
+// stream remains down for too long.
+func (s *stream) WaitUp(ctx context.Context) bool {
+	if s.up.Load() {
 		return true
 	}
-	c.mu.RLock()
-	wait := c.up.wait
-	c.mu.RUnlock()
+	s.mu.RLock()
+	wait := s.up.wait
+	s.mu.RUnlock()
 	if wait == nil {
 		return false
 	}
@@ -266,22 +266,22 @@ func (c *connection) WaitUp(ctx context.Context) bool {
 	case <-ctx.Done():
 		return false
 	case <-wait:
-		return c.up.Load()
+		return s.up.Load()
 	}
 }
 
-// waitStream waits until the stream has been created. It returns an error only
-// if ctx is canceled or if c has been closed.
-func (c *connection) waitStream(ctx context.Context) error {
+// waitStream blocks until the stream has been created. It returns an error only
+// if ctx is canceled or the stream has been closed.
+func (s *stream) waitStream(ctx context.Context) error {
 	select {
-	case <-c.js.wait:
+	case <-s.js.wait:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.closed {
-		return errors.New("connection has been closed")
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return errors.New("stream has been closed")
 	}
 	return nil
 }
@@ -290,9 +290,9 @@ func (c *connection) waitStream(ctx context.Context) error {
 // EVENTS stream exists.
 //
 // It is run in its own goroutine when the first connection is established.
-func (c *connection) ensureEventStream(ctx context.Context, opts streamOptions) {
+func (s *stream) ensureEventStream(ctx context.Context, opts streamOptions) {
 
-	js, err := jetstream.New(c.nc)
+	js, err := jetstream.New(s.nc)
 	if err != nil {
 		// jetstream.New can only fail if invalid options are provided;
 		// since no options are passed here, this error is unexpected.
@@ -309,7 +309,7 @@ func (c *connection) ensureEventStream(ctx context.Context, opts streamOptions) 
 	}
 
 	bo := backoff.New(10)
-	var s jetstream.Stream
+	var jsStream jetstream.Stream
 
 	var jetStreamUnavailableLogged bool
 
@@ -317,9 +317,9 @@ func (c *connection) ensureEventStream(ctx context.Context, opts streamOptions) 
 	// Exit the loop once the stream is created, already exists,
 	// or the context has been canceled.
 	for bo.Next(ctx) {
-		s, err = js.UpdateStream(ctx, cfg)
+		jsStream, err = js.UpdateStream(ctx, cfg)
 		if errors.Is(err, jetstream.ErrStreamNotFound) {
-			s, err = js.CreateStream(ctx, cfg)
+			jsStream, err = js.CreateStream(ctx, cfg)
 			if err == nil {
 				slog.Info("EVENTS stream has been created")
 			}
@@ -358,81 +358,81 @@ func (c *connection) ensureEventStream(ctx context.Context, opts streamOptions) 
 		break
 	}
 
-	c.mu.Lock()
-	// Return immediately if the connection has already been closed.
-	if c.closed {
-		c.mu.Unlock()
+	s.mu.Lock()
+	// Return immediately if the stream has already been closed.
+	if s.closed {
+		s.mu.Unlock()
 		return
 	}
 	// Cancel the context to release resources.
-	c.js.cancel()
+	s.js.cancel()
 	// Update the JetStream context and stream handle.
-	c.js.jetStream = js
-	c.js.stream = s
+	s.js.jetStream = js
+	s.js.stream = jsStream
 	// Close js.wait to unblock any goroutines waiting for the stream.
 	// Do not set it to nil: closing is the signal.
-	close(c.js.wait)
-	c.mu.Unlock()
+	close(s.js.wait)
+	s.mu.Unlock()
 
 	// Update the "up" state now that the stream is available.
-	c.refreshUpState()
+	s.refreshUpState()
 
 }
 
-// refreshUpState updates the "up" state based on connection status or stream
-// availability. It does nothing if the connection is closed.
-func (c *connection) refreshUpState() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed {
+// refreshUpState updates the "up" state based on NATS connection status and
+// stream availability. It does nothing if the stream is closed.
+func (s *stream) refreshUpState() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
 		return
 	}
-	if c.nc != nil {
-		up := c.js.stream != nil && c.nc.IsConnected()
-		if !c.up.Bool.CompareAndSwap(!up, up) {
+	if s.nc != nil {
+		up := s.js.stream != nil && s.nc.IsConnected()
+		if !s.up.Bool.CompareAndSwap(!up, up) {
 			return
 		}
-		if up || c.closed {
-			if c.up.wait == nil {
+		if up || s.closed {
+			if s.up.wait == nil {
 				return
 			}
-			close(c.up.wait)
-			c.up.wait = nil
-			c.up.timer.Stop()
-			c.up.timer = nil
+			close(s.up.wait)
+			s.up.wait = nil
+			s.up.timer.Stop()
+			s.up.timer = nil
 			return
 		}
 	}
-	c.up.wait = make(chan struct{})
-	c.up.timer = time.AfterFunc(200*time.Millisecond, func() {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		if c.up.timer == nil {
+	s.up.wait = make(chan struct{})
+	s.up.timer = time.AfterFunc(200*time.Millisecond, func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.up.timer == nil {
 			return
 		}
-		close(c.up.wait)
-		c.up.wait = nil
-		c.up.timer.Stop()
-		c.up.timer = nil
+		close(s.up.wait)
+		s.up.wait = nil
+		s.up.timer.Stop()
+		s.up.timer = nil
 	})
 }
 
 // Batch returns a batch publisher for the stream.
-func (c *connection) Batch(ctx context.Context) (streams.BatchPublisher, error) {
-	err := c.waitStream(ctx)
+func (s *stream) Batch(ctx context.Context) (streams.BatchPublisher, error) {
+	err := s.waitStream(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &batch{conn: c, futures: make([]jetstream.PubAckFuture, 0, 1)}, nil
+	return &batch{stream: s, futures: make([]jetstream.PubAckFuture, 0, 1)}, nil
 }
 
 // Consume returns a buffered channel of the given size that streams events for
 // the specified topic. Events belonging to the same shard are sent on the
 // channel in order, ensuring per-user ordering is preserved.
-func (c *connection) Consume(topic string, size int) streams.Consumer {
+func (s *stream) Consume(topic string, size int) streams.Consumer {
 	ctx, cancel := context.WithCancel(context.Background())
 	consumer := &consumer{
-		stream: c,
+		stream: s,
 		events: make(chan streams.Event, size),
 		cancel: cancel,
 	}
@@ -447,7 +447,7 @@ func (c *connection) Consume(topic string, size int) streams.Consumer {
 			// The channel is closed only after the consumers have been stopped.
 			close(consumer.events)
 		}()
-		err := c.waitStream(ctx)
+		err := s.waitStream(ctx)
 		if err != nil {
 			return
 		}
@@ -457,7 +457,7 @@ func (c *connection) Consume(topic string, size int) streams.Consumer {
 			var cc jetstream.ConsumeContext
 			bo := backoff.New(10)
 			for bo.Next(ctx) {
-				jsConsumer, err := c.js.jetStream.CreateOrUpdateConsumer(ctx, "EVENTS", jetstream.ConsumerConfig{
+				jsConsumer, err := s.js.jetStream.CreateOrUpdateConsumer(ctx, "EVENTS", jetstream.ConsumerConfig{
 					Name:          consumerName,
 					Durable:       consumerName,
 					FilterSubject: filterSubject,
@@ -535,7 +535,7 @@ func (c *connection) Consume(topic string, size int) streams.Consumer {
 
 // consumer implements the streams.Consumer interface.
 type consumer struct {
-	stream *connection
+	stream *stream
 	events chan streams.Event
 	cancel context.CancelFunc
 }
@@ -556,7 +556,7 @@ func (c *consumer) Events(ctx context.Context) (<-chan streams.Event, error) {
 
 // batch implements the streams.Batch interface.
 type batch struct {
-	conn    *connection
+	stream  *stream
 	futures []jetstream.PubAckFuture
 }
 
@@ -600,7 +600,7 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 			}
 			header = nats.Header{"destinations": h}
 		}
-		future, err := batch.conn.js.jetStream.PublishMsgAsync(&nats.Msg{
+		future, err := batch.stream.js.jetStream.PublishMsgAsync(&nats.Msg{
 			Header:  header,
 			Subject: "events.v1." + topic + "." + strconv.Itoa(shard),
 			Data:    data,
