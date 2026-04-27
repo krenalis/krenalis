@@ -81,10 +81,6 @@ func (st *SnowflakeTester) Settings() Settings {
 	return st.settings
 }
 
-func (st *SnowflakeTester) DB() *sql.DB { // TODO: is this necessary?
-	return st.db
-}
-
 func (st *SnowflakeTester) Teardown() error {
 	_, err := st.db.Exec("DROP DATABASE \"%s\"", st.settings.Database)
 	if err != nil {
