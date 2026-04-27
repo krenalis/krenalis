@@ -473,6 +473,18 @@ func (this *Organization) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
 	n := state.DeleteOrganization{ID: this.organization.ID}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		// Mark the organization's pipeline functions as discontinued.
+		now := time.Now().UTC()
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
+			"SELECT p.transformation_id, $1\n"+
+			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
+			"WHERE p.transformation_id != '' AND w.organization = $2\n"+
+			"ON CONFLICT (id) DO NOTHING", now, n.ID)
+		if err != nil {
+			return nil, err
+		}
 		result, err := tx.Exec(ctx, "DELETE FROM organizations WHERE id = $1", this.organization.ID)
 		if err != nil {
 			return nil, err
