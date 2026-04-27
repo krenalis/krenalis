@@ -1244,7 +1244,10 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		// Starts the run.
 		c := pipeline.Connection()
 		ws := c.Workspace()
-		store := core.datastore.Store(ws.ID)
+		store, ok := core.datastore.Store(ws.ID)
+		if !ok {
+			return
+		}
 		connection := &Connection{core: core, store: store, connection: c}
 		p := &Pipeline{core: core, pipeline: pipeline, connection: connection}
 
@@ -1283,7 +1286,10 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema types.Type,
 	primarySources map[string]int, operations []warehouses.AlterOperation) {
 	ctx := core.close.ctx
-	store := core.datastore.Store(workspace)
+	store, ok := core.datastore.Store(workspace)
+	if !ok {
+		return
+	}
 	ws, ok := core.state.Workspace(workspace)
 	if !ok {
 		return
@@ -1423,7 +1429,10 @@ Identifiers:
 // until it has completed (with success or with an operation error).
 func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	ctx := core.close.ctx
-	store := core.datastore.Store(workspace)
+	store, ok := core.datastore.Store(workspace)
+	if !ok {
+		return
+	}
 	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
 	// (2) returns with a *warehouses.OperationError, or (3) the context is
 	// canceled.
