@@ -124,7 +124,7 @@ func main() {
 			args = append(args, "-short")
 		}
 		if cliOptions.noSnowflakeTests {
-			// Skip all tests and subtests that have "snowflake" in the name
+			// Skip all tests and subtests that have "snowflake" in their name
 			// (case insensitive).
 			args = append(args, "-skip", "snowflake")
 		}
