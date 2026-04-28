@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -22,11 +21,6 @@ import (
 )
 
 func Test_Merge(t *testing.T) {
-
-	// Skip this test if explicitly requested by running the tests in Krenalis.
-	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") == "true" {
-		t.Skipf("test skipped because Snowflake tests were explicitly disabled when 'go run ./test/commit' was run")
-	}
 
 	cols := []struct {
 		KrenalisType  types.Type

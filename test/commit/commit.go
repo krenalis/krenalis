@@ -43,12 +43,6 @@ func main() {
 		}
 	}
 
-	// Ensure that the KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS env variable
-	// is not set before calling this script.
-	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") != "" {
-		fatal("the KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS env variable is set internally by this script and should not be set externally")
-	}
-
 	// Get the current working directory.
 	repo, err := os.Getwd()
 	if err != nil {
@@ -129,15 +123,16 @@ func main() {
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
+		if cliOptions.noSnowflakeTests {
+			// Skip all tests and subtests that have "snowflake" in the name
+			// (case insensitive).
+			args = append(args, "-skip", "snowflake")
+		}
 		for _, pkg := range packages {
 			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
 				continue // skip this package.
 			}
-			cmd := NewCmd("go", args...).InDir(repo, pkg)
-			if cliOptions.noSnowflakeTests {
-				cmd = cmd.WithEnv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS", "true")
-			}
-			cmd.Run()
+			NewCmd("go", args...).InDir(repo, pkg).Run()
 		}
 	}
 

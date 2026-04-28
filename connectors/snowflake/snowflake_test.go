@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -21,12 +20,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-func Test_Columns(t *testing.T) {
-
-	// Skip this test if explicitly requested by running the tests in Krenalis.
-	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") == "true" {
-		t.Skipf("test skipped because Snowflake tests were explicitly disabled when 'go run ./test/commit' was run")
-	}
+func Test_Snowflake_Columns(t *testing.T) {
 
 	// Create a test database on Snowflake.
 	testDB, err := snowflaketester.CreateTestDatabase()
@@ -128,18 +122,10 @@ func Test_Columns(t *testing.T) {
 
 }
 
-// Test_Merge_Query tests the Merge and Query methods on supported types. It
-// creates a table, inserts a row, and retrieves the data, verifying that the
-// returned columns and values match the expected results.
-//
-// Set the environment variable KRENALIS_TEST_PATH_SNOWFLAKE with the path to the
-// database credentials in JSON format for running the test.
-func Test_Merge_Query(t *testing.T) {
-
-	// Skip this test if explicitly requested by running the tests in Krenalis.
-	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") == "true" {
-		t.Skipf("test skipped because Snowflake tests were explicitly disabled when 'go run ./test/commit' was run")
-	}
+// Test_Snowflake_Merge_Query tests the Merge and Query methods on supported
+// types. It creates a table, inserts a row, and retrieves the data, verifying
+// that the returned columns and values match the expected results.
+func Test_Snowflake_Merge_Query(t *testing.T) {
 
 	cols := []struct {
 		DriverType    string
@@ -174,7 +160,7 @@ func Test_Merge_Query(t *testing.T) {
 	// Create a test database on Snowflake.
 	testDB, err := snowflaketester.CreateTestDatabase()
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer func() {
 		err := testDB.Teardown()
