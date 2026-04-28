@@ -20,7 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_Merge(t *testing.T) {
+func Test_Snowflake_Merge(t *testing.T) {
 
 	cols := []struct {
 		KrenalisType  types.Type

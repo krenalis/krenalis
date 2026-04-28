@@ -202,7 +202,7 @@ func parseCli() cliOptions {
 	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the Go tests on the Admin console. "+
 		reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
-	flag.BoolVar(&noSnowflakeTests, "no-snowflake-tests", false, "do not run tests that require a Snowflake database. "+reducedTestSetWarning)
+	flag.BoolVar(&noSnowflakeTests, "no-snowflake-tests", false, "skip Go tests that contain 'snowflake' in their name (case insensitive). "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
 		" Useful when you just want to run vendor generation commands, various asset related commands, etc... "+
 		reducedTestSetWarning)
