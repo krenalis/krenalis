@@ -43,6 +43,12 @@ func main() {
 		}
 	}
 
+	// Ensure that the KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS env variable
+	// is not set before calling this script.
+	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") != "" {
+		fatal("the KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS env variable is set internally by this script and should not be set externally")
+	}
+
 	// Get the current working directory.
 	repo, err := os.Getwd()
 	if err != nil {
@@ -123,12 +129,15 @@ func main() {
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
-
 		for _, pkg := range packages {
 			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
 				continue // skip this package.
 			}
-			NewCmd("go", args...).InDir(repo, pkg).Run()
+			cmd := NewCmd("go", args...).InDir(repo, pkg)
+			if cliOptions.noSnowflakeTests {
+				cmd = cmd.WithEnv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS", "true")
+			}
+			cmd.Run()
 		}
 	}
 
@@ -138,6 +147,7 @@ func main() {
 type cliOptions struct {
 	justTestAdmin    bool
 	noConnectorTests bool
+	noSnowflakeTests bool
 	noGoTest         bool
 	short            bool
 }
@@ -188,6 +198,7 @@ func parseCli() cliOptions {
 	var printHelp bool
 	var short bool
 	var noConnectorTests bool
+	var noSnowflakeTests bool
 
 	const reducedTestSetWarning = "WARNING: this option reduces the set of tests performed," +
 		" so some parts of the software and/or changes made may not be validated " +
@@ -196,6 +207,7 @@ func parseCli() cliOptions {
 	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the Go tests on the Admin console. "+
 		reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
+	flag.BoolVar(&noSnowflakeTests, "no-snowflake-tests", false, "do not run tests that require a Snowflake database. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
 		" Useful when you just want to run vendor generation commands, various asset related commands, etc... "+
 		reducedTestSetWarning)
@@ -236,10 +248,12 @@ func parseCli() cliOptions {
 	// Flags incompatible with '--no-go-test'.
 	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 	mutualExclusive(noGoTest, noConnectorTests, "-no-go-test", "-no-connector-tests")
+	mutualExclusive(noGoTest, noSnowflakeTests, "-no-go-test", "-no-snowflake-tests")
 
 	return cliOptions{
 		justTestAdmin:    justTestAdmin,
 		noConnectorTests: noConnectorTests,
+		noSnowflakeTests: noSnowflakeTests,
 		noGoTest:         noGoTest,
 		short:            short,
 	}

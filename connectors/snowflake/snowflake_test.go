@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -21,6 +22,11 @@ import (
 )
 
 func Test_Columns(t *testing.T) {
+
+	// Skip this test if explicitly requested by running the tests in Krenalis.
+	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") == "true" {
+		t.Skipf("test skipped because Snowflake tests were explicitly disabled when 'go run ./test/commit' was run")
+	}
 
 	// Create a test database on Snowflake.
 	testDB, err := snowflaketester.CreateTestDatabase()
@@ -129,6 +135,11 @@ func Test_Columns(t *testing.T) {
 // Set the environment variable KRENALIS_TEST_PATH_SNOWFLAKE with the path to the
 // database credentials in JSON format for running the test.
 func Test_Merge_Query(t *testing.T) {
+
+	// Skip this test if explicitly requested by running the tests in Krenalis.
+	if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") == "true" {
+		t.Skipf("test skipped because Snowflake tests were explicitly disabled when 'go run ./test/commit' was run")
+	}
 
 	cols := []struct {
 		DriverType    string

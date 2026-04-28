@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -535,6 +536,10 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "Snowflake":
+				// Skip this test if explicitly requested by running the tests in Krenalis.
+				if os.Getenv("KRENALIS_TEST_COMMIT_DISABLE_SNOWFLAKE_TESTS") == "true" {
+					t.Skipf("test skipped because Snowflake tests were explicitly disabled when 'go run ./test/commit' was run")
+				}
 				testDB, err := snowflaketester.CreateTestDatabase()
 				if err != nil {
 					panic(err)
