@@ -458,11 +458,11 @@ func (typ *AccessKeyType) Scan(src any) error {
 // String returns the string representation of typ.
 // It panics if typ is not a valid AccessKeyType value.
 func (typ AccessKeyType) String() string {
-	m, err := typ.Value()
+	v, err := typ.Value()
 	if err != nil {
-		panic("invalid access key type")
+		panic(err)
 	}
-	return m.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -562,11 +562,11 @@ func (mode *WarehouseMode) Scan(src any) error {
 // String returns the string representation of mode.
 // It panics if mode is not a valid WarehouseMode value.
 func (mode WarehouseMode) String() string {
-	m, err := mode.Value()
+	v, err := mode.Value()
 	if err != nil {
-		panic("invalid warehouse mode")
+		panic(err)
 	}
-	return m.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -908,11 +908,11 @@ func (typ *ConnectorType) Scan(src any) error {
 // String returns the string representation of typ.
 // It panics if typ is not a valid ConnectorType value.
 func (typ ConnectorType) String() string {
-	s, err := typ.Value()
+	v, err := typ.Value()
 	if err != nil {
-		panic("invalid connector type")
+		panic(err)
 	}
-	return s.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -972,11 +972,11 @@ func (per *WebhooksPer) Scan(src any) error {
 // String returns the string representation of w.
 // It panics if w is not a valid WebhooksPer value.
 func (per WebhooksPer) String() string {
-	s, err := per.Value()
+	v, err := per.Value()
 	if err != nil {
-		panic("invalid webhooksPer value")
+		panic(err)
 	}
-	return s.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1187,15 +1187,11 @@ func (health *Health) Scan(src any) error {
 // String returns the string representation of health.
 // It panics if health is not a valid Health value.
 func (health Health) String() string {
-	switch health {
-	case Healthy:
-		return "Healthy"
-	case NoRecentData:
-		return "NoRecentData"
-	case RecentError:
-		return "RecentError"
+	v, err := health.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid connection health")
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1245,13 +1241,11 @@ func (role *Role) Scan(src any) error {
 // String returns the string representation of role.
 // It panics if role is not a valid Role value.
 func (role Role) String() string {
-	switch role {
-	case Source:
-		return "Source"
-	case Destination:
-		return "Destination"
+	v, err := role.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid connection role")
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1352,15 +1346,11 @@ func (target *Target) Scan(src any) error {
 // String returns the string representation of target.
 // It panics if target is not a valid Target value.
 func (target Target) String() string {
-	switch target {
-	case TargetEvent:
-		return "Event"
-	case TargetUser:
-		return "User"
-	case TargetGroup:
-		return "Group"
+	v, err := target.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid target")
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1509,13 +1499,11 @@ func (lang *Language) Scan(src any) error {
 }
 
 func (lang Language) String() string {
-	switch lang {
-	case JavaScript:
-		return "JavaScript"
-	case Python:
-		return "Python"
+	v, err := lang.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid language")
+	return v.(string)
 }
 
 func (lang Language) Value() (driver.Value, error) {
