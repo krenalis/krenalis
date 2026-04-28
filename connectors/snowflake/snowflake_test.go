@@ -27,12 +27,12 @@ func Test_Columns(t *testing.T) {
 	// Create a test database on Snowflake.
 	testDB, err := snowflaketester.CreateTestDatabase()
 	if err != nil {
-		panic(err)
+		t.Fatalf("cannot create test database on Snowflake: %s", err)
 	}
 	defer func() {
 		err := testDB.Teardown()
 		if err != nil {
-			t.Logf("cannot teardown test Snowflake database: %s", err)
+			t.Logf("cannot teardown Snowflake test database: %s", err)
 		}
 	}()
 
@@ -167,7 +167,7 @@ func Test_Merge_Query(t *testing.T) {
 	defer func() {
 		err := testDB.Teardown()
 		if err != nil {
-			t.Logf("cannot teardown test Snowflake database: %s", err)
+			t.Logf("cannot teardown Snowflake test database: %s", err)
 		}
 	}()
 

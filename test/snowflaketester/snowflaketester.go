@@ -47,7 +47,7 @@ import (
 //	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
 //	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
-//	KRENALIS_SNOWFLAKE_TESTER_SCHEMA
+//	KRENALIS_SNOWFLAKE_TESTER_SCHEMA // TODO: rimuovere?
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
 func CreateTestDatabase() (*TestDB, error) {
@@ -59,7 +59,7 @@ func CreateTestDatabase() (*TestDB, error) {
 		Password:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_PASSWORD"),
 		Database:  "", // will be set later.
 		Role:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ROLE"),
-		Schema:    os.Getenv("KRENALIS_SNOWFLAKE_TESTER_SCHEMA"),
+		Schema:    "", // will be set later.
 		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
 	}
 
@@ -80,13 +80,14 @@ func CreateTestDatabase() (*TestDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate test database name: %s", err)
 	}
-	_, err = db.Exec("CREATE DATABASE \"%s\"", dbName)
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {
-		return nil, fmt.Errorf("cannot create test database on Snowflake: %s", err)
+		return nil, fmt.Errorf("CREATE DATABASE query failed: %s", err)
 	}
-	slog.Info("test Snowflake database created", "dbName", dbName)
+	slog.Info("Snowflake test database created", "dbName", dbName)
 
 	settings.Database = dbName
+	settings.Schema = "PUBLIC"
 	return &TestDB{
 		connector: connector,
 		db:        db,
@@ -148,11 +149,11 @@ func (settings Settings) JSON() []byte {
 // any database initialized with [CreateTestDatabase]. Once this method is
 // called, the test database can no longer be used.
 func (testDB *TestDB) Teardown() error {
-	_, err := testDB.db.Exec("DROP DATABASE \"%s\"", testDB.settings.Database)
+	_, err := testDB.db.Exec(fmt.Sprintf("DROP DATABASE %s", testDB.settings.Database))
 	if err != nil {
-		return fmt.Errorf("cannot drop test Snowflake database %q: %s", testDB.settings.Database, err)
+		return fmt.Errorf("cannot drop Snowflake test database %q: %s", testDB.settings.Database, err)
 	}
-	slog.Info("test Snowflake database dropped", "dbName", testDB.settings.Database)
+	slog.Info("Snowflake test database dropped", "dbName", testDB.settings.Database)
 	return nil
 }
 

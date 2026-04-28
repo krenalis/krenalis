@@ -542,7 +542,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				defer func() {
 					err := testDB.Teardown()
 					if err != nil {
-						t.Logf("cannot teardown test Snowflake database: %s", err)
+						t.Logf("cannot teardown Snowflake test database: %s", err)
 					}
 				}()
 				settings = testDB.Settings().JSON()
