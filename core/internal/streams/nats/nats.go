@@ -303,7 +303,7 @@ func (s *stream) ensureEventStream(ctx context.Context, opts streamOptions) {
 		Name:        "EVENTS",
 		Subjects:    []string{"events.v1.>"},
 		Replicas:    opts.replicas,
-		Retention:   jetstream.InterestPolicy,
+		Retention:   jetstream.WorkQueuePolicy,
 		Storage:     opts.storage,
 		Compression: opts.compression,
 	}
