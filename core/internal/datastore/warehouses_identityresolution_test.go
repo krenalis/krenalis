@@ -30,16 +30,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// This file contains tests on Identity Resolution. These tests are executed on
-// the registered data warehouses, provided that the environment variables:
-//
-//      KRENALIS_TEST_PATH_WAREHOUSE_<warehouse-name>
-//
-// are set for the corresponding data warehouse and point to JSON files
-// containing the warehouse settings.
-//
-// WARNING: the warehouses must be empty, as the tests will initialize them.
-
 var columns = []warehouses.Column{
 	{Name: "email", Type: types.String(), Nullable: true},
 	{Name: "first_name", Type: types.String(), Nullable: true},
