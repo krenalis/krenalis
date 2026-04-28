@@ -67,7 +67,6 @@ func CreateTestDatabase() (*TestDB, error) {
 		User:             settings.User,
 		Password:         settings.Password,
 		Role:             settings.Role,
-		Schema:           settings.Schema,
 		Warehouse:        settings.Warehouse,
 		DisableTelemetry: true,
 	})
@@ -152,6 +151,10 @@ func (testDB *TestDB) Teardown() error {
 		return fmt.Errorf("cannot drop Snowflake test database %q: %s", testDB.settings.Database, err)
 	}
 	slog.Info("Snowflake test database dropped", "dbName", testDB.settings.Database)
+	err = testDB.db.Close()
+	if err != nil {
+		return fmt.Errorf("cannot close Snowflake db: %s", err)
+	}
 	return nil
 }
 
