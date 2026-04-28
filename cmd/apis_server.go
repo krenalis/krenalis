@@ -485,8 +485,9 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			return nil, err
 		}
-		return nil, err
 	}
 
 	// Store the session.
