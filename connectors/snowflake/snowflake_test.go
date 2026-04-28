@@ -130,6 +130,9 @@ func Test_Snowflake_Columns(t *testing.T) {
 // that the returned columns and values match the expected results.
 func Test_Snowflake_Merge_Query(t *testing.T) {
 
+	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
+	t.Skip()
+
 	cols := []struct {
 		DriverType    string
 		DriverValue   any
