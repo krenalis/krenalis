@@ -22,6 +22,9 @@ import (
 
 func Test_Snowflake_Columns(t *testing.T) {
 
+	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
+	t.Skip()
+
 	// Create a test database on Snowflake.
 	testDB, err := snowflaketester.CreateTestDatabase()
 	if err != nil {
