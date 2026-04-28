@@ -89,12 +89,12 @@ func Test_Snowflake_Merge(t *testing.T) {
 
 	testDB, err := snowflaketester.CreateTestDatabase()
 	if err != nil {
-		panic(err)
+		t.Fatalf("cannot create test database: %s", err)
 	}
 	defer func() {
 		err := testDB.Teardown()
 		if err != nil {
-			panic(err)
+			t.Logf("cannot teardown Snowflake database: %s", err)
 		}
 	}()
 
@@ -103,7 +103,7 @@ func Test_Snowflake_Merge(t *testing.T) {
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
 	if err != nil {
-		panic(err)
+		t.Fatalf("cannot open Snowflake warehouse: %s", err)
 	}
 
 	// Create the table.
