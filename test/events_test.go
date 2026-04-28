@@ -21,9 +21,6 @@ import (
 
 func TestEvents(t *testing.T) {
 
-	// TODO: skipped until https://github.com/krenalis/krenalis/issues/2150 is fixed.
-	t.Skip()
-
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
