@@ -11,6 +11,7 @@
 // variables:
 //
 //	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_DATABASE
 //	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
 //	KRENALIS_SNOWFLAKE_TESTER_USER
@@ -44,6 +45,7 @@ import (
 // variables:
 //
 //	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_DATABASE
 //	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
 //	KRENALIS_SNOWFLAKE_TESTER_USER
@@ -53,38 +55,38 @@ func CreateTestDatabase() (*TestDB, error) {
 	// Read the Snowflake settings from the environment.
 	settings := Settings{
 		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),
-		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
+		Database:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_DATABASE"),
 		Password:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_PASSWORD"),
-		Database:  "", // will be set later.
 		Role:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ROLE"),
 		Schema:    "", // will be set later.
+		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
 		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
 	}
 
 	// Instantiate a Snowflake connector.
 	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
 		Account:          settings.Account,
-		User:             settings.User,
+		Database:         settings.Database,
 		Password:         settings.Password,
 		Role:             settings.Role,
+		User:             settings.User,
 		Warehouse:        settings.Warehouse,
 		DisableTelemetry: true,
 	})
 
 	// Generate the name and create the test database.
 	db := sql.OpenDB(connector)
-	dbName, err := generateTestDatabaseName()
+	schema, err := generateTestSchemaName()
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate test database name: %s", err)
 	}
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	_, err = db.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
 	if err != nil {
-		return nil, fmt.Errorf("CREATE DATABASE query failed: %s", err)
+		return nil, fmt.Errorf("CREATE SCHEMA query failed: %s", err)
 	}
-	slog.Info("Snowflake test database created", "dbName", dbName)
+	slog.Info("Snowflake test schema created", "dbName", schema)
 
-	settings.Database = dbName
-	settings.Schema = "PUBLIC"
+	settings.Schema = schema
 	return &TestDB{
 		connector: connector,
 		db:        db,
@@ -146,11 +148,11 @@ func (settings Settings) JSON() []byte {
 // any database initialized with [CreateTestDatabase]. Once this method is
 // called, the test database can no longer be used.
 func (testDB *TestDB) Teardown() error {
-	_, err := testDB.db.Exec(fmt.Sprintf("DROP DATABASE %s", testDB.settings.Database))
+	_, err := testDB.db.Exec(fmt.Sprintf("DROP SCHEMA %s", testDB.settings.Schema))
 	if err != nil {
 		return fmt.Errorf("cannot drop Snowflake test database %q: %s", testDB.settings.Database, err)
 	}
-	slog.Info("Snowflake test database dropped", "dbName", testDB.settings.Database)
+	slog.Info("Snowflake test database dropped", "dbName", testDB.settings.Schema)
 	err = testDB.db.Close()
 	if err != nil {
 		return fmt.Errorf("cannot close Snowflake db: %s", err)
@@ -158,20 +160,20 @@ func (testDB *TestDB) Teardown() error {
 	return nil
 }
 
-// generateTestDatabaseName generates the name of a Snowflake database to use
+// generateTestSchemaName generates the name of a Snowflake database to use
 // for testing.
 // The returned name has the form:
 //
 //	KRENALIS_TEST_1777297109_e1ddc97e0b7b9d71005affc2325c10b3
 //
 // and it is not quoted by this function.
-func generateTestDatabaseName() (string, error) {
+func generateTestSchemaName() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("KRENALIS_TEST_%d_%s",
+	return fmt.Sprintf("KRENALIS_TEST_SCHEMA_%d_%s",
 		time.Now().UTC().Unix(),
 		hex.EncodeToString(b),
 	), nil
