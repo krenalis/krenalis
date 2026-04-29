@@ -525,7 +525,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "Snowflake":
-				testDB, err := snowflaketester.CreateTestDatabase()
+				testDB, err := snowflaketester.CreateTestEnvironment()
 				if err != nil {
 					panic(err)
 				}

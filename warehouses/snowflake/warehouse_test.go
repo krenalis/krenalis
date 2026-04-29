@@ -87,7 +87,7 @@ func Test_Snowflake_Merge(t *testing.T) {
 		}
 	}
 
-	testDB, err := snowflaketester.CreateTestDatabase()
+	testDB, err := snowflaketester.CreateTestEnvironment()
 	if err != nil {
 		t.Fatalf("cannot create test database: %s", err)
 	}

@@ -25,20 +25,20 @@ func Test_Snowflake_Columns(t *testing.T) {
 	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
 	t.Skip()
 
-	// Create a test database on Snowflake.
-	testDB, err := snowflaketester.CreateTestDatabase()
+	// Create a test environment on Snowflake.
+	testEnv, err := snowflaketester.CreateTestEnvironment()
 	if err != nil {
-		t.Fatalf("cannot create test database on Snowflake: %s", err)
+		t.Fatalf("cannot create test environment on Snowflake: %s", err)
 	}
 	defer func() {
-		err := testDB.Teardown()
+		err := testEnv.Teardown()
 		if err != nil {
-			t.Logf("cannot teardown Snowflake test database: %s", err)
+			t.Logf("cannot teardown Snowflake test environment: %s", err)
 		}
 	}()
 
 	// Open the Snowflake connector.
-	jsonSettings := testDB.Settings().JSON()
+	jsonSettings := testEnv.Settings().JSON()
 	env := connectors.DatabaseEnv{
 		Settings: newTestSettingsStore(jsonSettings),
 	}
@@ -163,20 +163,20 @@ func Test_Snowflake_Merge_Query(t *testing.T) {
 		}
 	}
 
-	// Create a test database on Snowflake.
-	testDB, err := snowflaketester.CreateTestDatabase()
+	// Create a test environment on Snowflake.
+	testEnv, err := snowflaketester.CreateTestEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		err := testDB.Teardown()
+		err := testEnv.Teardown()
 		if err != nil {
-			t.Logf("cannot teardown Snowflake test database: %s", err)
+			t.Logf("cannot teardown Snowflake test environment: %s", err)
 		}
 	}()
 
 	// Open the Snowflake connector.
-	jsonSettings := testDB.Settings().JSON()
+	jsonSettings := testEnv.Settings().JSON()
 	env := connectors.DatabaseEnv{
 		Settings: newTestSettingsStore(jsonSettings),
 	}

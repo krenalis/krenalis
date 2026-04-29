@@ -19,7 +19,7 @@
 //
 // # Creating a test database on Snowflake
 //
-// See the function [CreateTestDatabase].
+// See the function [CreateTestEnvironment].
 package snowflaketester
 
 import (
@@ -36,9 +36,9 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
-// CreateTestDatabase creates a test database on Snowflake with an unique name.
+// CreateTestEnvironment creates a test environment on Snowflake.
 //
-// Once created, you need to call the [TestDB.Teardown] method to
+// Once created, you need to call the [TestEnvironment.Teardown] method to
 // delete it.
 //
 // The configuration for Snowflake access is read from these environment
@@ -50,7 +50,7 @@ import (
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
-func CreateTestDatabase() (*TestDB, error) {
+func CreateTestEnvironment() (*TestEnvironment, error) {
 
 	// Read the Snowflake settings from the environment.
 	settings := Settings{
@@ -74,11 +74,11 @@ func CreateTestDatabase() (*TestDB, error) {
 		DisableTelemetry: true,
 	})
 
-	// Generate the name and create the test database.
+	// Generate a random schema name and create it in the given database.
 	db := sql.OpenDB(connector)
 	schema, err := generateTestSchemaName()
 	if err != nil {
-		return nil, fmt.Errorf("cannot generate test database name: %s", err)
+		return nil, fmt.Errorf("cannot generate test schema name: %s", err)
 	}
 	_, err = db.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
 	if err != nil {
@@ -87,15 +87,15 @@ func CreateTestDatabase() (*TestDB, error) {
 	slog.Info("Snowflake test schema created", "dbName", schema)
 
 	settings.Schema = schema
-	return &TestDB{
+	return &TestEnvironment{
 		connector: connector,
 		db:        db,
 		settings:  settings,
 	}, nil
 }
 
-// TestDB represents an instance of a test database on Snowflake.
-type TestDB struct {
+// TestEnvironment represents an instance of a test environment on Snowflake.
+type TestEnvironment struct {
 	connector driver.Connector
 	db        *sql.DB
 	settings  Settings
@@ -106,14 +106,14 @@ type Settings struct {
 	Account   string
 	User      string
 	Password  string
-	Database  string // something like: "KRENALIS_TEST_1777297109_e1ddc97e0b7b9d71005affc2325c10b3"
+	Database  string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
 	Role      string
 	Schema    string
 	Warehouse string
 }
 
 // Settings returns the settings of the test database.
-func (testDB *TestDB) Settings() Settings {
+func (testDB *TestEnvironment) Settings() Settings {
 	return testDB.settings
 }
 
@@ -144,15 +144,15 @@ func (settings Settings) JSON() []byte {
 	return encoded
 }
 
-// Teardown deletes the Snowflake test database. This method must be called for
-// any database initialized with [CreateTestDatabase]. Once this method is
-// called, the test database can no longer be used.
-func (testDB *TestDB) Teardown() error {
+// Teardown deletes the Snowflake test environment. This method must be called
+// for any environment initialized with [CreateTestEnvironment]. Once this
+// method is called, the test environment can no longer be used.
+func (testDB *TestEnvironment) Teardown() error {
 	_, err := testDB.db.Exec(fmt.Sprintf("DROP SCHEMA %s", testDB.settings.Schema))
 	if err != nil {
-		return fmt.Errorf("cannot drop Snowflake test database %q: %s", testDB.settings.Database, err)
+		return fmt.Errorf("cannot drop Snowflake test schema %q: %s", testDB.settings.Database, err)
 	}
-	slog.Info("Snowflake test database dropped", "dbName", testDB.settings.Schema)
+	slog.Info("Snowflake test schema dropped", "dbName", testDB.settings.Schema)
 	err = testDB.db.Close()
 	if err != nil {
 		return fmt.Errorf("cannot close Snowflake db: %s", err)
@@ -164,7 +164,7 @@ func (testDB *TestDB) Teardown() error {
 // for testing.
 // The returned name has the form:
 //
-//	KRENALIS_TEST_1777297109_e1ddc97e0b7b9d71005affc2325c10b3
+//	KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c
 //
 // and it is not quoted by this function.
 func generateTestSchemaName() (string, error) {
