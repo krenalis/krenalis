@@ -527,12 +527,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				testDB, err := snowflaketester.CreateTestEnvironment()
 				if err != nil {
-					panic(err)
+					t.Fatalf("cannot create Snowflake test environment: %s", err)
 				}
 				defer func() {
 					err := testDB.Teardown()
 					if err != nil {
-						t.Logf("cannot teardown Snowflake test database: %s", err)
+						t.Logf("cannot teardown Snowflake test environment: %s", err)
 					}
 				}()
 				settings = testDB.Settings().JSON()

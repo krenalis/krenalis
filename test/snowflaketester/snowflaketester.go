@@ -2,8 +2,11 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// snowflaketester provides an interface for creating temporary databases on
+// snowflaketester provides an interface for creating temporary environment on
 // Snowflake, which can be used for testing.
+//
+// Specifically, this package creates temporary schemas within the provided
+// Snowflake database, which are then deleted at the end of the tests.
 //
 // # Environment variables
 //
@@ -17,7 +20,7 @@
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
 //
-// # Creating a test database on Snowflake
+// # Creating a test environment on Snowflake
 //
 // See the function [CreateTestEnvironment].
 package snowflaketester
@@ -101,7 +104,7 @@ type TestEnvironment struct {
 	settings  Settings
 }
 
-// Settings represents the settings for accessing a test database on Snowflake.
+// Settings represents the settings for accessing a test environment on Snowflake.
 type Settings struct {
 	Account   string
 	User      string
@@ -112,7 +115,7 @@ type Settings struct {
 	Warehouse string
 }
 
-// Settings returns the settings of the test database.
+// Settings returns the settings of the test environment.
 func (testDB *TestEnvironment) Settings() Settings {
 	return testDB.settings
 }
@@ -160,13 +163,13 @@ func (testDB *TestEnvironment) Teardown() error {
 	return nil
 }
 
-// generateTestSchemaName generates the name of a Snowflake database to use
-// for testing.
+// generateTestSchemaName generates the name of a Snowflake schema to use for
+// testing.
 // The returned name has the form:
 //
 //	KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c
 //
-// and it is not quoted by this function.
+// and it is returned unquoted.
 func generateTestSchemaName() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
