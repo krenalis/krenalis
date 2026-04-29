@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/snowflakedb/gosnowflake"
@@ -54,6 +55,18 @@ import (
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
 func CreateTestEnvironment() (*TestEnvironment, error) {
+
+	// Return a clear error if env vars are not passed.
+	found := false
+	for _, v := range os.Environ() {
+		if strings.HasPrefix(v, "KRENALIS_SNOWFLAKE_TESTER_") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("creating a Snowflake test environment requires passing environment variables with your Snowflake credentials")
+	}
 
 	// Read the Snowflake settings from the environment.
 	settings := Settings{
