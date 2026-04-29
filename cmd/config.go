@@ -74,6 +74,7 @@ type Config struct {
 		ClientID      string
 		APIKey        string
 		WebhookSecret string
+		ActionsSecret string
 	}
 }
 
@@ -581,6 +582,15 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET cannot be an empty string")
 		}
 		settings.WorkOS.WebhookSecret = webhookSecret
+
+		actionsSecret, ok := conf.Lookup("KRENALIS_WORKOS_ACTIONS_SECRET")
+		if !ok {
+			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
+		}
+		if actionsSecret == "" {
+			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET cannot be an empty string")
+		}
+		settings.WorkOS.ActionsSecret = actionsSecret
 	}
 
 	return settings, nil

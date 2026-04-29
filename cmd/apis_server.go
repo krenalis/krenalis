@@ -88,7 +88,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
 	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
 	sentryErrorTunnel *sentryErrorTunnel, workosClientID string, workosAPIKey string,
-	workosWebhookSecret string) *apisServer {
+	workosWebhookSecret string, workosActionsSecret string) *apisServer {
 
 	s := &apisServer{
 		core:                   core,
@@ -104,7 +104,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	}
 
 	if workosClientID != "" {
-		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret)
+		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret, workosActionsSecret)
 	}
 
 	s.sentryTelemetry.level = sentryTelemetryLevel
@@ -511,6 +511,58 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 	}
 	writeSessionCookie(w, c)
 	return []any{memberID, nil}, nil
+}
+
+// handleWorkosAction handles the WorkOS user-registration Action. It verifies
+// the request signature and denies registration if the email the user is
+// registering with does not match the email on the WorkOS invitation.
+func (s *apisServer) handleWorkosAction(w http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos == nil || s.workos.actionsSecret == "" {
+		return nil, errors.Unauthorized("WorkOS actions are not configured")
+	}
+
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.BadRequest("failed to read request body")
+	}
+
+	sigHeader := r.Header.Get("WorkOS-Signature")
+	if sigHeader == "" {
+		return nil, errors.Unauthorized("WorkOS action is missing the signature header")
+	}
+	if err := s.workos.verifyActionSignature(rawBody, sigHeader); err != nil {
+		return nil, errors.Unauthorized("invalid WorkOS action signature")
+	}
+
+	var actionCtx struct {
+		UserData struct {
+			Email string `json:"email"`
+		} `json:"user_data"`
+		Invitation *struct {
+			Email string `json:"email"`
+		} `json:"invitation"`
+	}
+	if err := stdJSON.Unmarshal(rawBody, &actionCtx); err != nil {
+		return nil, errors.BadRequest("invalid action payload")
+	}
+
+	verdict, message := "Deny", "Registration is by invitation only."
+
+	if actionCtx.Invitation != nil {
+		if strings.EqualFold(actionCtx.UserData.Email, actionCtx.Invitation.Email) {
+			verdict, message = "Allow", ""
+		} else {
+			message = "You must register with the email address you were invited with."
+		}
+	}
+
+	responseJSON, err := s.workos.buildActionResponse(verdict, message)
+	if err != nil {
+		return nil, err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(responseJSON)
+	return nil, nil
 }
 
 // secureCookie returns the *securecookie.SecureCookie instance.

@@ -38,6 +38,7 @@ type workos struct {
 	clientID      string
 	apiKey        string
 	webhookSecret string
+	actionsSecret string
 }
 
 // workosUser holds the user information returned by WorkOS after token
@@ -57,11 +58,12 @@ type workosJWKS struct {
 	} `json:"keys"`
 }
 
-func NewWorkOS(clientID, apiKey, webhookSecret string) *workos {
+func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string) *workos {
 	return &workos{
 		clientID:      clientID,
 		apiKey:        apiKey,
 		webhookSecret: webhookSecret,
+		actionsSecret: actionsSecret,
 	}
 }
 
@@ -180,27 +182,35 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
 	}
 
-	orgID := claims.OrgID
-
-	var orgRes struct {
-		ExternalID string `json:"external_id"`
-	}
-	status, err = wo.call(http.MethodGet, "/organizations/"+orgID, nil, &orgRes)
+	organizationID, err := wo.resolveOrganization(claims.OrgID)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	return &workosUser{Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
+}
+
+// resolveOrganization fetches the WorkOS organization and returns its external
+// ID as a UUID, which is the Krenalis-side organization identifier.
+func (wo *workos) resolveOrganization(orgID string) (*uuid.UUID, error) {
+	var orgRes struct {
+		ExternalID string `json:"external_id"`
+	}
+	status, err := wo.call(http.MethodGet, "/organizations/"+orgID, nil, &orgRes)
+	if err != nil {
+		return nil, err
+	}
 	if status != http.StatusOK {
-		return nil, nil, fmt.Errorf("WorkOS API returned status %d for organization %s", status, orgID)
+		return nil, fmt.Errorf("WorkOS API returned status %d for organization %s", status, orgID)
 	}
 	if orgRes.ExternalID == "" {
-		return nil, nil, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
+		return nil, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
 	}
-	organizationID, err := uuid.Parse(orgRes.ExternalID)
+	id, err := uuid.Parse(orgRes.ExternalID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("WorkOS organization %s has invalid external ID", orgID)
+		return nil, fmt.Errorf("WorkOS organization %s has invalid external ID", orgID)
 	}
-
-	return &workosUser{Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, &organizationID, nil
+	return &id, nil
 }
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status
@@ -241,32 +251,85 @@ func (wo *workos) call(method, path string, body any, out any) (int, error) {
 	return resp.StatusCode, nil
 }
 
+// verifyActionSignature verifies the HMAC-SHA256 signature of an incoming
+// WorkOS action request. The header format and signing scheme are identical to
+// webhook signatures but use the dedicated actions secret.
+func (wo *workos) verifyActionSignature(rawBody []byte, sigHeader string) error {
+	return wo.verifyHMACSignature(rawBody, sigHeader, wo.actionsSecret)
+}
+
 // verifyWebhookSignature verifies the HMAC-SHA256 signature of an incoming
 // WorkOS webhook request. sigHeader is the value of the "WorkOS-Signature"
 // header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
 // message is "<timestamp>.<rawBody>".
 func (wo *workos) verifyWebhookSignature(rawBody []byte, sigHeader string) error {
-	var timestamp, signature string
-	for part := range strings.SplitSeq(sigHeader, ",") {
-		if v, ok := strings.CutPrefix(part, "t="); ok {
-			timestamp = v
-		} else if v, ok := strings.CutPrefix(part, "v1="); ok {
-			signature = v
-		}
+	return wo.verifyHMACSignature(rawBody, sigHeader, wo.webhookSecret)
+}
+
+// verifyHMACSignature is the shared implementation for verifyWebhookSignature
+// and verifyActionSignature.
+func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) error {
+	parts := strings.Split(sigHeader, ",")
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid WorkOS webhook")
 	}
+
+	timestamp, ok := strings.CutPrefix(strings.TrimSpace(parts[0]), "t=")
+	if !ok {
+		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
+	signature, ok := strings.CutPrefix(strings.TrimSpace(parts[1]), "v1=")
+	if !ok {
+		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
 	if timestamp == "" || signature == "" {
-		return fmt.Errorf("workos: missing t or v1 in WorkOS-Signature header")
+		return fmt.Errorf("invalid WorkOS webhook")
 	}
+
 	sigBytes, err := hex.DecodeString(signature)
 	if err != nil {
 		return fmt.Errorf("workos: invalid hex in WorkOS-Signature header: %w", err)
 	}
-	mac := hmac.New(sha256.New, []byte(wo.webhookSecret))
+
+	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(timestamp))
 	mac.Write([]byte("."))
 	mac.Write(rawBody)
 	if !hmac.Equal(mac.Sum(nil), sigBytes) {
-		return fmt.Errorf("workos: webhook signature mismatch")
+		return fmt.Errorf("workos: signature mismatch")
 	}
+
 	return nil
+}
+
+// buildActionResponse builds and signs a WorkOS action response JSON payload.
+// verdict must be "Allow" or "Deny"; errorMessage is included only on Deny.
+func (wo *workos) buildActionResponse(verdict, errorMessage string) ([]byte, error) {
+	type payloadObj struct {
+		Timestamp    int64  `json:"timestamp"`
+		Verdict      string `json:"verdict"`
+		ErrorMessage string `json:"error_message,omitempty"`
+	}
+	t := time.Now().UnixMilli()
+	payload := payloadObj{Timestamp: t, Verdict: verdict, ErrorMessage: errorMessage}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	mac := hmac.New(sha256.New, []byte(wo.actionsSecret))
+	fmt.Fprintf(mac, "%d.", t)
+	mac.Write(payloadJSON)
+	sig := hex.EncodeToString(mac.Sum(nil))
+	type responseObj struct {
+		Object    string     `json:"object"`
+		Payload   payloadObj `json:"payload"`
+		Signature string     `json:"signature"`
+	}
+	return json.Marshal(responseObj{
+		Object:    "user_registration_action_response",
+		Payload:   payload,
+		Signature: sig,
+	})
 }
