@@ -87,18 +87,18 @@ func Test_Snowflake_Merge(t *testing.T) {
 		}
 	}
 
-	testDB, err := snowflaketester.CreateTestEnvironment()
+	testEnv, err := snowflaketester.CreateTestEnvironment()
 	if err != nil {
-		t.Fatalf("cannot create test database: %s", err)
+		t.Fatalf("cannot create test environment: %s", err)
 	}
 	defer func() {
-		err := testDB.Teardown()
+		err := testEnv.Teardown()
 		if err != nil {
-			t.Logf("cannot teardown Snowflake database: %s", err)
+			t.Logf("cannot teardown Snowflake environment: %s", err)
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testDB.Settings().JSON()))
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()))
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
