@@ -263,9 +263,15 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	if !found {
 		return nil, errors.BadRequest("invalid MCP (Model Context Protocol) key")
 	}
-	organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
-	if !found {
-		return nil, errors.New("invalid MCP (Model Context Protocol) key")
+	organizationID, workspaceID, err := core.AccessKey(ctx, mcpToken, _core.AccessKeyTypeMCP)
+	if err != nil {
+		switch err.(type) {
+		case *errors.BadRequestError:
+			err = errors.New("MCP key is malformed; please check that it was copied correctly")
+		case *errors.NotFoundError:
+			err = errors.New("MCP key is invalid")
+		}
+		return nil, err
 	}
 	org, err := core.Organization(organizationID)
 	if err != nil {

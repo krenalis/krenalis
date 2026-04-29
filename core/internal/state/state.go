@@ -27,6 +27,11 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
+	ErrAccessKeyNotFound      = errors.New("access key not found")
+)
+
 // election represents a leader election.
 type election struct {
 	number   int
@@ -42,6 +47,7 @@ type metadata struct {
 	installationID        string
 	kmsEncryptedCookieKey []byte
 	oAuthKey              *cipher.Key
+	apiKeyPepper          *cipher.Key
 }
 
 // State represents the application state.
@@ -60,7 +66,7 @@ type State struct {
 	pipelines        map[int]*Pipeline           // protected by mu
 	connections      map[int]*Connection         // protected by mu
 	connectionsByKey map[string]*Connection      // protected by mu
-	accessKeyByToken map[string]*AccessKey       // protected by mu
+	accessKeyByHMAC  map[string]*AccessKey       // protected by mu
 	election         election                    // protected by mu
 	organizations    map[uuid.UUID]*Organization // protected by mu
 	workspaces       map[int]*Workspace          // protected by mu
@@ -135,13 +141,30 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	return state, nil
 }
 
-// AccessKeyByToken returns the access key with the provided token.
-// The boolean return value reports whether the access key exists.
-func (state *State) AccessKeyByToken(token string) (*AccessKey, bool) {
+// AccessKey returns the access key for the provided token.
+// It returns ErrInvalidAccessKeyFormat if the token is malformed,
+// ErrAccessKeyNotFound if no matching key exists.
+func (state *State) AccessKey(ctx context.Context, token string) (*AccessKey, error) {
+	if len(token) != accessKeyBodySize {
+		return nil, ErrInvalidAccessKeyFormat
+	}
+	payload := make([]byte, accessKeyPayloadSize)
+	defer clear(payload)
+	err := parseAccessKey(payload, token)
+	if err != nil {
+		return nil, ErrInvalidAccessKeyFormat
+	}
+	hmac, err := state.metadata.apiKeyPepper.HMAC(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
 	state.mu.Lock()
-	key, ok := state.accessKeyByToken[token]
+	key, ok := state.accessKeyByHMAC[string(hmac[:])]
 	state.mu.Unlock()
-	return key, ok
+	if !ok {
+		return nil, ErrAccessKeyNotFound
+	}
+	return key, nil
 }
 
 // Account returns the account with identifier id.
