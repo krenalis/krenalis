@@ -525,17 +525,17 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "Snowflake":
-				testDB, err := snowflaketester.CreateTestEnvironment()
+				testEnv, err := snowflaketester.CreateTestEnvironment()
 				if err != nil {
 					t.Fatalf("cannot create Snowflake test environment: %s", err)
 				}
 				defer func() {
-					err := testDB.Teardown()
+					err := testEnv.Teardown()
 					if err != nil {
 						t.Logf("cannot teardown Snowflake test environment: %s", err)
 					}
 				}()
-				settings = testDB.Settings().JSON()
+				settings = testEnv.Settings().JSON()
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}

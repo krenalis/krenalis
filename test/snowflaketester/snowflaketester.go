@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// snowflaketester provides an interface for creating temporary environment on
+// snowflaketester provides an interface for creating temporary environments on
 // Snowflake, which can be used for testing.
 //
 // Specifically, this package creates temporary schemas within the provided
@@ -116,8 +116,8 @@ type Settings struct {
 }
 
 // Settings returns the settings of the test environment.
-func (testDB *TestEnvironment) Settings() Settings {
-	return testDB.settings
+func (testEnv *TestEnvironment) Settings() Settings {
+	return testEnv.settings
 }
 
 // JSON returns the settings as JSON, in the form:
@@ -150,13 +150,13 @@ func (settings Settings) JSON() []byte {
 // Teardown deletes the Snowflake test environment. This method must be called
 // for any environment initialized with [CreateTestEnvironment]. Once this
 // method is called, the test environment can no longer be used.
-func (testDB *TestEnvironment) Teardown() error {
-	_, err := testDB.db.Exec(fmt.Sprintf("DROP SCHEMA %s", testDB.settings.Schema))
+func (testEnv *TestEnvironment) Teardown() error {
+	_, err := testEnv.db.Exec(fmt.Sprintf("DROP SCHEMA %s", testEnv.settings.Schema))
 	if err != nil {
-		return fmt.Errorf("cannot drop Snowflake test schema %q: %s", testDB.settings.Database, err)
+		return fmt.Errorf("cannot drop Snowflake test schema %q: %s", testEnv.settings.Database, err)
 	}
-	slog.Info("Snowflake test schema dropped", "dbName", testDB.settings.Schema)
-	err = testDB.db.Close()
+	slog.Info("Snowflake test schema dropped", "dbName", testEnv.settings.Schema)
+	err = testEnv.db.Close()
 	if err != nil {
 		return fmt.Errorf("cannot close Snowflake db: %s", err)
 	}
