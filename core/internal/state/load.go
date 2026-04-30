@@ -236,7 +236,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
 	clear(kmsEncryptedNotificationKey)
-	validNotificationKeyCh := make(chan error)
+	validNotificationKeyCh := make(chan error, 1)
 	go func() {
 		validNotificationKeyCh <- notificationKey.IsValid(ctx)
 	}()
