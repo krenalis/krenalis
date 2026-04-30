@@ -241,6 +241,9 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		validNotificationKeyCh <- notificationKey.IsValid(ctx)
 	}()
 	// API key pepper.
+	if len(kmsEncryptedAPIKeyPepper) == 0 {
+		return errors.New("missing API key pepper in metadata table")
+	}
 	state.metadata.apiKeyPepper = state.cipher.Key(kmsEncryptedAPIKeyPepper)
 	clear(kmsEncryptedAPIKeyPepper)
 
