@@ -74,8 +74,8 @@ type Avatar struct {
 
 // MemberToSet represents a member to update with the UpdateMember method.
 type MemberToSet struct {
-	Name     string  `json:"name"`     // Name, in range [1, 60]
-	Email    string  `json:"email"`    // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
+	Name     string  `json:"name"`     // Name, in range [1, 255]
+	Email    string  `json:"email"`    // Email, in range [4, 255] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
 	Password string  `json:"password"` // Password, at least 8 characters long
 	Avatar   *Avatar `json:"avatar"`
 }
@@ -209,17 +209,16 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	return err
 }
 
-// ProvisionMember adds a member provisioned from an external identity provider.
-//
-// The added member doesn't have a password, since its authentication is managed
-// by the external identity provider.
+// ProvisionMemberFromWorkos adds a member provisioned from WorkOS. The added
+// member doesn't have a password, since its authentication is managed by
+// WorkOS.
 //
 // It returns an errors.UnprocessableError error with code MemberEmailExists if
-// the email is already used by another member.
-func (this *Organization) ProvisionMember(ctx context.Context, name, email string) (int, error) {
+// the email is already used by another member in the organization.
+func (this *Organization) ProvisionMemberFromWorkos(ctx context.Context, name, email, workosUserID string) (int, error) {
 	this.core.mustBeOpen()
 	if name != "" {
-		if err := util.ValidateStringField("name", name, 45); err != nil {
+		if err := util.ValidateStringField("name", name, 255); err != nil {
 			return 0, errors.BadRequest("%s", err)
 		}
 	}
@@ -237,8 +236,8 @@ func (this *Organization) ProvisionMember(ctx context.Context, name, email strin
 			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		err = tx.QueryRow(ctx,
-			"INSERT INTO members (name, email, organization, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
-			name, email, this.organization.ID, now).Scan(&n.ID)
+			"INSERT INTO members (name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+			name, email, workosUserID, this.organization.ID, now).Scan(&n.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -248,6 +247,72 @@ func (this *Organization) ProvisionMember(ctx context.Context, name, email strin
 		return 0, err
 	}
 	return n.ID, nil
+}
+
+// MemberByWorkosID returns the ID of the member with the given WorkOS user ID
+// in the organization. It returns an errors.NotFoundError if no member has that
+// WorkOS user ID.
+func (this *Organization) MemberByWorkosID(ctx context.Context, workosUserID string) (int, error) {
+	this.core.mustBeOpen()
+	var id int
+	err := this.core.db.QueryRow(ctx, "SELECT id FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, errors.NotFound("member with WorkOS user ID %s does not exist", workosUserID)
+		}
+		return 0, err
+	}
+	return id, nil
+}
+
+// UpdateMembersByWorkosID updates the name and email of all members across all
+// organizations that have the given WorkOS user ID.
+//
+// It returns an errors.UnprocessableError with code MemberEmailExists if the
+// new email is already in use by another member in any affected organization.
+func (core *Core) UpdateMembersByWorkosID(ctx context.Context, workosUserID, name, email string) error {
+	core.mustBeOpen()
+	if name != "" {
+		if err := util.ValidateStringField("name", name, 255); err != nil {
+			return errors.BadRequest("%s", err)
+		}
+	}
+	if err := validateMemberEmail(email); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		conflict, err := tx.QueryExists(ctx,
+			"SELECT FROM members m1 JOIN members m2 ON m2.organization = m1.organization AND m2.email = $2 AND m2.id <> m1.id WHERE m1.workos_user_id = $1",
+			workosUserID, email)
+		if err != nil {
+			return nil, err
+		}
+		if conflict {
+			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+		}
+		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
+		return nil, err
+	})
+}
+
+// UpdateOrganizationName updates the name of the organization identified by
+// orgID. If no organization with that ID exists, the call is a no-op.
+func (core *Core) UpdateOrganizationName(ctx context.Context, orgID uuid.UUID, name string) error {
+	core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 255); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	n := state.UpdateOrganization{ID: orgID, Name: name}
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, orgID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, nil
+		}
+		return n, nil
+	})
 }
 
 // AccessKeys returns the access keys of the organization ordered by creation
@@ -291,7 +356,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 120); err != nil {
+	if err := util.ValidateStringField("email", email, 255); err != nil {
 		return 0, errors.BadRequest("%s", err)
 	}
 	if !emailRegExp.MatchString(email) {
@@ -853,7 +918,7 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 // Update updates the name of the organization.
 func (this *Organization) Update(ctx context.Context, name string) error {
 	this.core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
+	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	n := state.UpdateOrganization{ID: this.organization.ID, Name: name}
@@ -1110,7 +1175,7 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 // validateMemberEmail validates a member's email and returns an error if it is
 // not valid.
 func validateMemberEmail(email string) error {
-	if err := util.ValidateStringField("email", email, 120); err != nil {
+	if err := util.ValidateStringField("email", email, 255); err != nil {
 		return err
 	}
 	if !emailRegExp.MatchString(email) {
@@ -1124,7 +1189,7 @@ func validateMemberEmail(email string) error {
 func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bool, validatePassword bool) error {
 	// Validate name.
 	if validateName {
-		if err := util.ValidateStringField("name", member.Name, 45); err != nil {
+		if err := util.ValidateStringField("name", member.Name, 255); err != nil {
 			return err
 		}
 	}

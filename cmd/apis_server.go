@@ -31,6 +31,10 @@ import (
 // maxRequestSize is the maximum size bytes for an API request.
 const maxRequestSize = 500 * 1024
 
+// maxWorkosPayloadSize is the maximum size in bytes for a WorkOS webhook or
+// action payload.
+const maxWorkosPayloadSize = 64 * 1024
+
 var newline = []byte("\n")
 
 var (
@@ -450,9 +454,9 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 }
 
 // workosLogin exchanges a WorkOS access token for a Krenalis session cookie. It
-// verifies the WorkOS JWT, retrieves the member by email, auto-provision them
-// if they are not already registered in Krenalis, and sets the same encrypted
-// session cookie as a normal login.
+// verifies the WorkOS JWT, retrieves the member by WorkOS user ID,
+// auto-provisions them if they are not already registered in Krenalis, and sets
+// the same encrypted session cookie as a normal login.
 func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, error) {
 	if s.workos == nil {
 		return nil, errors.Unauthorized("WorkOS authentication is not enabled")
@@ -478,14 +482,14 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 		return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
 	}
 
-	memberID, err := org.MemberByEmail(r.Context(), workosUser.Email)
+	memberID, err := org.MemberByWorkosID(r.Context(), workosUser.ID)
 	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); ok {
-			memberID, err = org.ProvisionMember(r.Context(), workosUser.FirstName+" "+workosUser.LastName, workosUser.Email)
-			if err != nil {
-				return nil, err
-			}
-		} else {
+		if _, ok := err.(*errors.NotFoundError); !ok {
+			return nil, err
+		}
+		name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
+		memberID, err = org.ProvisionMemberFromWorkos(r.Context(), name, workosUser.Email, workosUser.ID)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -521,9 +525,13 @@ func (s *apisServer) handleWorkosAction(w http.ResponseWriter, r *http.Request) 
 		return nil, errors.Unauthorized("WorkOS actions are not configured")
 	}
 
-	rawBody, err := io.ReadAll(r.Body)
+	lr := &io.LimitedReader{R: r.Body, N: maxWorkosPayloadSize + 1}
+	rawBody, err := io.ReadAll(lr)
 	if err != nil {
 		return nil, errors.BadRequest("failed to read request body")
+	}
+	if lr.N == 0 {
+		return nil, errors.BadRequest("request body too large")
 	}
 
 	sigHeader := r.Header.Get("WorkOS-Signature")
@@ -562,6 +570,87 @@ func (s *apisServer) handleWorkosAction(w http.ResponseWriter, r *http.Request) 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(responseJSON)
+	return nil, nil
+}
+
+// handleWorkosWebhook handles incoming WorkOS webhook events. It verifies the
+// request signature and, for "user.updated" events, updates the member's name
+// and email across all organizations.
+func (s *apisServer) handleWorkosWebhook(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos == nil || s.workos.webhookSecret == "" {
+		return nil, errors.Unauthorized("WorkOS webhook is not configured")
+	}
+
+	lr := &io.LimitedReader{R: r.Body, N: maxWorkosPayloadSize + 1}
+	rawBody, err := io.ReadAll(lr)
+	if err != nil {
+		return nil, errors.BadRequest("failed to read request body")
+	}
+	if lr.N == 0 {
+		return nil, errors.BadRequest("request body too large")
+	}
+
+	sigHeader := r.Header.Get("WorkOS-Signature")
+	if sigHeader == "" {
+		return nil, errors.Unauthorized("WorkOS webhook is missing the signature header")
+	}
+	err = s.workos.verifyWebhookSignature(rawBody, sigHeader)
+	if err != nil {
+		return nil, errors.Unauthorized("invalid WorkOS webhook signature")
+	}
+
+	var event struct {
+		Event string `json:"event"`
+		Data  struct {
+			ID         string  `json:"id"`
+			Email      string  `json:"email"`
+			FirstName  string  `json:"first_name"`
+			LastName   string  `json:"last_name"`
+			Name       string  `json:"name"`
+			ExternalID *string `json:"external_id"`
+		} `json:"data"`
+	}
+	if err := stdJSON.Unmarshal(rawBody, &event); err != nil {
+		return nil, errors.BadRequest("invalid webhook payload")
+	}
+
+	switch event.Event {
+	case "user.updated":
+		name := strings.TrimSpace(event.Data.FirstName + " " + event.Data.LastName)
+		if event.Data.ID == "" || event.Data.Email == "" {
+			return nil, nil
+		}
+		if runes := []rune(name); len(runes) > 255 {
+			name = string(runes[:255])
+		}
+		if err := s.core.UpdateMembersByWorkosID(r.Context(), event.Data.ID, name, event.Data.Email); err != nil {
+			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
+				slog.Warn("workos webhook: email already in use, skipping member update",
+					"workos_user_id", event.Data.ID, "email", event.Data.Email)
+				return nil, nil
+			}
+			return nil, err
+		}
+	case "organization.updated":
+		if event.Data.ExternalID == nil || *event.Data.ExternalID == "" {
+			return nil, nil
+		}
+		orgID, err := uuid.Parse(*event.Data.ExternalID)
+		if err != nil {
+			return nil, nil
+		}
+		orgName := event.Data.Name
+		if orgName == "" {
+			return nil, nil
+		}
+		if runes := []rune(orgName); len(runes) > 255 {
+			orgName = string(runes[:255])
+		}
+		if err := s.core.UpdateOrganizationName(r.Context(), orgID, orgName); err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, nil
 }
 

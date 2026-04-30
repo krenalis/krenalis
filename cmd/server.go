@@ -171,6 +171,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	c := http.NewCrossOriginProtection()
 	c.AddInsecureBypassPattern("POST /v1/events")
+	c.AddInsecureBypassPattern("POST /v1/workos/webhook")
 	c.AddInsecureBypassPattern("POST /v1/workos/actions/user-registration")
 	origin := strings.TrimSuffix(config.HTTP.ExternalURL, "/")
 	err = c.AddTrustedOrigin(origin)

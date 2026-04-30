@@ -28,7 +28,7 @@ const Members = () => {
 
 	const pendingDeletedMember = useRef<number>(0);
 
-	const hasWorkos = publicMetadata.workosClientID !== ''
+	const hasWorkos = publicMetadata.workosClientID !== '';
 
 	useEffect(() => {
 		const fetchData = async () => {

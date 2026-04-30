@@ -44,6 +44,7 @@ type workos struct {
 // workosUser holds the user information returned by WorkOS after token
 // verification.
 type workosUser struct {
+	ID        string
 	Email     string
 	FirstName string
 	LastName  string
@@ -187,7 +188,7 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		return nil, nil, err
 	}
 
-	return &workosUser{Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
+	return &workosUser{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
 }
 
 // resolveOrganization fetches the WorkOS organization and returns its external

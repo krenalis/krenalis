@@ -685,10 +685,10 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 }
 
 // CreateOrganization creates a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
+// name cannot be empty and cannot be longer than 255 runes.
 func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
 	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
+	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return uuid.Nil, errors.BadRequest("%s", err)
 	}
 	n := state.CreateOrganization{Name: name}
