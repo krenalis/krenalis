@@ -100,7 +100,7 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CREATE SCHEMA query failed: %s", err)
 	}
-	slog.Info("Snowflake test schema created", "dbName", schema)
+	slog.Info("Snowflake test schema created", "schema", schema)
 
 	settings.Schema = schema
 	return &TestEnvironment{
@@ -168,7 +168,7 @@ func (testEnv *TestEnvironment) Teardown() error {
 	if err != nil {
 		return fmt.Errorf("cannot drop Snowflake test schema %q: %s", testEnv.settings.Database, err)
 	}
-	slog.Info("Snowflake test schema dropped", "dbName", testEnv.settings.Schema)
+	slog.Info("Snowflake test schema dropped", "schema", testEnv.settings.Schema)
 	err = testEnv.db.Close()
 	if err != nil {
 		return fmt.Errorf("cannot close Snowflake db: %s", err)
