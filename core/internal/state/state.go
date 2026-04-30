@@ -145,15 +145,11 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 // It returns ErrInvalidAccessKeyFormat if the token is malformed,
 // ErrAccessKeyNotFound if no matching key exists.
 func (state *State) AccessKey(ctx context.Context, token string) (*AccessKey, error) {
-	if len(token) != accessKeyBodySize {
-		return nil, ErrInvalidAccessKeyFormat
-	}
-	payload := make([]byte, accessKeyPayloadSize)
-	defer clear(payload)
-	err := parseAccessKey(payload, token)
+	payload, err := parseAccessKey(token)
 	if err != nil {
 		return nil, ErrInvalidAccessKeyFormat
 	}
+	defer clear(payload)
 	hmac, err := state.metadata.apiKeyPepper.HMAC(ctx, payload)
 	if err != nil {
 		return nil, err

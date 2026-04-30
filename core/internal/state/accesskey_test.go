@@ -62,16 +62,18 @@ func TestTokenAllocations(t *testing.T) {
 		t.Fatalf("expected encodeFixedBase62 not to allocate, got %.1f", encodeAllocs)
 	}
 
-	var parsed [32]byte
+	var parsed []byte
 	parseAllocs := testing.AllocsPerRun(1000, func() {
-		if err := parseAccessKey(parsed[:], body); err != nil {
+		var err error
+		parsed, err = parseAccessKey(body)
+		if err != nil {
 			t.Fatal(err)
 		}
 	})
-	if parseAllocs != 0 {
-		t.Fatalf("expected Parse not to allocate, got %.1f", parseAllocs)
+	if parseAllocs > 1 {
+		t.Fatalf("expected Parse to allocate at most once, got %.1f", parseAllocs)
 	}
-	if parsed != payload {
+	if !bytes.Equal(parsed, payload[:]) {
 		t.Fatalf("expected payload %x, got %x", payload, parsed)
 	}
 	decodeAllocs := testing.AllocsPerRun(1000, func() {
@@ -98,11 +100,11 @@ func TestGenerateAccessKey(t *testing.T) {
 	if len(hmac) != 32 {
 		t.Fatalf("expected 32-byte HMAC, got %d", len(hmac))
 	}
-	var payload [32]byte
-	if err := parseAccessKey(payload[:], body); err != nil {
+	payload, err := parseAccessKey(body)
+	if err != nil {
 		t.Fatalf("expected valid token, got %v", err)
 	}
-	expected, err := state.metadata.apiKeyPepper.HMAC(ctx, payload[:])
+	expected, err := state.metadata.apiKeyPepper.HMAC(ctx, payload)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -161,11 +163,11 @@ func TestFormatParseRoundTrip(t *testing.T) {
 			if len(body) != accessKeyBodySize {
 				t.Fatalf("expected %d-byte body, got %d", accessKeyBodySize, len(body))
 			}
-			var got [32]byte
-			if err := parseAccessKey(got[:], body); err != nil {
+			got, err := parseAccessKey(body)
+			if err != nil {
 				t.Fatalf("expected valid token, got %v", err)
 			}
-			if got != tt.payload {
+			if !bytes.Equal(got, tt.payload[:]) {
 				t.Fatalf("expected payload %x, got %x", tt.payload, got)
 			}
 		})
@@ -179,11 +181,11 @@ func TestFormatAccessKeyKnownVector(t *testing.T) {
 	if got := formatAccessKey(payload[:]); got != expected {
 		t.Fatalf("expected token body %q, got %q", expected, got)
 	}
-	var got [32]byte
-	if err := parseAccessKey(got[:], expected); err != nil {
+	got, err := parseAccessKey(expected)
+	if err != nil {
 		t.Fatalf("expected valid token, got %v", err)
 	}
-	if got != payload {
+	if !bytes.Equal(got, payload[:]) {
 		t.Fatalf("expected payload %x, got %x", payload, got)
 	}
 }
@@ -213,8 +215,7 @@ func TestParseRejectsInvalidToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := payload
-			if err := parseAccessKey(got[:], tt.token); err == nil {
+			if _, err := parseAccessKey(tt.token); err == nil {
 				t.Fatal("expected invalid token error, got nil")
 			}
 		})
@@ -278,14 +279,16 @@ func BenchmarkFormat(b *testing.B) {
 func BenchmarkParse(b *testing.B) {
 	payload := testPayload()
 	body := formatAccessKey(payload[:])
-	var parsed [32]byte
+	var parsed []byte
 	b.ReportAllocs()
 	for b.Loop() {
-		if err := parseAccessKey(parsed[:], body); err != nil {
+		var err error
+		parsed, err = parseAccessKey(body)
+		if err != nil {
 			b.Fatal(err)
 		}
 	}
-	if parsed != payload {
+	if !bytes.Equal(parsed, payload[:]) {
 		b.Fatalf("expected payload %x, got %x", payload, parsed)
 	}
 }

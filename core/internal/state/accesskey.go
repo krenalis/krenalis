@@ -71,25 +71,32 @@ func formatAccessKey(payload []byte) string {
 	return string(out)
 }
 
-// parseAccessKey parses token as an access key and stores the 32-byte payload
-// in dst. It returns errInvalidToken if token is malformed or fails its CRC
-// check.
-//
-// parseAccessKey may write to dst even if it returns an error.
-func parseAccessKey(dst []byte, token string) error {
-	err := decodeFixedBase62(dst, token[:accessKeyPayloadBase62Size])
+// parseAccessKey parses token as an access key and returns its 32-byte payload.
+// It returns errInvalidToken if token is malformed or fails its CRC check.
+func parseAccessKey(token string) (payload []byte, err error) {
+	if len(token) != accessKeyBodySize {
+		return nil, errInvalidToken
+	}
+	payload = make([]byte, accessKeyPayloadSize)
+	defer func() {
+		if err != nil {
+			clear(payload)
+		}
+	}()
+	err = decodeFixedBase62(payload, token[:accessKeyPayloadBase62Size])
 	if err != nil {
-		return errInvalidToken
+		return
 	}
 	var crc [4]byte
 	err = decodeFixedBase62(crc[:], token[accessKeyPayloadBase62Size:])
 	if err != nil {
-		return errInvalidToken
+		return
 	}
-	if crc32.ChecksumIEEE(dst) != binary.BigEndian.Uint32(crc[:]) {
-		return errInvalidToken
+	if crc32.ChecksumIEEE(payload) != binary.BigEndian.Uint32(crc[:]) {
+		err = errInvalidToken
+		return
 	}
-	return nil
+	return payload, nil
 }
 
 // encodeFixedBase62 encodes data into dst using base62. data must be at most 32
