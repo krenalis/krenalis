@@ -16,7 +16,7 @@ import { useApp } from './useApp';
 import { UnauthorizedError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
 import RootError from '../RootError/RootError';
-import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
+import { IS_PASSWORDLESS_KEY, IS_DOCKER_KEY } from '../../../constants/storage';
 import { AuthKitProvider, useAuth } from '@workos-inc/authkit-react';
 import API from '../../../lib/api/api';
 import { PublicMetadata } from '../../../lib/api/types/responses';
@@ -232,6 +232,8 @@ const WorkOSWrapper = () => {
 				signOut();
 				return;
 			}
+			localStorage.removeItem(IS_PASSWORDLESS_KEY);
+			localStorage.removeItem(IS_DOCKER_KEY);
 			setIsLoggedInViaWorkos(true);
 		};
 		if (workosUser == null || isLoggedInViaWorkos) {
