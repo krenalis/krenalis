@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -20,7 +21,12 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-func Test_Snowflake_Columns(t *testing.T) {
+func Test_Columns(t *testing.T) {
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
+	// ./test/commit' when -no-snowflake-tests is used.
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
 
 	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
 	t.Skip()
@@ -125,10 +131,15 @@ func Test_Snowflake_Columns(t *testing.T) {
 
 }
 
-// Test_Snowflake_Merge_Query tests the Merge and Query methods on supported
-// types. It creates a table, inserts a row, and retrieves the data, verifying
-// that the returned columns and values match the expected results.
-func Test_Snowflake_Merge_Query(t *testing.T) {
+// Test_Merge_Query tests the Merge and Query methods on supported types. It
+// creates a table, inserts a row, and retrieves the data, verifying that the
+// returned columns and values match the expected results.
+func Test_Merge_Query(t *testing.T) {
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
+	// ./test/commit' when -no-snowflake-tests is used.
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
 
 	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
 	t.Skip()

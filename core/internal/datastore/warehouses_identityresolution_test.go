@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -525,6 +526,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "Snowflake":
+				// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set
+				// by 'go run ./test/commit' when -no-snowflake-tests is used.
+				if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+					t.Skip()
+				}
 				testEnv, err := snowflaketester.CreateTestEnvironment()
 				if err != nil {
 					t.Fatalf("cannot create Snowflake test environment: %s", err)

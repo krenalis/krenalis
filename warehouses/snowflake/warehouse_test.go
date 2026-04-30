@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -20,7 +21,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_Snowflake_Merge(t *testing.T) {
+func Test_Merge(t *testing.T) {
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
+	// ./test/commit' when -no-snowflake-tests is used.
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
 
 	cols := []struct {
 		KrenalisType  types.Type

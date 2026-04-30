@@ -27,6 +27,16 @@ func main() {
 		os.Exit(0)
 	}
 
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set internally
+	// by this script when -no-snowflake-tests is used. It must not be set
+	// externally, as that would bypass the intended flow and could cause
+	// confusion.
+	if _, alreadySet := os.LookupEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS"); alreadySet {
+		fatal("the KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is already set in the environment." +
+			" This variable is managed internally by the 'commit' script via the -no-snowflake-tests flag" +
+			" and must not be set manually.")
+	}
+
 	start := time.Now()
 
 	// Find modules and packages in the current working directory, then ensure
@@ -123,16 +133,15 @@ func main() {
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
-		if cliOptions.noSnowflakeTests {
-			// Skip all tests and subtests that have "snowflake" in their name
-			// (case insensitive).
-			args = append(args, "-skip", "snowflake")
-		}
 		for _, pkg := range packages {
 			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
 				continue // skip this package.
 			}
-			NewCmd("go", args...).InDir(repo, pkg).Run()
+			cmd := NewCmd("go", args...).InDir(repo, pkg)
+			if cliOptions.noSnowflakeTests {
+				cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
+			}
+			cmd.Run()
 		}
 	}
 
