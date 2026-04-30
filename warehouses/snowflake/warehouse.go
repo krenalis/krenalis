@@ -432,13 +432,13 @@ func connector(s *sfSettings) driver.Connector {
 		account = account[:i] + "-" + account[i+1:]
 	}
 	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
-		Account:          account,
-		User:             s.Username,
-		Password:         s.Password,
-		Database:         s.Database,
-		Schema:           s.Schema,
-		Warehouse:        s.Warehouse,
-		Role:             s.Role,
+		Account:   account,
+		User:      s.Username,
+		Password:  s.Password,
+		Database:  s.Database,
+		Schema:    s.Schema,
+		Warehouse: s.Warehouse,
+		Role:      s.Role,
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": new("false"),
 		},
