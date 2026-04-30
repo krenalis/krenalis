@@ -871,9 +871,9 @@ func (state *State) deleteOrganization(n notification) uuid.UUID {
 		delete(state.workspaces, id)
 	}
 	// Delete all access keys belonging to the organization.
-	for token, key := range state.accessKeyByHMAC {
+	for hmac, key := range state.accessKeyByHMAC {
 		if key.Organization == e.ID {
-			delete(state.accessKeyByHMAC, token)
+			delete(state.accessKeyByHMAC, hmac)
 		}
 	}
 	state.mu.Unlock()
