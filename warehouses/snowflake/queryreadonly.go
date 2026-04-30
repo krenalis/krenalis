@@ -6,15 +6,23 @@ package snowflake
 
 import (
 	"context"
-	"errors"
 
 	"github.com/krenalis/krenalis/warehouses"
+	"github.com/krenalis/krenalis/warehouses/snowflake/internal/readonlysql"
 )
 
-// QueryReadOnly executes a read-only query and returns the results and the
-// number of columns in each row.
-func (warehouse *Snowflake) QueryReadOnly(_ context.Context, _ string) (warehouses.Rows, int, error) {
-	// TODO(Gianluca): implement read-only query validation for Snowflake before
-	// allowing this execution path. See https://github.com/krenalis/krenalis/issues/1665.
-	return nil, 0, errors.New("QueryReadOnly is not implemented for Snowflake")
+// QueryReadOnly executes a query accepted as read-only and returns the results
+// and the number of columns in each row.
+//
+// Safety depends on deployment assumptions in addition to SQL validation:
+//   - The MCP credentials must have passed CheckReadOnlyAccess before use.
+//   - The active Snowflake role hierarchy must expose only the expected
+//     read-only surface.
+//
+// Snowflake role privileges are the database-enforced runtime protection.
+func (warehouse *Snowflake) QueryReadOnly(ctx context.Context, query string) (warehouses.Rows, int, error) {
+	if err := readonlysql.ValidateReadOnly(query); err != nil {
+		return nil, 0, err
+	}
+	return warehouse.RawQuery(ctx, query)
 }

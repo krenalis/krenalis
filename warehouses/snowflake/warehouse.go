@@ -72,8 +72,177 @@ type sfSettings struct {
 // a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
-	// TODO(Gianluca): see the issue https://github.com/krenalis/krenalis/issues/1693.
-	return errors.New("the read-only access check is currently not implemented in Snowflake")
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
+
+	// Determine if there are tables on the data warehouse for which the active
+	// Snowflake role hierarchy has too many privileges.
+	fixedTables := []string{
+		"KRENALIS_DESTINATION_PROFILES",
+		"KRENALIS_SYSTEM_OPERATIONS",
+		"KRENALIS_IDENTITIES",
+		"KRENALIS_PROFILE_SCHEMA_VERSIONS",
+		"KRENALIS_EVENTS",
+	}
+	publicViews := []string{"EVENTS", "PROFILES"}
+	disallowedPrivileges := []string{"APPLYBUDGET", "DELETE", "EVOLVE SCHEMA", "INSERT", "OWNERSHIP", "TRUNCATE", "UPDATE"}
+
+	var query strings.Builder
+	query.WriteString(`
+SELECT "TABLE_NAME", "PRIVILEGE_TYPE"
+FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"
+WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
+  AND "TABLE_SCHEMA" = CURRENT_SCHEMA()
+  AND (
+    ("GRANTED_TO" = 'ROLE' AND IS_ROLE_IN_SESSION("GRANTEE"))
+    OR ("GRANTED_TO" = 'DATABASE_ROLE' AND IS_DATABASE_ROLE_IN_SESSION("GRANTEE"))
+  )
+  AND (
+    "TABLE_NAME" IN (`)
+	for i, table := range fixedTables {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		quoteString(&query, table)
+	}
+	for _, view := range publicViews {
+		query.WriteByte(',')
+		quoteString(&query, view)
+	}
+	query.WriteString(`)
+    OR REGEXP_LIKE("TABLE_NAME", '^KRENALIS_PROFILES_[0-9]+$')
+  )
+  AND "PRIVILEGE_TYPE" IN (`)
+	for i, privilege := range disallowedPrivileges {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		quoteString(&query, privilege)
+	}
+	query.WriteString(`)
+ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
+
+	rows, err := db.QueryContext(ctx, query.String())
+	if err != nil {
+		return snowflake(err)
+	}
+	defer rows.Close()
+
+	tooPrivilegedTables := make(map[string][]string)
+	var tooPrivilegedTableNames []string
+	for rows.Next() {
+		var table, privilege string
+		err = rows.Scan(&table, &privilege)
+		if err != nil {
+			return snowflake(err)
+		}
+		if len(tooPrivilegedTables[table]) == 0 {
+			tooPrivilegedTableNames = append(tooPrivilegedTableNames, table)
+		}
+		if !slices.Contains(tooPrivilegedTables[table], privilege) {
+			tooPrivilegedTables[table] = append(tooPrivilegedTables[table], privilege)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return snowflake(err)
+	}
+	if err = rows.Close(); err != nil {
+		return snowflake(err)
+	}
+	if len(tooPrivilegedTables) > 0 {
+		var details []string
+		for _, table := range tooPrivilegedTableNames {
+			privileges := tooPrivilegedTables[table]
+			details = append(details, fmt.Sprintf("%s (%s)", table, strings.Join(privileges, ", ")))
+		}
+		return &warehouses.SettingsNotReadOnly{
+			Err: fmt.Errorf(
+				"the credentials should be read-only, but they allow non-read-only privileges on the following Krenalis tables: %s",
+				strings.Join(details, ", "),
+			)}
+	}
+
+	for _, view := range publicViews {
+		err = snowflakeQueryRelation(ctx, db, view)
+		if err != nil {
+			return &warehouses.SettingsNotReadOnly{
+				Err: fmt.Errorf("the credentials should be read-only, but they cannot read the required %s view: %w", view, err),
+			}
+		}
+	}
+
+	var internalTablesQuery strings.Builder
+	internalTablesQuery.WriteString(`
+SELECT "TABLE_NAME"
+FROM "INFORMATION_SCHEMA"."TABLES"
+WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
+  AND "TABLE_SCHEMA" = CURRENT_SCHEMA()
+  AND "TABLE_TYPE" = 'BASE TABLE'
+  AND (
+    "TABLE_NAME" IN (`)
+	for i, table := range fixedTables {
+		if i > 0 {
+			internalTablesQuery.WriteByte(',')
+		}
+		quoteString(&internalTablesQuery, table)
+	}
+	internalTablesQuery.WriteString(`)
+    OR REGEXP_LIKE("TABLE_NAME", '^KRENALIS_PROFILES_[0-9]+$')
+  )
+ORDER BY "TABLE_NAME"`)
+
+	rows, err = db.QueryContext(ctx, internalTablesQuery.String())
+	if err != nil {
+		return snowflake(err)
+	}
+	defer rows.Close()
+
+	var directlyReadableInternalTables []string
+	for rows.Next() {
+		var table string
+		err = rows.Scan(&table)
+		if err != nil {
+			return snowflake(err)
+		}
+		directlyReadableInternalTables = append(directlyReadableInternalTables, table)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return snowflake(err)
+	}
+	if err = rows.Close(); err != nil {
+		return snowflake(err)
+	}
+	if len(directlyReadableInternalTables) > 0 {
+		return &warehouses.SettingsNotReadOnly{
+			Err: fmt.Errorf(
+				"the credentials should be read-only, but they allow direct access to internal Krenalis tables: %s",
+				strings.Join(directlyReadableInternalTables, ", "),
+			)}
+	}
+
+	return nil
+}
+
+// snowflakeQueryRelation verifies that relation can be queried by the current
+// Snowflake session without reading any rows.
+func snowflakeQueryRelation(ctx context.Context, db *sql.DB, relation string) error {
+	rows, err := db.QueryContext(ctx, "SELECT 1 FROM "+quoteIdent(relation)+" LIMIT 0")
+	if err != nil {
+		return snowflake(err)
+	}
+	defer rows.Close()
+	err = rows.Close()
+	if err != nil {
+		return snowflake(err)
+	}
+	if err = rows.Err(); err != nil {
+		return snowflake(err)
+	}
+	return nil
 }
 
 // Close closes the data warehouse.
