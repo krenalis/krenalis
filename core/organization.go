@@ -281,9 +281,12 @@ func (core *Core) UpdateMembersByWorkosID(ctx context.Context, workosUserID, nam
 		return errors.BadRequest("%s", err)
 	}
 	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		conflict, err := tx.QueryExists(ctx,
+		conflict, err := tx.QueryExists(
+			ctx,
 			"SELECT FROM members m1 JOIN members m2 ON m2.organization = m1.organization AND m2.email = $2 AND m2.id <> m1.id WHERE m1.workos_user_id = $1",
-			workosUserID, email)
+			workosUserID,
+			email,
+		)
 		if err != nil {
 			return nil, err
 		}
