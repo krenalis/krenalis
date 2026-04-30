@@ -122,9 +122,9 @@ type Settings struct {
 	Account   string
 	User      string
 	Password  string
-	Database  string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
+	Database  string
 	Role      string
-	Schema    string
+	Schema    string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
 	Warehouse string
 }
 
