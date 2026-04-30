@@ -140,10 +140,15 @@ func UpgradeAddAPIKeyPepper(ctx context.Context, db *db.DB, kms kms.Kms) error {
 		}
 		return nil
 	})
-	if err == errAPIKeyPepperAlreadyExists {
-		return nil
+	if err != nil {
+		if err == errAPIKeyPepperAlreadyExists {
+			slog.Info("PostgreSQL database is already up to date")
+			return nil
+		}
+		return err
 	}
-	return err
+	slog.Info("PostgreSQL database updated successfully")
+	return nil
 }
 
 // databaseIsEmpty reports whether the given PostgreSQL database is empty, that
