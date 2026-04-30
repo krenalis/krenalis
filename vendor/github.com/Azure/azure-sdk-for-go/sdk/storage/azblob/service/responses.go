@@ -1,12 +1,10 @@
-//go:build go1.18
-// +build go1.18
-
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 package service
 
 import (
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/exported"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/generated"
 )
 
@@ -42,3 +40,21 @@ type FilterBlobsResponse = generated.ServiceClientFilterBlobsResponse
 
 // GetUserDelegationKeyResponse contains the response from method ServiceClient.GetUserDelegationKey.
 type GetUserDelegationKeyResponse = generated.ServiceClientGetUserDelegationKeyResponse
+
+// SubmitBatchResponse contains the response from method Client.SubmitBatch.
+type SubmitBatchResponse struct {
+	// Responses contains the responses of the sub-requests in the batch
+	Responses []*BatchResponseItem
+
+	// ContentType contains the information returned from the Content-Type header response.
+	ContentType *string
+
+	// RequestID contains the information returned from the x-ms-request-id header response.
+	RequestID *string
+
+	// Version contains the information returned from the x-ms-version header response.
+	Version *string
+}
+
+// BatchResponseItem contains the response for the individual sub-requests.
+type BatchResponseItem = exported.BatchResponseItem

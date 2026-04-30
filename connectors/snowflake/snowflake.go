@@ -24,7 +24,7 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 //go:embed documentation/source/overview.md
@@ -170,15 +170,16 @@ func connector(s *innerSettings) driver.Connector {
 		account = account[:i] + "-" + account[i+1:]
 	}
 	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
-		Account:          account,
-		User:             s.Username,
-		Password:         s.Password,
-		Role:             s.Role,
-		Database:         s.Database,
-		Schema:           s.Schema,
-		Warehouse:        s.Warehouse,
-		Params:           make(map[string]*string),
-		DisableTelemetry: true,
+		Account:   account,
+		User:      s.Username,
+		Password:  s.Password,
+		Role:      s.Role,
+		Database:  s.Database,
+		Schema:    s.Schema,
+		Warehouse: s.Warehouse,
+		Params: map[string]*string{
+			"CLIENT_TELEMETRY_ENABLED": new("false"),
+		},
 	})
 }
 

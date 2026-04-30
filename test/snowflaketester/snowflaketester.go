@@ -37,7 +37,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 // CreateTestEnvironment creates a test environment on Snowflake.
@@ -87,7 +87,9 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 		Role:             settings.Role,
 		User:             settings.User,
 		Warehouse:        settings.Warehouse,
-		DisableTelemetry: true,
+		Params: map[string]*string{
+			"CLIENT_TELEMETRY_ENABLED": new("false"),
+		},
 	})
 
 	// Generate a random schema name and create it in the given database.

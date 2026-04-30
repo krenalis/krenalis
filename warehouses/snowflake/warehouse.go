@@ -25,7 +25,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 var (
@@ -244,7 +244,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
 		// Put the rows into the temporary table's stage.
-		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, csvReader), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		_, err = conn.ExecContext(gosnowflake.WithFilePutStream(ctx, csvReader), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
 			return snowflake(err)
 		}
@@ -439,8 +439,9 @@ func connector(s *sfSettings) driver.Connector {
 		Schema:           s.Schema,
 		Warehouse:        s.Warehouse,
 		Role:             s.Role,
-		Params:           make(map[string]*string),
-		DisableTelemetry: true,
+		Params: map[string]*string{
+			"CLIENT_TELEMETRY_ENABLED": new("false"),
+		},
 	})
 }
 
