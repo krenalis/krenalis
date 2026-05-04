@@ -163,6 +163,8 @@ type innerSettings struct {
 	Warehouse string `json:"warehouse"`
 }
 
+var falseStrPtr = new("false")
+
 // connector returns a driver.Connector from the settings.
 func connector(s *innerSettings) driver.Connector {
 	account := s.Account
@@ -178,7 +180,7 @@ func connector(s *innerSettings) driver.Connector {
 		Schema:    s.Schema,
 		Warehouse: s.Warehouse,
 		Params: map[string]*string{
-			"CLIENT_TELEMETRY_ENABLED": new("false"),
+			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
 	})
 }

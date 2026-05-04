@@ -88,7 +88,7 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 		User:      settings.User,
 		Warehouse: settings.Warehouse,
 		Params: map[string]*string{
-			"CLIENT_TELEMETRY_ENABLED": new("false"),
+			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
 	})
 
@@ -196,3 +196,5 @@ func generateTestSchemaName() (string, error) {
 		hex.EncodeToString(b),
 	), nil
 }
+
+var falseStrPtr = new("false")
