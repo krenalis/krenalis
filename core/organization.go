@@ -331,7 +331,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	createdAt := time.Now().UTC().Truncate(time.Second)
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, hmac, hint, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac[:], hint, createdAt)
+			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
