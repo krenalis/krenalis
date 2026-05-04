@@ -24,7 +24,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 // merge performs a table merge operation.
@@ -151,7 +151,7 @@ func merge(ctx context.Context, conn *sql.Conn, table warehouses.Table, rows [][
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
 		// Put the rows into the temporary table's stage.
-		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, rowsCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		_, err = conn.ExecContext(gosnowflake.WithFilePutStream(ctx, rowsCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func merge(ctx context.Context, conn *sql.Conn, table warehouses.Table, rows [][
 	// Copy the deleted rows into the temporary table.
 	if len(deleted) > 0 {
 		// Put the deleted rows into the temporary table's stage.
-		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, deletedCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		_, err = conn.ExecContext(gosnowflake.WithFilePutStream(ctx, deletedCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
 			return err
 		}

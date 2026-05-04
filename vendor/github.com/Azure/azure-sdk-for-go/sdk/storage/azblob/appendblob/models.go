@@ -1,6 +1,3 @@
-//go:build go1.18
-// +build go1.18
-
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
@@ -100,6 +97,9 @@ func (o *AppendBlockOptions) format() (*generated.AppendBlobClientAppendBlockOpt
 
 // AppendBlockFromURLOptions contains the optional parameters for the Client.AppendBlockFromURL method.
 type AppendBlockFromURLOptions struct {
+	// Only Bearer type is supported. Credentials should be a valid OAuth access token to copy source.
+	CopySourceAuthorization *string
+
 	// SourceContentValidation contains the validation mechanism used on the range of bytes read from the source.
 	SourceContentValidation blob.SourceContentValidationType
 
@@ -108,6 +108,8 @@ type AppendBlockFromURLOptions struct {
 	CPKInfo *blob.CPKInfo
 
 	CPKScopeInfo *blob.CPKScopeInfo
+
+	FileRequestIntent *blob.FileRequestIntentType
 
 	SourceModifiedAccessConditions *blob.SourceModifiedAccessConditions
 
@@ -125,7 +127,9 @@ func (o *AppendBlockFromURLOptions) format() (*generated.AppendBlobClientAppendB
 	}
 
 	options := &generated.AppendBlobClientAppendBlockFromURLOptions{
-		SourceRange: exported.FormatHTTPRange(o.Range),
+		SourceRange:             exported.FormatHTTPRange(o.Range),
+		CopySourceAuthorization: o.CopySourceAuthorization,
+		FileRequestIntent:       o.FileRequestIntent,
 	}
 
 	if o.SourceContentValidation != nil {

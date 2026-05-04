@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -20,9 +21,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
-
 func Test_Merge(t *testing.T) {
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
+	// ./test/commit' when -no-snowflake-tests is used.
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
 
 	cols := []struct {
 		KrenalisType  types.Type
@@ -89,22 +93,23 @@ func Test_Merge(t *testing.T) {
 		}
 	}
 
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
-	}
-
-	// Open the data warehouse.
-	settings, err := os.ReadFile(settingsFile)
+	testEnv, err := snowflaketester.CreateTestEnvironment()
 	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+		t.Fatalf("cannot create test environment: %s", err)
 	}
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(settings))
+	defer func() {
+		err := testEnv.Teardown()
+		if err != nil {
+			t.Logf("cannot teardown Snowflake environment: %s", err)
+		}
+	}()
+
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()))
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
 	if err != nil {
-		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
+		t.Fatalf("cannot open Snowflake warehouse: %s", err)
 	}
 
 	// Create the table.

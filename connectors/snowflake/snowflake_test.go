@@ -15,22 +15,51 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-const settingsEnvKey = "KRENALIS_TEST_PATH_SNOWFLAKE"
-
 func Test_Columns(t *testing.T) {
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
+	// ./test/commit' when -no-snowflake-tests is used.
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
 
-	// Open connector.
-	connector := newSnowflakeFromENV(t)
+	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
+	t.Skip()
+
+	// Create a test environment on Snowflake.
+	testEnv, err := snowflaketester.CreateTestEnvironment()
+	if err != nil {
+		t.Fatalf("cannot create test environment on Snowflake: %s", err)
+	}
+	defer func() {
+		err := testEnv.Teardown()
+		if err != nil {
+			t.Logf("cannot teardown Snowflake test environment: %s", err)
+		}
+	}()
+
+	// Open the Snowflake connector.
+	jsonSettings := testEnv.Settings().JSON()
+	env := connectors.DatabaseEnv{
+		Settings: newTestSettingsStore(jsonSettings),
+	}
+	connector, err := New(&env)
+	if err != nil {
+		t.Fatalf("cannot open the Snowflake connector: %s", err)
+	}
 	defer func() {
 		if err := connector.Close(); err != nil {
 			t.Fatalf("unexpected error closing the database: %s", err)
 		}
 	}()
+	if err = connector.openDB(context.Background()); err != nil {
+		t.Fatalf("cannot open the database: %s", err)
+	}
 
 	// Create the table
 	tableName := "test_columns"
@@ -46,7 +75,7 @@ func Test_Columns(t *testing.T) {
 		"i" VARCHAR(50),
 		"j" ARRAY NOT NULL
 	)`
-	_, err := connector.db.ExecContext(context.Background(), create)
+	_, err = connector.db.ExecContext(context.Background(), create)
 	if err != nil {
 		t.Fatalf("cannot create table: %s", err)
 	}
@@ -105,10 +134,15 @@ func Test_Columns(t *testing.T) {
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
-//
-// Set the environment variable KRENALIS_TEST_PATH_SNOWFLAKE with the path to the
-// database credentials in JSON format for running the test.
 func Test_Merge_Query(t *testing.T) {
+	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
+	// ./test/commit' when -no-snowflake-tests is used.
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
+
+	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
+	t.Skip()
 
 	cols := []struct {
 		DriverType    string
@@ -140,13 +174,35 @@ func Test_Merge_Query(t *testing.T) {
 		}
 	}
 
-	// Open connector.
-	connector := newSnowflakeFromENV(t)
+	// Create a test environment on Snowflake.
+	testEnv, err := snowflaketester.CreateTestEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := testEnv.Teardown()
+		if err != nil {
+			t.Logf("cannot teardown Snowflake test environment: %s", err)
+		}
+	}()
+
+	// Open the Snowflake connector.
+	jsonSettings := testEnv.Settings().JSON()
+	env := connectors.DatabaseEnv{
+		Settings: newTestSettingsStore(jsonSettings),
+	}
+	connector, err := New(&env)
+	if err != nil {
+		t.Fatalf("cannot open the Snowflake connector: %s", err)
+	}
 	defer func() {
 		if err := connector.Close(); err != nil {
 			t.Fatalf("unexpected error closing the database: %s", err)
 		}
 	}()
+	if err = connector.openDB(context.Background()); err != nil {
+		t.Fatalf("cannot open the database: %s", err)
+	}
 
 	// Create the table and add a row.
 	create := bytes.NewBufferString(`CREATE TABLE "` + table.Name + "\" (\n\t\"")
@@ -159,7 +215,7 @@ func Test_Merge_Query(t *testing.T) {
 		create.WriteString(cols[i].DriverType)
 	}
 	create.WriteString("\n)")
-	_, err := connector.db.ExecContext(context.Background(), create.String())
+	_, err = connector.db.ExecContext(context.Background(), create.String())
 	if err != nil {
 		t.Fatalf("cannot create table: %s", err)
 	}
@@ -222,27 +278,6 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatalf("cannot scan row: %s", err)
 	}
 
-}
-
-func newSnowflakeFromENV(t *testing.T) *Snowflake {
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
-	}
-	// Open connector.
-	settings, err := os.ReadFile(settingsFile)
-	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
-	}
-	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings)}
-	connector, err := New(&env)
-	if err != nil {
-		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
-	}
-	if err = connector.openDB(context.Background()); err != nil {
-		t.Fatalf("cannot open the database: %s", err)
-	}
-	return connector
 }
 
 // scanner implements the sql.Scanner interface to read the database values.

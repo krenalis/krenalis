@@ -1,6 +1,3 @@
-//go:build go1.18
-// +build go1.18
-
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
@@ -99,6 +96,9 @@ type SetLegalHoldResponse = generated.BlobClientSetLegalHoldResponse
 
 // CopyFromURLResponse contains the response from method BlobClient.CopyFromURL.
 type CopyFromURLResponse = generated.BlobClientCopyFromURLResponse
+
+// GetAccountInfoResponse contains the response from method BlobClient.GetAccountInfo.
+type GetAccountInfoResponse = generated.BlobClientGetAccountInfoResponse
 
 // AcquireLeaseResponse contains the response from method BlobClient.AcquireLease.
 type AcquireLeaseResponse = generated.BlobClientAcquireLeaseResponse
