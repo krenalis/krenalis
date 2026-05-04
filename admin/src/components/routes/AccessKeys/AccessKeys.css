@@ -70,7 +70,7 @@
 }
 
 .access-keys__dialog--copy::part(panel) {
-	width: 520px;
+	width: 560px;
 	max-width: calc(100vw - 40px);
 }
 
