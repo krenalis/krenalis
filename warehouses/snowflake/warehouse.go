@@ -61,6 +61,7 @@ type Snowflake struct {
 type sfSettings struct {
 	Username  string `json:"username"`
 	Password  string `json:"password"`
+	Token     string `json:"token,omitempty"` // JWT token for OIDC/WIF authentication; takes precedence over Password when set
 	Account   string `json:"account"`
 	Warehouse string `json:"warehouse"`
 	Database  string `json:"database"`
@@ -402,9 +403,11 @@ func validateSettings(s *sfSettings) error {
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
 		return warehouses.SettingsErrorf("user name length must be in range [1,255]")
 	}
-	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return warehouses.SettingsErrorf("password length must be in range [1,255]")
+	// Validate Password (not required when a token is provided for OIDC/WIF auth).
+	if s.Token == "" {
+		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
+			return warehouses.SettingsErrorf("password length must be in range [1,255]")
+		}
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
@@ -433,10 +436,9 @@ func connector(s *sfSettings) driver.Connector {
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
 	}
-	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
+	cfg := gosnowflake.Config{
 		Account:   account,
 		User:      s.Username,
-		Password:  s.Password,
 		Database:  s.Database,
 		Schema:    s.Schema,
 		Warehouse: s.Warehouse,
@@ -444,7 +446,15 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
-	})
+	}
+	if s.Token != "" {
+		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
+		cfg.WorkloadIdentityProvider = "OIDC"
+		cfg.Token = s.Token
+	} else {
+		cfg.Password = s.Password
+	}
+	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)
 }
 
 // serializeIdentitiesToCSV serializes identities as CSV, using columns as

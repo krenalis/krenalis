@@ -73,6 +73,7 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),
 		Database:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_DATABASE"),
 		Password:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_PASSWORD"),
+		OIDCToken: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN"),
 		Role:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ROLE"),
 		Schema:    "", // will be set later.
 		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
@@ -80,17 +81,24 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 	}
 
 	// Instantiate a Snowflake connector.
-	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
+	cfg := gosnowflake.Config{
 		Account:   settings.Account,
 		Database:  settings.Database,
-		Password:  settings.Password,
 		Role:      settings.Role,
 		User:      settings.User,
 		Warehouse: settings.Warehouse,
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
-	})
+	}
+	if settings.OIDCToken != "" {
+		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
+		cfg.WorkloadIdentityProvider = "OIDC"
+		cfg.Token = settings.OIDCToken
+	} else {
+		cfg.Password = settings.Password
+	}
+	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)
 
 	// Generate a random schema name and create it in the given database.
 	db := sql.OpenDB(connector)
@@ -124,6 +132,7 @@ type Settings struct {
 	Account   string
 	User      string
 	Password  string
+	OIDCToken string // JWT token for OIDC/WIF authentication; takes precedence over Password when set
 	Database  string
 	Role      string
 	Schema    string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
@@ -147,15 +156,20 @@ func (testEnv *TestEnvironment) Settings() Settings {
 //	    "role": "..."
 //	}
 func (settings Settings) JSON() []byte {
-	encoded, err := json.Marshal(map[string]any{
+	m := map[string]any{
 		"username":  settings.User,
-		"password":  settings.Password,
 		"account":   settings.Account,
 		"warehouse": settings.Warehouse,
 		"database":  settings.Database,
 		"schema":    settings.Schema,
 		"role":      settings.Role,
-	})
+	}
+	if settings.OIDCToken != "" {
+		m["token"] = settings.OIDCToken
+	} else {
+		m["password"] = settings.Password
+	}
+	encoded, err := json.Marshal(m)
 	if err != nil {
 		panic(err)
 	}
