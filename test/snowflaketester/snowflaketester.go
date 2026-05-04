@@ -37,7 +37,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 // CreateTestEnvironment creates a test environment on Snowflake.
@@ -81,13 +81,15 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 
 	// Instantiate a Snowflake connector.
 	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
-		Account:          settings.Account,
-		Database:         settings.Database,
-		Password:         settings.Password,
-		Role:             settings.Role,
-		User:             settings.User,
-		Warehouse:        settings.Warehouse,
-		DisableTelemetry: true,
+		Account:   settings.Account,
+		Database:  settings.Database,
+		Password:  settings.Password,
+		Role:      settings.Role,
+		User:      settings.User,
+		Warehouse: settings.Warehouse,
+		Params: map[string]*string{
+			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
+		},
 	})
 
 	// Generate a random schema name and create it in the given database.
@@ -194,3 +196,5 @@ func generateTestSchemaName() (string, error) {
 		hex.EncodeToString(b),
 	), nil
 }
+
+var falseStrPtr = new("false")
