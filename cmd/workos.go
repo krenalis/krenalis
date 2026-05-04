@@ -74,7 +74,7 @@ func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
 	var jwks workosJWKS
 	status, err := wo.call(http.MethodGet, "/sso/jwks/"+wo.clientID, nil, &jwks)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
 	}
 	if status != http.StatusOK {
 		return nil, fmt.Errorf("WorkOS JWKS endpoint returned status %d", status)
@@ -85,11 +85,11 @@ func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
 		}
 		nBytes, err := base64.RawURLEncoding.DecodeString(k.N)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode WorkOS JWKS key N: %w", err)
+			return nil, fmt.Errorf("failed to decode WorkOS JWKS key N: %s", err)
 		}
 		eBytes, err := base64.RawURLEncoding.DecodeString(k.E)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode WorkOS JWKS key E: %w", err)
+			return nil, fmt.Errorf("failed to decode WorkOS JWKS key E: %s", err)
 		}
 		return &rsa.PublicKey{
 			N: new(big.Int).SetBytes(nBytes),
@@ -112,14 +112,14 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 	// Decode and parse the header to get the algorithm and key ID.
 	headerJSON, err := base64.RawURLEncoding.DecodeString(headerB64)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT header encoding: %w", err)
+		return nil, nil, fmt.Errorf("invalid JWT header encoding: %s", err)
 	}
 	var header struct {
 		Alg string `json:"alg"`
 		Kid string `json:"kid"`
 	}
 	if err := json.Unmarshal(headerJSON, &header); err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT header: %w", err)
+		return nil, nil, fmt.Errorf("invalid JWT header: %s", err)
 	}
 	if header.Alg != "RS256" {
 		return nil, nil, fmt.Errorf("unexpected JWT algorithm %q, expected RS256", header.Alg)
@@ -134,17 +134,17 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 	// Verify the RS256 signature over "headerB64.payloadB64".
 	sigBytes, err := base64.RawURLEncoding.DecodeString(sigB64)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT signature encoding: %w", err)
+		return nil, nil, fmt.Errorf("invalid JWT signature encoding: %s", err)
 	}
 	digest := sha256.Sum256([]byte(headerB64 + "." + payloadB64))
 	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest[:], sigBytes); err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT signature: %w", err)
+		return nil, nil, fmt.Errorf("invalid JWT signature: %s", err)
 	}
 
 	// Decode and parse the payload.
 	payloadJSON, err := base64.RawURLEncoding.DecodeString(payloadB64)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT payload encoding: %w", err)
+		return nil, nil, fmt.Errorf("invalid JWT payload encoding: %s", err)
 	}
 	var claims struct {
 		Sub   string `json:"sub"`
@@ -152,7 +152,7 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		OrgID string `json:"org_id"`
 	}
 	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT payload: %w", err)
+		return nil, nil, fmt.Errorf("invalid JWT payload: %s", err)
 	}
 
 	// Validate time-based claims.
@@ -177,7 +177,7 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 
 	status, err := wo.call(http.MethodGet, "/user_management/users/"+userID, nil, &userRes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to fetch WorkOS token: %s", err)
 	}
 	if status != http.StatusOK {
 		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
@@ -199,7 +199,7 @@ func (wo *workos) resolveOrganization(orgID string) (*uuid.UUID, error) {
 	}
 	status, err := wo.call(http.MethodGet, "/organizations/"+orgID, nil, &orgRes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
 	}
 	if status != http.StatusOK {
 		return nil, fmt.Errorf("WorkOS API returned status %d for organization %s", status, orgID)
@@ -221,7 +221,7 @@ func (wo *workos) call(method, path string, body any, out any) (int, error) {
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return 0, fmt.Errorf("workos: failed to encode request body: %w", err)
+			return 0, fmt.Errorf("failed to encode request body: %s", err)
 		}
 		bodyReader = bytes.NewReader(b)
 	}
@@ -239,14 +239,14 @@ func (wo *workos) call(method, path string, body any, out any) (int, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("workos: %s %s failed: %w", method, path, err)
+		return 0, fmt.Errorf("%s %s failed: %s", method, path, err)
 	}
 	defer resp.Body.Close()
 
 	if out != nil {
 		err := json.NewDecoder(resp.Body).Decode(out)
 		if err != nil {
-			return resp.StatusCode, fmt.Errorf("workos: failed to decode response from %s %s: %w", method, path, err)
+			return resp.StatusCode, fmt.Errorf("failed to decode response from %s %s: %s", method, path, err)
 		}
 	}
 	return resp.StatusCode, nil
@@ -291,7 +291,7 @@ func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 
 	sigBytes, err := hex.DecodeString(signature)
 	if err != nil {
-		return fmt.Errorf("workos: invalid hex in WorkOS-Signature header: %w", err)
+		return fmt.Errorf("invalid hex in WorkOS-Signature header: %s", err)
 	}
 
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -299,7 +299,7 @@ func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 	mac.Write([]byte("."))
 	mac.Write(rawBody)
 	if !hmac.Equal(mac.Sum(nil), sigBytes) {
-		return fmt.Errorf("workos: signature mismatch")
+		return fmt.Errorf("WorkOS signature mismatch")
 	}
 
 	return nil
