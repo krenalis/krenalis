@@ -127,7 +127,7 @@ func TestWriteSessionCookie(t *testing.T) {
 }
 
 func TestNewAPIsServerInitializesCookieKeys(t *testing.T) {
-	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", "", nil, "", "", "", "")
+	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", "", nil, "", "", "", "", false)
 	if s.cookieKeys == nil {
 		t.Fatal("expected newAPIsServer to initialize cookieKeys")
 	}
