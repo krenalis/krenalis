@@ -14,7 +14,7 @@ const Organization = () => {
 
 	let content: ReactNode;
 
-	const hasWorkos = publicMetadata.workosClientID !== ''
+	const hasWorkos = publicMetadata.workosClientID !== '';
 
 	if (location.pathname.endsWith('organization')) {
 		content = (

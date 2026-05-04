@@ -255,6 +255,7 @@ const WorkOSWrapper = () => {
 
 const Root = () => {
 	const [workosClientID, setWorkosClientID] = useState<string | null>(null);
+	const [workosDevMode, setWorkosDevMode] = useState<boolean>(false);
 
 	useEffect(() => {
 		const api = new API(window.location.origin, 0);
@@ -268,6 +269,7 @@ const Root = () => {
 				return;
 			}
 			setWorkosClientID(publicMetadata.workosClientID);
+			setWorkosDevMode(publicMetadata.workosDevMode);
 		};
 
 		fetchWorkosClientID();
@@ -285,7 +287,11 @@ const Root = () => {
 	const hasWorkOS = workosClientID !== '';
 	if (hasWorkOS) {
 		return (
-			<AuthKitProvider clientId={workosClientID} redirectUri={`${window.location.origin}/admin`}>
+			<AuthKitProvider
+				clientId={workosClientID}
+				devMode={workosDevMode}
+				redirectUri={`${window.location.origin}/admin`}
+			>
 				<WorkOSWrapper />
 			</AuthKitProvider>
 		);

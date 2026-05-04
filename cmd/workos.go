@@ -25,20 +25,12 @@ import (
 
 const workosBaseURL = "https://api.workos.com"
 
-// workosClientIDString returns the WorkOS client ID, or an empty string if
-// WorkOS authentication is not configured.
-func (s *apisServer) workosClientIDString() string {
-	if s.workos == nil {
-		return ""
-	}
-	return s.workos.clientID
-}
-
 type workos struct {
 	clientID      string
 	apiKey        string
 	webhookSecret string
 	actionsSecret string
+	devMode       bool
 }
 
 // workosUser holds the user information returned by WorkOS after token
@@ -59,12 +51,13 @@ type workosJWKS struct {
 	} `json:"keys"`
 }
 
-func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string) *workos {
+func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *workos {
 	return &workos{
 		clientID:      clientID,
 		apiKey:        apiKey,
 		webhookSecret: webhookSecret,
 		actionsSecret: actionsSecret,
+		devMode:       devMode,
 	}
 }
 

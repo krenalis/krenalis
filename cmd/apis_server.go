@@ -92,7 +92,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
 	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
 	sentryErrorTunnel *sentryErrorTunnel, workosClientID string, workosAPIKey string,
-	workosWebhookSecret string, workosActionsSecret string) *apisServer {
+	workosWebhookSecret string, workosActionsSecret string, workosDevMode bool) *apisServer {
 
 	s := &apisServer{
 		core:                   core,
@@ -108,7 +108,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	}
 
 	if workosClientID != "" {
-		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret, workosActionsSecret)
+		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret, workosActionsSecret, workosDevMode)
 	}
 
 	s.sentryTelemetry.level = sentryTelemetryLevel

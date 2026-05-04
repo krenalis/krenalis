@@ -86,7 +86,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		config.HTTP.ExternalURL, config.HTTP.ExternalEventURL, config.ExternalAssetsURLs,
 		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.OrganizationsAPIKey,
 		config.SentryTelemetryLevel, sentryErrorTunnel, config.WorkOS.ClientID, config.WorkOS.APIKey,
-		config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret)
+		config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode)
 
 	admin, err := newAdmin(assetsFS)
 	if err != nil {

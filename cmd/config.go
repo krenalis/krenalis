@@ -75,6 +75,7 @@ type Config struct {
 		APIKey        string
 		WebhookSecret string
 		ActionsSecret string
+		DevMode       bool
 	}
 }
 
@@ -591,6 +592,11 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET cannot be an empty string")
 		}
 		settings.WorkOS.ActionsSecret = actionsSecret
+
+		settings.WorkOS.DevMode, err = boolEnvVar(conf.Get("KRENALIS_WORKOS_DEV_MODE"), false)
+		if err != nil {
+			return nil, fmt.Errorf("KRENALIS_WORKOS_DEV_MODE must be a boolean: %s", err)
+		}
 	}
 
 	return settings, nil
