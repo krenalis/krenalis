@@ -157,7 +157,7 @@ type innerSettings struct {
 	Account   string `json:"account"`
 	Username  string `json:"username"`
 	Password  string `json:"password"`
-	Token     string `json:"token,omitempty"` // JWT token for OIDC/WIF authentication; takes precedence over Password when set
+	OIDCToken string `json:"oidcToken"`
 	Role      string `json:"role"`
 	Database  string `json:"database"`
 	Schema    string `json:"schema"`
@@ -183,10 +183,10 @@ func connector(s *innerSettings) driver.Connector {
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
 	}
-	if s.Token != "" {
+	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
 		cfg.WorkloadIdentityProvider = "OIDC"
-		cfg.Token = s.Token
+		cfg.Token = s.OIDCToken
 	} else {
 		cfg.Password = s.Password
 	}
@@ -271,9 +271,12 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
 		return connectors.NewInvalidSettingsError("username length must be in range [1,255]")
 	}
-	// Validate Password (not required when a token is provided for OIDC/WIF
-	// auth).
-	if s.Token == "" {
+	// Validate combination of OIDC token and password.
+	if (s.OIDCToken == "") == (s.Password == "") {
+		return connectors.NewInvalidSettingsError("one (and only one) of OIDC token or password must be provided")
+	}
+	// Validate Password.
+	if s.Password != "" {
 		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
 			return connectors.NewInvalidSettingsError("password length must be in range [1,255]")
 		}

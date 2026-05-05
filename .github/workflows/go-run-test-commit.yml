@@ -52,6 +52,7 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=snowflakecomputing.com" \
             | jq --raw-output '.value')
           echo "token=$OIDC_TOKEN" >> "$GITHUB_OUTPUT"
+
       - name: go run ./test/commit
         env:
           KRENALIS_SNOWFLAKE_TESTER_ACCOUNT: ${{ secrets.KRENALIS_SNOWFLAKE_TESTER_ACCOUNT }}
@@ -69,7 +70,7 @@ jobs:
           KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY }}
           KRENALIS_TEST_POSTHOG_API_KEY: ${{ secrets.KRENALIS_TEST_POSTHOG_API_KEY }}
           KRENALIS_TEST_POSTHOG_PROJECT_REGION: ${{ secrets.KRENALIS_TEST_POSTHOG_PROJECT_REGION }}
-        run: |
-          go test -test.fullpath=true -timeout 1h -run "^Test_Merge$" "github.com/krenalis/krenalis/warehouses/snowflake" -count 1 -v -failfast
-      # - name: Check that the repository is clean
-      #   run: ./test/commit/repo_is_clean.bash
+        run: go run ./test/commit
+
+      - name: Check that the repository is clean
+        run: ./test/commit/repo_is_clean.bash
