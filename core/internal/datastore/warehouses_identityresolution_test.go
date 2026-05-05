@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -29,16 +30,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
-
-// This file contains tests on Identity Resolution. These tests are executed on
-// the registered data warehouses, provided that the environment variables:
-//
-//      KRENALIS_TEST_PATH_WAREHOUSE_<warehouse-name>
-//
-// are set for the corresponding data warehouse and point to JSON files
-// containing the warehouse settings.
-//
-// WARNING: the warehouses must be empty, as the tests will initialize them.
 
 var columns = []warehouses.Column{
 	{Name: "email", Type: types.String(), Nullable: true},
@@ -535,18 +526,22 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "Snowflake":
-				// Read the warehouse settings, if the env variable is set,
-				// otherwise skip this warehouse.
-				settingsFile, ok := os.LookupEnv("KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE")
-				if !ok {
-					t.Skipf("the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable is not present")
+				// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set
+				// by 'go run ./test/commit' when -no-snowflake-tests is used.
+				if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+					t.Skip()
 				}
-				// Read the JSON file with the warehouse settings.
-				var err error
-				settings, err = os.ReadFile(settingsFile)
+				testEnv, err := snowflaketester.CreateTestEnvironment()
 				if err != nil {
-					t.Fatalf("cannot open the path %q specified in the KRENALIS_TEST_PATH_WAREHOUSE_SNOWFLAKE environment variable: %s", settingsFile, err)
+					t.Fatalf("cannot create Snowflake test environment: %s", err)
 				}
+				defer func() {
+					err := testEnv.Teardown()
+					if err != nil {
+						t.Logf("cannot teardown Snowflake test environment: %s", err)
+					}
+				}()
+				settings = testEnv.Settings().JSON()
 			default:
 				panic(fmt.Sprintf("unsupported data warehouse %q", platform.Name))
 			}

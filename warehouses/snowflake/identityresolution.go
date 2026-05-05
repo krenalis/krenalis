@@ -18,7 +18,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/snowflakedb/gosnowflake"
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 //go:embed identity_resolution.sql
@@ -182,10 +182,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	query = strings.Replace(query, "{{ merge_identities_in_profiles }}", mergeProfiles.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_profiles_name }}", quoteIdent(newProfilesName))
 	query = strings.ReplaceAll(query, "{{ new_profiles_version }}", strconv.Itoa(newProfilesVersion))
-	ctxMulti, err := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
-	if err != nil {
-		return snowflake(err)
-	}
+	ctxMulti := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return snowflake(err)
