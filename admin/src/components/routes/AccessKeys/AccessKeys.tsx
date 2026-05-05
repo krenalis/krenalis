@@ -187,8 +187,7 @@ const AccessKeys = () => {
 		return [apiRows, mcpRows];
 	}, [accessKeys]);
 
-	const hasWorkspaceSupportingMCP =
-		warehouseByWorkspace != null && Object.keys(warehouseByWorkspace).length > 0;
+	const hasWorkspaceSupportingMCP = warehouseByWorkspace != null && Object.values(warehouseByWorkspace).some(Boolean);
 
 	return (
 		<div className='access-keys'>
