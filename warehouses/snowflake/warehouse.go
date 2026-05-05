@@ -21,7 +21,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -412,7 +411,7 @@ func validateSettings(s *sfSettings) error {
 		// referring to the OIDC would only create confusion. If a user wishes
 		// to use an OIDC token in some specific scenario, it's clear that it's
 		// being used as an alternative to the password.
-		return connectors.NewInvalidSettingsError("password must be provided")
+		return warehouses.SettingsErrorf("password must be provided")
 	}
 	if s.Password != "" && s.OIDCToken != "" {
 		return warehouses.SettingsErrorf("password and OIDC token cannot be provided simultaneously")
