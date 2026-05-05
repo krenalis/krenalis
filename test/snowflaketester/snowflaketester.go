@@ -49,13 +49,13 @@ import (
 // The configuration for Snowflake access is read from these environment
 // variables:
 //
-//		KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
-//		KRENALIS_SNOWFLAKE_TESTER_DATABASE
-//		KRENALIS_SNOWFLAKE_TESTER_PASSWORD
-//		KRENALIS_SNOWFLAKE_TESTER_ROLE
-//		KRENALIS_SNOWFLAKE_TESTER_USER
-//		KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
-//	    KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN  ← to be used in CI contexts, otherwise use the password
+//	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_DATABASE
+//	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
+//	KRENALIS_SNOWFLAKE_TESTER_ROLE
+//	KRENALIS_SNOWFLAKE_TESTER_USER
+//	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
+//	KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN  ← to be used in CI contexts, otherwise use the password
 func CreateTestEnvironment() (*TestEnvironment, error) {
 
 	// Return a clear error if env vars are not passed.
