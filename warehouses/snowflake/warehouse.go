@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -405,10 +406,16 @@ func validateSettings(s *sfSettings) error {
 	}
 	// Validate combination of OIDC token and password.
 	if s.Password == "" && s.OIDCToken == "" {
-		return warehouses.SettingsErrorf("either the password or the OIDC token must be provided")
+		// The error message here intentionally doesn't mention that an OIDC
+		// token can be passed instead of a password, as using a password is the
+		// most common method (and the only one available when using Admin), and
+		// referring to the OIDC would only create confusion. If a user wishes
+		// to use an OIDC token in some specific scenario, it's clear that it's
+		// being used as an alternative to the password.
+		return connectors.NewInvalidSettingsError("password must be provided")
 	}
 	if s.Password != "" && s.OIDCToken != "" {
-		return warehouses.SettingsErrorf("the password and the OIDC token cannot be provided simultaneously")
+		return warehouses.SettingsErrorf("password and OIDC token cannot be provided simultaneously")
 	}
 	// Validate Password.
 	if s.Password != "" {
