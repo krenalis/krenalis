@@ -272,15 +272,16 @@ func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, er
 		return "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var parsed struct {
+	var respBody struct {
 		Value string `json:"value"`
 	}
-	if err := json.Unmarshal(body, &parsed); err != nil {
+	err = json.Unmarshal(body, &respBody)
+	if err != nil {
 		return "", fmt.Errorf("cannot parse response body: %s", err)
 	}
-	if parsed.Value == "" {
+	if respBody.Value == "" {
 		return "", errors.New("empty token in response")
 	}
 
-	return parsed.Value, nil
+	return respBody.Value, nil
 }
