@@ -176,7 +176,7 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
 	}
 
-	organizationID, err := wo.resolveOrganization(claims.OrgID)
+	organizationID, err := wo.workosOrganization(claims.OrgID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -184,9 +184,9 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 	return &workosUser{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
 }
 
-// resolveOrganization fetches the WorkOS organization and returns its external
+// workosOrganization fetches the WorkOS organization and returns its external
 // ID as a UUID, which is the Krenalis-side organization identifier.
-func (wo *workos) resolveOrganization(orgID string) (*uuid.UUID, error) {
+func (wo *workos) workosOrganization(orgID string) (*uuid.UUID, error) {
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
