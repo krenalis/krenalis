@@ -19,6 +19,11 @@ import (
 func Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges(t *testing.T) {
 	db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
 		{
+			match: `FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`,
+			cols:  []string{"VERSION"},
+			rows:  [][]driver.Value{{int64(1)}},
+		},
+		{
 			match: `FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"`,
 			cols:  []string{"TABLE_NAME", "PRIVILEGE_TYPE"},
 			rows:  [][]driver.Value{{"KRENALIS_IDENTITIES", "INSERT"}},
@@ -44,6 +49,11 @@ func Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges(t *testing.T) {
 func Test_CheckReadOnlyAccess_rejectsUnreadableRequiredView(t *testing.T) {
 	db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
 		{
+			match: `FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`,
+			cols:  []string{"VERSION"},
+			rows:  [][]driver.Value{{int64(1)}},
+		},
+		{
 			match: `FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"`,
 			cols:  []string{"TABLE_NAME", "PRIVILEGE_TYPE"},
 		},
@@ -67,40 +77,14 @@ func Test_CheckReadOnlyAccess_rejectsUnreadableRequiredView(t *testing.T) {
 	}
 }
 
-func Test_CheckReadOnlyAccess_rejectsDirectInternalTableAccess(t *testing.T) {
-	db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
-		{
-			match: `FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"`,
-			cols:  []string{"TABLE_NAME", "PRIVILEGE_TYPE"},
-		},
-		{
-			match: `SELECT 1 FROM "EVENTS" LIMIT 0`,
-			cols:  []string{"1"},
-		},
-		{
-			match: `SELECT 1 FROM "PROFILES" LIMIT 0`,
-			cols:  []string{"1"},
-		},
-		{
-			match: `FROM "INFORMATION_SCHEMA"."TABLES"`,
-			cols:  []string{"TABLE_NAME"},
-			rows:  [][]driver.Value{{"KRENALIS_IDENTITIES"}},
-		},
-	})
-	defer db.Close()
-
-	wh := &Snowflake{db: db}
-	err := wh.CheckReadOnlyAccess(t.Context())
-	assertSettingsNotReadOnly(t, err)
-
-	if !strings.Contains(err.Error(), "direct access to internal Krenalis tables: KRENALIS_IDENTITIES") {
-		t.Fatalf("expected internal table access error, got %q", err.Error())
-	}
-}
-
 func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 	db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
 		{
+			match: `FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`,
+			cols:  []string{"VERSION"},
+			rows:  [][]driver.Value{{int64(1)}},
+		},
+		{
 			match: `FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"`,
 			cols:  []string{"TABLE_NAME", "PRIVILEGE_TYPE"},
 		},
@@ -111,10 +95,6 @@ func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 		{
 			match: `SELECT 1 FROM "PROFILES" LIMIT 0`,
 			cols:  []string{"1"},
-		},
-		{
-			match: `FROM "INFORMATION_SCHEMA"."TABLES"`,
-			cols:  []string{"TABLE_NAME"},
 		},
 	})
 	defer db.Close()
@@ -124,13 +104,16 @@ func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected read-only access to be accepted, got %s", err)
 	}
+	if got := len(*queries); got != 4 {
+		t.Fatalf("expected 4 queries, got %d:\n%s", got, strings.Join(*queries, "\n"))
+	}
 
 	got := strings.Join(*queries, "\n")
 	for _, want := range []string{
 		`"EVENTS"`,
 		`"PROFILES"`,
 		`KRENALIS_IDENTITIES`,
-		`REGEXP_LIKE("TABLE_NAME", '^KRENALIS_PROFILES_[0-9]+$')`,
+		`KRENALIS_PROFILES_1`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected query to contain %q, got:\n%s", want, got)

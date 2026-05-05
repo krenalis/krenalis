@@ -77,14 +77,21 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 		return snowflake(err)
 	}
 
+	// Retrieve the profiles table version.
+	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Determine if there are tables on the data warehouse for which the active
 	// Snowflake role hierarchy has too many privileges.
-	fixedTables := []string{
+	tables := []string{
 		"KRENALIS_DESTINATION_PROFILES",
 		"KRENALIS_SYSTEM_OPERATIONS",
 		"KRENALIS_IDENTITIES",
 		"KRENALIS_PROFILE_SCHEMA_VERSIONS",
 		"KRENALIS_EVENTS",
+		"KRENALIS_PROFILES_" + strconv.Itoa(profileSchemaVersion),
 	}
 	publicViews := []string{"EVENTS", "PROFILES"}
 	disallowedPrivileges := []string{"APPLYBUDGET", "DELETE", "EVOLVE SCHEMA", "INSERT", "OWNERSHIP", "TRUNCATE", "UPDATE"}
@@ -101,7 +108,7 @@ WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
   )
   AND (
     "TABLE_NAME" IN (`)
-	for i, table := range fixedTables {
+	for i, table := range tables {
 		if i > 0 {
 			query.WriteByte(',')
 		}
@@ -112,7 +119,6 @@ WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
 		quoteString(&query, view)
 	}
 	query.WriteString(`)
-    OR REGEXP_LIKE("TABLE_NAME", '^KRENALIS_PROFILES_[0-9]+$')
   )
   AND "PRIVILEGE_TYPE" IN (`)
 	for i, privilege := range disallowedPrivileges {
@@ -128,7 +134,6 @@ ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
 	if err != nil {
 		return snowflake(err)
 	}
-	defer rows.Close()
 
 	tooPrivilegedTables := make(map[string][]string)
 	var tooPrivilegedTableNames []string
@@ -136,6 +141,7 @@ ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
 		var table, privilege string
 		err = rows.Scan(&table, &privilege)
 		if err != nil {
+			rows.Close()
 			return snowflake(err)
 		}
 		if len(tooPrivilegedTables[table]) == 0 {
@@ -174,56 +180,6 @@ ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
 		}
 	}
 
-	var internalTablesQuery strings.Builder
-	internalTablesQuery.WriteString(`
-SELECT "TABLE_NAME"
-FROM "INFORMATION_SCHEMA"."TABLES"
-WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
-  AND "TABLE_SCHEMA" = CURRENT_SCHEMA()
-  AND "TABLE_TYPE" = 'BASE TABLE'
-  AND (
-    "TABLE_NAME" IN (`)
-	for i, table := range fixedTables {
-		if i > 0 {
-			internalTablesQuery.WriteByte(',')
-		}
-		quoteString(&internalTablesQuery, table)
-	}
-	internalTablesQuery.WriteString(`)
-    OR REGEXP_LIKE("TABLE_NAME", '^KRENALIS_PROFILES_[0-9]+$')
-  )
-ORDER BY "TABLE_NAME"`)
-
-	rows, err = db.QueryContext(ctx, internalTablesQuery.String())
-	if err != nil {
-		return snowflake(err)
-	}
-	defer rows.Close()
-
-	var directlyReadableInternalTables []string
-	for rows.Next() {
-		var table string
-		err = rows.Scan(&table)
-		if err != nil {
-			return snowflake(err)
-		}
-		directlyReadableInternalTables = append(directlyReadableInternalTables, table)
-	}
-	if err = rows.Err(); err != nil {
-		rows.Close()
-		return snowflake(err)
-	}
-	if err = rows.Close(); err != nil {
-		return snowflake(err)
-	}
-	if len(directlyReadableInternalTables) > 0 {
-		return &warehouses.SettingsNotReadOnly{
-			Err: fmt.Errorf(
-				"the credentials should be read-only, but they allow direct access to internal Krenalis tables: %s",
-				strings.Join(directlyReadableInternalTables, ", "),
-			)}
-	}
-
 	return nil
 }
 
@@ -234,7 +190,6 @@ func snowflakeQueryRelation(ctx context.Context, db *sql.DB, relation string) er
 	if err != nil {
 		return snowflake(err)
 	}
-	defer rows.Close()
 	err = rows.Close()
 	if err != nil {
 		return snowflake(err)
