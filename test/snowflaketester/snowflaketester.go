@@ -19,7 +19,9 @@
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
-//	KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN ← to be used in CI contexts, otherwise use the password
+//
+// When running inside GitHub Actions, the password is ignored and a fresh OIDC
+// token is minted from GitHub on every call (audience snowflakecomputing.com).
 //
 // # Creating a test environment on Snowflake
 //
@@ -34,7 +36,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -56,7 +60,10 @@ import (
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
-//	KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN  ← to be used in CI contexts, otherwise use the password
+//
+// When running inside GitHub Actions (i.e. ACTIONS_ID_TOKEN_REQUEST_URL and
+// ACTIONS_ID_TOKEN_REQUEST_TOKEN are set), the password is ignored and a fresh
+// OIDC token is minted from GitHub on every call.
 func CreateTestEnvironment() (*TestEnvironment, error) {
 
 	// Return a clear error if env vars are not passed.
@@ -76,16 +83,25 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),
 		Database:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_DATABASE"),
 		Password:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_PASSWORD"),
-		OIDCToken: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN"),
 		Role:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ROLE"),
 		Schema:    "", // will be set later.
 		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
 		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
 	}
 
-	// Make sure only one of the password and the OIDC token are provided.
-	if settings.OIDCToken != "" && settings.Password != "" {
-		return nil, errors.New("KRENALIS_SNOWFLAKE_TESTER_PASSWORD and KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN cannot be provided simultaneously")
+	// When running inside GitHub Actions, mint a fresh OIDC token on every
+	// invocation. A single pre-fetched token would expire (~15 minute lifetime)
+	// before the long 'go run ./test/commit' run completes. The
+	// ACTIONS_ID_TOKEN_REQUEST_* env vars are exposed for the whole job when
+	// 'permissions: id-token: write' is set, and can be used to mint a new
+	// token on demand.
+	if reqURL, reqToken := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN"); reqURL != "" && reqToken != "" {
+		token, err := fetchGitHubOIDCToken(reqURL, reqToken, "snowflakecomputing.com")
+		if err != nil {
+			return nil, fmt.Errorf("cannot fetch GitHub OIDC token: %s", err)
+		}
+		settings.OIDCToken = token
+		settings.Password = ""
 	}
 
 	// Instantiate a Snowflake connector.
@@ -223,3 +239,47 @@ func generateTestSchemaName() (string, error) {
 }
 
 var falseStrPtr = new("false")
+
+// fetchGitHubOIDCToken requests a fresh OIDC token from GitHub Actions for the
+// given audience. requestURL and requestToken are the values of the
+// ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars set
+// by the runner when the job has 'permissions: id-token: write'.
+func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, error) {
+	sep := "?"
+	if strings.Contains(requestURL, "?") {
+		sep = "&"
+	}
+	req, err := http.NewRequest(http.MethodGet, requestURL+sep+"audience="+audience, nil)
+	if err != nil {
+		return "", fmt.Errorf("cannot build request: %s", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+requestToken)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("cannot perform request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("cannot read response body: %s", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var parsed struct {
+		Value string `json:"value"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return "", fmt.Errorf("cannot parse response body: %s", err)
+	}
+	if parsed.Value == "" {
+		return "", errors.New("empty token in response")
+	}
+
+	return parsed.Value, nil
+}
