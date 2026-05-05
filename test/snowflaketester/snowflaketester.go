@@ -32,6 +32,7 @@ import (
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -80,6 +81,11 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 		Schema:    "", // will be set later.
 		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
 		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
+	}
+
+	// Make sure only one of the password and the OIDC token are provided.
+	if settings.OIDCToken != "" && settings.Password != "" {
+		return nil, errors.New("KRENALIS_SNOWFLAKE_TESTER_PASSWORD and KRENALIS_SNOWFLAKE_TESTER_OIDC_TOKEN cannot be provided simultaneously")
 	}
 
 	// Instantiate a Snowflake connector.
