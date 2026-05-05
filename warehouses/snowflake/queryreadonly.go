@@ -15,12 +15,11 @@ import (
 // and the number of columns in each row.
 //
 // Safety depends on deployment assumptions in addition to SQL validation:
-//   - The MCP credentials must have passed CheckReadOnlyAccess before use.
-//   - The active Snowflake role hierarchy must expose only the expected
-//     read-only surface.
-//
-// Snowflake role privileges are the database-enforced runtime protection.
+//   - The workspace warehouse user must have only read-only access.
 func (warehouse *Snowflake) QueryReadOnly(ctx context.Context, query string) (warehouses.Rows, int, error) {
+	// Security is layered:
+	// 1. QueryReadOnly rejects queries outside a supported read-only subset.
+	// 2. The Snowflake role hierarchy is expected to have read-only privileges.
 	if err := readonlysql.ValidateReadOnly(query); err != nil {
 		return nil, 0, err
 	}
