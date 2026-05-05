@@ -97,8 +97,7 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 	disallowedPrivileges := []string{"APPLYBUDGET", "DELETE", "EVOLVE SCHEMA", "INSERT", "OWNERSHIP", "TRUNCATE", "UPDATE"}
 
 	var query strings.Builder
-	query.WriteString(`
-SELECT "TABLE_NAME", "PRIVILEGE_TYPE"
+	query.WriteString(`SELECT "TABLE_NAME", "PRIVILEGE_TYPE"
 FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"
 WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
   AND "TABLE_SCHEMA" = CURRENT_SCHEMA()
