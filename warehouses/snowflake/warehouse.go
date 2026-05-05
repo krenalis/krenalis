@@ -93,7 +93,6 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 		"KRENALIS_EVENTS",
 		"KRENALIS_PROFILES_" + strconv.Itoa(profileSchemaVersion),
 	}
-	publicViews := []string{"EVENTS", "PROFILES"}
 	disallowedPrivileges := []string{"APPLYBUDGET", "DELETE", "EVOLVE SCHEMA", "INSERT", "OWNERSHIP", "TRUNCATE", "UPDATE"}
 
 	var query strings.Builder
@@ -112,10 +111,6 @@ WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
 			query.WriteByte(',')
 		}
 		quoteString(&query, table)
-	}
-	for _, view := range publicViews {
-		query.WriteByte(',')
-		quoteString(&query, view)
 	}
 	query.WriteString(`)
   )
@@ -170,7 +165,7 @@ ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
 			)}
 	}
 
-	for _, view := range publicViews {
+	for _, view := range []string{"EVENTS", "PROFILES"} {
 		err = snowflakeQueryRelation(ctx, db, view)
 		if err != nil {
 			return &warehouses.SettingsNotReadOnly{
