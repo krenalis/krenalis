@@ -165,32 +165,6 @@ ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
 			)}
 	}
 
-	for _, view := range []string{"EVENTS", "PROFILES"} {
-		err = snowflakeQueryRelation(ctx, db, view)
-		if err != nil {
-			return &warehouses.SettingsNotReadOnly{
-				Err: fmt.Errorf("the credentials should be read-only, but they cannot read the required %s view: %w", view, err),
-			}
-		}
-	}
-
-	return nil
-}
-
-// snowflakeQueryRelation verifies that relation can be queried by the current
-// Snowflake session without reading any rows.
-func snowflakeQueryRelation(ctx context.Context, db *sql.DB, relation string) error {
-	rows, err := db.QueryContext(ctx, "SELECT 1 FROM "+quoteIdent(relation)+" LIMIT 0")
-	if err != nil {
-		return snowflake(err)
-	}
-	err = rows.Close()
-	if err != nil {
-		return snowflake(err)
-	}
-	if err = rows.Err(); err != nil {
-		return snowflake(err)
-	}
 	return nil
 }
 
