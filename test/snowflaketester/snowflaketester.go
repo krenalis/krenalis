@@ -245,6 +245,7 @@ var falseStrPtr = new("false")
 // ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars set
 // by the runner when the job has 'permissions: id-token: write'.
 func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, error) {
+
 	sep := "?"
 	if strings.Contains(requestURL, "?") {
 		sep = "&"
