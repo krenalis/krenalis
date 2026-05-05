@@ -36,6 +36,7 @@ func (n scannedName) normalizedToken() string {
 
 // normalizedChain returns the lowercase ASCII dotted chain.
 func (n scannedName) normalizedChain(sql string) string {
+
 	if !n.isQualified {
 		return n.normalizedToken()
 	}
@@ -67,6 +68,7 @@ func (n scannedName) normalizedChain(sql string) string {
 // scanIdentifierChain scans an unquoted identifier and following unquoted
 // dotted parts.
 func scanIdentifierChain(sql string, start int) (scannedName, error) {
+
 	tokenEnd := scanIdentifierEnd(sql, start)
 	lastEnd := tokenEnd
 	isQualified := false

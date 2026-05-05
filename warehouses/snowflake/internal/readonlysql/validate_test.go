@@ -14,6 +14,7 @@ import (
 
 // TestValidateReadOnlyStatements verifies statement-level policy.
 func TestValidateReadOnlyStatements(t *testing.T) {
+
 	acceptTests := []struct {
 		name string
 		sql  string
@@ -106,6 +107,7 @@ func TestValidateReadOnlyStatements(t *testing.T) {
 
 // TestValidateReadOnlyIdentifierChains verifies Snowflake identifier forms.
 func TestValidateReadOnlyIdentifierChains(t *testing.T) {
+
 	tests := []struct {
 		name string
 		sql  string
@@ -128,6 +130,7 @@ func TestValidateReadOnlyIdentifierChains(t *testing.T) {
 
 // TestValidateReadOnlyFunctionsAllowed verifies allowed function calls.
 func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
+
 	tests := []struct {
 		name string
 		sql  string
@@ -179,6 +182,7 @@ func TestValidateReadOnlyFunctionsAllowed(t *testing.T) {
 
 // TestValidateReadOnlyFunctionsRejected verifies rejected function calls.
 func TestValidateReadOnlyFunctionsRejected(t *testing.T) {
+
 	tests := []struct {
 		name    string
 		sql     string
@@ -212,6 +216,7 @@ func TestValidateReadOnlyFunctionsRejected(t *testing.T) {
 
 // TestValidateReadOnlyQualifiedFunctionsRejected verifies qualified calls.
 func TestValidateReadOnlyQualifiedFunctionsRejected(t *testing.T) {
+
 	tests := []struct {
 		name string
 		sql  string
@@ -240,6 +245,7 @@ func TestValidateReadOnlyQualifiedFunctionsRejected(t *testing.T) {
 
 // TestValidateReadOnlySnowflakeLexicalRejections verifies Snowflake syntax.
 func TestValidateReadOnlySnowflakeLexicalRejections(t *testing.T) {
+
 	tests := []struct {
 		name    string
 		sql     string
@@ -278,6 +284,7 @@ func TestNewFunctionNotAllowedError(t *testing.T) {
 
 // TestASCIIWordSetHas verifies ASCII case-insensitive word lookup.
 func TestASCIIWordSetHas(t *testing.T) {
+
 	set := newASCIIWordSet("select", "current_timestamp")
 
 	if !set.Has("SELECT") {
@@ -325,8 +332,7 @@ func assertFunctionNotAllowedError(t *testing.T, err error, wantName string) {
 // assertRejectedError fails if err is not a read-only query rejection.
 func assertRejectedError(t *testing.T, err error) {
 	t.Helper()
-	var target *warehouses.RejectedReadOnlyQueryError
-	if !errors.As(err, &target) {
+	if _, ok := errors.AsType[*warehouses.RejectedReadOnlyQueryError](err); !ok {
 		t.Fatalf("expected warehouses.RejectedReadOnlyQueryError, got %T (%v)", err, err)
 	}
 }
@@ -334,8 +340,7 @@ func assertRejectedError(t *testing.T, err error) {
 // assertNoRejectedFunctionError fails if err carries a rejected function name.
 func assertNoRejectedFunctionError(t *testing.T, err error) {
 	t.Helper()
-	var target *warehouses.RejectedReadOnlyQueryError
-	if errors.As(err, &target) && target.Function != "" {
+	if target, ok := errors.AsType[*warehouses.RejectedReadOnlyQueryError](err); ok && target.Function != "" {
 		t.Fatalf("expected no rejected function name, got %+v", target)
 	}
 }

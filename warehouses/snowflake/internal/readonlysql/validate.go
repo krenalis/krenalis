@@ -15,6 +15,7 @@ package readonlysql
 // warehouses.RejectedReadOnlyQueryError describing the reason for the
 // rejection.
 func ValidateReadOnly(query string) error {
+
 	var seenMainSelect bool
 	var seenTopLevel bool
 	var expectCTEName bool

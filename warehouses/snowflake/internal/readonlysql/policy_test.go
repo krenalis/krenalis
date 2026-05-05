@@ -11,6 +11,7 @@ import (
 
 // TestPolicyForbiddenTokens verifies the Snowflake command denylist.
 func TestPolicyForbiddenTokens(t *testing.T) {
+
 	tests := []string{
 		"alter",
 		"begin",
@@ -63,6 +64,7 @@ func TestPolicyForbiddenTokens(t *testing.T) {
 
 // TestPolicyAllowedFunctions verifies the initial BI-oriented allowlist.
 func TestPolicyAllowedFunctions(t *testing.T) {
+
 	tests := []string{
 		"abs",
 		"array_construct",
@@ -133,6 +135,7 @@ func TestPolicyAllowedFunctions(t *testing.T) {
 
 // TestPolicyRejectedFunctions verifies representative non-allowlisted calls.
 func TestPolicyRejectedFunctions(t *testing.T) {
+
 	tests := []string{
 		"identifier",
 		"last_query_id",
@@ -156,6 +159,7 @@ func TestPolicyRejectedFunctions(t *testing.T) {
 
 // TestPolicyDisallowedSpecialForms verifies context forms without parentheses.
 func TestPolicyDisallowedSpecialForms(t *testing.T) {
+
 	tests := []string{
 		"current_account",
 		"current_database",
