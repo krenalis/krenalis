@@ -16,6 +16,9 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges verifies that
+// CheckReadOnlyAccess rejects active Snowflake roles with non-read-only
+// privileges on Krenalis tables.
 func Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges(t *testing.T) {
 	db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
 		{
@@ -46,6 +49,9 @@ func Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges(t *testing.T) {
 	}
 }
 
+// Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface verifies that
+// CheckReadOnlyAccess accepts credentials when no disallowed table privilege is
+// reported.
 func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 	db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
 		{
@@ -80,6 +86,8 @@ func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 	}
 }
 
+// assertSettingsNotReadOnly fails the test unless err wraps a
+// warehouses.SettingsNotReadOnly value.
 func assertSettingsNotReadOnly(t *testing.T, err error) {
 	t.Helper()
 	var target *warehouses.SettingsNotReadOnly
@@ -88,6 +96,8 @@ func assertSettingsNotReadOnly(t *testing.T, err error) {
 	}
 }
 
+// checkReadOnlyQuery describes one expected SQL query and the rows or error
+// returned by the fake CheckReadOnlyAccess database connection.
 type checkReadOnlyQuery struct {
 	match string
 	cols  []string
@@ -95,6 +105,8 @@ type checkReadOnlyQuery struct {
 	err   error
 }
 
+// newCheckReadOnlyTestDB returns a database backed by a fake driver that
+// validates query order and records every query it receives.
 func newCheckReadOnlyTestDB(t *testing.T, responses []checkReadOnlyQuery) (*sql.DB, *[]string) {
 	t.Helper()
 
@@ -107,6 +119,8 @@ func newCheckReadOnlyTestDB(t *testing.T, responses []checkReadOnlyQuery) (*sql.
 	return sql.OpenDB(connector), &queries
 }
 
+// checkReadOnlyConnector implements driver.Connector for the fake
+// CheckReadOnlyAccess database.
 type checkReadOnlyConnector struct {
 	t         *testing.T
 	responses []checkReadOnlyQuery
@@ -114,36 +128,48 @@ type checkReadOnlyConnector struct {
 	next      int
 }
 
+// Connect returns a new fake connection sharing c's response cursor.
 func (c *checkReadOnlyConnector) Connect(context.Context) (driver.Conn, error) {
 	return &checkReadOnlyConn{connector: c}, nil
 }
 
+// Driver returns the fake driver associated with c.
 func (c *checkReadOnlyConnector) Driver() driver.Driver {
 	return checkReadOnlyDriver{}
 }
 
+// checkReadOnlyDriver implements driver.Driver for sql.OpenDB compatibility.
 type checkReadOnlyDriver struct{}
 
+// Open is unused because tests construct databases through sql.OpenDB.
 func (checkReadOnlyDriver) Open(string) (driver.Conn, error) {
 	return nil, errors.New("checkReadOnlyDriver.Open is not used")
 }
 
+// checkReadOnlyConn implements the query-capable subset of driver.Conn used by
+// CheckReadOnlyAccess.
 type checkReadOnlyConn struct {
 	connector *checkReadOnlyConnector
 }
 
+// Prepare is not implemented because the tests only exercise QueryContext.
 func (c *checkReadOnlyConn) Prepare(string) (driver.Stmt, error) {
 	return nil, errors.New("checkReadOnlyConn.Prepare is not implemented")
 }
 
+// Close closes the fake connection.
 func (c *checkReadOnlyConn) Close() error {
 	return nil
 }
 
+// Begin is not implemented because CheckReadOnlyAccess does not start
+// transactions.
 func (c *checkReadOnlyConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("checkReadOnlyConn.Begin is not implemented")
 }
 
+// QueryContext validates query against the next expected response and returns
+// its configured rows or error.
 func (c *checkReadOnlyConn) QueryContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Rows, error) {
 	connector := c.connector
 	*connector.queries = append(*connector.queries, query)
@@ -162,20 +188,24 @@ func (c *checkReadOnlyConn) QueryContext(_ context.Context, query string, _ []dr
 	return &checkReadOnlyRows{cols: response.cols, rows: response.rows}, nil
 }
 
+// checkReadOnlyRows implements driver.Rows over an in-memory row slice.
 type checkReadOnlyRows struct {
 	cols []string
 	rows [][]driver.Value
 	next int
 }
 
+// Columns returns the configured result column names.
 func (r *checkReadOnlyRows) Columns() []string {
 	return r.cols
 }
 
+// Close closes the fake result set.
 func (r *checkReadOnlyRows) Close() error {
 	return nil
 }
 
+// Next copies the next configured row into dest.
 func (r *checkReadOnlyRows) Next(dest []driver.Value) error {
 	if r.next >= len(r.rows) {
 		return io.EOF
