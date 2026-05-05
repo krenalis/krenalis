@@ -10,6 +10,7 @@ jobs:
     # Note that 'ubuntu-latest' includes the Docker server, which is required to
     # run './test/commit'.
     runs-on: ubuntu-latest
+    environment: tests
 
     timeout-minutes: 40
 
