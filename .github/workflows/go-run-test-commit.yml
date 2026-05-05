@@ -49,7 +49,7 @@ jobs:
         run: |
           OIDC_TOKEN=$(curl --fail --silent \
             --header "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=${{ secrets.KRENALIS_SNOWFLAKE_TESTER_ACCOUNT }}" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=snowflakecomputing.com" \
             | jq --raw-output '.value')
           echo "token=$OIDC_TOKEN" >> "$GITHUB_OUTPUT"
       - name: go run ./test/commit
