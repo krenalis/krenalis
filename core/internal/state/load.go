@@ -232,7 +232,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return errors.New("missing notification key in metadata table")
 	}
 	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
-	validNotificationKeyCh := make(chan error)
+	validNotificationKeyCh := make(chan error, 1)
 	go func() {
 		validNotificationKeyCh <- notificationKey.IsValid(ctx)
 	}()
