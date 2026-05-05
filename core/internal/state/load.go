@@ -204,10 +204,12 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		_ = tx.Rollback(ctx)
 	}()
 
-	// Read the installation ID and the KMS-encrypted cookie and notification keys.
-	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey []byte
-	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key FROM metadata").Scan(
-		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedOAuthKey, &kmsEncryptedNotificationKey)
+	// Read the installation ID, the KMS-encrypted cookie, OAuth, and notification keys, and the API key pepper.
+	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
+	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key,"+
+		" kms_encrypted_notification_key, kms_encrypted_api_key_pepper FROM metadata").Scan(
+		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedOAuthKey,
+		&kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New("row is missing from table 'metadata'")
@@ -216,6 +218,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 	defer clear(kmsEncryptedOAuthKey)
 	defer clear(kmsEncryptedNotificationKey)
+	defer clear(kmsEncryptedAPIKeyPepper)
 	if state.metadata.installationID == "" {
 		return errors.New("missing installation ID in metadata table")
 	}
@@ -232,12 +235,17 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return errors.New("missing notification key in metadata table")
 	}
 	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
+	clear(kmsEncryptedNotificationKey)
 	validNotificationKeyCh := make(chan error, 1)
 	go func() {
 		validNotificationKeyCh <- notificationKey.IsValid(ctx)
 	}()
-
-	clear(kmsEncryptedNotificationKey)
+	// API key pepper.
+	if len(kmsEncryptedAPIKeyPepper) == 0 {
+		return errors.New("missing API key pepper in metadata table")
+	}
+	state.metadata.apiKeyPepper = state.cipher.Key(kmsEncryptedAPIKeyPepper)
+	clear(kmsEncryptedAPIKeyPepper)
 
 	// Read the latest election.
 	err = tx.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
@@ -353,20 +361,24 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all access keys.
-	state.accessKeyByToken = map[string]*AccessKey{}
-	err = tx.QueryScan(ctx, "SELECT id, organization, workspace, type, token FROM access_keys",
+	state.accessKeyByHMAC = map[string]*AccessKey{}
+	err = tx.QueryScan(ctx, "SELECT id, organization, workspace, type, hmac FROM access_keys",
 		func(rows *db.Rows) error {
+			var hmac []byte
 			for rows.Next() {
 				k := AccessKey{}
-				var token string
 				var workspace *int
-				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &k.Type, &token); err != nil {
+				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &k.Type, &hmac); err != nil {
 					return err
 				}
 				if workspace != nil {
 					k.Workspace = *workspace
 				}
-				state.accessKeyByToken[token] = &k
+				if len(hmac) != 32 {
+					return errors.New("state: access key token HMAC is invalid")
+				}
+				state.accessKeyByHMAC[string(hmac)] = &k
+				clear(hmac)
 			}
 			return nil
 		})

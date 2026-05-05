@@ -602,8 +602,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 		if token, found := strings.CutPrefix(token, "api_"); found {
 			// Authenticate with the API key in the header.
-			key, ok := c.state.AccessKeyByToken(token)
-			if !ok || key.Type != state.AccessKeyTypeAPI {
+			key, err := c.state.AccessKey(r.Context(), token)
+			if err != nil {
+				switch err {
+				case state.ErrInvalidAccessKeyFormat:
+					err = errors.BadRequest("API key in the Authorization header is malformed; check that it was copied correctly")
+				case state.ErrAccessKeyNotFound:
+					err = errors.Unauthorized("API key in the Authorization header is invalid")
+				}
+				return err
+			}
+			if key.Type != state.AccessKeyTypeAPI {
 				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
 			if header, ok := r.Header["Krenalis-Workspace"]; ok {
