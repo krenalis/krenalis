@@ -393,21 +393,6 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	return id, nil
 }
 
-// MemberByEmail returns the ID of the member with the given email in the
-// organization.
-func (this *Organization) MemberByEmail(ctx context.Context, email string) (int, error) {
-	this.core.mustBeOpen()
-	var id int
-	err := this.core.db.QueryRow(ctx, "SELECT id FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email).Scan(&id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, errors.NotFound("member with email %s does not exist", email)
-		}
-		return 0, err
-	}
-	return id, nil
-}
-
 // CreateAccessKey creates a new access key for the organization with the
 // specified name, which must be between 1 and 100 runes in length, and the
 // specified type. If the workspace is not 0, the key will be restricted to that
