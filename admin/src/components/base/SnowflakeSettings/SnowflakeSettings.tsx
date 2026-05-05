@@ -13,7 +13,7 @@ interface settingsProps {
 const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef }: settingsProps) => {
 	useEffect(() => {
 		if (settings === undefined && precompileDefault) {
-			// Precompile schema and role.
+			// Precompile schema.
 			setSettings({
 				schema: 'PUBLIC',
 			});
