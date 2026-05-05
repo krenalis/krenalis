@@ -134,7 +134,7 @@ type Settings struct {
 	Account   string
 	User      string
 	Password  string
-	OIDCToken string // JWT token for OIDC/WIF authentication; takes precedence over Password when set
+	OIDCToken string
 	Database  string
 	Role      string
 	Schema    string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
@@ -157,6 +157,9 @@ func (testEnv *TestEnvironment) Settings() Settings {
 //	    "schema": "...",
 //	    "role": "..."
 //	}
+//
+// The "oidcToken" field may be returned instead of "password" when using OIDC
+// authentication.
 func (settings Settings) JSON() []byte {
 	m := map[string]any{
 		"username":  settings.User,
@@ -167,7 +170,7 @@ func (settings Settings) JSON() []byte {
 		"role":      settings.Role,
 	}
 	if settings.OIDCToken != "" {
-		m["token"] = settings.OIDCToken
+		m["oidcToken"] = settings.OIDCToken
 	} else {
 		m["password"] = settings.Password
 	}

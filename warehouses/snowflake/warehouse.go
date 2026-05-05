@@ -404,8 +404,11 @@ func validateSettings(s *sfSettings) error {
 		return warehouses.SettingsErrorf("user name length must be in range [1,255]")
 	}
 	// Validate combination of OIDC token and password.
-	if (s.OIDCToken == "") == (s.Password == "") {
-		return warehouses.SettingsErrorf("one (and only one) of OIDC token or password must be provided")
+	if s.Password == "" && s.OIDCToken == "" {
+		return warehouses.SettingsErrorf("either the password or the OIDC token must be provided")
+	}
+	if s.Password != "" && s.OIDCToken != "" {
+		return warehouses.SettingsErrorf("the password and the OIDC token cannot be provided simultaneously")
 	}
 	// Validate Password.
 	if s.Password != "" {

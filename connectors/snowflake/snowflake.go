@@ -272,8 +272,11 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 		return connectors.NewInvalidSettingsError("username length must be in range [1,255]")
 	}
 	// Validate combination of OIDC token and password.
-	if (s.OIDCToken == "") == (s.Password == "") {
-		return connectors.NewInvalidSettingsError("one (and only one) of OIDC token or password must be provided")
+	if s.Password == "" && s.OIDCToken == "" {
+		return connectors.NewInvalidSettingsError("either the password or the OIDC token must be provided")
+	}
+	if s.Password != "" && s.OIDCToken != "" {
+		return connectors.NewInvalidSettingsError("the password and the OIDC token cannot be provided simultaneously")
 	}
 	// Validate Password.
 	if s.Password != "" {
