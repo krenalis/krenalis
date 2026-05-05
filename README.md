@@ -2,7 +2,7 @@
 
 [Krenalis](https://www.krenalis.com) is a Customer Data Platform (CDP) that helps data analysts and the marketing team collect, enrich, unify, and activate user and customer data — including product events, marketing signals, and sales interactions — and syncs it to the tools your teams use every day.
 
-Krenalis is open and free to use. It's a lightweight, developer-friendly alternative to Customer Data Platforms such as Segment, RudderStack, and mParticle.  
+Krenalis is open and free to use. It's a lightweight, developer-friendly alternative to Customer Data Platforms such as Segment, RudderStack, and mParticle.
 
 It is built in Go with a modern TypeScript/React frontend and a comprehensive REST API, and ships as a **single executable** that includes:
 
@@ -31,14 +31,14 @@ Meanwhile, **real-time, bidirectional sync** keeps operational tools aligned wit
 
 The easiest way to collect events is to use one of the official SDKs:
 
-- **JavaScript (Browser)** — https://github.com/krenalis/analytics-javascript  
+- **JavaScript (Browser)** — https://github.com/krenalis/analytics-javascript
 - **Android** — https://github.com/krenalis/analytics-kotlin
 - **iOS** — https://github.com/krenalis/analytics-swift
-- **Python** — https://github.com/krenalis/analytics-python  
-- **.NET** — https://github.com/krenalis/analytics-dotnet  
-- **Java** — https://github.com/krenalis/analytics-java  
-- **Node.js** — https://github.com/krenalis/analytics-nodejs  
-- **Go** — https://github.com/krenalis/analytics-go  
+- **Python** — https://github.com/krenalis/analytics-python
+- **.NET** — https://github.com/krenalis/analytics-dotnet
+- **Java** — https://github.com/krenalis/analytics-java
+- **Node.js** — https://github.com/krenalis/analytics-nodejs
+- **Go** — https://github.com/krenalis/analytics-go
 
 ## Get Started
 
