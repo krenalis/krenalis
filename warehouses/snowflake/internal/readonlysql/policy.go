@@ -61,8 +61,11 @@ var nonFunctionCallTokens = newASCIIWordSet(
 	"when",
 )
 
-// allowedFunctionCalls is the initial Snowflake allowlist used by
+// allowedFunctionCalls is the Snowflake function allowlist used by
 // ValidateReadOnly.
+//
+// The list is intentionally limited to a practical BI-oriented subset rather
+// than all safe Snowflake built-ins.
 var allowedFunctionCalls = newASCIIWordSet(
 	"abs",
 	"array_construct",

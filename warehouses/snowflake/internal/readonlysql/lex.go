@@ -64,7 +64,8 @@ func (n scannedName) normalizedChain(sql string) string {
 	return b.String()
 }
 
-// scanIdentifierChain scans an unquoted identifier and following dotted parts.
+// scanIdentifierChain scans an unquoted identifier and following unquoted
+// dotted parts.
 func scanIdentifierChain(sql string, start int) (scannedName, error) {
 	tokenEnd := scanIdentifierEnd(sql, start)
 	lastEnd := tokenEnd
