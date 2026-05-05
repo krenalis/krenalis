@@ -346,7 +346,7 @@ type CreateAccessKey struct {
 	Organization uuid.UUID
 	Workspace    int
 	Type         AccessKeyType
-	Token        string
+	HMAC         []byte
 }
 
 // createAccessKey creates an access key.
@@ -362,7 +362,7 @@ func (state *State) createAccessKey(n notification) uuid.UUID {
 		Type:         e.Type,
 	}
 	state.mu.Lock()
-	state.accessKeyByToken[e.Token] = &key
+	state.accessKeyByHMAC[string(e.HMAC)] = &key
 	state.mu.Unlock()
 	return e.Organization
 }
@@ -675,9 +675,9 @@ func (state *State) deleteAccessKey(n notification) uuid.UUID {
 	}
 	var org uuid.UUID
 	state.mu.Lock()
-	for token, key := range state.accessKeyByToken {
+	for hmac, key := range state.accessKeyByHMAC {
 		if key.ID == e.ID {
-			delete(state.accessKeyByToken, token)
+			delete(state.accessKeyByHMAC, hmac)
 			org = key.Organization
 			break
 		}
@@ -871,9 +871,9 @@ func (state *State) deleteOrganization(n notification) uuid.UUID {
 		delete(state.workspaces, id)
 	}
 	// Delete all access keys belonging to the organization.
-	for token, key := range state.accessKeyByToken {
+	for hmac, key := range state.accessKeyByHMAC {
 		if key.Organization == e.ID {
-			delete(state.accessKeyByToken, token)
+			delete(state.accessKeyByHMAC, hmac)
 		}
 	}
 	state.mu.Unlock()
