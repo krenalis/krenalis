@@ -39,6 +39,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -250,7 +251,7 @@ func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, er
 	if strings.Contains(requestURL, "?") {
 		sep = "&"
 	}
-	req, err := http.NewRequest(http.MethodGet, requestURL+sep+"audience="+audience, nil)
+	req, err := http.NewRequest(http.MethodGet, requestURL+sep+"audience="+url.QueryEscape(audience), nil)
 	if err != nil {
 		return "", fmt.Errorf("cannot build request: %s", err)
 	}
