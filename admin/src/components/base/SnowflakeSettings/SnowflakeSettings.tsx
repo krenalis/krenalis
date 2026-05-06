@@ -7,12 +7,13 @@ interface settingsProps {
 	setSettings: React.Dispatch<React.SetStateAction<any>>;
 	settings: WarehouseSettings | undefined;
 	precompileDefault: boolean;
+	inputRef?: any;
 }
 
-const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: settingsProps) => {
+const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef }: settingsProps) => {
 	useEffect(() => {
 		if (settings === undefined && precompileDefault) {
-			// Precompile schema and role.
+			// Precompile schema.
 			setSettings({
 				schema: 'PUBLIC',
 			});
@@ -50,6 +51,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: setting
 				maxlength={255}
 				onSlInput={onSettingInput}
 				value={settings?.username || ''}
+				ref={inputRef}
 			/>
 			<SlInput
 				name='password'

@@ -187,9 +187,7 @@ const AccessKeys = () => {
 		return [apiRows, mcpRows];
 	}, [accessKeys]);
 
-	const hasWorkspaceSupportingMCP =
-		warehouseByWorkspace != null &&
-		Object.keys(warehouseByWorkspace).findIndex((id) => warehouseByWorkspace[id] !== 'Snowflake') !== -1;
+	const hasWorkspaceSupportingMCP = warehouseByWorkspace != null && Object.values(warehouseByWorkspace).some(Boolean);
 
 	return (
 		<div className='access-keys'>
@@ -561,12 +559,11 @@ const CreateAccessKeyDialog = ({
 					>
 						{!isMCP && <SlOption value='0'>Any workspace</SlOption>}
 						{warehouseByWorkspace != null &&
-							workspaces.map((w) => {
-								if (!isMCP || (isMCP && warehouseByWorkspace[w.id] !== 'Snowflake')) {
-									return <SlOption value={String(w.id)}>{w.name}</SlOption>;
-								}
-								return null;
-							})}
+							workspaces.map((w) => (
+								<SlOption key={w.id} value={String(w.id)}>
+									{w.name}
+								</SlOption>
+							))}
 					</SlSelect>
 					{workspaceError && (
 						<div className='access-keys__dialog-error'>
