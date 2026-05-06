@@ -88,7 +88,8 @@ CREATE TABLE access_keys (
     workspace integer REFERENCES workspaces ON DELETE CASCADE,
     name varchar(100) NOT NULL,
     type access_key_type NOT NULL,
-    token varchar(43) NOT NULL UNIQUE,
+    hmac bytea NOT NULL UNIQUE,
+    hint varchar(13) NOT NULL,
     created_at timestamp(0) NOT NULL,
     PRIMARY KEY (id)
 );
@@ -326,16 +327,19 @@ CREATE TABLE metadata (
     installation_id text UNIQUE NOT NULL,
     kms_encrypted_cookie_key bytea NOT NULL,
     kms_encrypted_oauth_key bytea NOT NULL,
-    kms_encrypted_notification_key bytea NOT NULL
+    kms_encrypted_notification_key bytea NOT NULL,
+    kms_encrypted_api_key_pepper bytea NOT NULL
 );
 
 INSERT INTO metadata (
     installation_id,
     kms_encrypted_cookie_key,
     kms_encrypted_oauth_key,
-    kms_encrypted_notification_key
+    kms_encrypted_notification_key,
+    kms_encrypted_api_key_pepper
 ) VALUES (
     gen_random_uuid(),
+    '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea

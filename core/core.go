@@ -396,6 +396,35 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
+// UpgradeDBAddAPIKeyPepper adds the KMS-encrypted API key pepper to the
+// database. Existing access keys are deleted.
+func UpgradeDBAddAPIKeyPepper(ctx context.Context, conf *Config) error {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.DB.Host,
+		Port:           conf.DB.Port,
+		Username:       conf.DB.Username,
+		Password:       conf.DB.Password,
+		Database:       conf.DB.Database,
+		Schema:         conf.DB.Schema,
+		MaxConnections: max(2, conf.DB.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	kms, err := kms.New(ctx, conf.KMS)
+	if err != nil {
+		return err
+	}
+	return initdb.UpgradeAddAPIKeyPepper(ctx, db, kms)
+}
+
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [1, 60]. password's length must be at least 8 character long.
@@ -441,14 +470,22 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 
 // AccessKey returns the organization and workspace identifiers associated with
 // the provided access key token and type. If the access key is not restricted
-// to a workspace, the workspace identifier will be 0. The boolean return value
-// indicates whether the token exists.
-func (core *Core) AccessKey(token string, typ AccessKeyType) (uuid.UUID, int, bool) {
-	key, ok := core.state.AccessKeyByToken(token)
-	if !ok || key.Type != state.AccessKeyType(typ) {
-		return uuid.Nil, 0, false
+// to a workspace, the workspace identifier will be 0.
+func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType) (uuid.UUID, int, error) {
+	key, err := core.state.AccessKey(ctx, token)
+	if err != nil {
+		switch err {
+		case state.ErrInvalidAccessKeyFormat:
+			err = errors.BadRequest("access key is malformed")
+		case state.ErrAccessKeyNotFound:
+			err = errors.NotFound("access key not found")
+		}
+		return uuid.UUID{}, 0, err
 	}
-	return key.Organization, key.Workspace, true
+	if key.Type != state.AccessKeyType(typ) {
+		return uuid.Nil, 0, errors.NotFound("access key not found")
+	}
+	return key.Organization, key.Workspace, nil
 }
 
 // CanSendMemberPasswordReset returns whether it is possible to send the reset

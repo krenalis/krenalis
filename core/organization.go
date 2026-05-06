@@ -323,7 +323,7 @@ func (core *Core) UpdateOrganizationName(ctx context.Context, orgID uuid.UUID, n
 func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) {
 	this.core.mustBeOpen()
 	keys := make([]*AccessKey, 0)
-	query := "SELECT id, workspace, name, type, token, created_at FROM access_keys WHERE organization = $1 ORDER BY created_at"
+	query := "SELECT id, workspace, name, type, hint, created_at FROM access_keys WHERE organization = $1 ORDER BY created_at"
 	err := this.core.db.QueryScan(ctx, query, this.organization.ID, func(rows *db.Rows) error {
 		var err error
 		for rows.Next() {
@@ -333,10 +333,6 @@ func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) 
 				return err
 			}
 			key.Type = AccessKeyType(typ)
-			if len(key.Token) != 43 {
-				return fmt.Errorf("access key %d has an invalid token in the database", key.ID)
-			}
-			key.Token = key.Token[:4] + "..." + key.Token[40:]
 			keys = append(keys, &key)
 		}
 		return nil
@@ -427,17 +423,24 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	if err != nil {
 		return 0, "", err
 	}
+	// Generate a random access key,
+	token, hmac, err := this.core.state.GenerateAccessKey(ctx)
+	if err != nil {
+		return 0, "", err
+	}
+	defer clear(hmac)
+	hint := token[:4] + "..." + token[len(token)-6:]
 	n := state.CreateAccessKey{
 		ID:           id,
 		Organization: this.organization.ID,
 		Workspace:    workspace,
 		Type:         state.AccessKeyType(typ),
-		Token:        generateAccessKeyToken(),
+		HMAC:         hmac,
 	}
 	createdAt := time.Now().UTC().Truncate(time.Second)
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, token, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7)", n.ID, n.Organization, n.Workspace, name, n.Type, n.Token, createdAt)
+		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, hmac, hint, created_at) "+
+			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
@@ -454,7 +457,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	if err != nil {
 		return 0, "", err
 	}
-	return n.ID, n.Token, nil
+	return n.ID, token, nil
 }
 
 // Warehouse represents a data warehouse.
@@ -1054,17 +1057,6 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 }
 
 const base62alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-// generateAccessKeyToken generates a new access key token.
-func generateAccessKeyToken() string {
-	// ⌈log₆₂ 2²⁵⁶⌉ ≈ 43 chars
-	src := make([]byte, 43)
-	_, _ = rand.Read(src)
-	for i := range src {
-		src[i] = base62alphabet[src[i]%62]
-	}
-	return string(src)
-}
 
 // generateEventWriteKeyToken generates a new event write key token.
 func generateEventWriteKeyToken() string {
