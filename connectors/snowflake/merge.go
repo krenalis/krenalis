@@ -214,7 +214,7 @@ func serializeRowsToCSV(columns []connectors.Column, rows [][]any, deleted bool)
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(strings.ToUpper(c.Name))
+		b.WriteString(csvColumnName(c.Name))
 	}
 	b.WriteString(",$PURGE\n")
 	for i, row := range rows {

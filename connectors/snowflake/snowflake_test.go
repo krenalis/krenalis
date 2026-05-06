@@ -143,9 +143,6 @@ func Test_Merge_Query(t *testing.T) {
 		t.Skip()
 	}
 
-	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
-	t.Skip()
-
 	cols := []struct {
 		DriverType    string
 		DriverValue   any
