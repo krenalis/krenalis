@@ -24,7 +24,10 @@ const warehouseInformationToolDescription = "Return high-level information about
 	" This information is for understanding the workspace context only." +
 	" Do not use it to infer or attempt direct warehouse access."
 
-const warehouseInformationResult = "This workspace has a data warehouse managed directly by Krenalis." +
+// warehouseInformationResultFormat is the response template returned by the
+// 'warehouse-information' tool. The %s placeholder is replaced at request time
+// with the warehouse platform name (Snowflake, Postgresql, etc.).
+const warehouseInformationResultFormat = "This workspace has a %s data warehouse managed directly by Krenalis." +
 	" Krenalis is responsible for writes and schema changes on Krenalis-managed tables and views." +
 	" If a user needs to change data, schema, or configuration, they must do so through the Krenalis Admin console or the Krenalis APIs." +
 	" This MCP server exposes the warehouse only for read-only analytical queries." +
@@ -58,11 +61,15 @@ var tools = []server.ServerTool{
 			mcp.WithOpenWorldHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			_, err := workspaceFromCtx(ctx)
+			ws, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
-			return mcp.NewToolResultText(warehouseInformationResult), nil
+			platform, _, _, err := ws.Warehouse(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return mcp.NewToolResultText(fmt.Sprintf(warehouseInformationResultFormat, platform)), nil
 		},
 	},
 
