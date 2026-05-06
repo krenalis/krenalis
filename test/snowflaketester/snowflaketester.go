@@ -20,6 +20,9 @@
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
 //
+// When running inside GitHub Actions, the password is ignored and a fresh OIDC
+// token is minted from GitHub on every call (audience snowflakecomputing.com).
+//
 // # Creating a test environment on Snowflake
 //
 // See the function [CreateTestEnvironment].
@@ -31,8 +34,12 @@ import (
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -54,6 +61,10 @@ import (
 //	KRENALIS_SNOWFLAKE_TESTER_ROLE
 //	KRENALIS_SNOWFLAKE_TESTER_USER
 //	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
+//
+// When running inside GitHub Actions (i.e. ACTIONS_ID_TOKEN_REQUEST_URL and
+// ACTIONS_ID_TOKEN_REQUEST_TOKEN are set), the password is ignored and a fresh
+// OIDC token is minted from GitHub on every call.
 func CreateTestEnvironment() (*TestEnvironment, error) {
 
 	// Return a clear error if env vars are not passed.
@@ -79,18 +90,40 @@ func CreateTestEnvironment() (*TestEnvironment, error) {
 		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
 	}
 
+	// When running inside GitHub Actions, mint a fresh OIDC token on every
+	// invocation. A single pre-fetched token would expire (~15 minute lifetime)
+	// before the long 'go run ./test/commit' run completes. The
+	// ACTIONS_ID_TOKEN_REQUEST_* env vars are exposed for the whole job when
+	// 'permissions: id-token: write' is set, and can be used to mint a new
+	// token on demand.
+	if reqURL, reqToken := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN"); reqURL != "" && reqToken != "" {
+		token, err := fetchGitHubOIDCToken(reqURL, reqToken, "snowflakecomputing.com")
+		if err != nil {
+			return nil, fmt.Errorf("cannot fetch GitHub OIDC token: %s", err)
+		}
+		settings.OIDCToken = token
+		settings.Password = ""
+	}
+
 	// Instantiate a Snowflake connector.
-	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
+	cfg := gosnowflake.Config{
 		Account:   settings.Account,
 		Database:  settings.Database,
-		Password:  settings.Password,
 		Role:      settings.Role,
 		User:      settings.User,
 		Warehouse: settings.Warehouse,
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
-	})
+	}
+	if settings.OIDCToken != "" {
+		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
+		cfg.WorkloadIdentityProvider = "OIDC"
+		cfg.Token = settings.OIDCToken
+	} else {
+		cfg.Password = settings.Password
+	}
+	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)
 
 	// Generate a random schema name and create it in the given database.
 	db := sql.OpenDB(connector)
@@ -124,6 +157,7 @@ type Settings struct {
 	Account   string
 	User      string
 	Password  string
+	OIDCToken string
 	Database  string
 	Role      string
 	Schema    string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
@@ -146,16 +180,24 @@ func (testEnv *TestEnvironment) Settings() Settings {
 //	    "schema": "...",
 //	    "role": "..."
 //	}
+//
+// The "oidcToken" field may be returned instead of "password" when using OIDC
+// authentication.
 func (settings Settings) JSON() []byte {
-	encoded, err := json.Marshal(map[string]any{
+	m := map[string]any{
 		"username":  settings.User,
-		"password":  settings.Password,
 		"account":   settings.Account,
 		"warehouse": settings.Warehouse,
 		"database":  settings.Database,
 		"schema":    settings.Schema,
 		"role":      settings.Role,
-	})
+	}
+	if settings.OIDCToken != "" {
+		m["oidcToken"] = settings.OIDCToken
+	} else {
+		m["password"] = settings.Password
+	}
+	encoded, err := json.Marshal(m)
 	if err != nil {
 		panic(err)
 	}
@@ -198,3 +240,54 @@ func generateTestSchemaName() (string, error) {
 }
 
 var falseStrPtr = new("false")
+
+// fetchGitHubOIDCToken requests a fresh OIDC token from GitHub Actions for the
+// given audience. requestURL and requestToken are the values of the
+// ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars set
+// by the runner when the job has 'permissions: id-token: write'.
+func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, error) {
+
+	sep := "?"
+	if strings.Contains(requestURL, "?") {
+		sep = "&"
+	}
+	req, err := http.NewRequest(http.MethodGet, requestURL+sep+"audience="+url.QueryEscape(audience), nil)
+	if err != nil {
+		return "", fmt.Errorf("cannot build request: %s", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+requestToken)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return errors.New("unexpected redirect")
+		},
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("cannot perform request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("cannot read response body: %s", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var respBody struct {
+		Value string `json:"value"`
+	}
+	err = json.Unmarshal(body, &respBody)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse response body: %s", err)
+	}
+	if respBody.Value == "" {
+		return "", errors.New("empty token in response")
+	}
+
+	return respBody.Value, nil
+}

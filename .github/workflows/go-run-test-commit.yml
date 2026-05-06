@@ -10,11 +10,13 @@ jobs:
     # Note that 'ubuntu-latest' includes the Docker server, which is required to
     # run './test/commit'.
     runs-on: ubuntu-latest
+    environment: tests
 
     timeout-minutes: 40
 
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - name: Checkout
@@ -42,8 +44,18 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./test/commit -no-snowflake-tests
+      - name: go run ./test/commit
+        # The Snowflake OIDC token is fetched on demand by snowflaketester
+        # using ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN,
+        # which are exposed automatically by the runner because the job has
+        # 'permissions: id-token: write'. A single pre-fetched token would
+        # expire (~15 min lifetime) before the long test/commit run completes.
         env:
+          KRENALIS_SNOWFLAKE_TESTER_ACCOUNT: ${{ secrets.KRENALIS_SNOWFLAKE_TESTER_ACCOUNT }}
+          KRENALIS_SNOWFLAKE_TESTER_DATABASE: ${{ secrets.KRENALIS_SNOWFLAKE_TESTER_DATABASE }}
+          KRENALIS_SNOWFLAKE_TESTER_ROLE: ${{ secrets.KRENALIS_SNOWFLAKE_TESTER_ROLE }}
+          KRENALIS_SNOWFLAKE_TESTER_USER: ${{ secrets.KRENALIS_SNOWFLAKE_TESTER_USER }}
+          KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE: ${{ secrets.KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_API_SECRET }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
           KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT: ${{ secrets.KRENALIS_TEST_GOOGLE_ANALYTICS_COLLECTION_ENDPOINT }}
@@ -53,7 +65,7 @@ jobs:
           KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.KRENALIS_TEST_MIXPANEL_DATA_RESIDENCY }}
           KRENALIS_TEST_POSTHOG_API_KEY: ${{ secrets.KRENALIS_TEST_POSTHOG_API_KEY }}
           KRENALIS_TEST_POSTHOG_PROJECT_REGION: ${{ secrets.KRENALIS_TEST_POSTHOG_PROJECT_REGION }}
-        run: go run ./test/commit -no-snowflake-tests
+        run: go run ./test/commit
 
       - name: Check that the repository is clean
         run: ./test/commit/repo_is_clean.bash
