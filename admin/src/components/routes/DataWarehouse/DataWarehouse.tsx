@@ -149,6 +149,7 @@ const WarehouseInfo = ({
 
 	const rows: GridRow[] = [];
 	for (const k in warehouseSettings) {
+		if (k.toLowerCase() === 'oidctoken') continue;
 		let value: ReactNode;
 		if (k === 'Password' || k === 'password') {
 			value = <PasswordToggle password={warehouseSettings[k]} />;
@@ -162,6 +163,7 @@ const WarehouseInfo = ({
 
 	const mcpRows: GridRow[] = [];
 	for (const k in warehouseMCPSettings) {
+		if (k.toLowerCase() === 'oidctoken') continue;
 		let value: ReactNode;
 		if (k === 'Password' || k === 'password') {
 			value = <PasswordToggle password={warehouseMCPSettings[k]} />;
