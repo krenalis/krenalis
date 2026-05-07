@@ -1,3 +1,8 @@
+# v1.90.1 (2026-04-29)
+
+* **Dependency Update**: Update to smithy-go v1.25.1.
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.90.0 (2026-04-22)
 
 * **Feature**: Add Ruby 4.0 (ruby4.0) support to AWS Lambda.
