@@ -45,8 +45,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		input = strings.Trim(input, "\n")
-		if input == "teardown" {
+		if strings.TrimSpace(input) == "teardown" {
 			break
 		}
 
