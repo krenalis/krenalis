@@ -2,6 +2,7 @@ name: Run go run ./test/commit
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions: {}
 
