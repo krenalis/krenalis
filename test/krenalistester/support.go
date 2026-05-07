@@ -687,6 +687,23 @@ func (c *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 	return response.Profiles, response.Schema, response.Total
 }
 
+func (c *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection int, expected int) {
+	bo := backoff.New(200)
+	bo.SetAttempts(20)
+	bo.SetCap(2 * time.Second)
+	bo.SetNextWaitTime(200 * time.Millisecond)
+	for bo.Next(ctx) {
+		_, count := c.ConnectionIdentities(connection, 0, 1)
+		if count == expected {
+			break
+		}
+		c.t.Logf("[attempt %d] %d connection identity(ies) stored in warehouse until now", bo.Attempt(), count)
+		if bo.WaitTime() == 0 {
+			c.t.Fatalf("too many failed attempts")
+		}
+	}
+}
+
 func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
 	bo := backoff.New(200)
 	bo.SetAttempts(20)
