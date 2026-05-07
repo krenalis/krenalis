@@ -187,7 +187,9 @@ const AccessKeys = () => {
 		return [apiRows, mcpRows];
 	}, [accessKeys]);
 
-	const hasWorkspaceSupportingMCP = warehouseByWorkspace != null && Object.values(warehouseByWorkspace).some(Boolean);
+	const hasWorkspaceWithWarehouse =
+		warehouseByWorkspace != null &&
+		Object.keys(warehouseByWorkspace).findIndex((id) => warehouseByWorkspace[id] !== '') !== -1;
 
 	return (
 		<div className='access-keys'>
@@ -214,7 +216,7 @@ const AccessKeys = () => {
 				<SlDivider style={{ '--spacing': '30px' } as React.CSSProperties} />
 				<div className='access-keys__title access-keys__title--mcp'>
 					<p className='access-keys__title-text'>MCP keys</p>
-					{hasWorkspaceSupportingMCP && (
+					{hasWorkspaceWithWarehouse && (
 						<SlButton size='small' variant='primary' onClick={() => setIsCreatingMCPKey(true)}>
 							Add a new MCP key
 						</SlButton>
@@ -225,7 +227,7 @@ const AccessKeys = () => {
 					rows={mcpRows}
 					columns={GRID_COLUMNS}
 					noRowsMessage={
-						hasWorkspaceSupportingMCP ? 'No MCP keys to show' : 'None of your workspaces support MCP'
+						hasWorkspaceWithWarehouse ? 'No MCP keys to show' : 'None of your workspaces support MCP'
 					}
 					isLoading={isLoadingMCPKeys}
 				/>
@@ -559,11 +561,17 @@ const CreateAccessKeyDialog = ({
 					>
 						{!isMCP && <SlOption value='0'>Any workspace</SlOption>}
 						{warehouseByWorkspace != null &&
-							workspaces.map((w) => (
-								<SlOption key={w.id} value={String(w.id)}>
-									{w.name}
-								</SlOption>
-							))}
+							workspaces.map((w) => {
+								const hasWarehouse = warehouseByWorkspace[w.id] !== '';
+								if (!isMCP || (isMCP && hasWarehouse)) {
+									return (
+										<SlOption key={w.id} value={String(w.id)}>
+											{w.name}
+										</SlOption>
+									);
+								}
+								return null;
+							})}
 					</SlSelect>
 					{workspaceError && (
 						<div className='access-keys__dialog-error'>
