@@ -32,7 +32,7 @@ require (
 	github.com/klauspost/compress v1.18.5
 	github.com/krenalis/analytics-go v0.0.8
 	github.com/mark3labs/mcp-go v0.47.1
-	github.com/nats-io/nats.go v1.51.0
+	github.com/nats-io/nats.go v1.52.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/oschwald/maxminddb-golang/v2 v2.2.0
 	github.com/pkg/sftp v1.13.10
