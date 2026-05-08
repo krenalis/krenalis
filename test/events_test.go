@@ -29,6 +29,9 @@ func TestEvents(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
+	// Disable automatic execution of Identity Resolution.
+	c.UpdateIdentityResolution(false, nil)
+
 	// Load some users in the data warehouse from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
 	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
@@ -51,6 +54,7 @@ func TestEvents(t *testing.T) {
 	})
 	run := c.RunPipeline(importUsersID)
 	c.WaitRunsCompletion(dummySrc, run)
+	c.RunIdentityResolution()
 
 	// Create a JavaScript connection with 2 pipelines (one for importing events,
 	// one for importing identities) and retrieve its key.
@@ -119,17 +123,16 @@ func TestEvents(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 
-	time.Sleep(time.Second)
-	c.RunIdentityResolution()
-
 	ctx := context.Background()
+
+	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
+	c.RunIdentityResolution()
 
 	const expectedEventsCount = 5
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Run the identity resolution, so that the events KPID are updated.
-	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
 	// Retrieve the profile imported from the event.
@@ -225,10 +228,6 @@ func TestEvents(t *testing.T) {
 		UserId:      "Zny0kLMyz",
 		AnonymousId: "bd857fe0-8f62-4d36-8e47-0161db0cc513",
 	})
-	time.Sleep(time.Second)
-	_, total = c.ConnectionIdentities(javaScript2ID, 0, 100)
-	if total != 1 {
-		t.Fatalf("expected one identity, got %d", total)
-	}
 
+	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScript2ID, 1)
 }

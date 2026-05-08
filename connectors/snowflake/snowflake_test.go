@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -27,9 +28,6 @@ func Test_Columns(t *testing.T) {
 	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
 		t.Skip()
 	}
-
-	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
-	t.Skip()
 
 	// Create a test environment on Snowflake.
 	testEnv, err := snowflaketester.CreateTestEnvironment()
@@ -114,6 +112,10 @@ func Test_Columns(t *testing.T) {
 	}
 
 	// Test the 'columns' return parameter of the Query method.
+	queryExpected := slices.Clone(expected)
+	for i := range queryExpected {
+		queryExpected[i].Writable = false
+	}
 	query := `SELECT "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" FROM "` + tableName + `"`
 	rows, got, err := connector.Query(context.Background(), query)
 	if err != nil {
@@ -123,7 +125,7 @@ func Test_Columns(t *testing.T) {
 	if len(expected) != len(got) {
 		t.Fatalf("expected %d columns, got %d", len(expected), len(got))
 	}
-	for i, c := range expected {
+	for i, c := range queryExpected {
 		if !reflect.DeepEqual(c, got[i]) {
 			t.Fatalf("unexpected column:\n\nexpected: %#v\ngot:      %#v\n", c, got[i])
 		}
@@ -140,9 +142,6 @@ func Test_Merge_Query(t *testing.T) {
 	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
 		t.Skip()
 	}
-
-	// TODO: skipped, see https://github.com/krenalis/krenalis/issues/2198.
-	t.Skip()
 
 	cols := []struct {
 		DriverType    string

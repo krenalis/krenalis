@@ -61,6 +61,7 @@ type Snowflake struct {
 type sfSettings struct {
 	Username  string `json:"username"`
 	Password  string `json:"password"`
+	OIDCToken string `json:"oidcToken"`
 	Account   string `json:"account"`
 	Warehouse string `json:"warehouse"`
 	Database  string `json:"database"`
@@ -72,8 +73,100 @@ type sfSettings struct {
 // a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
-	// TODO(Gianluca): see the issue https://github.com/krenalis/krenalis/issues/1693.
-	return errors.New("the read-only access check is currently not implemented in Snowflake")
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return snowflake(err)
+	}
+
+	// Retrieve the profiles table version.
+	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Determine if there are tables on the data warehouse for which the active
+	// Snowflake role hierarchy has too many privileges.
+	tables := []string{
+		"KRENALIS_DESTINATION_PROFILES",
+		"KRENALIS_SYSTEM_OPERATIONS",
+		"KRENALIS_IDENTITIES",
+		"KRENALIS_PROFILE_SCHEMA_VERSIONS",
+		"KRENALIS_EVENTS",
+		"KRENALIS_PROFILES_" + strconv.Itoa(profileSchemaVersion),
+	}
+	disallowedPrivileges := []string{"APPLYBUDGET", "DELETE", "EVOLVE SCHEMA", "INSERT", "OWNERSHIP", "TRUNCATE", "UPDATE"}
+
+	var query strings.Builder
+	query.WriteString(`SELECT "TABLE_NAME", "PRIVILEGE_TYPE"
+FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"
+WHERE "TABLE_CATALOG" = CURRENT_DATABASE()
+  AND "TABLE_SCHEMA" = CURRENT_SCHEMA()
+  AND (
+    ("GRANTED_TO" = 'ROLE' AND IS_ROLE_IN_SESSION("GRANTEE"))
+    OR ("GRANTED_TO" = 'DATABASE_ROLE' AND IS_DATABASE_ROLE_IN_SESSION("GRANTEE"))
+  )
+  AND (
+    "TABLE_NAME" IN (`)
+	for i, table := range tables {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		quoteString(&query, table)
+	}
+	query.WriteString(`)
+  )
+  AND "PRIVILEGE_TYPE" IN (`)
+	for i, privilege := range disallowedPrivileges {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		quoteString(&query, privilege)
+	}
+	query.WriteString(`)
+ORDER BY "TABLE_NAME", "PRIVILEGE_TYPE"`)
+
+	rows, err := db.QueryContext(ctx, query.String())
+	if err != nil {
+		return snowflake(err)
+	}
+
+	tooPrivilegedTables := make(map[string][]string)
+	var tooPrivilegedTableNames []string
+	for rows.Next() {
+		var table, privilege string
+		err = rows.Scan(&table, &privilege)
+		if err != nil {
+			rows.Close()
+			return snowflake(err)
+		}
+		if len(tooPrivilegedTables[table]) == 0 {
+			tooPrivilegedTableNames = append(tooPrivilegedTableNames, table)
+		}
+		if !slices.Contains(tooPrivilegedTables[table], privilege) {
+			tooPrivilegedTables[table] = append(tooPrivilegedTables[table], privilege)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return snowflake(err)
+	}
+	if err = rows.Close(); err != nil {
+		return snowflake(err)
+	}
+	if len(tooPrivilegedTables) > 0 {
+		var details []string
+		for _, table := range tooPrivilegedTableNames {
+			privileges := tooPrivilegedTables[table]
+			details = append(details, fmt.Sprintf("%s (%s)", table, strings.Join(privileges, ", ")))
+		}
+		return &warehouses.SettingsNotReadOnly{
+			Err: fmt.Errorf(
+				"the credentials should be read-only, but they allow non-read-only privileges on the following Krenalis tables: %s",
+				strings.Join(details, ", "),
+			)}
+	}
+
+	return nil
 }
 
 // Close closes the data warehouse.
@@ -402,9 +495,24 @@ func validateSettings(s *sfSettings) error {
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
 		return warehouses.SettingsErrorf("user name length must be in range [1,255]")
 	}
+	// Validate combination of OIDC token and password.
+	if s.Password == "" && s.OIDCToken == "" {
+		// The error message here intentionally doesn't mention that an OIDC
+		// token can be passed instead of a password, as using a password is the
+		// most common method (and the only one available when using Admin), and
+		// referring to the OIDC would only create confusion. If a user wishes
+		// to use an OIDC token in some specific scenario, it's clear that it's
+		// being used as an alternative to the password.
+		return warehouses.SettingsErrorf("password must be provided")
+	}
+	if s.Password != "" && s.OIDCToken != "" {
+		return warehouses.SettingsErrorf("password and OIDC token cannot be provided simultaneously")
+	}
 	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return warehouses.SettingsErrorf("password length must be in range [1,255]")
+	if s.Password != "" {
+		if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
+			return warehouses.SettingsErrorf("password length must be in range [1,255]")
+		}
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
@@ -433,10 +541,9 @@ func connector(s *sfSettings) driver.Connector {
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
 	}
-	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
+	cfg := gosnowflake.Config{
 		Account:   account,
 		User:      s.Username,
-		Password:  s.Password,
 		Database:  s.Database,
 		Schema:    s.Schema,
 		Warehouse: s.Warehouse,
@@ -444,7 +551,15 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
-	})
+	}
+	if s.OIDCToken != "" {
+		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
+		cfg.WorkloadIdentityProvider = "OIDC"
+		cfg.Token = s.OIDCToken
+	} else {
+		cfg.Password = s.Password
+	}
+	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)
 }
 
 // serializeIdentitiesToCSV serializes identities as CSV, using columns as

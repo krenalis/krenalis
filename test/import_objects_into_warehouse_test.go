@@ -22,6 +22,9 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
+	// Disable automatic execution of Identity Resolution.
+	c.UpdateIdentityResolution(false, nil)
+
 	dummy := c.CreateDummy("Dummy (source)", krenalistester.Source)
 	importUsersID := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
@@ -56,6 +59,7 @@ def transform(user: dict) -> dict:
 	})
 	run := c.RunPipeline(importUsersID)
 	c.WaitRunsCompletion(dummy, run)
+	c.RunIdentityResolution()
 
 	// Check if the profiles have been imported - and then returned - correctly.
 
