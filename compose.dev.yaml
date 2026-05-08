@@ -116,7 +116,7 @@ services:
       - warehouse:/var/lib/postgresql/data
 
   nats:
-    image: nats:2.12-alpine3.22
+    image: nats:2.14-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     ports:
       - 127.0.0.1:4222:4222

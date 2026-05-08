@@ -77,7 +77,7 @@ services:
       - warehouse:/var/lib/postgresql/data
 
   nats:
-    image: nats:2.12-alpine3.22
+    image: nats:2.14-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
