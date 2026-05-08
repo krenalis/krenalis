@@ -38,7 +38,6 @@ func Main(assets fs.FS) {
 	var configStore string
 	var initDBIfEmpty bool
 	var initDockerMember bool
-	var upgradeDBAddAPIKeyPepper bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.StringVar(&configStore, "config-store", "env:",
 		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<region>:<prefix>' to read from AWS Parameter Store (default: 'env:')")
@@ -46,8 +45,6 @@ func Main(assets fs.FS) {
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
-	flag.BoolVar(&upgradeDBAddAPIKeyPepper, "upgrade-db-add-api-key-pepper", false,
-		"upgrade the database by adding the API key pepper; existing access keys are deleted")
 	flag.Parse()
 	if help {
 		flag.Usage()
@@ -73,12 +70,8 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
-	if upgradeDBAddAPIKeyPepper && (initDBIfEmpty || initDockerMember) {
-		flag.Usage()
-		fatal(1, "the -upgrade-db-add-api-key-pepper flag cannot be combined with -init-db-if-empty or -init-docker-member")
-	}
 
-	if !upgradeDBAddAPIKeyPepper && !devMode && assets != nil {
+	if !devMode && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
@@ -98,16 +91,6 @@ func Main(assets fs.FS) {
 	conf, err := loadConfig(ctx, configStore)
 	if err != nil {
 		fatal(1, err.Error())
-	}
-	if upgradeDBAddAPIKeyPepper {
-		err = core.UpgradeDBAddAPIKeyPepper(ctx, &core.Config{
-			DB:  conf.DB,
-			KMS: conf.KMS,
-		})
-		if err != nil {
-			fatal(1, err.Error())
-		}
-		return
 	}
 
 	// Unset the Krenalis environment variables, except for those intended for

@@ -19,8 +19,6 @@ import (
 
 const kmsEncryptedKeys = 4
 
-var errAPIKeyPepperAlreadyExists = errors.New("API key pepper already exists")
-
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
 // If dockerMember is true, it also initializes the Docker member.
 func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool) error {
@@ -92,63 +90,6 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 	})
 
 	return err
-}
-
-// UpgradeAddAPIKeyPepper adds the KMS-encrypted API key pepper to the database.
-// Existing access keys are deleted.
-func UpgradeAddAPIKeyPepper(ctx context.Context, db *db.DB, kms kms.Kms) error {
-	key, err := kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
-	if err != nil {
-		return fmt.Errorf("failed to generate API key pepper using KMS: %s", err)
-	}
-	err = db.Transaction(ctx, func(tx *dbpkg.Tx) error {
-		_, err := tx.Exec(ctx, "ALTER TABLE metadata ADD COLUMN kms_encrypted_api_key_pepper bytea")
-		if err != nil {
-			if dbpkg.IsDuplicateColumn(err) {
-				return errAPIKeyPepperAlreadyExists
-			}
-			return err
-		}
-		result, err := tx.Exec(ctx, "UPDATE metadata SET kms_encrypted_api_key_pepper = $1", key)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() != 1 {
-			return errors.New("row is missing from table 'metadata'")
-		}
-		_, err = tx.Exec(ctx, "ALTER TABLE metadata ALTER COLUMN kms_encrypted_api_key_pepper SET NOT NULL")
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec(ctx, "DROP TABLE IF EXISTS access_keys")
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec(ctx, `CREATE TABLE access_keys (
-			id integer NOT NULL,
-			organization uuid NOT NULL REFERENCES organizations ON DELETE CASCADE,
-			workspace integer REFERENCES workspaces ON DELETE CASCADE,
-			name varchar(100) NOT NULL,
-			type access_key_type NOT NULL,
-			hmac bytea NOT NULL UNIQUE,
-			hint varchar(13) NOT NULL,
-			created_at timestamp(0) NOT NULL,
-			PRIMARY KEY (id)
-		)`)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		if err == errAPIKeyPepperAlreadyExists {
-			slog.Info("PostgreSQL database is already up to date")
-			return nil
-		}
-		return err
-	}
-	slog.Info("PostgreSQL database updated successfully")
-	return nil
 }
 
 // databaseIsEmpty reports whether the given PostgreSQL database is empty, that

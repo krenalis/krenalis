@@ -396,35 +396,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
-// UpgradeDBAddAPIKeyPepper adds the KMS-encrypted API key pepper to the
-// database. Existing access keys are deleted.
-func UpgradeDBAddAPIKeyPepper(ctx context.Context, conf *Config) error {
-	db, err := dbpkg.Open(&dbpkg.Options{
-		Host:           conf.DB.Host,
-		Port:           conf.DB.Port,
-		Username:       conf.DB.Username,
-		Password:       conf.DB.Password,
-		Database:       conf.DB.Database,
-		Schema:         conf.DB.Schema,
-		MaxConnections: max(2, conf.DB.MaxConnections),
-	})
-	if err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-	defer db.Close()
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	err = db.Ping(pingCtx)
-	if err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-	kms, err := kms.New(ctx, conf.KMS)
-	if err != nil {
-		return err
-	}
-	return initdb.UpgradeAddAPIKeyPepper(ctx, db, kms)
-}
-
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [1, 60]. password's length must be at least 8 character long.
