@@ -52,7 +52,7 @@ services:
       POSTGRES_PASSWORD: krenalis
       POSTGRES_DB: krenalis
     volumes:
-      - db:/var/lib/postgresql/data
+      - db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U krenalis"]
       interval: 5s
@@ -74,7 +74,7 @@ services:
       - source: warehouse
         target: /docker-entrypoint-initdb.d/init.sql
     volumes:
-      - warehouse:/var/lib/postgresql/data
+      - warehouse:/var/lib/postgresql
 
   nats:
     image: nats:2.14-alpine3.22
