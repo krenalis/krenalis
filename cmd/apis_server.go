@@ -31,9 +31,9 @@ import (
 // maxRequestSize is the maximum size bytes for an API request.
 const maxRequestSize = 500 * 1024
 
-// maxWorkosPayloadSize is the maximum size in bytes for a WorkOS webhook or
+// maxWorkOSPayloadSize is the maximum size in bytes for a WorkOS webhook or
 // action payload.
-const maxWorkosPayloadSize = 64 * 1024
+const maxWorkOSPayloadSize = 64 * 1024
 
 var newline = []byte("\n")
 
@@ -488,13 +488,13 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 		return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
 	}
 
-	memberID, err := org.MemberByWorkosID(r.Context(), workosUser.ID)
+	memberID, err := org.MemberByWorkOSID(r.Context(), workosUser.ID)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); !ok {
 			return nil, err
 		}
 		name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
-		memberID, err = org.ProvisionMemberFromWorkos(r.Context(), name, workosUser.Email, workosUser.ID)
+		memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -523,15 +523,15 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 	return []any{memberID, nil}, nil
 }
 
-// handleWorkosAction handles the WorkOS user-registration Action. It verifies
+// handleWorkOSAction handles the WorkOS user-registration Action. It verifies
 // the request signature and denies registration if the email the user is
 // registering with does not match the email on the WorkOS invitation.
-func (s *apisServer) handleWorkosAction(w http.ResponseWriter, r *http.Request) (any, error) {
+func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) (any, error) {
 	if s.workos == nil || s.workos.actionsSecret == "" {
 		return nil, errors.Unauthorized("WorkOS actions are not configured")
 	}
 
-	lr := &io.LimitedReader{R: r.Body, N: maxWorkosPayloadSize + 1}
+	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
 	rawBody, err := io.ReadAll(lr)
 	if err != nil {
 		return nil, errors.BadRequest("failed to read request body")
@@ -579,15 +579,15 @@ func (s *apisServer) handleWorkosAction(w http.ResponseWriter, r *http.Request) 
 	return nil, nil
 }
 
-// handleWorkosWebhook handles incoming WorkOS webhook events. It verifies the
+// handleWorkOSWebhook handles incoming WorkOS webhook events. It verifies the
 // request signature and, for "user.updated" events, updates the member's name
 // and email across all organizations.
-func (s *apisServer) handleWorkosWebhook(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if s.workos == nil || s.workos.webhookSecret == "" {
 		return nil, errors.Unauthorized("WorkOS webhook is not configured")
 	}
 
-	lr := &io.LimitedReader{R: r.Body, N: maxWorkosPayloadSize + 1}
+	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
 	rawBody, err := io.ReadAll(lr)
 	if err != nil {
 		return nil, errors.BadRequest("failed to read request body")
@@ -629,7 +629,7 @@ func (s *apisServer) handleWorkosWebhook(_ http.ResponseWriter, r *http.Request)
 		if runes := []rune(name); len(runes) > 255 {
 			name = string(runes[:255])
 		}
-		if err := s.core.UpdateMembersByWorkosID(r.Context(), event.Data.ID, name, event.Data.Email); err != nil {
+		if err := s.core.UpdateMembersByWorkOSID(r.Context(), event.Data.ID, name, event.Data.Email); err != nil {
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				slog.Warn("workos webhook: email already in use, skipping member update",
 					"workos_user_id", event.Data.ID, "email", event.Data.Email)

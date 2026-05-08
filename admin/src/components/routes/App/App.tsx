@@ -25,7 +25,7 @@ import '@workos-inc/widgets/styles.css';
 
 setBasePath('/admin/src/shoelace/dist');
 
-const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
+const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
@@ -35,7 +35,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	const hasWorkOS = onWorkosLogout != null;
+	const hasWorkOS = onWorkOSLogout != null;
 
 	const showStatus = (status: Status) => {
 		if (toastRef.current == null) return;
@@ -57,7 +57,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
 		if (hasWorkOS) {
-			onWorkosLogout();
+			onWorkOSLogout();
 		}
 		setSelectedWorkspace(0);
 		setIsLoggedIn(false);
@@ -212,7 +212,7 @@ const App = ({ onWorkosLogout }: { onWorkosLogout?: () => void } = {}) => {
 // available it exchanges the WorkOS access token for a Krenalis session cookie,
 // then renders the app as usual.
 const WorkOSWrapper = () => {
-	const [isLoggedInViaWorkos, setIsLoggedInViaWorkos] = useState(false);
+	const [isLoggedInViaWorkOS, setIsLoggedInViaWorkOS] = useState(false);
 
 	const { isLoading, user: workosUser, signIn, signOut, getAccessToken } = useAuth();
 
@@ -223,7 +223,7 @@ const WorkOSWrapper = () => {
 	}, [isLoading, workosUser]);
 
 	useEffect(() => {
-		const loginViaWorkos = async () => {
+		const loginViaWorkOS = async () => {
 			const api = new API(window.location.origin, 0);
 			try {
 				const token = await getAccessToken();
@@ -234,15 +234,15 @@ const WorkOSWrapper = () => {
 			}
 			localStorage.removeItem(IS_PASSWORDLESS_KEY);
 			localStorage.removeItem(IS_DOCKER_KEY);
-			setIsLoggedInViaWorkos(true);
+			setIsLoggedInViaWorkOS(true);
 		};
-		if (workosUser == null || isLoggedInViaWorkos) {
+		if (workosUser == null || isLoggedInViaWorkOS) {
 			return;
 		}
-		loginViaWorkos();
+		loginViaWorkOS();
 	}, [workosUser]);
 
-	if (!isLoggedInViaWorkos) {
+	if (!isLoggedInViaWorkOS) {
 		return (
 			<SlSpinner
 				className='app-spinner'
@@ -250,17 +250,17 @@ const WorkOSWrapper = () => {
 			/>
 		);
 	}
-	return <App onWorkosLogout={signOut} />;
+	return <App onWorkOSLogout={signOut} />;
 };
 
 const Root = () => {
-	const [workosClientID, setWorkosClientID] = useState<string | null>(null);
-	const [workosDevMode, setWorkosDevMode] = useState<boolean>(false);
+	const [workosClientID, setWorkOSClientID] = useState<string | null>(null);
+	const [workosDevMode, setWorkOSDevMode] = useState<boolean>(false);
 
 	useEffect(() => {
 		const api = new API(window.location.origin, 0);
 
-		const fetchWorkosClientID = async () => {
+		const fetchWorkOSClientID = async () => {
 			let publicMetadata: PublicMetadata;
 			try {
 				publicMetadata = await api.publicMetadata();
@@ -268,11 +268,11 @@ const Root = () => {
 				console.error('error', err);
 				return;
 			}
-			setWorkosClientID(publicMetadata.workosClientID);
-			setWorkosDevMode(publicMetadata.workosDevMode);
+			setWorkOSClientID(publicMetadata.workosClientID);
+			setWorkOSDevMode(publicMetadata.workosDevMode);
 		};
 
-		fetchWorkosClientID();
+		fetchWorkOSClientID();
 	}, []);
 
 	if (workosClientID == null) {

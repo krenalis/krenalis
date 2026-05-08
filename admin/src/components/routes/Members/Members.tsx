@@ -28,7 +28,7 @@ const Members = () => {
 
 	const pendingDeletedMember = useRef<number>(0);
 
-	const hasWorkos = publicMetadata.workosClientID !== '';
+	const hasWorkOS = publicMetadata.workosClientID !== '';
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -49,7 +49,7 @@ const Members = () => {
 			return;
 		}
 
-		if (hasWorkos) {
+		if (hasWorkOS) {
 			setIsLoading(false);
 			return;
 		}

@@ -51,7 +51,7 @@ const Header = ({ title, member }: HeaderProps) => {
 		dropdownRef.current.hide();
 	};
 
-	const hasWorkos = publicMetadata.workosClientID !== '';
+	const hasWorkOS = publicMetadata.workosClientID !== '';
 
 	return (
 		<header>
@@ -77,7 +77,7 @@ const Header = ({ title, member }: HeaderProps) => {
 				</a>
 			</SlTooltip>
 			<div className='header__account'>
-				{hasWorkos ? (
+				{hasWorkOS ? (
 					<WorkOSAccountDropdown
 						ref={dropdownRef}
 						closeMenu={closeMenu}

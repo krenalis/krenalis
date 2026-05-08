@@ -114,8 +114,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /ui-event":                                    workspace.ServeUI,      /* only Admin */
 		"POST   /validate-expression":                         api.ValidateExpression, /* only Admin */
 		"POST   /warehouse/repair":                            workspace.RepairWarehouse,
-		"POST   /workos/webhook":                              s.handleWorkosWebhook,
-		"POST   /workos/actions/user-registration":            s.handleWorkosAction,
+		"POST   /workos/webhook":                              s.handleWorkOSWebhook,
+		"POST   /workos/actions/user-registration":            s.handleWorkOSAction,
 		"POST   /workspaces":                                  organization.CreateWorkspace,
 		"POST   /workspaces/test":                             organization.TestWorkspaceCreation,
 		"PUT    /connections/{id}":                            connection.Update,

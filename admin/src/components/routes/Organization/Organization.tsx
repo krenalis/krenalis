@@ -14,12 +14,12 @@ const Organization = () => {
 
 	let content: ReactNode;
 
-	const hasWorkos = publicMetadata.workosClientID !== '';
+	const hasWorkOS = publicMetadata.workosClientID !== '';
 
 	if (location.pathname.endsWith('organization')) {
 		content = (
 			<>
-				{hasWorkos ? <WorkOSMembersLink /> : <MembersLink />}
+				{hasWorkOS ? <WorkOSMembersLink /> : <MembersLink />}
 				<Link path='organization/access-keys'>
 					<ListTile
 						className='organization__entry'

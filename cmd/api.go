@@ -247,8 +247,8 @@ type publicMetadata struct {
 	InviteMembersViaEmail      bool     `json:"inviteMembersViaEmail"`
 	CanSendMemberPasswordReset bool     `json:"canSendMemberPasswordReset"`
 	TelemetryLevel             string   `json:"telemetryLevel"`
-	WorkosClientID             string   `json:"workosClientID"`
-	WorkosDevMode              bool     `json:"workosDevMode"`
+	WorkOSClientID             string   `json:"workosClientID"`
+	WorkOSDevMode              bool     `json:"workosDevMode"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -278,8 +278,8 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		TelemetryLevel:             string(api.sentryTelemetry.level),
 	}
 	if api.workos != nil {
-		metadata.WorkosClientID = api.workos.clientID
-		metadata.WorkosDevMode = api.workos.devMode
+		metadata.WorkOSClientID = api.workos.clientID
+		metadata.WorkOSDevMode = api.workos.devMode
 	}
 	if api.potentialConnectorsURL != "" {
 		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL

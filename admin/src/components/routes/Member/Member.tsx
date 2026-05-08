@@ -50,7 +50,7 @@ const Member = () => {
 		return location.pathname.endsWith('current');
 	}, [location]);
 
-	const hasWorkos = publicMetadata.workosClientID !== '';
+	const hasWorkOS = publicMetadata.workosClientID !== '';
 
 	useLayoutEffect(() => {
 		if (!isUpdate) {
@@ -209,7 +209,7 @@ const Member = () => {
 		}, 300);
 	};
 
-	if (hasWorkos) {
+	if (hasWorkOS) {
 		return <WorkOSMember />;
 	}
 

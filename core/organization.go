@@ -209,13 +209,13 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	return err
 }
 
-// ProvisionMemberFromWorkos adds a member provisioned from WorkOS. The added
+// ProvisionMemberFromWorkOS adds a member provisioned from WorkOS. The added
 // member doesn't have a password, since its authentication is managed by
 // WorkOS.
 //
 // It returns an errors.UnprocessableError error with code MemberEmailExists if
 // the email is already used by another member in the organization.
-func (this *Organization) ProvisionMemberFromWorkos(ctx context.Context, name, email, workosUserID string) (int, error) {
+func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, email, workosUserID string) (int, error) {
 	this.core.mustBeOpen()
 	if name != "" {
 		if err := util.ValidateStringField("name", name, 255); err != nil {
@@ -249,10 +249,10 @@ func (this *Organization) ProvisionMemberFromWorkos(ctx context.Context, name, e
 	return n.ID, nil
 }
 
-// MemberByWorkosID returns the ID of the member with the given WorkOS user ID
+// MemberByWorkOSID returns the ID of the member with the given WorkOS user ID
 // in the organization. It returns an errors.NotFoundError if no member has that
 // WorkOS user ID.
-func (this *Organization) MemberByWorkosID(ctx context.Context, workosUserID string) (int, error) {
+func (this *Organization) MemberByWorkOSID(ctx context.Context, workosUserID string) (int, error) {
 	this.core.mustBeOpen()
 	var id int
 	err := this.core.db.QueryRow(ctx, "SELECT id FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID).Scan(&id)
@@ -265,12 +265,12 @@ func (this *Organization) MemberByWorkosID(ctx context.Context, workosUserID str
 	return id, nil
 }
 
-// UpdateMembersByWorkosID updates the name and email of all members across all
+// UpdateMembersByWorkOSID updates the name and email of all members across all
 // organizations that have the given WorkOS user ID.
 //
 // It returns an errors.UnprocessableError with code MemberEmailExists if the
 // new email is already in use by another member in any affected organization.
-func (core *Core) UpdateMembersByWorkosID(ctx context.Context, workosUserID, name, email string) error {
+func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, name, email string) error {
 	core.mustBeOpen()
 	if name != "" {
 		if err := util.ValidateStringField("name", name, 255); err != nil {
