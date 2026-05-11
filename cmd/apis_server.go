@@ -637,6 +637,13 @@ func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request)
 			}
 			return nil, err
 		}
+	case "user.deleted":
+		if event.Data.ID == "" {
+			return nil, nil
+		}
+		if err := s.core.DeleteMembersByWorkOSID(r.Context(), event.Data.ID); err != nil {
+			return nil, err
+		}
 	case "organization.updated":
 		if event.Data.ExternalID == nil || *event.Data.ExternalID == "" {
 			return nil, nil

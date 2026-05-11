@@ -298,6 +298,60 @@ func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, nam
 	})
 }
 
+// DeleteMembersByWorkOSID deletes all members across all organizations that
+// have the given WorkOS user ID.
+func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
+	core.mustBeOpen()
+	type memberRef struct {
+		id           int
+		organization uuid.UUID
+	}
+	var members []memberRef
+	err := core.db.QueryScan(
+		ctx,
+		"SELECT id, organization FROM members WHERE workos_user_id = $1",
+		workosUserID,
+		func(rows *db.Rows) error {
+			for rows.Next() {
+				var m memberRef
+				if err := rows.Scan(&m.id, &m.organization); err != nil {
+					return err
+				}
+				members = append(members, m)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return err
+	}
+	for _, m := range members {
+		n := state.DeleteMember{
+			ID:           m.id,
+			Organization: m.organization,
+		}
+		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			result, err := tx.Exec(
+				ctx,
+				"DELETE FROM members WHERE id = $1 AND organization = $2",
+				m.id,
+				m.organization,
+			)
+			if err != nil {
+				return nil, err
+			}
+			if result.RowsAffected() == 0 {
+				return nil, nil
+			}
+			return n, nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // UpdateOrganizationName updates the name of the organization identified by
 // orgID. If no organization with that ID exists, the call is a no-op.
 func (core *Core) UpdateOrganizationName(ctx context.Context, orgID uuid.UUID, name string) error {
