@@ -142,7 +142,13 @@ const PipelineTable = () => {
 		<>
 			<Section
 				title='Destination table'
-				description='Enter the name of an existing database table where profile data will be exported.'
+				description={
+					<>
+						Enter the name of an existing table where profile data will be exported, exactly as defined in
+						the database. For example, <code>users</code> and <code>USERS</code> could refer to different
+						tables.
+					</>
+				}
 				padded={true}
 				annotated={true}
 			>
