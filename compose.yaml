@@ -3,7 +3,7 @@
 
 services:
   krenalis:
-    image: krenalis/krenalis:v0.35.0
+    image: krenalis/krenalis:v0.36.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
