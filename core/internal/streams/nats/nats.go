@@ -345,7 +345,7 @@ func (s *stream) ensureEventStream(ctx context.Context, opts streamOptions) {
 			default:
 				if ctx.Err() == nil {
 					if !jetStreamUnavailableLogged {
-						slog.Warn("cannot verify JetStream availability")
+						slog.Warn("cannot update or create stream", "err", err)
 						jetStreamUnavailableLogged = true
 					}
 					continue

@@ -3,7 +3,7 @@
 
 services:
   krenalis:
-    image: krenalis/krenalis:v0.35.0
+    image: krenalis/krenalis:v0.36.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
@@ -46,13 +46,13 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:18.1-alpine3.23
+    image: postgres:18.3-alpine3.23
     environment:
       POSTGRES_USER: krenalis
       POSTGRES_PASSWORD: krenalis
       POSTGRES_DB: krenalis
     volumes:
-      - db:/var/lib/postgresql/data
+      - db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U krenalis"]
       interval: 5s
@@ -60,7 +60,7 @@ services:
       retries: 5
 
   warehouse:
-    image: postgres:18.1-alpine3.23
+    image: postgres:18.3-alpine3.23
     environment:
       POSTGRES_USER: warehouse
       POSTGRES_PASSWORD: warehouse
@@ -74,10 +74,10 @@ services:
       - source: warehouse
         target: /docker-entrypoint-initdb.d/init.sql
     volumes:
-      - warehouse:/var/lib/postgresql/data
+      - warehouse:/var/lib/postgresql
 
   nats:
-    image: nats:2.12-alpine3.22
+    image: nats:2.14-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage
