@@ -311,7 +311,7 @@ func (s *stream) ensureEventStream(ctx context.Context, opts streamOptions) {
 	bo := backoff.New(10)
 	var jsStream jetstream.Stream
 
-	var jetStreamUnavailableLogged bool
+	var lastLogMsg, lastLogErr string
 
 	// Create the stream if it does not exist.
 	// Exit the loop once the stream is created, already exists,
@@ -329,30 +329,34 @@ func (s *stream) ensureEventStream(ctx context.Context, opts streamOptions) {
 			case errors.Is(err, nats.ErrConnectionClosed):
 				continue
 			case errors.Is(err, jetstream.ErrJetStreamNotEnabledForAccount):
-				if !jetStreamUnavailableLogged {
-					slog.Warn("JetStream not enabled for this account; waiting for availability")
-					jetStreamUnavailableLogged = true
+				msg := "JetStream not enabled for this account; waiting for availability"
+				if msg != lastLogMsg {
+					slog.Warn(msg)
+					lastLogMsg, lastLogErr = msg, ""
 				}
 				continue
 			case
 				errors.Is(err, jetstream.ErrJetStreamNotEnabled),
 				errors.Is(err, nats.ErrNoResponders):
-				if !jetStreamUnavailableLogged {
-					slog.Warn("JetStream not enabled; waiting for availability")
-					jetStreamUnavailableLogged = true
+				msg := "JetStream not enabled; waiting for availability"
+				if msg != lastLogMsg {
+					slog.Warn(msg)
+					lastLogMsg, lastLogErr = msg, ""
 				}
 				continue
 			default:
 				if ctx.Err() == nil {
-					if !jetStreamUnavailableLogged {
-						slog.Warn("cannot update or create stream", "err", err)
-						jetStreamUnavailableLogged = true
+					msg := "cannot update or create stream"
+					errMsg := err.Error()
+					if msg != lastLogMsg || errMsg != lastLogErr {
+						slog.Warn(msg, "err", err)
+						lastLogMsg, lastLogErr = msg, errMsg
 					}
 					continue
 				}
 			}
 		}
-		if jetStreamUnavailableLogged {
+		if lastLogMsg != "" {
 			slog.Info("JetStream became available")
 		}
 		break
