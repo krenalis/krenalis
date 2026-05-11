@@ -326,6 +326,38 @@ sl-icon::part(svg) {
 	overflow: visible !important;
 }
 
+/* || Radix */
+
+.radix-themes:where([data-gray-color=slate]) {
+	--accent-1: var(--sl-color-primary-50)!important;
+	--accent-2: var(--sl-color-primary-100)!important;
+	--accent-3: var(--sl-color-primary-200)!important;
+	--accent-4: var(--sl-color-primary-300)!important;
+	--accent-5: var(--sl-color-primary-400)!important;
+	--accent-6: var(--sl-color-primary-500)!important;
+	--accent-7: var(--sl-color-primary-600)!important;
+	--accent-8: var(--sl-color-primary-700)!important;
+	--accent-9: var(--sl-color-primary-800!important);
+	--accent-10: var(--sl-color-primary-900!important);
+	--accent-11: var(--sl-color-primary-950)!important;
+	--accent-12: var(--sl-color-primary-950)!important;
+}
+
+.rt-TableColumnHeaderCell {
+	font-weight: 600!important;
+	color: var(--text-light)!important;
+}
+
+.rt-TextFieldRoot:where(.rt-variant-surface),
+.rt-SelectTrigger:where(.rt-variant-surface) {
+	box-shadow: none!important;
+	border: 1px solid var(--border-primary)!important;
+}
+
+.rt-BaseDialogContent {
+	border-radius: 5px!important;
+}
+
 /* || Content */
 
 .app .route-content {
