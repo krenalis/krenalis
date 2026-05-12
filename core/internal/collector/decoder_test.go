@@ -6,6 +6,7 @@ package collector
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -723,6 +724,9 @@ func TestDecoderContextIPHandling(t *testing.T) {
 	t.Parallel()
 
 	const remoteIP = "198.51.100.23"
+	const remoteIPv6 = "2001:db8:face:12::1"
+	const remoteIPv6Prefix64 = "2001:db8:face:12::"
+	const remoteIPv6Prefix48 = "2001:db8:face::"
 
 	remoteParts := strings.Split(remoteIP, ".")
 	if len(remoteParts) != 4 {
@@ -744,16 +748,21 @@ func TestDecoderContextIPHandling(t *testing.T) {
 		return base + `,"context":` + contextJSON + `}`
 	}
 
-	decode := func(t *testing.T, body string, fallback bool) events.Event {
+	decode := func(t *testing.T, body string, fallback bool, remoteAddr string, forwardedFor string) (events.Event, error) {
 		t.Helper()
 
+		header := http.Header{
+			"Content-Type": []string{"application/json; charset=utf-8"},
+			"User-Agent":   []string{"DecoderContextIPTest/1.0"},
+		}
+		if forwardedFor != "" {
+			header.Set("X-Forwarded-For", forwardedFor)
+		}
+
 		r := &http.Request{
-			Method: "POST",
-			Header: http.Header{
-				"Content-Type": []string{"application/json; charset=utf-8"},
-				"User-Agent":   []string{"DecoderContextIPTest/1.0"},
-			},
-			RemoteAddr: remoteIP + ":9000",
+			Method:     "POST",
+			Header:     header,
+			RemoteAddr: remoteAddr,
 			URL:        requestURL,
 			Body:       io.NopCloser(strings.NewReader(body)),
 		}
@@ -775,17 +784,14 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			count++
 		}
 
-		if gotErr != nil {
-			t.Fatalf("unexpected event error: %v", gotErr)
-		}
 		if count != 1 {
 			t.Fatalf("expected 1 event, got %d", count)
 		}
-		if gotEvent == nil {
+		if gotErr == nil && gotEvent == nil {
 			t.Fatal("expected non-nil event, got nil")
 		}
 
-		return gotEvent
+		return gotEvent, gotErr
 	}
 
 	type expectedIP struct {
@@ -794,10 +800,13 @@ func TestDecoderContextIPHandling(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		contextJSON string
-		fallback    bool
-		wantIP      expectedIP
+		name         string
+		contextJSON  string
+		fallback     bool
+		remoteIP     string
+		forwardedFor string
+		wantIP       expectedIP
+		wantErr      error
 	}{
 		{
 			name:        "no-context-ip-fallback-disabled",
@@ -824,6 +833,30 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			wantIP:      expectedIP{present: true, value: "198.18.0.1"},
 		},
 		{
+			name:        "context-regular-ipv6",
+			contextJSON: `{"ip":"2001:db8:face:12::1"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: "2001:db8:face:12::1"},
+		},
+		{
+			name:        "context-ipv4-mapped-ipv6",
+			contextJSON: `{"ip":"::ffff:192.0.2.1"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: "192.0.2.1"},
+		},
+		{
+			name:        "context-scoped-ipv6",
+			contextJSON: `{"ip":"fe80::1%eth0"}`,
+			fallback:    true,
+			wantErr:     errors.BadRequest("property 'ip' is not a valid IP address"),
+		},
+		{
+			name:        "context-multicast-ipv6",
+			contextJSON: `{"ip":"ff02::1"}`,
+			fallback:    true,
+			wantErr:     errors.BadRequest("property 'ip' cannot be a multicast IP address"),
+		},
+		{
 			name:        "context-ip-zero",
 			contextJSON: `{"ip":"0.0.0.0"}`,
 			fallback:    true,
@@ -847,6 +880,48 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			fallback:    false,
 			wantIP:      expectedIP{present: true, value: remoteIP16},
 		},
+		{
+			name:        "no-context-ip-ipv6-fallback-enabled",
+			contextJSON: "",
+			fallback:    true,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:        "context-ip-mask-32-with-ipv6-remote",
+			contextJSON: `{"ip":"255.255.255.255"}`,
+			fallback:    false,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:        "context-ip-mask-24-with-ipv6-remote",
+			contextJSON: `{"ip":"255.255.255.0"}`,
+			fallback:    false,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix64},
+		},
+		{
+			name:        "context-ip-mask-16-with-ipv6-remote",
+			contextJSON: `{"ip":"255.255.0.0"}`,
+			fallback:    false,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix48},
+		},
+		{
+			name:         "x-forwarded-for-ipv6-overrides-remote-addr",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIPv6,
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-ipv6-list",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIPv6 + ", " + remoteIP,
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
 	}
 
 	for _, tt := range tests {
@@ -854,7 +929,17 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			t.Parallel()
 
 			body := makeBody(tt.contextJSON)
-			event := decode(t, body, tt.fallback)
+			remoteAddr := remoteIP
+			if tt.remoteIP != "" {
+				remoteAddr = tt.remoteIP
+			}
+			event, err := decode(t, body, tt.fallback, net.JoinHostPort(remoteAddr, "9000"), tt.forwardedFor)
+			if !reflect.DeepEqual(tt.wantErr, err) {
+				t.Fatalf("expected error %#v, got error %#v", tt.wantErr, err)
+			}
+			if err != nil {
+				return
+			}
 
 			ctx, ok := event["context"].(map[string]any)
 			if ctx == nil {
@@ -877,6 +962,66 @@ func TestDecoderContextIPHandling(t *testing.T) {
 				if ok {
 					t.Fatalf("expected context.ip to be absent, got %v", ipVal)
 				}
+			}
+		})
+	}
+}
+
+// TestDecoderRemoteAddrValidation verifies request-level validation of IP
+// addresses provided by RemoteAddr and X-Forwarded-For.
+func TestDecoderRemoteAddrValidation(t *testing.T) {
+	t.Parallel()
+
+	requestURL, err := url.Parse("/events/track")
+	if err != nil {
+		t.Fatalf("failed to parse request URL: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		remoteAddr   string
+		forwardedFor string
+		wantErr      error
+	}{
+		{
+			name:         "scoped-ipv6-x-forwarded-for",
+			remoteAddr:   net.JoinHostPort("198.51.100.23", "9000"),
+			forwardedFor: "fe80::1%eth0",
+			wantErr:      errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address"),
+		},
+		{
+			name:       "scoped-ipv6-remote-addr",
+			remoteAddr: net.JoinHostPort("fe80::1%eth0", "9000"),
+			wantErr:    errors.New("unexpected IP address from RemoteAddr"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			header := http.Header{
+				"Content-Type": []string{"application/json; charset=utf-8"},
+				"User-Agent":   []string{"DecoderRemoteAddrValidationTest/1.0"},
+			}
+			if tt.forwardedFor != "" {
+				header.Set("X-Forwarded-For", tt.forwardedFor)
+			}
+
+			r := &http.Request{
+				Method:     "POST",
+				Header:     header,
+				RemoteAddr: tt.remoteAddr,
+				URL:        requestURL,
+				Body:       io.NopCloser(strings.NewReader(`{"type":"track","event":"click","anonymousId":"anon-1"}`)),
+			}
+
+			dec, err := newDecoder(r)
+			if !reflect.DeepEqual(tt.wantErr, err) {
+				t.Fatalf("expected error %#v, got error %#v", tt.wantErr, err)
+			}
+			if dec != nil {
+				t.Fatal("unexpected non-nil decoder")
 			}
 		})
 	}
@@ -1257,6 +1402,8 @@ func TestParseRemoteAddr(t *testing.T) {
 		{"172.16.5.123", "172.16.5.123", "172.16.5.0", "172.16.0.0"},
 		{"8.8.8.8", "8.8.8.8", "8.8.8.0", "8.8.0.0"},
 		{"::ffff:192.0.2.1", "192.0.2.1", "192.0.2.0", "192.0.0.0"},
+		{"2001:db8:face:12::1", "2001:db8:face:12::1", "2001:db8:face:12::", "2001:db8:face::"},
+		{"::1", "::1", "::", "::"},
 
 		// Edge octet values.
 		{"0.0.0.0", "0.0.0.0", "0.0.0.0", "0.0.0.0"},
@@ -1296,7 +1443,7 @@ func TestParseRemoteAddr(t *testing.T) {
 	// --- invalid cases ---
 	invalid := []string{
 		"", "   ", "1.2.3", "1.2.3.4.5", "256.1.1.1", "-1.2.3.4", "1.2.3.-4",
-		"abc.def.ghi.jkl", "::1", "2001:db8::1", "1.2.3.4 ", " 1.2.3.4",
+		"abc.def.ghi.jkl", "fe80::1%eth0", "1.2.3.4 ", " 1.2.3.4",
 	}
 
 	for _, in := range invalid {

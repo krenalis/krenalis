@@ -52,9 +52,9 @@ type decoder struct {
 	receivedAt time.Time
 	remoteAddr struct {
 		ip   netip.Addr
-		ip32 string // es. 192.168.1.42
-		ip24 string // es. 192.168.1.0
-		ip16 string // es. 192.168.0.0
+		ip32 string // e.g. 192.168.1.42 or 2001:db8:face:12::1
+		ip24 string // e.g. 192.168.1.0 (/24) or 2001:db8:face:12:: (/64)
+		ip16 string // e.g. 192.168.0.0 (/16) or 2001:db8:face:: (/48)
 	}
 	sentAt       time.Time
 	writeKey     string
@@ -176,7 +176,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		clientIP = strings.TrimSpace(clientIP)
 		err = d.parseRemoteAddr(clientIP)
 		if err != nil {
-			return errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IPv4 address")
+			return errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address")
 		}
 	} else {
 		// The address wasn't provided through the 'X-Forwarded-For' header,
@@ -184,7 +184,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		host, _, _ := net.SplitHostPort(r.RemoteAddr)
 		err = d.parseRemoteAddr(host)
 		if err != nil {
-			return errors.BadRequest("only IP version 4 is supported")
+			return errors.New("unexpected IP address from RemoteAddr")
 		}
 	}
 
@@ -567,11 +567,12 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 	// IP.
 	if ip, ok := context["ip"].(string); ok {
 		addr, err := netip.ParseAddr(ip)
-		if err != nil {
+		if err != nil || addr.Zone() != "" {
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
-		if !addr.Is4() {
-			return nil, errors.BadRequest("property 'ip' is not an IPv4 address")
+		mapped := addr.Is4In6()
+		if mapped {
+			addr = addr.Unmap()
 		}
 		switch addr {
 		case ip0: // 0.0.0.0
@@ -588,6 +589,9 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		default:
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
+			}
+			if mapped {
+				context["ip"] = addr.String()
 			}
 			locationIP = addr
 		}
@@ -1099,21 +1103,25 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 	return sec, nil
 }
 
-// parseRemoteAddr parses s as an IPv4 address, including IPv4-mapped
+// parseRemoteAddr parses s as an IPv4 or IPv6 address, including IPv4-mapped
 // addresses such as "::ffff:192.0.2.1", and stores the result in d.remoteAddr.
 func (d *decoder) parseRemoteAddr(s string) error {
 	addr, err := netip.ParseAddr(s)
 	if err != nil {
 		return err
 	}
-	addr = addr.Unmap()
-	if !addr.Is4() {
-		return errors.New("not an IPv4 address")
+	if addr.Zone() != "" {
+		return errors.New("invalid scoped IP address")
 	}
-	d.remoteAddr.ip = addr.Unmap()
+	addr = addr.Unmap()
+	bits24, bits16 := 24, 16
+	if addr.Is6() {
+		bits24, bits16 = 64, 48
+	}
+	d.remoteAddr.ip = addr
 	d.remoteAddr.ip32 = d.remoteAddr.ip.String()
-	d.remoteAddr.ip24 = netip.PrefixFrom(addr, 24).Masked().Addr().String()
-	d.remoteAddr.ip16 = netip.PrefixFrom(addr, 16).Masked().Addr().String()
+	d.remoteAddr.ip24 = netip.PrefixFrom(addr, bits24).Masked().Addr().String()
+	d.remoteAddr.ip16 = netip.PrefixFrom(addr, bits16).Masked().Addr().String()
 	return nil
 }
 
