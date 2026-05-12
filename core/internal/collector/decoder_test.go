@@ -922,6 +922,27 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			forwardedFor: remoteIPv6 + ", " + remoteIP,
 			wantIP:       expectedIP{present: true, value: remoteIPv6},
 		},
+		{
+			name:         "x-forwarded-for-bracketed-ipv6",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: "[" + remoteIPv6 + "]",
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-bracketed-ipv6-with-port",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: "[" + remoteIPv6 + "]:1234",
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-ipv4-with-port",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIP + ":1234",
+			wantIP:       expectedIP{present: true, value: remoteIP},
+		},
 	}
 
 	for _, tt := range tests {
@@ -987,6 +1008,12 @@ func TestDecoderRemoteAddrValidation(t *testing.T) {
 			name:         "scoped-ipv6-x-forwarded-for",
 			remoteAddr:   net.JoinHostPort("198.51.100.23", "9000"),
 			forwardedFor: "fe80::1%eth0",
+			wantErr:      errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address"),
+		},
+		{
+			name:         "unclosed-bracket-ipv6-x-forwarded-for",
+			remoteAddr:   net.JoinHostPort("198.51.100.23", "9000"),
+			forwardedFor: "[2001:db8:face:12::1",
 			wantErr:      errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address"),
 		},
 		{
