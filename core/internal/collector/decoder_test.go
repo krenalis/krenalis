@@ -725,8 +725,8 @@ func TestDecoderContextIPHandling(t *testing.T) {
 
 	const remoteIP = "198.51.100.23"
 	const remoteIPv6 = "2001:db8:face:12::1"
-	const remoteIPv6Prefix64 = "2001:db8:face:12::"
 	const remoteIPv6Prefix48 = "2001:db8:face::"
+	const remoteIPv6Prefix32 = "2001:db8::"
 
 	remoteParts := strings.Split(remoteIP, ".")
 	if len(remoteParts) != 4 {
@@ -899,14 +899,14 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			contextJSON: `{"ip":"255.255.255.0"}`,
 			fallback:    false,
 			remoteIP:    remoteIPv6,
-			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix64},
+			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix48},
 		},
 		{
 			name:        "context-ip-mask-16-with-ipv6-remote",
 			contextJSON: `{"ip":"255.255.0.0"}`,
 			fallback:    false,
 			remoteIP:    remoteIPv6,
-			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix48},
+			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix32},
 		},
 		{
 			name:         "x-forwarded-for-ipv6-overrides-remote-addr",
@@ -1402,7 +1402,7 @@ func TestParseRemoteAddr(t *testing.T) {
 		{"172.16.5.123", "172.16.5.123", "172.16.5.0", "172.16.0.0"},
 		{"8.8.8.8", "8.8.8.8", "8.8.8.0", "8.8.0.0"},
 		{"::ffff:192.0.2.1", "192.0.2.1", "192.0.2.0", "192.0.0.0"},
-		{"2001:db8:face:12::1", "2001:db8:face:12::1", "2001:db8:face:12::", "2001:db8:face::"},
+		{"2001:db8:face:12::1", "2001:db8:face:12::1", "2001:db8:face::", "2001:db8::"},
 		{"::1", "::1", "::", "::"},
 
 		// Edge octet values.

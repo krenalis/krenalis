@@ -53,8 +53,8 @@ type decoder struct {
 	remoteAddr struct {
 		ip   netip.Addr
 		ip32 string // e.g. 192.168.1.42 or 2001:db8:face:12::1
-		ip24 string // e.g. 192.168.1.0 (/24) or 2001:db8:face:12:: (/64)
-		ip16 string // e.g. 192.168.0.0 (/16) or 2001:db8:face:: (/48)
+		ip24 string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
+		ip16 string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
 	}
 	sentAt       time.Time
 	writeKey     string
@@ -1116,7 +1116,7 @@ func (d *decoder) parseRemoteAddr(s string) error {
 	addr = addr.Unmap()
 	bits24, bits16 := 24, 16
 	if addr.Is6() {
-		bits24, bits16 = 64, 48
+		bits24, bits16 = 48, 32
 	}
 	d.remoteAddr.ip = addr
 	d.remoteAddr.ip32 = d.remoteAddr.ip.String()
