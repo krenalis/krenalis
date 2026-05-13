@@ -561,9 +561,6 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 		if workosClientID == "" {
 			return nil, errors.New("KRENALIS_WORKOS_CLIENT_ID cannot be an empty string")
 		}
-		if !strings.HasPrefix(workosClientID, "client_") {
-			return nil, errors.New("KRENALIS_WORKOS_CLIENT_ID must start with 'client_'")
-		}
 		settings.WorkOS.ClientID = workosClientID
 
 		apiKey, ok := conf.Lookup("KRENALIS_WORKOS_API_KEY")
