@@ -375,6 +375,9 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos != nil {
+		return nil, errors.Unauthorized("native password login is disabled when WorkOS authentication is configured")
+	}
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
