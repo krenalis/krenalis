@@ -17,6 +17,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -280,6 +281,15 @@ func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 
 	if timestamp == "" || signature == "" {
 		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid timestamp in WorkOS-Signature header")
+	}
+	diff := time.Now().UnixMilli() - ts
+	if diff < 0 || diff > 5*60*1000 {
+		return fmt.Errorf("WorkOS signature timestamp is too old or in the future")
 	}
 
 	sigBytes, err := hex.DecodeString(signature)
