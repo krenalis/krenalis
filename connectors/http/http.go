@@ -115,7 +115,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := transport.RoundTrip(req)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -190,7 +190,7 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	for _, header := range s.Headers {
 		req.Header[header.Key] = []string{header.Value}
 	}
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := transport.RoundTrip(req)
 	if err != nil {
 		return err
 	}
@@ -231,4 +231,19 @@ func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 
 func ishex(c byte) bool {
 	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
+}
+
+var dialer = &net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
+
+var transport http.RoundTripper = &http.Transport{
+	Proxy:                 http.ProxyFromEnvironment,
+	DialContext:           dialer.DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
 }
