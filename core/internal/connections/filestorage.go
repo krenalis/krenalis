@@ -161,7 +161,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		records = append(records, record.Attributes)
 		return true
 	})
-	err = _file.(fileReadConnection).Read(ctx, r, sheet, rw)
+	err = readFromFileConnector(ctx, _file, &r, sheet, rw)
 	rw.close()
 	if err != nil && err != errRecordStop {
 		return nil, nil, nil, connectorError(err)
