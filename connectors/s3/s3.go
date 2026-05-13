@@ -14,6 +14,7 @@ import (
 	"context"
 	_ "embed"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -22,9 +23,10 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awsHTTP "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
-	s3pkg "github.com/aws/aws-sdk-go-v2/service/s3"
+	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 //go:embed documentation/source/overview.md
@@ -94,7 +96,7 @@ func (s3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time
 		return nil, time.Time{}, err
 	}
 	client := s3.client(&s)
-	res, err := client.GetObject(ctx, &s3pkg.GetObjectInput{
+	res, err := client.GetObject(ctx, &awsS3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(name),
 	})
@@ -205,7 +207,7 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 }
 
 // client returns a S3 client.
-func (s3 *S3) client(s *innerSettings) *s3pkg.Client {
+func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 	cfg := aws.Config{
 		Region: s.Region,
 		Credentials: aws.NewCredentialsCache(
@@ -215,8 +217,16 @@ func (s3 *S3) client(s *innerSettings) *s3pkg.Client {
 				"",
 			),
 		),
+		HTTPClient: awsHTTP.NewBuildableClient().
+			WithTransportOptions(func(transport *http.Transport) {
+				transport.Proxy = nil
+				transport.MaxConnsPerHost = 2
+				transport.MaxIdleConns = 2
+				transport.MaxIdleConnsPerHost = 2
+				transport.IdleConnTimeout = 10 * time.Second
+			}),
 	}
-	return s3pkg.NewFromConfig(cfg)
+	return awsS3.NewFromConfig(cfg)
 }
 
 // saveSettings validates and saves the settings.
