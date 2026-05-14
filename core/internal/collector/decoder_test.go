@@ -1486,7 +1486,7 @@ func TestParseRemoteAddr(t *testing.T) {
 				t.Fatalf("normalization: expected %q, got %q", "192.168.1.42", ra.identifiable)
 			}
 			if ra.partiallyAnonymous != "192.168.1.0" || ra.stronglyAnonymous != "192.168.0.0" {
-				t.Fatalf("masked normalization: expected ip24=%q ip16=%q, got ip24=%q ip16=%q",
+				t.Fatalf("masked normalization: expected partiallyAnonymous=%q stronglyAnonymous=%q, got partiallyAnonymous=%q stronglyAnonymous=%q",
 					"192.168.1.0", "192.168.0.0", ra.partiallyAnonymous, ra.stronglyAnonymous)
 			}
 		}
