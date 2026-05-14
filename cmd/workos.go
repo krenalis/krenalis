@@ -151,10 +151,7 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		return nil, nil, fmt.Errorf("invalid JWT payload: %s", err)
 	}
 
-	// Validate issuer and environment.
-	if claims.Iss != workosBaseURL {
-		return nil, nil, fmt.Errorf("unexpected JWT issuer %q", claims.Iss)
-	}
+	// Validate environment.
 	if claims.ClientID != wo.clientID {
 		return nil, nil, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
