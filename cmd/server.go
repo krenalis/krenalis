@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/krenalis/krenalis/cmd/internal/mcp"
+	"github.com/krenalis/krenalis/cmd/mcp"
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/prometheus"
 

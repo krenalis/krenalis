@@ -51,10 +51,10 @@ type decoder struct {
 
 	receivedAt time.Time
 	remoteAddr struct {
-		ip                 netip.Addr
-		identifiable       string // e.g. 192.168.1.42 or 2001:db8:face:12::1
-		partiallyAnonymous string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
-		stronglyAnonymous  string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
+		ip   netip.Addr
+		ip32 string // e.g. 192.168.1.42 or 2001:db8:face:12::1
+		ip24 string // e.g. 192.168.1.0 (/24) or 2001:db8:face:12:: (/64)
+		ip16 string // e.g. 192.168.0.0 (/16) or 2001:db8:face:: (/48)
 	}
 	sentAt       time.Time
 	writeKey     string
@@ -584,28 +584,33 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		if err != nil || addr.Zone() != "" {
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
+		mapped := addr.Is4In6()
+		if mapped {
+			addr = addr.Unmap()
+		}
 		switch addr {
 		case ip0: // 0.0.0.0
 			delete(context, "ip")
 		case ip32: // 255.255.255.255
-			context["ip"] = d.remoteAddr.identifiable
+			context["ip"] = d.remoteAddr.ip32
 			locationIP = d.remoteAddr.ip
 		case ip24: // 255.255.255.0
-			context["ip"] = d.remoteAddr.partiallyAnonymous
+			context["ip"] = d.remoteAddr.ip24
 			locationIP = d.remoteAddr.ip
 		case ip16: // 255.255.0.0
-			context["ip"] = d.remoteAddr.stronglyAnonymous
+			context["ip"] = d.remoteAddr.ip16
 			locationIP = d.remoteAddr.ip
 		default:
-			addr = addr.Unmap()
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
-			context["ip"] = addr.String()
+			if mapped {
+				context["ip"] = addr.String()
+			}
 			locationIP = addr
 		}
 	} else if fallbackToRequestIP {
-		context["ip"] = d.remoteAddr.identifiable
+		context["ip"] = d.remoteAddr.ip32
 		locationIP = d.remoteAddr.ip
 	}
 
@@ -1123,15 +1128,14 @@ func (d *decoder) parseRemoteAddr(s string) error {
 		return errors.New("invalid scoped IP address")
 	}
 	addr = addr.Unmap()
-	d.remoteAddr.ip = addr
-	d.remoteAddr.identifiable = d.remoteAddr.ip.String()
+	bits24, bits16 := 24, 16
 	if addr.Is6() {
-		d.remoteAddr.partiallyAnonymous = netip.PrefixFrom(addr, 48).Masked().Addr().String()
-		d.remoteAddr.stronglyAnonymous = netip.PrefixFrom(addr, 32).Masked().Addr().String()
-	} else {
-		d.remoteAddr.partiallyAnonymous = netip.PrefixFrom(addr, 24).Masked().Addr().String()
-		d.remoteAddr.stronglyAnonymous = netip.PrefixFrom(addr, 16).Masked().Addr().String()
+		bits24, bits16 = 64, 48
 	}
+	d.remoteAddr.ip = addr
+	d.remoteAddr.ip32 = d.remoteAddr.ip.String()
+	d.remoteAddr.ip24 = netip.PrefixFrom(addr, bits24).Masked().Addr().String()
+	d.remoteAddr.ip16 = netip.PrefixFrom(addr, bits16).Masked().Addr().String()
 	return nil
 }
 
