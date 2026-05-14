@@ -570,8 +570,8 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		if err != nil || addr.Zone() != "" {
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
-		mapped := addr.Is4In6()
-		if mapped {
+		ip4in6 := addr.Is4In6()
+		if ip4in6 {
 			addr = addr.Unmap()
 		}
 		switch addr {
@@ -590,7 +590,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
-			if mapped {
+			if ip4in6 {
 				context["ip"] = addr.String()
 			}
 			locationIP = addr
