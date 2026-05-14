@@ -41,13 +41,9 @@ type fileReadConnection interface {
 	Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error
 }
 
-// fileReadSeekConnection is implemented by file connectors that require a
-// seekable reader when reading records.
 type fileReadSeekConnection interface {
 	// Read is like fileReadConnection.Read but accepts an io.ReadSeeker instead of
-	// an io.Reader.
-	//
-	// r must also implement io.ReaderAt.
+	// an io.Reader. r must also implement io.ReaderAt.
 	Read(ctx context.Context, r io.ReadSeeker, sheet string, records connectors.RecordWriter) error
 }
 
@@ -71,7 +67,7 @@ type File struct {
 	state       *state.State
 	pipeline    *state.Pipeline
 	timeLayouts *state.TimeLayouts
-	inner       any
+	inner       any // used as fileReadConnection | fileReadSeekConnection | fileWriteConnection | fileContentTypeConnection
 	err         error
 }
 
@@ -475,7 +471,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  any
+	inner  any // used as fileReadConnection | fileReadSeekConnection
 	err    error
 	closed bool
 }
