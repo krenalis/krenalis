@@ -583,9 +583,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 			context["ip"] = d.remoteAddr.stronglyAnonymous
 			locationIP = d.remoteAddr.ip
 		default:
-			if addr.Is4In6() {
-				addr = addr.Unmap()
-			}
+			addr = addr.Unmap()
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
