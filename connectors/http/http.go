@@ -232,7 +232,8 @@ func ishex(c byte) bool {
 }
 
 var dialer = &net.Dialer{
-	Timeout: 5 * time.Second,
+	Timeout:   5 * time.Second,
+	KeepAlive: -1, // disable keep-alive probes.
 }
 
 var transport = &http.Transport{

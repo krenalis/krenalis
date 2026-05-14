@@ -197,9 +197,10 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 
 // storage returns the inner storage connection of the file.
 func (file *File) storage() (any, error) {
-	connector := file.pipeline.Connection().Connector()
+	storage := file.pipeline.Connection()
+	connector := storage.Connector()
 	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
-		Settings: newPipelineSettingStore(file.state, file.pipeline),
+		Settings: newConnectionSettingStore(file.state, storage),
 	})
 }
 
