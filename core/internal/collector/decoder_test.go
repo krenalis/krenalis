@@ -881,6 +881,18 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			wantIP:      expectedIP{present: true, value: remoteIP16},
 		},
 		{
+			name:        "context-ipv4-mapped-ipv6-mask-24",
+			contextJSON: `{"ip":"::ffff:255.255.255.0"}`,
+			fallback:    false,
+			wantIP:      expectedIP{present: true, value: "255.255.255.0"},
+		},
+		{
+			name:        "context-ipv4-mapped-ipv6-multicast",
+			contextJSON: `{"ip":"::ffff:224.0.0.1"}`,
+			fallback:    false,
+			wantErr:     errors.BadRequest("property 'ip' cannot be a multicast IP address"),
+		},
+		{
 			name:        "no-context-ip-ipv6-fallback-enabled",
 			contextJSON: "",
 			fallback:    true,

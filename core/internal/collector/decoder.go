@@ -570,10 +570,6 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		if err != nil || addr.Zone() != "" {
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
-		ip4in6 := addr.Is4In6()
-		if ip4in6 {
-			addr = addr.Unmap()
-		}
 		switch addr {
 		case ip0: // 0.0.0.0
 			delete(context, "ip")
@@ -587,12 +583,13 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 			context["ip"] = d.remoteAddr.ip16
 			locationIP = d.remoteAddr.ip
 		default:
+			if addr.Is4In6() {
+				addr = addr.Unmap()
+			}
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
-			if ip4in6 {
-				context["ip"] = addr.String()
-			}
+			context["ip"] = addr.String()
 			locationIP = addr
 		}
 	} else if fallbackToRequestIP {
