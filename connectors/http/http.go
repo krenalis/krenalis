@@ -115,12 +115,11 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := transport.RoundTrip(req)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
 	if res.StatusCode != 200 {
-		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 		return nil, time.Time{}, fmt.Errorf("server responded with status: %s", res.Status)
 	}
@@ -190,12 +189,11 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	for _, header := range s.Headers {
 		req.Header[header.Key] = []string{header.Value}
 	}
-	res, err := http.DefaultTransport.RoundTrip(req)
+	res, err := transport.RoundTrip(req)
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, res.Body)
+	_ = res.Body.Close()
 	if c := res.StatusCode; c != 200 && c != 201 {
 		return fmt.Errorf("server responded with status: %s", res.Status)
 	}
@@ -231,4 +229,19 @@ func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 
 func ishex(c byte) bool {
 	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
+}
+
+var dialer = &net.Dialer{
+	Timeout:   5 * time.Second,
+	KeepAlive: -1, // disable keep-alive probes.
+}
+
+var transport = &http.Transport{
+	Proxy:                 nil,
+	DialContext:           dialer.DialContext,
+	DisableKeepAlives:     true,
+	ForceAttemptHTTP2:     true,
+	TLSHandshakeTimeout:   5 * time.Second,
+	ResponseHeaderTimeout: 5 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
 }
