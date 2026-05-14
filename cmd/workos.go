@@ -141,17 +141,30 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		return nil, nil, fmt.Errorf("invalid JWT payload encoding: %s", err)
 	}
 	var claims struct {
-		Sub   string `json:"sub"`
-		Exp   int64  `json:"exp"`
-		OrgID string `json:"org_id"`
+		Iss      string `json:"iss"`
+		ClientID string `json:"client_id"`
+		Sub      string `json:"sub"`
+		Exp      *int64 `json:"exp"`
+		OrgID    string `json:"org_id"`
 	}
 	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
 		return nil, nil, fmt.Errorf("invalid JWT payload: %s", err)
 	}
 
+	// Validate issuer and environment.
+	if claims.Iss != workosBaseURL {
+		return nil, nil, fmt.Errorf("unexpected JWT issuer %q", claims.Iss)
+	}
+	if claims.ClientID != wo.clientID {
+		return nil, nil, fmt.Errorf("JWT client_id does not match configured client ID")
+	}
+
 	// Validate time-based claims.
+	if claims.Exp == nil {
+		return nil, nil, fmt.Errorf("missing exp claim in JWT")
+	}
 	now := time.Now().Unix()
-	if claims.Exp > 0 && now > claims.Exp {
+	if now >= *claims.Exp {
 		return nil, nil, fmt.Errorf("JWT has expired")
 	}
 	if claims.Sub == "" {
