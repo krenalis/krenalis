@@ -354,5 +354,6 @@ var parameters = map[string]string{
 	"/workos/actions-secret":                  "WORKOS_ACTIONS_SECRET",
 	"/workos/api-key":                         "WORKOS_API_KEY",
 	"/workos/client-id":                       "WORKOS_CLIENT_ID",
+	"/workos/dev-mode":                        "WORKOS_DEV_MODE",
 	"/workos/webhook-secret":                  "WORKOS_WEBHOOK_SECRET",
 }
