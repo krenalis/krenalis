@@ -1403,10 +1403,10 @@ func TestParseRemoteAddr(t *testing.T) {
 
 	// --- valid cases ---
 	valid := []struct {
-		in     string
-		want32 string
-		want24 string
-		want16 string
+		in                     string
+		wantIdentifiable       string
+		wantPartiallyAnonymous string
+		wantStronglyAnonymous  string
 	}{
 		// Common cases.
 		{"192.168.1.42", "192.168.1.42", "192.168.1.0", "192.168.0.0"},
@@ -1435,17 +1435,17 @@ func TestParseRemoteAddr(t *testing.T) {
 			}
 
 			ra := dec.remoteAddr
-			if ra.ip32 != test.want32 {
-				t.Fatalf("ip32: expected %q, got %q", test.want32, ra.ip32)
+			if ra.identifiable != test.wantIdentifiable {
+				t.Fatalf("identifiable: expected %q, got %q", test.wantIdentifiable, ra.identifiable)
 			}
-			if ra.ip24 != test.want24 {
-				t.Fatalf("ip24: expected %q, got %q", test.want24, ra.ip24)
+			if ra.partiallyAnonymous != test.wantPartiallyAnonymous {
+				t.Fatalf("partiallyAnonymous: expected %q, got %q", test.wantPartiallyAnonymous, ra.partiallyAnonymous)
 			}
-			if ra.ip16 != test.want16 {
-				t.Fatalf("ip16: expected %q, got %q", test.want16, ra.ip16)
+			if ra.stronglyAnonymous != test.wantStronglyAnonymous {
+				t.Fatalf("stronglyAnonymous: expected %q, got %q", test.wantStronglyAnonymous, ra.stronglyAnonymous)
 			}
 
-			wantIP := netip.MustParseAddr(test.want32)
+			wantIP := netip.MustParseAddr(test.wantIdentifiable)
 			if wantIP != ra.ip {
 				t.Fatalf("ip: expected %v, got %v", wantIP, ra.ip)
 			}
@@ -1468,7 +1468,7 @@ func TestParseRemoteAddr(t *testing.T) {
 				t.Fatalf("parseRemoteAddr(%q): expected error, got nil", in)
 			}
 			ra := dec.remoteAddr
-			if ra.ip32 != "" || ra.ip24 != "" || ra.ip16 != "" || ra.ip.IsValid() {
+			if ra.identifiable != "" || ra.partiallyAnonymous != "" || ra.stronglyAnonymous != "" || ra.ip.IsValid() {
 				t.Fatalf("parseRemoteAddr(%q): expected zero-value remoteAddr on error, got %+v", in, ra)
 			}
 		})
@@ -1482,12 +1482,12 @@ func TestParseRemoteAddr(t *testing.T) {
 		err := dec.parseRemoteAddr("192.168.001.042")
 		if err == nil {
 			ra := dec.remoteAddr
-			if ra.ip32 != "192.168.1.42" {
-				t.Fatalf("normalization: expected %q, got %q", "192.168.1.42", ra.ip32)
+			if ra.identifiable != "192.168.1.42" {
+				t.Fatalf("normalization: expected %q, got %q", "192.168.1.42", ra.identifiable)
 			}
-			if ra.ip24 != "192.168.1.0" || ra.ip16 != "192.168.0.0" {
+			if ra.partiallyAnonymous != "192.168.1.0" || ra.stronglyAnonymous != "192.168.0.0" {
 				t.Fatalf("masked normalization: expected ip24=%q ip16=%q, got ip24=%q ip16=%q",
-					"192.168.1.0", "192.168.0.0", ra.ip24, ra.ip16)
+					"192.168.1.0", "192.168.0.0", ra.partiallyAnonymous, ra.stronglyAnonymous)
 			}
 		}
 	})
