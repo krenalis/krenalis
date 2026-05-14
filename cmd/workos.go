@@ -258,22 +258,21 @@ func (wo *workos) call(method, path string, body any, out any) (int, error) {
 }
 
 // verifyActionSignature verifies the HMAC-SHA256 signature of an incoming
-// WorkOS action request. The header format and signing scheme are identical to
-// webhook signatures but use the dedicated actions secret.
+// WorkOS action request. sigHeader is the value of the "WorkOS-Signature"
+// header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
+// message is "<timestamp>.<rawBody>".
 func (wo *workos) verifyActionSignature(rawBody []byte, sigHeader string) error {
 	return wo.verifyHMACSignature(rawBody, sigHeader, wo.actionsSecret)
 }
 
 // verifyWebhookSignature verifies the HMAC-SHA256 signature of an incoming
-// WorkOS webhook request. sigHeader is the value of the "WorkOS-Signature"
+// WorkOS webhook event. sigHeader is the value of the "WorkOS-Signature"
 // header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
 // message is "<timestamp>.<rawBody>".
 func (wo *workos) verifyWebhookSignature(rawBody []byte, sigHeader string) error {
 	return wo.verifyHMACSignature(rawBody, sigHeader, wo.webhookSecret)
 }
 
-// verifyHMACSignature is the shared implementation for verifyWebhookSignature
-// and verifyActionSignature.
 func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) error {
 	parts := strings.Split(sigHeader, ",")
 	if len(parts) < 2 {
@@ -322,29 +321,31 @@ func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 // buildActionResponse builds and signs a WorkOS action response JSON payload.
 // verdict must be "Allow" or "Deny"; errorMessage is included only on Deny.
 func (wo *workos) buildActionResponse(verdict, errorMessage string) ([]byte, error) {
-	type payloadObj struct {
+	type actionPayload struct {
 		Timestamp    int64  `json:"timestamp"`
 		Verdict      string `json:"verdict"`
 		ErrorMessage string `json:"error_message,omitempty"`
 	}
 	t := time.Now().UnixMilli()
-	payload := payloadObj{Timestamp: t, Verdict: verdict, ErrorMessage: errorMessage}
-	payloadJSON, err := json.Marshal(payload)
+	p := actionPayload{Timestamp: t, Verdict: verdict, ErrorMessage: errorMessage}
+	pJSON, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
 	}
 	mac := hmac.New(sha256.New, []byte(wo.actionsSecret))
 	fmt.Fprintf(mac, "%d.", t)
-	mac.Write(payloadJSON)
+	mac.Write(pJSON)
 	sig := hex.EncodeToString(mac.Sum(nil))
-	type responseObj struct {
-		Object    string     `json:"object"`
-		Payload   payloadObj `json:"payload"`
-		Signature string     `json:"signature"`
+	type response struct {
+		Object    string        `json:"object"`
+		Payload   actionPayload `json:"payload"`
+		Signature string        `json:"signature"`
 	}
-	return json.Marshal(responseObj{
-		Object:    "user_registration_action_response",
-		Payload:   payload,
-		Signature: sig,
-	})
+	return json.Marshal(
+		response{
+			Object:    "user_registration_action_response",
+			Payload:   p,
+			Signature: sig,
+		},
+	)
 }

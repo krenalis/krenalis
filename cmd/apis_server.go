@@ -463,14 +463,13 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 }
 
 // workosLogin exchanges a WorkOS access token for a Krenalis session cookie. It
-// verifies the WorkOS JWT, retrieves the member by WorkOS user ID,
+// verifies the WorkOS token, retrieves the member by WorkOS user ID,
 // auto-provisions them if they are not already registered in Krenalis, and sets
 // the same encrypted session cookie as a normal login.
 func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, error) {
 	if s.workos == nil {
-		return nil, errors.Unauthorized("WorkOS authentication is not enabled")
+		return nil, errors.Unauthorized("WorkOS is not configured")
 	}
-
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
@@ -534,8 +533,8 @@ func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, e
 // the request signature and denies registration if the email the user is
 // registering with does not match the email on the WorkOS invitation.
 func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) (any, error) {
-	if s.workos == nil || s.workos.actionsSecret == "" {
-		return nil, errors.Unauthorized("WorkOS actions are not configured")
+	if s.workos == nil {
+		return nil, errors.Unauthorized("WorkOS is not configured")
 	}
 
 	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
@@ -555,7 +554,7 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 		return nil, errors.Unauthorized("invalid WorkOS action signature")
 	}
 
-	var actionCtx struct {
+	var action struct {
 		UserData struct {
 			Email string `json:"email"`
 		} `json:"user_data"`
@@ -563,14 +562,14 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 			Email string `json:"email"`
 		} `json:"invitation"`
 	}
-	if err := stdJSON.Unmarshal(rawBody, &actionCtx); err != nil {
+	if err := stdJSON.Unmarshal(rawBody, &action); err != nil {
 		return nil, errors.BadRequest("invalid action payload")
 	}
 
 	verdict, message := "Deny", "Registration is by invitation only."
 
-	if actionCtx.Invitation != nil {
-		if strings.EqualFold(actionCtx.UserData.Email, actionCtx.Invitation.Email) {
+	if action.Invitation != nil {
+		if strings.EqualFold(action.UserData.Email, action.Invitation.Email) {
 			verdict, message = "Allow", ""
 		} else {
 			message = "You must register with the email address you were invited with."
@@ -586,12 +585,10 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 	return nil, nil
 }
 
-// handleWorkOSWebhook handles incoming WorkOS webhook events. It verifies the
-// request signature and, for "user.updated" events, updates the member's name
-// and email across all organizations.
+// handleWorkOSWebhook handles incoming WorkOS webhook events.
 func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if s.workos == nil || s.workos.webhookSecret == "" {
-		return nil, errors.Unauthorized("WorkOS webhook is not configured")
+	if s.workos == nil {
+		return nil, errors.Unauthorized("WorkOS is not configured")
 	}
 
 	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
@@ -638,8 +635,8 @@ func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request)
 		}
 		if err := s.core.UpdateMembersByWorkOSID(r.Context(), event.Data.ID, name, event.Data.Email); err != nil {
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
-				slog.Warn("workos webhook: email already in use, skipping member update",
-					"workos_user_id", event.Data.ID, "email", event.Data.Email)
+				// Email already in use, skip the update without returning
+				// errors to prevent webhook retries.
 				return nil, nil
 			}
 			return nil, err

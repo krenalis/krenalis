@@ -25,6 +25,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
@@ -713,6 +714,60 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUI
 	return n.ID, nil
 }
 
+// DeleteMembersByWorkOSID deletes all members across all organizations that
+// have the given WorkOS user ID.
+func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
+	core.mustBeOpen()
+	type memberRef struct {
+		id           int
+		organization uuid.UUID
+	}
+	var members []memberRef
+	err := core.db.QueryScan(
+		ctx,
+		"SELECT id, organization FROM members WHERE workos_user_id = $1",
+		workosUserID,
+		func(rows *db.Rows) error {
+			for rows.Next() {
+				var m memberRef
+				if err := rows.Scan(&m.id, &m.organization); err != nil {
+					return err
+				}
+				members = append(members, m)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return err
+	}
+	for _, m := range members {
+		n := state.DeleteMember{
+			ID:           m.id,
+			Organization: m.organization,
+		}
+		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			result, err := tx.Exec(
+				ctx,
+				"DELETE FROM members WHERE id = $1 AND organization = $2",
+				m.id,
+				m.organization,
+			)
+			if err != nil {
+				return nil, err
+			}
+			if result.RowsAffected() == 0 {
+				return nil, nil
+			}
+			return n, nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // InstallationID returns the installation ID.
 func (core *Core) InstallationID() string {
 	return core.state.InstallationID()
@@ -851,6 +906,58 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.mustBeOpen()
 	core.collector.ServeHTTP(w, r)
+}
+
+// UpdateMembersByWorkOSID updates the name and email of all members across all
+// organizations that have the given WorkOS user ID. It returns an
+// errors.UnprocessableError with code MemberEmailExists if the new email is
+// already in use by another member in any affected organization.
+func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, name, email string) error {
+	core.mustBeOpen()
+	if name != "" {
+		if err := util.ValidateStringField("name", name, 255); err != nil {
+			return errors.BadRequest("%s", err)
+		}
+	}
+	if err := validateMemberEmail(email); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		alreadyExists, err := tx.QueryExists(
+			ctx,
+			"SELECT FROM members m1 JOIN members m2 ON m2.organization = m1.organization AND m2.email = $2 AND m2.id <> m1.id WHERE m1.workos_user_id = $1",
+			workosUserID,
+			email,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if alreadyExists {
+			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+		}
+		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
+		return nil, err
+	})
+}
+
+// UpdateOrganizationName updates the name of the organization identified by
+// orgID.
+func (core *Core) UpdateOrganizationName(ctx context.Context, orgID uuid.UUID, name string) error {
+	core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 255); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	n := state.UpdateOrganization{ID: orgID, Name: name}
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, orgID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, nil
+		}
+		return n, nil
+	})
 }
 
 // ValidateMemberPasswordResetToken validates the given password reset token.
