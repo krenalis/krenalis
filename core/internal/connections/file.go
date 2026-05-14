@@ -550,8 +550,7 @@ type readSeekAtConnection interface {
 
 // readFromFileConnector reads records with the file connector. If the connector
 // requires an io.ReadSeeker, it materializes r into a temporary file first. The
-// reader passed to the connector also implements io.ReaderAt, but does not expose
-// Close or Name.
+// reader passed to the connector also implements io.ReaderAt.
 func readFromFileConnector(ctx context.Context, connector any, r *io.ReadCloser, sheet string, records connectors.RecordWriter) (err error) {
 	c, ok := connector.(fileReadSeekConnection)
 	if !ok {
@@ -572,6 +571,7 @@ func readFromFileConnector(ctx context.Context, connector any, r *io.ReadCloser,
 
 // materializeReadSeeker returns a seekable reader for r.
 func materializeReadSeeker(r *io.ReadCloser) (io.ReadCloser, io.ReadSeeker, error) {
+
 	if rs, ok := (*r).(readSeekAtConnection); ok {
 		rc := *r
 		reader := readSeekAt{Reader: rs, Seeker: rs, ReaderAt: rs}
@@ -609,6 +609,7 @@ func materializeReadSeeker(r *io.ReadCloser) (io.ReadCloser, io.ReadSeeker, erro
 		return nil, nil, err
 	}
 	reader := readSeekAt{Reader: fi, Seeker: fi, ReaderAt: fi}
+
 	return newFuncReadCloser(reader, cleanup), reader, nil
 }
 
