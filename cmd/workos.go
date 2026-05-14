@@ -17,6 +17,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -179,7 +180,7 @@ func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, erro
 		LastName  string `json:"last_name"`
 	}
 
-	status, err := wo.call(http.MethodGet, "/user_management/users/"+userID, nil, &userRes)
+	status, err := wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), nil, &userRes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch WorkOS token: %s", err)
 	}
@@ -201,7 +202,7 @@ func (wo *workos) workosOrganization(orgID string) (*uuid.UUID, error) {
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
-	status, err := wo.call(http.MethodGet, "/organizations/"+orgID, nil, &orgRes)
+	status, err := wo.call(http.MethodGet, "/organizations/"+url.PathEscape(orgID), nil, &orgRes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
 	}
