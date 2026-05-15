@@ -7,6 +7,7 @@
 package sftp
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -33,6 +34,8 @@ var sourceOverview string
 
 //go:embed documentation/destination/overview.md
 var destinationOverview string
+
+var errHostKeyMismatch = errors.New("host key mismatch")
 
 func init() {
 	connectors.RegisterFileStorage(connectors.FileStorageSpec{
@@ -62,11 +65,12 @@ type SFTP struct {
 }
 
 type innerSettings struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	TempPath string `json:"tempPath"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	HostPublicKey string `json:"hostPublicKey"`
+	TempPath      string `json:"tempPath"`
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
@@ -147,6 +151,7 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, settings json.Value, 
 			&connectors.Input{Name: "port", Label: "Port", Placeholder: "22", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
 			&connectors.Input{Name: "username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
 			&connectors.Input{Name: "password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&connectors.Input{Name: "hostPublicKey", Label: "Server public key", Placeholder: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...", HelpText: "Strongly recommended. Ensures the SFTP server identity matches this OpenSSH public key.", Rows: 3, MaxLength: 5000},
 			&connectors.Input{Name: "tempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: connectors.Destination},
 		},
 		Settings: settings,
@@ -243,6 +248,16 @@ func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role conn
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
 		return connectors.NewInvalidSettingsError("password length must be in range [1,200]")
 	}
+	// Validate HostPublicKey.
+	s.HostPublicKey = strings.TrimSpace(s.HostPublicKey)
+	if s.HostPublicKey != "" {
+		if n := utf8.RuneCountInString(s.HostPublicKey); n > 5000 {
+			return connectors.NewInvalidSettingsError("server public key length must be in range [0,5000]")
+		}
+		if err := validateHostPublicKey(s.HostPublicKey); err != nil {
+			return connectors.NewInvalidSettingsError(err.Error())
+		}
+	}
 	// Validate TempPath.
 	if role == connectors.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
@@ -304,17 +319,65 @@ func (client *client) close() error {
 	return err2
 }
 
-// openClient opens a client for the SFTP server based on the provided settings.
-// The returned client must be closed using the close method. If the context is
-// canceled before the client is closed, the underlying network connection, not
-// the client, will be automatically closed.
-func openClient(ctx context.Context, s *innerSettings) (*client, error) {
+// hostKeyAlgorithms returns the host key algorithms accepted for the given key.
+//
+// RSA public keys are identified as "ssh-rsa", but SSH servers may use the
+// same key with the stronger rsa-sha2-256 or rsa-sha2-512 signature algorithms
+// during host key verification.
+//
+// For RSA keys, accept both RSA-SHA2 algorithms and the legacy ssh-rsa
+// algorithm to remain compatible with older and newer servers.
+func hostKeyAlgorithms(key ssh.PublicKey) []string {
+	if key.Type() == ssh.KeyAlgoRSA {
+		return []string{ssh.KeyAlgoRSASHA256, ssh.KeyAlgoRSASHA512, ssh.KeyAlgoRSA}
+	}
+	return []string{key.Type()}
+}
+
+// hostKeyValidator returns an SSH HostKeyCallback that verifies the server
+// host key matches the expected key exactly. Connections using a different
+// host key are rejected.
+func hostKeyValidator(key ssh.PublicKey) ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, candidate ssh.PublicKey) error {
+		if key == nil {
+			return errors.New("required host key was nil")
+		}
+		if !bytes.Equal(candidate.Marshal(), key.Marshal()) {
+			return errHostKeyMismatch
+		}
+		return nil
+	}
+}
+
+// newSSHClientConfig returns the SSH client configuration for s.
+func newSSHClientConfig(s *innerSettings) (*ssh.ClientConfig, error) {
 	sshConfig := &ssh.ClientConfig{
 		User: s.Username,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(s.Password),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(marco) don't use in production
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	if s.HostPublicKey == "" {
+		return sshConfig, nil
+	}
+	hostPublicKey, err := parseHostPublicKey(s.HostPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	sshConfig.HostKeyCallback = hostKeyValidator(hostPublicKey)
+	sshConfig.HostKeyAlgorithms = hostKeyAlgorithms(hostPublicKey)
+	return sshConfig, nil
+}
+
+// openClient opens a client for the SFTP server based on the provided settings.
+// The returned client must be closed using the close method. If the context is
+// canceled before the client is closed, the underlying network connection, not
+// the client, will be automatically closed.
+func openClient(ctx context.Context, s *innerSettings) (*client, error) {
+	sshConfig, err := newSSHClientConfig(s)
+	if err != nil {
+		return nil, err
 	}
 	addr := s.Host + ":" + strconv.Itoa(s.Port)
 	// The ssh package does not implement the ssh.DialContext function
@@ -341,6 +404,9 @@ func openClient(ctx context.Context, s *innerSettings) (*client, error) {
 	}()
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
 	if err != nil {
+		if errors.Is(err, errHostKeyMismatch) {
+			return nil, connectors.NewInvalidSettingsError("server public key does not match the server host key")
+		}
 		return nil, err
 	}
 	sshClient := ssh.NewClient(c, chans, reqs)
@@ -353,15 +419,38 @@ func openClient(ctx context.Context, s *innerSettings) (*client, error) {
 	return cl, nil
 }
 
+// parseHostPublicKey parses k as a single-line OpenSSH public key without
+// authorized_keys options. The returned error messages are suitable for
+// connectors.NewInvalidSettingsError.
+func parseHostPublicKey(k string) (ssh.PublicKey, error) {
+	if strings.ContainsAny(k, "\r\n") {
+		return nil, errors.New("public key must be a single line")
+	}
+	key, _, options, rest, err := ssh.ParseAuthorizedKey([]byte(k))
+	if err != nil {
+		return nil, errors.New("server public key must be a valid OpenSSH public key")
+	}
+	if len(options) != 0 {
+		return nil, errors.New("public key options are not allowed")
+	}
+	if len(rest) != 0 {
+		return nil, errors.New("unexpected trailing data after public key")
+	}
+	return key, nil
+}
+
 // testConnection tests a connection using the provided settings. It returns an
 // error if the connection cannot be established or if the server does not
 // respond within 5 seconds.
 func testConnection(ctx context.Context, settings *innerSettings) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	openCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	client, err := openClient(ctx, settings)
+	client, err := openClient(openCtx, settings)
 	if err != nil {
 		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if openCtx.Err() != nil {
 			return errors.New("sftp: unable to establish a connection within the 5-second limit. Verify the correctness of the settings and the functionality of the server")
 		}
 		return err
@@ -373,4 +462,11 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 		}
 	}
 	return nil
+}
+
+// validateHostPublicKey checks that k is a single-line OpenSSH public key
+// without authorized_keys options.
+func validateHostPublicKey(k string) error {
+	_, err := parseHostPublicKey(k)
+	return err
 }
