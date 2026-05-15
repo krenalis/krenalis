@@ -255,7 +255,7 @@ func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role conn
 			return connectors.NewInvalidSettingsError("server public key length must be in range [0,5000]")
 		}
 		if err := validateHostPublicKey(s.HostPublicKey); err != nil {
-			return connectors.NewInvalidSettingsError("server public key must be a valid OpenSSH public key")
+			return connectors.NewInvalidSettingsError(err.Error())
 		}
 	}
 	// Validate TempPath.
@@ -420,14 +420,15 @@ func openClient(ctx context.Context, s *innerSettings) (*client, error) {
 }
 
 // parseHostPublicKey parses k as a single-line OpenSSH public key without
-// authorized_keys options. It returns an error if the key is invalid.
+// authorized_keys options. The returned error messages are suitable for
+// connectors.NewInvalidSettingsError.
 func parseHostPublicKey(k string) (ssh.PublicKey, error) {
 	if strings.ContainsAny(k, "\r\n") {
 		return nil, errors.New("public key must be a single line")
 	}
 	key, _, options, rest, err := ssh.ParseAuthorizedKey([]byte(k))
 	if err != nil {
-		return nil, err
+		return nil, errors.New("server public key must be a valid OpenSSH public key")
 	}
 	if len(options) != 0 {
 		return nil, errors.New("public key options are not allowed")
