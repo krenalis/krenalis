@@ -345,6 +345,12 @@ func build(outDir, vendorDir, entryPoint string, external []string, resolve map[
 						if strings.HasPrefix(args.Path, "data:") {
 							return api.OnResolveResult{}, nil
 						}
+						if strings.HasPrefix(args.Path, "https://") {
+							return api.OnResolveResult{
+								Path:     args.Path,
+								External: true,
+							}, nil
+						}
 						var key string
 						if dir, ok := strings.CutPrefix(args.ResolveDir, vendorDir); ok {
 							key = pathKey(dir, args.Path)

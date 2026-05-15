@@ -194,6 +194,8 @@ interface PublicMetadata {
 	inviteMembersViaEmail: boolean;
 	canSendMemberPasswordReset: boolean;
 	telemetryLevel: TelemetryLevel;
+	workosClientID: string;
+	workosDevMode: boolean;
 }
 
 export type {

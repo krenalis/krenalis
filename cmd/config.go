@@ -70,6 +70,13 @@ type Config struct {
 	PrometheusMetricsEnabled      bool
 	OAuthCredentials              map[string]*core.OAuthCredentials // always empty (no connector currently uses OAuth).
 	MaxQueuedEventsPerDestination int
+	WorkOS                        struct {
+		ClientID      string
+		APIKey        string
+		WebhookSecret string
+		ActionsSecret string
+		DevMode       bool
+	}
 }
 
 type LambdaConfig struct {
@@ -548,6 +555,45 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 			return nil, fmt.Errorf("KRENALIS_MAX_QUEUED_EVENTS_PER_DESTINATION must be >= 1, got %d", maxEvents)
 		}
 		settings.MaxQueuedEventsPerDestination = int(maxEvents)
+	}
+
+	if workosClientID, ok := conf.Lookup("KRENALIS_WORKOS_CLIENT_ID"); ok {
+		if workosClientID == "" {
+			return nil, errors.New("KRENALIS_WORKOS_CLIENT_ID cannot be an empty string")
+		}
+		settings.WorkOS.ClientID = workosClientID
+
+		apiKey, ok := conf.Lookup("KRENALIS_WORKOS_API_KEY")
+		if !ok {
+			return nil, errors.New("KRENALIS_WORKOS_API_KEY must be set when KRENALIS_WORKOS_CLIENT_ID is set")
+		}
+		if apiKey == "" {
+			return nil, errors.New("KRENALIS_WORKOS_API_KEY cannot be an empty string")
+		}
+		settings.WorkOS.APIKey = apiKey
+
+		webhookSecret, ok := conf.Lookup("KRENALIS_WORKOS_WEBHOOK_SECRET")
+		if !ok {
+			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
+		}
+		if webhookSecret == "" {
+			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET cannot be an empty string")
+		}
+		settings.WorkOS.WebhookSecret = webhookSecret
+
+		actionsSecret, ok := conf.Lookup("KRENALIS_WORKOS_ACTIONS_SECRET")
+		if !ok {
+			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
+		}
+		if actionsSecret == "" {
+			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET cannot be an empty string")
+		}
+		settings.WorkOS.ActionsSecret = actionsSecret
+
+		settings.WorkOS.DevMode, err = boolEnvVar(conf.Get("KRENALIS_WORKOS_DEV_MODE"), false)
+		if err != nil {
+			return nil, fmt.Errorf("KRENALIS_WORKOS_DEV_MODE must be a boolean: %s", err)
+		}
 	}
 
 	return settings, nil

@@ -351,4 +351,9 @@ var parameters = map[string]string{
 	"/transformers/local/python/executable":   "TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE",
 	"/transformers/local/sudo-user":           "TRANSFORMERS_LOCAL_SUDO_USER",
 	"/transformers/provider":                  "TRANSFORMERS_PROVIDER",
+	"/workos/actions-secret":                  "WORKOS_ACTIONS_SECRET",
+	"/workos/api-key":                         "WORKOS_API_KEY",
+	"/workos/client-id":                       "WORKOS_CLIENT_ID",
+	"/workos/dev-mode":                        "WORKOS_DEV_MODE",
+	"/workos/webhook-secret":                  "WORKOS_WEBHOOK_SECRET",
 }

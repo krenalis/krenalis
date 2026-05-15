@@ -90,6 +90,12 @@ class API {
 		return await call(`${this.apiURL}/members/logout`, http.POST, this.workspaceID);
 	};
 
+	workosLogin = async (accessToken: string): Promise<[number, string]> => {
+		return await call(`${this.apiURL}/members/workos-login`, http.POST, this.workspaceID, {
+			accessToken,
+		});
+	};
+
 	sendMemberPasswordReset = async (email: string): Promise<void> => {
 		return await call(`${this.apiURL}/members/reset-password`, http.PUT, this.workspaceID, { email });
 	};

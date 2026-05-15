@@ -247,6 +247,8 @@ type publicMetadata struct {
 	InviteMembersViaEmail      bool     `json:"inviteMembersViaEmail"`
 	CanSendMemberPasswordReset bool     `json:"canSendMemberPasswordReset"`
 	TelemetryLevel             string   `json:"telemetryLevel"`
+	WorkOSClientID             string   `json:"workosClientID"`
+	WorkOSDevMode              bool     `json:"workosDevMode"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -260,6 +262,8 @@ type publicMetadata struct {
 //   - inviteMembersViaEmail: should new members be added by sending invitation emails??
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
+//   - workosClientID: WorkOS client ID, it's an empty string when WorkOS authentication is not configured
+//   - workosDevMode: when true, WorkOS AuthKit stores the refresh token in LocalStorage instead of using a cookie
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -272,6 +276,10 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		InviteMembersViaEmail:      api.inviteMembersViaEmail,
 		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:             string(api.sentryTelemetry.level),
+	}
+	if api.workos != nil {
+		metadata.WorkOSClientID = api.workos.clientID
+		metadata.WorkOSDevMode = api.workos.devMode
 	}
 	if api.potentialConnectorsURL != "" {
 		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL

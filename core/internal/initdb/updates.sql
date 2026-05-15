@@ -11,3 +11,9 @@ ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteOrganization' AFTER 
 ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateOrganization' AFTER 'UpdateIdentityResolutionSettings';
 
 CREATE UNIQUE INDEX IF NOT EXISTS pipelines_transformation_id_idx ON pipelines (transformation_id) WHERE transformation_id <> '';
+
+ALTER TABLE members ADD COLUMN IF NOT EXISTS workos_user_id varchar(255) NOT NULL DEFAULT '';
+CREATE UNIQUE INDEX IF NOT EXISTS members_workos_user_id_idx ON members (organization, workos_user_id) WHERE workos_user_id <> '';
+ALTER TABLE organizations ALTER COLUMN name TYPE varchar(255);
+ALTER TABLE members ALTER COLUMN name TYPE varchar(255);
+ALTER TABLE members ALTER COLUMN email TYPE varchar(255);

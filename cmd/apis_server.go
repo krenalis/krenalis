@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	stdJSON "encoding/json"
 	"io"
 	"log/slog"
 	"math"
@@ -29,6 +30,10 @@ import (
 
 // maxRequestSize is the maximum size bytes for an API request.
 const maxRequestSize = 500 * 1024
+
+// maxWorkOSPayloadSize is the maximum size in bytes for a WorkOS webhook or
+// action payload.
+const maxWorkOSPayloadSize = 64 * 1024
 
 var newline = []byte("\n")
 
@@ -72,7 +77,8 @@ type apisServer struct {
 	externalAssetsURLs     []string
 	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
 	inviteMembersViaEmail  bool
-	organizationsAPIKey    string // can be empty (which means that organizations APIs cannot be used)
+	organizationsAPIKey    string  // can be empty (which means that organizations APIs cannot be used)
+	workos                 *workos // nil when WorkOS authentication is not configured.
 	sentryTelemetry        struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
@@ -85,8 +91,8 @@ type apisServer struct {
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
 	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
-	sentryErrorTunnel *sentryErrorTunnel,
-) *apisServer {
+	sentryErrorTunnel *sentryErrorTunnel, workosClientID string, workosAPIKey string,
+	workosWebhookSecret string, workosActionsSecret string, workosDevMode bool) *apisServer {
 
 	s := &apisServer{
 		core:                   core,
@@ -100,6 +106,11 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 		inviteMembersViaEmail:  inviteMembersViaEmail,
 		organizationsAPIKey:    organizationsAPIKey,
 	}
+
+	if workosClientID != "" {
+		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret, workosActionsSecret, workosDevMode)
+	}
+
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
 
@@ -364,6 +375,9 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos != nil {
+		return nil, errors.Unauthorized("native password login is disabled when WorkOS authentication is configured")
+	}
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
@@ -445,6 +459,215 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		MaxAge:   -1,
 	}
 	writeSessionCookie(w, c)
+	return nil, nil
+}
+
+// workosLogin exchanges a WorkOS access token for a Krenalis session cookie. It
+// verifies the WorkOS token, retrieves the member by WorkOS user ID,
+// auto-provisions them if they are not already registered in Krenalis, and sets
+// the same encrypted session cookie as a normal login.
+func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos == nil {
+		return nil, errors.Unauthorized("WorkOS is not configured")
+	}
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		AccessToken string `json:"accessToken"`
+	}
+	if err := json.Decode(r.Body, &body); err != nil || body.AccessToken == "" {
+		return nil, errors.BadRequest("")
+	}
+
+	workosUser, workosExternalOrganizationID, err := s.workos.verifyToken(body.AccessToken)
+	if err != nil {
+		return nil, errors.Unauthorized("invalid WorkOS token")
+	}
+
+	org, err := s.core.Organization(*workosExternalOrganizationID)
+	if err != nil {
+		slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
+			"workos_user_id", workosUser.ID,
+			"organization_id", *workosExternalOrganizationID,
+		)
+		return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
+	}
+
+	memberID, err := org.MemberByWorkOSID(r.Context(), workosUser.ID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); !ok {
+			return nil, err
+		}
+		name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
+		memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Store the session.
+	sc := &sessionCookie{Organization: org.ID, Member: memberID}
+	se, err := s.secureCookie(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	value, err := se.Encode(sessionCookieName, sc)
+	if err != nil {
+		return nil, err
+	}
+
+	c := &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    value,
+		Path:     sessionCookiePath,
+		Secure:   s.runsOnHTTPS,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	writeSessionCookie(w, c)
+	return []any{memberID, nil}, nil
+}
+
+// handleWorkOSAction handles the WorkOS user-registration Action. It verifies
+// the request signature and denies registration if the email the user is
+// registering with does not match the email on the WorkOS invitation.
+func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos == nil {
+		return nil, errors.Unauthorized("WorkOS is not configured")
+	}
+
+	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
+	rawBody, err := io.ReadAll(lr)
+	if err != nil {
+		return nil, errors.BadRequest("failed to read request body")
+	}
+	if lr.N == 0 {
+		return nil, errors.BadRequest("request body too large")
+	}
+
+	sigHeader := r.Header.Get("WorkOS-Signature")
+	if sigHeader == "" {
+		return nil, errors.Unauthorized("WorkOS action is missing the signature header")
+	}
+	if err := s.workos.verifyActionSignature(rawBody, sigHeader); err != nil {
+		return nil, errors.Unauthorized("invalid WorkOS action signature")
+	}
+
+	var action struct {
+		UserData struct {
+			Email string `json:"email"`
+		} `json:"user_data"`
+		Invitation *struct {
+			Email string `json:"email"`
+		} `json:"invitation"`
+	}
+	if err := stdJSON.Unmarshal(rawBody, &action); err != nil {
+		return nil, errors.BadRequest("invalid action payload")
+	}
+
+	verdict, message := "Deny", "Registration is by invitation only."
+
+	if action.Invitation != nil {
+		if strings.EqualFold(action.UserData.Email, action.Invitation.Email) {
+			verdict, message = "Allow", ""
+		} else {
+			message = "You must register with the email address you were invited with."
+		}
+	}
+
+	responseJSON, err := s.workos.buildActionResponse(verdict, message)
+	if err != nil {
+		return nil, err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(responseJSON)
+	return nil, nil
+}
+
+// handleWorkOSWebhook handles incoming WorkOS webhook events.
+func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if s.workos == nil {
+		return nil, errors.Unauthorized("WorkOS is not configured")
+	}
+
+	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
+	rawBody, err := io.ReadAll(lr)
+	if err != nil {
+		return nil, errors.BadRequest("failed to read request body")
+	}
+	if lr.N == 0 {
+		return nil, errors.BadRequest("request body too large")
+	}
+
+	sigHeader := r.Header.Get("WorkOS-Signature")
+	if sigHeader == "" {
+		return nil, errors.Unauthorized("WorkOS webhook is missing the signature header")
+	}
+	err = s.workos.verifyWebhookSignature(rawBody, sigHeader)
+	if err != nil {
+		return nil, errors.Unauthorized("invalid WorkOS webhook signature")
+	}
+
+	var event struct {
+		Event string `json:"event"`
+		Data  struct {
+			ID         string  `json:"id"`
+			Email      string  `json:"email"`
+			FirstName  string  `json:"first_name"`
+			LastName   string  `json:"last_name"`
+			Name       string  `json:"name"`
+			ExternalID *string `json:"external_id"`
+		} `json:"data"`
+	}
+	if err := stdJSON.Unmarshal(rawBody, &event); err != nil {
+		return nil, errors.BadRequest("invalid webhook payload")
+	}
+
+	switch event.Event {
+	case "user.updated":
+		name := strings.TrimSpace(event.Data.FirstName + " " + event.Data.LastName)
+		if event.Data.ID == "" || event.Data.Email == "" {
+			return nil, nil
+		}
+		if runes := []rune(name); len(runes) > 255 {
+			name = string(runes[:255])
+		}
+		if err := s.core.UpdateMembersByWorkOSID(r.Context(), event.Data.ID, name, event.Data.Email); err != nil {
+			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
+				// Email already in use, skip the update without returning
+				// errors to prevent webhook retries.
+				return nil, nil
+			}
+			return nil, err
+		}
+	case "user.deleted":
+		if event.Data.ID == "" {
+			return nil, nil
+		}
+		if err := s.core.DeleteMembersByWorkOSID(r.Context(), event.Data.ID); err != nil {
+			return nil, err
+		}
+	case "organization.updated":
+		if event.Data.ExternalID == nil || *event.Data.ExternalID == "" {
+			return nil, nil
+		}
+		orgID, err := uuid.Parse(*event.Data.ExternalID)
+		if err != nil {
+			return nil, nil
+		}
+		orgName := event.Data.Name
+		if orgName == "" {
+			return nil, nil
+		}
+		if runes := []rune(orgName); len(runes) > 255 {
+			orgName = string(runes[:255])
+		}
+		if err := s.core.UpdateOrganizationName(r.Context(), orgID, orgName); err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, nil
 }
 

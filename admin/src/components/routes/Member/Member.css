@@ -122,3 +122,7 @@
 .member__save-button {
 	min-width: 200px;
 }
+
+[data-woswidgets-widget-id='user-security'] {
+	margin-top: 20px;
+}
