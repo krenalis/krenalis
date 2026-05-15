@@ -6,6 +6,7 @@ package collector
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -723,6 +724,9 @@ func TestDecoderContextIPHandling(t *testing.T) {
 	t.Parallel()
 
 	const remoteIP = "198.51.100.23"
+	const remoteIPv6 = "2001:db8:face:12::1"
+	const remoteIPv6Prefix48 = "2001:db8:face::"
+	const remoteIPv6Prefix32 = "2001:db8::"
 
 	remoteParts := strings.Split(remoteIP, ".")
 	if len(remoteParts) != 4 {
@@ -744,16 +748,21 @@ func TestDecoderContextIPHandling(t *testing.T) {
 		return base + `,"context":` + contextJSON + `}`
 	}
 
-	decode := func(t *testing.T, body string, fallback bool) events.Event {
+	decode := func(t *testing.T, body string, fallback bool, remoteAddr string, forwardedFor string) (events.Event, error) {
 		t.Helper()
 
+		header := http.Header{
+			"Content-Type": []string{"application/json; charset=utf-8"},
+			"User-Agent":   []string{"DecoderContextIPTest/1.0"},
+		}
+		if forwardedFor != "" {
+			header.Set("X-Forwarded-For", forwardedFor)
+		}
+
 		r := &http.Request{
-			Method: "POST",
-			Header: http.Header{
-				"Content-Type": []string{"application/json; charset=utf-8"},
-				"User-Agent":   []string{"DecoderContextIPTest/1.0"},
-			},
-			RemoteAddr: remoteIP + ":9000",
+			Method:     "POST",
+			Header:     header,
+			RemoteAddr: remoteAddr,
 			URL:        requestURL,
 			Body:       io.NopCloser(strings.NewReader(body)),
 		}
@@ -775,17 +784,14 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			count++
 		}
 
-		if gotErr != nil {
-			t.Fatalf("unexpected event error: %v", gotErr)
-		}
 		if count != 1 {
 			t.Fatalf("expected 1 event, got %d", count)
 		}
-		if gotEvent == nil {
+		if gotErr == nil && gotEvent == nil {
 			t.Fatal("expected non-nil event, got nil")
 		}
 
-		return gotEvent
+		return gotEvent, gotErr
 	}
 
 	type expectedIP struct {
@@ -794,10 +800,13 @@ func TestDecoderContextIPHandling(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		contextJSON string
-		fallback    bool
-		wantIP      expectedIP
+		name         string
+		contextJSON  string
+		fallback     bool
+		remoteIP     string
+		forwardedFor string
+		wantIP       expectedIP
+		wantErr      error
 	}{
 		{
 			name:        "no-context-ip-fallback-disabled",
@@ -824,6 +833,30 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			wantIP:      expectedIP{present: true, value: "198.18.0.1"},
 		},
 		{
+			name:        "context-regular-ipv6",
+			contextJSON: `{"ip":"2001:db8:face:12::1"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: "2001:db8:face:12::1"},
+		},
+		{
+			name:        "context-ipv4-mapped-ipv6",
+			contextJSON: `{"ip":"::ffff:192.0.2.1"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: "192.0.2.1"},
+		},
+		{
+			name:        "context-scoped-ipv6",
+			contextJSON: `{"ip":"fe80::1%eth0"}`,
+			fallback:    true,
+			wantErr:     errors.BadRequest("property 'ip' is not a valid IP address"),
+		},
+		{
+			name:        "context-multicast-ipv6",
+			contextJSON: `{"ip":"ff02::1"}`,
+			fallback:    true,
+			wantErr:     errors.BadRequest("property 'ip' cannot be a multicast IP address"),
+		},
+		{
 			name:        "context-ip-zero",
 			contextJSON: `{"ip":"0.0.0.0"}`,
 			fallback:    true,
@@ -847,6 +880,88 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			fallback:    false,
 			wantIP:      expectedIP{present: true, value: remoteIP16},
 		},
+		{
+			name:        "context-ipv4-mapped-ipv6-mask-24",
+			contextJSON: `{"ip":"::ffff:255.255.255.0"}`,
+			fallback:    false,
+			wantIP:      expectedIP{present: true, value: "255.255.255.0"},
+		},
+		{
+			name:        "context-ipv4-mapped-ipv6-multicast",
+			contextJSON: `{"ip":"::ffff:224.0.0.1"}`,
+			fallback:    false,
+			wantErr:     errors.BadRequest("property 'ip' cannot be a multicast IP address"),
+		},
+		{
+			name:        "no-context-ip-ipv6-fallback-enabled",
+			contextJSON: "",
+			fallback:    true,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:        "context-ip-mask-32-with-ipv6-remote",
+			contextJSON: `{"ip":"255.255.255.255"}`,
+			fallback:    false,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:        "context-ip-mask-24-with-ipv6-remote",
+			contextJSON: `{"ip":"255.255.255.0"}`,
+			fallback:    false,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix48},
+		},
+		{
+			name:        "context-ip-mask-16-with-ipv6-remote",
+			contextJSON: `{"ip":"255.255.0.0"}`,
+			fallback:    false,
+			remoteIP:    remoteIPv6,
+			wantIP:      expectedIP{present: true, value: remoteIPv6Prefix32},
+		},
+		{
+			name:         "x-forwarded-for-ipv6-overrides-remote-addr",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIPv6,
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-ipv6-list",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIPv6 + ", " + remoteIP,
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-ipv4",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIP,
+			wantIP:       expectedIP{present: true, value: remoteIP},
+		},
+		{
+			name:         "x-forwarded-for-bracketed-ipv6",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: "[" + remoteIPv6 + "]",
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-bracketed-ipv6-with-port",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: "[" + remoteIPv6 + "]:1234",
+			wantIP:       expectedIP{present: true, value: remoteIPv6},
+		},
+		{
+			name:         "x-forwarded-for-ipv4-with-port",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIP + ":1234",
+			wantIP:       expectedIP{present: true, value: remoteIP},
+		},
 	}
 
 	for _, tt := range tests {
@@ -854,7 +969,17 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			t.Parallel()
 
 			body := makeBody(tt.contextJSON)
-			event := decode(t, body, tt.fallback)
+			remoteAddr := remoteIP
+			if tt.remoteIP != "" {
+				remoteAddr = tt.remoteIP
+			}
+			event, err := decode(t, body, tt.fallback, net.JoinHostPort(remoteAddr, "9000"), tt.forwardedFor)
+			if !reflect.DeepEqual(tt.wantErr, err) {
+				t.Fatalf("expected error %#v, got error %#v", tt.wantErr, err)
+			}
+			if err != nil {
+				return
+			}
 
 			ctx, ok := event["context"].(map[string]any)
 			if ctx == nil {
@@ -877,6 +1002,72 @@ func TestDecoderContextIPHandling(t *testing.T) {
 				if ok {
 					t.Fatalf("expected context.ip to be absent, got %v", ipVal)
 				}
+			}
+		})
+	}
+}
+
+// TestDecoderRemoteAddrValidation verifies request-level validation of IP
+// addresses provided by RemoteAddr and X-Forwarded-For.
+func TestDecoderRemoteAddrValidation(t *testing.T) {
+	t.Parallel()
+
+	requestURL, err := url.Parse("/events/track")
+	if err != nil {
+		t.Fatalf("failed to parse request URL: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		remoteAddr   string
+		forwardedFor string
+		wantErr      error
+	}{
+		{
+			name:         "scoped-ipv6-x-forwarded-for",
+			remoteAddr:   net.JoinHostPort("198.51.100.23", "9000"),
+			forwardedFor: "fe80::1%eth0",
+			wantErr:      errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address"),
+		},
+		{
+			name:         "unclosed-bracket-ipv6-x-forwarded-for",
+			remoteAddr:   net.JoinHostPort("198.51.100.23", "9000"),
+			forwardedFor: "[2001:db8:face:12::1",
+			wantErr:      errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address"),
+		},
+		{
+			name:       "scoped-ipv6-remote-addr",
+			remoteAddr: net.JoinHostPort("fe80::1%eth0", "9000"),
+			wantErr:    errors.New("unexpected IP address from RemoteAddr"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			header := http.Header{
+				"Content-Type": []string{"application/json; charset=utf-8"},
+				"User-Agent":   []string{"DecoderRemoteAddrValidationTest/1.0"},
+			}
+			if tt.forwardedFor != "" {
+				header.Set("X-Forwarded-For", tt.forwardedFor)
+			}
+
+			r := &http.Request{
+				Method:     "POST",
+				Header:     header,
+				RemoteAddr: tt.remoteAddr,
+				URL:        requestURL,
+				Body:       io.NopCloser(strings.NewReader(`{"type":"track","event":"click","anonymousId":"anon-1"}`)),
+			}
+
+			dec, err := newDecoder(r)
+			if !reflect.DeepEqual(tt.wantErr, err) {
+				t.Fatalf("expected error %#v, got error %#v", tt.wantErr, err)
+			}
+			if dec != nil {
+				t.Fatal("unexpected non-nil decoder")
 			}
 		})
 	}
@@ -1246,10 +1437,10 @@ func TestParseRemoteAddr(t *testing.T) {
 
 	// --- valid cases ---
 	valid := []struct {
-		in     string
-		want32 string
-		want24 string
-		want16 string
+		in                     string
+		wantIdentifiable       string
+		wantPartiallyAnonymous string
+		wantStronglyAnonymous  string
 	}{
 		// Common cases.
 		{"192.168.1.42", "192.168.1.42", "192.168.1.0", "192.168.0.0"},
@@ -1257,6 +1448,8 @@ func TestParseRemoteAddr(t *testing.T) {
 		{"172.16.5.123", "172.16.5.123", "172.16.5.0", "172.16.0.0"},
 		{"8.8.8.8", "8.8.8.8", "8.8.8.0", "8.8.0.0"},
 		{"::ffff:192.0.2.1", "192.0.2.1", "192.0.2.0", "192.0.0.0"},
+		{"2001:db8:face:12::1", "2001:db8:face:12::1", "2001:db8:face::", "2001:db8::"},
+		{"::1", "::1", "::", "::"},
 
 		// Edge octet values.
 		{"0.0.0.0", "0.0.0.0", "0.0.0.0", "0.0.0.0"},
@@ -1276,17 +1469,17 @@ func TestParseRemoteAddr(t *testing.T) {
 			}
 
 			ra := dec.remoteAddr
-			if ra.ip32 != test.want32 {
-				t.Fatalf("ip32: expected %q, got %q", test.want32, ra.ip32)
+			if ra.identifiable != test.wantIdentifiable {
+				t.Fatalf("identifiable: expected %q, got %q", test.wantIdentifiable, ra.identifiable)
 			}
-			if ra.ip24 != test.want24 {
-				t.Fatalf("ip24: expected %q, got %q", test.want24, ra.ip24)
+			if ra.partiallyAnonymous != test.wantPartiallyAnonymous {
+				t.Fatalf("partiallyAnonymous: expected %q, got %q", test.wantPartiallyAnonymous, ra.partiallyAnonymous)
 			}
-			if ra.ip16 != test.want16 {
-				t.Fatalf("ip16: expected %q, got %q", test.want16, ra.ip16)
+			if ra.stronglyAnonymous != test.wantStronglyAnonymous {
+				t.Fatalf("stronglyAnonymous: expected %q, got %q", test.wantStronglyAnonymous, ra.stronglyAnonymous)
 			}
 
-			wantIP := netip.MustParseAddr(test.want32)
+			wantIP := netip.MustParseAddr(test.wantIdentifiable)
 			if wantIP != ra.ip {
 				t.Fatalf("ip: expected %v, got %v", wantIP, ra.ip)
 			}
@@ -1296,7 +1489,7 @@ func TestParseRemoteAddr(t *testing.T) {
 	// --- invalid cases ---
 	invalid := []string{
 		"", "   ", "1.2.3", "1.2.3.4.5", "256.1.1.1", "-1.2.3.4", "1.2.3.-4",
-		"abc.def.ghi.jkl", "::1", "2001:db8::1", "1.2.3.4 ", " 1.2.3.4",
+		"abc.def.ghi.jkl", "fe80::1%eth0", "1.2.3.4 ", " 1.2.3.4",
 	}
 
 	for _, in := range invalid {
@@ -1309,7 +1502,7 @@ func TestParseRemoteAddr(t *testing.T) {
 				t.Fatalf("parseRemoteAddr(%q): expected error, got nil", in)
 			}
 			ra := dec.remoteAddr
-			if ra.ip32 != "" || ra.ip24 != "" || ra.ip16 != "" || ra.ip.IsValid() {
+			if ra.identifiable != "" || ra.partiallyAnonymous != "" || ra.stronglyAnonymous != "" || ra.ip.IsValid() {
 				t.Fatalf("parseRemoteAddr(%q): expected zero-value remoteAddr on error, got %+v", in, ra)
 			}
 		})
@@ -1323,12 +1516,12 @@ func TestParseRemoteAddr(t *testing.T) {
 		err := dec.parseRemoteAddr("192.168.001.042")
 		if err == nil {
 			ra := dec.remoteAddr
-			if ra.ip32 != "192.168.1.42" {
-				t.Fatalf("normalization: expected %q, got %q", "192.168.1.42", ra.ip32)
+			if ra.identifiable != "192.168.1.42" {
+				t.Fatalf("normalization: expected %q, got %q", "192.168.1.42", ra.identifiable)
 			}
-			if ra.ip24 != "192.168.1.0" || ra.ip16 != "192.168.0.0" {
-				t.Fatalf("masked normalization: expected ip24=%q ip16=%q, got ip24=%q ip16=%q",
-					"192.168.1.0", "192.168.0.0", ra.ip24, ra.ip16)
+			if ra.partiallyAnonymous != "192.168.1.0" || ra.stronglyAnonymous != "192.168.0.0" {
+				t.Fatalf("masked normalization: expected partiallyAnonymous=%q stronglyAnonymous=%q, got partiallyAnonymous=%q stronglyAnonymous=%q",
+					"192.168.1.0", "192.168.0.0", ra.partiallyAnonymous, ra.stronglyAnonymous)
 			}
 		}
 	})
