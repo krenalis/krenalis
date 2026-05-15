@@ -533,6 +533,9 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	if json.Value(e.Filter).IsNull() {
 		e.Filter = nil
 	}
+	if e.FormatSettings.IsNull() {
+		e.FormatSettings = nil
+	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
 	pipeline := &Pipeline{
@@ -1494,6 +1497,9 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 	// back to json.Value(nil).
 	if json.Value(e.Filter).IsNull() {
 		e.Filter = nil
+	}
+	if e.FormatSettings.IsNull() {
+		e.FormatSettings = nil
 	}
 	format := state.connectors[e.Format]
 	var filter *Where
