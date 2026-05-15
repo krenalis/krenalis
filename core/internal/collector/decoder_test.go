@@ -935,6 +935,13 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			wantIP:       expectedIP{present: true, value: remoteIPv6},
 		},
 		{
+			name:         "x-forwarded-for-ipv4",
+			contextJSON:  "",
+			fallback:     true,
+			forwardedFor: remoteIP,
+			wantIP:       expectedIP{present: true, value: remoteIP},
+		},
+		{
 			name:         "x-forwarded-for-bracketed-ipv6",
 			contextJSON:  "",
 			fallback:     true,
