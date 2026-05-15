@@ -169,11 +169,25 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr.ip = netip.Addr{}
 
-	// If an 'X-Forwarded-For' header was provided, get the request address from
-	// there.
+	// If the 'X-Forwarded-For' header is present, use it to determine
+	// the client's IP address. Also accept non-standard formats such as
+	// bracketed IPv6 addresses and addresses with a ":port" suffix.
 	if ff := r.Header.Get("X-Forwarded-For"); ff != "" {
 		clientIP, _, _ := strings.Cut(ff, ",")
 		clientIP = strings.TrimSpace(clientIP)
+		// If the address starts with '[', assume it is an IPv6 address
+		// and strip the optional port suffix.
+		if strings.HasPrefix(clientIP, "[") {
+			if before, _, found := strings.Cut(clientIP[1:], "]"); found {
+				clientIP = before
+			}
+		} else {
+			// If the address contains a single ':', assume it separates
+			// the host and port, then keep only the host part.
+			if before, after, found := strings.Cut(clientIP, ":"); found && !strings.Contains(after, ":") {
+				clientIP = before
+			}
+		}
 		err = d.parseRemoteAddr(clientIP)
 		if err != nil {
 			return errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address")
