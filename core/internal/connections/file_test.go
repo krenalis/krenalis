@@ -97,6 +97,12 @@ func TestMaterializeReadSeekerReusesReadSeekAt(t *testing.T) {
 	if _, ok := original.(closedReadCloser); !ok {
 		t.Fatalf("expected original reader type closedReadCloser, got %T", original)
 	}
+	if _, ok := any(rs).(io.Closer); ok {
+		t.Fatal("reused reader exposed io.Closer to the connector")
+	}
+	if _, ok := any(rs).(interface{ Name() string }); ok {
+		t.Fatal("reused reader exposed Name to the connector")
+	}
 
 	buf := make([]byte, 2)
 	if n, err := rs.Read(buf); err != nil || n != 2 || string(buf) != "ab" {
