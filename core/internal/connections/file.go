@@ -561,9 +561,8 @@ func readFromFileConnector(ctx context.Context, connector any, r *io.ReadCloser,
 		return err
 	}
 	defer func() {
-		closeErr := rc.Close()
-		if closeErr != nil && (err == nil || err == errRecordStop) {
-			err = closeErr
+		if err := rc.Close(); err != nil {
+			slog.Warn("core/connectors: cannot close file reader", "error", err)
 		}
 	}()
 	return c.Read(ctx, rs, sheet, records)
