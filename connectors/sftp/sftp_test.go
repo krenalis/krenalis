@@ -49,6 +49,22 @@ func (s *testSettingsStore) Store(ctx context.Context, src any) error {
 	return nil
 }
 
+// TestHostKeyValidatorMatch tests host key match detection.
+func TestHostKeyValidatorMatch(t *testing.T) {
+	expected, err := parseHostPublicKey(testHostPublicKey)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	candidate, err := parseHostPublicKey(testHostPublicKey)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	err = hostKeyValidator(expected)("", nil, candidate)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
 // TestHostKeyValidatorMismatch tests host key mismatch detection.
 func TestHostKeyValidatorMismatch(t *testing.T) {
 	expected, err := parseHostPublicKey(testHostPublicKey)
