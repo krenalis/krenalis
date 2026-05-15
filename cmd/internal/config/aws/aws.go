@@ -15,18 +15,22 @@
 //
 // Only Krenalis's parameter paths are recognized.
 //
-// Database connection credentials can also be loaded from the optional Secrets
-// Manager reference exposed by Parameter Store at:
+// Database and NATS credentials can also be loaded from Secrets Manager
+// secrets:
 //
-//	/aws/reference/secretsmanager/<prefix>/db
+//	<prefix>/db
+//	<prefix>/nats
 //
-// The referenced secret must contain the standard AWS JSON structure for a
-// PostgreSQL database secret. It populates DB_HOST, DB_PORT, DB_DATABASE,
-// DB_USERNAME, and DB_PASSWORD.
+// The database secret must be the standard AWS JSON structure for a PostgreSQL
+// database secret. It populates DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, and
+// DB_PASSWORD.
 //
-// Database credentials must be configured either through /db/... Parameter
-// Store entries or through the /db Secrets Manager reference; mixing the two
-// sources is rejected.
+// The NATS secret must be a JSON object that populates NATS_URL, NATS_NKEY,
+// NATS_TOKEN, NATS_USER, and NATS_PASSWORD.
+//
+// Database and NATS credentials must each be configured either through their
+// own /db/... or /nats/... Parameter Store entries or through the respective
+// Secrets Manager secret; mixing the two sources is rejected.
 package aws
 
 import (
@@ -72,9 +76,12 @@ func New(ctx context.Context, options string) (*Store, error) {
 	}
 	prefix = normalizePrefix(prefix)
 	return &Store{
-		client:      ssm.NewFromConfig(cfg),
-		prefix:      prefix,
-		secretNames: []string{"/aws/reference/secretsmanager" + prefix + "/db"},
+		client: ssm.NewFromConfig(cfg),
+		prefix: prefix,
+		secretNames: []string{
+			"/aws/reference/secretsmanager" + prefix + "/db",
+			"/aws/reference/secretsmanager" + prefix + "/nats",
+		},
 	}, nil
 }
 
@@ -127,6 +134,7 @@ func (s *Store) loadParametersByPath(ctx context.Context) (map[string]string, er
 }
 
 var dbSecretNames = []string{"DB_HOST", "DB_PORT", "DB_DATABASE", "DB_USERNAME", "DB_PASSWORD"}
+var natsSecretNames = []string{"NATS_URL", "NATS_NKEY", "NATS_TOKEN", "NATS_USER", "NATS_PASSWORD"}
 
 // loadSecretsManagerReferences loads supported Secrets Manager references into
 // values.
@@ -151,7 +159,8 @@ func (s *Store) loadSecretsManagerReferences(ctx context.Context, values map[str
 		if p.Value == nil {
 			return errors.New("config/aws: AWS has returned a nil parameter value")
 		}
-		if strings.HasSuffix(*p.Name, "/db") {
+		switch {
+		case strings.HasSuffix(*p.Name, "/db"):
 			// Reject mixed database parameters.
 			for _, name := range dbSecretNames {
 				if _, ok := values[name]; ok {
@@ -159,6 +168,17 @@ func (s *Store) loadSecretsManagerReferences(ctx context.Context, values map[str
 				}
 			}
 			err := unmarshalDatabaseSecret(values, *p.Value)
+			if err != nil {
+				return err
+			}
+		case strings.HasSuffix(*p.Name, "/nats"):
+			// Reject mixed NATS parameters.
+			for _, name := range natsSecretNames {
+				if _, ok := values[name]; ok {
+					return fmt.Errorf("config/aws: both the '%s/nats' Secrets Manager secret and '%s/nats/...' parameters are configured; only one NATS configuration source is allowed", s.prefix, s.prefix)
+				}
+			}
+			err := unmarshalNATSSecret(values, *p.Value)
 			if err != nil {
 				return err
 			}
@@ -213,6 +233,26 @@ func unmarshalDatabaseSecret(values map[string]string, secret string) error {
 	values["DB_DATABASE"] = db.DBName
 	values["DB_USERNAME"] = db.Username
 	values["DB_PASSWORD"] = db.Password
+	return nil
+}
+
+// unmarshalNATSSecret decodes a NATS secret into config values.
+func unmarshalNATSSecret(values map[string]string, secret string) error {
+	var nats struct {
+		URL      string `json:"url"`
+		NKey     string `json:"nkey"`
+		Token    string `json:"token"`
+		User     string `json:"user"`
+		Password string `json:"password"`
+	}
+	if err := json.Unmarshal([]byte(secret), &nats); err != nil {
+		return fmt.Errorf("config/aws: invalid '/nats' secret JSON: %s", err)
+	}
+	values["NATS_URL"] = nats.URL
+	values["NATS_NKEY"] = nats.NKey
+	values["NATS_TOKEN"] = nats.Token
+	values["NATS_USER"] = nats.User
+	values["NATS_PASSWORD"] = nats.Password
 	return nil
 }
 
