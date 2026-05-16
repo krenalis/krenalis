@@ -527,12 +527,6 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.Value(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.Value("null"), so this code converts it
-	// back to json.Value(nil).
-	if json.Value(e.Filter).IsNull() {
-		e.Filter = nil
-	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
 	pipeline := &Pipeline{
@@ -568,7 +562,7 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	if c.Role == Source && e.Target == TargetUser {
 		pipeline.propertiesToUnset = []string{}
 	}
-	if e.Filter != nil {
+	if !json.Value(e.Filter).IsNull() {
 		pipeline.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
 
@@ -1489,15 +1483,9 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
-	// json.Value(nil) is marshaled into "null", but when it is
-	// deserialized it becomes json.Value("null"), so this code converts it
-	// back to json.Value(nil).
-	if json.Value(e.Filter).IsNull() {
-		e.Filter = nil
-	}
 	format := state.connectors[e.Format]
 	var filter *Where
-	if e.Filter != nil {
+	if !json.Value(e.Filter).IsNull() {
 		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
