@@ -342,7 +342,9 @@ func hostKeyValidator(key ssh.PublicKey) ssh.HostKeyCallback {
 		if key == nil {
 			return errors.New("required host key was nil")
 		}
-		if !bytes.Equal(candidate.Marshal(), key.Marshal()) {
+		c := candidate.Marshal()
+		k := key.Marshal()
+		if !bytes.Equal(c, k) {
 			return errHostKeyMismatch
 		}
 		return nil
