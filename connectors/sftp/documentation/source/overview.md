@@ -8,3 +8,4 @@ This connector lets you import user data from files stored in a SFTP server into
 ## What does it require?
 
 * A username and password for an SFTP server with read access.
+* Optionally, provide the server host key so Krenalis can verify that it is connecting to the expected server.
