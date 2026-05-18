@@ -600,6 +600,12 @@ func (c *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 	return c.Call("POST", "/v1/workspaces/test", headers, body, nil)
 }
 
+// DeletePipeline deletes a pipeline.
+func (c *Krenalis) DeletePipeline(pipelineID int) {
+	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
+	c.MustCall("DELETE", path, nil, nil, nil)
+}
+
 func (c *Krenalis) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
 	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
 	c.MustCall("PUT", path, nil, pipeline, nil)

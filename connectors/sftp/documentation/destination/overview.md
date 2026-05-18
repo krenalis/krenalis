@@ -8,3 +8,4 @@ This connector lets you export unified users. These are users that have been con
 ## What does it require?
 
 * A username and password for an SFTP server with write access.
+* Optionally, provide the server host key so Krenalis can verify that it is connecting to the expected server.
