@@ -36,9 +36,15 @@ type fileContentTypeConnection interface {
 
 type fileReadConnection interface {
 	// Read reads the records from r and writes them to records. If the connector
-	// has multiple sheets, sheet is the name of the sheet to be read.
+	// has multiple sheets, sheet is the name of the sheet to read.
 	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
 	Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error
+}
+
+type fileReadSeekConnection interface {
+	// Read is like fileReadConnection.Read but accepts an io.ReadSeeker instead of
+	// an io.Reader. r must also implement io.ReaderAt.
+	Read(ctx context.Context, r io.ReadSeeker, sheet string, records connectors.RecordWriter) error
 }
 
 type fileWriteConnection interface {
@@ -61,7 +67,7 @@ type File struct {
 	state       *state.State
 	pipeline    *state.Pipeline
 	timeLayouts *state.TimeLayouts
-	inner       any
+	inner       any // used as fileReadConnection | fileReadSeekConnection | fileWriteConnection | fileContentTypeConnection
 	err         error
 }
 
@@ -136,7 +142,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 		rw:    rw,
 		rc:    rc,
 		sheet: file.pipeline.Sheet,
-		inner: file.inner.(fileReadConnection),
+		inner: file.inner,
 	}
 	return records, nil
 }
@@ -466,7 +472,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  fileReadConnection
+	inner  any // used as fileReadConnection | fileReadSeekConnection
 	err    error
 	closed bool
 }
@@ -484,7 +490,7 @@ func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 		}()
 		r.rw.setYieldFunc(yield)
-		err := r.inner.Read(ctx, r.rc, r.sheet, r.rw)
+		err := readFromFileConnector(ctx, r.inner, &r.rc, r.sheet, r.rw)
 		r.rw.close()
 		if err != nil && err != errRecordStop {
 			r.err = connectorError(err)
@@ -527,6 +533,97 @@ func newFuncReadCloser(r io.Reader, close func() error) io.ReadCloser {
 
 func (c funcReadCloser) Close() error {
 	return c.close()
+}
+
+// readSeekAt wraps a reader with seek and offset-read capabilities.
+type readSeekAt struct {
+	io.Reader
+	io.Seeker
+	io.ReaderAt
+}
+
+// readSeekAtConnection is implemented by readers that support random access.
+type readSeekAtConnection interface {
+	io.Reader
+	io.Seeker
+	io.ReaderAt
+}
+
+// readFromFileConnector reads records with the file connector. If the connector
+// requires an io.ReadSeeker, it materializes r into a temporary file first. The
+// reader passed to the connector also implements io.ReaderAt.
+func readFromFileConnector(ctx context.Context, connector any, r *io.ReadCloser, sheet string, records connectors.RecordWriter) (err error) {
+	c, ok := connector.(fileReadSeekConnection)
+	if !ok {
+		return connector.(fileReadConnection).Read(ctx, *r, sheet, records)
+	}
+	rc, rs, err := materializeReadSeeker(r)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := rc.Close(); err != nil {
+			slog.Warn("core/connectors: cannot close file reader", "error", err)
+		}
+	}()
+	return c.Read(ctx, rs, sheet, records)
+}
+
+// materializeReadSeeker returns a seekable reader for r.
+func materializeReadSeeker(r *io.ReadCloser) (io.ReadCloser, io.ReadSeeker, error) {
+
+	if rs, ok := (*r).(readSeekAtConnection); ok {
+		rc := *r
+		reader := readSeekAt{Reader: rs, Seeker: rs, ReaderAt: rs}
+		*r = closedReadCloser{}
+		return newFuncReadCloser(reader, rc.Close), reader, nil
+	}
+
+	fi, err := os.CreateTemp("", "")
+	if err != nil {
+		return nil, nil, err
+	}
+	closed := false
+	cleanup := func() error {
+		if closed {
+			return nil
+		}
+		closed = true
+		return removeTempFile(fi)
+	}
+	defer func() {
+		if err != nil {
+			_ = cleanup()
+		}
+	}()
+
+	_, err = io.Copy(fi, *r)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = (*r).Close(); err != nil {
+		return nil, nil, err
+	}
+	*r = closedReadCloser{}
+	if _, err = fi.Seek(0, io.SeekStart); err != nil {
+		return nil, nil, err
+	}
+	reader := readSeekAt{Reader: fi, Seeker: fi, ReaderAt: fi}
+
+	return newFuncReadCloser(reader, cleanup), reader, nil
+}
+
+// closedReadCloser is an already-closed reader.
+type closedReadCloser struct{}
+
+// Read returns io.EOF.
+func (closedReadCloser) Read([]byte) (int, error) {
+	return 0, io.EOF
+}
+
+// Close returns nil.
+func (closedReadCloser) Close() error {
+	return nil
 }
 
 var (
@@ -944,10 +1041,14 @@ func (c storageWriteCloser) CloseWithError(err error) error {
 // encountered will be logged.
 func removeTempFile(fi *os.File) error {
 	err := fi.Close()
-	if err := os.Remove(fi.Name()); err != nil {
-		slog.Warn("core/connectors: cannot remove temporary file", "path", fi.Name(), "error", err)
+	err2 := os.Remove(fi.Name())
+	if err2 != nil {
+		slog.Warn("core/connectors: cannot remove temporary file", "path", fi.Name(), "error", err2)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return err2
 }
 
 // timeoutReader implements an io.ReadCloser with a timeout between two
