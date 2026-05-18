@@ -407,7 +407,7 @@ func openClient(ctx context.Context, s *innerSettings) (*client, error) {
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
 	if err != nil {
 		if errors.Is(err, errHostKeyMismatch) {
-			return nil, connectors.NewInvalidSettingsError("server public key does not match the server host key")
+			return nil, connectors.NewInvalidSettingsError("remote server does not match the configured server public key")
 		}
 		return nil, err
 	}
