@@ -339,9 +339,6 @@ func hostKeyAlgorithms(key ssh.PublicKey) []string {
 // host key are rejected.
 func hostKeyValidator(key ssh.PublicKey) ssh.HostKeyCallback {
 	return func(hostname string, remote net.Addr, candidate ssh.PublicKey) error {
-		if key == nil {
-			return errors.New("required host key was nil")
-		}
 		c := candidate.Marshal()
 		k := key.Marshal()
 		if !bytes.Equal(c, k) {
