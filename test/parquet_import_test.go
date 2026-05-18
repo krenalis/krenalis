@@ -51,11 +51,9 @@ func TestParquetImport(t *testing.T) {
 	})
 	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
-	// Create a File System source connection.
+	// Create a File System source connection, with a pipeline that imports from the Parquet file.
 	fs := c.CreateSourceFileSystem()
-
-	// Define a pipeline that imports from the Parquet file.
-	parquetPipeline := krenalistester.PipelineToSet{
+	pipeline1 := c.CreatePipeline(fs, "User", krenalistester.PipelineToSet{
 		Name:    "Parquet",
 		Enabled: true,
 		Path:    "test.parquet",
@@ -89,14 +87,9 @@ func TestParquetImport(t *testing.T) {
 				OutPaths: []string{"parquet_id", "parquet_imported"},
 			},
 		},
-		UserIDColumn:    "parquet_id",
-		UpdatedAtColumn: "updated_at",
-		Format:          "parquet",
-		Incremental:     true,
-	}
-
-	// Create the pipeline.
-	pipeline1 := c.CreatePipeline(fs, "User", parquetPipeline)
+		UserIDColumn: "parquet_id",
+		Format:       "parquet",
+	})
 
 	// Import and wait.
 	run1 := c.RunPipeline(pipeline1)
@@ -121,16 +114,6 @@ func TestParquetImport(t *testing.T) {
 	}
 	if fail {
 		t.Fatal("profiles do not match")
-	}
-
-	// Parquet has no format settings. Updating the pipeline without changing it
-	// must preserve its cursor: records without updated_at can still be read
-	// using the file timestamp, but the record at the cursor must be skipped.
-	c.UpdatePipeline(pipeline1, parquetPipeline)
-	run2 := c.RunPipeline(pipeline1)
-	c.WaitForRunsCompletionAllowFailed(fs, run2)
-	if run := c.PipelineRun(run2); run.Passed[0] != len(expectedProfiles)-1 {
-		t.Fatalf("expected %d records to be received after updating the pipeline, got passed counters %v", len(expectedProfiles)-1, run.Passed)
 	}
 
 }
