@@ -51,7 +51,10 @@ func TestParquetImport(t *testing.T) {
 	})
 	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
+	// Create a File System source connection.
 	fs := c.CreateSourceFileSystem()
+
+	// Define a pipeline that imports from the Parquet file.
 	parquetPipeline := krenalistester.PipelineToSet{
 		Name:    "Parquet",
 		Enabled: true,
@@ -92,7 +95,7 @@ func TestParquetImport(t *testing.T) {
 		Incremental:     true,
 	}
 
-	// Create a File System source connection, with a pipeline that imports from the Parquet file.
+	// Create the pipeline.
 	pipeline1 := c.CreatePipeline(fs, "User", parquetPipeline)
 
 	// Import and wait.
