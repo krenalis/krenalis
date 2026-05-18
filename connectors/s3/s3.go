@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -34,6 +35,15 @@ var sourceOverview string
 
 //go:embed documentation/destination/overview.md
 var destinationOverview string
+
+const (
+	maxConnsPerHost     = 64   // Maximum connections per host.
+	maxIdleConns        = 1024 // Maximum idle keep-alive connections.
+	maxIdleConnsPerHost = 64   // Maximum idle keep-alive connections per host.
+
+	partSizeBytes = 8 * 1024 * 1024 // Buffer size in bytes for S3 multipart uploads.
+	concurrency   = 2               // Number of goroutines used in parallel for object transfers.
+)
 
 func init() {
 	connectors.RegisterFileStorage(connectors.FileStorageSpec{
@@ -194,8 +204,8 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	}
 	client := s3.client(&s)
 	tm := transfermanager.New(client, func(opts *transfermanager.Options) {
-		opts.PartSizeBytes = 8 * 1024 * 1024
-		opts.Concurrency = 2
+		opts.PartSizeBytes = partSizeBytes
+		opts.Concurrency = concurrency
 	})
 	_, err = tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
 		Bucket:      aws.String(s.Bucket),
@@ -217,14 +227,16 @@ func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 				"",
 			),
 		),
-		HTTPClient: awsHTTP.NewBuildableClient().
-			WithTransportOptions(func(transport *http.Transport) {
-				transport.Proxy = nil
-				transport.MaxConnsPerHost = 2
-				transport.MaxIdleConns = 2
-				transport.MaxIdleConnsPerHost = 2
-				transport.IdleConnTimeout = 10 * time.Second
-			}),
+		HTTPClient: sync.OnceValue(func() aws.HTTPClient {
+			return awsHTTP.NewBuildableClient().
+				WithTransportOptions(func(transport *http.Transport) {
+					transport.Proxy = nil
+					transport.MaxConnsPerHost = maxConnsPerHost
+					transport.MaxIdleConns = maxIdleConns
+					transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
+					transport.IdleConnTimeout = 10 * time.Second
+				})
+		})(),
 	}
 	return awsS3.NewFromConfig(cfg)
 }
