@@ -218,6 +218,18 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	return err
 }
 
+var httpClient = sync.OnceValue(func() aws.HTTPClient {
+	return awsHTTP.NewBuildableClient().
+		WithTransportOptions(func(transport *http.Transport) {
+			transport.Proxy = nil
+			transport.MaxConnsPerHost = maxConnsPerHost
+			transport.MaxIdleConns = maxIdleConns
+			transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
+			transport.IdleConnTimeout = idleConnTimeout
+			transport.ResponseHeaderTimeout = responseHeaderTimeout
+		})
+})
+
 // client returns a S3 client.
 func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 	cfg := aws.Config{
@@ -229,17 +241,7 @@ func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 				"",
 			),
 		),
-		HTTPClient: sync.OnceValue(func() aws.HTTPClient {
-			return awsHTTP.NewBuildableClient().
-				WithTransportOptions(func(transport *http.Transport) {
-					transport.Proxy = nil
-					transport.MaxConnsPerHost = maxConnsPerHost
-					transport.MaxIdleConns = maxIdleConns
-					transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
-					transport.IdleConnTimeout = idleConnTimeout
-					transport.ResponseHeaderTimeout = responseHeaderTimeout
-				})
-		})(),
+		HTTPClient: httpClient(),
 	}
 	return awsS3.NewFromConfig(cfg)
 }
