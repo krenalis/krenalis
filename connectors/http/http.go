@@ -120,7 +120,6 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 		return nil, time.Time{}, err
 	}
 	if res.StatusCode != 200 {
-		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 		return nil, time.Time{}, fmt.Errorf("server responded with status: %s", res.Status)
 	}
@@ -194,8 +193,7 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, res.Body)
+	_ = res.Body.Close()
 	if c := res.StatusCode; c != 200 && c != 201 {
 		return fmt.Errorf("server responded with status: %s", res.Status)
 	}

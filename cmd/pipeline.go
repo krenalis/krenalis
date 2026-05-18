@@ -21,11 +21,11 @@ func (pipeline pipeline) Delete(_ http.ResponseWriter, r *http.Request) (any, er
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
-	a, err := pipeline.id(r)
+	p, err := pipeline.id(r)
 	if err != nil {
 		return nil, err
 	}
-	err = a.Delete(r.Context())
+	err = p.Delete(r.Context())
 	return nil, err
 }
 
@@ -68,7 +68,7 @@ func (pipeline pipeline) ServeUI(w http.ResponseWriter, r *http.Request) (any, e
 	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", r.PathValue("id"))
 	}
-	a, err := ws.Pipeline(id)
+	p, err := ws.Pipeline(id)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (pipeline pipeline) ServeUI(w http.ResponseWriter, r *http.Request) (any, e
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return a.ServeUI(r.Context(), body.Event, body.FormatSettings)
+	return p.ServeUI(r.Context(), body.Event, body.FormatSettings)
 }
 
 // SetSchedulePeriod sets the schedule period of a pipeline.
@@ -88,7 +88,7 @@ func (pipeline pipeline) SetSchedulePeriod(_ http.ResponseWriter, r *http.Reques
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	a, err := pipeline.id(r)
+	p, err := pipeline.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (pipeline pipeline) SetSchedulePeriod(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.SetSchedulePeriod(r.Context(), body.Period)
+	err = p.SetSchedulePeriod(r.Context(), body.Period)
 	return nil, err
 }
 
@@ -108,7 +108,7 @@ func (pipeline pipeline) SetStatus(_ http.ResponseWriter, r *http.Request) (any,
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	a, err := pipeline.id(r)
+	p, err := pipeline.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (pipeline pipeline) SetStatus(_ http.ResponseWriter, r *http.Request) (any,
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.SetStatus(r.Context(), body.Enabled)
+	err = p.SetStatus(r.Context(), body.Enabled)
 	return nil, err
 }
 
@@ -128,7 +128,7 @@ func (pipeline pipeline) Update(_ http.ResponseWriter, r *http.Request) (any, er
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	a, err := pipeline.id(r)
+	p, err := pipeline.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (pipeline pipeline) Update(_ http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.Update(r.Context(), body)
+	err = p.Update(r.Context(), body)
 	return nil, err
 }
 

@@ -66,7 +66,7 @@ func TestSendEvents(t *testing.T) {
 				"device": map[string]any{
 					"advertisingId": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 				},
-				"ip": "192.0.2.1",
+				"ip": "2001:db8:face:12::1",
 				"os": map[string]any{
 					"name":    "macOS",
 					"version": "15.5",
@@ -135,7 +135,7 @@ func TestSendEvents(t *testing.T) {
 					"currency":         "USD",
 					"discount":         20.78,
 					"distinct_id":      event.Received.AnonymousID(),
-					"ip":               "192.0.2.1",
+					"ip":               "2001:db8:face:12::1",
 					"order_id":         "703924",
 					"products":         []map[string]any{{"sku": "G7NZ0I5"}, {"sku": "QN72LVRA"}},
 					"revenue":          198.45,

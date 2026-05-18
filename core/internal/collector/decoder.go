@@ -51,10 +51,10 @@ type decoder struct {
 
 	receivedAt time.Time
 	remoteAddr struct {
-		ip   netip.Addr
-		ip32 string // es. 192.168.1.42
-		ip24 string // es. 192.168.1.0
-		ip16 string // es. 192.168.0.0
+		ip                 netip.Addr
+		identifiable       string // e.g. 192.168.1.42 or 2001:db8:face:12::1
+		partiallyAnonymous string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
+		stronglyAnonymous  string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
 	}
 	sentAt       time.Time
 	writeKey     string
@@ -169,14 +169,28 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr.ip = netip.Addr{}
 
-	// If an 'X-Forwarded-For' header was provided, get the request address from
-	// there.
+	// If the 'X-Forwarded-For' header is present, use it to determine
+	// the client's IP address. Also accept non-standard formats such as
+	// bracketed IPv6 addresses and addresses with a ":port" suffix.
 	if ff := r.Header.Get("X-Forwarded-For"); ff != "" {
 		clientIP, _, _ := strings.Cut(ff, ",")
 		clientIP = strings.TrimSpace(clientIP)
+		// If the address starts with '[', assume it is an IPv6 address
+		// and strip the optional port suffix.
+		if strings.HasPrefix(clientIP, "[") {
+			if before, _, found := strings.Cut(clientIP[1:], "]"); found {
+				clientIP = before
+			}
+		} else {
+			// If the address contains a single ':', assume it separates
+			// the host and port, then keep only the host part.
+			if before, after, found := strings.Cut(clientIP, ":"); found && !strings.Contains(after, ":") {
+				clientIP = before
+			}
+		}
 		err = d.parseRemoteAddr(clientIP)
 		if err != nil {
-			return errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IPv4 address")
+			return errors.BadRequest("address specified in the 'X-Forwarded-For' header is not a valid IP address")
 		}
 	} else {
 		// The address wasn't provided through the 'X-Forwarded-For' header,
@@ -184,7 +198,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		host, _, _ := net.SplitHostPort(r.RemoteAddr)
 		err = d.parseRemoteAddr(host)
 		if err != nil {
-			return errors.BadRequest("only IP version 4 is supported")
+			return errors.New("unexpected IP address from RemoteAddr")
 		}
 	}
 
@@ -567,32 +581,31 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 	// IP.
 	if ip, ok := context["ip"].(string); ok {
 		addr, err := netip.ParseAddr(ip)
-		if err != nil {
+		if err != nil || addr.Zone() != "" {
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
-		}
-		if !addr.Is4() {
-			return nil, errors.BadRequest("property 'ip' is not an IPv4 address")
 		}
 		switch addr {
 		case ip0: // 0.0.0.0
 			delete(context, "ip")
 		case ip32: // 255.255.255.255
-			context["ip"] = d.remoteAddr.ip32
+			context["ip"] = d.remoteAddr.identifiable
 			locationIP = d.remoteAddr.ip
 		case ip24: // 255.255.255.0
-			context["ip"] = d.remoteAddr.ip24
+			context["ip"] = d.remoteAddr.partiallyAnonymous
 			locationIP = d.remoteAddr.ip
 		case ip16: // 255.255.0.0
-			context["ip"] = d.remoteAddr.ip16
+			context["ip"] = d.remoteAddr.stronglyAnonymous
 			locationIP = d.remoteAddr.ip
 		default:
+			addr = addr.Unmap()
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
+			context["ip"] = addr.String()
 			locationIP = addr
 		}
 	} else if fallbackToRequestIP {
-		context["ip"] = d.remoteAddr.ip32
+		context["ip"] = d.remoteAddr.identifiable
 		locationIP = d.remoteAddr.ip
 	}
 
@@ -1099,21 +1112,26 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 	return sec, nil
 }
 
-// parseRemoteAddr parses s as an IPv4 address, including IPv4-mapped
+// parseRemoteAddr parses s as an IPv4 or IPv6 address, including IPv4-mapped
 // addresses such as "::ffff:192.0.2.1", and stores the result in d.remoteAddr.
 func (d *decoder) parseRemoteAddr(s string) error {
 	addr, err := netip.ParseAddr(s)
 	if err != nil {
 		return err
 	}
-	addr = addr.Unmap()
-	if !addr.Is4() {
-		return errors.New("not an IPv4 address")
+	if addr.Zone() != "" {
+		return errors.New("invalid scoped IP address")
 	}
-	d.remoteAddr.ip = addr.Unmap()
-	d.remoteAddr.ip32 = d.remoteAddr.ip.String()
-	d.remoteAddr.ip24 = netip.PrefixFrom(addr, 24).Masked().Addr().String()
-	d.remoteAddr.ip16 = netip.PrefixFrom(addr, 16).Masked().Addr().String()
+	addr = addr.Unmap()
+	d.remoteAddr.ip = addr
+	d.remoteAddr.identifiable = d.remoteAddr.ip.String()
+	if addr.Is6() {
+		d.remoteAddr.partiallyAnonymous = netip.PrefixFrom(addr, 48).Masked().Addr().String()
+		d.remoteAddr.stronglyAnonymous = netip.PrefixFrom(addr, 32).Masked().Addr().String()
+	} else {
+		d.remoteAddr.partiallyAnonymous = netip.PrefixFrom(addr, 24).Masked().Addr().String()
+		d.remoteAddr.stronglyAnonymous = netip.PrefixFrom(addr, 16).Masked().Addr().String()
+	}
 	return nil
 }
 
