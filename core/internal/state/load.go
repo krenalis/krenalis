@@ -539,7 +539,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				if filter != nil {
 					pipeline.Filter, err = unmarshalWhere(filter, pipeline.InSchema)
 					if err != nil {
-						return err
+						return fmt.Errorf("cannot load filter for pipeline %d: %s", pipeline.ID, err)
 					}
 				}
 				if len(mapping) > 0 {
