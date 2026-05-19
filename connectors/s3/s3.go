@@ -14,17 +14,20 @@ import (
 	"context"
 	_ "embed"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awsHTTP "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
-	s3pkg "github.com/aws/aws-sdk-go-v2/service/s3"
+	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 //go:embed documentation/source/overview.md
@@ -32,6 +35,17 @@ var sourceOverview string
 
 //go:embed documentation/destination/overview.md
 var destinationOverview string
+
+const (
+	maxConnsPerHost       = 64               // Maximum connections per host.
+	maxIdleConns          = 1024             // Maximum idle keep-alive connections.
+	maxIdleConnsPerHost   = 64               // Maximum idle keep-alive connections per host.
+	idleConnTimeout       = 20 * time.Second // Maximum idle keep-alive connection time.
+	responseHeaderTimeout = 10 * time.Second // Maximum time to wait for response headers.
+
+	partSizeBytes = 8 * 1024 * 1024 // Buffer size in bytes for S3 multipart uploads.
+	concurrency   = 2               // Number of goroutines used in parallel for object transfers.
+)
 
 func init() {
 	connectors.RegisterFileStorage(connectors.FileStorageSpec{
@@ -94,7 +108,7 @@ func (s3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time
 		return nil, time.Time{}, err
 	}
 	client := s3.client(&s)
-	res, err := client.GetObject(ctx, &s3pkg.GetObjectInput{
+	res, err := client.GetObject(ctx, &awsS3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(name),
 	})
@@ -192,8 +206,8 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	}
 	client := s3.client(&s)
 	tm := transfermanager.New(client, func(opts *transfermanager.Options) {
-		opts.PartSizeBytes = 8 * 1024 * 1024
-		opts.Concurrency = 2
+		opts.PartSizeBytes = partSizeBytes
+		opts.Concurrency = concurrency
 	})
 	_, err = tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
 		Bucket:      aws.String(s.Bucket),
@@ -204,8 +218,20 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	return err
 }
 
+var httpClient = sync.OnceValue(func() aws.HTTPClient {
+	return awsHTTP.NewBuildableClient().
+		WithTransportOptions(func(transport *http.Transport) {
+			transport.Proxy = nil
+			transport.MaxConnsPerHost = maxConnsPerHost
+			transport.MaxIdleConns = maxIdleConns
+			transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
+			transport.IdleConnTimeout = idleConnTimeout
+			transport.ResponseHeaderTimeout = responseHeaderTimeout
+		})
+})
+
 // client returns a S3 client.
-func (s3 *S3) client(s *innerSettings) *s3pkg.Client {
+func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 	cfg := aws.Config{
 		Region: s.Region,
 		Credentials: aws.NewCredentialsCache(
@@ -215,8 +241,9 @@ func (s3 *S3) client(s *innerSettings) *s3pkg.Client {
 				"",
 			),
 		),
+		HTTPClient: httpClient(),
 	}
-	return s3pkg.NewFromConfig(cfg)
+	return awsS3.NewFromConfig(cfg)
 }
 
 // saveSettings validates and saves the settings.
