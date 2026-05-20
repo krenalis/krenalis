@@ -560,30 +560,21 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 	if workosClientID := conf.Get("KRENALIS_WORKOS_CLIENT_ID"); workosClientID != "" {
 		settings.WorkOS.ClientID = workosClientID
 
-		apiKey, ok := conf.Lookup("KRENALIS_WORKOS_API_KEY")
-		if !ok {
-			return nil, errors.New("KRENALIS_WORKOS_API_KEY must be set when KRENALIS_WORKOS_CLIENT_ID is set")
-		}
+		apiKey := conf.Get("KRENALIS_WORKOS_API_KEY")
 		if apiKey == "" {
-			return nil, errors.New("KRENALIS_WORKOS_API_KEY cannot be an empty string")
+			return nil, errors.New("KRENALIS_WORKOS_API_KEY must be set when KRENALIS_WORKOS_CLIENT_ID is set")
 		}
 		settings.WorkOS.APIKey = apiKey
 
-		webhookSecret, ok := conf.Lookup("KRENALIS_WORKOS_WEBHOOK_SECRET")
-		if !ok {
-			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
-		}
+		webhookSecret := conf.Get("KRENALIS_WORKOS_WEBHOOK_SECRET")
 		if webhookSecret == "" {
-			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET cannot be an empty string")
+			return nil, errors.New("KRENALIS_WORKOS_WEBHOOK_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
 		}
 		settings.WorkOS.WebhookSecret = webhookSecret
 
-		actionsSecret, ok := conf.Lookup("KRENALIS_WORKOS_ACTIONS_SECRET")
-		if !ok {
-			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
-		}
+		actionsSecret := conf.Get("KRENALIS_WORKOS_ACTIONS_SECRET")
 		if actionsSecret == "" {
-			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET cannot be an empty string")
+			return nil, errors.New("KRENALIS_WORKOS_ACTIONS_SECRET must be set when KRENALIS_WORKOS_CLIENT_ID is set")
 		}
 		settings.WorkOS.ActionsSecret = actionsSecret
 
