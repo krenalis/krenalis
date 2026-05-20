@@ -1612,10 +1612,6 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		// TODO(Gianluca): for https://github.com/krenalis/krenalis/issues/1833.
-		if this.workspace.Warehouse.Platform == "Snowflake" {
-			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
-		}
 		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
@@ -1809,10 +1805,6 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
-		// TODO(Gianluca): for https://github.com/krenalis/krenalis/issues/1833.
-		if this.workspace.Warehouse.Platform == "Snowflake" {
-			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
-		}
 		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {

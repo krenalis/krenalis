@@ -297,9 +297,15 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if !found {
 			return nil, nil, errors.BadRequest("API key is not valid; API keys start with the api_ prefix")
 		}
-		organizationID, workspaceID, found := s.core.AccessKey(token, core.AccessKeyTypeAPI)
-		if !found {
-			return nil, nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
+		organizationID, workspaceID, err := s.core.AccessKey(r.Context(), token, core.AccessKeyTypeAPI)
+		if err != nil {
+			switch err.(type) {
+			case *errors.BadRequestError:
+				err = errors.Unauthorized("API key in the Authorization header of the request is malformed")
+			case *errors.NotFoundError:
+				err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
+			}
+			return nil, nil, err
 		}
 		org, err := s.core.Organization(organizationID)
 		if err != nil {

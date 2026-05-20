@@ -7,6 +7,13 @@ package db
 import (
 	"testing"
 	"time"
+
+	"github.com/krenalis/krenalis/test/testimages"
+
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Test_Quote checks that Quote correctly formats different Go values for use
@@ -90,4 +97,90 @@ func Test_Quote(t *testing.T) {
 		Quote([]any{1, struct{}{}})
 	})
 
+}
+
+// Test_TxQueryRowForeignKeyViolationIsDirectPgError checks that pgx returns a
+// direct PgError for a foreign key violation from Tx.QueryRow.
+func Test_TxQueryRowForeignKeyViolationIsDirectPgError(t *testing.T) {
+
+	const (
+		testDatabase = "krenalis"
+		testUser     = "krenalis"
+		testPassword = "krenalis"
+		constraint   = "children_parent_id_fkey"
+	)
+
+	ctx := t.Context()
+	postgresContainer, err := postgres.Run(ctx,
+		testimages.PostgreSQL,
+		postgres.WithDatabase(testDatabase),
+		postgres.WithUsername(testUser),
+		postgres.WithPassword(testPassword),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(60*time.Second)),
+	)
+	defer func() {
+		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	host, err := postgresContainer.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := Open(&Options{
+		Host:     host,
+		Port:     int(port.Num()),
+		Username: testUser,
+		Password: testPassword,
+		Database: testDatabase,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(ctx, `
+		CREATE TABLE parents (id integer PRIMARY KEY);
+		CREATE TABLE children (
+			id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+			parent_id integer NOT NULL,
+			CONSTRAINT children_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES parents (id)
+		);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Transaction(ctx, func(tx *Tx) error {
+		var id int
+		return tx.QueryRow(ctx, "INSERT INTO children (parent_id) VALUES ($1) RETURNING id", 42).Scan(&id)
+	})
+
+	pgErr, ok := err.(*pgconn.PgError)
+	if !ok {
+		t.Fatalf("expected direct *pgconn.PgError, got %T: %v", err, err)
+	}
+	if pgErr.Code != "23503" {
+		t.Fatalf("expected SQLSTATE 23503, got %s", pgErr.Code)
+	}
+	if pgErr.ConstraintName != constraint {
+		t.Fatalf("expected constraint %q, got %q", constraint, pgErr.ConstraintName)
+	}
+	if !IsForeignKeyViolation(err) {
+		t.Fatal("expected foreign key violation")
+	}
+	if got := ErrConstraintName(err); got != constraint {
+		t.Fatalf("expected constraint %q, got %q", constraint, got)
+	}
 }

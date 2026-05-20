@@ -26,8 +26,7 @@ func (r repeatReader) Read(p []byte) (int, error) {
 
 func TestCollectorReturnsRequestEntityTooLarge(t *testing.T) {
 	c := &Collector{
-		sc: &streamstest.Connection{
-			StreamValue: &streamstest.Stream{},
+		stream: &streamstest.Stream{
 			WaitUpValue: true,
 		},
 	}

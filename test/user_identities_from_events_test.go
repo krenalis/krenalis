@@ -7,7 +7,6 @@ package test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
@@ -24,6 +23,9 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	c := krenalistester.NewKrenalisInstance(t)
 	c.Start()
 	defer c.Stop()
+
+	// Disable automatic execution of Identity Resolution.
+	c.UpdateIdentityResolution(false, nil)
 
 	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	javaScriptKey := c.EventWriteKeys(javaScriptID)[0]
@@ -61,7 +63,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 		},
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
-	time.Sleep(time.Second)
+	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
 	c.RunIdentityResolution()
 
 	// Retrieve the profile imported from the event.
@@ -105,7 +107,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 		},
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
-	time.Sleep(time.Second)
+	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 2)
 	c.RunIdentityResolution()
 
 	// Check that the profile has been created.
@@ -146,7 +148,7 @@ def transform(event: dict) -> dict:
 		},
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
-	time.Sleep(time.Second)
+	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 3)
 	c.RunIdentityResolution()
 
 	// Check that the profile has been created.

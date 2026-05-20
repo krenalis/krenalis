@@ -2,12 +2,20 @@ name: Release Krenalis
 
 on:
   release:
-    types: [ published ]
+    types: [published]
 
 permissions: {}
 
 jobs:
+  tests:
+    uses: ./.github/workflows/go-run-test-commit.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+
   push_to_docker_registry:
+    needs: tests
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     permissions:

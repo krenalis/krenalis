@@ -27,6 +27,11 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
+	ErrAccessKeyNotFound      = errors.New("access key not found")
+)
+
 // election represents a leader election.
 type election struct {
 	number   int
@@ -42,6 +47,7 @@ type metadata struct {
 	installationID        string
 	kmsEncryptedCookieKey []byte
 	oAuthKey              *cipher.Key
+	apiKeyPepper          *cipher.Key
 }
 
 // State represents the application state.
@@ -60,7 +66,7 @@ type State struct {
 	pipelines        map[int]*Pipeline           // protected by mu
 	connections      map[int]*Connection         // protected by mu
 	connectionsByKey map[string]*Connection      // protected by mu
-	accessKeyByToken map[string]*AccessKey       // protected by mu
+	accessKeyByHMAC  map[string]*AccessKey       // protected by mu
 	election         election                    // protected by mu
 	organizations    map[uuid.UUID]*Organization // protected by mu
 	workspaces       map[int]*Workspace          // protected by mu
@@ -135,13 +141,26 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	return state, nil
 }
 
-// AccessKeyByToken returns the access key with the provided token.
-// The boolean return value reports whether the access key exists.
-func (state *State) AccessKeyByToken(token string) (*AccessKey, bool) {
+// AccessKey returns the access key for the provided token.
+// It returns ErrInvalidAccessKeyFormat if the token is malformed,
+// ErrAccessKeyNotFound if no matching key exists.
+func (state *State) AccessKey(ctx context.Context, token string) (*AccessKey, error) {
+	payload, err := parseAccessKey(token)
+	if err != nil {
+		return nil, ErrInvalidAccessKeyFormat
+	}
+	defer clear(payload)
+	hmac, err := state.metadata.apiKeyPepper.HMAC(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
 	state.mu.Lock()
-	key, ok := state.accessKeyByToken[token]
+	key, ok := state.accessKeyByHMAC[string(hmac[:])]
 	state.mu.Unlock()
-	return key, ok
+	if !ok {
+		return nil, ErrAccessKeyNotFound
+	}
+	return key, nil
 }
 
 // Account returns the account with identifier id.
@@ -458,11 +477,11 @@ func (typ *AccessKeyType) Scan(src any) error {
 // String returns the string representation of typ.
 // It panics if typ is not a valid AccessKeyType value.
 func (typ AccessKeyType) String() string {
-	m, err := typ.Value()
+	v, err := typ.Value()
 	if err != nil {
-		panic("invalid access key type")
+		panic(err)
 	}
-	return m.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -562,11 +581,11 @@ func (mode *WarehouseMode) Scan(src any) error {
 // String returns the string representation of mode.
 // It panics if mode is not a valid WarehouseMode value.
 func (mode WarehouseMode) String() string {
-	m, err := mode.Value()
+	v, err := mode.Value()
 	if err != nil {
-		panic("invalid warehouse mode")
+		panic(err)
 	}
-	return m.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -908,11 +927,11 @@ func (typ *ConnectorType) Scan(src any) error {
 // String returns the string representation of typ.
 // It panics if typ is not a valid ConnectorType value.
 func (typ ConnectorType) String() string {
-	s, err := typ.Value()
+	v, err := typ.Value()
 	if err != nil {
-		panic("invalid connector type")
+		panic(err)
 	}
-	return s.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -972,11 +991,11 @@ func (per *WebhooksPer) Scan(src any) error {
 // String returns the string representation of w.
 // It panics if w is not a valid WebhooksPer value.
 func (per WebhooksPer) String() string {
-	s, err := per.Value()
+	v, err := per.Value()
 	if err != nil {
-		panic("invalid webhooksPer value")
+		panic(err)
 	}
-	return s.(string)
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1187,15 +1206,11 @@ func (health *Health) Scan(src any) error {
 // String returns the string representation of health.
 // It panics if health is not a valid Health value.
 func (health Health) String() string {
-	switch health {
-	case Healthy:
-		return "Healthy"
-	case NoRecentData:
-		return "NoRecentData"
-	case RecentError:
-		return "RecentError"
+	v, err := health.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid connection health")
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1245,13 +1260,11 @@ func (role *Role) Scan(src any) error {
 // String returns the string representation of role.
 // It panics if role is not a valid Role value.
 func (role Role) String() string {
-	switch role {
-	case Source:
-		return "Source"
-	case Destination:
-		return "Destination"
+	v, err := role.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid connection role")
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1352,15 +1365,11 @@ func (target *Target) Scan(src any) error {
 // String returns the string representation of target.
 // It panics if target is not a valid Target value.
 func (target Target) String() string {
-	switch target {
-	case TargetEvent:
-		return "Event"
-	case TargetUser:
-		return "User"
-	case TargetGroup:
-		return "Group"
+	v, err := target.Value()
+	if err != nil {
+		panic(err)
 	}
-	panic("invalid target")
+	return v.(string)
 }
 
 // Value implements driver.Valuer interface.
@@ -1509,13 +1518,21 @@ func (lang *Language) Scan(src any) error {
 }
 
 func (lang Language) String() string {
+	v, err := lang.Value()
+	if err != nil {
+		panic(err)
+	}
+	return v.(string)
+}
+
+func (lang Language) Value() (driver.Value, error) {
 	switch lang {
 	case JavaScript:
-		return "JavaScript"
+		return "JavaScript", nil
 	case Python:
-		return "Python"
+		return "Python", nil
 	}
-	panic("invalid language")
+	return nil, fmt.Errorf("state: invalid language: %d", lang)
 }
 
 // Transformation represents a transformation.

@@ -447,10 +447,13 @@ func validateFileConnector(file FileSpec) {
 	validateCategories(file.Code, file.Categories)
 
 	if file.AsSource != nil {
-		iface := reflect.TypeFor[interface {
+		readerIface := reflect.TypeFor[interface {
 			Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 		}]()
-		if !file.ct.Implements(iface) {
+		readSeekerIface := reflect.TypeFor[interface {
+			Read(ctx context.Context, r io.ReadSeeker, sheet string, records RecordWriter) error
+		}]()
+		if !file.ct.Implements(readerIface) && !file.ct.Implements(readSeekerIface) {
 			panic(fmt.Sprintf("krenalis/connectors: connector %s: inconsistency between the declared functionalities and the methods it actually implements", file.Code))
 		}
 	}

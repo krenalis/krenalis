@@ -305,7 +305,10 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 		}
 		err := c.complete(func() error {
 
-			store := c.core.datastore.Store(id)
+			store, ok := c.core.datastore.Store(id)
+			if !ok {
+				return nil
+			}
 			err := store.PurgePipelines(c.close.ctx, pipelines)
 			if err != nil {
 				return fmt.Errorf("cannot purge pipelines: %s", err)
@@ -388,7 +391,10 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 					}
 					c2 := pipeline.Connection()
 					ws := c2.Workspace()
-					store := c.core.datastore.Store(ws.ID)
+					store, ok := c.core.datastore.Store(ws.ID)
+					if !ok {
+						continue
+					}
 					connection := &Connection{core: c.core, store: store, connection: c2}
 					p := &Pipeline{core: c.core, pipeline: pipeline, connection: connection}
 					go p.endRun(pipelineErr)
@@ -429,7 +435,10 @@ func (c *pipelineCleaner) unsetIdentityProperties(id int) {
 		// Unset the properties.
 		err := c.complete(func() error {
 
-			store := c.core.datastore.Store(pipeline.Connection().Workspace().ID)
+			store, ok := c.core.datastore.Store(pipeline.Connection().Workspace().ID)
+			if !ok {
+				return nil
+			}
 			err := store.UnsetIdentityProperties(c.close.ctx, pipeline.ID, paths)
 			if err != nil {
 				return err

@@ -21,9 +21,6 @@ import (
 
 func Test_ImportFromManyConnections(t *testing.T) {
 
-	// TODO: skipped until https://github.com/krenalis/krenalis/issues/2150 is fixed.
-	t.Skip()
-
 	// Determine the storage directory and assert that such directory exists.
 	storageDir, err := filepath.Abs("testdata/import_from_many_connections_test")
 	if err != nil {

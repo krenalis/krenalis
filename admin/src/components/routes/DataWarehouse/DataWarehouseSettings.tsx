@@ -76,7 +76,7 @@ const DataWarehouseSettings = ({
 
 	const onEnableMCPSettings = () => {
 		setIsMCPEnabled(!isMCPEnabled);
-		if (!isMCPEnabled && selectedWarehouse.name === 'PostgreSQL' && mcpSettings == null) {
+		if (!isMCPEnabled && mcpSettings == null) {
 			// pre-fill the settings with the values of the main credentials
 			// form (apart from username and password) and focus the username
 			// input.
@@ -173,40 +173,39 @@ const DataWarehouseSettings = ({
 						)}
 					</div>
 				</Section>
-				{selectedWarehouse.name !== 'Snowflake' && (
-					<Section
-						title={warehouseSectionTexts.mcp.title}
-						description={warehouseSectionTexts.mcp.description}
-						padded={true}
-						annotated={true}
+				<Section
+					title={warehouseSectionTexts.mcp.title}
+					description={warehouseSectionTexts.mcp.description}
+					padded={true}
+					annotated={true}
+				>
+					<SlCheckbox
+						checked={isMCPEnabled}
+						onSlChange={onEnableMCPSettings}
+						className='warehouse-settings__mcp-checkbox'
 					>
-						<SlCheckbox
-							checked={isMCPEnabled}
-							onSlChange={onEnableMCPSettings}
-							className='warehouse-settings__mcp-checkbox'
-						>
-							Grant read-only access to the data warehouse for AI queries
-						</SlCheckbox>
-						{isMCPEnabled && (
-							<div className='warehouse-settings__mcp-form'>
-								{selectedWarehouse.name === 'PostgreSQL' ? (
-									<PostgreSQLSettings
-										setSettings={setMCPSettings}
-										settings={mcpSettings}
-										precompileDefault={false}
-										inputRef={usernameRef}
-									/>
-								) : (
-									<SnowflakeSettings
-										setSettings={setMCPSettings}
-										settings={mcpSettings}
-										precompileDefault={false}
-									/>
-								)}
-							</div>
-						)}
-					</Section>
-				)}
+						Grant read-only access to the data warehouse for AI queries
+					</SlCheckbox>
+					{isMCPEnabled && (
+						<div className='warehouse-settings__mcp-form'>
+							{selectedWarehouse.name === 'PostgreSQL' ? (
+								<PostgreSQLSettings
+									setSettings={setMCPSettings}
+									settings={mcpSettings}
+									precompileDefault={false}
+									inputRef={usernameRef}
+								/>
+							) : (
+								<SnowflakeSettings
+									setSettings={setMCPSettings}
+									settings={mcpSettings}
+									precompileDefault={false}
+									inputRef={usernameRef}
+								/>
+							)}
+						</div>
+					)}
+				</Section>
 			</div>
 			<div className='warehouse-settings__buttons'>
 				<SlButton

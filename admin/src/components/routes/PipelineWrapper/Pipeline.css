@@ -358,6 +358,10 @@
 	gap: 30px;
 }
 
+.pipeline__destination_table sl-input {
+	width: min(375px, 100%);
+}
+
 .pipeline__destination_table .popover {
 	margin-left: -15px;
 }

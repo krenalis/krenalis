@@ -41,7 +41,7 @@ func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provid
 		metrics:  metrics,
 	}
 	ws := pipeline.Connection().Workspace()
-	store := ds.Store(ws.ID)
+	store, _ := ds.Store(ws.ID)
 	iw.writer = store.NewEventIdentityWriter(pipeline.ID)
 	if t := pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		iw.transformer, _ = transformers.New(pipeline, provider, nil)

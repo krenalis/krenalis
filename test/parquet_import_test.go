@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
@@ -51,12 +52,59 @@ func TestParquetImport(t *testing.T) {
 	})
 	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
-	// Create a File System source connection, with a pipeline that imports from the Parquet file.
 	fs := c.CreateSourceFileSystem()
-	pipeline1 := c.CreatePipeline(fs, "User", krenalistester.PipelineToSet{
-		Name:    "Parquet",
-		Enabled: true,
-		Path:    "test.parquet",
+
+	testCases := []struct {
+		name        string
+		path        string
+		compression krenalistester.Compression
+	}{
+		{name: "NoCompression", path: "test.parquet"},
+		{name: "Zip", path: "test.parquet.zip", compression: krenalistester.ZipCompression},
+		{name: "Gzip", path: "test.parquet.gz", compression: krenalistester.GzipCompression},
+		{name: "Snappy", path: "test.parquet.sz", compression: krenalistester.SnappyCompression},
+	}
+
+	for _, tc := range testCases {
+
+		f := func(t *testing.T) {
+
+			pipeline := c.CreatePipeline(fs, "User", parquetImportPipeline(tc.path, tc.compression))
+			var identityResolutionStart time.Time
+			var runStarted bool
+			defer purgeParquetImportProfiles(t, c)
+			defer c.DeletePipeline(pipeline)
+			defer func() {
+				if runStarted {
+					waitParquetImportIdentityResolution(t, c, identityResolutionStart)
+				}
+			}()
+
+			identityResolutionStart = time.Now().UTC()
+			run := c.RunPipeline(pipeline)
+			runStarted = true
+			c.WaitRunsCompletion(fs, run)
+
+			waitParquetImportProfiles(t, c, len(expectedProfiles))
+			profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+			checkParquetImportProfiles(t, profiles)
+
+		}
+		if !t.Run(tc.name, f) {
+			return
+		}
+
+	}
+}
+
+// parquetImportPipeline returns a pipeline definition for importing a Parquet
+// file with the given compression.
+func parquetImportPipeline(path string, compression krenalistester.Compression) krenalistester.PipelineToSet {
+	return krenalistester.PipelineToSet{
+		Name:        "Parquet",
+		Enabled:     true,
+		Path:        path,
+		Compression: compression,
 		InSchema: types.Object([]types.Property{
 			{Name: "parquet_id", Type: types.Int(64), Nullable: true},
 			{Name: "first_name", Type: types.String(), Nullable: true},
@@ -70,9 +118,6 @@ func TestParquetImport(t *testing.T) {
 			{Name: "parquet_id", Type: types.Int(64), ReadOptional: true},
 			{Name: "parquet_imported", Type: types.JSON(), ReadOptional: true},
 		}),
-		// Define a transformation function that imports the Parquet row IDs in
-		// "parquet_id" (it is used for sorting the profiles before comparing them)
-		// and any other property into the JSON property "parquet_imported".
 		Transformation: &krenalistester.Transformation{
 			Function: &krenalistester.TransformationFunction{
 				Language: "Python",
@@ -89,23 +134,24 @@ func TestParquetImport(t *testing.T) {
 		},
 		UserIDColumn: "parquet_id",
 		Format:       "parquet",
-	})
-
-	// Import and wait.
-	run1 := c.RunPipeline(pipeline1)
-	c.WaitForRunsCompletionAllowFailed(fs, run1)
-
-	// Check that the count of profiles imported from the file is correct.
-	profiles, _, count := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
-	if count != len(expectedProfiles) {
-		t.Fatalf("expected %d user(s), got %d", len(expectedProfiles), count)
 	}
+}
 
-	// Check that the profiles properties imported in Krenalis match the user
-	// properties in the Parquet file.
+// checkParquetImportProfiles verifies that profiles match the expected Parquet
+// import result.
+func checkParquetImportProfiles(t *testing.T, profiles []krenalistester.Profile) {
+	t.Helper()
+	if len(profiles) != len(expectedProfiles) {
+		t.Fatalf("expected %d profile(s), got %d", len(expectedProfiles), len(profiles))
+	}
 	var fail bool
 	for i := range profiles {
-		gotAttributes := profiles[i].Attributes["parquet_imported"].(map[string]any)
+		gotAttributes, ok := profiles[i].Attributes["parquet_imported"].(map[string]any)
+		if !ok {
+			t.Errorf("profiles[%d]: expected parquet_imported to be map[string]any, got %T", i, profiles[i].Attributes["parquet_imported"])
+			fail = true
+			continue
+		}
 		expectedAttributes := expectedProfiles[i]
 		if !reflect.DeepEqual(gotAttributes, expectedAttributes) {
 			t.Errorf("profiles[%d]: expected attributes %#v, got %#v", i, expectedAttributes, gotAttributes)
@@ -115,7 +161,54 @@ func TestParquetImport(t *testing.T) {
 	if fail {
 		t.Fatal("profiles do not match")
 	}
+}
 
+// waitParquetImportProfiles waits until the expected number of Parquet import
+// profiles is visible.
+func waitParquetImportProfiles(t *testing.T, c *krenalistester.Krenalis, expected int) {
+	t.Helper()
+	for attempt := range 20 {
+		profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+		if len(profiles) == expected {
+			return
+		}
+		t.Logf("[attempt %d] expected %d profile(s), got %d", attempt+1, expected, len(profiles))
+		time.Sleep(200 * time.Millisecond)
+	}
+	profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+	t.Fatalf("expected %d profile(s), got %d", expected, len(profiles))
+}
+
+// waitParquetImportIdentityResolution waits for the identity resolution started
+// at or after since to complete.
+func waitParquetImportIdentityResolution(t *testing.T, c *krenalistester.Krenalis, since time.Time) {
+	t.Helper()
+	for attempt := range 20 {
+		startTime, endTime := c.LatestIdentityResolution()
+		if startTime != nil && (startTime.Equal(since) || startTime.After(since)) && endTime != nil {
+			return
+		}
+		t.Logf("[attempt %d] waiting for identity resolution to complete", attempt+1)
+		time.Sleep(200 * time.Millisecond)
+	}
+	t.Fatal("expected identity resolution to complete")
+}
+
+// purgeParquetImportProfiles runs identity resolution until no Parquet import
+// profiles are visible.
+func purgeParquetImportProfiles(t *testing.T, c *krenalistester.Krenalis) {
+	t.Helper()
+	for attempt := range 20 {
+		c.RunIdentityResolution()
+		profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+		if len(profiles) == 0 {
+			return
+		}
+		t.Logf("[attempt %d] expected 0 profile(s), got %d", attempt+1, len(profiles))
+		time.Sleep(200 * time.Millisecond)
+	}
+	profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+	t.Fatalf("expected 0 profile(s), got %d", len(profiles))
 }
 
 var expectedProfiles = []map[string]any{

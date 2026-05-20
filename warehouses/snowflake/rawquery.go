@@ -13,8 +13,6 @@ import (
 // RawQuery executes a query and returns the results and the number of columns
 // in each row.
 func (warehouse *Snowflake) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
-	// TODO(Gianluca): this should be tested on a Snowflake warehouse. See
-	// https://github.com/krenalis/krenalis/issues/1665.
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return nil, 0, snowflake(err)

@@ -600,6 +600,12 @@ func (c *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 	return c.Call("POST", "/v1/workspaces/test", headers, body, nil)
 }
 
+// DeletePipeline deletes a pipeline.
+func (c *Krenalis) DeletePipeline(pipelineID int) {
+	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
+	c.MustCall("DELETE", path, nil, nil, nil)
+}
+
 func (c *Krenalis) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
 	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
 	c.MustCall("PUT", path, nil, pipeline, nil)
@@ -687,9 +693,28 @@ func (c *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 	return response.Profiles, response.Schema, response.Total
 }
 
+func (c *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection int, expected int) {
+	bo := backoff.New(200)
+	const attempts = 20
+	bo.SetAttempts(attempts)
+	bo.SetCap(2 * time.Second)
+	bo.SetNextWaitTime(200 * time.Millisecond)
+	for bo.Next(ctx) {
+		_, count := c.ConnectionIdentities(connection, 0, 1)
+		if count == expected {
+			break
+		}
+		c.t.Logf("[attempt %d] %d connection identities stored in warehouse until now", bo.Attempt(), count)
+		if bo.WaitTime() == 0 {
+			c.t.Fatalf("too many failed attempts (%d identities were expected, but after %d attempts %d identities are returned by Krenalis)", expected, attempts, count)
+		}
+	}
+}
+
 func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
 	bo := backoff.New(200)
-	bo.SetAttempts(20)
+	const attempts = 20
+	bo.SetAttempts(attempts)
 	bo.SetCap(2 * time.Second)
 	bo.SetNextWaitTime(200 * time.Millisecond)
 	for bo.Next(ctx) {
@@ -697,9 +722,9 @@ func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected i
 		if count == expected {
 			break
 		}
-		c.t.Logf("[attempt %d] %d event(s) stored in warehouse until now", bo.Attempt(), count)
+		c.t.Logf("[attempt %d] %d events stored in warehouse until now", bo.Attempt(), count)
 		if bo.WaitTime() == 0 {
-			c.t.Fatalf("too many failed attempts")
+			c.t.Fatalf("too many failed attempts (%d events were expected, but after %d attempts %d events are returned by Krenalis)", expected, attempts, count)
 		}
 	}
 }

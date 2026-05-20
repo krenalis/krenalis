@@ -149,6 +149,7 @@ const WarehouseInfo = ({
 
 	const rows: GridRow[] = [];
 	for (const k in warehouseSettings) {
+		if (k.toLowerCase() === 'oidctoken') continue;
 		let value: ReactNode;
 		if (k === 'Password' || k === 'password') {
 			value = <PasswordToggle password={warehouseSettings[k]} />;
@@ -162,6 +163,7 @@ const WarehouseInfo = ({
 
 	const mcpRows: GridRow[] = [];
 	for (const k in warehouseMCPSettings) {
+		if (k.toLowerCase() === 'oidctoken') continue;
 		let value: ReactNode;
 		if (k === 'Password' || k === 'password') {
 			value = <PasswordToggle password={warehouseMCPSettings[k]} />;
@@ -205,36 +207,33 @@ const WarehouseInfo = ({
 			>
 				<Grid rows={rows} columns={warehouseInfoColumns} />
 			</Section>
-			{warehouseName !== 'Snowflake' && (
-				<Section
-					title={warehouseSectionTexts.mcp.title}
-					description={
-						<>
-							<span>{warehouseSectionTexts.mcp.description}</span>
-							<a
-								href='https://www.krenalis.com/docs/ref/admin/warehouse-read-only-mcp-credentials'
-								target='_blank'
-								rel='noopener'
-							>
-								Set up AI querying
-							</a>
-						</>
-					}
-					padded={mcpRows.length === 0}
-					annotated={true}
-				>
-					{mcpRows.length > 0 ? (
-						<div className='warehouse-info__settings'>
-							<Grid rows={mcpRows} columns={warehouseInfoColumns} />
-						</div>
-					) : (
-						<div className='warehouse-info__mcp-not-configured'>
-							No credentials have been set. AI-based queries currently have no access to this data
-							warehouse.
-						</div>
-					)}
-				</Section>
-			)}
+			<Section
+				title={warehouseSectionTexts.mcp.title}
+				description={
+					<>
+						<span>{warehouseSectionTexts.mcp.description}</span>
+						<a
+							href='https://www.krenalis.com/docs/ref/admin/warehouse-read-only-mcp-credentials'
+							target='_blank'
+							rel='noopener'
+						>
+							Set up AI querying
+						</a>
+					</>
+				}
+				padded={mcpRows.length === 0}
+				annotated={true}
+			>
+				{mcpRows.length > 0 ? (
+					<div className='warehouse-info__settings'>
+						<Grid rows={mcpRows} columns={warehouseInfoColumns} />
+					</div>
+				) : (
+					<div className='warehouse-info__mcp-not-configured'>
+						No credentials have been set. AI-based queries currently have no access to this data warehouse.
+					</div>
+				)}
+			</Section>
 		</div>
 	);
 };

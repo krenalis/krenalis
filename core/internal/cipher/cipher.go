@@ -8,7 +8,9 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"slices"
 
@@ -78,6 +80,20 @@ func (c *Cipher) Decrypt(ctx context.Context, ciphertext, encryptedDataKey []byt
 	}
 	defer clearKey.Done()
 	return decryptWithDataKey(ciphertext, clearKey.Value)
+}
+
+// HMAC computes the HMAC-SHA-256 of data using the data key represented by
+// encryptedDataKey.
+func (c *Cipher) HMAC(ctx context.Context, data, encryptedDataKey []byte) ([32]byte, error) {
+	clearKey, err := c.decryptDataKey(ctx, encryptedDataKey)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	defer clearKey.Done()
+	if len(clearKey.Value) != 32 {
+		return [32]byte{}, errors.New("cipher: data key must be 32 bytes")
+	}
+	return hmacSHA256(data, clearKey.Value), nil
 }
 
 // KMS returns the KMS used by the cipher.
@@ -154,6 +170,14 @@ func decryptWithAESGCM(ciphertext, dataKey []byte) ([]byte, error) {
 	return aead.Open(make([]byte, 0, len(sealed)-aead.Overhead()), nonce, sealed, nil)
 }
 
+func hmacSHA256(data, key []byte) [32]byte {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(data)
+	var out [32]byte
+	mac.Sum(out[:0])
+	return out
+}
+
 // Key encrypts and decrypts values using an encrypted data key.
 // It is safe for concurrent use by multiple goroutines.
 type Key struct {
@@ -169,6 +193,11 @@ func (k *Key) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 // Decrypt decrypts ciphertext using the key.
 func (k *Key) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	return k.cipher.Decrypt(ctx, ciphertext, k.key)
+}
+
+// HMAC computes the HMAC-SHA-256 of data using the key.
+func (k *Key) HMAC(ctx context.Context, data []byte) ([32]byte, error) {
+	return k.cipher.HMAC(ctx, data, k.key)
 }
 
 // IsValid reports whether the key is valid

@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+// csvColumnName returns the column name to write in Snowflake CSV headers.
+func csvColumnName(name string) string {
+	return strings.ToUpper(name)
+}
+
 // quoteBytes quotes s as a string and writes it into b.
 func quoteBytes(b *strings.Builder, s []byte) {
 	if len(s) == 0 {

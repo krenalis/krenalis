@@ -144,12 +144,12 @@ func (ds *Datastore) Initialize(ctx context.Context, platform string, settings j
 	return unavailableError(dw.Close())
 }
 
-func (ds *Datastore) Store(workspace int) *Store {
+func (ds *Datastore) Store(workspace int) (*Store, bool) {
 	ds.mustBeOpen()
 	ds.mu.Lock()
-	store := ds.store[workspace]
+	store, ok := ds.store[workspace]
 	ds.mu.Unlock()
-	return store
+	return store, ok
 }
 
 // ValidateWarehouseSettings validates data warehouse settings and returns them

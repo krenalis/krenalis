@@ -529,6 +529,18 @@ func IsForeignKeyViolation(err error) bool {
 	return false
 }
 
+// IsDuplicateColumn reports whether err is a duplicate column error.
+func IsDuplicateColumn(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "42701"
+}
+
+// IsUndefinedTable reports whether err is an undefined table error.
+func IsUndefinedTable(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "42P01"
+}
+
 // Quote escapes a value to safely insert it into a query.
 func Quote(value any) string {
 	if value == nil {

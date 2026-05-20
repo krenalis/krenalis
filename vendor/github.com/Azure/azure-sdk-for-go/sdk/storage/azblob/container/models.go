@@ -1,6 +1,3 @@
-//go:build go1.18
-// +build go1.18
-
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
@@ -9,6 +6,8 @@ package container
 import (
 	"reflect"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/exported"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/generated"
@@ -125,7 +124,7 @@ func (o *GetPropertiesOptions) format() (*generated.ContainerClientGetProperties
 
 // ListBlobsInclude indicates what additional information the service should return with each blob.
 type ListBlobsInclude struct {
-	Copy, Metadata, Snapshots, UncommittedBlobs, Deleted, Tags, Versions, LegalHold, ImmutabilityPolicy, DeletedWithVersions bool
+	Copy, Metadata, Snapshots, UncommittedBlobs, Deleted, Tags, Versions, LegalHold, ImmutabilityPolicy, DeletedWithVersions, Permissions bool
 }
 
 func (l ListBlobsInclude) format() []generated.ListBlobsIncludeItem {
@@ -165,7 +164,9 @@ func (l ListBlobsInclude) format() []generated.ListBlobsIncludeItem {
 	if l.Versions {
 		include = append(include, generated.ListBlobsIncludeItemVersions)
 	}
-
+	if l.Permissions {
+		include = append(include, generated.ListBlobsIncludeItemPermissions)
+	}
 	return include
 }
 
@@ -187,6 +188,9 @@ type ListBlobsFlatOptions struct {
 	MaxResults *int32
 	// Filters the results to return only containers whose name begins with the specified prefix.
 	Prefix *string
+	// Specifies the relative path to list paths from. For non-recursive list, only one entity level is supported; For recursive
+	// list, multiple entity levels are supported. (Inclusive)
+	StartFrom *string
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -209,6 +213,9 @@ type ListBlobsHierarchyOptions struct {
 	MaxResults *int32
 	// Filters the results to return only containers whose name begins with the specified prefix.
 	Prefix *string
+	// Specifies the relative path to list paths from. For non-recursive list, only one entity level is supported; For recursive
+	// list, multiple entity levels are supported. (Inclusive)
+	StartFrom *string
 }
 
 // ContainerClientListBlobHierarchySegmentOptions contains the optional parameters for the ContainerClient.ListBlobHierarchySegment method.
@@ -328,4 +335,99 @@ func formatTime(c *SignedIdentifier) error {
 	}
 
 	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// GetAccountInfoOptions provides set of options for Client.GetAccountInfo
+type GetAccountInfoOptions struct {
+	// placeholder for future options
+}
+
+func (o *GetAccountInfoOptions) format() *generated.ContainerClientGetAccountInfoOptions {
+	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// BatchDeleteOptions contains the optional parameters for the BatchBuilder.Delete method.
+type BatchDeleteOptions struct {
+	blob.DeleteOptions
+	VersionID *string
+	Snapshot  *string
+}
+
+func (o *BatchDeleteOptions) format() (*generated.BlobClientDeleteOptions, *generated.LeaseAccessConditions, *generated.ModifiedAccessConditions) {
+	if o == nil {
+		return nil, nil, nil
+	}
+
+	basics := generated.BlobClientDeleteOptions{
+		DeleteSnapshots: o.DeleteSnapshots,
+		DeleteType:      o.BlobDeleteType, // None by default
+		Snapshot:        o.Snapshot,
+		VersionID:       o.VersionID,
+	}
+
+	leaseAccessConditions, modifiedAccessConditions := exported.FormatBlobAccessConditions(o.AccessConditions)
+	return &basics, leaseAccessConditions, modifiedAccessConditions
+}
+
+// BatchSetTierOptions contains the optional parameters for the BatchBuilder.SetTier method.
+type BatchSetTierOptions struct {
+	blob.SetTierOptions
+	VersionID *string
+	Snapshot  *string
+}
+
+func (o *BatchSetTierOptions) format() (*generated.BlobClientSetTierOptions, *generated.LeaseAccessConditions, *generated.ModifiedAccessConditions) {
+	if o == nil {
+		return nil, nil, nil
+	}
+
+	basics := generated.BlobClientSetTierOptions{
+		RehydratePriority: o.RehydratePriority,
+		Snapshot:          o.Snapshot,
+		VersionID:         o.VersionID,
+	}
+
+	leaseAccessConditions, modifiedAccessConditions := exported.FormatBlobAccessConditions(o.AccessConditions)
+	return &basics, leaseAccessConditions, modifiedAccessConditions
+}
+
+// SubmitBatchOptions contains the optional parameters for the Client.SubmitBatch method.
+type SubmitBatchOptions struct {
+	// placeholder for future options
+}
+
+func (o *SubmitBatchOptions) format() *generated.ContainerClientSubmitBatchOptions {
+	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// FilterBlobsOptions provides set of options for Client.FilterBlobs.
+type FilterBlobsOptions struct {
+	// A string value that identifies the portion of the list of containers to be returned with the next listing operation. The
+	// operation returns the NextMarker value within the response body if the listing
+	// operation did not return all containers remaining to be listed with the current page. The NextMarker value can be used
+	// as the value for the marker parameter in a subsequent call to request the next
+	// page of list items. The marker value is opaque to the client.
+	Marker *string
+	// Specifies the maximum number of containers to return. If the request does not specify maxresults, or specifies a value
+	// greater than 5000, the server will return up to 5000 items. Note that if the
+	// listing operation crosses a partition boundary, then the service will return a continuation token for retrieving the remainder
+	// of the results. For this reason, it is possible that the service will
+	// return fewer results than specified by maxresults, or than the default of 5000.
+	MaxResults *int32
+}
+
+func (o *FilterBlobsOptions) format() *generated.ContainerClientFilterBlobsOptions {
+	if o == nil {
+		return nil
+	}
+	return &generated.ContainerClientFilterBlobsOptions{
+		Marker:     o.Marker,
+		Maxresults: o.MaxResults,
+	}
 }

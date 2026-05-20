@@ -30,7 +30,7 @@ func (state *State) keep() {
 	var client analytics.Client
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
-			Endpoint: "https://telemetry.krenalis.com/events",
+			Endpoint: "https://telemetry.krenalis.com/v1/events",
 			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
 		})
 		defer func() {
@@ -346,7 +346,7 @@ type CreateAccessKey struct {
 	Organization uuid.UUID
 	Workspace    int
 	Type         AccessKeyType
-	Token        string
+	HMAC         []byte
 }
 
 // createAccessKey creates an access key.
@@ -362,7 +362,7 @@ func (state *State) createAccessKey(n notification) uuid.UUID {
 		Type:         e.Type,
 	}
 	state.mu.Lock()
-	state.accessKeyByToken[e.Token] = &key
+	state.accessKeyByHMAC[string(e.HMAC)] = &key
 	state.mu.Unlock()
 	return e.Organization
 }
@@ -533,6 +533,9 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	if json.Value(e.Filter).IsNull() {
 		e.Filter = nil
 	}
+	if e.FormatSettings.IsNull() {
+		e.FormatSettings = nil
+	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
 	pipeline := &Pipeline{
@@ -675,9 +678,9 @@ func (state *State) deleteAccessKey(n notification) uuid.UUID {
 	}
 	var org uuid.UUID
 	state.mu.Lock()
-	for token, key := range state.accessKeyByToken {
+	for hmac, key := range state.accessKeyByHMAC {
 		if key.ID == e.ID {
-			delete(state.accessKeyByToken, token)
+			delete(state.accessKeyByHMAC, hmac)
 			org = key.Organization
 			break
 		}
@@ -871,9 +874,9 @@ func (state *State) deleteOrganization(n notification) uuid.UUID {
 		delete(state.workspaces, id)
 	}
 	// Delete all access keys belonging to the organization.
-	for token, key := range state.accessKeyByToken {
+	for hmac, key := range state.accessKeyByHMAC {
 		if key.Organization == e.ID {
-			delete(state.accessKeyByToken, token)
+			delete(state.accessKeyByHMAC, hmac)
 		}
 	}
 	state.mu.Unlock()
@@ -1494,6 +1497,9 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 	// back to json.Value(nil).
 	if json.Value(e.Filter).IsNull() {
 		e.Filter = nil
+	}
+	if e.FormatSettings.IsNull() {
+		e.FormatSettings = nil
 	}
 	format := state.connectors[e.Format]
 	var filter *Where

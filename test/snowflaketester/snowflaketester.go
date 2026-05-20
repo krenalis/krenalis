@@ -1,0 +1,293 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
+// snowflaketester provides an interface for creating temporary environments on
+// Snowflake, which can be used for testing.
+//
+// Specifically, this package creates temporary schemas within the provided
+// Snowflake database, which are then deleted at the end of the tests.
+//
+// # Environment variables
+//
+// The credentials for accessing Snowflake are read from these environment
+// variables:
+//
+//	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_DATABASE
+//	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
+//	KRENALIS_SNOWFLAKE_TESTER_ROLE
+//	KRENALIS_SNOWFLAKE_TESTER_USER
+//	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
+//
+// When running inside GitHub Actions, the password is ignored and a fresh OIDC
+// token is minted from GitHub on every call (audience snowflakecomputing.com).
+//
+// # Creating a test environment on Snowflake
+//
+// See the function [CreateTestEnvironment].
+package snowflaketester
+
+import (
+	"crypto/rand"
+	"database/sql"
+	"database/sql/driver"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/snowflakedb/gosnowflake/v2"
+)
+
+// CreateTestEnvironment creates a test environment on Snowflake.
+//
+// Once created, you need to call the [TestEnvironment.Teardown] method to
+// delete it.
+//
+// The configuration for Snowflake access is read from these environment
+// variables:
+//
+//	KRENALIS_SNOWFLAKE_TESTER_ACCOUNT
+//	KRENALIS_SNOWFLAKE_TESTER_DATABASE
+//	KRENALIS_SNOWFLAKE_TESTER_PASSWORD
+//	KRENALIS_SNOWFLAKE_TESTER_ROLE
+//	KRENALIS_SNOWFLAKE_TESTER_USER
+//	KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE
+//
+// When running inside GitHub Actions (i.e. ACTIONS_ID_TOKEN_REQUEST_URL and
+// ACTIONS_ID_TOKEN_REQUEST_TOKEN are set), the password is ignored and a fresh
+// OIDC token is minted from GitHub on every call.
+func CreateTestEnvironment() (*TestEnvironment, error) {
+
+	// Return a clear error if env vars are not passed.
+	found := false
+	for _, v := range os.Environ() {
+		if strings.HasPrefix(v, "KRENALIS_SNOWFLAKE_TESTER_") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("creating a Snowflake test environment requires passing environment variables with your Snowflake credentials")
+	}
+
+	// Read the Snowflake settings from the environment.
+	settings := Settings{
+		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),
+		Database:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_DATABASE"),
+		Password:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_PASSWORD"),
+		Role:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ROLE"),
+		Schema:    "", // will be set later.
+		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
+		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
+	}
+
+	// When running inside GitHub Actions, mint a fresh OIDC token on every
+	// invocation. A single pre-fetched token would expire (~15 minute lifetime)
+	// before the long 'go run ./test/commit' run completes. The
+	// ACTIONS_ID_TOKEN_REQUEST_* env vars are exposed for the whole job when
+	// 'permissions: id-token: write' is set, and can be used to mint a new
+	// token on demand.
+	if reqURL, reqToken := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN"); reqURL != "" && reqToken != "" {
+		token, err := fetchGitHubOIDCToken(reqURL, reqToken, "snowflakecomputing.com")
+		if err != nil {
+			return nil, fmt.Errorf("cannot fetch GitHub OIDC token: %s", err)
+		}
+		settings.OIDCToken = token
+		settings.Password = ""
+	}
+
+	// Instantiate a Snowflake connector.
+	cfg := gosnowflake.Config{
+		Account:   settings.Account,
+		Database:  settings.Database,
+		Role:      settings.Role,
+		User:      settings.User,
+		Warehouse: settings.Warehouse,
+		Params: map[string]*string{
+			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
+		},
+	}
+	if settings.OIDCToken != "" {
+		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
+		cfg.WorkloadIdentityProvider = "OIDC"
+		cfg.Token = settings.OIDCToken
+	} else {
+		cfg.Password = settings.Password
+	}
+	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)
+
+	// Generate a random schema name and create it in the given database.
+	db := sql.OpenDB(connector)
+	schema, err := generateTestSchemaName()
+	if err != nil {
+		return nil, fmt.Errorf("cannot generate test schema name: %s", err)
+	}
+	_, err = db.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
+	if err != nil {
+		return nil, fmt.Errorf("CREATE SCHEMA query failed: %s", err)
+	}
+	slog.Info("Snowflake test schema created", "schema", schema)
+
+	settings.Schema = schema
+	return &TestEnvironment{
+		connector: connector,
+		db:        db,
+		settings:  settings,
+	}, nil
+}
+
+// TestEnvironment represents an instance of a test environment on Snowflake.
+type TestEnvironment struct {
+	connector driver.Connector
+	db        *sql.DB
+	settings  Settings
+}
+
+// Settings represents the settings for accessing a test environment on Snowflake.
+type Settings struct {
+	Account   string
+	User      string
+	Password  string
+	OIDCToken string
+	Database  string
+	Role      string
+	Schema    string // something like: "KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c"
+	Warehouse string
+}
+
+// Settings returns the settings of the test environment.
+func (testEnv *TestEnvironment) Settings() Settings {
+	return testEnv.settings
+}
+
+// JSON returns the settings as JSON, in the form:
+//
+//	{
+//	    "username": "...",
+//	    "password": "...",
+//	    "account": "...",
+//	    "warehouse": "...",
+//	    "database": "...",
+//	    "schema": "...",
+//	    "role": "..."
+//	}
+//
+// The "oidcToken" field may be returned instead of "password" when using OIDC
+// authentication.
+func (settings Settings) JSON() []byte {
+	m := map[string]any{
+		"username":  settings.User,
+		"account":   settings.Account,
+		"warehouse": settings.Warehouse,
+		"database":  settings.Database,
+		"schema":    settings.Schema,
+		"role":      settings.Role,
+	}
+	if settings.OIDCToken != "" {
+		m["oidcToken"] = settings.OIDCToken
+	} else {
+		m["password"] = settings.Password
+	}
+	encoded, err := json.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
+}
+
+// Teardown deletes the Snowflake test environment. This method must be called
+// for any environment initialized with [CreateTestEnvironment]. Once this
+// method is called, the test environment can no longer be used.
+func (testEnv *TestEnvironment) Teardown() error {
+	_, err := testEnv.db.Exec(fmt.Sprintf("DROP SCHEMA %s", testEnv.settings.Schema))
+	if err != nil {
+		return fmt.Errorf("cannot drop Snowflake test schema %q: %s", testEnv.settings.Database, err)
+	}
+	slog.Info("Snowflake test schema dropped", "schema", testEnv.settings.Schema)
+	err = testEnv.db.Close()
+	if err != nil {
+		return fmt.Errorf("cannot close Snowflake db: %s", err)
+	}
+	return nil
+}
+
+// generateTestSchemaName generates the name of a Snowflake schema to use for
+// testing.
+// The returned name has the form:
+//
+//	KRENALIS_TEST_SCHEMA_1777459231_ef9618291974b866473c6abe66acc29c
+//
+// and it is returned unquoted.
+func generateTestSchemaName() (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("KRENALIS_TEST_SCHEMA_%d_%s",
+		time.Now().UTC().Unix(),
+		hex.EncodeToString(b),
+	), nil
+}
+
+var falseStrPtr = new("false")
+
+// fetchGitHubOIDCToken requests a fresh OIDC token from GitHub Actions for the
+// given audience. requestURL and requestToken are the values of the
+// ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars set
+// by the runner when the job has 'permissions: id-token: write'.
+func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, error) {
+
+	sep := "?"
+	if strings.Contains(requestURL, "?") {
+		sep = "&"
+	}
+	req, err := http.NewRequest(http.MethodGet, requestURL+sep+"audience="+url.QueryEscape(audience), nil)
+	if err != nil {
+		return "", fmt.Errorf("cannot build request: %s", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+requestToken)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return errors.New("unexpected redirect")
+		},
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("cannot perform request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("cannot read response body: %s", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var respBody struct {
+		Value string `json:"value"`
+	}
+	err = json.Unmarshal(body, &respBody)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse response body: %s", err)
+	}
+	if respBody.Value == "" {
+		return "", errors.New("empty token in response")
+	}
+
+	return respBody.Value, nil
+}

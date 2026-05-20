@@ -81,7 +81,7 @@ name: krenalis-dev
 
 services:
   db:
-    image: postgres:18.1-alpine3.23
+    image: postgres:18.3-alpine3.23
     ports:
       - 127.0.0.1:15432:5432
     environment:
@@ -89,7 +89,7 @@ services:
       POSTGRES_USER: krenalis
       POSTGRES_DB: krenalis
     volumes:
-      - db:/var/lib/postgresql/data
+      - db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U krenalis"]
       interval: 5s
@@ -97,7 +97,7 @@ services:
       retries: 5
 
   warehouse:
-    image: postgres:18.1-alpine3.23
+    image: postgres:18.3-alpine3.23
     ports:
       - 127.0.0.1:15433:5432
     environment:
@@ -113,10 +113,10 @@ services:
       - source: warehouse
         target: /docker-entrypoint-initdb.d/init.sql
     volumes:
-      - warehouse:/var/lib/postgresql/data
+      - warehouse:/var/lib/postgresql
 
   nats:
-    image: nats:2.12-alpine3.22
+    image: nats:2.14-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     ports:
       - 127.0.0.1:4222:4222

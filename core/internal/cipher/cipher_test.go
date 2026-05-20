@@ -3,6 +3,8 @@ package cipher
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"errors"
 	"slices"
 	"testing"
@@ -95,6 +97,39 @@ func TestKeyEncryptDecryptRoundTrip(t *testing.T) {
 	}
 	if !bytes.Equal(decrypted, plaintext) {
 		t.Fatalf("expected plaintext %q, got %q", plaintext, decrypted)
+	}
+}
+
+// TestKeyHMACUsesDecryptedDataKey verifies HMAC authenticates with the
+// plaintext data key, not with the encrypted key material.
+func TestKeyHMACUsesDecryptedDataKey(t *testing.T) {
+	t.Parallel()
+
+	c := New(&testKMS{})
+	t.Cleanup(c.Close)
+	ctx := context.Background()
+	data := []byte("payload")
+
+	dataKey, encryptedDataKey, err := c.KMS().GenerateDataKey(ctx, 32)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	key := c.Key(encryptedDataKey)
+
+	got, err := key.HMAC(ctx, data)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	expected := hmac.New(sha256.New, dataKey)
+	expected.Write(data)
+	if !bytes.Equal(got[:], expected.Sum(nil)) {
+		t.Fatalf("expected HMAC with decrypted data key, got %x", got)
+	}
+
+	wrong := hmac.New(sha256.New, encryptedDataKey)
+	wrong.Write(data)
+	if bytes.Equal(got[:], wrong.Sum(nil)) {
+		t.Fatal("expected HMAC not to use encrypted data key")
 	}
 }
 

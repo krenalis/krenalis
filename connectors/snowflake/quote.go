@@ -13,6 +13,11 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
+// csvColumnName returns the column name to write in Snowflake CSV headers.
+func csvColumnName(name string) string {
+	return name
+}
+
 // quoteIdent quotes the identifier name.
 func quoteIdent(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
