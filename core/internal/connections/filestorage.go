@@ -134,7 +134,11 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	if err != nil {
 		return nil, nil, nil, connectorError(err)
 	}
-	defer r.Close()
+	defer func() {
+		if r != nil {
+			_ = r.Close()
+		}
+	}()
 	if err = validateUpdatedAt(storageTimestamp); err != nil {
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
@@ -161,12 +165,14 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		records = append(records, record.Attributes)
 		return true
 	})
-	err = _file.(fileReadConnection).Read(ctx, r, sheet, rw)
+	err = readFromFileConnector(ctx, _file, &r, sheet, rw)
 	rw.close()
 	if err != nil && err != errRecordStop {
 		return nil, nil, nil, connectorError(err)
 	}
-	if err = r.Close(); err != nil {
+	err = r.Close()
+	r = nil
+	if err != nil {
 		return nil, nil, nil, connectorError(err)
 	}
 	if recordErr != nil {
@@ -214,12 +220,18 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() {
+		if r != nil {
+			_ = r.Close()
+		}
+	}()
 	sheets, err := sheetsFile.Sheets(ctx, r)
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	if err = r.Close(); err != nil {
+	err = r.Close()
+	r = nil
+	if err != nil {
 		return nil, err
 	}
 	sheets = slices.DeleteFunc(sheets, func(name string) bool {

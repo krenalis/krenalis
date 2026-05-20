@@ -120,7 +120,6 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 		return nil, time.Time{}, err
 	}
 	if res.StatusCode != 200 {
-		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 		return nil, time.Time{}, fmt.Errorf("server responded with status: %s", res.Status)
 	}
@@ -194,8 +193,7 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, res.Body)
+	_ = res.Body.Close()
 	if c := res.StatusCode; c != 200 && c != 201 {
 		return fmt.Errorf("server responded with status: %s", res.Status)
 	}
@@ -234,16 +232,16 @@ func ishex(c byte) bool {
 }
 
 var dialer = &net.Dialer{
-	Timeout:   30 * time.Second,
-	KeepAlive: 30 * time.Second,
+	Timeout:   5 * time.Second,
+	KeepAlive: -1, // disable keep-alive probes.
 }
 
-var transport http.RoundTripper = &http.Transport{
-	Proxy:                 http.ProxyFromEnvironment,
+var transport = &http.Transport{
+	Proxy:                 nil,
 	DialContext:           dialer.DialContext,
+	DisableKeepAlives:     true,
 	ForceAttemptHTTP2:     true,
-	MaxIdleConns:          100,
-	IdleConnTimeout:       90 * time.Second,
-	TLSHandshakeTimeout:   10 * time.Second,
+	TLSHandshakeTimeout:   5 * time.Second,
+	ResponseHeaderTimeout: 5 * time.Second,
 	ExpectContinueTimeout: 1 * time.Second,
 }

@@ -14,6 +14,14 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
+// TestHTTPClient checks that the S3 HTTP client is reused.
+func TestHTTPClient(t *testing.T) {
+	if httpClient() != httpClient() {
+		t.Fatal("expected the same HTTP client, got a different one")
+	}
+}
+
+// TestPathConvert checks S3 absolute path conversion.
 func TestPathConvert(t *testing.T) {
 	s3 := &S3{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{Bucket: "my-example-bucket"})}}
 	tests := []testconnector.AbsolutePathTest{

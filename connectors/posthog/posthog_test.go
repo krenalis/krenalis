@@ -85,7 +85,7 @@ func TestSendEvents(t *testing.T) {
 			"anonymousId":  anonymousID,
 			"userId":       userID,
 			"context": map[string]any{
-				"ip": "203.0.113.9",
+				"ip": "2001:db8:face:12::1",
 				"session": map[string]any{
 					"id":    int(sessionID),
 					"start": true,
@@ -132,7 +132,7 @@ func TestSendEvents(t *testing.T) {
 					"distinct_id": userID,
 					"properties": map[string]any{
 						"$anon_distinct_id": anonymousID,
-						"$ip":               "203.0.113.9",
+						"$ip":               "2001:db8:face:12::1",
 						"$set": map[string]any{
 							"active":     true,
 							"email":      "sam@example.com",

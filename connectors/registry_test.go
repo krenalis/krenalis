@@ -168,6 +168,71 @@ func TestRegisterFileRegistersConnector(t *testing.T) {
 	}
 }
 
+// TestRegisterSourceFileReadVariants verifies the supported Read signatures for
+// source file connectors.
+func TestRegisterSourceFileReadVariants(t *testing.T) {
+	testCases := []struct {
+		name      string
+		code      string
+		register  func(FileSpec)
+		wantPanic bool
+	}{
+		{
+			name: "ReadReader",
+			code: "test-source-file-reader",
+			register: func(file FileSpec) {
+				RegisterFile(file, func(*FileEnv) (testSourceFileReaderConnector, error) {
+					return testSourceFileReaderConnector{}, nil
+				})
+			},
+		},
+		{
+			name: "ReadSeeker",
+			code: "test-source-file-read-seeker",
+			register: func(file FileSpec) {
+				RegisterFile(file, func(*FileEnv) (testSourceFileReadSeekerConnector, error) {
+					return testSourceFileReadSeekerConnector{}, nil
+				})
+			},
+		},
+		{
+			name: "MissingRead",
+			code: "test-source-file-without-read",
+			register: func(file FileSpec) {
+				RegisterFile(file, newTestFile)
+			},
+			wantPanic: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			replaceRegistryForTest(t)
+			file := FileSpec{
+				Code:       tc.code,
+				Label:      tc.name,
+				Categories: CategoryFile,
+				AsSource:   &AsSourceFile{},
+			}
+			if tc.wantPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Fatal("expected panic when registering source file without a supported Read method")
+					}
+				}()
+			}
+			tc.register(file)
+			if tc.wantPanic {
+				return
+			}
+			got := RegisteredFile(file.Code)
+			if got.Code != file.Code {
+				t.Fatalf("expected code %s, got %s", file.Code, got.Code)
+			}
+		})
+	}
+}
+
 func TestRegisterFileStorageRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
@@ -330,6 +395,22 @@ func (testFileConnector) Write(context.Context, io.Writer, string, RecordReader)
 
 func (testFileConnector) ContentType(context.Context) string {
 	return "text/plain"
+}
+
+// testSourceFileReaderConnector reads from an io.Reader.
+type testSourceFileReaderConnector struct{}
+
+// Read implements the source file reader signature.
+func (testSourceFileReaderConnector) Read(context.Context, io.Reader, string, RecordWriter) error {
+	return nil
+}
+
+// testSourceFileReadSeekerConnector reads from an io.ReadSeeker.
+type testSourceFileReadSeekerConnector struct{}
+
+// Read implements the source file read seeker signature.
+func (testSourceFileReadSeekerConnector) Read(context.Context, io.ReadSeeker, string, RecordWriter) error {
+	return nil
 }
 
 func newTestFileStorage(*FileStorageEnv) (testFileStorageConnector, error) {

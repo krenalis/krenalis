@@ -101,6 +101,24 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 	return app.(T), err
 }
 
+// NewStorage returns an instance of the file storage connector with the
+// specified code for testing purposes. Settings are the connection settings.
+//
+// It panics if no file storage connector with the specified code has been
+// registered.
+func NewStorage[T any](code string, settings any) (T, error) {
+	registeredStorage := connectors.RegisteredFileStorage(code)
+	s, err := json.Marshal(settings)
+	if err != nil {
+		var t T
+		return t, fmt.Errorf("cannot marshal settings: %s", err)
+	}
+	app, err := registeredStorage.New(&connectors.FileStorageEnv{
+		Settings: newSettingsStore(s),
+	})
+	return app.(T), err
+}
+
 // ReceivedEvent wraps a map[string]any and returns a value that implements the
 // connectors.ReceivedEvent interface.
 //

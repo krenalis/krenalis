@@ -5,12 +5,152 @@
 package connections
 
 import (
+	"errors"
 	"io"
 	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
 )
+
+// TestMaterializeReadSeeker verifies that a streaming reader is materialized as
+// a read seeker with offset-read support.
+func TestMaterializeReadSeeker(t *testing.T) {
+
+	original := io.ReadCloser(io.NopCloser(strings.NewReader("abcdef")))
+	rc, rs, err := materializeReadSeeker(&original)
+	if err != nil {
+		t.Fatalf("materializeReadSeeker failed: %v", err)
+	}
+	defer rc.Close()
+	if _, ok := original.(closedReadCloser); !ok {
+		t.Fatalf("expected original reader type closedReadCloser, got %T", original)
+	}
+
+	if _, ok := any(rs).(io.ReaderAt); !ok {
+		t.Fatal("expected materialized reader to implement io.ReaderAt")
+	}
+	if _, ok := any(rs).(io.Closer); ok {
+		t.Fatal("materialized reader exposed io.Closer to the connector")
+	}
+	if _, ok := any(rs).(interface{ Name() string }); ok {
+		t.Fatal("materialized reader exposed Name to the connector")
+	}
+
+	buf := make([]byte, 2)
+	if n, err := rs.Read(buf); err != nil || n != 2 || string(buf) != "ab" {
+		t.Fatalf("expected Read to return n=2 buf=%q err=<nil>, got n=%d buf=%q err=%v", "ab", n, buf, err)
+	}
+	if _, err := rs.Seek(4, io.SeekStart); err != nil {
+		t.Fatalf("expected Seek to succeed, got %v", err)
+	}
+	if n, err := rs.Read(buf); err != nil || n != 2 || string(buf) != "ef" {
+		t.Fatalf("expected Read after Seek to return n=2 buf=%q err=<nil>, got n=%d buf=%q err=%v", "ef", n, buf, err)
+	}
+	if n, err := any(rs).(io.ReaderAt).ReadAt(buf, 2); err != nil || n != 2 || string(buf) != "cd" {
+		t.Fatalf("expected ReadAt to return n=2 buf=%q err=<nil>, got n=%d buf=%q err=%v", "cd", n, buf, err)
+	}
+
+}
+
+// TestMaterializeReadSeekerKeepsOriginalReaderOnCloseError verifies that a
+// close error leaves the original reader available to the caller.
+func TestMaterializeReadSeekerKeepsOriginalReaderOnCloseError(t *testing.T) {
+
+	closeErr := errors.New("close failed")
+	originalReader := &errorCloseReader{
+		Reader: strings.NewReader("abcdef"),
+		err:    closeErr,
+	}
+	original := io.ReadCloser(originalReader)
+
+	rc, rs, err := materializeReadSeeker(&original)
+	if err == nil {
+		if rc != nil {
+			_ = rc.Close()
+		}
+		t.Fatal("expected materializeReadSeeker to fail")
+	}
+	if !errors.Is(err, closeErr) {
+		t.Fatalf("expected close error, got %v", err)
+	}
+	if rs != nil {
+		t.Fatal("expected no read seeker after close error")
+	}
+	if original != originalReader {
+		t.Fatalf("expected original reader %p, got %p", originalReader, original)
+	}
+
+}
+
+// TestMaterializeReadSeekerReusesReadSeekAt verifies that a reader that already
+// supports random access is reused.
+func TestMaterializeReadSeekerReusesReadSeekAt(t *testing.T) {
+
+	originalReader := &readSeekAtCloser{Reader: strings.NewReader("abcdef")}
+	original := io.ReadCloser(originalReader)
+
+	rc, rs, err := materializeReadSeeker(&original)
+	if err != nil {
+		t.Fatalf("materializeReadSeeker failed: %v", err)
+	}
+	if _, ok := original.(closedReadCloser); !ok {
+		t.Fatalf("expected original reader type closedReadCloser, got %T", original)
+	}
+	if _, ok := any(rs).(io.Closer); ok {
+		t.Fatal("reused reader exposed io.Closer to the connector")
+	}
+	if _, ok := any(rs).(interface{ Name() string }); ok {
+		t.Fatal("reused reader exposed Name to the connector")
+	}
+
+	buf := make([]byte, 2)
+	if n, err := rs.Read(buf); err != nil || n != 2 || string(buf) != "ab" {
+		t.Fatalf("expected Read to return n=2 buf=%q err=<nil>, got n=%d buf=%q err=%v", "ab", n, buf, err)
+	}
+	if _, err := rs.Seek(4, io.SeekStart); err != nil {
+		t.Fatalf("expected Seek to succeed, got %v", err)
+	}
+	if n, err := rs.Read(buf); err != nil || n != 2 || string(buf) != "ef" {
+		t.Fatalf("expected Read after Seek to return n=2 buf=%q err=<nil>, got n=%d buf=%q err=%v", "ef", n, buf, err)
+	}
+	if n, err := any(rs).(io.ReaderAt).ReadAt(buf, 2); err != nil || n != 2 || string(buf) != "cd" {
+		t.Fatalf("expected ReadAt to return n=2 buf=%q err=<nil>, got n=%d buf=%q err=%v", "cd", n, buf, err)
+	}
+	if originalReader.closed {
+		t.Fatal("expected reused reader to stay open until returned closer is closed")
+	}
+	if err := rc.Close(); err != nil {
+		t.Fatalf("close failed: %v", err)
+	}
+	if !originalReader.closed {
+		t.Fatal("expected returned closer to close reused reader")
+	}
+
+}
+
+// errorCloseReader is a reader whose Close method fails.
+type errorCloseReader struct {
+	io.Reader
+	err error
+}
+
+// Close returns the configured error.
+func (r *errorCloseReader) Close() error {
+	return r.err
+}
+
+// readSeekAtCloser is a random-access reader with observable close state.
+type readSeekAtCloser struct {
+	*strings.Reader
+	closed bool
+}
+
+// Close marks r as closed.
+func (r *readSeekAtCloser) Close() error {
+	r.closed = true
+	return nil
+}
 
 // Verifies reads succeed and the timeout does not fire when calls stay within
 // the window.

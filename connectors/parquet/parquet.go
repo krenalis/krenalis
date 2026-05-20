@@ -17,8 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -72,28 +70,9 @@ func (pq *Parquet) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
+func (pq *Parquet) Read(ctx context.Context, r io.ReadSeeker, sheet string, records connectors.RecordWriter) error {
 
-	// Copy data read from r to a temporary file.
-	dir := os.TempDir()
-	fi, err := os.CreateTemp(dir, "")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = fi.Close()
-		_ = os.Remove(filepath.Join(dir, fi.Name()))
-	}()
-	_, err = io.Copy(fi, r)
-	if err != nil {
-		return err
-	}
-	_, err = fi.Seek(0, io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	fr, err := goparquet.NewFileReaderWithOptions(fi, goparquet.WithReaderContext(ctx))
+	fr, err := goparquet.NewFileReaderWithOptions(r, goparquet.WithReaderContext(ctx))
 	if err != nil {
 		return err
 	}
