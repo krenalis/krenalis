@@ -312,7 +312,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			var organizationID uuid.UUID
 			var warehousePlatform string
 			var warehouseMode WarehouseMode
-			var userSchema []byte
+			var profileSchema []byte
 			var alterProfileSchemaSchema []byte
 			for rows.Next() {
 				ws := &Workspace{
@@ -327,7 +327,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.AlterProfileSchema.ID, &alterProfileSchemaSchema,
 					&ws.AlterProfileSchema.PrimarySources, &ws.AlterProfileSchema.Operations,
 					&ws.AlterProfileSchema.StartTime, &ws.AlterProfileSchema.EndTime,
-					&ws.AlterProfileSchema.Err, &userSchema, &ws.ResolveIdentitiesOnBatchImport,
+					&ws.AlterProfileSchema.Err, &profileSchema, &ws.ResolveIdentitiesOnBatchImport,
 					&ws.Identifiers, &ws.IR.ID, &ws.IR.StartTime, &ws.IR.EndTime,
 					&ws.UIPreferences.Profile.Image, &ws.UIPreferences.Profile.FirstName,
 					&ws.UIPreferences.Profile.LastName, &ws.UIPreferences.Profile.Extra,
@@ -342,7 +342,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.settingsKey = state.cipher.Key(settingsKey)
 				ws.Warehouse.mcpSettingsKey = state.cipher.Key(mcpSettingsKey)
-				err = json.Unmarshal(userSchema, &ws.ProfileSchema)
+				err = json.Unmarshal(profileSchema, &ws.ProfileSchema)
 				if err != nil {
 					return err
 				}
