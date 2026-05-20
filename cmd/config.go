@@ -557,10 +557,7 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 		settings.MaxQueuedEventsPerDestination = int(maxEvents)
 	}
 
-	if workosClientID, ok := conf.Lookup("KRENALIS_WORKOS_CLIENT_ID"); ok {
-		if workosClientID == "" {
-			return nil, errors.New("KRENALIS_WORKOS_CLIENT_ID cannot be an empty string")
-		}
+	if workosClientID := conf.Get("KRENALIS_WORKOS_CLIENT_ID"); workosClientID != "" {
 		settings.WorkOS.ClientID = workosClientID
 
 		apiKey, ok := conf.Lookup("KRENALIS_WORKOS_API_KEY")
