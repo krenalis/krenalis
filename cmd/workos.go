@@ -96,9 +96,9 @@ func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
 
 // verifyToken verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *workos) verifyToken(tokenString string) (*workosUser, *uuid.UUID, error) {
+func (wo *workos) verifyToken(token string) (*workosUser, *uuid.UUID, error) {
 	// Split the JWT into header, payload and signature.
-	parts := strings.SplitN(tokenString, ".", 3)
+	parts := strings.SplitN(token, ".", 3)
 	if len(parts) != 3 {
 		return nil, nil, fmt.Errorf("invalid JWT format")
 	}
