@@ -227,7 +227,7 @@ const WorkOSWrapper = () => {
 			const api = new API(window.location.origin, 0);
 			try {
 				const token = await getAccessToken();
-				await api.workosLogin(token);
+				await api.loginWithWorkOS(token);
 			} catch (err) {
 				signOut();
 				return;

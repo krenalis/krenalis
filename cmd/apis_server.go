@@ -374,44 +374,88 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 }
 
 // login logs a user in.
+//
+// If WorkOS is configured, it verifies the WorkOS access token, retrieves the
+// member by WorkOS user ID, auto-provisions them if they are not already
+// registered in Krenalis, and sets the same encrypted session cookie as the
+// native login.
+//
+// If workOS is not configured, it uses Krenalis native email and password
+// login.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
-	if s.workos != nil {
-		return nil, errors.Unauthorized("native password login is disabled when WorkOS authentication is configured")
-	}
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		IsUnique bool   `json:"isUnique"`
-	}
-	err := json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("")
-	}
 
-	// Retrieve the organization and the member.
-	organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
-	if len(organizations) == 0 {
-		return nil, errors.New("there are no organizations")
-	}
-	org := organizations[0]
-	memberID, err := org.AuthenticateMember(r.Context(), body.Email, body.Password)
-	if err != nil {
-		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
-			return []any{0, "AuthenticationFailed"}, nil
+	var org *core.Organization
+	var memberID int
+	if s.workos == nil {
+		var body struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+			IsUnique bool   `json:"isUnique"`
 		}
-		return nil, err
-	}
-
-	if body.IsUnique {
-		members, err := org.Members(r.Context())
+		err := json.Decode(r.Body, &body)
 		if err != nil {
+			return nil, errors.BadRequest("")
+		}
+
+		// Retrieve the organization and the member.
+		organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
+		if len(organizations) == 0 {
+			return nil, errors.New("there are no organizations")
+		}
+		org = organizations[0]
+		memberID, err = org.AuthenticateMember(r.Context(), body.Email, body.Password)
+		if err != nil {
+			if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
+				return []any{0, "AuthenticationFailed"}, nil
+			}
 			return nil, err
 		}
-		if len(members) > 1 {
-			return []any{0, "AuthenticationFailed"}, nil
+
+		if body.IsUnique {
+			members, err := org.Members(r.Context())
+			if err != nil {
+				return nil, err
+			}
+			if len(members) > 1 {
+				return []any{0, "AuthenticationFailed"}, nil
+			}
+		}
+	} else {
+		var body struct {
+			AccessToken string `json:"accessToken"`
+		}
+		err := json.Decode(r.Body, &body)
+		if err != nil || body.AccessToken == "" {
+			return nil, errors.BadRequest("")
+		}
+
+		workosUser, workosExternalOrganizationID, err := s.workos.verifyToken(body.AccessToken)
+		if err != nil {
+			return nil, errors.Unauthorized("invalid WorkOS token")
+		}
+
+		org, err = s.core.Organization(*workosExternalOrganizationID)
+		if err != nil {
+			slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
+				"workos_user_id", workosUser.ID,
+				"organization_id", *workosExternalOrganizationID,
+			)
+			return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
+		}
+
+		memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); !ok {
+				return nil, err
+			}
+			name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
+			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -460,73 +504,6 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	}
 	writeSessionCookie(w, c)
 	return nil, nil
-}
-
-// workosLogin exchanges a WorkOS access token for a Krenalis session cookie. It
-// verifies the WorkOS token, retrieves the member by WorkOS user ID,
-// auto-provisions them if they are not already registered in Krenalis, and sets
-// the same encrypted session cookie as a normal login.
-func (s *apisServer) workosLogin(w http.ResponseWriter, r *http.Request) (any, error) {
-	if s.workos == nil {
-		return nil, errors.Unauthorized("WorkOS is not configured")
-	}
-	if err := validateRequiredBody(r, false); err != nil {
-		return nil, err
-	}
-	var body struct {
-		AccessToken string `json:"accessToken"`
-	}
-	if err := json.Decode(r.Body, &body); err != nil || body.AccessToken == "" {
-		return nil, errors.BadRequest("")
-	}
-
-	workosUser, workosExternalOrganizationID, err := s.workos.verifyToken(body.AccessToken)
-	if err != nil {
-		return nil, errors.Unauthorized("invalid WorkOS token")
-	}
-
-	org, err := s.core.Organization(*workosExternalOrganizationID)
-	if err != nil {
-		slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
-			"workos_user_id", workosUser.ID,
-			"organization_id", *workosExternalOrganizationID,
-		)
-		return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
-	}
-
-	memberID, err := org.MemberByWorkOSID(r.Context(), workosUser.ID)
-	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); !ok {
-			return nil, err
-		}
-		name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
-		memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Store the session.
-	sc := &sessionCookie{Organization: org.ID, Member: memberID}
-	se, err := s.secureCookie(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	value, err := se.Encode(sessionCookieName, sc)
-	if err != nil {
-		return nil, err
-	}
-
-	c := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    value,
-		Path:     sessionCookiePath,
-		Secure:   s.runsOnHTTPS,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	}
-	writeSessionCookie(w, c)
-	return []any{memberID, nil}, nil
 }
 
 // handleWorkOSAction handles the WorkOS user-registration Action. It verifies

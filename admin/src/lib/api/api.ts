@@ -86,14 +86,14 @@ class API {
 		});
 	};
 
-	logout = async (): Promise<void> => {
-		return await call(`${this.apiURL}/members/logout`, http.POST, this.workspaceID);
-	};
-
-	workosLogin = async (accessToken: string): Promise<[number, string]> => {
-		return await call(`${this.apiURL}/members/workos-login`, http.POST, this.workspaceID, {
+	loginWithWorkOS = async (accessToken: string): Promise<[number, string]> => {
+		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, {
 			accessToken,
 		});
+	};
+
+	logout = async (): Promise<void> => {
+		return await call(`${this.apiURL}/members/logout`, http.POST, this.workspaceID);
 	};
 
 	sendMemberPasswordReset = async (email: string): Promise<void> => {

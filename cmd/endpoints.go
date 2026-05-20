@@ -103,7 +103,6 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/invitations":                         organization.InviteMember,    /* only Admin */
 		"POST   /members/login":                               s.login,                      /* only Admin */
 		"POST   /members/logout":                              s.logout,                     /* only Admin */
-		"POST   /members/workos-login":                        s.workosLogin,                /* only Admin */
 		"POST   /organizations":                               api.CreateOrganization,
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
