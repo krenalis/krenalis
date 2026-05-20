@@ -91,8 +91,8 @@ type apisServer struct {
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
 	inviteMembersViaEmail bool, organizationsAPIKey string, sentryTelemetryLevel core.TelemetryLevel,
-	sentryErrorTunnel *sentryErrorTunnel, workosClientID string, workosAPIKey string,
-	workosWebhookSecret string, workosActionsSecret string, workosDevMode bool) *apisServer {
+	sentryErrorTunnel *sentryErrorTunnel, workosClientID, workosAPIKey, workosWebhookSecret,
+	workosActionsSecret string, workosDevMode bool) *apisServer {
 
 	s := &apisServer{
 		core:                   core,
