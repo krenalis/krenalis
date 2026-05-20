@@ -278,7 +278,7 @@ func (d *decoder) Reset(r *http.Request) error {
 			if kind != '{' {
 				return errors.BadRequest("property 'context' is not a valid object")
 			}
-			d.context, err = d.decodeContext(true)
+			d.context, err = d.decodeContext()
 			if err != nil {
 				return err
 			}
@@ -459,7 +459,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 			if kind != '{' {
 				return nil, errors.BadRequest("property 'context' is not an valid object")
 			}
-			context, err = d.decodeContext(false)
+			context, err = d.decodeContext()
 			if err != nil {
 				return nil, err
 			}
@@ -770,12 +770,11 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 	return event, nil
 }
 
-// decodeContext decodes and returns a context. isDefault indicates if it is the
-// default context. The first token must be '{'.
+// decodeContext decodes and returns a context. The first token must be '{'.
 //
 // Before returning, decodeContext attempts to advance the decoder so that the
 // next token is the one following the end of the object, even in case of error.
-func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
+func (d *decoder) decodeContext() (map[string]any, error) {
 
 	skipOut := true
 	defer func() {
@@ -866,7 +865,7 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 			if d.dec.PeekKind() != '{' {
 				return nil, errors.BadRequest("property 'context.%s' is not a valid object", section.name)
 			}
-			v, err := d.decodeContextSection(section, isDefault)
+			v, err := d.decodeContextSection(section)
 			if err != nil {
 				return nil, err
 			}
@@ -1003,7 +1002,7 @@ var contextSections = map[string]*contextSection{
 // Before returning, decodeContextSection attempts to advance the decoder so
 // that the next token is the one following the end of the object, even in case
 // of error.
-func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) (map[string]any, error) {
+func (d *decoder) decodeContextSection(section *contextSection) (map[string]any, error) {
 
 	skipOut := true
 	defer func() {
