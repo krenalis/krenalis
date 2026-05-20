@@ -565,19 +565,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				exe := PipelineRun{
+				run := PipelineRun{
 					mu: &sync.Mutex{},
 				}
 				var pipelineID int
-				err := rows.Scan(&exe.ID, &pipelineID, &exe.Cursor, &exe.Incremental, &exe.StartTime)
+				err := rows.Scan(&run.ID, &pipelineID, &run.Cursor, &run.Incremental, &run.StartTime)
 				if err != nil {
 					return err
 				}
 				pipeline := state.pipelines[pipelineID]
-				exe.pipeline = pipeline
-				pipeline.run = &exe
-				ws := exe.pipeline.connection.workspace
-				ws.runs[exe.ID] = &exe
+				run.pipeline = pipeline
+				pipeline.run = &run
+				ws := run.pipeline.connection.workspace
+				ws.runs[run.ID] = &run
 			}
 			return nil
 		})
