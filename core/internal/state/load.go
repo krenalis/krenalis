@@ -214,7 +214,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		if err == sql.ErrNoRows {
 			return errors.New("cannot load metadata: no rows found in table; expected exactly one row")
 		}
-		return errors.New("cannot load metadata: %s")
+		return fmt.Errorf("cannot load metadata: %s", err)
 	}
 	defer clear(kmsEncryptedOAuthKey)
 	defer clear(kmsEncryptedNotificationKey)
