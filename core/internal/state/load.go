@@ -257,20 +257,14 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all organizations.
 	state.organizations = map[uuid.UUID]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
-		var id uuid.UUID
-		var name string
 		for rows.Next() {
-			if err := rows.Scan(&id, &name); err != nil {
-				return fmt.Errorf("loading organization %s: %s", id, err)
+			org := &Organization{mu: new(sync.Mutex)}
+			if err := rows.Scan(&org.ID, &org.Name); err != nil {
+				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
-			organization := &Organization{
-				mu:   new(sync.Mutex),
-				ID:   id,
-				Name: name,
-			}
-			organization.workspaces = map[int]*Workspace{}
-			organization.members = map[int]struct{}{}
-			state.organizations[id] = organization
+			org.workspaces = map[int]*Workspace{}
+			org.members = map[int]struct{}{}
+			state.organizations[org.ID] = org
 		}
 		return nil
 	})
@@ -280,10 +274,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all members.
 	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
-		var id int
-		var organization uuid.UUID
 		var org *Organization
 		for rows.Next() {
+			var id int
+			var organization uuid.UUID
 			if err := rows.Scan(&id, &organization); err != nil {
 				return fmt.Errorf("loading member %d: %s", id, err)
 			}
@@ -309,12 +303,12 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		" ir_end_time, ui_profile_image, ui_profile_first_name, ui_profile_last_name, ui_profile_extra,"+
 		" pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
-			var organizationID uuid.UUID
-			var warehousePlatform string
-			var warehouseMode WarehouseMode
-			var profileSchema []byte
-			var alterProfileSchemaSchema []byte
 			for rows.Next() {
+				var organizationID uuid.UUID
+				var warehousePlatform string
+				var warehouseMode WarehouseMode
+				var profileSchema []byte
+				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[int]*Connection{},
@@ -364,10 +358,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	state.accessKeyByHMAC = map[string]*AccessKey{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, workspace, type, hmac FROM access_keys",
 		func(rows *db.Rows) error {
-			var hmac []byte
 			for rows.Next() {
 				k := AccessKey{}
 				var workspace *int
+				var hmac []byte
 				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &k.Type, &hmac); err != nil {
 					return fmt.Errorf("loading access key %d: %s", k.ID, err)
 				}
@@ -586,9 +580,9 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all primary sources.
 	err = tx.QueryScan(ctx, "SELECT source, path FROM primary_sources",
 		func(rows *db.Rows) error {
-			var source int
-			var path string
 			for rows.Next() {
+				var source int
+				var path string
 				if err := rows.Scan(&source, &path); err != nil {
 					return fmt.Errorf("loading source %d: %s", source, err)
 				}
