@@ -130,10 +130,7 @@ func (wo *workos) verifyToken(token string) (*workosUser, *uuid.UUID, error) {
 		},
 		jwt.WithExpirationRequired(),
 	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT: %w", err)
-	}
-	if !parsed.Valid {
+	if err != nil || !parsed.Valid {
 		return nil, nil, fmt.Errorf("invalid JWT")
 	}
 
