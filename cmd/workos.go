@@ -19,13 +19,22 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-const workosBaseURL = "https://api.workos.com"
+const (
+	workosBaseURL = "https://api.workos.com"
+
+	// workosPublicKeyTTL is an arbitrary TTL used to eventually evict cached
+	// public keys and ensure they are re-fetched periodically. It does not
+	// reflect any documented WorkOS key rotation policy.
+	workosPublicKeyTTL      = 24 * time.Hour
+	workosPublicKeyMaxCache = 100
+)
 
 type workos struct {
 	clientID      string
@@ -33,6 +42,8 @@ type workos struct {
 	webhookSecret string
 	actionsSecret string
 	devMode       bool
+	keysMu        sync.RWMutex
+	publicKeys    map[string]workosPublicKey // kid → cached key
 }
 
 // workosUser holds the user information returned by WorkOS after token
@@ -42,6 +53,12 @@ type workosUser struct {
 	Email     string
 	FirstName string
 	LastName  string
+}
+
+type workosPublicKey struct {
+	key       *rsa.PublicKey
+	alg       string
+	expiresAt time.Time
 }
 
 type workosClaims struct {
@@ -68,12 +85,49 @@ func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string, devMode bo
 		webhookSecret: webhookSecret,
 		actionsSecret: actionsSecret,
 		devMode:       devMode,
+		publicKeys:    make(map[string]workosPublicKey),
 	}
 }
 
-// publicKey fetches the WorkOS JWKS and returns the RSA public key for the
-// given key ID, supporting the given alg.
+// publicKey returns the RSA public key for the given key ID and algorithm,
+// using the in-memory cache when available.
 func (wo *workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
+	wo.keysMu.RLock()
+	if pk, ok := wo.publicKeys[kid]; ok && pk.alg == alg && time.Now().Before(pk.expiresAt) {
+		wo.keysMu.RUnlock()
+		return pk.key, nil
+	}
+	wo.keysMu.RUnlock()
+
+	key, err := wo.fetchPublicKey(kid, alg)
+	if err != nil {
+		return nil, err
+	}
+
+	wo.keysMu.Lock()
+	defer wo.keysMu.Unlock()
+
+	now := time.Now()
+	for k, e := range wo.publicKeys {
+		if now.After(e.expiresAt) {
+			delete(wo.publicKeys, k)
+		}
+	}
+
+	if len(wo.publicKeys) < workosPublicKeyMaxCache {
+		wo.publicKeys[kid] = workosPublicKey{
+			key:       key,
+			alg:       alg,
+			expiresAt: time.Now().Add(workosPublicKeyTTL),
+		}
+	}
+
+	return key, nil
+}
+
+// fetchPublicKey fetches the WorkOS JWKS and returns the RSA public key for the
+// given key ID and algorithm.
+func (wo *workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 	var jwks workosJWKS
 	status, err := wo.call(http.MethodGet, "/sso/jwks/"+wo.clientID, nil, &jwks)
 	if err != nil {
