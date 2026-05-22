@@ -396,6 +396,31 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
+// UpgradeDBOrganizationIDToInt changes the organization ID from UUID to integer.
+func UpgradeDBOrganizationIDToInt(ctx context.Context, conf *Config) error {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.DB.Host,
+		Port:           conf.DB.Port,
+		Username:       conf.DB.Username,
+		Password:       conf.DB.Password,
+		Database:       conf.DB.Database,
+		Schema:         conf.DB.Schema,
+		MaxConnections: max(2, conf.DB.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	return initdb.UpgradeOrganizationIDToInt(ctx, db)
+}
+
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [1, 60]. password's length must be at least 8 character long.
@@ -442,7 +467,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 // AccessKey returns the organization and workspace identifiers associated with
 // the provided access key token and type. If the access key is not restricted
 // to a workspace, the workspace identifier will be 0.
-func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType) (uuid.UUID, int, error) {
+func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType) (int, int, error) {
 	key, err := core.state.AccessKey(ctx, token)
 	if err != nil {
 		switch err {
@@ -451,10 +476,10 @@ func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType
 		case state.ErrAccessKeyNotFound:
 			err = errors.NotFound("access key not found")
 		}
-		return uuid.UUID{}, 0, err
+		return 0, 0, err
 	}
 	if key.Type != state.AccessKeyType(typ) {
-		return uuid.Nil, 0, errors.NotFound("access key not found")
+		return 0, 0, errors.NotFound("access key not found")
 	}
 	return key.Organization, key.Workspace, nil
 }
@@ -694,10 +719,10 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 
 // CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
+func (core *Core) CreateOrganization(ctx context.Context, name string) (int, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 45); err != nil {
-		return uuid.Nil, errors.BadRequest("%s", err)
+		return 0, errors.BadRequest("%s", err)
 	}
 	n := state.CreateOrganization{Name: name}
 	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
@@ -708,7 +733,7 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUI
 		return n, nil
 	})
 	if err != nil {
-		return uuid.Nil, err
+		return 0, err
 	}
 	return n.ID, nil
 }
@@ -761,7 +786,7 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 	if !isValidMemberToken(token) {
 		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
-	var organizationID uuid.UUID
+	var organizationID int
 	var email string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, email, created_at FROM members WHERE invitation_token = $1", token).Scan(&organizationID, &email, &createdAt)
@@ -786,14 +811,14 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 // Organization returns the organization with identifier id.
 //
 // It returns an errors.NotFound error if the organization does not exist.
-func (core *Core) Organization(id uuid.UUID) (*Organization, error) {
+func (core *Core) Organization(id int) (*Organization, error) {
 	core.mustBeOpen()
-	if id == uuid.Nil {
+	if id == 0 {
 		return nil, errors.BadRequest("identifier is not a valid organization identifier")
 	}
 	org, ok := core.state.Organization(id)
 	if !ok {
-		return nil, errors.NotFound("organization %q does not exist", id)
+		return nil, errors.NotFound("organization %d does not exist", id)
 	}
 	organization := Organization{
 		core:         core,
@@ -830,7 +855,7 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 		a, b := organizations[i], organizations[j]
 		switch order {
 		case SortByName:
-			return a.Name < b.Name || a.Name == b.Name && bytes.Compare(a.ID[:], b.ID[:]) < 0
+			return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
 		}
 		return false
 	})
@@ -862,7 +887,7 @@ func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token st
 	if !isValidMemberToken(token) {
 		return errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	var organizationID uuid.UUID
+	var organizationID int
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
 	if err != nil {

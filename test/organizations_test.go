@@ -25,7 +25,7 @@ func TestOrganizationsAPI(t *testing.T) {
 	t.Run("read organization by ID", func(t *testing.T) {
 		org := c.Organization(orgID)
 		if org.ID != orgID {
-			t.Fatalf("expected ID %q, got %q", orgID, org.ID)
+			t.Fatalf("expected ID %d, got %d", orgID, org.ID)
 		}
 		if org.Name != "Test Org" {
 			t.Fatalf("expected name %q, got %q", "Test Org", org.Name)
@@ -45,7 +45,7 @@ func TestOrganizationsAPI(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Fatalf("organization %q not found in list", orgID)
+			t.Fatalf("organization %d not found in list", orgID)
 		}
 	})
 

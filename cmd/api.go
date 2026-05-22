@@ -103,7 +103,7 @@ func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	return map[string]string{"id": id.String()}, nil
+	return map[string]int{"id": id}, nil
 }
 
 // EventSchema returns the event schema.
@@ -198,7 +198,7 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
 	}
-	id, ok := parseOrganizationUUID(r.PathValue("id"))
+	id, ok := parseID(r.PathValue("id"))
 	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
 	}

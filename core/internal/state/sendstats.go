@@ -8,16 +8,16 @@ import (
 	"log/slog"
 	"net"
 	"runtime"
+	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/analytics-go"
 )
 
 // sendNotificationStats sends information about notification n to Krenalis.
-func (state *State) sendNotificationStats(client analytics.Client, organization uuid.UUID, n notification) {
+func (state *State) sendNotificationStats(client analytics.Client, organization int, n notification) {
 	go func() {
 		err := client.Enqueue(analytics.Track{
-			UserId: organization.String(),
+			UserId: strconv.Itoa(organization),
 			Event:  "State Changed",
 			Context: &analytics.Context{
 				OS: analytics.OSInfo{

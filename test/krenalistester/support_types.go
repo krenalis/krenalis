@@ -348,8 +348,8 @@ const (
 )
 
 type Organization struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type Workspace struct {

@@ -33,7 +33,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/google/uuid"
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -52,8 +51,8 @@ var errResetPasswordTokenNotExist = errors.New("The reset password token doesn't
 type Organization struct {
 	core         *Core
 	organization *state.Organization
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
 }
 
 // Member represents a member of an organization.
@@ -336,7 +335,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
 				case "access_keys_organization_fkey":
-					err = errors.Unprocessable(OrganizationNotExist, "organization %q does not exist", n.Organization)
+					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
 				case "access_keys_workspace_fkey":
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
@@ -433,7 +432,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
-					return nil, errors.Unprocessable(OrganizationNotExist, "organization %q does not exist", n.Organization)
+					return nil, errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
 				}
 			}
 			return nil, err
@@ -493,7 +492,7 @@ func (this *Organization) Delete(ctx context.Context) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("organization %q does not exist", this.organization.ID)
+			return nil, errors.NotFound("organization %d does not exist", this.organization.ID)
 		}
 		return n, nil
 	})
@@ -810,7 +809,7 @@ func (this *Organization) Update(ctx context.Context, name string) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("organization %q does not exist", this.organization.ID)
+			return nil, errors.NotFound("organization %d does not exist", this.organization.ID)
 		}
 		return n, nil
 	})

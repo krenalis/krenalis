@@ -5,7 +5,6 @@
 package state
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -17,8 +16,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
-
-	"github.com/google/uuid"
 )
 
 // load loads the state.
@@ -255,12 +252,12 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all organizations.
-	state.organizations = map[uuid.UUID]*Organization{}
+	state.organizations = map[int]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			if err := rows.Scan(&org.ID, &org.Name); err != nil {
-				return fmt.Errorf("loading organization %s: %s", org.ID, err)
+				return fmt.Errorf("loading organization %d: %s", org.ID, err)
 			}
 			org.workspaces = map[int]*Workspace{}
 			org.members = map[int]struct{}{}
@@ -276,12 +273,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
 		var org *Organization
 		for rows.Next() {
-			var id int
-			var organization uuid.UUID
+			var id, organization int
 			if err := rows.Scan(&id, &organization); err != nil {
 				return fmt.Errorf("loading member %d: %s", id, err)
 			}
-			if org == nil || !bytes.Equal(org.ID[:], organization[:]) {
+			if org == nil || org.ID != organization {
 				org = state.organizations[organization]
 			}
 			org.members[id] = struct{}{}
@@ -304,7 +300,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		" pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var organizationID uuid.UUID
+				var organizationID int
 				var warehousePlatform string
 				var warehouseMode WarehouseMode
 				var profileSchema []byte

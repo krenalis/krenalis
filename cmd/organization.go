@@ -13,8 +13,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 type organization struct {
@@ -167,7 +165,7 @@ func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) 
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
-	id, ok := parseOrganizationUUID(r.PathValue("id"))
+	id, ok := parseID(r.PathValue("id"))
 	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
 	}
@@ -356,7 +354,7 @@ func (organization organization) Update(_ http.ResponseWriter, r *http.Request) 
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	id, ok := parseOrganizationUUID(r.PathValue("id"))
+	id, ok := parseID(r.PathValue("id"))
 	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
 	}
@@ -415,17 +413,4 @@ func (organization organization) key(r *http.Request) (int, error) {
 		return 0, errors.BadRequest("identifier %q is not a valid access key identifier", r.PathValue("key"))
 	}
 	return key, nil
-}
-
-// parseOrganizationUUID parses and returns a UUID representing the ID of an
-// organization, returning true if it is valid, false otherwise.
-func parseOrganizationUUID(s string) (uuid.UUID, bool) {
-	if len(s) != 36 {
-		return uuid.Nil, false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return uuid.Nil, false
-	}
-	return id, true
 }

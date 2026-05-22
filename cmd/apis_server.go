@@ -22,7 +22,6 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/text/unicode/norm"
 )
@@ -44,7 +43,7 @@ var (
 const sessionMaxAge = 6 * 60 * 60
 
 type sessionCookie struct {
-	Organization uuid.UUID
+	Organization int
 	Member       int
 }
 
