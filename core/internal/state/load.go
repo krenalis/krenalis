@@ -212,19 +212,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		&kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("row is missing from table 'metadata'")
+			return errors.New("cannot load metadata: no rows found in table; expected exactly one row")
 		}
-		return err
+		return fmt.Errorf("cannot load metadata: %s", err)
 	}
 	defer clear(kmsEncryptedOAuthKey)
 	defer clear(kmsEncryptedNotificationKey)
 	defer clear(kmsEncryptedAPIKeyPepper)
 	if state.metadata.installationID == "" {
-		return errors.New("missing installation ID in metadata table")
+		return errors.New("cannot load state: missing installation ID in metadata table")
 	}
 	// Cookie key.
 	if len(kmsEncryptedCookieKey) == 0 {
-		return errors.New("missing KMS encrypted cookie key in metadata table")
+		return errors.New("cannot load state: missing KMS encrypted cookie key in metadata table")
 	}
 	state.metadata.kmsEncryptedCookieKey = kmsEncryptedCookieKey
 	// OAuth key.
@@ -232,7 +232,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	clear(kmsEncryptedOAuthKey)
 	// Notification key.
 	if len(kmsEncryptedNotificationKey) == 0 {
-		return errors.New("missing notification key in metadata table")
+		return errors.New("cannot load state: missing notification key in metadata table")
 	}
 	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
 	clear(kmsEncryptedNotificationKey)
@@ -242,7 +242,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}()
 	// API key pepper.
 	if len(kmsEncryptedAPIKeyPepper) == 0 {
-		return errors.New("missing API key pepper in metadata table")
+		return errors.New("cannot load state: missing API key pepper in metadata table")
 	}
 	state.metadata.apiKeyPepper = state.cipher.Key(kmsEncryptedAPIKeyPepper)
 	clear(kmsEncryptedAPIKeyPepper)
@@ -251,41 +251,35 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
 		Scan(&state.election.number, &state.election.leader)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load election: %s", err)
 	}
 
 	// Read all organizations.
 	state.organizations = map[uuid.UUID]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
-		var id uuid.UUID
-		var name string
 		for rows.Next() {
-			if err := rows.Scan(&id, &name); err != nil {
-				return err
+			org := &Organization{mu: new(sync.Mutex)}
+			if err := rows.Scan(&org.ID, &org.Name); err != nil {
+				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
-			organization := &Organization{
-				mu:   new(sync.Mutex),
-				ID:   id,
-				Name: name,
-			}
-			organization.workspaces = map[int]*Workspace{}
-			organization.members = map[int]struct{}{}
-			state.organizations[id] = organization
+			org.workspaces = map[int]*Workspace{}
+			org.members = map[int]struct{}{}
+			state.organizations[org.ID] = org
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load organizations: %s", err)
 	}
 
 	// Read all members.
 	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
-		var id int
-		var organization uuid.UUID
 		var org *Organization
 		for rows.Next() {
+			var id int
+			var organization uuid.UUID
 			if err := rows.Scan(&id, &organization); err != nil {
-				return err
+				return fmt.Errorf("loading member %d: %s", id, err)
 			}
 			if org == nil || !bytes.Equal(org.ID[:], organization[:]) {
 				org = state.organizations[organization]
@@ -295,7 +289,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load members: %s", err)
 	}
 
 	// Read all workspaces.
@@ -309,12 +303,12 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		" ir_end_time, ui_profile_image, ui_profile_first_name, ui_profile_last_name, ui_profile_extra,"+
 		" pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
-			var organizationID uuid.UUID
-			var warehousePlatform string
-			var warehouseMode WarehouseMode
-			var profileSchema []byte
-			var alterProfileSchemaSchema []byte
 			for rows.Next() {
+				var organizationID uuid.UUID
+				var warehousePlatform string
+				var warehouseMode WarehouseMode
+				var profileSchema []byte
+				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[int]*Connection{},
@@ -332,11 +326,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.UIPreferences.Profile.Image, &ws.UIPreferences.Profile.FirstName,
 					&ws.UIPreferences.Profile.LastName, &ws.UIPreferences.Profile.Extra,
 					&ws.pipelinesToPurge); err != nil {
-					return err
+					return fmt.Errorf("loading workspace %d: %s", ws.ID, err)
 				}
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
-					return fmt.Errorf("warehouse platform for %q is required but not registered. (Possibly forgotten import?)", warehousePlatform)
+					return fmt.Errorf("loading workspace %d: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)
 				}
 				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
@@ -344,11 +338,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				ws.Warehouse.mcpSettingsKey = state.cipher.Key(mcpSettingsKey)
 				err = json.Unmarshal(profileSchema, &ws.ProfileSchema)
 				if err != nil {
-					return err
+					return fmt.Errorf("cannot load profile schema for workspace %d: %s", ws.ID, err)
 				}
 				err = json.Unmarshal(alterProfileSchemaSchema, &ws.AlterProfileSchema.Schema)
 				if err != nil {
-					return err
+					return fmt.Errorf("cannot load alter profile schema for workspace %d: %s", ws.ID, err)
 				}
 				ws.PrimarySources = map[string]int{}
 				ws.organization.workspaces[ws.ID] = ws
@@ -357,25 +351,25 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load workspaces: %s", err)
 	}
 
 	// Read all access keys.
 	state.accessKeyByHMAC = map[string]*AccessKey{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, workspace, type, hmac FROM access_keys",
 		func(rows *db.Rows) error {
-			var hmac []byte
 			for rows.Next() {
 				k := AccessKey{}
 				var workspace *int
+				var hmac []byte
 				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &k.Type, &hmac); err != nil {
-					return err
+					return fmt.Errorf("loading access key %d: %s", k.ID, err)
 				}
 				if workspace != nil {
 					k.Workspace = *workspace
 				}
 				if len(hmac) != 32 {
-					return errors.New("state: access key token HMAC is invalid")
+					return fmt.Errorf("loading access key %d: token HMAC is invalid", k.ID)
 				}
 				state.accessKeyByHMAC[string(hmac)] = &k
 				clear(hmac)
@@ -383,7 +377,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load access keys: %s", err)
 	}
 
 	// Read all accounts.
@@ -394,7 +388,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var workspaceID int
 				var connectorName string
 				if err := rows.Scan(&a.ID, &workspaceID, &connectorName, &a.Code, &a.AccessToken, &a.RefreshToken, &a.ExpiresIn); err != nil {
-					return err
+					return fmt.Errorf("loading account %d: %s", a.ID, err)
 				}
 				a.mu = new(sync.Mutex)
 				a.workspace = state.workspaces[workspaceID]
@@ -404,7 +398,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load accounts: %s", err)
 	}
 
 	// Read all connections.
@@ -421,7 +415,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.settings,
 				&settingsKey, &c.Health,
 			); err != nil {
-				return err
+				return fmt.Errorf("loading connection %d: %s", c.ID, err)
 			}
 			ws := state.workspaces[workspaceID]
 			c.mu = new(sync.Mutex)
@@ -429,8 +423,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			c.workspace = ws
 			c.connector = state.connectors[connector]
 			if c.connector == nil {
-				return fmt.Errorf("the %s connector required by the %s '%s' is not included in the executable. "+
-					"Recompile the executable with the %s connector to resolve the issue", connector, c.Role, c.Name, connector)
+				return fmt.Errorf("loading connection %d: the %s connector is not included in the executable. "+
+					"Recompile the executable with the %s connector to resolve the issue", c.ID, connector, connector)
 			}
 			c.pipelines = map[int]*Pipeline{}
 			if account > 0 {
@@ -466,7 +460,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load connections: %s", err)
 	}
 
 	// Read all event write keys.
@@ -476,7 +470,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var connectionID int
 				var key string
 				if err := rows.Scan(&connectionID, &key); err != nil {
-					return err
+					return fmt.Errorf("loading key for connection %d: %s", connectionID, err)
 				}
 				connection := state.connections[connectionID]
 				connection.Keys = append(connection.Keys, key)
@@ -485,7 +479,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load event write keys: %s", err)
 	}
 
 	// Read all pipelines.
@@ -513,14 +507,14 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
 					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
-					return err
+					return fmt.Errorf("loading pipeline %d: %s", pipeline.ID, err)
 				}
 				c := state.connections[connectionID]
 				if format != nil {
 					pipeline.format = state.connectors[*format]
 					if pipeline.format == nil {
-						return fmt.Errorf("the %s connector required by the %s '%s' is not included in the executable. "+
-							"Recompile the executable with the %s connector to resolve the issue", *format, c.Role, c.Name, *format)
+						return fmt.Errorf("loading pipeline %d: the %s connector is not included in the executable. "+
+							"Recompile the executable with the %s connector to resolve the issue", pipeline.ID, *format, *format)
 					}
 				}
 				pipeline.mu = new(sync.Mutex)
@@ -528,24 +522,22 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline.EventType = eventType
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
-					// TODO(marco) disable the pipeline instead of returning an error
-					return err
+					return fmt.Errorf("loading input schema for pipeline %d: %s", pipeline.ID, err)
 				}
 				err = pipeline.OutSchema.UnmarshalJSON(rawOutSchema)
 				if err != nil {
-					// TODO(marco) disable the pipeline instead of returning an error
-					return err
+					return fmt.Errorf("loading output schema for pipeline %d: %s", pipeline.ID, err)
 				}
 				if filter != nil {
 					pipeline.Filter, err = unmarshalWhere(filter, pipeline.InSchema)
 					if err != nil {
-						return err
+						return fmt.Errorf("loading filter for pipeline %d: %s", pipeline.ID, err)
 					}
 				}
 				if len(mapping) > 0 {
 					err = json.Unmarshal(mapping, &pipeline.Transformation.Mapping)
 					if err != nil {
-						return err
+						return fmt.Errorf("loading transformation mapping for pipeline %d: %s", pipeline.ID, err)
 					}
 				}
 				if function.Source != "" {
@@ -557,7 +549,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load pipelines: %s", err)
 	}
 
 	// Read pipeline runs in progress.
@@ -571,7 +563,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var pipelineID int
 				err := rows.Scan(&run.ID, &pipelineID, &run.Cursor, &run.Incremental, &run.StartTime)
 				if err != nil {
-					return err
+					return fmt.Errorf("loading run %d: %s", run.ID, err)
 				}
 				pipeline := state.pipelines[pipelineID]
 				run.pipeline = pipeline
@@ -582,17 +574,17 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load pipeline runs: %s", err)
 	}
 
 	// Read all primary sources.
 	err = tx.QueryScan(ctx, "SELECT source, path FROM primary_sources",
 		func(rows *db.Rows) error {
-			var source int
-			var path string
 			for rows.Next() {
+				var source int
+				var path string
 				if err := rows.Scan(&source, &path); err != nil {
-					return err
+					return fmt.Errorf("loading source %d: %s", source, err)
 				}
 				c := state.connections[source]
 				c.workspace.PrimarySources[path] = source
@@ -600,17 +592,17 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			return nil
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load primary sources: %s", err)
 	}
 
 	// Read the last notification ID.
 	var latest int64
 	err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load the notification ID: %s", err)
 	}
 	if latest == math.MaxInt64 {
-		return errors.New("maximum limit for the auto-increment 'notifications.id' column has been reached")
+		return errors.New("cannot load the notification ID: maximum limit has been reached")
 	}
 
 	err = tx.Commit(ctx)
@@ -623,7 +615,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return err
+		return fmt.Errorf("cannot load state: validating the notification key: %s", err)
 	}
 
 	state.notifications.key = notificationKey
