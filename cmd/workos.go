@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/hmac"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -22,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -44,12 +44,20 @@ type workosUser struct {
 	LastName  string
 }
 
+type workosClaims struct {
+	jwt.RegisteredClaims
+	ClientID string `json:"client_id"`
+	OrgID    string `json:"org_id"`
+}
+
 type workosJWKS struct {
 	Keys []struct {
 		Kty string `json:"kty"`
+		Use string `json:"use"`
+		Alg string `json:"alg"`
+		Kid string `json:"kid"`
 		N   string `json:"n"`
 		E   string `json:"e"`
-		Kid string `json:"kid"`
 	} `json:"keys"`
 }
 
@@ -64,8 +72,8 @@ func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string, devMode bo
 }
 
 // publicKey fetches the WorkOS JWKS and returns the RSA public key for the
-// given key ID.
-func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
+// given key ID, supporting the given alg.
+func (wo *workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 	var jwks workosJWKS
 	status, err := wo.call(http.MethodGet, "/sso/jwks/"+wo.clientID, nil, &jwks)
 	if err != nil {
@@ -76,6 +84,12 @@ func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
 	}
 	for _, k := range jwks.Keys {
 		if k.Kid != kid || k.Kty != "RSA" {
+			continue
+		}
+		if k.Use != "" && k.Use != "sig" {
+			continue
+		}
+		if k.Alg != alg {
 			continue
 		}
 		nBytes, err := base64.RawURLEncoding.DecodeString(k.N)
@@ -97,82 +111,43 @@ func (wo *workos) publicKey(kid string) (*rsa.PublicKey, error) {
 // verifyToken verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
 func (wo *workos) verifyToken(token string) (*workosUser, *uuid.UUID, error) {
-	// Split the JWT into header, payload and signature.
-	parts := strings.SplitN(token, ".", 3)
-	if len(parts) != 3 {
-		return nil, nil, fmt.Errorf("invalid JWT format")
-	}
-	headerB64, payloadB64, sigB64 := parts[0], parts[1], parts[2]
+	var claims workosClaims
 
-	// Decode and parse the header to get the algorithm and key ID.
-	headerJSON, err := base64.RawURLEncoding.DecodeString(headerB64)
+	parsed, err := jwt.ParseWithClaims(
+		token,
+		&claims,
+		func(t *jwt.Token) (any, error) {
+			_, isRSA := t.Method.(*jwt.SigningMethodRSA)
+			_, isPSS := t.Method.(*jwt.SigningMethodRSAPSS)
+			if !isRSA && !isPSS {
+				return nil, fmt.Errorf("unexpected JWT signing method: %v", t.Method.Alg())
+			}
+			kid, _ := t.Header["kid"].(string)
+			if kid == "" {
+				return nil, fmt.Errorf("JWT is missing kid header")
+			}
+			return wo.publicKey(kid, t.Method.Alg())
+		},
+		jwt.WithExpirationRequired(),
+	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT header encoding: %s", err)
+		return nil, nil, fmt.Errorf("invalid JWT: %w", err)
 	}
-	var header struct {
-		Alg string `json:"alg"`
-		Kid string `json:"kid"`
-	}
-	if err := json.Unmarshal(headerJSON, &header); err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT header: %s", err)
-	}
-	if header.Alg != "RS256" {
-		return nil, nil, fmt.Errorf("unexpected JWT algorithm %q, expected RS256", header.Alg)
+	if !parsed.Valid {
+		return nil, nil, fmt.Errorf("invalid JWT")
 	}
 
-	// Fetch the RSA public key matching the key ID.
-	pubKey, err := wo.publicKey(header.Kid)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Verify the RS256 signature over "headerB64.payloadB64".
-	sigBytes, err := base64.RawURLEncoding.DecodeString(sigB64)
-	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT signature encoding: %s", err)
-	}
-	digest := sha256.Sum256([]byte(headerB64 + "." + payloadB64))
-	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest[:], sigBytes); err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT signature: %s", err)
-	}
-
-	// Decode and parse the payload.
-	payloadJSON, err := base64.RawURLEncoding.DecodeString(payloadB64)
-	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT payload encoding: %s", err)
-	}
-	var claims struct {
-		Iss      string `json:"iss"`
-		ClientID string `json:"client_id"`
-		Sub      string `json:"sub"`
-		Exp      *int64 `json:"exp"`
-		OrgID    string `json:"org_id"`
-	}
-	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
-		return nil, nil, fmt.Errorf("invalid JWT payload: %s", err)
-	}
-
-	// Validate environment.
 	if claims.ClientID != wo.clientID {
 		return nil, nil, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
-
-	// Validate time-based claims.
-	if claims.Exp == nil {
-		return nil, nil, fmt.Errorf("missing exp claim in JWT")
-	}
-	now := time.Now().Unix()
-	if now >= *claims.Exp {
-		return nil, nil, fmt.Errorf("JWT has expired")
-	}
-	if claims.Sub == "" {
+	if claims.Subject == "" {
 		return nil, nil, fmt.Errorf("missing sub claim in JWT")
 	}
 	if claims.OrgID == "" {
 		return nil, nil, fmt.Errorf("missing organization ID in JWT")
 	}
 
-	userID := claims.Sub
+	userID := claims.Subject
 
 	var userRes struct {
 		Email     string `json:"email"`
