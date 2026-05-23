@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"html"
 	"maps"
-	"math/big"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
@@ -308,11 +307,6 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	if typ == AccessKeyTypeMCP && workspace == 0 {
 		return 0, "", errors.BadRequest("workspace is required for MCP keys")
 	}
-	// Generate a random identifier.
-	id, err := generateRandomID()
-	if err != nil {
-		return 0, "", err
-	}
 	// Generate a random access key,
 	token, hmac, err := this.core.state.GenerateAccessKey(ctx)
 	if err != nil {
@@ -321,7 +315,6 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	defer clear(hmac)
 	hint := token[:4] + "..." + token[len(token)-6:]
 	n := state.CreateAccessKey{
-		ID:           id,
 		Organization: this.organization.ID,
 		Workspace:    workspace,
 		Type:         state.AccessKeyType(typ),
@@ -329,8 +322,10 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	}
 	createdAt := time.Now().UTC().Truncate(time.Second)
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, hmac, hint, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt)
+		err := tx.QueryRow(ctx,
+			"INSERT INTO access_keys (organization, workspace, name, type, hmac, hint, created_at) "+
+				"VALUES ($1, NULLIF($2, 0), $3, $4, $5, $6, $7) RETURNING id",
+			n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
@@ -407,12 +402,6 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		return 0, err
 	}
 
-	// Generate the identifier.
-	n.ID, err = generateRandomID()
-	if err != nil {
-		return 0, err
-	}
-
 	// Encode the profile schema to JSON.
 	encodedProfileSchema, err := json.Marshal(n.ProfileSchema)
 	if err != nil {
@@ -420,15 +409,15 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	}
 
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
+		err := tx.QueryRow(ctx, "INSERT INTO workspaces (organization, name,"+
 			" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
 			" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
 			" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
-			n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id",
+			n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
 			n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
 			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Warehouse.Platform,
-			n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
+			n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
@@ -968,17 +957,6 @@ func generateMemberToken() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(bytes), nil
-}
-
-var bigMaxInt32 = big.NewInt(maxInt32)
-
-// generateRandomID generates a random identifier in [1, maxInt32].
-func generateRandomID() (int, error) {
-	n, err := rand.Int(rand.Reader, bigMaxInt32)
-	if err != nil {
-		return 0, err
-	}
-	return int(n.Int64()) + 1, nil
 }
 
 // isInvitationTokenExpired checks if the invitation token of a member is

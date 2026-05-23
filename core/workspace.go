@@ -726,12 +726,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 	}
 
-	// Generate the identifier.
-	n.ID, err = generateRandomID()
-	if err != nil {
-		return 0, err
-	}
-
 	// Generate an event write key.
 	if c.Type == state.SDK || c.Type == state.Webhook {
 		n.EventWriteKey = generateEventWriteKeyToken()
@@ -774,12 +768,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			}
 		}
 		// Insert the connection.
-		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, connector, role, account,"+
-			" strategy, sending_mode, linked_connections, settings, kms_encrypted_settings_key)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
-			n.SendingMode, n.LinkedConnections, n.Settings, n.SettingsKey)
+		err = tx.QueryRow(ctx, "INSERT INTO connections "+
+			"(workspace, name, connector, role, account, strategy,"+
+			" sending_mode, linked_connections, settings, kms_encrypted_settings_key)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
+			n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
+			n.SendingMode, n.LinkedConnections, n.Settings, n.SettingsKey).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)

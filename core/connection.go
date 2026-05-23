@@ -454,12 +454,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		formatCode = new(format.Code)
 	}
 
-	// Generate a random identifier.
-	n.ID, err = generateRandomID()
-	if err != nil {
-		return 0, err
-	}
-
 	// Marshal the input and the output schemas.
 	rawInSchema, err := marshalSchema(inSchema)
 	if err != nil {
@@ -529,7 +523,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				return nil, err
 			}
 		}
-		query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
+		query := "INSERT INTO pipelines (connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
 			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
@@ -537,13 +531,13 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			"update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n" +
 			"updated_at_format, incremental)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
-		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
+			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35) RETURNING id"
+		err := tx.QueryRow(ctx, query, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
-			n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
+			n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)

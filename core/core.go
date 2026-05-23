@@ -222,6 +222,13 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			return nil, err
 		}
 	}
+	upgradeInProgress, err := initdb.RenumberInternalIDsMigrationInProgress(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	if upgradeInProgress {
+		return nil, errors.New("PostgreSQL database upgrade is incomplete; start Krenalis with the -upgrade-db flag")
+	}
 
 	var smtp *SMTPConfig
 	if conf.SMTP.Host != "" {
@@ -396,8 +403,9 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
-// UpgradeDBOrganizationIDToInt changes the organization ID from UUID to integer.
-func UpgradeDBOrganizationIDToInt(ctx context.Context, conf *Config) error {
+// UpgradeDB upgrades Krenalis's PostgreSQL database and any workspace
+// warehouses that need coordinated data updates.
+func UpgradeDB(ctx context.Context, conf *Config) error {
 	db, err := dbpkg.Open(&dbpkg.Options{
 		Host:           conf.DB.Host,
 		Port:           conf.DB.Port,
@@ -418,7 +426,86 @@ func UpgradeDBOrganizationIDToInt(ctx context.Context, conf *Config) error {
 	if err != nil {
 		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
-	return initdb.UpgradeOrganizationIDToInt(ctx, db)
+
+	if err := initdb.MigrateRenumberedInternalIDs(ctx, db); err != nil {
+		return err
+	}
+	inProgress, err := initdb.RenumberInternalIDsMigrationInProgress(ctx, db)
+	if err != nil {
+		return err
+	}
+	if !inProgress {
+		return nil
+	}
+	pending, err := initdb.PendingRenumberInternalIDsWarehouseMigrations(ctx, db)
+	if err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return initdb.CompleteRenumberInternalIDsMigration(ctx, db)
+	}
+
+	kms, err := kms.New(ctx, conf.KMS)
+	if err != nil {
+		return err
+	}
+
+	st, err := state.New(ctx, db, kms, nil, false)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	for _, migration := range pending {
+		ws, ok := st.Workspace(migration.Workspace)
+		if !ok {
+			return fmt.Errorf("workspace %d does not exist", migration.Workspace)
+		}
+		settings, err := ws.WarehouseSettings(ctx)
+		if err != nil {
+			return fmt.Errorf("cannot decrypt warehouse settings for workspace %d: %s", migration.Workspace, err)
+		}
+		warehouse := warehouses.Registered(ws.Warehouse.Platform).New(migrationSettingsLoader{settings: settings})
+		migrator, ok := warehouse.(interface {
+			MigrateRenumberedInternalIDs(context.Context, string, int, map[int]int, map[int]int) error
+		})
+		if !ok {
+			warehouse.Close()
+			clear(settings)
+			return fmt.Errorf("warehouse platform %s does not support internal ID migration", ws.Warehouse.Platform)
+		}
+		err = migrator.MigrateRenumberedInternalIDs(ctx, initdb.RenumberInternalIDsMigrationName, migration.Workspace, migration.ConnectionMap, migration.PipelineMap)
+		closeErr := warehouse.Close()
+		clear(settings)
+		if err != nil {
+			return fmt.Errorf("cannot migrate warehouse for workspace %d: %s", migration.Workspace, err)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("cannot close warehouse for workspace %d: %s", migration.Workspace, closeErr)
+		}
+		if err := initdb.MarkRenumberInternalIDsWarehouseMigrationDone(ctx, db, migration.Workspace); err != nil {
+			return err
+		}
+	}
+	return initdb.CompleteRenumberInternalIDsMigration(ctx, db)
+}
+
+// UpgradeDBOrganizationIDToInt changes the organization ID from UUID to integer.
+// Deprecated: use UpgradeDB.
+func UpgradeDBOrganizationIDToInt(ctx context.Context, conf *Config) error {
+	return UpgradeDB(ctx, conf)
+}
+
+type migrationSettingsLoader struct {
+	settings json.Value
+}
+
+// Load unmarshals the stored settings into dst.
+func (loader migrationSettingsLoader) Load(_ context.Context, dst any) error {
+	data, err := json.Marshal(loader.settings)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, dst)
 }
 
 // AcceptInvitation accepts the invitation with the given invitation token. It
