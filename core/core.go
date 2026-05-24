@@ -1630,7 +1630,8 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 //
 // primarySources cannot be nil.
 //
-// It returns an errors.UnprocessableError error with code
+// It returns an errors.NotFoundError error if the workspace does not exist, and
+// returns an errors.UnprocessableError error with code
 //
 //   - OperationAlreadyExecuting, if another operation (identity resolution or
 //     profile schema update) is already running.
@@ -1688,6 +1689,9 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
+			}
 			return nil, err
 		}
 		if ongoingOp {
