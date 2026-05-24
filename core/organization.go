@@ -506,9 +506,6 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
-	if !this.organization.HasMember(id) {
-		return errors.NotFound("member %d does not exist", id)
-	}
 	n := state.DeleteMember{
 		ID:           id,
 		Organization: this.organization.ID,
