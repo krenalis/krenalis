@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -36,6 +37,8 @@ const (
 	publicKeyTTL      = 24 * time.Hour
 	publicKeyMaxCache = 100
 )
+
+var errInvalidJWTToken = errors.New("WorkOS provided a malformed JWT token")
 
 type Workos struct {
 	ClientID      string
@@ -191,17 +194,17 @@ func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil || !parsed.Valid {
-		return nil, uuid.UUID{}, fmt.Errorf("invalid JWT")
+		return nil, uuid.UUID{}, errInvalidJWTToken
 	}
 
 	if claims.ClientID != wo.ClientID {
 		return nil, uuid.UUID{}, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
 	if claims.Subject == "" {
-		return nil, uuid.UUID{}, fmt.Errorf("missing sub claim in JWT")
+		return nil, uuid.UUID{}, errInvalidJWTToken
 	}
 	if claims.OrgID == "" {
-		return nil, uuid.UUID{}, fmt.Errorf("missing organization ID in JWT")
+		return nil, uuid.UUID{}, errInvalidJWTToken
 	}
 
 	userID := claims.Subject
