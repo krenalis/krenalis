@@ -180,7 +180,7 @@ func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
 			_, isRSA := t.Method.(*jwt.SigningMethodRSA)
 			_, isPSS := t.Method.(*jwt.SigningMethodRSAPSS)
 			if !isRSA && !isPSS {
-				return nil, fmt.Errorf("unexpected JWT signing method: %v", t.Method.Alg())
+				return nil, fmt.Errorf("WorkOS signed the JWT using %s, but Krenalis only supports RSA and RSA-PSS signing methods", t.Method.Alg())
 			}
 			kid, _ := t.Header["kid"].(string)
 			if kid == "" {
