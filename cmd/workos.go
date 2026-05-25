@@ -129,7 +129,7 @@ func (wo *workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 // given key ID and algorithm.
 func (wo *workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 	var jwks workosJWKS
-	status, err := wo.call(http.MethodGet, "/sso/jwks/"+wo.clientID, nil, &jwks)
+	status, err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.clientID), nil, &jwks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
 	}
