@@ -214,7 +214,14 @@ func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
 		return nil, uuid.UUID{}, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
-	return &user{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
+	user := &user{
+		ID:        userID,
+		Email:     userRes.Email,
+		FirstName: userRes.FirstName,
+		LastName:  userRes.LastName,
+	}
+
+	return user, organizationID, nil
 }
 
 // organization fetches the WorkOS organization and returns its external ID as a
