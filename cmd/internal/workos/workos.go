@@ -27,13 +27,13 @@ import (
 )
 
 const (
-	workosBaseURL = "https://api.workos.com"
+	baseURL = "https://api.workos.com"
 
-	// workosPublicKeyTTL is an arbitrary TTL used to eventually evict cached
-	// public keys and ensure they are re-fetched periodically. It does not
-	// reflect any documented WorkOS key rotation policy.
-	workosPublicKeyTTL      = 24 * time.Hour
-	workosPublicKeyMaxCache = 100
+	// publicKeyTTL is an arbitrary TTL used to eventually evict cached public
+	// keys and ensure they are re-fetched periodically. It does not reflect any
+	// documented WorkOS key rotation policy.
+	publicKeyTTL      = 24 * time.Hour
+	publicKeyMaxCache = 100
 )
 
 type Workos struct {
@@ -43,31 +43,30 @@ type Workos struct {
 	actionsSecret string
 	DevMode       bool
 	keysMu        sync.RWMutex
-	publicKeys    map[string]workosPublicKey // kid → cached key
+	publicKeys    map[string]publicKey // kid → cached key
 }
 
-// workosUser holds the user information returned by WorkOS after token
-// verification.
-type workosUser struct {
+// user holds the user information returned by WorkOS after token verification.
+type user struct {
 	ID        string
 	Email     string
 	FirstName string
 	LastName  string
 }
 
-type workosPublicKey struct {
+type publicKey struct {
 	key       *rsa.PublicKey
 	alg       string
 	expiresAt time.Time
 }
 
-type workosClaims struct {
+type claims struct {
 	jwt.RegisteredClaims
 	ClientID string `json:"client_id"`
 	OrgID    string `json:"org_id"`
 }
 
-type workosJWKS struct {
+type jwks struct {
 	Keys []struct {
 		Kty string `json:"kty"`
 		Use string `json:"use"`
@@ -78,14 +77,14 @@ type workosJWKS struct {
 	} `json:"keys"`
 }
 
-func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *Workos {
+func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *Workos {
 	return &Workos{
 		ClientID:      clientID,
 		apiKey:        apiKey,
 		webhookSecret: webhookSecret,
 		actionsSecret: actionsSecret,
 		DevMode:       devMode,
-		publicKeys:    make(map[string]workosPublicKey),
+		publicKeys:    make(map[string]publicKey),
 	}
 }
 
@@ -114,11 +113,11 @@ func (wo *Workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 		}
 	}
 
-	if len(wo.publicKeys) < workosPublicKeyMaxCache {
-		wo.publicKeys[kid] = workosPublicKey{
+	if len(wo.publicKeys) < publicKeyMaxCache {
+		wo.publicKeys[kid] = publicKey{
 			key:       key,
 			alg:       alg,
-			expiresAt: time.Now().Add(workosPublicKeyTTL),
+			expiresAt: time.Now().Add(publicKeyTTL),
 		}
 	}
 
@@ -128,7 +127,7 @@ func (wo *Workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 // fetchPublicKey fetches the WorkOS JWKS and returns the RSA public key for the
 // given key ID and algorithm.
 func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
-	var jwks workosJWKS
+	var jwks jwks
 	status, err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), nil, &jwks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
@@ -164,8 +163,8 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // VerifyToken verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) VerifyToken(token string) (*workosUser, *uuid.UUID, error) {
-	var claims workosClaims
+func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
+	var claims claims
 
 	parsed, err := jwt.ParseWithClaims(
 		token,
@@ -214,17 +213,17 @@ func (wo *Workos) VerifyToken(token string) (*workosUser, *uuid.UUID, error) {
 		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
 	}
 
-	organizationID, err := wo.workosOrganization(claims.OrgID)
+	organizationID, err := wo.organization(claims.OrgID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return &workosUser{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
+	return &user{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
 }
 
-// workosOrganization fetches the WorkOS organization and returns its external
-// ID as a UUID, which is the Krenalis-side organization identifier.
-func (wo *Workos) workosOrganization(orgID string) (*uuid.UUID, error) {
+// organization fetches the WorkOS organization and returns its external ID as a
+// UUID, which is the Krenalis-side organization identifier.
+func (wo *Workos) organization(orgID string) (*uuid.UUID, error) {
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
@@ -257,7 +256,7 @@ func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 		bodyReader = bytes.NewReader(b)
 	}
 
-	req, err := http.NewRequest(method, workosBaseURL+path, bodyReader)
+	req, err := http.NewRequest(method, baseURL+path, bodyReader)
 	if err != nil {
 		return 0, err
 	}
