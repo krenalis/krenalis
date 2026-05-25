@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package cmd
+package workos
 
 import (
 	"bytes"
@@ -36,12 +36,12 @@ const (
 	workosPublicKeyMaxCache = 100
 )
 
-type workos struct {
-	clientID      string
+type Workos struct {
+	ClientID      string
 	apiKey        string
 	webhookSecret string
 	actionsSecret string
-	devMode       bool
+	DevMode       bool
 	keysMu        sync.RWMutex
 	publicKeys    map[string]workosPublicKey // kid → cached key
 }
@@ -78,20 +78,20 @@ type workosJWKS struct {
 	} `json:"keys"`
 }
 
-func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *workos {
-	return &workos{
-		clientID:      clientID,
+func NewWorkOS(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *Workos {
+	return &Workos{
+		ClientID:      clientID,
 		apiKey:        apiKey,
 		webhookSecret: webhookSecret,
 		actionsSecret: actionsSecret,
-		devMode:       devMode,
+		DevMode:       devMode,
 		publicKeys:    make(map[string]workosPublicKey),
 	}
 }
 
 // publicKey returns the RSA public key for the given key ID and algorithm,
 // using the in-memory cache when available.
-func (wo *workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
+func (wo *Workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 	wo.keysMu.RLock()
 	if pk, ok := wo.publicKeys[kid]; ok && pk.alg == alg && time.Now().Before(pk.expiresAt) {
 		wo.keysMu.RUnlock()
@@ -127,9 +127,9 @@ func (wo *workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // fetchPublicKey fetches the WorkOS JWKS and returns the RSA public key for the
 // given key ID and algorithm.
-func (wo *workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
+func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 	var jwks workosJWKS
-	status, err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.clientID), nil, &jwks)
+	status, err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), nil, &jwks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
 	}
@@ -162,9 +162,9 @@ func (wo *workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 	return nil, fmt.Errorf("WorkOS JWKS does not contain key %q", kid)
 }
 
-// verifyToken verifies the WorkOS JWT and returns the authenticated user's
+// VerifyToken verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *workos) verifyToken(token string) (*workosUser, *uuid.UUID, error) {
+func (wo *Workos) VerifyToken(token string) (*workosUser, *uuid.UUID, error) {
 	var claims workosClaims
 
 	parsed, err := jwt.ParseWithClaims(
@@ -188,7 +188,7 @@ func (wo *workos) verifyToken(token string) (*workosUser, *uuid.UUID, error) {
 		return nil, nil, fmt.Errorf("invalid JWT")
 	}
 
-	if claims.ClientID != wo.clientID {
+	if claims.ClientID != wo.ClientID {
 		return nil, nil, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
 	if claims.Subject == "" {
@@ -224,7 +224,7 @@ func (wo *workos) verifyToken(token string) (*workosUser, *uuid.UUID, error) {
 
 // workosOrganization fetches the WorkOS organization and returns its external
 // ID as a UUID, which is the Krenalis-side organization identifier.
-func (wo *workos) workosOrganization(orgID string) (*uuid.UUID, error) {
+func (wo *Workos) workosOrganization(orgID string) (*uuid.UUID, error) {
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
@@ -247,7 +247,7 @@ func (wo *workos) workosOrganization(orgID string) (*uuid.UUID, error) {
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status
 // code.
-func (wo *workos) call(method, path string, body any, out any) (int, error) {
+func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -283,23 +283,23 @@ func (wo *workos) call(method, path string, body any, out any) (int, error) {
 	return resp.StatusCode, nil
 }
 
-// verifyActionSignature verifies the HMAC-SHA256 signature of an incoming
+// VerifyActionSignature verifies the HMAC-SHA256 signature of an incoming
 // WorkOS action request. sigHeader is the value of the "WorkOS-Signature"
 // header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
 // message is "<timestamp>.<rawBody>".
-func (wo *workos) verifyActionSignature(rawBody []byte, sigHeader string) error {
+func (wo *Workos) VerifyActionSignature(rawBody []byte, sigHeader string) error {
 	return wo.verifyHMACSignature(rawBody, sigHeader, wo.actionsSecret)
 }
 
-// verifyWebhookSignature verifies the HMAC-SHA256 signature of an incoming
+// VerifyWebhookSignature verifies the HMAC-SHA256 signature of an incoming
 // WorkOS webhook event. sigHeader is the value of the "WorkOS-Signature"
 // header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
 // message is "<timestamp>.<rawBody>".
-func (wo *workos) verifyWebhookSignature(rawBody []byte, sigHeader string) error {
+func (wo *Workos) VerifyWebhookSignature(rawBody []byte, sigHeader string) error {
 	return wo.verifyHMACSignature(rawBody, sigHeader, wo.webhookSecret)
 }
 
-func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) error {
+func (wo *Workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) error {
 	parts := strings.Split(sigHeader, ",")
 	if len(parts) < 2 {
 		return fmt.Errorf("invalid WorkOS webhook")
@@ -344,9 +344,9 @@ func (wo *workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 	return nil
 }
 
-// buildActionResponse builds and signs a WorkOS action response JSON payload.
+// BuildActionResponse builds and signs a WorkOS action response JSON payload.
 // verdict must be "Allow" or "Deny"; errorMessage is included only on Deny.
-func (wo *workos) buildActionResponse(verdict, errorMessage string) ([]byte, error) {
+func (wo *Workos) BuildActionResponse(verdict, errorMessage string) ([]byte, error) {
 	type actionPayload struct {
 		Timestamp    int64  `json:"timestamp"`
 		Verdict      string `json:"verdict"`

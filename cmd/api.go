@@ -278,8 +278,8 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		TelemetryLevel:             string(api.sentryTelemetry.level),
 	}
 	if api.workos != nil {
-		metadata.WorkOSClientID = api.workos.clientID
-		metadata.WorkOSDevMode = api.workos.devMode
+		metadata.WorkOSClientID = api.workos.ClientID
+		metadata.WorkOSDevMode = api.workos.DevMode
 	}
 	if api.potentialConnectorsURL != "" {
 		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL

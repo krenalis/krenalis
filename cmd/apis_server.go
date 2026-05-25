@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/krenalis/krenalis/cmd/internal/workos"
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -77,8 +78,8 @@ type apisServer struct {
 	externalAssetsURLs     []string
 	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
 	inviteMembersViaEmail  bool
-	organizationsAPIKey    string  // can be empty (which means that organizations APIs cannot be used)
-	workos                 *workos // nil when WorkOS authentication is not configured.
+	organizationsAPIKey    string         // can be empty (which means that organizations APIs cannot be used)
+	workos                 *workos.Workos // nil when WorkOS authentication is not configured.
 	sentryTelemetry        struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
@@ -108,7 +109,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	}
 
 	if workosClientID != "" {
-		s.workos = NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret, workosActionsSecret, workosDevMode)
+		s.workos = workos.NewWorkOS(workosClientID, workosAPIKey, workosWebhookSecret, workosActionsSecret, workosDevMode)
 	}
 
 	s.sentryTelemetry.level = sentryTelemetryLevel
@@ -432,7 +433,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, errors.BadRequest("")
 		}
 
-		workosUser, workosExternalOrganizationID, err := s.workos.verifyToken(body.AccessToken)
+		workosUser, workosExternalOrganizationID, err := s.workos.VerifyToken(body.AccessToken)
 		if err != nil {
 			return nil, errors.Unauthorized("invalid WorkOS token")
 		}
@@ -527,7 +528,7 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 	if sigHeader == "" {
 		return nil, errors.Unauthorized("WorkOS action is missing the signature header")
 	}
-	if err := s.workos.verifyActionSignature(rawBody, sigHeader); err != nil {
+	if err := s.workos.VerifyActionSignature(rawBody, sigHeader); err != nil {
 		return nil, errors.Unauthorized("invalid WorkOS action signature")
 	}
 
@@ -553,7 +554,7 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	responseJSON, err := s.workos.buildActionResponse(verdict, message)
+	responseJSON, err := s.workos.BuildActionResponse(verdict, message)
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +582,7 @@ func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request)
 	if sigHeader == "" {
 		return nil, errors.Unauthorized("WorkOS webhook is missing the signature header")
 	}
-	err = s.workos.verifyWebhookSignature(rawBody, sigHeader)
+	err = s.workos.VerifyWebhookSignature(rawBody, sigHeader)
 	if err != nil {
 		return nil, errors.Unauthorized("invalid WorkOS webhook signature")
 	}
