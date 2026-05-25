@@ -209,7 +209,7 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 
 	status, err := wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), nil, &userRes)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch WorkOS token: %s", err)
+		return nil, nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 	if status != http.StatusOK {
 		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
