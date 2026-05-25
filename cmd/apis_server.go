@@ -438,11 +438,11 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, errors.Unauthorized("invalid WorkOS token")
 		}
 
-		org, err = s.core.Organization(*workosExternalOrganizationID)
+		org, err = s.core.Organization(workosExternalOrganizationID)
 		if err != nil {
 			slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
 				"workos_user_id", workosUser.ID,
-				"organization_id", *workosExternalOrganizationID,
+				"organization_id", workosExternalOrganizationID,
 			)
 			return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
 		}

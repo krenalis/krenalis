@@ -162,7 +162,7 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // VerifyToken verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
+func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
 	var claims claims
 
 	parsed, err := jwt.ParseWithClaims(
@@ -183,17 +183,17 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil || !parsed.Valid {
-		return nil, nil, fmt.Errorf("invalid JWT")
+		return nil, uuid.UUID{}, fmt.Errorf("invalid JWT")
 	}
 
 	if claims.ClientID != wo.ClientID {
-		return nil, nil, fmt.Errorf("JWT client_id does not match configured client ID")
+		return nil, uuid.UUID{}, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
 	if claims.Subject == "" {
-		return nil, nil, fmt.Errorf("missing sub claim in JWT")
+		return nil, uuid.UUID{}, fmt.Errorf("missing sub claim in JWT")
 	}
 	if claims.OrgID == "" {
-		return nil, nil, fmt.Errorf("missing organization ID in JWT")
+		return nil, uuid.UUID{}, fmt.Errorf("missing organization ID in JWT")
 	}
 
 	userID := claims.Subject
@@ -206,12 +206,12 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 
 	err = wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
+		return nil, uuid.UUID{}, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
 	organizationID, err := wo.organization(claims.OrgID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
+		return nil, uuid.UUID{}, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
 	return &user{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
@@ -219,25 +219,25 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 
 // organization fetches the WorkOS organization and returns its external ID as a
 // UUID, which is the Krenalis-side organization identifier.
-func (wo *Workos) organization(orgID string) (*uuid.UUID, error) {
+func (wo *Workos) organization(orgID string) (uuid.UUID, error) {
 	if strings.TrimSpace(orgID) == "" {
-		return nil, fmt.Errorf("missing organization ID")
+		return uuid.UUID{}, fmt.Errorf("missing organization ID")
 	}
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
 	err := wo.call(http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
+		return uuid.UUID{}, fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
 	}
 	if orgRes.ExternalID == "" {
-		return nil, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
+		return uuid.UUID{}, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
 	}
 	id, err := uuid.Parse(orgRes.ExternalID)
 	if err != nil {
-		return nil, fmt.Errorf("WorkOS organization %s has invalid external ID", orgID)
+		return uuid.UUID{}, fmt.Errorf("WorkOS organization %s has invalid external ID", orgID)
 	}
-	return &id, nil
+	return id, nil
 }
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status
