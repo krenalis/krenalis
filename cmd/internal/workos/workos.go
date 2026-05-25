@@ -130,12 +130,9 @@ func (wo *Workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
 // given key ID and algorithm.
 func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 	var jwks jwks
-	status, err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), nil, &jwks)
+	err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), http.StatusOK, nil, &jwks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
-	}
-	if status != http.StatusOK {
-		return nil, fmt.Errorf("WorkOS JWKS endpoint returned status %d", status)
 	}
 	for _, k := range jwks.Keys {
 		if k.Kid != kid || k.Kty != "RSA" {
@@ -207,12 +204,9 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 		LastName  string `json:"last_name"`
 	}
 
-	status, err := wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), nil, &userRes)
+	err = wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
-	}
-	if status != http.StatusOK {
-		return nil, nil, fmt.Errorf("WorkOS API returned status %d for user %s", status, userID)
 	}
 
 	organizationID, err := wo.organization(claims.OrgID)
@@ -229,12 +223,9 @@ func (wo *Workos) organization(orgID string) (*uuid.UUID, error) {
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
-	status, err := wo.call(http.MethodGet, "/organizations/"+url.PathEscape(orgID), nil, &orgRes)
+	err := wo.call(http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
-	}
-	if status != http.StatusOK {
-		return nil, fmt.Errorf("WorkOS API returned status %d for organization %s", status, orgID)
 	}
 	if orgRes.ExternalID == "" {
 		return nil, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
@@ -248,19 +239,19 @@ func (wo *Workos) organization(orgID string) (*uuid.UUID, error) {
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status
 // code.
-func (wo *Workos) call(method, path string, body any, out any) (int, error) {
+func (wo *Workos) call(method, path string, expectedStatus int, body any, out any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return 0, fmt.Errorf("failed to encode request body: %s", err)
+			return fmt.Errorf("failed to encode request body: %s", err)
 		}
 		bodyReader = bytes.NewReader(b)
 	}
 
 	req, err := http.NewRequest(method, baseURL+path, bodyReader)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+wo.apiKey)
 	if body != nil {
@@ -269,17 +260,22 @@ func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 
 	resp, err := wo.transport.RoundTrip(req)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if out != nil {
 		err := json.NewDecoder(resp.Body).Decode(out)
 		if err != nil {
-			return resp.StatusCode, err
+			return err
 		}
 	}
-	return resp.StatusCode, nil
+
+	if resp.StatusCode != expectedStatus {
+		return fmt.Errorf("WorkOS returned unexpected status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 // VerifyActionSignature verifies the HMAC-SHA256 signature of an incoming
