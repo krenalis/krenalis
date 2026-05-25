@@ -38,7 +38,10 @@ const (
 	publicKeyMaxCache = 100
 )
 
-var errInvalidJWTToken = errors.New("WorkOS provided a malformed JWT token")
+var (
+	errInvalidJWTToken         = errors.New("WorkOS provided a malformed JWT token")
+	errCannotRetrievePublicKey = errors.New("cannot retrieve the WorkOS public key")
+)
 
 type Workos struct {
 	ClientID      string
@@ -189,11 +192,23 @@ func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
 			if kid == "" {
 				return nil, fmt.Errorf("JWT is missing kid header")
 			}
-			return wo.publicKey(kid, t.Method.Alg())
+			key, err := wo.publicKey(kid, t.Method.Alg())
+			if err != nil {
+				return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
+			}
+			return key, nil
 		},
 		jwt.WithExpirationRequired(),
 	)
-	if err != nil || !parsed.Valid {
+
+	if err != nil {
+		if errors.Is(err, errCannotRetrievePublicKey) {
+			return nil, uuid.UUID{}, err
+		}
+		return nil, uuid.UUID{}, errInvalidJWTToken
+	}
+
+	if !parsed.Valid {
 		return nil, uuid.UUID{}, errInvalidJWTToken
 	}
 
