@@ -211,7 +211,7 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 
 	organizationID, err := wo.organization(claims.OrgID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
 	return &user{ID: userID, Email: userRes.Email, FirstName: userRes.FirstName, LastName: userRes.LastName}, organizationID, nil
@@ -220,6 +220,9 @@ func (wo *Workos) VerifyToken(token string) (*user, *uuid.UUID, error) {
 // organization fetches the WorkOS organization and returns its external ID as a
 // UUID, which is the Krenalis-side organization identifier.
 func (wo *Workos) organization(orgID string) (*uuid.UUID, error) {
+	if strings.TrimSpace(orgID) == "" {
+		return nil, fmt.Errorf("missing organization ID")
+	}
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
