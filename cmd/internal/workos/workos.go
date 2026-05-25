@@ -269,7 +269,7 @@ func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 
 	resp, err := wo.transport.RoundTrip(req)
 	if err != nil {
-		return 0, fmt.Errorf("%s %s failed: %s", method, path, err)
+		return 0, err
 	}
 	defer resp.Body.Close()
 
