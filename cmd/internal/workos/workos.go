@@ -44,6 +44,7 @@ type Workos struct {
 	DevMode       bool
 	keysMu        sync.RWMutex
 	publicKeys    map[string]publicKey // kid → cached key
+	transport     http.RoundTripper
 }
 
 // user holds the user information returned by WorkOS after token verification.
@@ -85,6 +86,7 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 		actionsSecret: actionsSecret,
 		DevMode:       devMode,
 		publicKeys:    make(map[string]publicKey),
+		transport:     &http.Transport{Proxy: nil},
 	}
 }
 
@@ -265,7 +267,7 @@ func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := wo.transport.RoundTrip(req)
 	if err != nil {
 		return 0, fmt.Errorf("%s %s failed: %s", method, path, err)
 	}
