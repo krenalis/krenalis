@@ -100,6 +100,9 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 // publicKey returns the RSA public key for the given key ID and algorithm,
 // using the in-memory cache when available.
 func (wo *Workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
+	if kid == "" {
+		return nil, fmt.Errorf("WorkOS provided a JWT with an empty key identifier (kid)")
+	}
 	wo.keysMu.RLock()
 	if pk, ok := wo.publicKeys[kid]; ok && pk.alg == alg && time.Now().Before(pk.expiresAt) {
 		wo.keysMu.RUnlock()
@@ -189,9 +192,6 @@ func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
 				return nil, fmt.Errorf("WorkOS signed the JWT using %s, but Krenalis only supports RSA and RSA-PSS signing methods", t.Method.Alg())
 			}
 			kid, _ := t.Header["kid"].(string)
-			if kid == "" {
-				return nil, fmt.Errorf("JWT is missing kid header")
-			}
 			key, err := wo.publicKey(kid, t.Method.Alg())
 			if err != nil {
 				return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
