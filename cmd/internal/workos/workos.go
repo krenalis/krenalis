@@ -260,9 +260,7 @@ func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if wo.apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+wo.apiKey)
-	}
+	req.Header.Set("Authorization", "Bearer "+wo.apiKey)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
