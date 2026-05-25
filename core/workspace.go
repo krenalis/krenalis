@@ -1650,6 +1650,9 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 // must be between 1 and 100 runes long. displayedProperties must contain valid
 // displayed property names. A valid displayed property name is an empty string,
 // or alternatively a valid property name between 1 and 100 runes long.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist
+// anymore.
 func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 100); err != nil {
@@ -1665,13 +1668,16 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 		UIPreferences: state.UIPreferences(uiPreferences),
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_profile_image = $2, "+
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_profile_image = $2, "+
 			"ui_profile_first_name = $3, ui_profile_last_name = $4, "+
 			"ui_profile_extra = $5 WHERE id = $6",
 			n.Name, n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
 			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Workspace)
 		if err != nil {
 			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
 		}
 		return n, nil
 	})

@@ -423,3 +423,140 @@ func TestStoreLoadReturnsErrorOnInvalidDatabaseSecretJSON(t *testing.T) {
 		t.Fatalf("Load() error = %q, want prefix %q", got, wantPrefix)
 	}
 }
+
+func TestStoreLoadLoadsNATSSecret(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		secret    string
+		wantNKey  string
+		wantToken string
+	}{
+		{
+			name:      "nkey",
+			secret:    `{"url":"nats://nats.internal:4222","nkey":"UAAAA","user":"app","password":"secret-password"}`,
+			wantNKey:  "UAAAA",
+			wantToken: "",
+		},
+		{
+			name:      "token",
+			secret:    `{"url":"nats://nats.internal:4222","token":"secret-token","user":"app","password":"secret-password"}`,
+			wantNKey:  "",
+			wantToken: "secret-token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := &Store{
+				client: &fakeSSMClient{
+					getOutputs: []*ssm.GetParametersOutput{
+						{
+							Parameters: []types.Parameter{
+								{
+									Name:  new("/aws/reference/secretsmanager/prod/nats"),
+									Value: new(tt.secret),
+								},
+							},
+						},
+					},
+				},
+				prefix:      "/prod",
+				secretNames: []string{"/aws/reference/secretsmanager/prod/db", "/aws/reference/secretsmanager/prod/nats"},
+			}
+
+			conf, err := store.Load(context.Background())
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+
+			if got := conf.Get("KRENALIS_NATS_URL"); got != "nats://nats.internal:4222" {
+				t.Fatalf("Get(KRENALIS_NATS_URL) = %q, want %q", got, "nats://nats.internal:4222")
+			}
+			if got := conf.Get("KRENALIS_NATS_NKEY"); got != tt.wantNKey {
+				t.Fatalf("Get(KRENALIS_NATS_NKEY) = %q, want %q", got, tt.wantNKey)
+			}
+			if got := conf.Get("KRENALIS_NATS_TOKEN"); got != tt.wantToken {
+				t.Fatalf("Get(KRENALIS_NATS_TOKEN) = %q, want %q", got, tt.wantToken)
+			}
+			if got := conf.Get("KRENALIS_NATS_USER"); got != "app" {
+				t.Fatalf("Get(KRENALIS_NATS_USER) = %q, want %q", got, "app")
+			}
+			if got := conf.Get("KRENALIS_NATS_PASSWORD"); got != "secret-password" {
+				t.Fatalf("Get(KRENALIS_NATS_PASSWORD) = %q, want %q", got, "secret-password")
+			}
+		})
+	}
+}
+
+func TestStoreLoadReturnsErrorWhenNATSConfigIsMixed(t *testing.T) {
+	t.Parallel()
+
+	store := &Store{
+		client: &fakeSSMClient{
+			byPathOutputs: []*ssm.GetParametersByPathOutput{
+				{
+					Parameters: []types.Parameter{
+						{Name: new("/prod/nats/url"), Value: new("nats://nats.internal:4222")},
+					},
+				},
+			},
+			getOutputs: []*ssm.GetParametersOutput{
+				{
+					Parameters: []types.Parameter{
+						{
+							Name:  new("/aws/reference/secretsmanager/prod/nats"),
+							Value: new(`{"url":"nats://nats.internal:4222","user":"app","password":"secret-password"}`),
+						},
+					},
+				},
+			},
+		},
+		prefix:      "/prod",
+		secretNames: []string{"/aws/reference/secretsmanager/prod/db", "/aws/reference/secretsmanager/prod/nats"},
+	}
+
+	_, err := store.Load(context.Background())
+	if err == nil {
+		t.Fatal("Load() error = nil, want non-nil")
+	}
+
+	want := "config/aws: both the '/prod/nats' Secrets Manager secret and '/prod/nats/...' parameters are configured; only one NATS configuration source is allowed"
+	if err.Error() != want {
+		t.Fatalf("Load() error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestStoreLoadReturnsErrorOnInvalidNATSSecretJSON(t *testing.T) {
+	t.Parallel()
+
+	store := &Store{
+		client: &fakeSSMClient{
+			getOutputs: []*ssm.GetParametersOutput{
+				{
+					Parameters: []types.Parameter{
+						{
+							Name:  new("/aws/reference/secretsmanager/prod/nats"),
+							Value: new(`{`),
+						},
+					},
+				},
+			},
+		},
+		prefix:      "/prod",
+		secretNames: []string{"/aws/reference/secretsmanager/prod/db", "/aws/reference/secretsmanager/prod/nats"},
+	}
+
+	_, err := store.Load(context.Background())
+	if err == nil {
+		t.Fatal("Load() error = nil, want non-nil")
+	}
+
+	const wantPrefix = "config/aws: invalid '/nats' secret JSON: "
+	if got := err.Error(); !strings.HasPrefix(got, wantPrefix) {
+		t.Fatalf("Load() error = %q, want prefix %q", got, wantPrefix)
+	}
+}
