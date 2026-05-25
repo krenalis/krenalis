@@ -276,7 +276,7 @@ func (wo *Workos) call(method, path string, body any, out any) (int, error) {
 	if out != nil {
 		err := json.NewDecoder(resp.Body).Decode(out)
 		if err != nil {
-			return resp.StatusCode, fmt.Errorf("failed to decode response from %s %s: %s", method, path, err)
+			return resp.StatusCode, err
 		}
 	}
 	return resp.StatusCode, nil
