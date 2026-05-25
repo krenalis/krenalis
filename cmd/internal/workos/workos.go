@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -135,7 +136,14 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
 	}
 	for _, k := range jwks.Keys {
-		if k.Kid != kid || k.Kty != "RSA" {
+		if k.Kty != "RSA" {
+			slog.Warn("workos: JWKS contains non-RSA key", "kid", k.Kid, "kty", k.Kty)
+			if k.Kid == kid {
+				return nil, fmt.Errorf("WorkOS JWKS key %q has unsupported type %q", kid, k.Kty)
+			}
+			continue
+		}
+		if k.Kid != kid {
 			continue
 		}
 		if k.Use != "" && k.Use != "sig" {
