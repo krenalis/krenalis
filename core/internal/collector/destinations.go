@@ -65,28 +65,11 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 	d.state.AddListener(d.onDeleteOrganization)
 	d.state.AddListener(d.onDeleteWorkspace)
 	d.state.AddListener(d.onSetConnectionSettings)
+	d.state.AddListener(d.onSetOrganizationStatus)
 	d.state.AddListener(d.onSetPipelineStatus)
 	d.state.AddListener(d.onUpdatePipeline)
 	for _, c := range st.Connections() {
-		if c.Role != state.Destination {
-			continue
-		}
-		if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
-			continue
-		}
-		app := connections.Application(c)
-		sender := sender.New(app, d.metrics)
-		pipelines := make(destinationPipelines, 0, 1)
-		// Keeps all pipelines active on the connection's events.
-		for _, p := range c.Pipelines() {
-			if !p.Enabled || p.Target != state.TargetEvent {
-				continue
-			}
-			pipeline := d.createDestinationPipeline(p, sender)
-			pipelines = append(pipelines, pipeline)
-		}
-		d.senders[c.ID] = sender
-		d.pipelines[c.ID] = pipelines
+		d.addConnection(c)
 	}
 	d.state.Unfreeze()
 
@@ -104,6 +87,30 @@ func (d *destinations) QueueEvent(connection string, event streams.Event) {
 			p.QueueEvent(event)
 		}
 	}
+}
+
+// addConnection adds the connection to destinations.
+// When this method is called, the state is frozen.
+func (d *destinations) addConnection(connection *state.Connection) {
+	if connection.Role != state.Destination {
+		return
+	}
+	if !connection.Connector().DestinationTargets.Contains(state.TargetEvent) {
+		return
+	}
+	app := d.connections.Application(connection)
+	sender := sender.New(app, d.metrics)
+	pipelines := make(destinationPipelines, 0, 1)
+	// Keeps all pipelines active on the connection's events.
+	for _, p := range connection.Pipelines() {
+		if !p.Enabled || p.Target != state.TargetEvent {
+			continue
+		}
+		pipeline := d.createDestinationPipeline(p, sender)
+		pipelines = append(pipelines, pipeline)
+	}
+	d.senders[connection.ID] = sender
+	d.pipelines[connection.ID] = pipelines
 }
 
 // createDestinationPipeline creates a destination pipeline for the provided
@@ -257,6 +264,23 @@ func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
 	connection, _ := d.state.Connection(n.Connection)
 	app := d.connections.Application(connection)
 	sender.SetApplication(app)
+}
+
+// onSetOrganizationStatus is called when an organization status is updated.
+func (d *destinations) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	org, _ := d.state.Organization(n.ID)
+	if n.Enabled {
+		for _, ws := range org.Workspaces() {
+			for _, connection := range ws.Connections() {
+				d.addConnection(connection)
+			}
+		}
+	} else {
+		cause := errors.New("organization has been disabled")
+		for _, ws := range org.Workspaces() {
+			d.removeWorkspace(ws, cause)
+		}
+	}
 }
 
 // onSetPipelineStatus is called when the status of a pipeline is set.

@@ -380,6 +380,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onRunPipeline)
+	core.state.AddListener(core.onSetOrganizationStatus)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
@@ -404,6 +405,9 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 // If an invitation with the given token does not exist, it returns a
 // NotFoundError error. If the token is expired it returns an
 // error.UnprocessableError error with code InvitationTokenExpired.
+//
+// If the organization is disabled, it returns an errors.UnprocessableError
+// error with code OrganizationDisabled.
 func (core *Core) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -429,6 +433,13 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		}
 		if isInvitationTokenExpired(createdAt) {
 			return nil, errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+		}
+		organization, ok := core.state.Organization(n.Organization)
+		if !ok {
+			return nil, errors.NotFound("invitation token %q does not exist", token)
+		}
+		if !organization.Enabled {
+			return nil, errors.Unprocessable(OrganizationDisabled, "organization is disabled")
 		}
 		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3 AND organization = $4",
 			name, string(pass), n.Member, n.Organization)
@@ -474,6 +485,9 @@ func (core *Core) CanSendMemberPasswordReset() bool {
 //
 // If a reset password request with the given token does not exist or if the
 // token is expired, it returns a NotFoundError error.
+//
+// If the organization is disabled, it returns an errors.UnprocessableError
+// error with code OrganizationDisabled.
 func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string, password string) error {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -491,9 +505,9 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		return err
 	}
 	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-		var id string
+		var id, organizationID string
 		var createdAt time.Time
-		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
+		err := tx.QueryRow(ctx, "SELECT id, organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &organizationID, &createdAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
@@ -502,6 +516,13 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		}
 		if isResetPasswordTokenExpired(createdAt) {
 			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		organization, ok := core.state.Organization(organizationID)
+		if !ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		if !organization.Enabled {
+			return nil, errors.Unprocessable(OrganizationDisabled, "organization is disabled")
 		}
 		_, err = tx.Exec(ctx, "UPDATE members SET password = $1, reset_password_token = '', reset_password_token_created_at = NULL WHERE id = $2",
 			string(pass), id)
@@ -695,16 +716,17 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 
 // CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 45 runes.
+// The created organization is already enabled.
 func (core *Core) CreateOrganization(ctx context.Context, name string) (string, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	n := state.CreateOrganization{Name: name}
+	n := state.CreateOrganization{Name: name, Enabled: true}
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, $3)", n.ID, n.Name, n.Enabled)
 			if err != nil {
 				return nil, err
 			}
@@ -761,9 +783,11 @@ func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 
 // MemberInvitation returns the organization's name and email of the member
 // invited with the given invitation token. If an invitation with the given
-// token does not exist, it returns a NotFoundError error. If the token is
-// expired it returns an errors.UnprocessableError error with code
-// InvitationTokenExpired.
+// token does not exist, it returns a NotFoundError error.
+//
+// It returns an errors.UnprocessableError error with code:
+// - InvitationTokenExpired if the token is expired;
+// - OrganizationDisabled if the organization is disabled.
 func (core *Core) MemberInvitation(ctx context.Context, token string) (string, string, error) {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -787,6 +811,9 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 	if !ok {
 		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
+	if !organization.Enabled {
+		return "", "", errors.Unprocessable(OrganizationDisabled, "organization is disabled")
+	}
 	return organization.Name, email, nil
 }
 
@@ -807,6 +834,7 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		organization: org,
 		ID:           org.ID,
 		Name:         org.Name,
+		Enabled:      org.Enabled,
 	}
 	return &organization, nil
 }
@@ -849,6 +877,7 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			organization: organization,
 			ID:           organization.ID,
 			Name:         organization.Name,
+			Enabled:      organization.Enabled,
 		}
 	}
 	return orgs, nil
@@ -864,6 +893,9 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 //
 // If a password reset request with the given password reset token does not
 // exist or if the token is expired, it returns a NotFoundError error.
+//
+// If the organization is disabled, it returns an errors.UnprocessableError
+// error with code OrganizationDisabled.
 func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -881,9 +913,12 @@ func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token st
 	if isResetPasswordTokenExpired(createdAt) {
 		return errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	_, ok := core.state.Organization(organizationID)
+	organization, ok := core.state.Organization(organizationID)
 	if !ok {
 		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	if !organization.Enabled {
+		return errors.Unprocessable(OrganizationDisabled, "organization is disabled")
 	}
 	return nil
 }
@@ -1557,6 +1592,26 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 			go core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
 				ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
 				ws.AlterProfileSchema.Operations)
+		}
+	}
+}
+
+// onSetOrganizationStatus is called when an organization status is updated.
+func (core *Core) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	org, _ := core.state.Organization(n.ID)
+	if n.Enabled {
+		for _, ws := range org.Workspaces() {
+			var dw warehouses.Warehouse
+			if ws.HasWarehouseMCPSettings() {
+				dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+			}
+			core.mcpMu.Lock()
+			core.mcp[ws.ID] = dw
+			core.mcpMu.Unlock()
+		}
+	} else {
+		for _, ws := range org.Workspaces() {
+			core.removeMCPWarehouse(ws.ID)
 		}
 	}
 }

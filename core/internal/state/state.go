@@ -511,6 +511,7 @@ type Organization struct {
 	members    map[string]struct{}
 	ID         string
 	Name       string
+	Enabled    bool
 }
 
 // HasMember reports whether the organization has a member with the given ID.

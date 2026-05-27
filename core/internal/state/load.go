@@ -253,10 +253,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
-	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
+	err = tx.QueryScan(ctx, "SELECT id, name, enabled FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
-			if err := rows.Scan(&org.ID, &org.Name); err != nil {
+			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.workspaces = map[string]*Workspace{}

@@ -25,6 +25,9 @@ type api struct {
 // AcceptInvitation accepts the invitation with a given invitation token.
 //
 // Authentication is not required to call AcceptInvitation.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -45,6 +48,9 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 // reset password token.
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -185,6 +191,9 @@ func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 // invited with a given invitation token.
 //
 // Authentication is not required to call MemberInvitation.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
 	organization, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
 	if err != nil {
@@ -278,6 +287,9 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 // SendMemberPasswordReset sends a reset password email.
 //
 // Authentication is not required to call SendMemberPasswordReset.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -294,6 +306,10 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 		return nil, errors.New("there are no organizations")
 	}
 	org := organizations[0]
+	// Verify that the organization is enabled.
+	if !org.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
 	resetPasswordEmail, err := static.ReadFile("static/reset_password_email.html")
 	if err != nil {
 		return nil, errors.New("embedded file 'static/reset_password_email.html' not found in executable")
@@ -306,6 +322,9 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
 	return nil, err

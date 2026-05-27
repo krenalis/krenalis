@@ -107,6 +107,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onDeleteOrganization)
 	st.AddListener(c.onDeleteWorkspace)
 	st.AddListener(c.onLinkConnection)
+	st.AddListener(c.onSetOrganizationStatus)
 	st.AddListener(c.onSetPipelineStatus)
 	st.AddListener(c.onUnlinkConnection)
 	st.AddListener(c.onUpdatePipeline)
@@ -114,31 +115,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 		c.addWorkspace(ws.ID)
 	}
 	for _, connection := range st.Connections() {
-		if connection.LinkedConnections == nil {
-			continue
-		}
-		switch connection.Role {
-		case state.Source:
-			// There is one worker per active source SDK and webhook pipeline.
-			for _, p := range connection.Pipelines() {
-				if p.Enabled {
-					c.startPipelineWorker(p)
-				}
-			}
-		case state.Destination:
-			// There is one worker per destination app connection
-			// that has at least one active pipeline sending events
-			// and is linked to at least one source connection.
-			if len(connection.LinkedConnections) == 0 {
-				continue
-			}
-			for _, p := range connection.Pipelines() {
-				if p.Enabled && p.Target == state.TargetEvent {
-					c.startConnectionWorker(connection)
-					break
-				}
-			}
-		}
+		c.addConnection(connection)
 	}
 	st.Unfreeze()
 
@@ -248,8 +225,40 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// addConnection adds the connection to the collector.
+// When this method is called, the state is frozen.
+func (c *Collector) addConnection(connection *state.Connection) {
+	if connection.LinkedConnections == nil {
+		return
+	}
+	switch connection.Role {
+	case state.Source:
+		// There is one worker per active source SDK and webhook pipeline.
+		for _, p := range connection.Pipelines() {
+			if p.Enabled {
+				c.startPipelineWorker(p)
+			}
+		}
+	case state.Destination:
+		// There is one worker per destination app connection
+		// that has at least one active pipeline sending events
+		// and is linked to at least one source connection.
+		if len(connection.LinkedConnections) == 0 {
+			return
+		}
+		for _, p := range connection.Pipelines() {
+			if p.Enabled && p.Target == state.TargetEvent {
+				c.startConnectionWorker(connection)
+				break
+			}
+		}
+	}
+}
+
 // addWorkspace adds a workspace to the collector.
-// It is called from New and onCreateWorkspace.
+// It is called from New, onCreateWorkspace and onSetOrganizationStatus.
+// It does not add the connections, which must be added with [addConnection].
+// When this method is called, the state is frozen.
 func (c *Collector) addWorkspace(id string) {
 	c.observers.Store(id, newObserver())
 	store, _ := c.datastore.Store(id)
@@ -378,6 +387,23 @@ func (c *Collector) onLinkConnection(n state.LinkConnection) {
 		if p.Enabled && p.Target == state.TargetEvent {
 			c.startConnectionWorker(connection)
 			break
+		}
+	}
+}
+
+// onSetOrganizationStatus is called when an organization status is updated.
+func (c *Collector) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	org, _ := c.state.Organization(n.ID)
+	if n.Enabled {
+		for _, ws := range org.Workspaces() {
+			c.addWorkspace(ws.ID)
+			for _, connection := range ws.Connections() {
+				c.addConnection(connection)
+			}
+		}
+	} else {
+		for _, ws := range org.Workspaces() {
+			c.removeWorkspace(ws)
 		}
 	}
 }
@@ -690,6 +716,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
 
+	orgEnabled := connection.Organization().Enabled
+
 	batch, err := c.stream.Batch(r.Context())
 	if err != nil {
 		return errStreamUnavailable
@@ -715,6 +743,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 		if observer != nil {
 			observedEvents = append(observedEvents, event)
+		}
+
+		// When the organization is disabled, incoming events are treated as if
+		// every pipeline were disabled.
+		if !orgEnabled {
+			continue
 		}
 
 		topics = topics[0:0]

@@ -190,6 +190,9 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //
 // It returns errors.UnauthorizedError if authorization fails, or
 // errInvalidSessionCookie if the session cookie is invalid.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organization, ws *core.Workspace, userID string, err error) {
 
 	// Get the session.
@@ -218,6 +221,10 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	// Verify that the member still exists.
 	if exists, err := org.HasMember(session.Member); err != nil || !exists {
 		return nil, nil, "", errInvalidSessionCookie
+	}
+	// Verify that the organization is enabled.
+	if !org.Enabled {
+		return nil, nil, "", errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
 	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.
 	header, ok := r.Header["Krenalis-Workspace"]
@@ -274,6 +281,9 @@ func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
 //   - the session cookie is from the Admin console.
 //
 // If authorization fails, an errors.UnauthorizedError is returned.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *core.Workspace, error) {
 
 	if auth, ok := r.Header["Authorization"]; ok {
@@ -302,6 +312,10 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		org, err := s.core.Organization(organizationID)
 		if err != nil {
 			return nil, nil, err
+		}
+		// Verify that the organization is enabled.
+		if !org.Enabled {
+			return nil, nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 		}
 		// If the key is restricted to a workspace, return the workspace as well.
 		if workspaceID != "" {
@@ -350,6 +364,9 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 }
 
 // login logs a user in.
+//
+// If the organization is disabled, an UnprocessableError error with code
+// OrganizationDisabled is returned.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -379,6 +396,10 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return []any{"", "AuthenticationFailed"}, nil
 		}
 		return nil, err
+	}
+	// Verify that the organization is enabled.
+	if !org.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
 
 	if body.IsUnique {

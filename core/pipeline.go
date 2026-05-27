@@ -491,6 +491,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 //     column.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OrganizationDisabled, if the organization is disabled.
 //   - PipelineDisabled, if the pipeline is disabled.
 //   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error) {
@@ -512,6 +513,9 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error
 		if *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
 			return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 		}
+	}
+	if !c.Workspace().Organization().Enabled {
+		return "", errors.Unprocessable(OrganizationDisabled, "organization is disabled")
 	}
 	if !this.pipeline.Enabled {
 		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
@@ -877,6 +881,7 @@ func (this *Pipeline) application() *connections.Application {
 // It returns an errors.NotFoundError if the pipeline no longer exists.
 // It returns an errors.UnprocessableError with one of the following codes:
 //
+//   - OrganizationDisabled, if the organization is disabled.
 //   - PipelineDisabled, if the pipeline is disabled.
 //   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string, error) {
@@ -890,21 +895,27 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			var function string
-			var enabled, inc, executing bool
+			var pipelineEnabled, organizationEnabled, inc, executing bool
 			var cursor time.Time
-			err := tx.QueryRow(ctx, "SELECT p.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			err := tx.QueryRow(ctx, "SELECT p.enabled, o.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
 				"FROM pipelines AS p\n"+
+				"INNER JOIN connections AS c ON p.connection = c.id\n"+
+				"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
+				"INNER JOIN organizations AS o ON w.organization = o.id\n"+
 				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
 				"WHERE p.id = $1\n"+
 				"ORDER BY e.id DESC\n"+
-				"LIMIT 1", n.Pipeline).Scan(&enabled, &function, &inc, &cursor, &executing)
+				"LIMIT 1", n.Pipeline).Scan(&pipelineEnabled, &organizationEnabled, &function, &inc, &cursor, &executing)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
 				}
 				return nil, err
 			}
-			if !enabled {
+			if !organizationEnabled {
+				return nil, errors.Unprocessable(OrganizationDisabled, "organization is disabled")
+			}
+			if !pipelineEnabled {
 				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 			}
 			if executing {

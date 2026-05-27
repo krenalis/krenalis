@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE organizations (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     name varchar(45) NOT NULL DEFAULT '',
+    enabled boolean NOT NULL DEFAULT TRUE,
     PRIMARY KEY (id)
 );
 
@@ -286,6 +287,7 @@ CREATE TYPE notification_name AS ENUM (
     'RunPipeline',
     'SetAccount',
     'SetConnectionSettings',
+    'SetOrganizationStatus',
     'SetPipelineFormatSettings',
     'SetPipelineSchedulePeriod',
     'SetPipelineStatus',

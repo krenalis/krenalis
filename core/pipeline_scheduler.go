@@ -53,6 +53,7 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 	core.state.AddListener(ps.onDeletePipeline)
 	core.state.AddListener(ps.onDeleteWorkspace)
 	core.state.AddListener(ps.onElectLeader)
+	core.state.AddListener(ps.onSetOrganizationStatus)
 	core.state.AddListener(ps.onSetPipelineSchedulePeriod)
 	core.state.Unfreeze()
 	return ps
@@ -176,6 +177,39 @@ func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
 	ps.executor = newPipelineExecutor(ps.core, &ps.wg, ps.ctx)
 }
 
+// onSetOrganizationStatus is called when an organization status is updated.
+func (ps *pipelineScheduler) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	if ps.executor == nil {
+		return
+	}
+	var pipelines []*state.Pipeline
+	org, _ := ps.core.state.Organization(n.ID)
+	for _, workspace := range org.Workspaces() {
+		for _, connection := range workspace.Connections() {
+			for _, pipeline := range connection.Pipelines() {
+				if pipeline.SchedulePeriod != 0 {
+					pipelines = append(pipelines, pipeline)
+				}
+			}
+		}
+	}
+	if pipelines == nil {
+		return
+	}
+	if n.Enabled {
+		for _, pipeline := range pipelines {
+			ps.executor.AddPipeline(pipeline)
+		}
+	} else {
+		// Unlike other call sites, RemovePipeline is called synchronously to
+		// avoid races with 'AddPipeline' on the same pipeline IDs (when
+		// disabling and then re-enabling an organization).
+		for _, pipeline := range pipelines {
+			ps.executor.RemovePipeline(pipeline.ID)
+		}
+	}
+}
+
 // onSetPipelineSchedulePeriod is called when the schedule period of a pipeline
 // is set.
 func (ps *pipelineScheduler) onSetPipelineSchedulePeriod(n state.SetPipelineSchedulePeriod) {
@@ -211,7 +245,8 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 		pe.pipelines[i] = map[int16][]*state.Pipeline{}
 	}
 	for _, pipeline := range pe.core.state.Pipelines() {
-		if pipeline.SchedulePeriod == 0 {
+		org := pipeline.Connection().Workspace().Organization()
+		if !org.Enabled || pipeline.SchedulePeriod == 0 {
 			continue
 		}
 		i := periodIndex(pipeline.SchedulePeriod)

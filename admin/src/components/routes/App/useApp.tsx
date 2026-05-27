@@ -47,6 +47,7 @@ const useApp = (
 	const [isPasswordless, setIsPasswordless] = useState<boolean>(localStorage.getItem(IS_PASSWORDLESS_KEY) != null);
 	const [selectedWorkspace, setSelectedWorkspace] = useState<string>(localStorage.getItem(WORKSPACE_ID_KEY) ?? '');
 	const [publicMetadata, setPublicMetadata] = useState<PublicMetadata>();
+	const [isOrganizationDisabled, setIsOrganizationDisabled] = useState<boolean>(false);
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
@@ -545,6 +546,8 @@ const useApp = (
 		isPasswordless,
 		setIsPasswordless,
 		publicMetadata,
+		isOrganizationDisabled,
+		setIsOrganizationDisabled,
 	};
 };
 

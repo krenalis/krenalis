@@ -243,6 +243,29 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 	return org.Members(r.Context())
 }
 
+// SetStatus sets the status of an organization.
+func (organization organization) SetStatus(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := organization.authenticateOrganizationsRequest(r); err != nil {
+		return nil, err
+	}
+	if err := validateRequiredBody(w, r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	org, err := organization.core.Organization(r.PathValue("id"))
+	if err != nil {
+		return nil, err
+	}
+	err = org.SetStatus(r.Context(), body.Enabled)
+	return nil, err
+}
+
 // TestWorkspaceCreation tests a workspace creation.
 func (organization organization) TestWorkspaceCreation(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
