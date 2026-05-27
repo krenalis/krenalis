@@ -433,7 +433,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, errors.BadRequest("")
 		}
 
-		workosUser, workosExternalOrganizationID, err := s.workos.VerifyToken(body.AccessToken)
+		workosUser, workosExternalOrganizationID, err := s.workos.Authenticate(body.AccessToken)
 		if err != nil {
 			return nil, errors.Unauthorized("invalid WorkOS token")
 		}

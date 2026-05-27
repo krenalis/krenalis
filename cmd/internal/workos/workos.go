@@ -177,9 +177,9 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 	return nil, fmt.Errorf("WorkOS JWKS does not contain key %q", kid)
 }
 
-// VerifyToken verifies the WorkOS JWT and returns the authenticated user's
+// Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) VerifyToken(token string) (*user, uuid.UUID, error) {
+func (wo *Workos) Authenticate(token string) (*user, uuid.UUID, error) {
 	var claims claims
 
 	parsed, err := jwt.ParseWithClaims(
