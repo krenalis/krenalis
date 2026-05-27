@@ -9,7 +9,7 @@ import Section from '../../base/Section/Section';
 
 interface SnippetProps {
 	connectorCode: string;
-	connectionID: number;
+	connectionID: string;
 }
 
 interface SnippetFile {

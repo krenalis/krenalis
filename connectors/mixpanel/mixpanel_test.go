@@ -19,6 +19,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	testConnectionID = "7B3mN9qK2xA4"
+	testPipelineID   = "8QaT3mN7KxP5"
+)
+
 func TestSendEvents(t *testing.T) {
 
 	mixpanel := newMixpanelForTests(t)
@@ -56,7 +61,7 @@ func TestSendEvents(t *testing.T) {
 	t.Run("order_completed", func(t *testing.T) {
 
 		received := map[string]any{
-			"connectionId": 1323607634,
+			"connectionId": testConnectionID,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
@@ -109,7 +114,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 242809157,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "order_completed",
@@ -125,7 +130,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousID(),
-					"$insert_id":       "242809157*" + event.Received.MessageID(),
+					"$insert_id":       testPipelineID + "*" + event.Received.MessageID(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -156,7 +161,7 @@ func TestSendEvents(t *testing.T) {
 	t.Run("product_purchased", func(t *testing.T) {
 
 		received := map[string]any{
-			"connectionId": 1323607634,
+			"connectionId": testConnectionID,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
@@ -209,7 +214,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 148606728,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "product_purchased",
@@ -225,7 +230,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousID(),
-					"$insert_id":       "1#148606728*" + event.Received.MessageID(),
+					"$insert_id":       "1#" + testPipelineID + "*" + event.Received.MessageID(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -243,7 +248,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousID(),
-					"$insert_id":       "2#148606728*" + event.Received.MessageID(),
+					"$insert_id":       "2#" + testPipelineID + "*" + event.Received.MessageID(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -265,7 +270,7 @@ func TestSendEvents(t *testing.T) {
 	t.Run("track", func(t *testing.T) {
 
 		received := map[string]any{
-			"connectionId": 1323607634,
+			"connectionId": testConnectionID,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
@@ -311,7 +316,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 140861001,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "track",
@@ -327,7 +332,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousID(),
-					"$insert_id":       "140861001*" + event.Received.MessageID(),
+					"$insert_id":       testPipelineID + "*" + event.Received.MessageID(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -349,7 +354,7 @@ func TestSendEvents(t *testing.T) {
 	t.Run("page", func(t *testing.T) {
 
 		received := map[string]any{
-			"connectionId": 1323607634,
+			"connectionId": testConnectionID,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
@@ -404,7 +409,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 2094515358,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "page",
@@ -421,7 +426,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousID(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
-					"$insert_id":       "2094515358*" + event.Received.MessageID(),
+					"$insert_id":       testPipelineID + "*" + event.Received.MessageID(),
 					"$os":              "macOS",
 					"$os_version":      "15.5",
 					"$source":          "krenalis",
@@ -446,7 +451,7 @@ func TestSendEvents(t *testing.T) {
 	t.Run("screen", func(t *testing.T) {
 
 		received := map[string]any{
-			"connectionId": 1323607634,
+			"connectionId": testConnectionID,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"app": map[string]any{
@@ -502,7 +507,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 2023196674,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "screen",
@@ -524,7 +529,7 @@ func TestSendEvents(t *testing.T) {
 					"$device_name":        "iPhone",
 					"$device_type":        "ios",
 					"$ios_ifa":            "6D92078A-8246-4BA4-AE5B-76104861E7DC",
-					"$insert_id":          "2023196674*" + event.Received.MessageID(),
+					"$insert_id":          testPipelineID + "*" + event.Received.MessageID(),
 					"$manufacturer":       "Apple",
 					"$model":              "iPhone 16 Pro",
 					"$os":                 "iOS",

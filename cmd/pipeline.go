@@ -49,7 +49,7 @@ func (pipeline pipeline) Run(_ http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, err
 	}
-	return map[string]int{"id": id}, nil
+	return map[string]string{"id": id}, nil
 }
 
 // ServeUI serves the UI of a pipeline.

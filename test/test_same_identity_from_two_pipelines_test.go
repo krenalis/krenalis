@@ -97,14 +97,14 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 		case pipeline2:
 			pipeline2Count++
 		default:
-			t.Fatalf("unexpected identity pipeline %d", identity.Pipeline)
+			t.Fatalf("unexpected identity pipeline %s", identity.Pipeline)
 		}
 	}
 	if pipeline1Count != 10 {
-		t.Fatalf("expected 10 identities with pipeline %d, got %d", pipeline1, pipeline1Count)
+		t.Fatalf("expected 10 identities with pipeline %s, got %d", pipeline1, pipeline1Count)
 	}
 	if pipeline2Count != 10 {
-		t.Fatalf("expected 10 identities with pipeline %d, got %d", pipeline2, pipeline2Count)
+		t.Fatalf("expected 10 identities with pipeline %s, got %d", pipeline2, pipeline2Count)
 	}
 
 }

@@ -14,7 +14,7 @@ import (
 )
 
 type EventWriter struct {
-	workspace int
+	workspace string
 	events    chan<- flusherRow[[]any]
 	flusher   *flusher[[]any]
 	closed    atomic.Bool
@@ -44,7 +44,7 @@ func newEventWriter(store *Store) *EventWriter {
 
 // Write persists an event to the store.
 // It returns an error only if the context is canceled.
-func (w *EventWriter) Write(ctx context.Context, event streams.Event, pipeline int) error {
+func (w *EventWriter) Write(ctx context.Context, event streams.Event, pipeline string) error {
 
 	row := make([]any, 66)
 

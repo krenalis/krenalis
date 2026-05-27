@@ -31,7 +31,7 @@ const GRID_COLUMNS_WITH_FILTERS: GridColumn[] = [
 const GRID_COLUMNS_WITHOUT_FILTERS: GridColumn[] = [{ name: 'Pipeline' }, { name: 'Enabled' }, { name: '' }];
 
 interface PipelinesGridProps {
-	newPipelineID: React.MutableRefObject<number>;
+	newPipelineID: React.MutableRefObject<string>;
 	pipelines: Pipeline[];
 	onSelectPipeline: (pipeline: Pipeline) => void;
 }
@@ -94,7 +94,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		}
 	}, [pipelines]);
 
-	const onPipelineStatusSwitch = async (pipelineID: number) => {
+	const onPipelineStatusSwitch = async (pipelineID: string) => {
 		const index = connection.pipelines!.findIndex((p) => p.id === pipelineID);
 		const oldEnabled = connection.pipelines![index].enabled;
 		const newEnabled = !oldEnabled;
@@ -120,14 +120,14 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		}
 	};
 
-	const onDeletePipeline = (pipelineID: number) => {
+	const onDeletePipeline = (pipelineID: string) => {
 		setPipelineToDelete(pipelines.find((p) => p.id === pipelineID));
 		setDeleteConfirmationInput('');
 		setIsDialogAlertOpen(true);
 	};
 
 	const onConfirmDeletePipeline = async () => {
-		newPipelineID.current = 0; // do not re-trigger the animation of the new pipeline's row during the repainting.
+		newPipelineID.current = ''; // do not re-trigger the animation of the new pipeline's row during the repainting.
 		try {
 			await api.workspaces.connections.deletePipeline(pipelineToDelete.id);
 		} catch (err) {
@@ -151,7 +151,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		}, 300);
 	};
 
-	const onSchedulerPeriodChange = async (e: any, pipelineID: number) => {
+	const onSchedulerPeriodChange = async (e: any, pipelineID: string) => {
 		const period = e.currentTarget.value === 'Off' ? null : e.currentTarget.value;
 		try {
 			await api.workspaces.connections.setPipelineSchedulePeriod(pipelineID, period);
@@ -178,7 +178,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		onSelectPipeline(pipeline);
 	};
 
-	const onDropdownHide = (pipelineID: number) => {
+	const onDropdownHide = (pipelineID: string) => {
 		runPipelineButtonRefs.current[pipelineID].current.hideTooltip();
 		runPipelineDropdownButtonRefs.current[pipelineID].current.hideTooltip();
 	};

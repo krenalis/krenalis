@@ -13,14 +13,14 @@ import Grid from '../Grid/Grid';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 interface ConnectionSelectorProps {
-	linkedConnections: Number[] | null;
-	setLinkedConnections: React.Dispatch<React.SetStateAction<Number[] | null>>;
+	linkedConnections: string[] | null;
+	setLinkedConnections: React.Dispatch<React.SetStateAction<string[] | null>>;
 	connections: TransformedConnection[];
 	role: ConnectionRole;
 	title?: ReactNode;
 	description?: ReactNode;
-	onLink?: (id: Number) => Promise<void>;
-	onUnlink?: (id: Number) => Promise<void>;
+	onLink?: (id: string) => Promise<void>;
+	onUnlink?: (id: string) => Promise<void>;
 	isClickable?: boolean;
 	children?: ReactNode;
 }
@@ -67,8 +67,8 @@ const LinkedConnectionSelector = ({
 	}, [connections, linkedConnections, role]);
 
 	const onSelectLinkedConnection = async (e) => {
-		const id = Number(e.detail.item.value);
-		let updated: Number[] = [];
+		const id = e.detail.item.value;
+		let updated: string[] = [];
 		if (linkedConnections != null) {
 			updated = [...linkedConnections];
 		}

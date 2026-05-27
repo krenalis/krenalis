@@ -39,7 +39,7 @@ func (err *InvalidEventError) Error() string {
 
 // Application represents the application of an application connection.
 type Application struct {
-	id          int
+	id          string
 	connector   string
 	role        state.Role
 	timeLayouts *state.TimeLayouts
@@ -101,7 +101,7 @@ func (c *Connections) Application(connection *state.Connection) *Application {
 }
 
 // ID returns the ID of the application connection.
-func (app *Application) ID() int {
+func (app *Application) ID() string {
 	return app.id
 }
 

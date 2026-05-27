@@ -49,7 +49,7 @@ const App = () => {
 		}
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
-		setSelectedWorkspace(0);
+		setSelectedWorkspace('');
 		setIsLoggedIn(false);
 	};
 

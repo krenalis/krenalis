@@ -10,7 +10,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"math"
 	"mime"
 	"net/http"
 	"strconv"
@@ -22,7 +21,6 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/text/unicode/norm"
 )
@@ -44,8 +42,8 @@ var (
 const sessionMaxAge = 6 * 60 * 60
 
 type sessionCookie struct {
-	Organization uuid.UUID
-	Member       int
+	Organization string
+	Member       string
 }
 
 // cookieKeysFunc loads the hash key and block key used to sign and encrypt
@@ -192,37 +190,34 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //
 // It returns errors.UnauthorizedError if authorization fails, or
 // errInvalidSessionCookie if the session cookie is invalid.
-func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organization, ws *core.Workspace, userID int, err error) {
+func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organization, ws *core.Workspace, userID string, err error) {
 
 	// Get the session.
 	cookie, _ := r.Cookie(sessionCookieName)
 	if cookie == nil {
-		return nil, nil, 0, errors.Unauthorized("Authorization header with the API key is not present in the request")
+		return nil, nil, "", errors.Unauthorized("Authorization header with the API key is not present in the request")
 	}
 	session := &sessionCookie{}
 	se, err := s.secureCookie(r.Context())
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, "", err
 	}
 	err = se.Decode(sessionCookieName, cookie.Value, session)
 	if err != nil {
-		return nil, nil, 0, errInvalidSessionCookie
-	}
-	if id := session.Member; id < 1 || id > math.MaxInt32 {
-		return nil, nil, 0, errInvalidSessionCookie
+		return nil, nil, "", errInvalidSessionCookie
 	}
 
 	// Get the organization.
 	org, err = s.core.Organization(session.Organization)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, nil, 0, errInvalidSessionCookie
+			return nil, nil, "", errInvalidSessionCookie
 		}
-		return nil, nil, 0, err
+		return nil, nil, "", err
 	}
 	// Verify that the member still exists.
 	if !org.HasMember(session.Member) {
-		return nil, nil, 0, errInvalidSessionCookie
+		return nil, nil, "", errInvalidSessionCookie
 	}
 	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.
 	header, ok := r.Header["Krenalis-Workspace"]
@@ -230,18 +225,18 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		return org, nil, session.Member, nil
 	}
 	if len(header) > 1 {
-		return nil, nil, 0, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
+		return nil, nil, "", errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 	}
-	var workspaceID int64
+	workspaceID := ""
 	if header[0] != "" && header[0][0] != '+' {
-		workspaceID, _ = strconv.ParseInt(header[0], 10, 32)
+		workspaceID = header[0]
 	}
-	if workspaceID <= 0 {
-		return nil, nil, 0, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
+	if !core.IsValidID(workspaceID) {
+		return nil, nil, "", errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 	}
-	ws, err = org.Workspace(int(workspaceID))
+	ws, err = org.Workspace(workspaceID)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, "", err
 	}
 
 	return org, ws, session.Member, nil
@@ -312,7 +307,7 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 			return nil, nil, err
 		}
 		// If the key is restricted to a workspace, return the workspace as well.
-		if workspaceID > 0 {
+		if workspaceID != "" {
 			ws, err := org.Workspace(workspaceID)
 			if err != nil {
 				return nil, nil, err
@@ -327,14 +322,14 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if len(header) > 1 {
 			return nil, nil, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 		}
-		var id int64
+		id := ""
 		if header[0] != "" && header[0][0] != '+' {
-			id, _ = strconv.ParseInt(header[0], 10, 32)
+			id = header[0]
 		}
-		if id <= 0 {
+		if !core.IsValidID(id) {
 			return nil, nil, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 		}
-		ws, err := org.Workspace(int(id))
+		ws, err := org.Workspace(id)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -386,7 +381,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	memberID, err := org.AuthenticateMember(r.Context(), body.Email, body.Password)
 	if err != nil {
 		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
-			return []any{0, "AuthenticationFailed"}, nil
+			return []any{"", "AuthenticationFailed"}, nil
 		}
 		return nil, err
 	}
@@ -397,7 +392,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, err
 		}
 		if len(members) > 1 {
-			return []any{0, "AuthenticationFailed"}, nil
+			return []any{"", "AuthenticationFailed"}, nil
 		}
 	}
 
@@ -464,27 +459,12 @@ func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCook
 	return s.cookies.SecureCookie, nil
 }
 
-// parseID parses a decimal identifier in the form /^[1-9][0-9]*$/.
-// The value must be in the range [1, math.MaxInt32].
-// It returns (value, true) if valid, or (0, false) otherwise.
-func parseID(s string) (int, bool) {
-	if len(s) == 0 || s[0] == '0' {
-		return 0, false
+// parseID parses a public row identifier.
+func parseID(s string) (string, bool) {
+	if !core.IsValidID(s) {
+		return "", false
 	}
-	var n int64
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, false
-		}
-		n = n*10 + int64(c-'0')
-		if n > math.MaxInt32 {
-			return 0, false
-		}
-	}
-	if n < 1 {
-		return 0, false
-	}
-	return int(n), true
+	return s, true
 }
 
 // validateForbiddenBody rejects requests that contain a request body.

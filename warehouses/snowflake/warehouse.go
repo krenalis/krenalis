@@ -381,7 +381,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 
 // UnsetIdentityColumns unsets values for the specified identity columns for the
 // given pipeline.
-func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
+func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline string, columns []warehouses.Column) error {
 	var b strings.Builder
 	b.WriteString("UPDATE \"KRENALIS_IDENTITIES\" SET ")
 	for i, column := range columns {
@@ -392,7 +392,7 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline i
 		b.WriteString(" = NULL")
 	}
 	b.WriteString(" WHERE \"_PIPELINE\" = ")
-	b.WriteString(strconv.Itoa(pipeline))
+	quoteString(&b, pipeline)
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return snowflake(err)

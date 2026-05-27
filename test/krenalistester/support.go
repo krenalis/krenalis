@@ -27,7 +27,7 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (c *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
+func (c *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
@@ -54,7 +54,7 @@ func (c *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[stri
 
 // AlterProfileSchemaErr is like AlterProfileSchema but returns an error instead of
 // panicking.
-func (c *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (c *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
@@ -63,11 +63,11 @@ func (c *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[s
 	return c.Call("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
-func (c *Krenalis) AbsolutePath(storage int, path string) string {
+func (c *Krenalis) AbsolutePath(storage string, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
-	endpointPath := fmt.Sprintf("/v1/connections/%d/files/absolute", storage)
+	endpointPath := fmt.Sprintf("/v1/connections/%s/files/absolute", storage)
 	if path != "" {
 		endpointPath += "?path=" + url.QueryEscape(path)
 	}
@@ -75,8 +75,8 @@ func (c *Krenalis) AbsolutePath(storage int, path string) string {
 	return response.Path
 }
 
-func (c *Krenalis) PipelineSchemas(conn int, target core.Target, eventType string) map[string]any {
-	path := fmt.Sprintf("/v1/connections/%d/pipelines/schemas/%s", conn, target)
+func (c *Krenalis) PipelineSchemas(conn string, target core.Target, eventType string) map[string]any {
+	path := fmt.Sprintf("/v1/connections/%s/pipelines/schemas/%s", conn, target)
 	if eventType != "" {
 		path += "?type=" + url.QueryEscape(eventType)
 	}
@@ -85,24 +85,24 @@ func (c *Krenalis) PipelineSchemas(conn int, target core.Target, eventType strin
 	return schemas
 }
 
-func (c *Krenalis) ConnectionIdentities(conn, first, limit int) ([]Identity, int) {
+func (c *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identity, int) {
 	var response struct {
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
 	}
-	path := fmt.Sprintf("/v1/connections/%d/identities?first=%d&limit=%d", conn, first, limit)
+	path := fmt.Sprintf("/v1/connections/%s/identities?first=%d&limit=%d", conn, first, limit)
 	c.MustCall("GET", path, nil, nil, &response)
 	return response.Identities, response.Total
 }
 
-func (c *Krenalis) ConnectionUI(connection int) map[string]any {
-	path := fmt.Sprintf("/v1/connections/%d/ui", connection)
+func (c *Krenalis) ConnectionUI(connection string) map[string]any {
+	path := fmt.Sprintf("/v1/connections/%s/ui", connection)
 	var ui map[string]any
 	c.MustCall("GET", path, nil, nil, &ui)
 	return ui
 }
 
-func (c *Krenalis) CreatePipeline(conn int, target string, pipeline PipelineToSet) int {
+func (c *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineToSet) string {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -120,7 +120,7 @@ func (c *Krenalis) CreatePipeline(conn int, target string, pipeline PipelineToSe
 	body["connection"] = conn
 	body["target"] = target
 	var response struct {
-		ID int `json:"id"`
+		ID string `json:"id"`
 	}
 	c.MustCall("POST", "/v1/pipelines", nil, body, &response)
 	return response.ID
@@ -128,7 +128,7 @@ func (c *Krenalis) CreatePipeline(conn int, target string, pipeline PipelineToSe
 
 // CreatePipelineErr is like CreatePipeline but returns an error instead of
 // panicking.
-func (c *Krenalis) CreatePipelineErr(conn int, target string, pipeline PipelineToSet) (int, error) {
+func (c *Krenalis) CreatePipelineErr(conn string, target string, pipeline PipelineToSet) (string, error) {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -146,11 +146,11 @@ func (c *Krenalis) CreatePipelineErr(conn int, target string, pipeline PipelineT
 	body["connection"] = conn
 	body["target"] = target
 	var response struct {
-		ID int `json:"id"`
+		ID string `json:"id"`
 	}
 	err = c.Call("POST", "/v1/pipelines", nil, body, &response)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return response.ID, nil
 }
@@ -173,15 +173,15 @@ var DefaultFilterUserFromEvents = &Filter{
 	},
 }
 
-func (c *Krenalis) CreateConnection(connection ConnectionToCreate) int {
+func (c *Krenalis) CreateConnection(connection ConnectionToCreate) string {
 	var response struct {
-		ID int `json:"id"`
+		ID string `json:"id"`
 	}
 	c.MustCall("POST", "/v1/connections", nil, connection, &response)
 	return response.ID
 }
 
-func (c *Krenalis) CreateDestinationFilesystem() int {
+func (c *Krenalis) CreateDestinationFilesystem() string {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "File System",
 		Role:      Destination,
@@ -192,7 +192,7 @@ func (c *Krenalis) CreateDestinationFilesystem() int {
 	})
 }
 
-func (c *Krenalis) CreateDestinationPostgreSQL() int {
+func (c *Krenalis) CreateDestinationPostgreSQL() string {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
@@ -208,7 +208,7 @@ func (c *Krenalis) CreateDestinationPostgreSQL() int {
 	})
 }
 
-func (c *Krenalis) CreateDummy(name string, role Role) int {
+func (c *Krenalis) CreateDummy(name string, role Role) string {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
@@ -222,7 +222,7 @@ func (c *Krenalis) CreateDummy(name string, role Role) int {
 	return c.CreateConnection(conn)
 }
 
-func (c *Krenalis) CreateDummyWithSettings(name string, role Role, settings DummySettings) int {
+func (c *Krenalis) CreateDummyWithSettings(name string, role Role, settings DummySettings) string {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
@@ -236,7 +236,7 @@ func (c *Krenalis) CreateDummyWithSettings(name string, role Role, settings Dumm
 	return c.CreateConnection(conn)
 }
 
-func (c *Krenalis) CreateEventPipeline(conn int, eventType string, pipeline PipelineToSet) int {
+func (c *Krenalis) CreateEventPipeline(conn string, eventType string, pipeline PipelineToSet) string {
 	pipelineJSON, err := stdjson.Marshal(pipeline)
 	if err != nil {
 		panic(err)
@@ -250,13 +250,13 @@ func (c *Krenalis) CreateEventPipeline(conn int, eventType string, pipeline Pipe
 	body["target"] = "Event"
 	body["eventType"] = eventType
 	var response struct {
-		ID int `json:"id"`
+		ID string `json:"id"`
 	}
 	c.MustCall("POST", "/v1/pipelines", nil, body, &response)
 	return response.ID
 }
 
-func (c *Krenalis) CreateWebhookSource(name string, linkedConnections []int) int {
+func (c *Krenalis) CreateWebhookSource(name string, linkedConnections []string) string {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
@@ -267,12 +267,12 @@ func (c *Krenalis) CreateWebhookSource(name string, linkedConnections []int) int
 
 func (c *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 	var response struct {
-		ID    int    `json:"id"`
+		ID    string `json:"id"`
 		Token string `json:"token"`
 	}
 	body := struct {
 		Name      string        `json:"name"`
-		Workspace int           `json:"workspace"`
+		Workspace string        `json:"workspace"`
 		Type      AccessKeyType `json:"type"`
 	}{
 		Name:      name,
@@ -290,22 +290,22 @@ func organizationsHeaders() http.Header {
 	}
 }
 
-func (c *Krenalis) CreateOrganization(name string) uuid.UUID {
+func (c *Krenalis) CreateOrganization(name string) string {
 	var response struct {
-		ID uuid.UUID `json:"id"`
+		ID string `json:"id"`
 	}
 	c.MustCall("POST", "/v1/organizations", organizationsHeaders(), map[string]any{"name": name}, &response)
 	return response.ID
 }
 
-func (c *Krenalis) Organization(id uuid.UUID) Organization {
+func (c *Krenalis) Organization(id string) Organization {
 	var org Organization
 	c.MustCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
 	return org
 }
 
 // OrganizationErr is like Organization but returns an error instead of failing the test.
-func (c *Krenalis) OrganizationErr(id uuid.UUID) error {
+func (c *Krenalis) OrganizationErr(id string) error {
 	return c.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
@@ -318,15 +318,15 @@ func (c *Krenalis) Organizations(first, limit int) []Organization {
 	return response.Organizations
 }
 
-func (c *Krenalis) UpdateOrganization(id uuid.UUID, name string) {
+func (c *Krenalis) UpdateOrganization(id string, name string) {
 	c.MustCall("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
 }
 
-func (c *Krenalis) DeleteOrganization(id uuid.UUID) {
+func (c *Krenalis) DeleteOrganization(id string) {
 	c.MustCall("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
-func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []int) int {
+func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []string) string {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
@@ -336,7 +336,7 @@ func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []int) 
 	})
 }
 
-func (c *Krenalis) CreateSourceFileSystem() int {
+func (c *Krenalis) CreateSourceFileSystem() string {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "File System",
 		Role:      Source,
@@ -347,7 +347,7 @@ func (c *Krenalis) CreateSourceFileSystem() int {
 	})
 }
 
-func (c *Krenalis) CreateSourcePostgreSQL() int {
+func (c *Krenalis) CreateSourcePostgreSQL() string {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
@@ -363,16 +363,16 @@ func (c *Krenalis) CreateSourcePostgreSQL() int {
 	})
 }
 
-func (c *Krenalis) DeleteConnection(conn int) {
-	path := fmt.Sprintf("/v1/connections/%d", conn)
+func (c *Krenalis) DeleteConnection(conn string) {
+	path := fmt.Sprintf("/v1/connections/%s", conn)
 	c.MustCall("DELETE", path, nil, nil, nil)
 }
 
-func (c *Krenalis) RunPipeline(pipeline int) int {
+func (c *Krenalis) RunPipeline(pipeline string) string {
 	var response struct {
-		ID int
+		ID string
 	}
-	path := fmt.Sprintf("/v1/pipelines/%d/runs", pipeline)
+	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
 	c.MustCall("POST", path, nil, map[string]any{}, &response)
 	return response.ID
 }
@@ -396,7 +396,7 @@ func (c *Krenalis) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-func (c *Krenalis) File(storage int, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
+func (c *Krenalis) File(storage string, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -409,7 +409,7 @@ func (c *Krenalis) File(storage int, path, format, sheet string, compression Com
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	endpointPath := fmt.Sprintf("/v1/connections/%d/files", storage)
+	endpointPath := fmt.Sprintf("/v1/connections/%s/files", storage)
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Records, response.Schema
 }
@@ -439,9 +439,9 @@ func (c *Krenalis) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
-func (c *Krenalis) PipelineRun(id int) PipelineRun {
+func (c *Krenalis) PipelineRun(id string) PipelineRun {
 	var run PipelineRun
-	path := fmt.Sprintf("/v1/pipelines/runs/%d", id)
+	path := fmt.Sprintf("/v1/pipelines/runs/%s", id)
 	c.MustCall("GET", path, nil, nil, &run)
 	return run
 }
@@ -547,7 +547,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 	s.ch <- err
 }
 
-func (c *Krenalis) Sheets(storage int, path string, format string, compression Compression, settings json.Value) []string {
+func (c *Krenalis) Sheets(storage string, path string, format string, compression Compression, settings json.Value) []string {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -557,17 +557,17 @@ func (c *Krenalis) Sheets(storage int, path string, format string, compression C
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
-	endpointPath := fmt.Sprintf("/v1/connections/%d/files/sheets", storage)
+	endpointPath := fmt.Sprintf("/v1/connections/%s/files/sheets", storage)
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Sheets
 }
 
-func (c *Krenalis) TableSchema(conn int, table string) (types.Type, []string) {
+func (c *Krenalis) TableSchema(conn string, table string) (types.Type, []string) {
 	var response struct {
 		Schema types.Type `json:"schema"`
 		Issues []string   `json:"issues"`
 	}
-	path := fmt.Sprintf("/v1/connections/%d/tables", conn)
+	path := fmt.Sprintf("/v1/connections/%s/tables", conn)
 	if table != "" {
 		path += "?name=" + url.QueryEscape(table)
 	}
@@ -601,13 +601,13 @@ func (c *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 }
 
 // DeletePipeline deletes a pipeline.
-func (c *Krenalis) DeletePipeline(pipelineID int) {
-	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
+func (c *Krenalis) DeletePipeline(pipelineID string) {
+	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
 	c.MustCall("DELETE", path, nil, nil, nil)
 }
 
-func (c *Krenalis) UpdatePipeline(pipelineID int, pipeline PipelineToSet) {
-	path := fmt.Sprintf("/v1/pipelines/%d", pipelineID)
+func (c *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
+	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
 	c.MustCall("PUT", path, nil, pipeline, nil)
 }
 
@@ -693,7 +693,7 @@ func (c *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 	return response.Profiles, response.Schema, response.Total
 }
 
-func (c *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection int, expected int) {
+func (c *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {
 	bo := backoff.New(200)
 	const attempts = 20
 	bo.SetAttempts(attempts)
@@ -735,7 +735,7 @@ func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected i
 //
 // If you intend to proceed even in the case of one or more "Failed" (but not an
 // error for the entire run), see the method WaitForRunsCompletionAllowFailed.
-func (c *Krenalis) WaitRunsCompletion(conn int, runs ...int) {
+func (c *Krenalis) WaitRunsCompletion(conn string, runs ...string) {
 	c.waitForRunsCompletion(false, runs...)
 }
 
@@ -746,15 +746,15 @@ func (c *Krenalis) WaitRunsCompletion(conn int, runs ...int) {
 //
 // If you want the method to result in an error even in the case of one or more
 // "Failed", see the method WaitForRunsCompletion.
-func (c *Krenalis) WaitForRunsCompletionAllowFailed(conn int, runs ...int) {
+func (c *Krenalis) WaitForRunsCompletionAllowFailed(conn string, runs ...string) {
 	c.waitForRunsCompletion(true, runs...)
 }
 
-func (c *Krenalis) EventWriteKeys(conn int) []string {
+func (c *Krenalis) EventWriteKeys(conn string) []string {
 	var res struct {
 		Keys []string `json:"keys"`
 	}
-	path := fmt.Sprintf("/v1/connections/%d/event-write-keys", conn)
+	path := fmt.Sprintf("/v1/connections/%s/event-write-keys", conn)
 	c.MustCall("GET", path, nil, nil, &res)
 	return res.Keys
 }
@@ -765,7 +765,7 @@ func (c *Krenalis) Workspace() Workspace {
 	return ws
 }
 
-func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...int) {
+func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		if len(ids) == 1 {
@@ -773,10 +773,10 @@ func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...int) {
 			if run.EndTime != nil {
 				// If the pipeline run ended with an error, make the test fail.
 				if run.Error != "" {
-					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", run.Pipeline, run.ID, run.Error)
+					c.t.Fatalf("an error occurred when running pipeline %s on run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
 				if !allowFailed && run.Failed != [6]int{} {
-					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", run.Pipeline, run.ID, run.Failed)
+					c.t.Fatalf("an error occurred when running pipeline %s on run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
 			}
@@ -794,10 +794,10 @@ func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...int) {
 			}
 			// If the pipeline run ended with an error, make the test fail.
 			if run.Error != "" {
-				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", run.Pipeline, run.ID, run.Error)
+				c.t.Fatalf("an error occurred when running pipeline %s on run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
 			if !allowFailed && run.Failed != [6]int{} {
-				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", run.Pipeline, run.ID, run.Failed)
+				c.t.Fatalf("an error occurred when running pipeline %s on run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}
 		if completed {

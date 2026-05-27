@@ -1,8 +1,8 @@
 import { createContext } from 'react';
 
 interface ConnectionMapContext {
-	hoveredConnection: number | null;
-	setHoveredConnection: React.Dispatch<React.SetStateAction<number>>;
+	hoveredConnection: string | null;
+	setHoveredConnection: React.Dispatch<React.SetStateAction<string | null>>;
 	isEventDbHovered: boolean;
 	isUserDbHovered: boolean;
 }

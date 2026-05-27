@@ -62,14 +62,14 @@ type State struct {
 	metadata           metadata
 	sendStats          bool
 
-	mu               *sync.Mutex                 // for the 'pipelines', ..., and 'workspaces' fields
-	pipelines        map[int]*Pipeline           // protected by mu
-	connections      map[int]*Connection         // protected by mu
-	connectionsByKey map[string]*Connection      // protected by mu
-	accessKeyByHMAC  map[string]*AccessKey       // protected by mu
-	election         election                    // protected by mu
-	organizations    map[uuid.UUID]*Organization // protected by mu
-	workspaces       map[int]*Workspace          // protected by mu
+	mu               *sync.Mutex              // for the 'pipelines', ..., and 'workspaces' fields
+	pipelines        map[string]*Pipeline     // protected by mu
+	connections      map[string]*Connection   // protected by mu
+	connectionsByKey map[string]*Connection   // protected by mu
+	accessKeyByHMAC  map[string]*AccessKey    // protected by mu
+	election         election                 // protected by mu
+	organizations    map[string]*Organization // protected by mu
+	workspaces       map[string]*Workspace    // protected by mu
 
 	notifications struct {
 		*notifier
@@ -107,12 +107,12 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
 		cipher:           cipher.New(kms),
-		organizations:    map[uuid.UUID]*Organization{},
+		organizations:    map[string]*Organization{},
 		connectors:       map[string]*Connector{},
-		workspaces:       map[int]*Workspace{},
-		connections:      map[int]*Connection{},
+		workspaces:       map[string]*Workspace{},
+		connections:      map[string]*Connection{},
 		connectionsByKey: map[string]*Connection{},
-		pipelines:        map[int]*Pipeline{},
+		pipelines:        map[string]*Pipeline{},
 		sendStats:        sendStats,
 	}
 
@@ -198,7 +198,7 @@ func (state *State) CookieKeys(ctx context.Context) ([]byte, []byte, error) {
 
 // Connection returns the connection with identifier id.
 // The boolean return value reports whether the connection exists.
-func (state *State) Connection(id int) (*Connection, bool) {
+func (state *State) Connection(id string) (*Connection, bool) {
 	state.mu.Lock()
 	c, ok := state.connections[id]
 	state.mu.Unlock()
@@ -295,7 +295,7 @@ func (state *State) OAuthKey() *cipher.Key {
 
 // Organization returns the organization with identifier id.
 // The boolean return value reports whether the organization exists.
-func (state *State) Organization(id uuid.UUID) (*Organization, bool) {
+func (state *State) Organization(id string) (*Organization, bool) {
 	state.mu.Lock()
 	org, ok := state.organizations[id]
 	state.mu.Unlock()
@@ -313,14 +313,14 @@ func (state *State) Organizations() []*Organization {
 	}
 	state.mu.Unlock()
 	sort.Slice(organizations, func(i, j int) bool {
-		return bytes.Compare(organizations[i].ID[:], organizations[j].ID[:]) < 0
+		return organizations[i].ID < organizations[j].ID
 	})
 	return organizations
 }
 
 // Pipeline returns the pipeline with identifier id.
 // The boolean return value reports whether the pipeline exists.
-func (state *State) Pipeline(id int) (*Pipeline, bool) {
+func (state *State) Pipeline(id string) (*Pipeline, bool) {
 	state.mu.Lock()
 	p, ok := state.pipelines[id]
 	state.mu.Unlock()
@@ -427,7 +427,7 @@ func (state *State) WarehousePlatforms() []WarehousePlatform {
 
 // Workspace returns the workspace with identifier id.
 // The boolean return value reports whether the workspace exists.
-func (state *State) Workspace(id int) (*Workspace, bool) {
+func (state *State) Workspace(id string) (*Workspace, bool) {
 	state.mu.Lock()
 	ws, ok := state.workspaces[id]
 	state.mu.Unlock()
@@ -498,23 +498,24 @@ func (typ AccessKeyType) Value() (driver.Value, error) {
 
 // AccessKey represents an access key.
 type AccessKey struct {
-	ID           int
-	Organization uuid.UUID
-	Workspace    int
+	ID           string
+	Organization string
+	Workspace    string
 	Type         AccessKeyType
 }
 
 // Organization represents an organization.
 type Organization struct {
 	mu         *sync.Mutex
-	workspaces map[int]*Workspace
-	members    map[int]struct{}
-	ID         uuid.UUID
+	workspaces map[string]*Workspace
+	members    map[string]struct{}
+	ID         string
+	GlobalID   uuid.UUID
 	Name       string
 }
 
 // HasMember reports whether the organization has a member with the given ID.
-func (organization *Organization) HasMember(id int) bool {
+func (organization *Organization) HasMember(id string) bool {
 	organization.mu.Lock()
 	_, ok := organization.members[id]
 	organization.mu.Unlock()
@@ -523,7 +524,7 @@ func (organization *Organization) HasMember(id int) bool {
 
 // Workspace returns the workspace of the organization with identifier id.
 // The boolean return value reports whether the workspace exists.
-func (organization *Organization) Workspace(id int) (*Workspace, bool) {
+func (organization *Organization) Workspace(id string) (*Workspace, bool) {
 	organization.mu.Lock()
 	w, ok := organization.workspaces[id]
 	organization.mu.Unlock()
@@ -613,13 +614,13 @@ type Workspace struct {
 		settingsKey    *cipher.Key
 		mcpSettingsKey *cipher.Key
 	}
-	connections                    map[int]*Connection
-	runs                           map[int]*PipelineRun // pipeline runs in progress.
-	ID                             int
+	connections                    map[string]*Connection
+	runs                           map[string]*PipelineRun // pipeline runs in progress.
+	ID                             string
 	organization                   *Organization
 	Name                           string
 	ProfileSchema                  types.Type // without meta properties.
-	PrimarySources                 map[string]int
+	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
@@ -635,10 +636,10 @@ type Workspace struct {
 		EndTime        *time.Time // nil means profile schema alteration is running or has never started.
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter profile schema.
 		Schema         types.Type
-		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
+		PrimarySources map[string]string // nil if, and only if, schema alteration is not in execution.
 		Operations     []warehouses.AlterOperation
 	}
-	pipelinesToPurge []int // never nil
+	pipelinesToPurge []string // never nil
 }
 
 // Account returns the account with identifier id. The boolean return value
@@ -667,7 +668,7 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 
 // Connection returns the connection of the workspace with identifier id.
 // The boolean return value reports whether the connection exists.
-func (workspace *Workspace) Connection(id int) (*Connection, bool) {
+func (workspace *Workspace) Connection(id string) (*Connection, bool) {
 	workspace.mu.Lock()
 	c, ok := workspace.connections[id]
 	workspace.mu.Unlock()
@@ -756,7 +757,7 @@ func (workspace *Workspace) Organization() *Organization {
 // PipelinesToPurge returns the identifiers of pipelines that require purging,
 // specifically those that have been deleted but still have user identifiers or
 // destination users to be purged from the data warehouse. It never returns nil.
-func (workspace *Workspace) PipelinesToPurge() []int {
+func (workspace *Workspace) PipelinesToPurge() []string {
 	workspace.mu.Lock()
 	pipelines := workspace.pipelinesToPurge
 	workspace.mu.Unlock()
@@ -765,7 +766,7 @@ func (workspace *Workspace) PipelinesToPurge() []int {
 
 // Run returns the pipeline run in the workspace with the given id.
 // The boolean return value indicates whether the run exists.
-func (workspace *Workspace) Run(id int) (*PipelineRun, bool) {
+func (workspace *Workspace) Run(id string) (*PipelineRun, bool) {
 	workspace.mu.Lock()
 	exe, ok := workspace.runs[id]
 	workspace.mu.Unlock()
@@ -1058,19 +1059,19 @@ type Connection struct {
 	mu                *sync.Mutex
 	organization      *Organization
 	workspace         *Workspace
-	ID                int
+	ID                string
 	Name              string
 	connector         *Connector
 	Role              Role
 	account           *Account
 	Strategy          *Strategy
 	SendingMode       *SendingMode
-	LinkedConnections []int // Non-nil if events are supported; otherwise nil.
+	LinkedConnections []string // Non-nil if events are supported; otherwise nil.
 	Keys              []string
 	settings          []byte
 	settingsKey       *cipher.Key
 	UsersQuery        string
-	pipelines         map[int]*Pipeline
+	pipelines         map[string]*Pipeline
 	Health            Health
 }
 
@@ -1122,7 +1123,7 @@ func (connection *Connection) Organization() *Organization {
 
 // Pipeline returns the pipeline of the connection with identifier id.
 // The boolean return value reports whether the pipeline exists.
-func (connection *Connection) Pipeline(id int) (*Pipeline, bool) {
+func (connection *Connection) Pipeline(id string) (*Pipeline, bool) {
 	connection.mu.Lock()
 	p, ok := connection.pipelines[id]
 	connection.mu.Unlock()
@@ -1388,7 +1389,7 @@ func (target Target) Value() (driver.Value, error) {
 
 type Pipeline struct {
 	mu                 *sync.Mutex
-	ID                 int
+	ID                 string
 	connection         *Connection
 	format             *Connector
 	run                *PipelineRun
@@ -1459,7 +1460,7 @@ func (pipeline *Pipeline) Format() *Connector {
 // PipelineRun represents a pipeline run.
 type PipelineRun struct {
 	mu          *sync.Mutex
-	ID          int
+	ID          string
 	node        *uuid.UUID
 	pipeline    *Pipeline
 	Incremental bool

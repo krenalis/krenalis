@@ -7,7 +7,7 @@ interface LinkedConnectionBlocksProps {
 	primaryConnection: TransformedConnection;
 	primaryColumn: ArrowAnchor;
 	secondaryConnections: TransformedConnection[];
-	newConnection: number;
+	newConnection: string;
 }
 
 const LinkedConnectionBlocks = ({

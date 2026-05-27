@@ -9,7 +9,6 @@ import (
 	"context"
 	stderrors "errors"
 	"io"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -22,38 +21,39 @@ func TestParseID(t *testing.T) {
 
 	tests := []struct {
 		s  string
-		v  int
+		v  string
 		ok bool
 	}{
 		// valid
-		{"1", 1, true},
-		{"9", 9, true},
-		{"10", 10, true},
-		{"2147483647", math.MaxInt32, true},
+		{"7B3mN9qK2xA4", "7B3mN9qK2xA4", true},
+		{"abcdefghijkm", "abcdefghijkm", true},
 
 		// invalid: format
-		{"", 0, false},
-		{"0", 0, false},
-		{"01", 0, false},
-		{"000", 0, false},
-		{"+1", 0, false},
-		{"-1", 0, false},
-		{" 1", 0, false},
-		{"1 ", 0, false},
-		{"1\n", 0, false},
-		{"\t1", 0, false},
-		{"1\t", 0, false},
-		{"1a", 0, false},
-		{"a1", 0, false},
-		{"3.14", 0, false},
+		{"", "", false},
+		{"0", "", false},
+		{"01", "", false},
+		{"000", "", false},
+		{"+1", "", false},
+		{"-1", "", false},
+		{" 1", "", false},
+		{"1 ", "", false},
+		{"1\n", "", false},
+		{"\t1", "", false},
+		{"1\t", "", false},
+		{"1a", "", false},
+		{"a1", "", false},
+		{"3.14", "", false},
 
-		// invalid: overflow
-		{"2147483648", 0, false},
-		{"9999999999", 0, false},
-		{"18446744073709551616", 0, false},
+		// invalid: length
+		{"2147483640", "", false},
+		{"9999999990", "", false},
+		{"18446744073709551616", "", false},
+
+		// invalid: alphabet
+		{"7B3mN9qK2x0A", "", false},
 
 		// invalid: unicode digits
-		{"１２３", 0, false},
+		{"１２３", "", false},
 	}
 
 	for _, test := range tests {
@@ -63,7 +63,7 @@ func TestParseID(t *testing.T) {
 		}
 		if ok {
 			if got != test.v {
-				t.Fatalf("%q: expected %d, got %d", test.s, test.v, got)
+				t.Fatalf("%q: expected %q, got %q", test.s, test.v, got)
 			}
 		}
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/natsopts"
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/nats-io/nats.go"
@@ -496,14 +497,13 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 					}
 					if header := msg.Headers(); header != nil {
 						if destinations, ok := header["destinations"]; ok {
-							event.Destinations = make([]int, len(destinations))
+							event.Destinations = make([]string, len(destinations))
 							for i, d := range destinations {
-								id, _ := strconv.Atoi(d)
-								if id <= 0 {
+								if !isValidDestination(d) {
 									err = fmt.Errorf("invalid event destination: %q", d)
 									return
 								}
-								event.Destinations[i] = id
+								event.Destinations[i] = d
 							}
 						}
 					}
@@ -595,7 +595,7 @@ func (batch *batch) Done(ctx context.Context) error {
 // Publish adds an event to the current batch for the given topic.
 // If the topic begins with "connection-", destinations contains the destination
 // pipelines the event is sent to.
-func (batch *batch) Publish(ctx context.Context, topics []string, event map[string]any, destinations []int) error {
+func (batch *batch) Publish(ctx context.Context, topics []string, event map[string]any, destinations []string) error {
 	shard := shardOf(event["anonymousId"].(string))
 	data, err := types.Marshal(event, schemas.Event)
 	if err != nil {
@@ -606,7 +606,7 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 		if strings.HasPrefix(topic, "connection-") {
 			h := make([]string, len(destinations))
 			for i, d := range destinations {
-				h[i] = strconv.Itoa(d)
+				h[i] = d
 			}
 			header = nats.Header{"destinations": h}
 		}
@@ -621,6 +621,10 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 		batch.futures = append(batch.futures, future)
 	}
 	return nil
+}
+
+func isValidDestination(s string) bool {
+	return len(s) == 12 && base58.IsValid(s)
 }
 
 func shardOf(key string) int {

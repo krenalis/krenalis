@@ -29,10 +29,10 @@ type destinations struct {
 
 	// senders maps a connection ID to its sender.
 	// No mutex is needed since all accesses occur while the state is frozen.
-	senders map[int]*sender.Sender
+	senders map[string]*sender.Sender
 
 	mu        sync.Mutex
-	pipelines map[int]destinationPipelines // maps a destination connection ID to its pipelines; it is protected by mu.
+	pipelines map[string]destinationPipelines // maps a destination connection ID to its pipelines; it is protected by mu.
 
 	close struct {
 		closed    atomic.Bool             // indicates if the writer has been closed
@@ -51,8 +51,8 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		connections: connections,
 		provider:    provider,
 		metrics:     metrics,
-		senders:     map[int]*sender.Sender{},
-		pipelines:   map[int]destinationPipelines{},
+		senders:     map[string]*sender.Sender{},
+		pipelines:   map[string]destinationPipelines{},
 	}
 	d.close.ctx, d.close.cancel = context.WithCancelCause(context.Background())
 
@@ -95,7 +95,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 
 // QueueEvent enqueues the given event to the pipelines of the provided
 // connection that are specified in the event.
-func (d *destinations) QueueEvent(connection int, event streams.Event) {
+func (d *destinations) QueueEvent(connection string, event streams.Event) {
 	d.mu.Lock()
 	pipelines := d.pipelines[connection]
 	d.mu.Unlock()
@@ -129,7 +129,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 	queue.close.ctx = ctx
 	queue.close.cancel = cancel
 
-	go func(connection, pipeline int) {
+	go func(connection, pipeline string) {
 		done := queue.close.ctx.Done()
 		for {
 			select {
@@ -410,7 +410,7 @@ func (pp destinationPipelines) delete(index int) destinationPipelines {
 	return updated
 }
 
-func (pp destinationPipelines) find(id int) (*destinationPipeline, int) {
+func (pp destinationPipelines) find(id string) (*destinationPipeline, int) {
 	for i, pipeline := range pp {
 		if pipeline.id == id {
 			return pipeline, i

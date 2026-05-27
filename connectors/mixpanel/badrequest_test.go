@@ -28,7 +28,7 @@ func TestBadRequest(t *testing.T) {
 	event := &connectors.Event{
 		Received: testconnector.ReceivedEvent(map[string]any{
 			"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
-			"connectionId": 1323607634,
+			"connectionId": testConnectionID,
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Other",

@@ -38,7 +38,7 @@ func TestImportFromDatabase(t *testing.T) {
 				"email": "email",
 			},
 		},
-		Query:           `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
+		Query:           `SELECT 1 AS "id", 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
 		UserIDColumn:    "id",
 		UpdatedAtColumn: "",
 		UpdatedAtFormat: "",
@@ -57,7 +57,7 @@ func TestImportFromDatabase(t *testing.T) {
 
 	for _, identity := range identities {
 		if identity.Pipeline != importUsers {
-			t.Fatalf("expected identity pipeline %d, got %d", importUsers, identity.Pipeline)
+			t.Fatalf("expected identity pipeline %s, got %s", importUsers, identity.Pipeline)
 		}
 	}
 }

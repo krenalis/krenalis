@@ -150,7 +150,7 @@ const GeneralSettings = () => {
 		}
 		deleteButtonRef.current!.confirm();
 		setTimeout(() => {
-			setSelectedWorkspace(0);
+			setSelectedWorkspace('');
 			setIsLoadingState(true);
 		}, CONFIRM_ANIMATION_DURATION);
 	};

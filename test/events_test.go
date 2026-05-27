@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -58,7 +57,7 @@ func TestEvents(t *testing.T) {
 
 	// Create a JavaScript connection with 2 pipelines (one for importing events,
 	// one for importing identities) and retrieve its key.
-	var javaScriptID int
+	var javaScriptID string
 	var javaScriptKey string
 	{
 		javaScriptID = c.CreateJavaScriptSource("JavaScript (source)", nil)
@@ -185,8 +184,8 @@ func TestEvents(t *testing.T) {
 		if !reflect.DeepEqual(event["properties"], expectedProperties) {
 			t.Fatalf("expected properties %#v, got %#v", expectedProperties, event["properties"])
 		}
-		if connection, err := strconv.Atoi(string(event["connectionId"].(json.Number))); err != nil || connection != javaScriptID {
-			t.Fatalf("expected connection %d, got %#v", javaScriptID, event["connectionId"])
+		if connection, ok := event["connectionId"].(string); !ok || connection != javaScriptID {
+			t.Fatalf("expected connection %s, got %#v", javaScriptID, event["connectionId"])
 		}
 		if !reflect.DeepEqual(event["traits"], expectedTraits) {
 			t.Fatalf("expected traits %#v, got %#v", expectedTraits, event["traits"])

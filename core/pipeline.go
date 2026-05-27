@@ -53,10 +53,10 @@ type Pipeline struct {
 	core               *Core
 	pipeline           *state.Pipeline
 	connection         *Connection
-	ID                 int             `json:"id"`
+	ID                 string          `json:"id"`
 	Connector          string          `json:"connector"`
 	ConnectorType      ConnectorType   `json:"connectorType"`
-	Connection         int             `json:"connection"`
+	Connection         string          `json:"connection"`
 	ConnectionRole     Role            `json:"connectionRole"`
 	Target             Target          `json:"target"`
 	Name               string          `json:"name"`
@@ -219,7 +219,7 @@ func (this *Pipeline) Delete(ctx context.Context) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("pipeline %d does not exist", n.ID)
+			return nil, errors.NotFound("pipeline %s does not exist", n.ID)
 		}
 		// Mark the pipeline as deleted.
 		if c.Role == state.Source && this.pipeline.Target == state.TargetUser {
@@ -237,11 +237,11 @@ func (this *Pipeline) Delete(ctx context.Context) error {
 // MarshalJSON encodes the Pipeline as JSON.
 func (this *Pipeline) MarshalJSON() ([]byte, error) {
 	type serializedPipeline struct {
-		ID             int           `json:"id"`
+		ID             string        `json:"id"`
 		Name           string        `json:"name"`
 		Connector      string        `json:"connector"`
 		ConnectorType  ConnectorType `json:"connectorType"`
-		Connection     int           `json:"connection"`
+		Connection     string        `json:"connection"`
 		ConnectionRole Role          `json:"connectionRole"`
 		Target         Target        `json:"target"`
 		Enabled        bool          `json:"enabled"`
@@ -493,37 +493,37 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - PipelineDisabled, if the pipeline is disabled.
-func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
+func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error) {
 	this.core.mustBeOpen()
 	c := this.pipeline.Connection()
 	if t := this.pipeline.Target; t != state.TargetUser && t != state.TargetGroup {
-		return 0, errors.BadRequest("pipeline %d with target %s cannot be run", this.pipeline.ID, t)
+		return "", errors.BadRequest("pipeline %s with target %s cannot be run", this.pipeline.ID, t)
 	}
 	typ := c.Connector().Type
 	switch typ {
 	case state.Application, state.Database, state.FileStorage:
 	default:
-		return 0, errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
+		return "", errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
 	}
 	if incremental != nil {
 		if c.Role == state.Destination {
-			return 0, errors.BadRequest("incremental cannot be provided for destination pipelines")
+			return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
 		}
 		if *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
-			return 0, errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
+			return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 		}
 	}
 	if !this.pipeline.Enabled {
-		return 0, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", c.ID)
+		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", c.ID)
 	}
 	if _, ok := this.pipeline.Run(); ok {
-		return 0, errors.Unprocessable(RunInProgress, "pipeline %d is already in progress", this.pipeline.ID)
+		return "", errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 	}
 	switch this.connection.store.Mode() {
 	case state.Inspection:
-		return 0, errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		return "", errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 	case state.Maintenance:
-		return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		return "", errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
 	return this.createRun(ctx, incremental)
 }
@@ -810,7 +810,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 					return nil, err
 				}
 				if current.Language != fn.Language || current.Source != fn.Source {
-					return nil, fmt.Errorf("abort update pipeline %d: it was optimistically assumed that the transformation"+
+					return nil, fmt.Errorf("abort update pipeline %s: it was optimistically assumed that the transformation"+
 						" had not changed, but it has indeed changed", n.ID)
 				}
 				fn.ID = current.ID
@@ -877,54 +877,61 @@ func (this *Pipeline) application() *connections.Application {
 // It returns a errors.NotFoundError if the pipeline no longer exists.
 // It returns a errors.UnprocessableError with code RunInProgress if a run for
 // this pipeline is already in progress.
-func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (int, error) {
+func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string, error) {
 
 	n := state.RunPipeline{
 		Pipeline:  this.pipeline.ID,
 		StartTime: time.Now().UTC(),
 	}
 
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var function string
-		var inc, executing bool
-		var cursor time.Time
-		err := tx.QueryRow(ctx, "SELECT p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
-			"FROM pipelines AS p\n"+
-			"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
-			"WHERE p.id = $1\n"+
-			"ORDER BY e.id DESC\n"+
-			"LIMIT 1", n.Pipeline).Scan(&function, &inc, &cursor, &executing)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, errors.NotFound("pipeline %d does not exist", n.Pipeline)
-			}
-			return nil, err
-		}
-		if executing {
-			return nil, errors.Unprocessable(RunInProgress, "pipeline run %d is already in progress", this.pipeline.ID)
-		}
-		if incremental == nil {
-			n.Incremental = inc
-		} else {
-			n.Incremental = *incremental
-		}
-		if n.Incremental {
-			n.Cursor = cursor
-		}
-		err = tx.QueryRow(ctx, "INSERT INTO pipelines_runs (pipeline, function, cursor, incremental, start_time, ping_time)\n"+
-			"VALUES ($1, $2, $3, $4, $5, $5)\nRETURNING id", n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
-		if err != nil {
-			if db.IsForeignKeyViolation(err) {
-				if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
-					err = errors.NotFound("pipeline %d does not exit", n.Pipeline)
+	for {
+		n.ID = generateID[any](nil)
+		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			var function string
+			var inc, executing bool
+			var cursor time.Time
+			err := tx.QueryRow(ctx, "SELECT p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+				"FROM pipelines AS p\n"+
+				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
+				"WHERE p.id = $1\n"+
+				"ORDER BY e.id DESC\n"+
+				"LIMIT 1", n.Pipeline).Scan(&function, &inc, &cursor, &executing)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
 				}
+				return nil, err
 			}
-			return nil, err
+			if executing {
+				return nil, errors.Unprocessable(RunInProgress, "pipeline run %s is already in progress", this.pipeline.ID)
+			}
+			if incremental == nil {
+				n.Incremental = inc
+			} else {
+				n.Incremental = *incremental
+			}
+			if n.Incremental {
+				n.Cursor = cursor
+			}
+			_, err = tx.Exec(ctx, "INSERT INTO pipelines_runs (id, pipeline, function, cursor, incremental, start_time, ping_time)\n"+
+				"VALUES ($1, $2, $3, $4, $5, $6, $6)", n.ID, n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime)
+			if err != nil {
+				if db.IsForeignKeyViolation(err) {
+					if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
+						err = errors.NotFound("pipeline %s does not exit", n.Pipeline)
+					}
+				}
+				return nil, err
+			}
+			return n, nil
+		})
+		if err != nil {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "pipelines_runs_id_key" {
+				continue
+			}
+			return "", err
 		}
-		return n, nil
-	})
-	if err != nil {
-		return 0, err
+		break
 	}
 
 	return n.ID, nil
@@ -1494,10 +1501,10 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 // transformationFunctionName returns the name of the transformation function
 // for a pipeline. If pipeline is 0, the returned name refers to a preview
 // transformation function.
-func transformationFunctionName(pipeline int) string {
-	if pipeline == 0 {
+func transformationFunctionName(pipeline string) string {
+	if pipeline == "" {
 		return fmt.Sprintf("krenalis_preview_%s", uuid.NewString())
 	}
 	now := time.Now().UTC()
-	return fmt.Sprintf("krenalis_pipeline%d_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
+	return fmt.Sprintf("krenalis_pipeline_%s_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
 }

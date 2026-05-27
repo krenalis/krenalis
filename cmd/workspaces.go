@@ -32,9 +32,9 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		Schema         types.Type     `json:"schema"`
-		PrimarySources map[string]int `json:"primarySources"`
-		RePaths        map[string]any `json:"rePaths"`
+		Schema         types.Type        `json:"schema"`
+		PrimarySources map[string]string `json:"primarySources"`
+		RePaths        map[string]any    `json:"rePaths"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -109,7 +109,7 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return map[string]int{"id": id}, nil
+	return map[string]string{"id": id}, nil
 }
 
 // CreateEventListener creates an event listener for a workspace that listens to
@@ -123,7 +123,7 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Connection *int         `json:"connection"`
+		Connection *string      `json:"connection"`
 		Size       *int         `json:"size"`
 		Filter     *core.Filter `json:"filter"`
 	}
@@ -131,7 +131,7 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	connection := 0
+	connection := ""
 	if body.Connection != nil {
 		connection = *body.Connection
 	}
@@ -404,9 +404,9 @@ func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request
 	q := r.URL.Query()
 
 	// Parse pipelines.
-	var pipelines []int
+	var pipelines []string
 	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
-		pipelines = make([]int, len(ids))
+		pipelines = make([]string, len(ids))
 		for i, id := range ids {
 			var ok bool
 			pipelines[i], ok = parseID(id)
@@ -486,9 +486,9 @@ func (workspace workspace) PipelineMetricsPerDate(_ http.ResponseWriter, r *http
 	q := r.URL.Query()
 
 	// Parse pipelines.
-	var pipelines []int
+	var pipelines []string
 	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
-		pipelines = make([]int, len(ids))
+		pipelines = make([]string, len(ids))
 		for i, id := range ids {
 			var ok bool
 			pipelines[i], ok = parseID(id)
@@ -531,9 +531,9 @@ func (workspace workspace) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.
 	q := r.URL.Query()
 
 	// Parse pipelines.
-	var pipelines []int
+	var pipelines []string
 	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
-		pipelines = make([]int, len(ids))
+		pipelines = make([]string, len(ids))
 		for i, id := range ids {
 			var ok bool
 			pipelines[i], ok = parseID(id)
@@ -576,9 +576,9 @@ func (workspace workspace) PipelineMetricsPerHour(_ http.ResponseWriter, r *http
 	q := r.URL.Query()
 
 	// Parse pipelines.
-	var pipelines []int
+	var pipelines []string
 	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
-		pipelines = make([]int, len(ids))
+		pipelines = make([]string, len(ids))
 		for i, id := range ids {
 			var ok bool
 			pipelines[i], ok = parseID(id)
@@ -621,9 +621,9 @@ func (workspace workspace) PipelineMetricsPerMinute(_ http.ResponseWriter, r *ht
 	q := r.URL.Query()
 
 	// Parse pipelines.
-	var pipelines []int
+	var pipelines []string
 	if ids := splitQueryParameters(q["pipelines"]); len(ids) > 0 {
-		pipelines = make([]int, len(ids))
+		pipelines = make([]string, len(ids))
 		for i, id := range ids {
 			var ok bool
 			pipelines[i], ok = parseID(id)

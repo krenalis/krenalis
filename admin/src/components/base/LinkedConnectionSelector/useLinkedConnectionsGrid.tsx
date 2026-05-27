@@ -8,9 +8,9 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 
 const useLinkedConnectionsGrid = (
-	linkedConnections: Number[] | null,
-	setLinkedConnections: React.Dispatch<React.SetStateAction<Number[] | null>>,
-	onUnlink: (id: number) => Promise<void>,
+	linkedConnections: string[] | null,
+	setLinkedConnections: React.Dispatch<React.SetStateAction<string[] | null>>,
+	onUnlink: (id: string) => Promise<void>,
 	isClickable: boolean,
 	role: ConnectionRole,
 ) => {
@@ -52,9 +52,9 @@ const useLinkedConnectionsGrid = (
 		return fc;
 	}, [linkedConnections, connections]);
 
-	const unlinkConnection = async (e, idToUnlink: number) => {
+	const unlinkConnection = async (e, idToUnlink: string) => {
 		e.stopPropagation();
-		let updated: Number[] | null = [];
+		let updated: string[] | null = [];
 		for (const id of linkedConnections) {
 			if (id !== idToUnlink) {
 				updated.push(id);

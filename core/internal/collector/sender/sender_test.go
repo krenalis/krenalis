@@ -28,10 +28,12 @@ import (
 // uuidDeterministicNS defines the namespace used to generate deterministic UUIDv5 values.
 var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
+const testPipelineID = "8QaT3mN7KxP5"
+
 // testApplication is a configurable Application implementation for tests.
 // It defaults to no-op behavior when hooks are not provided.
 type testApplication struct {
-	IDValue        int
+	IDValue        string
 	ConnectorValue string
 	WaitTimeFunc   func(string) (time.Duration, error)
 	SendEventsFunc func(context.Context, connectors.Events) error
@@ -39,14 +41,14 @@ type testApplication struct {
 
 func newTestApplication() *testApplication {
 	return &testApplication{
-		IDValue:        1,
+		IDValue:        testPipelineID,
 		ConnectorValue: "nop",
 	}
 }
 
-func (a *testApplication) ID() int {
-	if a.IDValue == 0 {
-		return 1
+func (a *testApplication) ID() string {
+	if a.IDValue == "" {
+		return testPipelineID
 	}
 	return a.IDValue
 }
@@ -194,14 +196,14 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event0 := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+		event0 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user",
 				"messageId":   "msg-0",
 			},
 			Ack: nopAck,
 		})
-		event1 := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user",
 				"messageId":   "msg-1",
@@ -249,7 +251,7 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 
 		makeEvent := func(messageID string) *Event {
 			t.Helper()
-			return s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+			return s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 				Attributes: map[string]any{
 					"anonymousId": userID,
 					"messageId":   messageID,
@@ -302,7 +304,7 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user",
 				"messageId":   "msg-0",
@@ -506,7 +508,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		s := New(app, nil)
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user-1",
 				"messageId":   "msg-1",
@@ -543,7 +545,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user-2",
 				"messageId":   "msg-2",
@@ -581,7 +583,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(1, "Click", types.Type{}, streams.Event{
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user-3",
 				"messageId":   "msg-3",
@@ -672,7 +674,7 @@ func Test_Sender(t *testing.T) {
 				if !valid {
 					typ = "Invalid"
 				}
-				event := s.CreateEvent(1, typ, types.Type{}, streams.Event{
+				event := s.CreateEvent(testPipelineID, typ, types.Type{}, streams.Event{
 					Attributes: map[string]any{"anonymousId": anonymousId, "messageId": messageId},
 					Ack:        nopAck,
 				})
@@ -771,7 +773,7 @@ func Test_Sender(t *testing.T) {
 
 // createTestEvent creates a minimal event for tests.
 func createTestEvent(s *Sender, i int) *Event {
-	return s.CreateEvent(1, "page", types.Type{}, streams.Event{
+	return s.CreateEvent(testPipelineID, "page", types.Type{}, streams.Event{
 		Attributes: map[string]any{
 			"anonymousId": "user123",
 			"messageId":   fmt.Sprintf("msg-%d", i),
@@ -812,8 +814,8 @@ func (app *application) Sends() []send {
 	return sends
 }
 
-func (app *application) ID() int {
-	return 1
+func (app *application) ID() string {
+	return testPipelineID
 }
 
 func (app *application) Connector() string {

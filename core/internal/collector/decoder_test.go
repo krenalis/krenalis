@@ -24,6 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+const decoderTestConnectionID = "7B3mN9qK2xA4"
+
 func Test_Decoder(t *testing.T) {
 
 	writeKey := "vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"
@@ -51,7 +53,7 @@ func Test_Decoder(t *testing.T) {
 		typ            string
 		body           string
 		writeKey       string              // Leave empty if you don't want to test it.
-		connectionId   int                 // Can be any value.
+		connectionId   string              // Can be any value.
 		connectionType state.ConnectorType // Defaults to "Website" if not set.
 		expected       []expectedEvent     // Can be empty or nil, if no events are expected.
 		err            error               // Expected error from the newDecoder function.
@@ -76,8 +78,8 @@ func Test_Decoder(t *testing.T) {
 		{body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
 		{body: `{"batch":[],"context":{}}`},
 		{body: `{"batch":[],"context":{"foo":"boo"}}`},
-		{body: `{"batch":[],"connectionId":-2}`, err: errors.BadRequest("property 'connectionId' is not a valid connection identifier")},
-		{body: `{"batch":[],"connectionId":264826420}`},
+		{body: `{"batch":[],"connectionId":-2}`, err: errors.BadRequest("property 'connectionId' is not a string")},
+		{body: `{"batch":[],"connectionId":"9zQ4Tn7B3mS6"}`},
 
 		{typ: "track", body: ``, err: errors.BadRequest("request's body is empty")},
 		{typ: "track", body: `{`, expected: []expectedEvent{{err: errors.BadRequest("unexpected invalid token while decoding an event")}}},
@@ -88,7 +90,7 @@ func Test_Decoder(t *testing.T) {
 		// krenalis.track('click'); anonymous
 		{
 			body:         `{"batch":[{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}]}`,
-			connectionId: 830163006,
+			connectionId: decoderTestConnectionID,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
@@ -103,7 +105,7 @@ func Test_Decoder(t *testing.T) {
 		},
 		{
 			body:         `[{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}]`,
-			connectionId: 830163006,
+			connectionId: decoderTestConnectionID,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
@@ -119,7 +121,7 @@ func Test_Decoder(t *testing.T) {
 		{
 			typ:          "track",
 			body:         `{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}`,
-			connectionId: 830163006,
+			connectionId: decoderTestConnectionID,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
@@ -302,7 +304,7 @@ func Test_Decoder(t *testing.T) {
 				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"browser":{"name":"Chrome","version":"138.0"},"library":{"name":"krenalis.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
 				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"os":{"name":"macOS","version":"15"},"library":{"name":"krenalis.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
 				`],"sentAt":"2024-10-31T14:39:12.647Z","writeKey":"qWqwaP3zGZOazQUmuFRuRMfW3lMCqjUa"}`,
-			connectionId: 830163006,
+			connectionId: decoderTestConnectionID,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "5d60ebba-cbf6-463c-8d55-fc7a6f66183f",
@@ -691,7 +693,7 @@ func TestDecoderDefaultContextNotMutatedAcrossEvents(t *testing.T) {
 	}
 
 	i := 0
-	for event, err := range dec.Events(42, true) {
+	for event, err := range dec.Events(decoderTestConnectionID, true) {
 		if err != nil {
 			t.Fatalf("unexpected event error: %v", err)
 		}
@@ -778,7 +780,7 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			count    int
 		)
 
-		for event, err := range dec.Events(42, fallback) {
+		for event, err := range dec.Events(decoderTestConnectionID, fallback) {
 			gotEvent = event
 			gotErr = err
 			count++

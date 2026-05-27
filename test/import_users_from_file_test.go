@@ -97,10 +97,10 @@ func TestImportUsersFromFile(t *testing.T) {
 	}
 	for _, identity := range identities {
 		if identity.Connection != fsID {
-			t.Fatalf("expected connection %d, got %d", fsID, identity.Connection)
+			t.Fatalf("expected connection %s, got %s", fsID, identity.Connection)
 		}
 		if identity.Pipeline != importUsersPipelineID {
-			t.Fatalf("expected pipeline %d, got %d", importUsersPipelineID, identity.Pipeline)
+			t.Fatalf("expected pipeline %s, got %s", importUsersPipelineID, identity.Pipeline)
 		}
 		if len(identity.AnonymousIDs) != 0 {
 			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIDs)

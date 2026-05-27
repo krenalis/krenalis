@@ -74,9 +74,9 @@ type endpointGroup struct {
 type Client struct {
 	http           *HTTP
 	connector      string // connector code
-	connection     int    // connection identifier; it is 0 if the client is not relative to a connection
-	clientSecret   string // client secret; only if connection == 0
-	accessToken    string // access token; only if connection == 0
+	connection     string // connection identifier; it is 0 if the client is not relative to a connection
+	clientSecret   string // client secret; only if connection == ""
+	accessToken    string // access token; only if connection == ""
 	endpointGroups struct {
 		mux       *http.ServeMux
 		byPattern map[string]endpointGroup // endpoint group by pattern
@@ -86,7 +86,7 @@ type Client struct {
 // AccessToken returns an OAuth access token.
 func (c *Client) AccessToken(ctx context.Context) (string, error) {
 
-	if c.connection == 0 {
+	if c.connection == "" {
 		if c.accessToken == "" {
 			return "", errUnsupportedOAuth
 		}
@@ -95,7 +95,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 
 	connection, ok := c.http.state.Connection(c.connection)
 	if !ok {
-		return "", fmt.Errorf("connection %d does not exist anymore", c.connection)
+		return "", fmt.Errorf("connection %s does not exist anymore", c.connection)
 	}
 	connector := connection.Connector()
 	if connector.OAuth == nil {
@@ -103,7 +103,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 	}
 	a, ok := connection.Account()
 	if !ok {
-		return "", fmt.Errorf("connection %d does not have an OAuth account", c.connection)
+		return "", fmt.Errorf("connection %s does not have an OAuth account", c.connection)
 	}
 
 	if a.AccessToken != "" {
@@ -144,7 +144,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 
 // ClientSecret returns the OAuth client secret of the HTTP client.
 func (c *Client) ClientSecret() (string, error) {
-	if c.connection == 0 {
+	if c.connection == "" {
 		if c.clientSecret == "" {
 			return "", errUnsupportedOAuth
 		}
@@ -152,7 +152,7 @@ func (c *Client) ClientSecret() (string, error) {
 	}
 	connection, ok := c.http.state.Connection(c.connection)
 	if !ok {
-		return "", fmt.Errorf("connection %d does not exist anymore", c.connection)
+		return "", fmt.Errorf("connection %s does not exist anymore", c.connection)
 	}
 	connector := connection.Connector()
 	if connector.OAuth == nil {

@@ -116,7 +116,7 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Define a function "importUser" which imports the user into the data
 	// warehouse.
-	importUser := func(pipeline int, props map[string]any) {
+	importUser := func(pipeline string, props map[string]any) {
 
 		// Create a JSON file with the user.
 		t.Logf("importing user %v", props)

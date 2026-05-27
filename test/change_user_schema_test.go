@@ -46,7 +46,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	dec := json.NewDecoder(f)
 	var file struct {
 		Schema         types.Type
-		PrimarySources map[string]int
+		PrimarySources map[string]string
 		RePaths        map[string]any
 	}
 	err = dec.Decode(&file)
@@ -259,7 +259,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	// Create a primary source for the first property.
 	firstProperty := file.Schema.Properties().Names()[0]
 	primarySource := c.CreateDummy("Primary Source", krenalistester.Source)
-	primarySources := map[string]int{firstProperty: primarySource}
+	primarySources := map[string]string{firstProperty: primarySource}
 	c.AlterProfileSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()
 	if !maps.Equal(primarySources, ws.PrimarySources) {
@@ -270,7 +270,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 
 	// Set a primary source for a not existent property.
-	primarySources = map[string]int{"not_existent_property": primarySource}
+	primarySources = map[string]string{"not_existent_property": primarySource}
 	err = c.AlterProfileSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
 	if err.Error() != expectedErr {
@@ -278,13 +278,10 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 
 	// Set a not existing primary source for the first property.
-	notExistentSource := primarySource - 1
-	if notExistentSource == 0 {
-		notExistentSource = 2
-	}
-	primarySources = map[string]int{firstProperty: notExistentSource}
+	notExistentSource := "7B3mN9qK2xA4"
+	primarySources = map[string]string{firstProperty: notExistentSource}
 	err = c.AlterProfileSchemaErr(file.Schema, primarySources, nil)
-	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %d does not exist"}}`, notExistentSource)
+	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}}`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}

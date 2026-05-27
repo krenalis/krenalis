@@ -9,7 +9,7 @@ import AppContext from '../../../context/AppContext';
 const Workspaces = () => {
 	const { setSelectedWorkspace, workspaces, redirect, setIsLoadingState } = useContext(AppContext);
 
-	const onWorkspaceClick = (id: number) => {
+	const onWorkspaceClick = (id: string) => {
 		setSelectedWorkspace(id);
 		setIsLoadingState(true);
 		redirect('connections');

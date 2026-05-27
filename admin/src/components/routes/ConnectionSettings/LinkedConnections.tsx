@@ -10,7 +10,7 @@ interface LinkedConnectionProps {
 }
 
 const LinkedConnections = ({ connection, title, description }: LinkedConnectionProps) => {
-	const [linkedConnections, setLinkedConnections] = useState<Number[] | null>();
+	const [linkedConnections, setLinkedConnections] = useState<string[] | null>();
 
 	useEffect(() => {
 		setLinkedConnections(connection.linkedConnections);
@@ -18,7 +18,7 @@ const LinkedConnections = ({ connection, title, description }: LinkedConnectionP
 
 	const { connections, setIsLoadingConnections, api, handleError } = useContext(AppContext);
 
-	const onLink = async (id: number) => {
+	const onLink = async (id: string) => {
 		const [src, dst] = connection.role === 'Source' ? [connection.id, id] : [id, connection.id];
 		try {
 			await api.workspaces.connections.linkConnection(src, dst);
@@ -29,7 +29,7 @@ const LinkedConnections = ({ connection, title, description }: LinkedConnectionP
 		setIsLoadingConnections(true);
 	};
 
-	const onUnlink = async (id: number) => {
+	const onUnlink = async (id: string) => {
 		const [src, dst] = connection.role === 'Source' ? [connection.id, id] : [id, connection.id];
 		try {
 			await api.workspaces.connections.unlinkConnection(src, dst);

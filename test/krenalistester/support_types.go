@@ -65,7 +65,7 @@ type ConnectionToCreate struct {
 	Role              Role         `json:"role"`
 	Connector         string       `json:"connector"`
 	Strategy          *Strategy    `json:"strategy"`
-	LinkedConnections []int        `json:"linkedConnections"`
+	LinkedConnections []string     `json:"linkedConnections"`
 	SendingMode       *SendingMode `json:"sendingMode"`
 	Settings          json.Value   `json:"settings"`
 }
@@ -75,8 +75,8 @@ type DummySettings struct {
 }
 
 type PipelineRun struct {
-	ID        int        `json:"id"`
-	Pipeline  int        `json:"pipeline"`
+	ID        string     `json:"id"`
+	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
 	Passed    [6]int     `json:"passed"`
@@ -156,8 +156,8 @@ type Identity struct {
 	UserID       string    `json:"userId"`
 	AnonymousIDs []string  `json:"anonymousIds"`
 	UpdatedAt    time.Time `json:"updatedAt"`
-	Connection   int       `json:"connection"`
-	Pipeline     int       `json:"pipeline"`
+	Connection   string    `json:"connection"`
+	Pipeline     string    `json:"pipeline"`
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'core'.
@@ -348,19 +348,19 @@ const (
 )
 
 type Organization struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type Workspace struct {
-	ID                             int            `json:"id"`
-	Name                           string         `json:"name"`
-	ProfileSchema                  types.Type     `json:"profileSchema"`
-	PrimarySources                 map[string]int `json:"primarySources"`
-	ResolveIdentitiesOnBatchImport bool           `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string       `json:"identifiers"`
-	WarehouseMode                  WarehouseMode  `json:"warehouseMode"`
-	UIPreferences                  UIPreferences  `json:"uiPreferences"`
+	ID                             string            `json:"id"`
+	Name                           string            `json:"name"`
+	ProfileSchema                  types.Type        `json:"profileSchema"`
+	PrimarySources                 map[string]string `json:"primarySources"`
+	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string          `json:"identifiers"`
+	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
+	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }
 
 type UIPreferences struct {

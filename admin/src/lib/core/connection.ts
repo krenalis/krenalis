@@ -19,12 +19,12 @@ interface ConnectionStatus {
 }
 
 class TransformedConnection {
-	id: number;
+	id: string;
 	name: string;
 	connector: TransformedConnector;
 	role: ConnectionRole;
 	health: Health;
-	storage: number;
+	storage: string;
 	compression: Compression;
 	strategy?: Strategy | null;
 	sendingMode: SendingMode | null;
@@ -34,15 +34,15 @@ class TransformedConnection {
 	pipelineTypes?: PipelineType[];
 	pipelines: Pipeline[];
 	eventTypes?: TransformedEventType[];
-	linkedConnections?: number[];
+	linkedConnections?: string[];
 
 	constructor(
-		id: number,
+		id: string,
 		name: string,
 		connector: TransformedConnector,
 		role: ConnectionRole,
 		health: Health,
-		storage: number,
+		storage: string,
 		compression: Compression,
 		strategy: Strategy | null,
 		sendingMode: SendingMode | null,
@@ -52,14 +52,14 @@ class TransformedConnection {
 		pipelineTypes?: PipelineType[],
 		pipelines?: Pipeline[],
 		eventTypes?: TransformedEventType[],
-		linkedConnections?: number[],
+		linkedConnections?: string[],
 	) {
 		this.id = id;
 		this.name = name;
 		this.connector = connector;
 		this.role = role;
 		this.health = health;
-		this.storage = storage == null ? 0 : storage;
+		this.storage = storage == null ? '' : storage;
 		this.compression = compression;
 		this.strategy = strategy;
 		this.sendingMode = sendingMode;
@@ -83,7 +83,7 @@ class TransformedConnection {
 	}
 
 	get isFile() {
-		return this.connector.type === 'File' && this.storage !== 0;
+		return this.connector.type === 'File' && this.storage !== '';
 	}
 
 	get isFileStorage() {
@@ -126,7 +126,7 @@ class TransformedConnection {
 		return this.connector.hasSettings(this.role);
 	}
 
-	relations(connections: TransformedConnection[]): ('dwh-user' | 'dwh-event' | number)[] {
+	relations(connections: TransformedConnection[]): ('dwh-user' | 'dwh-event' | string)[] {
 		let hasUsersPipelines = this.pipelines.some((p) => {
 			if (this.isSDK || this.isWebhook) {
 				return p.target === 'User' && p.enabled;
@@ -135,7 +135,7 @@ class TransformedConnection {
 		});
 		let hasEventPipelines = this.pipelines.some((p) => p.target === 'Event' && p.enabled);
 
-		const linkedTo: ('dwh-user' | 'dwh-event' | number)[] = [];
+		const linkedTo: ('dwh-user' | 'dwh-event' | string)[] = [];
 		if (hasUsersPipelines) {
 			linkedTo.push('dwh-user');
 		}
@@ -220,7 +220,7 @@ const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: C
 };
 
 const getFileStorageConnections = (
-	storageID: number,
+	storageID: string,
 	connections: TransformedConnection[],
 ): TransformedConnection[] => {
 	return connections.filter((c) => c.storage === storageID);

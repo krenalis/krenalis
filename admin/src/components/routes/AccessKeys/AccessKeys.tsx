@@ -394,7 +394,7 @@ const CreateAccessKeyDialog = ({
 	warehouseByWorkspace,
 }: CreateAccessKeyDialogProps) => {
 	const [name, setName] = useState<string>('');
-	const [workspace, setWorkspace] = useState<number | null>();
+	const [workspace, setWorkspace] = useState<string | null>();
 	const [nameError, setNameError] = useState<string>('');
 	const [workspaceError, setWorkspaceError] = useState<string>('');
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -429,7 +429,7 @@ const CreateAccessKeyDialog = ({
 		if (v === '0') {
 			setWorkspace(null);
 		} else {
-			setWorkspace(Number(v));
+			setWorkspace(v);
 		}
 	};
 

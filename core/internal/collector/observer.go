@@ -36,14 +36,14 @@ type Observers struct {
 }
 
 // Delete deletes the observer for the provided workspace.
-func (o *Observers) Delete(workspace int) {
+func (o *Observers) Delete(workspace string) {
 	o.m.LoadAndDelete(workspace)
 }
 
 // Load returns the observer for the given workspace identifier, or nil if none
 // exists.
 // The ok result indicates whether the workspace was found.
-func (o *Observers) Load(workspace int) (observer *Observer, ok bool) {
+func (o *Observers) Load(workspace string) (observer *Observer, ok bool) {
 	v, ok := o.m.Load(workspace)
 	if !ok {
 		return nil, false
@@ -52,7 +52,7 @@ func (o *Observers) Load(workspace int) (observer *Observer, ok bool) {
 }
 
 // Store sets the observer for a workspace.
-func (o *Observers) Store(workspace int, observer *Observer) {
+func (o *Observers) Store(workspace string, observer *Observer) {
 	o.m.Store(workspace, observer)
 }
 
@@ -65,7 +65,7 @@ type Observer struct {
 // listener represents an event listener.
 type listener struct {
 	id          string
-	connections []int
+	connections []string
 	filter      *state.Where
 	sync.Mutex  // for the events and omitted fields
 	events      []json.Value
@@ -92,7 +92,7 @@ func newObserver() *Observer {
 //
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
-func (observer *Observer) CreateListener(connections []int, size int, filter *state.Where) (string, error) {
+func (observer *Observer) CreateListener(connections []string, size int, filter *state.Where) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
 		id:          id,
@@ -165,7 +165,7 @@ func (observer *Observer) addEvent(event events.Event) {
 	}
 	var properties json.Value
 	var receivedAt time.Time
-	connectionId := event["connectionId"].(int)
+	connectionId := event["connectionId"].(string)
 	for _, listener := range observer.listeners {
 		if listener.connections != nil && !slices.Contains(listener.connections, connectionId) {
 			continue

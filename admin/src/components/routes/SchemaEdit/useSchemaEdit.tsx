@@ -87,7 +87,7 @@ const useSchemaEdit = (
 		setEditableSchema(transformSchema(s));
 	}, [schema]);
 
-	const onAddProperty = (property: PropertyToEdit, primarySource: number | null) => {
+	const onAddProperty = (property: PropertyToEdit, primarySource: string | null) => {
 		if (isMetaProperty(property.name)) {
 			throw new Error(`Profile schema property names cannot start with an underscore`);
 		}
@@ -169,7 +169,7 @@ const useSchemaEdit = (
 		}
 	};
 
-	const onEditProperty = (property: PropertyToEdit, primarySource: number | null) => {
+	const onEditProperty = (property: PropertyToEdit, primarySource: string | null) => {
 		const key = property.key;
 		const s = { ...editableSchema };
 		const current = s[key];

@@ -10,17 +10,24 @@ import (
 )
 
 func TestAddAndRemoveLinkedConnection(t *testing.T) {
+	const (
+		linkedConnectionA = "2Qn5zBpR9YH7"
+		linkedConnectionB = "5zBpR9Y2QnM3"
+		linkedConnectionC = "8QaT3mN7KxP5"
+		linkedConnectionD = "B7mN9qK2xAC3"
+		linkedConnectionE = "G3mN7Kx8QaD4"
+	)
 
 	tests := []struct {
-		id      int
-		with    []int
-		without []int
+		id      string
+		with    []string
+		without []string
 	}{
-		{1, []int{1}, []int{}},
-		{1, []int{1, 2}, []int{2}},
-		{2, []int{1, 2}, []int{1}},
-		{8, []int{2, 5, 8, 15, 16}, []int{2, 5, 15, 16}},
-		{16, []int{1, 8, 15, 16}, []int{1, 8, 15}},
+		{linkedConnectionA, []string{linkedConnectionA}, []string{}},
+		{linkedConnectionA, []string{linkedConnectionA, linkedConnectionB}, []string{linkedConnectionB}},
+		{linkedConnectionB, []string{linkedConnectionA, linkedConnectionB}, []string{linkedConnectionA}},
+		{linkedConnectionC, []string{linkedConnectionB, linkedConnectionC, linkedConnectionD, linkedConnectionE}, []string{linkedConnectionB, linkedConnectionD, linkedConnectionE}},
+		{linkedConnectionE, []string{linkedConnectionA, linkedConnectionC, linkedConnectionD, linkedConnectionE}, []string{linkedConnectionA, linkedConnectionC, linkedConnectionD}},
 	}
 
 	// Test the addLinkedConnection function.

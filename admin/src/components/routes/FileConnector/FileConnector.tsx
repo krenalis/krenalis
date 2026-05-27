@@ -13,7 +13,7 @@ import { startsWithVowelSound } from '../../../utils/startsWithVowelSound';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const FileConnector = () => {
-	const [selectedStorage, setSelectedStorage] = useState<number>();
+	const [selectedStorage, setSelectedStorage] = useState<string>();
 
 	const { setTitle, connectors, redirect, handleError, connections } = useContext(appContext);
 
@@ -55,7 +55,7 @@ const FileConnector = () => {
 	}, [file]);
 
 	const onStorageChange = (e) => {
-		setSelectedStorage(Number(e.target.value));
+		setSelectedStorage(e.target.value);
 	};
 
 	const onAddPipelineType = (target: String) => {

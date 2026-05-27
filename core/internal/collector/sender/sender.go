@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 
@@ -44,7 +43,7 @@ var postponeMarker = new(iterator)
 type Application interface {
 
 	// ID returns the ID of the connection.
-	ID() int
+	ID() string
 
 	// Connector returns the name of the connector.
 	Connector() string
@@ -69,7 +68,7 @@ const maxQueueDelay = 200 * time.Millisecond
 type Event struct {
 	connectors.Event             // original event.
 	createdAt        time.Time   // time at which the event was created.
-	pipeline         int         // pipeline ID.
+	pipeline         string      // pipeline ID.
 	user             *user       // user to whom the event belongs.
 	sequence         int         // sequence number; access is synchronized via Sender.mu.
 	discarded        bool        // true if DiscardEvent was called for this event.
@@ -181,7 +180,7 @@ func New(app Application, metrics *metrics.Collector) *Sender {
 	s.close.stop = make(chan context.Context)
 	s.close.done = make(chan struct{})
 	// Set the metrics.
-	connection := strconv.Itoa(app.ID())
+	connection := app.ID()
 	s.prometheus.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
@@ -230,7 +229,7 @@ func (s *Sender) Close(ctx context.Context) {
 //
 // The returned event must be passed to SendEvent (optionally after setting
 // the Properties field) or to DiscardEvent if it should be discarded.
-func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event streams.Event) *Event {
+func (s *Sender) CreateEvent(pipeline string, typ string, schema types.Type, event streams.Event) *Event {
 	anonymousID, ok := event.Attributes["anonymousId"].(string)
 	if !ok {
 		panic("CreateEvent called with an event missing anonymousId")
@@ -361,7 +360,7 @@ func (s *Sender) discard(err error) {
 	if s.iterator.numConsumed == 0 {
 		s.iterator.sameUser.user = nil
 	}
-	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %d, message ID %q\n",
+	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %s, message ID %q\n",
 		s.iterator, i, s.iterator.index, e.pipeline, e.Received.MessageID())
 	if asserts {
 		s._assertAvailable(s.available)
@@ -582,9 +581,9 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 			messageId := event.Received.MessageID()
 			anonymousId := event.Received.AnonymousID()
 			if consume {
-				trace("Sender.read: iterator %p read and consumed event %q of pipeline %d (anonymousId %q) at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
+				trace("Sender.read: iterator %p read and consumed event %q of pipeline %s (anonymousId %q) at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
 			} else {
-				trace("Sender.read: iterator %p read event %q of pipeline %d (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
+				trace("Sender.read: iterator %p read event %q of pipeline %s (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
 			}
 		} else {
 			if consume {
@@ -686,7 +685,7 @@ func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern st
 	var acks []streams.Ack
 
 	type metricsKey struct {
-		pipeline int
+		pipeline string
 		err      error
 	}
 	var metricsCounts map[metricsKey]int
@@ -749,7 +748,7 @@ func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern st
 	}
 
 	for key, count := range metricsCounts {
-		trace("Sender.send: collect metric for iterator %p with pipeline %d, count %d, and error %#v\n", iter, key.pipeline, count, key.err)
+		trace("Sender.send: collect metric for iterator %p with pipeline %s, count %d, and error %#v\n", iter, key.pipeline, count, key.err)
 		if key.err != nil {
 			s.metrics.FinalizeFailed(key.pipeline, count, key.err.Error())
 			continue

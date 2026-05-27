@@ -65,7 +65,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 		for _, identity := range identities {
 			if identity.Pipeline != pipeline1 {
-				t.Fatalf("expected pipeline %d, got %d, ", pipeline1, identity.Pipeline)
+				t.Fatalf("expected pipeline %s, got %s, ", pipeline1, identity.Pipeline)
 			}
 		}
 		identities, total = c.ConnectionIdentities(dummy2, 0, 100)
@@ -74,7 +74,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 		for _, identity := range identities {
 			if identity.Pipeline != pipeline2 {
-				t.Fatalf("expected pipeline %d, got %d", pipeline2, identity.Pipeline)
+				t.Fatalf("expected pipeline %s, got %s", pipeline2, identity.Pipeline)
 			}
 		}
 	}

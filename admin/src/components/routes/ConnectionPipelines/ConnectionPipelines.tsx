@@ -26,7 +26,7 @@ const ConnectionPipelines = () => {
 	const { redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
-	const newPipelineID = useRef<number>(0);
+	const newPipelineID = useRef<string>('');
 
 	useLayoutEffect(() => {
 		const isNew = window.location.search.indexOf('new=true') !== -1;
@@ -42,7 +42,7 @@ const ConnectionPipelines = () => {
 		if (!isPipelineOpen) {
 			const id = sessionStorage.getItem('newPipelineID');
 			if (id && id !== '') {
-				newPipelineID.current = Number(id);
+				newPipelineID.current = id;
 				sessionStorage.removeItem('newPipelineID');
 			}
 		}

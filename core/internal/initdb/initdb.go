@@ -14,7 +14,10 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/kms"
+
+	"github.com/google/uuid"
 )
 
 const kmsEncryptedKeys = 4
@@ -65,6 +68,10 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 		err := initialize(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
+		}
+		err = initializeDefaultOrganization(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("cannot initialize the default organization: %s", err)
 		}
 		slog.Info("PostgreSQL database initialized correctly")
 		// Also initialize the Docker member, if requested.
@@ -134,6 +141,24 @@ func initialize(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
 
+// initializeDefaultOrganization initializes the default organization and member.
+func initializeDefaultOrganization(ctx context.Context, tx *db.Tx) error {
+	globalID, err := uuid.NewRandom()
+	if err != nil {
+		return err
+	}
+	const query = `WITH org AS (
+		INSERT INTO organizations (id, global_id, name)
+		VALUES ($1, $2, 'ACME inc')
+		RETURNING id
+	)
+	INSERT INTO members (id, organization, name, avatar, email, password, created_at)
+	SELECT $3, id, 'ACME inc', NULL, 'acme@krenalis.com', '$2a$10$1arUoJQAeIVLAuNiErG29ex2r43n/4bJZWmW/PPOiWaSt4ZCH5Ysm', now() at time zone 'utc'
+	FROM org`
+	_, err = tx.Exec(ctx, query, base58.Generate(12), globalID, base58.Generate(12))
+	return err
+}
+
 // initializeDockerMember initializes a Krenalis member on the given PostgreSQL
 // database (by executing queries in the given transaction) for certain
 // scenarios where Krenalis is running with Docker, e.g., with the configuration
@@ -154,10 +179,10 @@ func initializeDockerMember(ctx context.Context, tx *db.Tx) error {
 	if err != nil {
 		return err
 	}
-	const query = `INSERT INTO members (organization, name, avatar, email, password, created_at)
-		SELECT id, 'User', NULL, 'docker@krenalis.com', '$2a$10$1arUoJQAeIVLAuNiErG29ex2r43n/4bJZWmW/PPOiWaSt4ZCH5Ysm', now() at time zone 'utc'
+	const query = `INSERT INTO members (id, organization, name, avatar, email, password, created_at)
+		SELECT $1, id, 'User', NULL, 'docker@krenalis.com', '$2a$10$1arUoJQAeIVLAuNiErG29ex2r43n/4bJZWmW/PPOiWaSt4ZCH5Ysm', now() at time zone 'utc'
 		FROM organizations`
-	_, err = tx.Exec(ctx, query)
+	_, err = tx.Exec(ctx, query, base58.Generate(12))
 	if err != nil {
 		return err
 	}

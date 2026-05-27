@@ -64,12 +64,12 @@ func (s *Stream) WaitUp(ctx context.Context) bool {
 
 // batchPublisher is a mock for streams.BatchPublisher.
 type batchPublisher struct {
-	PublishFunc func(context.Context, []string, map[string]any, []int) error
+	PublishFunc func(context.Context, []string, map[string]any, []string) error
 	DoneFunc    func(context.Context) error
 }
 
 // Publish implements streams.BatchPublisher.
-func (b *batchPublisher) Publish(ctx context.Context, topics []string, attributes map[string]any, destinations []int) error {
+func (b *batchPublisher) Publish(ctx context.Context, topics []string, attributes map[string]any, destinations []string) error {
 	if b.PublishFunc != nil {
 		return b.PublishFunc(ctx, topics, attributes, destinations)
 	}

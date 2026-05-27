@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 
 	"github.com/krenalis/krenalis/core"
@@ -104,7 +103,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/v1/connections/"+strconv.Itoa(fsID), nil, map[string]any{
+		c.MustCall("PUT", "/v1/connections/"+fsID, nil, map[string]any{
 			"name":        "Storage",
 			"compression": core.NoCompression,
 		}, nil)
