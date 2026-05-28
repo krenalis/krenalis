@@ -216,7 +216,7 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		return nil, nil, "", err
 	}
 	// Verify that the member still exists.
-	if !org.HasMember(session.Member) {
+	if exists, err := org.HasMember(session.Member); err != nil || !exists {
 		return nil, nil, "", errInvalidSessionCookie
 	}
 	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.

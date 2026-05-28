@@ -44,8 +44,6 @@ const invitationTokenMaxAge = 3 * 24 * 60 * 60
 // resetPasswordTokenMaxAge represents the max age of a password token (1 hour).
 const resetPasswordTokenMaxAge = 1 * 60 * 60
 
-var errResetPasswordTokenNotExist = errors.New("The reset password token doesn't exist")
-
 // Organization represents an organization.
 type Organization struct {
 	core         *Core
@@ -525,9 +523,6 @@ func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 	if !IsValidID(id) {
 		return errors.BadRequest("identifier %q is not a valid member identifier", id)
 	}
-	if !this.organization.HasMember(id) {
-		return errors.NotFound("member %s does not exist", id)
-	}
 	n := state.DeleteMember{
 		ID:           id,
 		Organization: this.organization.ID,
@@ -546,8 +541,12 @@ func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 }
 
 // HasMember reports whether the organization has a member with the given ID.
-func (this *Organization) HasMember(id string) bool {
-	return this.organization.HasMember(id)
+func (this *Organization) HasMember(id string) (bool, error) {
+	this.core.mustBeOpen()
+	if !IsValidID(id) {
+		return false, errors.BadRequest("identifier %q is not a valid member identifier", id)
+	}
+	return this.organization.HasMember(id), nil
 }
 
 // InviteMember sends an invitation email to the given email address using the
@@ -676,6 +675,8 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
+var errMemberNotFoundOrInvitationPending = errors.New("member not found or invitation pending")
+
 // SendMemberPasswordReset sends a reset password email to the given email
 // address using the given template.
 //
@@ -701,16 +702,16 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 			return nil, err
 		}
 		if !exists {
-			return nil, errResetPasswordTokenNotExist
+			return nil, errMemberNotFoundOrInvitationPending
 		}
 		_, err = tx.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
 			resetToken, now, this.organization.ID, email)
 		return nil, err
 	})
 	if err != nil {
-		if err == errResetPasswordTokenNotExist {
-			// Do not return errors so that non-logged in users cannot
-			// tell if the email exists or not.
+		if err == errMemberNotFoundOrInvitationPending {
+			// Do not return an error, to avoid revealing whether the email
+			// belongs to an existing member or to a member with a pending invitation.
 			return nil
 		}
 		return err

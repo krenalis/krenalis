@@ -944,6 +944,12 @@ func (state *State) deleteWorkspace(n notification) uuid.UUID {
 	// Delete the workspace.
 	delete(state.workspaces, e.ID)
 	delete(organization.workspaces, e.ID)
+	// Delete access keys restricted to the workspace.
+	for hmac, key := range state.accessKeyByHMAC {
+		if key.Workspace == e.ID {
+			delete(state.accessKeyByHMAC, hmac)
+		}
+	}
 	// Delete the connections.
 	for _, c := range e.workspace.connections {
 		for _, key := range c.Keys {
