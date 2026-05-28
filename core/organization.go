@@ -525,6 +525,7 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 
 // HasMember reports whether the organization has a member with the given ID.
 func (this *Organization) HasMember(id int) bool {
+	this.core.mustBeOpen()
 	return this.organization.HasMember(id)
 }
 
