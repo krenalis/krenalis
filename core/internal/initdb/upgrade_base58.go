@@ -244,33 +244,49 @@ func prepareBase58IDMaps(ctx context.Context, tx *dbpkg.Tx) error {
 }
 
 func insertUUIDBase58Map(ctx context.Context, tx *dbpkg.Tx, table, query string, used map[string]struct{}) error {
-	return tx.QueryScan(ctx, query, func(rows *db.Rows) error {
+	var ids []string
+	err := tx.QueryScan(ctx, query, func(rows *db.Rows) error {
 		for rows.Next() {
 			var id string
 			if err := rows.Scan(&id); err != nil {
 				return err
 			}
-			if _, err := tx.Exec(ctx, "INSERT INTO "+table+" (old_id, new_id) VALUES ($1, $2)", id, generateMigrationID(used)); err != nil {
-				return err
-			}
+			ids = append(ids, id)
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if _, err := tx.Exec(ctx, "INSERT INTO "+table+" (old_id, new_id) VALUES ($1, $2)", id, generateMigrationID(used)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func insertIntBase58Map(ctx context.Context, tx *dbpkg.Tx, table, query string, used map[string]struct{}) error {
-	return tx.QueryScan(ctx, query, func(rows *db.Rows) error {
+	var ids []int
+	err := tx.QueryScan(ctx, query, func(rows *db.Rows) error {
 		for rows.Next() {
 			var id int
 			if err := rows.Scan(&id); err != nil {
 				return err
 			}
-			if _, err := tx.Exec(ctx, "INSERT INTO "+table+" (old_id, new_id) VALUES ($1, $2)", id, generateMigrationID(used)); err != nil {
-				return err
-			}
+			ids = append(ids, id)
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if _, err := tx.Exec(ctx, "INSERT INTO "+table+" (old_id, new_id) VALUES ($1, $2)", id, generateMigrationID(used)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func generateMigrationID(used map[string]struct{}) string {
