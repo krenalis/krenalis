@@ -1187,7 +1187,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 			}
 			break
 		}
-		if err := ctx.Err(); err != nil {
+		if ctx.Err() != nil {
 			// The context has been canceled.
 			return
 		}
@@ -1238,7 +1238,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					// The run no longer exists.
 					return
 				}
-				if err := ctx.Err(); err != nil {
+				if ctx.Err() != nil {
 					// The context has been canceled.
 					break
 				}
@@ -1247,7 +1247,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 			}
 			break
 		}
-		if err := ctx.Err(); err != nil {
+		if ctx.Err() != nil {
 			// The context has been canceled.
 			// TODO(marco): What happens if the node successfully assigns itself the run, but the context gets canceled?
 			return
