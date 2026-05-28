@@ -1165,24 +1165,18 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
 		for bo.Next(ctx) {
-			var node uuid.UUID
-			err := core.db.QueryRow(core.close.ctx,
-				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
-				core.state.ID(), run.ID).Scan(&node)
+			result, err := core.db.Exec(core.close.ctx,
+				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL",
+				core.state.ID(), run.ID)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The run no longer exists.
-					return
+				if ctx.Err() == nil {
+					slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
-				if err := ctx.Err(); err != nil {
-					// The context has been canceled.
-					break
-				}
-				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
-			if node != core.state.ID() {
-				// Another node acquired the run.
+			// If the run no longer exists, or it is assigned to another node,
+			// do nothing.
+			if result.RowsAffected() == 0 {
 				return
 			}
 			break
