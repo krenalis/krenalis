@@ -397,6 +397,33 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
+// UpgradeDBAddWorkOSUserID upgrades the database by adding the workos_user_id
+// column to the members table, creating the corresponding unique index, and
+// widening the name and email columns to varchar(255).
+func UpgradeDBAddWorkOSUserID(ctx context.Context, conf *Config) error {
+	ps := conf.DB
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           ps.Host,
+		Port:           ps.Port,
+		Username:       ps.Username,
+		Password:       ps.Password,
+		Database:       ps.Database,
+		Schema:         ps.Schema,
+		MaxConnections: max(2, ps.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	return initdb.UpgradeAddWorkOSUserID(ctx, db)
+}
+
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [1, 60]. password's length must be at least 8 character long.

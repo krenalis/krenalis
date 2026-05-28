@@ -92,6 +92,49 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 	return err
 }
 
+var errWorkOSUserIDAlreadyExists = errors.New("workos_user_id column already exists")
+
+// UpgradeAddWorkOSUserID adds the workos_user_id column to the members table,
+// creates the corresponding unique index, and widens the name and email columns
+// to varchar(255).
+func UpgradeAddWorkOSUserID(ctx context.Context, db *db.DB) error {
+	err := db.Transaction(ctx, func(tx *dbpkg.Tx) error {
+		_, err := tx.Exec(ctx, "ALTER TABLE members ADD COLUMN workos_user_id varchar(255) NOT NULL DEFAULT ''")
+		if err != nil {
+			if dbpkg.IsDuplicateColumn(err) {
+				return errWorkOSUserIDAlreadyExists
+			}
+			return err
+		}
+		_, err = tx.Exec(ctx, "CREATE UNIQUE INDEX members_workos_user_id_idx ON members (organization, workos_user_id) WHERE workos_user_id <> ''")
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, "ALTER TABLE organizations ALTER COLUMN name TYPE varchar(255)")
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, "ALTER TABLE members ALTER COLUMN name TYPE varchar(255)")
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, "ALTER TABLE members ALTER COLUMN email TYPE varchar(255)")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		if err == errWorkOSUserIDAlreadyExists {
+			slog.Info("PostgreSQL database is already up to date")
+			return nil
+		}
+		return err
+	}
+	slog.Info("PostgreSQL database updated successfully")
+	return nil
+}
+
 // databaseIsEmpty reports whether the given PostgreSQL database is empty, that
 // is, if it does not contain any database objects (such as tables, views,
 // types, etc.).
