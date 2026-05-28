@@ -386,8 +386,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Try to start pending pipeline runs.
 	for _, pipeline := range core.state.Pipelines() {
-		if exe, ok := pipeline.Run(); ok {
-			if _, ok := exe.Node(); !ok {
+		if run, ok := pipeline.Run(); ok {
+			if _, ok := run.Node(); !ok {
 				core.tryStartPipelineRun(pipeline.ID)
 			}
 		}
