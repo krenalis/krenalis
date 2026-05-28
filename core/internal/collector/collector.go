@@ -266,30 +266,6 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	return connection, true
 }
 
-// deleteWorkspace deletes a workspace from the collector.
-func (c *Collector) deleteWorkspace(ws *state.Workspace) {
-	c.observers.Delete(ws.ID)
-	for _, connection := range ws.Connections() {
-		if connection.LinkedConnections == nil {
-			continue
-		}
-		if connection.Role == state.Source {
-			for _, p := range connection.Pipelines() {
-				if p.Enabled {
-					c.stopPipelineWorker(p)
-				}
-			}
-		} else if len(connection.LinkedConnections) > 0 {
-			c.stopConnectionWorker(connection)
-		}
-	}
-	ew, _ := c.eventWriters.LoadAndDelete(ws.ID)
-	// Close using a canceled context to abort any in-flight flush.
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	_ = ew.(*datastore.EventWriter).Close(ctx)
-}
-
 // onCreateConnection is called when a connection is created.
 func (c *Collector) onCreateConnection(n state.CreateConnection) {
 	connection, _ := c.state.Connection(n.ID)
@@ -383,13 +359,13 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 // onDeleteOrganization is called when an organization is deleted.
 func (c *Collector) onDeleteOrganization(n state.DeleteOrganization) {
 	for _, ws := range n.Organization().Workspaces() {
-		c.deleteWorkspace(ws)
+		c.removeWorkspace(ws)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
-	c.deleteWorkspace(n.Workspace())
+	c.removeWorkspace(n.Workspace())
 }
 
 // onLinkConnection is called when two unlinked connections are linked.
@@ -546,6 +522,30 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams
 			return
 		}
 	}
+}
+
+// removeWorkspace removes the workspace ws from the collector.
+func (c *Collector) removeWorkspace(ws *state.Workspace) {
+	c.observers.Delete(ws.ID)
+	for _, connection := range ws.Connections() {
+		if connection.LinkedConnections == nil {
+			continue
+		}
+		if connection.Role == state.Source {
+			for _, p := range connection.Pipelines() {
+				if p.Enabled {
+					c.stopPipelineWorker(p)
+				}
+			}
+		} else if len(connection.LinkedConnections) > 0 {
+			c.stopConnectionWorker(connection)
+		}
+	}
+	ew, _ := c.eventWriters.LoadAndDelete(ws.ID)
+	// Close using a canceled context to abort any in-flight flush.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_ = ew.(*datastore.EventWriter).Close(ctx)
 }
 
 // serveEvents is called by the ServeHTTP method to serve an events request.
