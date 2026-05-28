@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	errInvalidJWTToken         = errors.New("WorkOS provided a malformed JWT token")
+	ErrInvalidToken            = errors.New("WorkOS provided an invalid JWT token")
 	errCannotRetrievePublicKey = errors.New("cannot retrieve the WorkOS public key")
 )
 
@@ -192,6 +192,9 @@ func (wo *Workos) Authenticate(token string) (*user, uuid.UUID, error) {
 				return nil, fmt.Errorf("WorkOS signed the JWT using %s, but Krenalis only supports RSA and RSA-PSS signing methods", t.Method.Alg())
 			}
 			kid, _ := t.Header["kid"].(string)
+			if kid == "" {
+				return nil, fmt.Errorf("WorkOS provided a JWT with an empty key identifier (kid)")
+			}
 			key, err := wo.publicKey(kid, t.Method.Alg())
 			if err != nil {
 				return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
@@ -205,21 +208,21 @@ func (wo *Workos) Authenticate(token string) (*user, uuid.UUID, error) {
 		if errors.Is(err, errCannotRetrievePublicKey) {
 			return nil, uuid.UUID{}, err
 		}
-		return nil, uuid.UUID{}, errInvalidJWTToken
+		return nil, uuid.UUID{}, ErrInvalidToken
 	}
 
 	if !parsed.Valid {
-		return nil, uuid.UUID{}, errInvalidJWTToken
+		return nil, uuid.UUID{}, ErrInvalidToken
 	}
 
 	if claims.ClientID != wo.ClientID {
 		return nil, uuid.UUID{}, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
 	if claims.Subject == "" {
-		return nil, uuid.UUID{}, errInvalidJWTToken
+		return nil, uuid.UUID{}, ErrInvalidToken
 	}
 	if claims.OrgID == "" {
-		return nil, uuid.UUID{}, errInvalidJWTToken
+		return nil, uuid.UUID{}, ErrInvalidToken
 	}
 
 	userID := claims.Subject

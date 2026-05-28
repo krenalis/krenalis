@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	stdJSON "encoding/json"
+	stderrors "errors"
 	"io"
 	"log/slog"
 	"math"
@@ -435,22 +436,32 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 
 		workosUser, workosExternalOrganizationID, err := s.workos.Authenticate(body.AccessToken)
 		if err != nil {
-			return nil, errors.Unauthorized("invalid WorkOS token")
+			if stderrors.Is(err, workos.ErrInvalidToken) {
+				return nil, errors.Unauthorized("invalid WorkOS token")
+			}
+			return nil, err
 		}
 
 		org, err = s.core.Organization(workosExternalOrganizationID)
 		if err != nil {
-			slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
-				"workos_user_id", workosUser.ID,
-				"organization_id", workosExternalOrganizationID,
-			)
-			return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
+			if _, ok := err.(*errors.NotFoundError); ok {
+				slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
+					"workos_user_id", workosUser.ID,
+					"organization_id", workosExternalOrganizationID,
+				)
+				return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
+			}
+			return nil, err
 		}
 
 		memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); !ok {
-				return nil, err
+				slog.Error("WorkOS user authenticated but no matching Krenalis member found",
+					"workos_user_id", workosUser.ID,
+					"organization_id", workosExternalOrganizationID,
+				)
+				return nil, errors.Unauthorized("invalid user ID in WorkOS token")
 			}
 			name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
 			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
