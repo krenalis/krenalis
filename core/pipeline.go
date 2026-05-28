@@ -926,7 +926,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			return n, nil
 		})
 		if err != nil {
-			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "pipelines_runs_id_key" {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "pipelines_runs_pkey" {
 				continue
 			}
 			return "", err
