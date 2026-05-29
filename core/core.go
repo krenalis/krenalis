@@ -1524,35 +1524,13 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 // onDeleteOrganization is called when an organization is deleted.
 func (core *Core) onDeleteOrganization(n state.DeleteOrganization) {
 	for _, ws := range n.Organization().Workspaces() {
-		core.mcpMu.Lock()
-		wh, ok := core.mcp[ws.ID]
-		delete(core.mcp, ws.ID)
-		core.mcpMu.Unlock()
-		if ok && wh != nil {
-			go func(workspace int) {
-				err := wh.Close()
-				if err != nil {
-					slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
-				}
-			}(ws.ID)
-		}
+		core.removeMCPWarehouse(ws.ID)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
-	core.mcpMu.Lock()
-	wh, ok := core.mcp[n.ID]
-	delete(core.mcp, n.ID)
-	core.mcpMu.Unlock()
-	if ok && wh != nil {
-		go func(workspace int) {
-			err := wh.Close()
-			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
-			}
-		}(n.ID)
-	}
+	core.removeMCPWarehouse(n.ID)
 }
 
 // onElectLeader is called when a leader is elected.
@@ -1618,6 +1596,24 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 		}
 	}(ws.ID)
+}
+
+// removeMCPWarehouse removes from core the MCP warehouse for the given
+// workspace.
+// When this method is called, the state is frozen.
+func (core *Core) removeMCPWarehouse(ws int) {
+	core.mcpMu.Lock()
+	wh, ok := core.mcp[ws]
+	delete(core.mcp, ws)
+	core.mcpMu.Unlock()
+	if ok && wh != nil {
+		go func() {
+			err := wh.Close()
+			if err != nil {
+				slog.Error("core: error closing a MCP warehouse", "workspace", ws, "error", err)
+			}
+		}()
+	}
 }
 
 // startAlterProfileSchema starts the alter of the profile schema.
