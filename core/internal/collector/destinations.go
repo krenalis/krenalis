@@ -352,6 +352,7 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 }
 
 // removeWorkspace removes the workspace ws from destinations.
+// When this method is called, the state is frozen.
 func (d *destinations) removeWorkspace(ws *state.Workspace) {
 	var pipelines []*destinationPipeline
 	for _, c := range ws.Connections() {
