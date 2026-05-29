@@ -522,9 +522,12 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 }
 
 // HasMember reports whether the organization has a member with the given ID.
-func (this *Organization) HasMember(id int) bool {
+func (this *Organization) HasMember(id int) (bool, error) {
 	this.core.mustBeOpen()
-	return this.organization.HasMember(id)
+	if id < 1 || id > maxInt32 {
+		return false, errors.BadRequest("identifier %d is not a valid member identifier", id)
+	}
+	return this.organization.HasMember(id), nil
 }
 
 // InviteMember sends an invitation email to the given email address using the
