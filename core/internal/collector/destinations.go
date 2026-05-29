@@ -235,57 +235,14 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
-	var pipelines []*destinationPipeline
 	for _, ws := range n.Organization().Workspaces() {
-		for _, c := range ws.Connections() {
-			if c.Role != state.Destination {
-				continue
-			}
-			connector := c.Connector()
-			if !connector.DestinationTargets.Contains(state.TargetEvent) {
-				continue
-			}
-			delete(d.senders, c.ID)
-			pipelines = append(pipelines, d.pipelines[c.ID]...) // No lock needed for reads while the state is frozen.
-			d.mu.Lock()
-			delete(d.pipelines, c.ID)
-			d.mu.Unlock()
-		}
-	}
-	if len(pipelines) > 0 {
-		go func() {
-			for _, pipeline := range pipelines {
-				pipeline.Close(errors.New("workspace has been deleted"))
-			}
-		}()
+		d.removeWorkspace(ws)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
-	ws := n.Workspace()
-	var pipelines []*destinationPipeline
-	for _, c := range ws.Connections() {
-		if c.Role != state.Destination {
-			continue
-		}
-		connector := c.Connector()
-		if !connector.DestinationTargets.Contains(state.TargetEvent) {
-			continue
-		}
-		delete(d.senders, c.ID)
-		pipelines = append(pipelines, d.pipelines[c.ID]...) // No lock needed for reads while the state is frozen.
-		d.mu.Lock()
-		delete(d.pipelines, c.ID)
-		d.mu.Unlock()
-	}
-	if len(pipelines) > 0 {
-		go func() {
-			for _, pipeline := range pipelines {
-				pipeline.Close(errors.New("workspace has been deleted"))
-			}
-		}()
-	}
+	d.removeWorkspace(n.Workspace())
 }
 
 // onSetConnectionSettings is called when the settings of a connection is
@@ -392,6 +349,33 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 	d.mu.Lock()
 	d.pipelines[c.ID] = pipelines
 	d.mu.Unlock()
+}
+
+// removeWorkspace removes the workspace ws from destinations.
+// When this method is called, the state is frozen.
+func (d *destinations) removeWorkspace(ws *state.Workspace) {
+	var pipelines []*destinationPipeline
+	for _, c := range ws.Connections() {
+		if c.Role != state.Destination {
+			continue
+		}
+		connector := c.Connector()
+		if !connector.DestinationTargets.Contains(state.TargetEvent) {
+			continue
+		}
+		delete(d.senders, c.ID)
+		pipelines = append(pipelines, d.pipelines[c.ID]...) // No lock needed for reads while the state is frozen.
+		d.mu.Lock()
+		delete(d.pipelines, c.ID)
+		d.mu.Unlock()
+	}
+	if len(pipelines) > 0 {
+		go func() {
+			for _, pipeline := range pipelines {
+				pipeline.Close(errors.New("workspace has been deleted"))
+			}
+		}()
+	}
 }
 
 type destinationPipelines []*destinationPipeline
