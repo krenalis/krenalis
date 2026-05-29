@@ -44,6 +44,7 @@ import (
 	_ "github.com/krenalis/krenalis/connectors/json"
 	_ "github.com/krenalis/krenalis/connectors/klaviyo"
 	_ "github.com/krenalis/krenalis/connectors/mailchimp"
+	_ "github.com/krenalis/krenalis/connectors/mailerlite"
 	_ "github.com/krenalis/krenalis/connectors/mixpanel"
 	_ "github.com/krenalis/krenalis/connectors/mysql"
 	_ "github.com/krenalis/krenalis/connectors/parquet"
