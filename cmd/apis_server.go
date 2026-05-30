@@ -352,9 +352,7 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 	if _, _, _, err := s.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
-	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-	payload := norm.NFC.Reader(lr)
-	r.Body = io.NopCloser(payload)
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
 	s.sentryTelemetry.errorTunnel.ServeHTTP(w, r)
 	return nil, nil
 }
