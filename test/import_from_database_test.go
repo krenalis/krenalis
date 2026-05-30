@@ -27,7 +27,7 @@ func TestImportFromDatabase(t *testing.T) {
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "id", Type: types.Int(32), Nullable: true},
+			{Name: "id", Type: types.String().WithMaxLength(12), Nullable: true},
 			{Name: "email", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
@@ -38,7 +38,7 @@ func TestImportFromDatabase(t *testing.T) {
 				"email": "email",
 			},
 		},
-		Query:           `SELECT 1 AS "id", 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
+		Query:           `SELECT id, 'a@b' as "email", 'ABC123' as "customer_id" FROM members LIMIT ${limit}`,
 		UserIDColumn:    "id",
 		UpdatedAtColumn: "",
 		UpdatedAtFormat: "",
