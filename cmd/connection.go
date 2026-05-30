@@ -69,8 +69,8 @@ func (connection connection) AbsolutePath(_ http.ResponseWriter, r *http.Request
 }
 
 // CreatePipeline creates a pipeline.
-func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r, false); err != nil {
+func (connection connection) CreatePipeline(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace{connection.apisServer}.workspace(r)
@@ -147,8 +147,8 @@ func (connection connection) DeleteEventWriteKey(_ http.ResponseWriter, r *http.
 }
 
 // ExecQuery executes a query on a database connection.
-func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r, false); err != nil {
+func (connection connection) ExecQuery(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
 	c, err := connection.id(r)
@@ -322,8 +322,8 @@ func (connection connection) PipelineTypes(_ http.ResponseWriter, r *http.Reques
 }
 
 // PreviewSendEvent previews sending an event.
-func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r, false); err != nil {
+func (connection connection) PreviewSendEvent(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
 	c, err := connection.id(r)
@@ -350,7 +350,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 // ServeUI serves the user interface for a connection.
 func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
 	if r.Method != http.MethodGet {
-		if err := validateRequiredBody(r, false); err != nil {
+		if err := validateRequiredBody(w, r, false); err != nil {
 			return nil, err
 		}
 	}
@@ -459,8 +459,8 @@ func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Req
 }
 
 // Update updates a connection.
-func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r, false); err != nil {
+func (connection connection) Update(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
 	c, err := connection.id(r)
