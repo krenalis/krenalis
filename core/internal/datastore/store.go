@@ -92,7 +92,7 @@ type Store struct {
 
 // newStore returns a new Store for the workspace ws.
 // It must be called when the state is frozen.
-func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
+func newStore(ds *Datastore, ws *state.Workspace) *Store {
 	store := &Store{
 		ds:                   ds,
 		workspace:            ws.ID,
@@ -105,7 +105,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
 	store.columnByProperty.user["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
-	return store, nil
+	return store
 }
 
 // stateSettingsLoader is a workspaces.SettingsLoader that load the settings

@@ -63,12 +63,7 @@ func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 	ds.state.AddListener(ds.onUpdateWarehouse)
 	ds.state.AddListener(ds.onUpdateWarehouseMode)
 	for _, ws := range st.Workspaces() {
-		store, err := newStore(ds, ws)
-		if err != nil {
-			st.Unfreeze()
-			return nil, fmt.Errorf("cannot create store for workspace %s: %s", ws.ID, err)
-		}
-		ds.store[ws.ID] = store
+		ds.store[ws.ID] = newStore(ds, ws)
 	}
 	st.Unfreeze()
 	return ds, nil
@@ -198,7 +193,7 @@ func (ds *Datastore) onCreatePipeline(n state.CreatePipeline) {
 // onCreateWorkspace is called when a workspace is created.
 func (ds *Datastore) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := ds.state.Workspace(n.ID)
-	store, _ := newStore(ds, ws)
+	store := newStore(ds, ws)
 	ds.mu.Lock()
 	ds.store[ws.ID] = store
 	ds.mu.Unlock()
