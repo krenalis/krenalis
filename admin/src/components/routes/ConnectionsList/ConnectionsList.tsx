@@ -94,9 +94,7 @@ const ConnectionsList = () => {
 					const fullEventConnections: TransformedConnection[] = [];
 					for (const id of c.linkedConnections) {
 						const fullConnection = connections.find((c) => c.id === id);
-						if (fullConnection != null) {
-							fullEventConnections.push(fullConnection);
-						}
+						fullEventConnections.push(fullConnection);
 					}
 					fullEventConnections.sort((a, b) => {
 						if (a.name < b.name) {
@@ -112,13 +110,7 @@ const ConnectionsList = () => {
 							<LittleLogo key={ec.id} code={ec.connector.code} path={CONNECTORS_ASSETS_PATH} />,
 						);
 					}
-					cells.push(
-						connectionLogos.length > 0 ? (
-							<div className='connections-list__event-connections-cell'>{connectionLogos}</div>
-						) : (
-							'-'
-						),
-					);
+					cells.push(<div className='connections-list__event-connections-cell'>{connectionLogos}</div>);
 				} else {
 					cells.push('-');
 				}

@@ -71,15 +71,7 @@ const useConnectionIdentities = () => {
 
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
-			const pipeline = connection.pipelines.find((p) => p.id === identity.pipeline);
-			const pipelineCell =
-				pipeline != null ? (
-					<Link path={`connections/${connection.id}/pipelines/edit/${identity.pipeline}`}>
-						{pipeline.name}
-					</Link>
-				) : (
-					'Unknown pipeline'
-				);
+			const pipelineName = connection.pipelines.find((p) => p.id === identity.pipeline).name;
 			const row: GridRow = {
 				cells: [
 					identity.updatedAt,
@@ -91,7 +83,11 @@ const useConnectionIdentities = () => {
 							anonymous
 						</span>
 					),
-					<span className='connection-identities__pipeline'>{pipelineCell}</span>,
+					<span className='connection-identities__pipeline'>
+						<Link path={`connections/${connection.id}/pipelines/edit/${identity.pipeline}`}>
+							{pipelineName}
+						</Link>
+					</span>,
 				],
 				key: identity.userId,
 			};

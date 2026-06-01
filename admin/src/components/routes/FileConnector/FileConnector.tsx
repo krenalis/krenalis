@@ -48,7 +48,7 @@ const FileConnector = () => {
 			}
 		}
 		return s;
-	}, [connections, role]);
+	}, [connectors]);
 
 	useLayoutEffect(() => {
 		setTitle(`Add ${file.label} file`);
@@ -58,13 +58,8 @@ const FileConnector = () => {
 		setSelectedStorage(e.target.value);
 	};
 
-	const selectedStorageConnection = selectedStorage != null ? storages.find((s) => s.id === selectedStorage) : null;
-
-	const onAddPipelineType = (target: string) => {
-		if (selectedStorageConnection == null) {
-			return;
-		}
-		const id = selectedStorageConnection.id;
+	const onAddPipelineType = (target: String) => {
+		const id = storages.find((s) => s.id === selectedStorage).id;
 		redirect(`connections/${id}/pipelines/add/${target}?format=${file.code}`);
 	};
 
@@ -77,13 +72,13 @@ const FileConnector = () => {
 							<SlSelect
 								label='Storage'
 								name='storages'
-								value={selectedStorage ?? ''}
+								value={String(selectedStorage)}
 								onSlChange={onStorageChange}
 							>
-								{selectedStorageConnection != null && (
+								{selectedStorage != null && (
 									<div className='file-connector__storage-logo' slot='prefix'>
 										<LittleLogo
-											code={selectedStorageConnection.connector.code}
+											code={storages.find((s) => s.id === selectedStorage).connector.code}
 											path={CONNECTORS_ASSETS_PATH}
 										/>
 									</div>
@@ -110,7 +105,7 @@ const FileConnector = () => {
 							</Link>
 						</div>
 					)}
-					{selectedStorageConnection != null && (
+					{selectedStorage != null && (
 						<div className='file-connector__pipeline-types'>
 							<ListTile
 								key={'users-pipeline-type'}

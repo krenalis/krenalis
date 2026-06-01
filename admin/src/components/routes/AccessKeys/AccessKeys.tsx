@@ -59,7 +59,7 @@ const AccessKeys = () => {
 			}
 			setAccessKeys(res.keys);
 
-			const warehouseByWorkspace: Record<string, string> = {};
+			let warehouseByWorkspace: Record<string, string> = {};
 			for (const w of workspaces) {
 				let res: WarehouseResponse;
 				try {
@@ -148,7 +148,7 @@ const AccessKeys = () => {
 			let workspaceCell: ReactNode;
 			if (k.workspace != null) {
 				const workspace = workspaces.find((w) => w.id === k.workspace);
-				workspaceCell = workspace != null ? workspace.name : 'Unknown workspace';
+				workspaceCell = `${workspace.name}`;
 			} else {
 				workspaceCell = <span className='access-keys__grid-any-workspace'>Any workspace</span>;
 			}
@@ -185,7 +185,7 @@ const AccessKeys = () => {
 			}
 		}
 		return [apiRows, mcpRows];
-	}, [accessKeys, workspaces]);
+	}, [accessKeys]);
 
 	const hasWorkspaceWithWarehouse =
 		warehouseByWorkspace != null &&

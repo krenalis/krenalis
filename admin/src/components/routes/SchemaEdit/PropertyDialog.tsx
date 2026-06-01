@@ -106,7 +106,7 @@ const PropertyDialog = ({
 		setNameError('');
 		setTypeError('');
 		setProperty(propertyToEdit);
-		setPrimarySource(primarySources[propertyToEdit.key] ?? null);
+		setPrimarySource(primarySources[propertyToEdit.key]);
 	}, [propertyToEdit]);
 
 	const onInputName = (e) => {
@@ -456,18 +456,16 @@ const PropertyDialog = ({
 				return;
 			}
 		}
-		const effectivePrimarySource =
-			primarySource != null && sourceConnections.some((c) => c.id === primarySource) ? primarySource : null;
 		if (isEditing) {
 			try {
-				onEditProperty(property, effectivePrimarySource);
+				onEditProperty(property, primarySource);
 			} catch (err) {
 				setNameError(err.message);
 				return;
 			}
 		} else {
 			try {
-				onAddProperty(property, effectivePrimarySource);
+				onAddProperty(property, primarySource);
 			} catch (err) {
 				setNameError(err.message);
 				return;
@@ -681,9 +679,6 @@ const PropertyDialog = ({
 		}
 	}
 
-	const selectedPrimarySourceConnection =
-		primarySource != null ? sourceConnections.find((c) => c.id === primarySource) : null;
-
 	return (
 		<SlDialog
 			className='property-dialog'
@@ -822,15 +817,15 @@ const PropertyDialog = ({
 							<SlSelect
 								className='property-dialog__primary-source'
 								size='small'
-								value={selectedPrimarySourceConnection == null ? 'none' : primarySource}
+								value={primarySource == null ? 'none' : primarySource}
 								label='Primary Source'
 								name='primary-source'
 								onSlChange={onChangePrimarySource}
 							>
 								<div slot='prefix'>
-									{selectedPrimarySourceConnection != null && (
+									{primarySource && (
 										<LittleLogo
-											code={selectedPrimarySourceConnection.connector.code}
+											code={sourceConnections.find((c) => c.id === primarySource).connector.code}
 											path={CONNECTORS_ASSETS_PATH}
 										/>
 									)}

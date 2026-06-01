@@ -54,9 +54,6 @@ const useLinkedConnectionsGrid = (
 
 	const unlinkConnection = async (e, idToUnlink: string) => {
 		e.stopPropagation();
-		if (linkedConnections == null) {
-			return;
-		}
 		let updated: string[] | null = [];
 		for (const id of linkedConnections) {
 			if (id !== idToUnlink) {

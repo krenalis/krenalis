@@ -19,8 +19,7 @@ const Workspaces = () => {
 		redirect('workspaces/create');
 	};
 
-	const sortedWorkspaces = [...workspaces];
-	sortedWorkspaces.sort((a: Workspace, b: Workspace) => {
+	workspaces.sort((a: Workspace, b: Workspace) => {
 		if (a.name < b.name) {
 			return -1;
 		}
@@ -48,7 +47,7 @@ const Workspaces = () => {
 					)}
 				</div>
 				<div className='workspace-list__workspaces'>
-					{sortedWorkspaces.length === 0 ? (
+					{workspaces.length === 0 ? (
 						<>
 							<div className='workspace-list__no-workspace'>
 								Currently you don't have any workspace. Create at least one workspace to continue.
@@ -63,7 +62,7 @@ const Workspaces = () => {
 							</SlButton>
 						</>
 					) : (
-						sortedWorkspaces.map((workspace) => {
+						workspaces.map((workspace) => {
 							return (
 								<ListTile
 									key={workspace.id}
