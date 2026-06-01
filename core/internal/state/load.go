@@ -300,8 +300,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		" pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var organizationID string
-				var warehousePlatform string
+				var organizationID, warehousePlatform string
 				var warehouseMode WarehouseMode
 				var profileSchema []byte
 				var alterProfileSchemaSchema []byte
@@ -381,8 +380,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				a := Account{}
-				var workspaceID string
-				var connectorName string
+				var workspaceID, connectorName string
 				if err := rows.Scan(&a.ID, &workspaceID, &connectorName, &a.Code, &a.AccessToken, &a.RefreshToken, &a.ExpiresIn); err != nil {
 					return fmt.Errorf("loading account %d: %s", a.ID, err)
 				}
@@ -464,8 +462,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, created_at`,
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var connectionID string
-				var key string
+				var connectionID, key string
 				if err := rows.Scan(&connectionID, &key); err != nil {
 					return fmt.Errorf("loading key for connection %s: %s", connectionID, err)
 				}
@@ -578,8 +575,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryScan(ctx, "SELECT source, path FROM primary_sources",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var source string
-				var path string
+				var source, path string
 				if err := rows.Scan(&source, &path); err != nil {
 					return fmt.Errorf("loading source %s: %s", source, err)
 				}
