@@ -291,9 +291,9 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 
 // CreateAccessKey creates a new access key for the organization with the
 // specified name, which must be between 1 and 100 runes in length, and the
-// specified type. If the workspace is not 0, the key will be restricted to that
-// specific workspace. If the created key is an MCP key the workspace is
-// required and therefore cannot be 0.
+// specified type. If the workspace is not empty, the key will be restricted to
+// that specific workspace. If the created key is an MCP key the workspace is
+// required and therefore cannot be empty.
 //
 // It returns an errors.UnprocessableError error with code
 //

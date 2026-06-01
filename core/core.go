@@ -1547,7 +1547,7 @@ Identifiers:
 	}
 }
 
-// executeIdentityResolution execscriutes the Identity Resolution, not returning
+// executeIdentityResolution executes the Identity Resolution, not returning
 // until it has completed (with success or with an operation error).
 func (core *Core) executeIdentityResolution(workspace string, opID string) {
 	ctx := core.close.ctx

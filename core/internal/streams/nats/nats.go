@@ -623,6 +623,7 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 	return nil
 }
 
+// isValidDestination reports whether s is a valid destination identifier.
 func isValidDestination(s string) bool {
 	return len(s) == 12 && base58.IsValid(s)
 }

@@ -227,8 +227,8 @@ func (s *Sender) Close(ctx context.Context) {
 // CreateEvent creates a new event with the given pipeline, type, schema,
 // and original event.
 //
-// The returned event must be passed to SendEvent (optionally after setting
-// the Properties field) or to DiscardEvent if it should be discarded.
+// The returned event must be passed to SendEvent (optionally after setting the
+// Properties field) or to DiscardEvent if it should be discarded.
 func (s *Sender) CreateEvent(pipeline string, typ string, schema types.Type, event streams.Event) *Event {
 	anonymousID, ok := event.Attributes["anonymousId"].(string)
 	if !ok {
