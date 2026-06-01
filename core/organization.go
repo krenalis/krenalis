@@ -587,7 +587,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			return nil, err
 		})
 		if err != nil {
-			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_id_key" {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
 				continue
 			}
 			return err
