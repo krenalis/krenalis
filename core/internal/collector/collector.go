@@ -607,10 +607,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				if key.Workspace != "" {
 					return errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
 				}
-				var id string
-				if header[0] != "" && header[0][0] != '+' {
-					id = header[0]
-				}
+				id := header[0]
 				if !isValidWorkspaceID(id) {
 					return errors.BadRequest(`"Krenalis-Workspace" header is invalid; use "Krenalis-Workspace: <WORKSPACE_ID>"`)
 				}
