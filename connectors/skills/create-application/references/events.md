@@ -90,6 +90,11 @@ Use `events.First()` when the API truly accepts only one event per request.
 
 ```go
 func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error {
+	var s innerSettings
+	if err := c.env.Settings.Load(ctx, &s); err != nil {
+		return err
+	}
+
 	event := events.First()
 
 	bb := c.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
@@ -104,7 +109,7 @@ func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error 
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.settings.Token)
+	req.Header.Set("Authorization", "Bearer "+s.Token)
 	req.Header["Idempotency-Key"] = nil
 
 	res, err := c.env.HTTPClient.Do(req)
@@ -127,6 +132,11 @@ Use `events.SameUser()` when the API requires one user per batch.
 
 ```go
 func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error {
+	var s innerSettings
+	if err := c.env.Settings.Load(ctx, &s); err != nil {
+		return err
+	}
+
 	bb := c.env.HTTPClient.GetBodyBuffer(connectors.Gzip)
 	defer bb.Close()
 
@@ -153,7 +163,7 @@ func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error 
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.settings.Token)
+	req.Header.Set("Authorization", "Bearer "+s.Token)
 	req.Header["Idempotency-Key"] = nil
 
 	res, err := c.env.HTTPClient.Do(req)
@@ -176,6 +186,11 @@ Use `events.All()` when the API accepts mixed-user batches.
 
 ```go
 func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error {
+	var s innerSettings
+	if err := c.env.Settings.Load(ctx, &s); err != nil {
+		return err
+	}
+
 	bb := c.env.HTTPClient.GetBodyBuffer(connectors.Gzip)
 	defer bb.Close()
 
@@ -202,7 +217,7 @@ func (c *MyApp) SendEvents(ctx context.Context, events connectors.Events) error 
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.settings.Token)
+	req.Header.Set("Authorization", "Bearer "+s.Token)
 	req.Header["Idempotency-Key"] = nil
 
 	res, err := c.env.HTTPClient.Do(req)
