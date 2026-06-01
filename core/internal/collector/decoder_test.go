@@ -78,7 +78,8 @@ func Test_Decoder(t *testing.T) {
 		{body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
 		{body: `{"batch":[],"context":{}}`},
 		{body: `{"batch":[],"context":{"foo":"boo"}}`},
-		{body: `{"batch":[],"connectionId":-2}`, err: errors.BadRequest("property 'connectionId' is not a string")},
+		{body: `{"batch":[],"connectionId":56}`, err: errors.BadRequest("property 'connectionId' is not a string")},
+		{body: `{"batch":[],"connectionId":"a05!"}`, err: errors.BadRequest("property 'connectionId' is not a valid connection identifier")},
 		{body: `{"batch":[],"connectionId":"9zQ4Tn7B3mS6"}`},
 
 		{typ: "track", body: ``, err: errors.BadRequest("request's body is empty")},

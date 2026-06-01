@@ -11,11 +11,11 @@ import (
 
 func TestAddAndRemoveLinkedConnection(t *testing.T) {
 	const (
-		linkedConnectionA = "2Qn5zBpR9YH7"
-		linkedConnectionB = "5zBpR9Y2QnM3"
-		linkedConnectionC = "8QaT3mN7KxP5"
-		linkedConnectionD = "B7mN9qK2xAC3"
-		linkedConnectionE = "G3mN7Kx8QaD4"
+		connA = "2Qn5zBpR9YH7"
+		connB = "5zBpR9Y2QnM3"
+		connC = "8QaT3mN7KxP5"
+		connD = "B7mN9qK2xAC3"
+		connE = "G3mN7Kx8QaD4"
 	)
 
 	tests := []struct {
@@ -23,11 +23,11 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 		with    []string
 		without []string
 	}{
-		{linkedConnectionA, []string{linkedConnectionA}, []string{}},
-		{linkedConnectionA, []string{linkedConnectionA, linkedConnectionB}, []string{linkedConnectionB}},
-		{linkedConnectionB, []string{linkedConnectionA, linkedConnectionB}, []string{linkedConnectionA}},
-		{linkedConnectionC, []string{linkedConnectionB, linkedConnectionC, linkedConnectionD, linkedConnectionE}, []string{linkedConnectionB, linkedConnectionD, linkedConnectionE}},
-		{linkedConnectionE, []string{linkedConnectionA, linkedConnectionC, linkedConnectionD, linkedConnectionE}, []string{linkedConnectionA, linkedConnectionC, linkedConnectionD}},
+		{connA, []string{connA}, []string{}},
+		{connA, []string{connA, connB}, []string{connB}},
+		{connB, []string{connA, connB}, []string{connA}},
+		{connC, []string{connB, connC, connD, connE}, []string{connB, connD, connE}},
+		{connE, []string{connA, connC, connD, connE}, []string{connA, connC, connD}},
 	}
 
 	// Test the addLinkedConnection function.

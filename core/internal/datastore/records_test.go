@@ -124,8 +124,8 @@ func Test_Records(t *testing.T) {
 	}
 
 	const (
-		otherPipeline1 = "8QaT3mN7KxP5"
 		pipelineID     = "6NpT4zB8QaR2"
+		otherPipeline1 = "8QaT3mN7KxP5"
 		otherPipeline2 = "5zBpR9Y2QnM3"
 	)
 

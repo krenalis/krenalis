@@ -28,7 +28,10 @@ import (
 // uuidDeterministicNS defines the namespace used to generate deterministic UUIDv5 values.
 var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
-const testPipelineID = "8QaT3mN7KxP5"
+const (
+	testConnectionID = "B2tw4V9aGM2n"
+	testPipelineID   = "8QaT3mN7KxP5"
+)
 
 // testApplication is a configurable Application implementation for tests.
 // It defaults to no-op behavior when hooks are not provided.
@@ -41,14 +44,14 @@ type testApplication struct {
 
 func newTestApplication() *testApplication {
 	return &testApplication{
-		IDValue:        testPipelineID,
+		IDValue:        testConnectionID,
 		ConnectorValue: "nop",
 	}
 }
 
 func (a *testApplication) ID() string {
 	if a.IDValue == "" {
-		return testPipelineID
+		return testConnectionID
 	}
 	return a.IDValue
 }
@@ -815,7 +818,7 @@ func (app *application) Sends() []send {
 }
 
 func (app *application) ID() string {
-	return testPipelineID
+	return testConnectionID
 }
 
 func (app *application) Connector() string {
