@@ -23,7 +23,8 @@ import (
 const kmsEncryptedKeys = 4
 
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
-// If dockerMember is true, it also initializes the Docker member.
+// If dockerMember is true, the initial member email will be
+// "docker@krenalis.com" instead of "acme@krenalis.com".
 func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool) error {
 
 	isEmpty, err := databaseIsEmpty(ctx, db)
@@ -65,24 +66,11 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 	// Initialize the PostgreSQL database in a transaction, so if it is
 	// fails, there is no need to manually empty the database.
 	err = db.Transaction(ctx, func(tx *dbpkg.Tx) error {
-		err := initialize(ctx, tx)
+		err := initialize(ctx, tx, dockerMember)
 		if err != nil {
 			return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 		}
-		err = initializeDefaultOrganization(ctx, tx)
-		if err != nil {
-			return fmt.Errorf("cannot initialize the default organization: %s", err)
-		}
 		slog.Info("PostgreSQL database initialized correctly")
-		// Also initialize the Docker member, if requested.
-		if dockerMember {
-			slog.Info("initializing Docker member...")
-			err := initializeDockerMember(ctx, tx)
-			if err != nil {
-				return fmt.Errorf("cannot initialize the Docker member: %s", err)
-			}
-			slog.Info("Docker member initialized")
-		}
 		for range kmsEncryptedKeys {
 			if err = <-done; err != nil {
 				return fmt.Errorf("failed to generate key using KMS: %s", err)
@@ -121,13 +109,17 @@ func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 //go:embed "schema.sql"
 var schema string
 
-// initialize initializes the provided PostgreSQL database by executing queries
-// in the given transaction, creating all the database objects (tables, types,
-// etc.) needed to run Krenalis.
+// initialize initializes the provided PostgreSQL database by executing the
+// required queries within the given transaction. It creates all database
+// objects (tables, types, etc.) needed to run Krenalis, as well as an
+// organization and a member.
+//
+// If dockerMember is true, the initial member email will be
+// "docker@krenalis.com" instead of "acme@krenalis.com".
 //
 // This function must be called on a transaction opened on an empty database.
 // Otherwise, the behavior is undefined.
-func initialize(ctx context.Context, tx *db.Tx) error {
+func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	for query := range strings.SplitSeq(schema, ";\n") {
 		query = strings.TrimSpace(query)
 		if query == "" {
@@ -138,54 +130,26 @@ func initialize(ctx context.Context, tx *db.Tx) error {
 			return err
 		}
 	}
-	return nil
-}
-
-// initializeDefaultOrganization initializes the default organization and member.
-func initializeDefaultOrganization(ctx context.Context, tx *db.Tx) error {
-	globalID, err := uuid.NewRandom()
+	// Insert the organization.
+	organizationID := base58.Generate(12)
+	organizationGlobalID, err := uuid.NewRandom()
 	if err != nil {
 		return err
 	}
-	const query = `WITH org AS (
-		INSERT INTO organizations (id, global_id, name)
-		VALUES ($1, $2, 'ACME inc')
-		RETURNING id
-	)
-	INSERT INTO members (id, organization, name, avatar, email, password, created_at)
-	SELECT $3, id, 'ACME inc', NULL, 'acme@krenalis.com', '$2a$10$1arUoJQAeIVLAuNiErG29ex2r43n/4bJZWmW/PPOiWaSt4ZCH5Ysm', now() at time zone 'utc'
-	FROM org`
-	_, err = tx.Exec(ctx, query, base58.Generate(12), globalID, base58.Generate(12))
-	return err
-}
-
-// initializeDockerMember initializes a Krenalis member on the given PostgreSQL
-// database (by executing queries in the given transaction) for certain
-// scenarios where Krenalis is running with Docker, e.g., with the configuration
-// we provide in Docker Compose (this user is treated differently, for example,
-// by the Admin).
-//
-// This function is intended to be called after a successful call to initialize,
-// on its same transaction.
-//
-// Specifically, this function:
-//
-//  1. Deletes the members already present in the PostgreSQL database;
-//
-//  2. Creates a new member whose email is "docker@krenalis.com" and whose
-//     password is "krenalis-password".
-func initializeDockerMember(ctx context.Context, tx *db.Tx) error {
-	_, err := tx.Exec(ctx, "TRUNCATE members")
+	_, err = tx.Exec(ctx, "INSERT INTO organizations (id, global_id, name) VALUES ($1, $2, 'ACME inc')",
+		organizationID, organizationGlobalID)
 	if err != nil {
 		return err
 	}
-	const query = `INSERT INTO members (id, organization, name, avatar, email, password, created_at)
-		SELECT $1, id, 'User', NULL, 'docker@krenalis.com', '$2a$10$1arUoJQAeIVLAuNiErG29ex2r43n/4bJZWmW/PPOiWaSt4ZCH5Ysm', now() at time zone 'utc'
-		FROM organizations`
-	_, err = tx.Exec(ctx, query, base58.Generate(12))
-	if err != nil {
-		return err
+	// Insert the member.
+	memberID := base58.Generate(12)
+	email := "acme@krenalis.com"
+	if dockerMember {
+		email = "docker@krenalis.com"
 	}
+	_, err = tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, created_at)\n"+
+		"VALUES ($1, $2, 'User', $3, '$2a$10$1arUoJQAeIVLAuNiErG29ex2r43n/4bJZWmW/PPOiWaSt4ZCH5Ysm', now() at time zone 'utc')",
+		memberID, organizationID, email)
 	return err
 }
 
