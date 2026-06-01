@@ -1405,7 +1405,7 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 // returning until it has completed (with success or with an operation error).
 //
 // primarySources cannot be nil.
-func (core *Core) executeAlterProfileSchema(workspace string, opID string, schema types.Type,
+func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types.Type,
 	primarySources map[string]string, operations []warehouses.AlterOperation) {
 	ctx := core.close.ctx
 	store, ok := core.datastore.Store(workspace)
@@ -1549,7 +1549,7 @@ Identifiers:
 
 // executeIdentityResolution executes the Identity Resolution, not returning
 // until it has completed (with success or with an operation error).
-func (core *Core) executeIdentityResolution(workspace string, opID string) {
+func (core *Core) executeIdentityResolution(workspace, opID string) {
 	ctx := core.close.ctx
 	store, ok := core.datastore.Store(workspace)
 	if !ok {

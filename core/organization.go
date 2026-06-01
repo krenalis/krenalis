@@ -299,7 +299,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 //
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WorkspaceNotExist, if the workspace does not exist.
-func (this *Organization) CreateAccessKey(ctx context.Context, name string, workspace string, typ AccessKeyType) (string, string, error) {
+func (this *Organization) CreateAccessKey(ctx context.Context, name, workspace string, typ AccessKeyType) (string, string, error) {
 
 	this.core.mustBeOpen()
 
@@ -747,7 +747,7 @@ func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string
 //
 // If the access key does not exist for the organization, it returns an
 // errors.NotFound error.
-func (this *Organization) UpdateAccessKey(ctx context.Context, id string, name string) error {
+func (this *Organization) UpdateAccessKey(ctx context.Context, id, name string) error {
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
 		return errors.BadRequest("identifier %q is not a valid access key identifier", id)
