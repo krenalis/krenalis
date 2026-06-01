@@ -563,13 +563,13 @@ const ConnectionMetrics = () => {
 									size='small'
 									placeholder='All pipelines'
 									onSlChange={onChangesetSelectedPipeline}
-									value={selectedPipeline == null ? '' : String(selectedPipeline)}
+									value={selectedPipeline == null ? '' : selectedPipeline}
 									className='connection-metrics__pipelines'
 									clearable
 								>
 									{c.pipelines?.map((p) => {
 										if (p.target == selectedTarget) {
-											return <SlOption value={String(p.id)}>{p.name}</SlOption>;
+											return <SlOption value={p.id}>{p.name}</SlOption>;
 										}
 										return null;
 									})}

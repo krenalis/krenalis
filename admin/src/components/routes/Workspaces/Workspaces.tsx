@@ -19,7 +19,8 @@ const Workspaces = () => {
 		redirect('workspaces/create');
 	};
 
-	workspaces.sort((a: Workspace, b: Workspace) => {
+	const sortedWorkspaces = [...workspaces];
+	sortedWorkspaces.sort((a: Workspace, b: Workspace) => {
 		if (a.name < b.name) {
 			return -1;
 		}
@@ -47,7 +48,7 @@ const Workspaces = () => {
 					)}
 				</div>
 				<div className='workspace-list__workspaces'>
-					{workspaces.length === 0 ? (
+					{sortedWorkspaces.length === 0 ? (
 						<>
 							<div className='workspace-list__no-workspace'>
 								Currently you don't have any workspace. Create at least one workspace to continue.
@@ -62,7 +63,7 @@ const Workspaces = () => {
 							</SlButton>
 						</>
 					) : (
-						workspaces.map((workspace) => {
+						sortedWorkspaces.map((workspace) => {
 							return (
 								<ListTile
 									key={workspace.id}
@@ -70,7 +71,7 @@ const Workspaces = () => {
 									icon={<SlIcon name='person-workspace' />}
 									name={workspace.name}
 									showHover={true}
-									id={String(workspace.id)}
+									id={workspace.id}
 									onClick={() => onWorkspaceClick(workspace.id)}
 									action={<SlIcon name='chevron-right' />}
 								/>

@@ -356,7 +356,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				connection.isDatabase && connection.isSource
 					? [nameCell, enabledCell, pipelinesCell]
 					: [nameCell, conditionsCell, enabledCell, pipelinesCell],
-			key: String(pipeline.id),
+			key: pipeline.id,
 		};
 		if (pipeline.id === newPipelineID.current && connection.pipelines!.length > 1) {
 			row.animation = 'fade-in';

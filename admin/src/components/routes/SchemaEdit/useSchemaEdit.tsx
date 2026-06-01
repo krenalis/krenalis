@@ -65,7 +65,9 @@ const useSchemaEdit = (
 
 	const { setIsAltering } = useContext(SchemaContext);
 
-	const primarySources = useRef<PrimarySources>(workspaces.find((w) => w.id === selectedWorkspace).primarySources);
+	const primarySources = useRef<PrimarySources>(
+		workspaces.find((w) => w.id === selectedWorkspace)?.primarySources ?? {},
+	);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
 

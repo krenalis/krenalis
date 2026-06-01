@@ -47,12 +47,15 @@ const GeneralSettings = () => {
 
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);
+		if (ws == null) {
+			return;
+		}
 		setName(ws.name);
 		setFirstName(ws.uiPreferences.profile.firstName);
 		setLastName(ws.uiPreferences.profile.lastName);
 		setExtra(ws.uiPreferences.profile.extra);
 		setImage(ws.uiPreferences.profile.image);
-	}, [selectedWorkspace]);
+	}, [selectedWorkspace, workspaces]);
 
 	useEffect(() => {
 		const fetchProfileSchema = async () => {

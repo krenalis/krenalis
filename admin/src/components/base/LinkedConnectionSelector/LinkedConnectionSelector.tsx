@@ -119,7 +119,7 @@ const LinkedConnectionSelector = ({
 												linkedConnections?.find((id) => id === c.id) != null;
 											if (!isAlreadySelected) {
 												return (
-													<SlMenuItem key={c.id} value={String(c.id)}>
+													<SlMenuItem key={c.id} value={c.id}>
 														<LittleLogo
 															code={c.connector.code}
 															path={CONNECTORS_ASSETS_PATH}

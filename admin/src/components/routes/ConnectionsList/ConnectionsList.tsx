@@ -94,7 +94,9 @@ const ConnectionsList = () => {
 					const fullEventConnections: TransformedConnection[] = [];
 					for (const id of c.linkedConnections) {
 						const fullConnection = connections.find((c) => c.id === id);
-						fullEventConnections.push(fullConnection);
+						if (fullConnection != null) {
+							fullEventConnections.push(fullConnection);
+						}
 					}
 					fullEventConnections.sort((a, b) => {
 						if (a.name < b.name) {
@@ -107,17 +109,23 @@ const ConnectionsList = () => {
 					const connectionLogos: ReactNode[] = [];
 					for (const ec of fullEventConnections) {
 						connectionLogos.push(
-							<LittleLogo key={String(ec.id)} code={ec.connector.code} path={CONNECTORS_ASSETS_PATH} />,
+							<LittleLogo key={ec.id} code={ec.connector.code} path={CONNECTORS_ASSETS_PATH} />,
 						);
 					}
-					cells.push(<div className='connections-list__event-connections-cell'>{connectionLogos}</div>);
+					cells.push(
+						connectionLogos.length > 0 ? (
+							<div className='connections-list__event-connections-cell'>{connectionLogos}</div>
+						) : (
+							'-'
+						),
+					);
 				} else {
 					cells.push('-');
 				}
 			}
 			rows.push({
 				cells: cells,
-				id: String(c.id),
+				id: c.id,
 				onClick: () => {
 					redirect(`connections/${c.id}/pipelines`);
 				},

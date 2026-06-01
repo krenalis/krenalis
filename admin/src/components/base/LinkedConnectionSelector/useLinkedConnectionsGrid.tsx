@@ -54,6 +54,9 @@ const useLinkedConnectionsGrid = (
 
 	const unlinkConnection = async (e, idToUnlink: string) => {
 		e.stopPropagation();
+		if (linkedConnections == null) {
+			return;
+		}
 		let updated: string[] | null = [];
 		for (const id of linkedConnections) {
 			if (id !== idToUnlink) {
@@ -101,7 +104,7 @@ const useLinkedConnectionsGrid = (
 
 			const row: GridRow = {
 				cells: [nameCell, fc.connector.type, fc.connector.label, unlinkButtonCell],
-				key: String(fc.id),
+				key: fc.id,
 			};
 			if (isClickable) {
 				row.onClick = () => redirect(`connections/${fc.id}/pipelines`);

@@ -106,7 +106,7 @@ const PropertyDialog = ({
 		setNameError('');
 		setTypeError('');
 		setProperty(propertyToEdit);
-		setPrimarySource(primarySources[propertyToEdit.key]);
+		setPrimarySource(primarySources[propertyToEdit.key] ?? null);
 	}, [propertyToEdit]);
 
 	const onInputName = (e) => {
@@ -456,16 +456,18 @@ const PropertyDialog = ({
 				return;
 			}
 		}
+		const effectivePrimarySource =
+			primarySource != null && sourceConnections.some((c) => c.id === primarySource) ? primarySource : null;
 		if (isEditing) {
 			try {
-				onEditProperty(property, primarySource);
+				onEditProperty(property, effectivePrimarySource);
 			} catch (err) {
 				setNameError(err.message);
 				return;
 			}
 		} else {
 			try {
-				onAddProperty(property, primarySource);
+				onAddProperty(property, effectivePrimarySource);
 			} catch (err) {
 				setNameError(err.message);
 				return;
@@ -679,6 +681,9 @@ const PropertyDialog = ({
 		}
 	}
 
+	const selectedPrimarySourceConnection =
+		primarySource != null ? sourceConnections.find((c) => c.id === primarySource) : null;
+
 	return (
 		<SlDialog
 			className='property-dialog'
@@ -817,22 +822,22 @@ const PropertyDialog = ({
 							<SlSelect
 								className='property-dialog__primary-source'
 								size='small'
-								value={primarySource == null ? 'none' : String(primarySource)}
+								value={selectedPrimarySourceConnection == null ? 'none' : primarySource}
 								label='Primary Source'
 								name='primary-source'
 								onSlChange={onChangePrimarySource}
 							>
 								<div slot='prefix'>
-									{primarySource && (
+									{selectedPrimarySourceConnection != null && (
 										<LittleLogo
-											code={sourceConnections.find((c) => c.id === primarySource).connector.code}
+											code={selectedPrimarySourceConnection.connector.code}
 											path={CONNECTORS_ASSETS_PATH}
 										/>
 									)}
 								</div>
 								<SlOption value='none'>None</SlOption>
 								{sourceConnections.map((c) => (
-									<SlOption key={c.id} value={String(c.id)}>
+									<SlOption key={c.id} value={c.id}>
 										<div slot='prefix'>
 											<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} />
 										</div>

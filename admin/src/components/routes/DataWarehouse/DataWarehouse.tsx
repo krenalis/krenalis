@@ -58,7 +58,7 @@ const DataWarehouse = () => {
 		);
 	}
 
-	const warehouseMode = workspaces.find((w) => w.id === selectedWorkspace).warehouseMode;
+	const warehouseMode = workspaces.find((w) => w.id === selectedWorkspace)?.warehouseMode ?? 'Normal';
 
 	return (
 		<div className='data-warehouse'>

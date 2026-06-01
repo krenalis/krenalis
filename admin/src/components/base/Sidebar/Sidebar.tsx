@@ -256,7 +256,7 @@ const WorkspaceSelector = ({
 			<div className='workspace-selector__text'>
 				<div className='workspace-selector__label'>Workspace</div>
 				<div className='workspace-selector__value'>
-					{workspaces.find((w) => w.id === selectedWorkspace).name}
+					{workspaces.find((w) => w.id === selectedWorkspace)?.name ?? 'Select a workspace'}
 				</div>
 			</div>
 			<SlIcon name='chevron-down' className='workspace-selector__arrow' />

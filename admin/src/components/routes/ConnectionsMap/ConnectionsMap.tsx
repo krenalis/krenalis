@@ -141,7 +141,8 @@ const ConnectionsMap = () => {
 	const newConnectionID = new URL(document.location.href).searchParams.get('newConnection') ?? '';
 	const sources: TransformedConnection[] = [];
 	const destinations: TransformedConnection[] = [];
-	connections.sort((a, b) => {
+	const sortedConnections = [...connections];
+	sortedConnections.sort((a, b) => {
 		if (a.name < b.name) {
 			return -1;
 		} else if (a.name > b.name) {
@@ -151,14 +152,14 @@ const ConnectionsMap = () => {
 			return a.id < b.id ? -1 : 1;
 		}
 	});
-	for (const c of connections) {
+	for (const c of sortedConnections) {
 		if (c.role === 'Source') sources.push(c);
 		if (c.role === 'Destination') destinations.push(c);
 	}
 	const sourcesBlocks = getConnectionsBlocks(sources, newConnectionID);
 	const destinationsBlocks = getConnectionsBlocks(destinations, newConnectionID);
 
-	const warehouseMode = workspaces.find((w) => w.id === selectedWorkspace).warehouseMode;
+	const warehouseMode = workspaces.find((w) => w.id === selectedWorkspace)?.warehouseMode ?? 'Normal';
 
 	return (
 		<ConnectionMapContext.Provider

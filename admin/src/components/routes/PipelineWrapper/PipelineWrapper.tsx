@@ -27,7 +27,7 @@ const PipelineWrapper = () => {
 		const instructions = splitted.slice(instructionsStartIndex);
 		const isEditing = instructions[0] === 'edit';
 		if (isEditing) {
-			const pipeline = connection.pipelines!.find((p) => String(p.id) === params.pipeline);
+			const pipeline = connection.pipelines!.find((p) => p.id === params.pipeline);
 			setSelectedPipeline(pipeline);
 			return;
 		} else {
