@@ -497,14 +497,13 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 					}
 					if header := msg.Headers(); header != nil {
 						if destinations, ok := header["destinations"]; ok {
-							event.Destinations = make([]string, len(destinations))
-							for i, d := range destinations {
+							for _, d := range destinations {
 								if !isValidDestination(d) {
 									err = fmt.Errorf("invalid event destination: %q", d)
 									return
 								}
-								event.Destinations[i] = d
 							}
+							event.Destinations = destinations
 						}
 					}
 					event.Ack = func() {
@@ -604,11 +603,7 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 	for _, topic := range topics {
 		var header nats.Header
 		if strings.HasPrefix(topic, "connection-") {
-			h := make([]string, len(destinations))
-			for i, d := range destinations {
-				h[i] = d
-			}
-			header = nats.Header{"destinations": h}
+			header = nats.Header{"destinations": slices.Clone(destinations)}
 		}
 		future, err := batch.stream.js.jetStream.PublishMsgAsync(&nats.Msg{
 			Header:  header,
