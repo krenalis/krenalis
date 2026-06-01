@@ -18,7 +18,7 @@ import (
 
 const (
 	// Base58IDsMigrationName identifies the public resource ID migration.
-	Base58IDsMigrationName   = "base58-resource-identifiers-2026-05"
+	Base58IDsMigrationName   = "base58-resource-identifiers-2026-06"
 	base58IDsMigrationTable  = "krenalis_db_upgrade_base58_ids"
 	completedMigrationsTable = "krenalis_db_upgrades"
 	pipelineIDMapQuery       = "SELECT id FROM pipelines UNION SELECT unnest(pipelines_to_purge) AS id FROM workspaces ORDER BY id"
