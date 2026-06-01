@@ -243,7 +243,7 @@ func newUpgradeTestPostgreSQL(t *testing.T, ctx context.Context, database string
 func initializeUpgradeTestLegacyDB(t *testing.T, ctx context.Context, pool *pgxpool.Pool, keyManager kms.Kms) {
 	t.Helper()
 
-	for _, statement := range strings.Split(upgradeTestLegacySchema, ";\n") {
+	for statement := range strings.SplitSeq(upgradeTestLegacySchema, ";\n") {
 		statement = strings.TrimSpace(statement)
 		if statement == "" {
 			continue
