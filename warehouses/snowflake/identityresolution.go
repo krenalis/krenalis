@@ -126,7 +126,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 				mergeProfiles.WriteString(`ARRAY_AGG(CASE WHEN `)
 				mergeProfiles.WriteString(quoteIdent(c.Name))
 				mergeProfiles.WriteString(` IS NOT NULL AND "_CONNECTION" = `)
-				quoteString(&mergeProfiles, s)
+				quoteStringForDynamicSQL(&mergeProfiles, s)
 				mergeProfiles.WriteString(` THEN `)
 				mergeProfiles.WriteString(quoteIdent(c.Name))
 				mergeProfiles.WriteString(` END) WITHIN GROUP (ORDER BY "_UPDATED_AT" DESC)`)
