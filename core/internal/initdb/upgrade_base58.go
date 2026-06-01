@@ -12,7 +12,6 @@ import (
 	"strconv"
 
 	"github.com/krenalis/krenalis/core/internal/db"
-	dbpkg "github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -55,7 +54,7 @@ func MigrateBase58IDs(ctx context.Context, database *db.DB) error {
 		slog.Info("PostgreSQL database migration already prepared; resuming warehouse migrations")
 		return nil
 	}
-	err = database.Transaction(ctx, func(tx *dbpkg.Tx) error {
+	err = database.Transaction(ctx, func(tx *db.Tx) error {
 		if err := validateBase58IDsMigrationPreconditions(ctx, tx); err != nil {
 			return err
 		}
@@ -167,7 +166,7 @@ func base58IDsMigrationCompleted(ctx context.Context, database *db.DB) (bool, er
 	return database.QueryExists(ctx, `SELECT FROM `+completedMigrationsTable+` WHERE name = $1`, Base58IDsMigrationName)
 }
 
-func validateBase58IDsMigrationPreconditions(ctx context.Context, tx *dbpkg.Tx) error {
+func validateBase58IDsMigrationPreconditions(ctx context.Context, tx *db.Tx) error {
 	var typ string
 	err := tx.QueryRow(ctx, `
 		SELECT format_type(a.atttypid, a.atttypmod)
@@ -204,7 +203,7 @@ func validateBase58IDsMigrationPreconditions(ctx context.Context, tx *dbpkg.Tx) 
 	return nil
 }
 
-func prepareBase58IDMaps(ctx context.Context, tx *dbpkg.Tx) error {
+func prepareBase58IDMaps(ctx context.Context, tx *db.Tx) error {
 	queries := []string{
 		`LOCK TABLE organizations, members, workspaces, access_keys, connections, pipelines, pipelines_runs,
 			accounts, event_write_keys, primary_sources, pipelines_errors, pipelines_metrics, notifications IN ACCESS EXCLUSIVE MODE`,
@@ -243,7 +242,7 @@ func prepareBase58IDMaps(ctx context.Context, tx *dbpkg.Tx) error {
 	return nil
 }
 
-func insertUUIDBase58Map(ctx context.Context, tx *dbpkg.Tx, table, query string, used map[string]struct{}) error {
+func insertUUIDBase58Map(ctx context.Context, tx *db.Tx, table, query string, used map[string]struct{}) error {
 	var ids []string
 	err := tx.QueryScan(ctx, query, func(rows *db.Rows) error {
 		for rows.Next() {
@@ -266,7 +265,7 @@ func insertUUIDBase58Map(ctx context.Context, tx *dbpkg.Tx, table, query string,
 	return nil
 }
 
-func insertIntBase58Map(ctx context.Context, tx *dbpkg.Tx, table, query string, used map[string]struct{}) error {
+func insertIntBase58Map(ctx context.Context, tx *db.Tx, table, query string, used map[string]struct{}) error {
 	var ids []int
 	err := tx.QueryScan(ctx, query, func(rows *db.Rows) error {
 		for rows.Next() {
