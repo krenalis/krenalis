@@ -363,9 +363,8 @@ func (state *State) createAccessKey(n notification) string {
 	}
 	state.mu.Lock()
 	state.accessKeyByHMAC[string(e.HMAC)] = &key
-	org := state.organizations[e.Organization]
 	state.mu.Unlock()
-	return org.ID
+	return e.Organization
 }
 
 // CreateConnection is the event sent when a new connection is created.
@@ -487,7 +486,7 @@ func (state *State) createOrganization(n notification) string {
 	state.mu.Lock()
 	state.organizations[e.ID] = org
 	state.mu.Unlock()
-	return org.ID
+	return e.ID
 }
 
 // CreatePipeline is the event sent when a pipeline is created.
@@ -838,7 +837,7 @@ func (state *State) deleteMember(n notification) string {
 	org.mu.Lock()
 	delete(org.members, e.ID)
 	org.mu.Unlock()
-	return org.ID
+	return e.Organization
 }
 
 // DeleteOrganization is the event sent when an organization is deleted.
@@ -882,7 +881,7 @@ func (state *State) deleteOrganization(n notification) string {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
-	return e.organization.ID
+	return e.ID
 }
 
 // DeletePipeline is the event sent when a pipeline is deleted.
@@ -1459,10 +1458,10 @@ func (state *State) updateOrganization(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	org := state.replaceOrganization(e.ID, func(org *Organization) {
+	state.replaceOrganization(e.ID, func(org *Organization) {
 		org.Name = e.Name
 	})
-	return org.ID
+	return e.ID
 }
 
 // UpdatePipeline is the event sent when a pipeline is updated.
