@@ -420,7 +420,7 @@ func TestValidateRequiredBody(t *testing.T) {
 			t.Fatalf("expected error, got nil")
 		}
 		if _, ok := err.(*http.MaxBytesError); !ok {
-			t.Fatalf("expected http.MaxBytesError error, got %t", err)
+			t.Fatalf("expected http.MaxBytesError error, got %T", err)
 		}
 		if len(body) > maxRequestSize {
 			t.Fatalf("expected at most %d bytes, got %d", maxRequestSize, len(body))
