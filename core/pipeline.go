@@ -903,7 +903,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (int, er
 			return nil, err
 		}
 		if !enabled {
-			return 0, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", this.pipeline.ID)
+			return nil, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", this.pipeline.ID)
 		}
 		if executing {
 			return nil, errors.Unprocessable(RunInProgress, "pipeline run %d is already in progress", this.pipeline.ID)
