@@ -23,9 +23,10 @@ var (
 )
 
 type eventType struct {
-	ID     string
-	Name   string
-	Schema types.Type // invalid means no schema.
+	ID            string
+	Name          string
+	DefaultFilter string
+	Schema        types.Type // invalid means no schema.
 }
 
 var eventTypeByID map[string]*eventType
@@ -96,8 +97,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "add_payment_info",
-			Name: "Add Payment Info",
+			ID:            "add_payment_info",
+			Name:          "Add Payment Info",
+			DefaultFilter: "type is 'track' and event is 'Payment Info Entered'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -118,8 +120,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "add_to_cart",
-			Name: "Add To Cart",
+			ID:            "add_to_cart",
+			Name:          "Add To Cart",
+			DefaultFilter: "type is 'track' and event is 'Product Added'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -127,8 +130,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "add_to_wishlist",
-			Name: "Add To Wishlist",
+			ID:            "add_to_wishlist",
+			Name:          "Add To Wishlist",
+			DefaultFilter: "type is 'track' and event is 'Product Added to Wishlist'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -136,8 +140,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "begin_checkout",
-			Name: "Begin Checkout",
+			ID:            "begin_checkout",
+			Name:          "Begin Checkout",
+			DefaultFilter: "type is 'track' and event is 'Checkout Started'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -216,15 +221,17 @@ func init() {
 			}),
 		},
 		{
-			ID:   "login",
-			Name: "Login",
+			ID:            "login",
+			Name:          "Login",
+			DefaultFilter: "type is 'track' and event is 'Signed In'",
 			Schema: types.Object([]types.Property{
 				{Name: "method", Type: types.String(), Description: "Authentication method"},
 			}),
 		},
 		{
-			ID:   "page_view",
-			Name: "Page View",
+			ID:            "page_view",
+			Name:          "Page View",
+			DefaultFilter: "type is 'page'",
 			Schema: types.Object([]types.Property{
 				{Name: "page_location", Prefilled: "context.page.url", Type: types.String(), Description: "Page URL"},
 				{Name: "page_referrer", Prefilled: "context.page.referrer", Type: types.String(), Description: "Previous page URL"},
@@ -242,8 +249,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "purchase",
-			Name: "Purchase",
+			ID:            "purchase",
+			Name:          "Purchase",
+			DefaultFilter: "type is 'track' and event is 'Order Completed'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -264,8 +272,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "refund",
-			Name: "Refund",
+			ID:            "refund",
+			Name:          "Refund",
+			DefaultFilter: "type is 'track' and event is 'Order Refunded'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "transaction_id", Type: types.String(), CreateRequired: true, Description: "Transaction ID"},
@@ -277,8 +286,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "remove_from_cart",
-			Name: "Remove From Cart",
+			ID:            "remove_from_cart",
+			Name:          "Remove From Cart",
+			DefaultFilter: "type is 'track' and event is 'Product Removed'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -294,8 +304,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "search",
-			Name: "Search",
+			ID:            "search",
+			Name:          "Search",
+			DefaultFilter: "type is 'track' and event is 'Products Searched'",
 			Schema: types.Object([]types.Property{
 				{Name: "search_term", Type: types.String(), CreateRequired: true, Description: "Search term"},
 			}),
@@ -309,8 +320,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "select_item",
-			Name: "Select Item",
+			ID:            "select_item",
+			Name:          "Select Item",
+			DefaultFilter: "type is 'track' and event is 'Product Clicked'",
 			Schema: types.Object([]types.Property{
 				{Name: "item_list_id", Type: types.String(), Description: "Item list ID"},
 				{Name: "item_list_name", Type: types.String(), Description: "Item list name"},
@@ -318,8 +330,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "select_promotion",
-			Name: "Select Promotion",
+			ID:            "select_promotion",
+			Name:          "Select Promotion",
+			DefaultFilter: "type is 'track' and event is 'Promotion Clicked'",
 			Schema: types.Object([]types.Property{
 				{Name: "creative_name", Type: types.String(), Description: "Creative name"},
 				{Name: "creative_slot", Type: types.String(), Description: "Creative slot"},
@@ -338,8 +351,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "sign_up",
-			Name: "Sign Up",
+			ID:            "sign_up",
+			Name:          "Sign Up",
+			DefaultFilter: "type is 'track' and event is 'Signed Up'",
 			Schema: types.Object([]types.Property{
 				{Name: "method", Type: types.String(), Description: "Authentication method"},
 			}),
@@ -371,8 +385,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "view_cart",
-			Name: "View Cart",
+			ID:            "view_cart",
+			Name:          "View Cart",
+			DefaultFilter: "type is 'track' and event is 'Cart Viewed'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -380,8 +395,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "view_item",
-			Name: "View Item",
+			ID:            "view_item",
+			Name:          "View Item",
+			DefaultFilter: "type is 'track' and event is 'Product Viewed'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "value", Type: monetaryType, Description: "Event value"},
@@ -389,8 +405,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "view_item_list",
-			Name: "View Item List",
+			ID:            "view_item_list",
+			Name:          "View Item List",
+			DefaultFilter: "type is 'track' and event is 'Product List Viewed'",
 			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: currencyType, Description: "Currency code"},
 				{Name: "item_list_id", Type: types.String(), Description: "Item list ID"},
@@ -399,8 +416,9 @@ func init() {
 			}),
 		},
 		{
-			ID:   "view_promotion",
-			Name: "View Promotion",
+			ID:            "view_promotion",
+			Name:          "View Promotion",
+			DefaultFilter: "type is 'track' and event is 'Promotion Viewed'",
 			Schema: types.Object([]types.Property{
 				{Name: "creative_name", Type: types.String(), Description: "Creative name"},
 				{Name: "creative_slot", Type: types.String(), Description: "Creative slot"},
@@ -431,9 +449,10 @@ func init() {
 	for _, def := range measurementProtocolEvents {
 		eventTypeByID[def.ID] = def
 		eventTypes = append(eventTypes, &connectors.EventType{
-			ID:          def.ID,
-			Name:        def.Name,
-			Description: fmt.Sprintf("Send '%s' events to Google Analytics", def.Name),
+			ID:            def.ID,
+			Name:          def.Name,
+			Description:   fmt.Sprintf("Send '%s' events to Google Analytics", def.Name),
+			DefaultFilter: def.DefaultFilter,
 		})
 	}
 

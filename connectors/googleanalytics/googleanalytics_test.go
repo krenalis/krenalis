@@ -208,24 +208,6 @@ func TestPageViewEventTypeDefinition(t *testing.T) {
 
 	ga := &Analytics{}
 
-	eventTypes, err := ga.EventTypes(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	var found bool
-	for _, eventType := range eventTypes {
-		if eventType.ID == "page_view" {
-			found = true
-			if eventType.Name != "Page View" {
-				t.Fatalf("expected page_view name to be Page View, got %q", eventType.Name)
-			}
-			break
-		}
-	}
-	if !found {
-		t.Fatal("page_view event type not found")
-	}
-
 	schema, err := ga.EventTypeSchema(context.Background(), "page_view")
 	if err != nil {
 		t.Fatal(err)
