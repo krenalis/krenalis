@@ -49,8 +49,7 @@ type Workos struct {
 	webhookSecret string
 	actionsSecret string
 	DevMode       bool
-	keysMu        sync.RWMutex
-	publicKeys    map[string]publicKey // kid → cached key
+	keyStore      keyStore
 	transport     http.RoundTripper
 }
 
@@ -66,6 +65,39 @@ type publicKey struct {
 	key       *rsa.PublicKey
 	alg       string
 	expiresAt time.Time
+}
+
+type keyStore struct {
+	mu   sync.RWMutex
+	byID map[string]*publicKey // kid → cached key
+}
+
+func (ks *keyStore) get(kid string) (*rsa.PublicKey, string, bool) {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	pk, ok := ks.byID[kid]
+	if !ok || time.Now().After(pk.expiresAt) {
+		return nil, "", false
+	}
+	return pk.key, pk.alg, true
+}
+
+func (ks *keyStore) set(kid string, key *rsa.PublicKey, alg string) {
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	now := time.Now()
+	for kid, pk := range ks.byID {
+		if now.After(pk.expiresAt) {
+			delete(ks.byID, kid)
+		}
+	}
+	if len(ks.byID) < publicKeyMaxCache {
+		ks.byID[kid] = &publicKey{
+			key:       key,
+			alg:       alg,
+			expiresAt: now.Add(publicKeyTTL),
+		}
+	}
 }
 
 type claims struct {
@@ -92,46 +124,32 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 		webhookSecret: webhookSecret,
 		actionsSecret: actionsSecret,
 		DevMode:       devMode,
-		publicKeys:    make(map[string]publicKey),
+		keyStore:      keyStore{byID: make(map[string]*publicKey)},
 		transport:     &http.Transport{Proxy: nil},
 	}
 }
 
 // publicKey returns the RSA public key for the given key ID and algorithm,
 // using the in-memory cache when available.
-func (wo *Workos) publicKey(kid, alg string) (*rsa.PublicKey, error) {
+func (wo *Workos) publicKey(kid, algorithm string) (*rsa.PublicKey, error) {
 	if kid == "" {
 		return nil, fmt.Errorf("WorkOS provided a JWT with an empty key identifier (kid)")
 	}
-	wo.keysMu.RLock()
-	if pk, ok := wo.publicKeys[kid]; ok && pk.alg == alg && time.Now().Before(pk.expiresAt) {
-		wo.keysMu.RUnlock()
-		return pk.key, nil
-	}
-	wo.keysMu.RUnlock()
 
-	key, err := wo.fetchPublicKey(kid, alg)
+	key, alg, ok := wo.keyStore.get(kid)
+	if ok {
+		if alg != algorithm {
+			return nil, fmt.Errorf("key %s has algorithm %q, not %q", kid, alg, algorithm)
+		}
+		return key, nil
+	}
+
+	key, err := wo.fetchPublicKey(kid, algorithm)
 	if err != nil {
 		return nil, err
 	}
 
-	wo.keysMu.Lock()
-	defer wo.keysMu.Unlock()
-
-	now := time.Now()
-	for k, e := range wo.publicKeys {
-		if now.After(e.expiresAt) {
-			delete(wo.publicKeys, k)
-		}
-	}
-
-	if len(wo.publicKeys) < publicKeyMaxCache {
-		wo.publicKeys[kid] = publicKey{
-			key:       key,
-			alg:       alg,
-			expiresAt: time.Now().Add(publicKeyTTL),
-		}
-	}
+	wo.keyStore.set(kid, key, algorithm)
 
 	return key, nil
 }
