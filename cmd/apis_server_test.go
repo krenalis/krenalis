@@ -17,58 +17,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-func TestParseID(t *testing.T) {
-
-	tests := []struct {
-		s  string
-		v  string
-		ok bool
-	}{
-		// valid
-		{"7B3mN9qK2xA4", "7B3mN9qK2xA4", true},
-		{"abcdefghijkm", "abcdefghijkm", true},
-
-		// invalid: format
-		{"", "", false},
-		{"0", "", false},
-		{"01", "", false},
-		{"000", "", false},
-		{"+1", "", false},
-		{"-1", "", false},
-		{" 1", "", false},
-		{"1 ", "", false},
-		{"1\n", "", false},
-		{"\t1", "", false},
-		{"1\t", "", false},
-		{"1a", "", false},
-		{"a1", "", false},
-		{"3.14", "", false},
-
-		// invalid: length
-		{"2147483640", "", false},
-		{"9999999990", "", false},
-		{"18446744073709551616", "", false},
-
-		// invalid: alphabet
-		{"7B3mN9qK2x0A", "", false},
-
-		// invalid: unicode digits
-		{"１２３", "", false},
-	}
-
-	for _, test := range tests {
-		got, ok := parseID(test.s)
-		if ok != test.ok {
-			t.Fatalf("%q: expected %t, got %t", test.s, test.ok, ok)
-		}
-		if ok {
-			if got != test.v {
-				t.Fatalf("%q: expected %q, got %q", test.s, test.v, got)
-			}
-		}
-	}
-}
-
 func TestWriteSessionCookie(t *testing.T) {
 
 	t.Run("ignores empty cookie string", func(t *testing.T) {

@@ -64,9 +64,9 @@ func (pipeline pipeline) ServeUI(w http.ResponseWriter, r *http.Request) (any, e
 	if ws == nil {
 		return nil, errMissingWorkspace
 	}
-	id, ok := parseID(r.PathValue("id")) // ID of the pipeline
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", r.PathValue("id"))
+	id := r.PathValue("id")
+	if !core.IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", id)
 	}
 	p, err := ws.Pipeline(id)
 	if err != nil {
@@ -148,9 +148,9 @@ func (pipeline pipeline) id(r *http.Request) (*core.Pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", r.PathValue("id"))
+	id := r.PathValue("id")
+	if !core.IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", id)
 	}
 	return ws.Pipeline(id)
 }
