@@ -773,10 +773,10 @@ func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...int) {
 			if run.EndTime != nil {
 				// If the pipeline run ended with an error, make the test fail.
 				if run.Error != "" {
-					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", run.Pipeline, run.ID, run.Error)
+					c.t.Fatalf("error running pipeline %d for run %d: %s", run.Pipeline, run.ID, run.Error)
 				}
 				if !allowFailed && run.Failed != [6]int{} {
-					c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", run.Pipeline, run.ID, run.Failed)
+					c.t.Fatalf("error running pipeline %d for run %d: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
 			}
@@ -794,10 +794,10 @@ func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...int) {
 			}
 			// If the pipeline run ended with an error, make the test fail.
 			if run.Error != "" {
-				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %s", run.Pipeline, run.ID, run.Error)
+				c.t.Fatalf("error running pipeline %d for run %d: %s", run.Pipeline, run.ID, run.Error)
 			}
 			if !allowFailed && run.Failed != [6]int{} {
-				c.t.Fatalf("an error occurred when running pipeline %d on connection %d: %d failed", run.Pipeline, run.ID, run.Failed)
+				c.t.Fatalf("error running pipeline %d for run %d: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}
 		if completed {

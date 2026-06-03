@@ -539,6 +539,10 @@ If `HasSettings: true` for Source and/or Destination, implement `ServeUI`. Other
 
 - [references/settings-ui.md](references/settings-ui.md)
 
+Read persisted settings through `env.Settings.Load(ctx, &s)`, save validated
+settings through `env.Settings.Store(ctx, s)`, and do not cache settings in the
+connector instance.
+
 ### Users and events capabilities (load only what you implement)
 
 - Users (RecordFetcher / RecordUpserter): [references/users.md](references/users.md)

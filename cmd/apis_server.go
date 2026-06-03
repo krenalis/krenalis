@@ -221,9 +221,6 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	if err != nil {
 		return nil, nil, 0, errInvalidSessionCookie
 	}
-	if id := session.Member; id < 1 || id > math.MaxInt32 {
-		return nil, nil, 0, errInvalidSessionCookie
-	}
 
 	// Get the organization.
 	org, err = s.core.Organization(session.Organization)
@@ -234,7 +231,7 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		return nil, nil, 0, err
 	}
 	// Verify that the member still exists.
-	if !org.HasMember(session.Member) {
+	if exists, err := org.HasMember(session.Member); err != nil || !exists {
 		return nil, nil, 0, errInvalidSessionCookie
 	}
 	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.

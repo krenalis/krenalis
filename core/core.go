@@ -379,7 +379,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
-	core.state.AddListener(core.onExecutePipeline)
+	core.state.AddListener(core.onRunPipeline)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
@@ -387,8 +387,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Try to start pending pipeline runs.
 	for _, pipeline := range core.state.Pipelines() {
-		if exe, ok := pipeline.Run(); ok {
-			if _, ok := exe.Node(); !ok {
+		if run, ok := pipeline.Run(); ok {
+			if _, ok := run.Node(); !ok {
 				core.tryStartPipelineRun(pipeline.ID)
 			}
 		}
@@ -1253,8 +1253,8 @@ func (core *Core) mustBeOpen() {
 	}
 }
 
-// onExecutePipeline is called when a pipeline is executed.
-func (core *Core) onExecutePipeline(n state.RunPipeline) {
+// onRunPipeline is called when a pipeline run starts.
+func (core *Core) onRunPipeline(n state.RunPipeline) {
 	core.tryStartPipelineRun(n.Pipeline)
 }
 
@@ -1299,29 +1299,23 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
 		for bo.Next(ctx) {
-			var node uuid.UUID
-			err := core.db.QueryRow(core.close.ctx,
-				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
-				core.state.ID(), run.ID).Scan(&node)
+			result, err := core.db.Exec(core.close.ctx,
+				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL",
+				core.state.ID(), run.ID)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The run no longer exists.
-					return
+				if ctx.Err() == nil {
+					slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
-				if err := ctx.Err(); err != nil {
-					// The context has been canceled.
-					break
-				}
-				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
-			if node != core.state.ID() {
-				// Another node acquired the run.
+			// If the run no longer exists, or it is assigned to another node,
+			// do nothing.
+			if result.RowsAffected() == 0 {
 				return
 			}
 			break
 		}
-		if err := ctx.Err(); err != nil {
+		if ctx.Err() != nil {
 			// The context has been canceled.
 			return
 		}
@@ -1372,7 +1366,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 					// The run no longer exists.
 					return
 				}
-				if err := ctx.Err(); err != nil {
+				if ctx.Err() != nil {
 					// The context has been canceled.
 					break
 				}
@@ -1381,7 +1375,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 			}
 			break
 		}
-		if err := ctx.Err(); err != nil {
+		if ctx.Err() != nil {
 			// The context has been canceled.
 			// TODO(marco): What happens if the node successfully assigns itself the run, but the context gets canceled?
 			return
@@ -1664,35 +1658,13 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 // onDeleteOrganization is called when an organization is deleted.
 func (core *Core) onDeleteOrganization(n state.DeleteOrganization) {
 	for _, ws := range n.Organization().Workspaces() {
-		core.mcpMu.Lock()
-		wh, ok := core.mcp[ws.ID]
-		delete(core.mcp, ws.ID)
-		core.mcpMu.Unlock()
-		if ok && wh != nil {
-			go func(workspace int) {
-				err := wh.Close()
-				if err != nil {
-					slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
-				}
-			}(ws.ID)
-		}
+		core.removeMCPWarehouse(ws.ID)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
-	core.mcpMu.Lock()
-	wh, ok := core.mcp[n.ID]
-	delete(core.mcp, n.ID)
-	core.mcpMu.Unlock()
-	if ok && wh != nil {
-		go func(workspace int) {
-			err := wh.Close()
-			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
-			}
-		}(n.ID)
-	}
+	core.removeMCPWarehouse(n.ID)
 }
 
 // onElectLeader is called when a leader is elected.
@@ -1758,6 +1730,24 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 		}
 	}(ws.ID)
+}
+
+// removeMCPWarehouse removes from core the MCP warehouse for the given
+// workspace.
+// When this method is called, the state is frozen.
+func (core *Core) removeMCPWarehouse(ws int) {
+	core.mcpMu.Lock()
+	wh, ok := core.mcp[ws]
+	delete(core.mcp, ws)
+	core.mcpMu.Unlock()
+	if ok && wh != nil {
+		go func() {
+			err := wh.Close()
+			if err != nil {
+				slog.Error("core: error closing a MCP warehouse", "workspace", ws, "error", err)
+			}
+		}()
+	}
 }
 
 // startAlterProfileSchema starts the alter of the profile schema.
