@@ -223,6 +223,16 @@ func init() {
 			}),
 		},
 		{
+			ID:   "page_view",
+			Name: "Page View",
+			Schema: types.Object([]types.Property{
+				{Name: "page_location", Prefilled: "context.page.url", Type: types.String(), Description: "Page URL"},
+				{Name: "page_referrer", Prefilled: "context.page.referrer", Type: types.String(), Description: "Previous page URL"},
+				{Name: "page_title", Prefilled: "context.page.title", Type: types.String(), Description: "Page title"},
+				{Name: "engagement_time_msec", Prefilled: "1", Type: genericNumberType, Description: "Engagement time in milliseconds"},
+			}),
+		},
+		{
 			ID:   "post_score",
 			Name: "Post Score",
 			Schema: types.Object([]types.Property{
