@@ -510,7 +510,6 @@ type Organization struct {
 	workspaces map[string]*Workspace
 	members    map[string]struct{}
 	ID         string
-	GlobalID   uuid.UUID
 	Name       string
 }
 

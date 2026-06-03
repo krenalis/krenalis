@@ -57,7 +57,7 @@ func (state *State) keep() {
 		if logNotifications {
 			slog.Info("core/state: received notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
 		}
-		var org uuid.UUID
+		var org string
 		state.changing.Lock()
 		switch n.Name {
 		case "AcceptInvitation":
@@ -152,7 +152,7 @@ func (state *State) keep() {
 				ack.(chan struct{}) <- struct{}{}
 			}
 		}
-		if state.sendStats && org != uuid.Nil {
+		if state.sendStats && org != "" {
 			state.sendNotificationStats(client, org, n)
 		}
 	}
@@ -305,10 +305,10 @@ type AcceptInvitation struct {
 }
 
 // acceptInvitation accepts a member invitation.
-func (state *State) acceptInvitation(n notification) uuid.UUID {
+func (state *State) acceptInvitation(n notification) string {
 	e := AcceptInvitation{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	state.mu.Lock()
 	org := state.organizations[e.Organization]
@@ -316,7 +316,7 @@ func (state *State) acceptInvitation(n notification) uuid.UUID {
 	org.mu.Lock()
 	org.members[e.Member] = struct{}{}
 	org.mu.Unlock()
-	return org.GlobalID
+	return org.ID
 }
 
 // AddMember is the event sent when a member is added.
@@ -326,10 +326,10 @@ type AddMember struct {
 }
 
 // addMember adds a member.
-func (state *State) addMember(n notification) uuid.UUID {
+func (state *State) addMember(n notification) string {
 	e := AddMember{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	state.mu.Lock()
 	org := state.organizations[e.Organization]
@@ -337,7 +337,7 @@ func (state *State) addMember(n notification) uuid.UUID {
 	org.mu.Lock()
 	org.members[e.ID] = struct{}{}
 	org.mu.Unlock()
-	return org.GlobalID
+	return org.ID
 }
 
 // CreateAccessKey is the event sent when an access key is created.
@@ -350,10 +350,10 @@ type CreateAccessKey struct {
 }
 
 // createAccessKey creates an access key.
-func (state *State) createAccessKey(n notification) uuid.UUID {
+func (state *State) createAccessKey(n notification) string {
 	e := CreateAccessKey{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	key := AccessKey{
 		ID:           e.ID,
@@ -365,7 +365,7 @@ func (state *State) createAccessKey(n notification) uuid.UUID {
 	state.accessKeyByHMAC[string(e.HMAC)] = &key
 	org := state.organizations[e.Organization]
 	state.mu.Unlock()
-	return org.GlobalID
+	return org.ID
 }
 
 // CreateConnection is the event sent when a new connection is created.
@@ -391,10 +391,10 @@ type CreateConnection struct {
 }
 
 // createConnection creates a new connection.
-func (state *State) createConnection(n notification) uuid.UUID {
+func (state *State) createConnection(n notification) string {
 	e := CreateConnection{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.workspaces[e.Workspace]
 	connector := state.connectors[e.Connector]
@@ -462,34 +462,32 @@ func (state *State) createConnection(n notification) uuid.UUID {
 		})
 	}
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // CreateOrganization is the event sent when an organization is created.
 type CreateOrganization struct {
-	ID       string
-	GlobalID uuid.UUID
-	Name     string
+	ID   string
+	Name string
 }
 
 // createOrganization creates an organization.
-func (state *State) createOrganization(n notification) uuid.UUID {
+func (state *State) createOrganization(n notification) string {
 	e := CreateOrganization{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	org := &Organization{
 		mu:         &sync.Mutex{},
 		workspaces: map[string]*Workspace{},
 		members:    map[string]struct{}{},
 		ID:         e.ID,
-		GlobalID:   e.GlobalID,
 		Name:       e.Name,
 	}
 	state.mu.Lock()
 	state.organizations[e.ID] = org
 	state.mu.Unlock()
-	return org.GlobalID
+	return org.ID
 }
 
 // CreatePipeline is the event sent when a pipeline is created.
@@ -525,10 +523,10 @@ type CreatePipeline struct {
 }
 
 // createPipeline creates a new pipeline.
-func (state *State) createPipeline(n notification) uuid.UUID {
+func (state *State) createPipeline(n notification) string {
 	e := CreatePipeline{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	// json.Value(nil) is marshaled into "null", but when it is
 	// deserialized it becomes json.Value("null"), so this code converts it
@@ -586,7 +584,7 @@ func (state *State) createPipeline(n notification) uuid.UUID {
 	c.mu.Unlock()
 	dispatchNotification(state, e)
 
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // CreateWorkspace is the event sent when a workspace is created.
@@ -607,10 +605,10 @@ type CreateWorkspace struct {
 }
 
 // createWorkspace creates a workspace.
-func (state *State) createWorkspace(n notification) uuid.UUID {
+func (state *State) createWorkspace(n notification) string {
 	e := CreateWorkspace{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
@@ -640,7 +638,7 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 	organization.workspaces[e.ID] = &ws
 	organization.mu.Unlock()
 	dispatchNotification(state, e)
-	return organization.GlobalID
+	return organization.ID
 }
 
 // CreateEventWriteKey is the event sent when an event write key is created.
@@ -651,10 +649,10 @@ type CreateEventWriteKey struct {
 }
 
 // createEventWriteKey creates an event write key.
-func (state *State) createEventWriteKey(n notification) uuid.UUID {
+func (state *State) createEventWriteKey(n notification) string {
 	e := CreateEventWriteKey{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)+1)
@@ -665,7 +663,7 @@ func (state *State) createEventWriteKey(n notification) uuid.UUID {
 	state.mu.Lock()
 	state.connectionsByKey[e.Key] = c
 	state.mu.Unlock()
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // DeleteAccessKey is the event sent when an access key is deleted.
@@ -674,17 +672,17 @@ type DeleteAccessKey struct {
 }
 
 // deleteAccessKey deletes an access key.
-func (state *State) deleteAccessKey(n notification) uuid.UUID {
+func (state *State) deleteAccessKey(n notification) string {
 	e := DeleteAccessKey{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
-	var org uuid.UUID
+	var org string
 	state.mu.Lock()
 	for hmac, key := range state.accessKeyByHMAC {
 		if key.ID == e.ID {
 			delete(state.accessKeyByHMAC, hmac)
-			org = state.organizations[key.Organization].GlobalID
+			org = key.Organization
 			break
 		}
 	}
@@ -704,10 +702,10 @@ func (n DeleteConnection) Connection() *Connection {
 }
 
 // deleteConnection deletes a connection.
-func (state *State) deleteConnection(n notification) uuid.UUID {
+func (state *State) deleteConnection(n notification) string {
 	e := DeleteConnection{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	e.connection = state.connections[e.ID]
 	// Update connections and keys.
@@ -790,7 +788,7 @@ func (state *State) deleteConnection(n notification) uuid.UUID {
 		})
 	}
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // DeleteEventWriteKey is the event sent when an event write key is deleted.
@@ -800,10 +798,10 @@ type DeleteEventWriteKey struct {
 }
 
 // deleteEventWriteKey deletes an event write key.
-func (state *State) deleteEventWriteKey(n notification) uuid.UUID {
+func (state *State) deleteEventWriteKey(n notification) string {
 	e := DeleteEventWriteKey{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)-1)
@@ -819,7 +817,7 @@ func (state *State) deleteEventWriteKey(n notification) uuid.UUID {
 	state.mu.Lock()
 	delete(state.connectionsByKey, e.Key)
 	state.mu.Unlock()
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // DeleteMember is the event sent when a member is deleted.
@@ -829,10 +827,10 @@ type DeleteMember struct {
 }
 
 // deleteMember deletes a member.
-func (state *State) deleteMember(n notification) uuid.UUID {
+func (state *State) deleteMember(n notification) string {
 	e := DeleteMember{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	state.mu.Lock()
 	org := state.organizations[e.Organization]
@@ -840,7 +838,7 @@ func (state *State) deleteMember(n notification) uuid.UUID {
 	org.mu.Lock()
 	delete(org.members, e.ID)
 	org.mu.Unlock()
-	return org.GlobalID
+	return org.ID
 }
 
 // DeleteOrganization is the event sent when an organization is deleted.
@@ -854,10 +852,10 @@ func (n DeleteOrganization) Organization() *Organization {
 }
 
 // deleteOrganization deletes an organization.
-func (state *State) deleteOrganization(n notification) uuid.UUID {
+func (state *State) deleteOrganization(n notification) string {
 	e := DeleteOrganization{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	state.mu.Lock()
 	e.organization = state.organizations[e.ID]
@@ -884,7 +882,7 @@ func (state *State) deleteOrganization(n notification) uuid.UUID {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
-	return e.organization.GlobalID
+	return e.organization.ID
 }
 
 // DeletePipeline is the event sent when a pipeline is deleted.
@@ -898,10 +896,10 @@ func (n DeletePipeline) Pipeline() *Pipeline {
 }
 
 // deletePipeline deletes a pipeline.
-func (state *State) deletePipeline(n notification) uuid.UUID {
+func (state *State) deletePipeline(n notification) string {
 	e := DeletePipeline{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	e.pipeline = state.pipelines[e.ID]
 	state.mu.Lock()
@@ -919,7 +917,7 @@ func (state *State) deletePipeline(n notification) uuid.UUID {
 		ws.mu.Unlock()
 	}
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
@@ -933,10 +931,10 @@ func (n DeleteWorkspace) Workspace() *Workspace {
 }
 
 // deleteWorkspace deletes a workspace.
-func (state *State) deleteWorkspace(n notification) uuid.UUID {
+func (state *State) deleteWorkspace(n notification) string {
 	e := DeleteWorkspace{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	e.workspace = state.workspaces[e.ID]
 	organization := e.workspace.organization
@@ -963,7 +961,7 @@ func (state *State) deleteWorkspace(n notification) uuid.UUID {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
-	return organization.GlobalID
+	return organization.ID
 }
 
 // ElectLeader is the event sent when a leader is elected.
@@ -1005,10 +1003,10 @@ type EndAlterProfileSchema struct {
 }
 
 // endAlterProfileSchema ends the alter of the profile schema.
-func (state *State) endAlterProfileSchema(n notification) uuid.UUID {
+func (state *State) endAlterProfileSchema(n notification) string {
 	e := EndAlterProfileSchema{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		if e.Err == "" {
@@ -1026,7 +1024,7 @@ func (state *State) endAlterProfileSchema(n notification) uuid.UUID {
 		w.AlterProfileSchema.Operations = nil
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // EndIdentityResolution is the event sent when the execution of the Identity
@@ -1038,17 +1036,17 @@ type EndIdentityResolution struct {
 }
 
 // endIdentityResolution ends the Identity Resolution.
-func (state *State) endIdentityResolution(n notification) uuid.UUID {
+func (state *State) endIdentityResolution(n notification) string {
 	e := EndIdentityResolution{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.IR.ID = nil
 		w.IR.EndTime = &e.EndTime
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // EndPipelineRun is the event sent when pipeline run ends.
@@ -1059,10 +1057,10 @@ type EndPipelineRun struct {
 }
 
 // endPipelineRun marks an in-progress pipeline run as finished.
-func (state *State) endPipelineRun(n notification) uuid.UUID {
+func (state *State) endPipelineRun(n notification) string {
 	e := EndPipelineRun{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	p := state.pipelines[e.Pipeline]
 	ws := p.connection.workspace
@@ -1073,7 +1071,7 @@ func (state *State) endPipelineRun(n notification) uuid.UUID {
 		p.run = nil
 		p.Health = e.Health
 	})
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // LinkConnection is the event sent when two unlinked connections are linked.
@@ -1082,10 +1080,10 @@ type LinkConnection struct {
 }
 
 // linkConnection links two unlinked connections.
-func (state *State) linkConnection(n notification) uuid.UUID {
+func (state *State) linkConnection(n notification) string {
 	e := LinkConnection{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	state.replaceConnection(e.Connections[0], func(c *Connection) {
 		c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[1])
@@ -1094,7 +1092,7 @@ func (state *State) linkConnection(n notification) uuid.UUID {
 		c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[0])
 	})
 	dispatchNotification(state, e)
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // PurgePipelines is the event sent when pipelines of a workspace are purged.
@@ -1104,16 +1102,16 @@ type PurgePipelines struct {
 }
 
 // purgePipelines purges pipelines of a workspace.
-func (state *State) purgePipelines(n notification) uuid.UUID {
+func (state *State) purgePipelines(n notification) string {
 	e := PurgePipelines{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws, _ := state.Workspace(e.Workspace)
 	ws.mu.Lock()
 	ws.pipelinesToPurge = e.PipelinesToPurge
 	ws.mu.Unlock()
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // RenameConnection is the event sent when a connection is renamed.
@@ -1123,15 +1121,15 @@ type RenameConnection struct {
 }
 
 // renameConnection renames a connection.
-func (state *State) renameConnection(n notification) uuid.UUID {
+func (state *State) renameConnection(n notification) string {
 	e := RenameConnection{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Name = e.Name
 	})
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // RenameWorkspace is the event sent when a workspace is renamed.
@@ -1141,15 +1139,15 @@ type RenameWorkspace struct {
 }
 
 // renameWorkspace renames a workspace.
-func (state *State) renameWorkspace(n notification) uuid.UUID {
+func (state *State) renameWorkspace(n notification) string {
 	e := RenameWorkspace{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(ws *Workspace) {
 		ws.Name = e.Name
 	})
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // RunPipeline is the event sent when a pipeline run starts.
@@ -1162,10 +1160,10 @@ type RunPipeline struct {
 }
 
 // runPipeline runs a pipeline.
-func (state *State) runPipeline(n notification) uuid.UUID {
+func (state *State) runPipeline(n notification) string {
 	e := RunPipeline{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	p := state.pipelines[e.Pipeline]
 	ws := p.connection.workspace
@@ -1184,7 +1182,7 @@ func (state *State) runPipeline(n notification) uuid.UUID {
 	p.run = run
 	p.mu.Unlock()
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // SeeLeader is the event sent when the leader is seen.
@@ -1216,10 +1214,10 @@ type SetAccount struct {
 }
 
 // setAccount sets an account.
-func (state *State) setAccount(n notification) uuid.UUID {
+func (state *State) setAccount(n notification) string {
 	e := SetAccount{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.workspaces[e.Workspace]
 	ws.replaceAccount(e.ID, func(a *Account) {
@@ -1227,7 +1225,7 @@ func (state *State) setAccount(n notification) uuid.UUID {
 		a.RefreshToken = e.RefreshToken
 		a.ExpiresIn = e.ExpiresIn
 	})
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is
@@ -1238,17 +1236,17 @@ type SetConnectionSettings struct {
 }
 
 // setConnectionSettings sets the settings of a connection.
-func (state *State) setConnectionSettings(n notification) uuid.UUID {
+func (state *State) setConnectionSettings(n notification) string {
 	e := SetConnectionSettings{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	c := state.connections[e.Connection]
 	c.mu.Lock()
 	c.settings = e.Settings
 	c.mu.Unlock()
 	dispatchNotification(state, e)
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // SetPipelineFormatSettings is the event sent when the format settings of a
@@ -1259,15 +1257,15 @@ type SetPipelineFormatSettings struct {
 }
 
 // setPipelineFormatSettings sets the format settings of a pipeline.
-func (state *State) setPipelineFormatSettings(n notification) uuid.UUID {
+func (state *State) setPipelineFormatSettings(n notification) string {
 	e := SetPipelineFormatSettings{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	p := state.replacePipeline(e.Pipeline, func(p *Pipeline) {
 		p.FormatSettings = e.Settings
 	})
-	return p.connection.organization.GlobalID
+	return p.connection.organization.ID
 }
 
 // SetPipelineSchedulePeriod is the event sent when the schedule period of a
@@ -1278,16 +1276,16 @@ type SetPipelineSchedulePeriod struct {
 }
 
 // setPipelineSchedulePeriod sets the schedule period of a pipeline.
-func (state *State) setPipelineSchedulePeriod(n notification) uuid.UUID {
+func (state *State) setPipelineSchedulePeriod(n notification) string {
 	e := SetPipelineSchedulePeriod{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.SchedulePeriod = e.SchedulePeriod
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.GlobalID
+	return p.connection.organization.ID
 }
 
 // SetPipelineStatus is the event sent when the status of a pipeline is set.
@@ -1297,16 +1295,16 @@ type SetPipelineStatus struct {
 }
 
 // setPipelineStatus sets the status of a pipeline.
-func (state *State) setPipelineStatus(n notification) uuid.UUID {
+func (state *State) setPipelineStatus(n notification) string {
 	e := SetPipelineStatus{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.Enabled = e.Enabled
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.GlobalID
+	return p.connection.organization.ID
 }
 
 // StartAlterProfileSchema is the event sent when the alter of the profile
@@ -1321,10 +1319,10 @@ type StartAlterProfileSchema struct {
 }
 
 // startAlterProfileSchema starts the alter of the profile schema.
-func (state *State) startAlterProfileSchema(n notification) uuid.UUID {
+func (state *State) startAlterProfileSchema(n notification) string {
 	e := StartAlterProfileSchema{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.AlterProfileSchema.ID = &e.ID
@@ -1336,7 +1334,7 @@ func (state *State) startAlterProfileSchema(n notification) uuid.UUID {
 		w.AlterProfileSchema.Err = nil
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // StartIdentityResolution is the event sent when the execution of the Identity
@@ -1348,10 +1346,10 @@ type StartIdentityResolution struct {
 }
 
 // startIdentityResolution starts the Identity Resolution.
-func (state *State) startIdentityResolution(n notification) uuid.UUID {
+func (state *State) startIdentityResolution(n notification) string {
 	e := StartIdentityResolution{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.IR.ID = &e.ID
@@ -1359,7 +1357,7 @@ func (state *State) startIdentityResolution(n notification) uuid.UUID {
 		w.IR.EndTime = nil
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // UnlinkConnection is the event sent when two linked connections are unlinked.
@@ -1368,10 +1366,10 @@ type UnlinkConnection struct {
 }
 
 // unlinkConnection unlinks two linked connections.
-func (state *State) unlinkConnection(n notification) uuid.UUID {
+func (state *State) unlinkConnection(n notification) string {
 	e := UnlinkConnection{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	state.replaceConnection(e.Connections[0], func(c *Connection) {
 		c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[1])
@@ -1380,7 +1378,7 @@ func (state *State) unlinkConnection(n notification) uuid.UUID {
 		c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[0])
 	})
 	dispatchNotification(state, e)
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // UpdateConnection is the event sent when a connection is updated.
@@ -1392,10 +1390,10 @@ type UpdateConnection struct {
 }
 
 // updateConnection updates a connection.
-func (state *State) updateConnection(n notification) uuid.UUID {
+func (state *State) updateConnection(n notification) string {
 	e := UpdateConnection{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Name = e.Name
@@ -1403,7 +1401,7 @@ func (state *State) updateConnection(n notification) uuid.UUID {
 		c.SendingMode = e.SendingMode
 	})
 	dispatchNotification(state, e)
-	return c.organization.GlobalID
+	return c.organization.ID
 }
 
 // UpdateIdentityPropertiesToUnset is the event sent when the identity
@@ -1415,16 +1413,16 @@ type UpdateIdentityPropertiesToUnset struct {
 
 // updateIdentityPropertiesToUnset updates the identity properties to unset of
 // a pipeline.
-func (state *State) updateIdentityPropertiesToUnset(n notification) uuid.UUID {
+func (state *State) updateIdentityPropertiesToUnset(n notification) string {
 	e := UpdateIdentityPropertiesToUnset{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	p := state.pipelines[e.Pipeline]
 	p.mu.Lock()
 	p.propertiesToUnset = e.Properties
 	p.mu.Unlock()
-	return p.connection.organization.GlobalID
+	return p.connection.organization.ID
 }
 
 // UpdateIdentityResolutionSettings is the event sent when the identity
@@ -1437,16 +1435,16 @@ type UpdateIdentityResolutionSettings struct {
 
 // updateIdentityResolutionSettings updates the identity resolution settings of
 // a workspace.
-func (state *State) updateIdentityResolutionSettings(n notification) uuid.UUID {
+func (state *State) updateIdentityResolutionSettings(n notification) string {
 	e := UpdateIdentityResolutionSettings{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.ResolveIdentitiesOnBatchImport = e.ResolveIdentitiesOnBatchImport
 		w.Identifiers = e.Identifiers
 	})
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // UpdateOrganization is the event sent when an organization is updated.
@@ -1456,15 +1454,15 @@ type UpdateOrganization struct {
 }
 
 // updateOrganization updates an organization.
-func (state *State) updateOrganization(n notification) uuid.UUID {
+func (state *State) updateOrganization(n notification) string {
 	e := UpdateOrganization{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	org := state.replaceOrganization(e.ID, func(org *Organization) {
 		org.Name = e.Name
 	})
-	return org.GlobalID
+	return org.ID
 }
 
 // UpdatePipeline is the event sent when a pipeline is updated.
@@ -1496,10 +1494,10 @@ type UpdatePipeline struct {
 }
 
 // updatePipeline updates a pipeline.
-func (state *State) updatePipeline(n notification) uuid.UUID {
+func (state *State) updatePipeline(n notification) string {
 	e := UpdatePipeline{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	// json.Value(nil) is marshaled into "null", but when it is
 	// deserialized it becomes json.Value("null"), so this code converts it
@@ -1541,7 +1539,7 @@ func (state *State) updatePipeline(n notification) uuid.UUID {
 		p.Incremental = e.Incremental
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.GlobalID
+	return p.connection.organization.ID
 }
 
 // UpdateWarehouse is the event sent when a warehouse is updated.
@@ -1566,10 +1564,10 @@ func (n UpdateWarehouse) MCPSettingsHaveChanged() bool {
 }
 
 // updateWarehouse updates a warehouse.
-func (state *State) updateWarehouse(n notification) uuid.UUID {
+func (state *State) updateWarehouse(n notification) string {
 	e := UpdateWarehouse{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse.Mode = e.Mode
@@ -1581,7 +1579,7 @@ func (state *State) updateWarehouse(n notification) uuid.UUID {
 		}
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // UpdateWarehouseMode is the event sent when the mode of a data warehouse is
@@ -1593,16 +1591,16 @@ type UpdateWarehouseMode struct {
 }
 
 // updateWarehouseMode updates the mode of a data warehouse.
-func (state *State) updateWarehouseMode(n notification) uuid.UUID {
+func (state *State) updateWarehouseMode(n notification) string {
 	e := UpdateWarehouseMode{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse.Mode = e.Mode
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // UpdateWorkspace is the event sent when the name and the displayed properties
@@ -1614,17 +1612,17 @@ type UpdateWorkspace struct {
 }
 
 // updateWorkspace updates the name and the displayed properties of a workspace.
-func (state *State) updateWorkspace(n notification) uuid.UUID {
+func (state *State) updateWorkspace(n notification) string {
 	e := UpdateWorkspace{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Name = e.Name
 		w.UIPreferences = e.UIPreferences
 	})
 	dispatchNotification(state, e)
-	return ws.organization.GlobalID
+	return ws.organization.ID
 }
 
 // addLinkedConnection adds id to the provided linked connections. It returns

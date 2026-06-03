@@ -16,8 +16,6 @@ import (
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/kms"
-
-	"github.com/google/uuid"
 )
 
 const kmsEncryptedKeys = 4
@@ -132,12 +130,8 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	}
 	// Insert the organization.
 	organizationID := base58.Generate(12)
-	organizationGlobalID, err := uuid.NewRandom()
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec(ctx, "INSERT INTO organizations (id, global_id, name) VALUES ($1, $2, 'ACME inc')",
-		organizationID, organizationGlobalID)
+	_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, 'ACME inc')",
+		organizationID)
 	if err != nil {
 		return err
 	}

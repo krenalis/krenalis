@@ -6,7 +6,6 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE organizations (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
-    global_id uuid NOT NULL UNIQUE,
     name varchar(45) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );

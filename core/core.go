@@ -803,30 +803,21 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (string, 
 	n := state.CreateOrganization{Name: name}
 	for {
 		n.ID = generateID(core.state.Organization)
-		var err error
-		n.GlobalID, err = uuid.NewRandom()
-		if err != nil {
-			return "", err
-		}
-		err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, global_id, name) VALUES ($1, $2, $3)", n.ID, n.GlobalID, n.Name)
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
 			if err != nil {
 				return nil, err
 			}
 			return n, nil
 		})
 		if err != nil {
-			if dbpkg.IsUniqueViolation(err) {
-				name := dbpkg.ErrConstraintName(err)
-				if name == "organizations_pkey" || name == "organizations_global_id_key" {
-					continue
-				}
+			if dbpkg.IsUniqueViolation(err) && dbpkg.ErrConstraintName(err) == "organizations_pkey" {
+				continue
 			}
 			return "", err
 		}
 		break
 	}
-
 	return n.ID, nil
 }
 

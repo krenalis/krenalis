@@ -350,9 +350,6 @@ func base58IDMigrationQueries() []string {
 		`ALTER TABLE organizations ADD COLUMN id_new varchar(12)`,
 		`UPDATE organizations SET id_new = organization_id_map.new_id FROM organization_id_map WHERE organizations.id = organization_id_map.old_id`,
 		`ALTER TABLE organizations ALTER COLUMN id_new SET NOT NULL`,
-		`ALTER TABLE organizations ADD COLUMN global_id uuid`,
-		`UPDATE organizations SET global_id = id`,
-		`ALTER TABLE organizations ALTER COLUMN global_id SET NOT NULL`,
 
 		`ALTER TABLE workspaces ADD COLUMN id_new varchar(12)`,
 		`UPDATE workspaces SET id_new = workspace_id_map.new_id FROM workspace_id_map WHERE workspaces.id = workspace_id_map.old_id`,
@@ -504,7 +501,6 @@ func base58IDMigrationQueries() []string {
 		addBase58Check("pipelines_runs", "id"),
 
 		`ALTER TABLE organizations ADD CONSTRAINT organizations_pkey PRIMARY KEY (id)`,
-		`ALTER TABLE organizations ADD CONSTRAINT organizations_global_id_key UNIQUE (global_id)`,
 		`ALTER TABLE members ADD CONSTRAINT members_pkey PRIMARY KEY (id)`,
 		`ALTER TABLE workspaces ADD CONSTRAINT workspaces_pkey PRIMARY KEY (id)`,
 		`ALTER TABLE access_keys ADD CONSTRAINT access_keys_pkey PRIMARY KEY (id)`,

@@ -134,7 +134,6 @@ func TestUpgradeDBMigratesBase58IDs(t *testing.T) {
 	eventPipelineID := assertUpgradeTestBase58ID(t, ctx, internalPool, `SELECT id FROM pipelines WHERE name = 'Legacy events'`)
 	pipelineRunID := assertUpgradeTestBase58ID(t, ctx, internalPool, `SELECT id FROM pipelines_runs`)
 	purgedPipelineID := assertUpgradeTestBase58ID(t, ctx, internalPool, `SELECT pipelines_to_purge[2] FROM workspaces WHERE name = 'Legacy workspace'`)
-	assertUpgradeTestString(t, ctx, internalPool, organizationUUID, `SELECT global_id::text FROM organizations WHERE id = $1`, organizationID)
 	assertUpgradeTestString(t, ctx, internalPool, organizationID, `SELECT organization FROM members WHERE id = $1`, memberID)
 	assertUpgradeTestString(t, ctx, internalPool, organizationID, `SELECT organization FROM workspaces WHERE id = $1`, workspaceID)
 	assertUpgradeTestString(t, ctx, internalPool, accessKeyID, `SELECT id FROM access_keys WHERE workspace = $1`, workspaceID)
