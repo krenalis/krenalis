@@ -105,7 +105,7 @@ func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.
 	var workspace string
 	if body.Workspace != nil {
 		if !core.IsValidID(*body.Workspace) {
-			return nil, errors.BadRequest("workspace is not a valid workspace identifier")
+			return nil, errors.BadRequest("workspace %q is not a valid workspace identifier", *body.Workspace)
 		}
 		workspace = *body.Workspace
 	}

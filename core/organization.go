@@ -307,7 +307,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name, workspace s
 		return "", "", errors.BadRequest("%s", err)
 	}
 	if workspace != "" && !IsValidID(workspace) {
-		return "", "", errors.BadRequest("workspace is not a valid workspace identifier")
+		return "", "", errors.BadRequest("workspace %q is not a valid workspace identifier", workspace)
 	}
 	if workspace != "" {
 		if _, ok := this.organization.Workspace(workspace); !ok {
