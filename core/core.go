@@ -1872,8 +1872,8 @@ func EventSchema() types.Type {
 	return schemas.Event
 }
 
-// IsValidID reports whether id is a valid identifier for members, access keys,
-// workspaces, connections, pipelines, and pipeline runs.
+// IsValidID reports whether id is a valid resource identifier (organizations,
+// members, access keys, workspaces, connections, pipelines, and pipeline runs).
 func IsValidID(id string) bool {
 	return len(id) == 12 && base58.IsValid(id)
 }
