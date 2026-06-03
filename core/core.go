@@ -542,7 +542,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 
 // AccessKey returns the organization and workspace identifiers associated with
 // the provided access key token and type. If the access key is not restricted
-// to a workspace, the workspace identifier will be 0.
+// to a workspace, the workspace identifier will be empty.
 func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType) (string, string, error) {
 	key, err := core.state.AccessKey(ctx, token)
 	if err != nil {

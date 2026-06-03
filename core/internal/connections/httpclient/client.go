@@ -74,7 +74,7 @@ type endpointGroup struct {
 type Client struct {
 	http           *HTTP
 	connector      string // connector code
-	connection     string // connection identifier; it is 0 if the client is not relative to a connection
+	connection     string // connection identifier; it is empty if the client is not relative to a connection
 	clientSecret   string // client secret; only if connection is empty
 	accessToken    string // access token; only if connection is empty
 	endpointGroups struct {
