@@ -350,16 +350,14 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 	if _, _, _, err := s.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
-	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-	payload := norm.NFC.Reader(lr)
-	r.Body = io.NopCloser(payload)
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
 	s.sentryTelemetry.errorTunnel.ServeHTTP(w, r)
 	return nil, nil
 }
 
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r, false); err != nil {
+	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -494,7 +492,7 @@ func validateForbiddenBody(r *http.Request) error {
 // validateRequiredBody validates that the request body is present and is JSON,
 // then applies size limiting and NFC normalization.
 // If allowPlainText is true, it also allows "text/plain" as a content type.
-func validateRequiredBody(r *http.Request, allowPlainText bool) error {
+func validateRequiredBody(w http.ResponseWriter, r *http.Request, allowPlainText bool) error {
 	if r.ContentLength == 0 {
 		return errors.BadRequest("request's body is missing")
 	}
@@ -510,26 +508,15 @@ func validateRequiredBody(r *http.Request, allowPlainText bool) error {
 	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
 		return errors.BadRequest("request's content type charset must be 'utf-8'")
 	}
-	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-	normalized := norm.NFC.Reader(lr)
-	r.Body = io.NopCloser(&overLimitReader{
-		r:  normalized,
-		lr: lr,
-	})
-	return nil
-}
-
-type overLimitReader struct {
-	r  io.Reader
-	lr *io.LimitedReader
-}
-
-func (o *overLimitReader) Read(p []byte) (int, error) {
-	n, err := o.r.Read(p)
-	if o.lr != nil && o.lr.N <= 0 {
-		return n, errors.New("request body too large")
+	b := http.MaxBytesReader(w, r.Body, maxRequestSize)
+	r.Body = struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: norm.NFC.Reader(b),
+		Closer: b,
 	}
-	return n, err
+	return nil
 }
 
 // writeSessionCookie writes a session cookie on w. If one already exists,

@@ -379,7 +379,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
-	core.state.AddListener(core.onExecutePipeline)
+	core.state.AddListener(core.onRunPipeline)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
@@ -1226,8 +1226,8 @@ func (core *Core) mustBeOpen() {
 	}
 }
 
-// onExecutePipeline is called when a pipeline is executed.
-func (core *Core) onExecutePipeline(n state.RunPipeline) {
+// onRunPipeline is called when a pipeline run starts.
+func (core *Core) onRunPipeline(n state.RunPipeline) {
 	core.tryStartPipelineRun(n.Pipeline)
 }
 

@@ -489,10 +489,10 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 //
 //   - CannotRunIncrementally, if incremental mode requires a last-change-time
 //     column.
-//   - RunInProgress, if the pipeline already has a run in progress.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - PipelineDisabled, if the pipeline is disabled.
+//   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error) {
 	this.core.mustBeOpen()
 	c := this.pipeline.Connection()
