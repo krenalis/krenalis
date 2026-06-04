@@ -5,6 +5,7 @@
 package googleanalytics
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"os"
@@ -17,6 +18,8 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+const testConnectionID = "7B3mN9qK2xA4"
 
 func TestSendEvents(t *testing.T) {
 
@@ -55,6 +58,30 @@ func TestSendEvents(t *testing.T) {
 
 	now := time.Now().UTC()
 
+	pageViewReceived := map[string]any{
+		"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
+		"connectionId": 1323607634,
+		"context": map[string]any{
+			"page": map[string]any{
+				"referrer": "https://example.com/",
+				"title":    "Analytics Academy",
+				"url":      "https://example.com/academy/",
+			},
+		},
+		"messageId":         "1427b912-438f-46a8-ae7f-b276ee5345ee",
+		"originalTimestamp": now,
+		"receivedAt":        now,
+		"sentAt":            now.Add(-10 * time.Millisecond),
+		"timestamp":         now,
+		"type":              "page",
+		"userId":            nil,
+	}
+	pageViewSchema := eventTypeByID["page_view"].Schema
+	pageViewValues, err := testconnector.TransformEvent(pageViewSchema, pageViewReceived, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		events              []*connectors.Event
 		expectedRequestBody map[string]any
@@ -64,7 +91,7 @@ func TestSendEvents(t *testing.T) {
 				{
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
-						"connectionId": 1323607634,
+						"connectionId": testConnectionID,
 						"context": map[string]any{
 							"browser": map[string]any{
 								"name":  "Other",
@@ -110,6 +137,33 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 		},
+		{
+			events: []*connectors.Event{
+				{
+					Received: testconnector.ReceivedEvent(pageViewReceived),
+					Type: connectors.EventTypeInfo{
+						ID:     "page_view",
+						Schema: pageViewSchema,
+						Values: pageViewValues,
+					},
+				},
+			},
+			expectedRequestBody: map[string]any{
+				"client_id": "17fba6ee-8673-4ebc-afd6-69e62124e017",
+				"events": []any{
+					map[string]any{
+						"name": "page_view",
+						"params": map[string]any{
+							"page_location":        "https://example.com/academy/",
+							"page_referrer":        "https://example.com/",
+							"page_title":           "Analytics Academy",
+							"engagement_time_msec": 1.0,
+						},
+						"timestamp_micros": float64(now.UnixMicro()),
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -150,4 +204,65 @@ func TestSendEvents(t *testing.T) {
 		})
 	}
 
+}
+
+func TestPageViewEventTypeDefinition(t *testing.T) {
+
+	ga := &Analytics{}
+
+	schema, err := ga.EventTypeSchema(context.Background(), "page_view")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, prefilled := range map[string]string{
+		"page_location":        "context.page.url",
+		"page_referrer":        "context.page.referrer",
+		"page_title":           "context.page.title",
+		"engagement_time_msec": "1",
+	} {
+		property, ok := schema.Properties().ByName(name)
+		if !ok {
+			t.Fatalf("expected page_view schema to include %q", name)
+		}
+		if property.Prefilled != prefilled {
+			t.Fatalf("expected %q prefilled to be %q, got %q", name, prefilled, property.Prefilled)
+		}
+		if property.CreateRequired {
+			t.Fatalf("expected %q not to be required", name)
+		}
+	}
+
+	received := map[string]any{
+		"context": map[string]any{
+			"page": map[string]any{
+				"referrer": "https://example.com/",
+				"title":    "Analytics Academy",
+				"url":      "https://example.com/academy/",
+			},
+		},
+		"type": "page",
+	}
+	values, err := testconnector.TransformEvent(schema, received, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	params, err := types.Marshal(values, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err = json.Decode(bytes.NewReader(params), &got); err != nil {
+		t.Fatal(err)
+	}
+
+	expected := map[string]any{
+		"page_location":        "https://example.com/academy/",
+		"page_referrer":        "https://example.com/",
+		"page_title":           "Analytics Academy",
+		"engagement_time_msec": 1.0,
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("expected %#v, got %#v", expected, got)
+	}
 }

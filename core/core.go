@@ -39,6 +39,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/core/natsopts"
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
@@ -76,7 +77,7 @@ type Core struct {
 	//
 	// If a workspace does not have MCP settings configured, the map has a key
 	// and the value is nil.
-	mcp   map[int]warehouses.Warehouse
+	mcp   map[string]warehouses.Warehouse
 	mcpMu sync.Mutex
 }
 
@@ -351,7 +352,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
-	core.mcp = map[int]warehouses.Warehouse{}
+	core.mcp = map[string]warehouses.Warehouse{}
 	for _, ws := range core.state.Workspaces() {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
@@ -378,7 +379,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
-	core.state.AddListener(core.onExecutePipeline)
+	core.state.AddListener(core.onRunPipeline)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
@@ -394,6 +395,106 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	return core, nil
+}
+
+// UpgradeDB upgrades Krenalis's PostgreSQL database and workspace PostgreSQL
+// warehouses that need coordinated data updates.
+func UpgradeDB(ctx context.Context, conf *Config) error {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.DB.Host,
+		Port:           conf.DB.Port,
+		Username:       conf.DB.Username,
+		Password:       conf.DB.Password,
+		Database:       conf.DB.Database,
+		Schema:         conf.DB.Schema,
+		MaxConnections: max(2, conf.DB.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+
+	if err := initdb.MigrateBase58IDs(ctx, db); err != nil {
+		return err
+	}
+	inProgress, err := initdb.Base58IDsMigrationInProgress(ctx, db)
+	if err != nil {
+		return err
+	}
+	if !inProgress {
+		return nil
+	}
+	pending, err := initdb.PendingBase58IDsWarehouseMigrations(ctx, db)
+	if err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return initdb.CompleteBase58IDsMigration(ctx, db)
+	}
+
+	kms, err := kms.New(ctx, conf.KMS)
+	if err != nil {
+		return err
+	}
+	st, err := state.New(ctx, db, kms, nil, false)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+
+	for _, migration := range pending {
+		ws, ok := st.Workspace(migration.Workspace)
+		if !ok {
+			return fmt.Errorf("workspace %s does not exist", migration.Workspace)
+		}
+		settings, err := ws.WarehouseSettings(ctx)
+		if err != nil {
+			return fmt.Errorf("cannot decrypt warehouse settings for workspace %s: %s", migration.Workspace, err)
+		}
+		warehouse := warehouses.Registered(ws.Warehouse.Platform).New(migrationSettingsLoader{settings: settings})
+		migrator, ok := warehouse.(interface {
+			MigrateBase58IDs(context.Context, string, string, map[int]string, map[int]string, map[int]string) error
+		})
+		if !ok {
+			warehouse.Close()
+			clear(settings)
+			return fmt.Errorf("warehouse platform %s does not support Base58 ID migration", ws.Warehouse.Platform)
+		}
+		err = migrator.MigrateBase58IDs(ctx, initdb.Base58IDsMigrationName, migration.Workspace,
+			migration.ConnectionMap, migration.PipelineMap, migration.PipelineRunMap)
+		closeErr := warehouse.Close()
+		clear(settings)
+		if err != nil {
+			return fmt.Errorf("cannot migrate warehouse for workspace %s: %s", migration.Workspace, err)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("cannot close warehouse for workspace %s: %s", migration.Workspace, closeErr)
+		}
+		if err := initdb.MarkBase58IDsWarehouseMigrationDone(ctx, db, migration.Workspace); err != nil {
+			return err
+		}
+	}
+	return initdb.CompleteBase58IDsMigration(ctx, db)
+}
+
+type migrationSettingsLoader struct {
+	settings json.Value
+}
+
+// Load unmarshals the stored settings into dst.
+func (loader migrationSettingsLoader) Load(_ context.Context, dst any) error {
+	data, err := json.Marshal(loader.settings)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, dst)
 }
 
 // AcceptInvitation accepts the invitation with the given invitation token. It
@@ -441,8 +542,8 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 
 // AccessKey returns the organization and workspace identifiers associated with
 // the provided access key token and type. If the access key is not restricted
-// to a workspace, the workspace identifier will be 0.
-func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType) (uuid.UUID, int, error) {
+// to a workspace, the workspace identifier will be empty.
+func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType) (string, string, error) {
 	key, err := core.state.AccessKey(ctx, token)
 	if err != nil {
 		switch err {
@@ -451,10 +552,10 @@ func (core *Core) AccessKey(ctx context.Context, token string, typ AccessKeyType
 		case state.ErrAccessKeyNotFound:
 			err = errors.NotFound("access key not found")
 		}
-		return uuid.UUID{}, 0, err
+		return "", "", err
 	}
 	if key.Type != state.AccessKeyType(typ) {
-		return uuid.Nil, 0, errors.NotFound("access key not found")
+		return "", "", errors.NotFound("access key not found")
 	}
 	return key.Organization, key.Workspace, nil
 }
@@ -490,7 +591,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		return err
 	}
 	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-		var id int
+		var id string
 		var createdAt time.Time
 		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
 		if err != nil {
@@ -694,21 +795,28 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 
 // CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUID, error) {
+func (core *Core) CreateOrganization(ctx context.Context, name string) (string, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 45); err != nil {
-		return uuid.Nil, errors.BadRequest("%s", err)
+		return "", errors.BadRequest("%s", err)
 	}
 	n := state.CreateOrganization{Name: name}
-	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-		err := tx.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&n.ID)
+	for {
+		n.ID = generateID(core.state.Organization)
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
+			if err != nil {
+				return nil, err
+			}
+			return n, nil
+		})
 		if err != nil {
-			return nil, err
+			if dbpkg.IsUniqueViolation(err) && dbpkg.ErrConstraintName(err) == "organizations_pkey" {
+				continue
+			}
+			return "", err
 		}
-		return n, nil
-	})
-	if err != nil {
-		return uuid.Nil, err
+		break
 	}
 	return n.ID, nil
 }
@@ -761,8 +869,7 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 	if !isValidMemberToken(token) {
 		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
-	var organizationID uuid.UUID
-	var email string
+	var organizationID, email string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, email, created_at FROM members WHERE invitation_token = $1", token).Scan(&organizationID, &email, &createdAt)
 	if err != nil {
@@ -786,14 +893,14 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 // Organization returns the organization with identifier id.
 //
 // It returns an errors.NotFound error if the organization does not exist.
-func (core *Core) Organization(id uuid.UUID) (*Organization, error) {
+func (core *Core) Organization(id string) (*Organization, error) {
 	core.mustBeOpen()
-	if id == uuid.Nil {
-		return nil, errors.BadRequest("identifier is not a valid organization identifier")
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", id)
 	}
 	org, ok := core.state.Organization(id)
 	if !ok {
-		return nil, errors.NotFound("organization %q does not exist", id)
+		return nil, errors.NotFound("organization %s does not exist", id)
 	}
 	organization := Organization{
 		core:         core,
@@ -830,7 +937,7 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 		a, b := organizations[i], organizations[j]
 		switch order {
 		case SortByName:
-			return a.Name < b.Name || a.Name == b.Name && bytes.Compare(a.ID[:], b.ID[:]) < 0
+			return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
 		}
 		return false
 	})
@@ -862,7 +969,7 @@ func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token st
 	if !isValidMemberToken(token) {
 		return errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	var organizationID uuid.UUID
+	var organizationID string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
 	if err != nil {
@@ -978,7 +1085,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 			Source:  transformation.Function.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary function.
 		}
-		name := transformationFunctionName(0)
+		name := transformationFunctionName("")
 		switch transformation.Function.Language {
 		case "JavaScript":
 			pipeline.Transformation.Function.Language = state.JavaScript
@@ -1119,8 +1226,8 @@ func (core *Core) mustBeOpen() {
 	}
 }
 
-// onExecutePipeline is called when a pipeline is executed.
-func (core *Core) onExecutePipeline(n state.RunPipeline) {
+// onRunPipeline is called when a pipeline run starts.
+func (core *Core) onRunPipeline(n state.RunPipeline) {
 	core.tryStartPipelineRun(n.Pipeline)
 }
 
@@ -1140,7 +1247,7 @@ func (err pipelineError) Error() string {
 
 // tryStartPipelineRun attempts to start a pipeline run.
 // It returns immediately and spawns a new goroutine to handle the run.
-func (core *Core) tryStartPipelineRun(pipelineID int) {
+func (core *Core) tryStartPipelineRun(pipelineID string) {
 
 	core.close.Go(func() {
 
@@ -1188,7 +1295,7 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 
 		// Ping the run.
 		pingCtx, stopPing := context.WithCancel(ctx)
-		go func(id int) {
+		go func(id string) {
 			ticker := time.NewTicker(5 * time.Second)
 			for {
 				select {
@@ -1289,8 +1396,8 @@ func (core *Core) tryStartPipelineRun(pipelineID int) {
 // returning until it has completed (with success or with an operation error).
 //
 // primarySources cannot be nil.
-func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema types.Type,
-	primarySources map[string]int, operations []warehouses.AlterOperation) {
+func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types.Type,
+	primarySources map[string]string, operations []warehouses.AlterOperation) {
 	ctx := core.close.ctx
 	store, ok := core.datastore.Store(workspace)
 	if !ok {
@@ -1348,7 +1455,7 @@ func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema t
 				b.WriteByte(',')
 			}
 			b.WriteByte('(')
-			b.WriteString(strconv.Itoa(source))
+			b.WriteString(dbpkg.Quote(source))
 			b.WriteString(",$")
 			b.WriteString(strconv.Itoa(i + 1))
 			b.WriteString(")")
@@ -1433,7 +1540,7 @@ Identifiers:
 
 // executeIdentityResolution executes the Identity Resolution, not returning
 // until it has completed (with success or with an operation error).
-func (core *Core) executeIdentityResolution(workspace int, opID string) {
+func (core *Core) executeIdentityResolution(workspace, opID string) {
 	ctx := core.close.ctx
 	store, ok := core.datastore.Store(workspace)
 	if !ok {
@@ -1590,7 +1697,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 		return
 	}
 	// Close the old warehouse.
-	go func(workspace int) {
+	go func(workspace string) {
 		err := oldWarehouse.Close()
 		if err != nil {
 			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
@@ -1601,7 +1708,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 // removeMCPWarehouse removes from core the MCP warehouse for the given
 // workspace.
 // When this method is called, the state is frozen.
-func (core *Core) removeMCPWarehouse(ws int) {
+func (core *Core) removeMCPWarehouse(ws string) {
 	core.mcpMu.Lock()
 	wh, ok := core.mcp[ws]
 	delete(core.mcp, ws)
@@ -1627,7 +1734,7 @@ func (core *Core) removeMCPWarehouse(ws int) {
 //     profile schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, operations []warehouses.AlterOperation) error {
+func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
@@ -1643,7 +1750,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 	}
 	// Prepare the query to check whether the connections referred within the
 	// primary sources exist or not.
-	connIDs := []int{}
+	connIDs := []string{}
 	var connQuery strings.Builder
 	if len(primarySources) > 0 {
 		for _, connID := range primarySources {
@@ -1657,7 +1764,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 			if i > 0 {
 				connQuery.WriteByte(',')
 			}
-			connQuery.WriteString(strconv.Itoa(c))
+			connQuery.WriteString(dbpkg.Quote(c))
 		}
 		connQuery.WriteByte(')')
 	}
@@ -1680,7 +1787,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
+				return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
 			}
 			return nil, err
 		}
@@ -1710,7 +1817,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema ty
 // If another operation (identity resolution or profile schema update) is
 // already running, this method returns an errors.UnprocessableError error with
 // code OperationAlreadyExecuting.
-func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
+func (core *Core) startIdentityResolution(ctx context.Context, ws string) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
@@ -1756,6 +1863,12 @@ func EventSchema() types.Type {
 	return schemas.Event
 }
 
+// IsValidID reports whether id is a valid resource identifier (organizations,
+// members, access keys, workspaces, connections, pipelines, and pipeline runs).
+func IsValidID(id string) bool {
+	return len(id) == 12 && base58.IsValid(id)
+}
+
 // categoryBitmaskToCategoryNames converts a bitmask representing a connector's
 // categories into a slice of strings containing the various category names.
 func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []string {
@@ -1775,6 +1888,22 @@ func isValidMemberToken(token string) bool {
 	}
 	_, err := base64.URLEncoding.DecodeString(token)
 	return err == nil
+}
+
+// generateID returns a new 12-character Base58 identifier.
+//
+// If exists is provided, generateID keeps generating identifiers until it finds
+// one that does not already exist.
+func generateID[T any](exists func(string) (T, bool)) string {
+	for {
+		id := base58.Generate(12)
+		if exists == nil {
+			return id
+		}
+		if _, ok := exists(id); !ok {
+			return id
+		}
+	}
 }
 
 func stateToCoreTargets(targets state.ConnectorTargets) []Target {

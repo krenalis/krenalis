@@ -46,10 +46,10 @@ import (
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidAlterSchema, if the alter schema is invalid.
 //   - OperationAlreadyExecuting, if another operation is already executing.
-func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
-		primarySources = map[string]int{}
+		primarySources = map[string]string{}
 	}
 	if !schema.Valid() {
 		return errors.BadRequest("schema must be valid")
@@ -79,13 +79,13 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	for _, s := range primarySources {
 		source, ok := this.workspace.Connection(s)
 		if !ok {
-			return errors.Unprocessable(ConnectionNotExist, "primary source %d does not exist", s)
+			return errors.Unprocessable(ConnectionNotExist, "primary source %s does not exist", s)
 		}
 		if source.Role != state.Source {
-			return errors.BadRequest("primary source %d is not a source connection", s)
+			return errors.BadRequest("primary source %s is not a source connection", s)
 		}
 		if !source.Connector().SourceTargets.Contains(state.TargetUser) {
-			return errors.BadRequest("primary source %d does not support User target", s)
+			return errors.BadRequest("primary source %s does not support User target", s)
 		}
 	}
 	if this.workspace.IR.ID != nil || this.workspace.AlterProfileSchema.ID != nil {
@@ -205,15 +205,15 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 
 // validatePrimarySources validates a primary source returning an error if it is
 // not valid.
-func validatePrimarySources(schema types.Type, primarySources map[string]int) error {
+func validatePrimarySources(schema types.Type, primarySources map[string]string) error {
 	properties := schema.Properties()
 	for path, source := range primarySources {
 		p, err := properties.ByPath(path)
 		if err != nil {
 			return err
 		}
-		if source < 1 || source > maxInt32 {
-			return fmt.Errorf("primary source identifier %d is not valid", source)
+		if !IsValidID(source) {
+			return fmt.Errorf("primary source identifier %q is not valid", source)
 		}
 		if k := p.Type.Kind(); k == types.ObjectKind || k == types.ArrayKind {
 			return fmt.Errorf("primary sources cannot be specified for %s properties", p.Type)

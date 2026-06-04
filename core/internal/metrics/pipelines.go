@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/krenalis/krenalis/core/internal/db"
 )
 
 const (
@@ -21,7 +23,7 @@ const (
 
 // Error represents an error that occurred while executing a pipeline.
 type Error struct {
-	Pipeline     int       `json:"pipeline"`
+	Pipeline     string    `json:"pipeline"`
 	Step         Step      `json:"step"`
 	Count        int       `json:"count"`
 	Message      string    `json:"message"`
@@ -40,7 +42,7 @@ type Metrics struct {
 // [start,end). The end time must not precede the start time, and both must be
 // within [MinTime,MaxTime]. pipelines must not be empty. Returned errors are
 // limited to [first, first+limit), where first >= 0 and 0 < limit <= 100.
-func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines []int, step *Step, first, limit int) ([]Error, error) {
+func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines []string, step *Step, first, limit int) ([]Error, error) {
 
 	tsStart := TimeSlotFromTime(start)
 	tsEnd := TimeSlotFromTime(end) - 1
@@ -57,7 +59,7 @@ func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines 
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteString(strconv.Itoa(pipeline))
+		query.WriteString(db.Quote(pipeline))
 	}
 	query.WriteByte(')')
 
@@ -100,7 +102,7 @@ func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines 
 // range [MinTime,MaxTime], and the day of the start date must be at least one
 // day before the day of the end date. pipelines specifies the pipelines for
 // which metrics are returned and cannot be empty.
-func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, pipelines []int) (Metrics, error) {
+func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, pipelines []string) (Metrics, error) {
 
 	number := int(end.Sub(start).Hours() / 24)
 
@@ -121,7 +123,7 @@ func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, pi
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteString(strconv.Itoa(pipeline))
+		query.WriteString(db.Quote(pipeline))
 	}
 	query.WriteString(")\nGROUP BY day\nORDER BY day")
 
@@ -157,7 +159,7 @@ func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, pi
 // the current time. number must be in the following ranges: [1,60] for minutes,
 // [1,48] for hours, and [1,30] for days. pipelines represents the pipelines for
 // which metrics are returned and cannot be empty.
-func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, pipelines []int) (Metrics, error) {
+func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, pipelines []string) (Metrics, error) {
 
 	now := time.Now().UTC()
 	end := now.Truncate(unit).Add(unit)
@@ -180,7 +182,7 @@ func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit tim
 		if i > 0 {
 			query.WriteByte(',')
 		}
-		query.WriteString(strconv.Itoa(pipeline))
+		query.WriteString(db.Quote(pipeline))
 	}
 	query.WriteString(")\nGROUP BY slot\nORDER BY slot")
 

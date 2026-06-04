@@ -66,11 +66,11 @@ const API_BASE_PATH = '/v1';
 
 class API {
 	apiURL: string;
-	workspaceID: number;
+	workspaceID: string;
 	workspaces: Workspaces;
 	connectors: Connectors;
 
-	constructor(origin: string, workspaceID: number) {
+	constructor(origin: string, workspaceID: string) {
 		const apiURL = origin + API_BASE_PATH;
 		this.apiURL = apiURL;
 		this.workspaceID = workspaceID;
@@ -78,7 +78,7 @@ class API {
 		this.connectors = new Connectors(origin, apiURL);
 	}
 
-	login = async (email: string, password: string, isUnique?: boolean): Promise<[number, string]> => {
+	login = async (email: string, password: string, isUnique?: boolean): Promise<[string, string]> => {
 		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, {
 			email,
 			password,
@@ -195,7 +195,7 @@ class API {
 		});
 	};
 
-	deleteMember = async (member: number): Promise<void> => {
+	deleteMember = async (member: string): Promise<void> => {
 		return await call(`${this.apiURL}/members/${member}`, http.DELETE, this.workspaceID);
 	};
 
@@ -205,7 +205,7 @@ class API {
 
 	createAccessKey = async (
 		name: string,
-		workspace: number | null,
+		workspace: string | null,
 		type: AccessKeyType,
 	): Promise<CreateAccessKeyResponse> => {
 		return await call(`${this.apiURL}/keys`, http.POST, this.workspaceID, {
@@ -215,22 +215,22 @@ class API {
 		});
 	};
 
-	updateAccessKey = async (key: number, name: string): Promise<void> => {
+	updateAccessKey = async (key: string, name: string): Promise<void> => {
 		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.PUT, this.workspaceID, {
 			name,
 		});
 	};
 
-	deleteAccessKey = async (key: number): Promise<void> => {
+	deleteAccessKey = async (key: string): Promise<void> => {
 		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.DELETE, this.workspaceID);
 	};
 }
 
 class Connections {
 	apiURL: string;
-	workspaceID: number;
+	workspaceID: string;
 
-	constructor(url: string, workspaceID: number) {
+	constructor(url: string, workspaceID: string) {
 		this.apiURL = url;
 		this.workspaceID = workspaceID;
 	}
@@ -245,7 +245,7 @@ class Connections {
 		return res.connections as Connection[];
 	};
 
-	get = async (connection: number): Promise<Connection> => {
+	get = async (connection: string): Promise<Connection> => {
 		const c = await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}`,
 			http.GET,
@@ -257,7 +257,7 @@ class Connections {
 		return c as Connection;
 	};
 
-	update = async (id: number, connection: ConnectionToSet) => {
+	update = async (id: string, connection: ConnectionToSet) => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(id)}`,
 			http.PUT,
@@ -266,7 +266,7 @@ class Connections {
 		);
 	};
 
-	delete = async (connection: number): Promise<void> => {
+	delete = async (connection: string): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}`,
 			http.DELETE,
@@ -274,7 +274,7 @@ class Connections {
 		);
 	};
 
-	run = async (id: number): Promise<PipelineRun> => {
+	run = async (id: string): Promise<PipelineRun> => {
 		return await call(`${this.apiURL}/pipelines/runs/${id}`, http.GET, this.workspaceID);
 	};
 
@@ -282,7 +282,7 @@ class Connections {
 		return await call(`${this.apiURL}/pipelines/runs`, http.GET, this.workspaceID);
 	};
 
-	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
+	identities = async (connection: string, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/identities?first=${first}&limit=${limit}`,
 			http.GET,
@@ -290,7 +290,7 @@ class Connections {
 		);
 	};
 
-	execQuery = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {
+	execQuery = async (connection: string, query: string, limit: number): Promise<ExecQueryResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/query`,
 			http.POST,
@@ -303,7 +303,7 @@ class Connections {
 	};
 
 	records = async (
-		connection: number,
+		connection: string,
 		path: string,
 		format: string,
 		sheet: string | null,
@@ -330,7 +330,7 @@ class Connections {
 	};
 
 	sheets = async (
-		connection: number,
+		connection: string,
 		path: string,
 		format: string,
 		compression: string,
@@ -350,7 +350,7 @@ class Connections {
 		);
 	};
 
-	ui = async (connection: number): Promise<ConnectorUIResponse> => {
+	ui = async (connection: string): Promise<ConnectorUIResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui`,
 			http.GET,
@@ -358,7 +358,7 @@ class Connections {
 		);
 	};
 
-	uiEvent = async (connection: number, event: string, settings: ConnectorSettings): Promise<ConnectorUIResponse> => {
+	uiEvent = async (connection: string, event: string, settings: ConnectorSettings): Promise<ConnectorUIResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui-event`,
 			http.POST,
@@ -370,7 +370,7 @@ class Connections {
 		);
 	};
 
-	eventWriteKeys = async (connection: number): Promise<string[]> => {
+	eventWriteKeys = async (connection: string): Promise<string[]> => {
 		const res = await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
 			http.GET,
@@ -379,7 +379,7 @@ class Connections {
 		return res.keys;
 	};
 
-	createEventWriteKey = async (connection: number): Promise<string> => {
+	createEventWriteKey = async (connection: string): Promise<string> => {
 		const res: CreateEventWriteKeyResponse = await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
 			http.POST,
@@ -388,7 +388,7 @@ class Connections {
 		return res.key;
 	};
 
-	deleteEventWriteKey = async (connection: number, key: string): Promise<void> => {
+	deleteEventWriteKey = async (connection: string, key: string): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys/${encodeURIComponent(key)}`,
 			http.DELETE,
@@ -398,7 +398,7 @@ class Connections {
 
 	// TODO(Gianluca): this method is deprecated. See the issue
 	// https://github.com/krenalis/krenalis/issues/1265.
-	pipelineTypes = async (connection: number) => {
+	pipelineTypes = async (connection: string) => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipeline-types`,
 			http.GET,
@@ -409,7 +409,7 @@ class Connections {
 	// TODO(Gianluca): this method is deprecated. See the issue
 	// https://github.com/krenalis/krenalis/issues/1266.
 	pipelineSchemas = async (
-		connection: number,
+		connection: string,
 		target: PipelineTarget,
 		eventType: string,
 	): Promise<PipelineSchemasResponse> => {
@@ -433,11 +433,11 @@ class Connections {
 	};
 
 	createPipeline = async (
-		connection: number,
+		connection: string,
 		target: PipelineTarget,
 		eventType: string,
 		pipeline: PipelineToSet,
-	): Promise<number> => {
+	): Promise<string> => {
 		const res: CreatePipelineResponse = await call(`${this.apiURL}/pipelines`, http.POST, this.workspaceID, {
 			connection,
 			target,
@@ -447,15 +447,15 @@ class Connections {
 		return res.id;
 	};
 
-	updatePipeline = async (id: number, pipeline: PipelineToSet): Promise<void> => {
+	updatePipeline = async (id: string, pipeline: PipelineToSet): Promise<void> => {
 		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, pipeline);
 	};
 
-	deletePipeline = async (pipeline: number): Promise<void> => {
+	deletePipeline = async (pipeline: string): Promise<void> => {
 		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}`, http.DELETE, this.workspaceID);
 	};
 
-	setPipelineStatus = async (pipeline: number, enabled: boolean): Promise<void> => {
+	setPipelineStatus = async (pipeline: string, enabled: boolean): Promise<void> => {
 		return await call(
 			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/status`,
 			http.PUT,
@@ -466,7 +466,7 @@ class Connections {
 		);
 	};
 
-	setPipelineSchedulePeriod = async (pipeline: number, period: SchedulePeriod | null): Promise<void> => {
+	setPipelineSchedulePeriod = async (pipeline: string, period: SchedulePeriod | null): Promise<void> => {
 		return await call(
 			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/schedule`,
 			http.PUT,
@@ -477,7 +477,7 @@ class Connections {
 		);
 	};
 
-	runPipeline = async (pipeline: number): Promise<number> => {
+	runPipeline = async (pipeline: string): Promise<string> => {
 		const res = await call(
 			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/runs`,
 			http.POST,
@@ -486,11 +486,11 @@ class Connections {
 				incremental: null,
 			},
 		);
-		return res.id as number;
+		return res.id as string;
 	};
 
 	pipelineUiEvent = async (
-		pipeline: number,
+		pipeline: string,
 		event: string,
 		formatSettings: ConnectorSettings,
 	): Promise<ConnectorUIResponse> => {
@@ -505,7 +505,7 @@ class Connections {
 		);
 	};
 
-	absolutePath = async (storageConnection: number, path: string): Promise<AbsolutePathResponse> => {
+	absolutePath = async (storageConnection: string, path: string): Promise<AbsolutePathResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/files/absolute?path=${encodeURIComponent(path)}`,
 			http.GET,
@@ -513,7 +513,7 @@ class Connections {
 		);
 	};
 
-	tableSchema = async (connection: number, tableName: string): Promise<TableSchemaResponse> => {
+	tableSchema = async (connection: string, tableName: string): Promise<TableSchemaResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables?name=${encodeURIComponent(tableName)}`,
 			http.GET,
@@ -522,7 +522,7 @@ class Connections {
 	};
 
 	apiUsers = async (
-		connection: number,
+		connection: string,
 		schema: ObjectType,
 		filter: Filter | null,
 		cursor?: string,
@@ -543,7 +543,7 @@ class Connections {
 	};
 
 	previewSendEvent = async (
-		connection: number,
+		connection: string,
 		type: string,
 		event: Event,
 		outSchema: ObjectType,
@@ -562,7 +562,7 @@ class Connections {
 		);
 	};
 
-	unlinkConnection = async (src: number, dst: number): Promise<void> => {
+	unlinkConnection = async (src: string, dst: string): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(src)}/links/${encodeURIComponent(dst)}`,
 			http.DELETE,
@@ -570,7 +570,7 @@ class Connections {
 		);
 	};
 
-	linkConnection = async (src: number, dst: number): Promise<void> => {
+	linkConnection = async (src: string, dst: string): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(src)}/links/${encodeURIComponent(dst)}`,
 			http.POST,
@@ -581,15 +581,15 @@ class Connections {
 
 class EventListeners {
 	apiURL: string;
-	workspaceID: number;
+	workspaceID: string;
 
-	constructor(url: string, workspaceID: number) {
+	constructor(url: string, workspaceID: string) {
 		this.apiURL = url;
 		this.workspaceID = workspaceID;
 	}
 
 	create = async (
-		connection: number | null,
+		connection: string | null,
 		size: number | null,
 		filter: Filter | null,
 	): Promise<CreateEventListenerResponse> => {
@@ -619,9 +619,9 @@ class EventListeners {
 
 class Profiles {
 	apiURL: string;
-	workspaceID: number;
+	workspaceID: string;
 
-	constructor(url: string, workspaceID: number) {
+	constructor(url: string, workspaceID: string) {
 		this.apiURL = url;
 		this.workspaceID = workspaceID;
 	}
@@ -701,12 +701,12 @@ class Profiles {
 class Workspaces {
 	origin: string;
 	apiURL: string;
-	workspaceID: number;
+	workspaceID: string;
 	connections: Connections;
 	eventListeners: EventListeners;
 	profiles: Profiles;
 
-	constructor(origin: string, apiURL: string, workspaceID: number) {
+	constructor(origin: string, apiURL: string, workspaceID: string) {
 		this.origin = origin;
 		this.apiURL = apiURL;
 		this.workspaceID = workspaceID;
@@ -784,7 +784,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/profiles/schema/suitable-as-identifiers`, http.GET, this.workspaceID);
 	};
 
-	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<number> => {
+	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<string> => {
 		const res: CreateConnectionResponse = await call(`${this.apiURL}/connections`, http.POST, this.workspaceID, {
 			...connection,
 			authToken: authToken,
@@ -808,7 +808,7 @@ class Workspaces {
 		});
 	};
 
-	warehouse = async (workspaceID?: number): Promise<WarehouseResponse> => {
+	warehouse = async (workspaceID?: string): Promise<WarehouseResponse> => {
 		return await call(`${this.apiURL}/warehouse`, http.GET, workspaceID != null ? workspaceID : this.workspaceID);
 	};
 
@@ -871,7 +871,7 @@ class Workspaces {
 	pipelineErrors = async (
 		start: Date,
 		end: Date,
-		pipelines: number[],
+		pipelines: string[],
 		first: number,
 		limit: number,
 		step?: PipelineStep,
@@ -893,7 +893,7 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: number[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: string[]): Promise<PipelineMetrics> => {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
@@ -909,7 +909,7 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDay = async (days: number, pipelines: number[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerDay = async (days: number, pipelines: string[]): Promise<PipelineMetrics> => {
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/days/` +
 				`${encodeURIComponent(days)}?` +
@@ -922,7 +922,7 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerHour = async (hours: number, pipelines: number[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerHour = async (hours: number, pipelines: string[]): Promise<PipelineMetrics> => {
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/hours/` +
 				`${encodeURIComponent(hours)}?` +
@@ -935,7 +935,7 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerMinute = async (minutes: number, pipelines: number[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerMinute = async (minutes: number, pipelines: string[]): Promise<PipelineMetrics> => {
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/minutes/` +
 				`${encodeURIComponent(minutes)}?` +
@@ -987,7 +987,7 @@ class Connectors {
 	};
 
 	ui = async (
-		workspace: number,
+		workspace: string,
 		connector: string,
 		role: ConnectionRole,
 		authToken: string,
@@ -1000,7 +1000,7 @@ class Connectors {
 	};
 
 	uiEvent = async (
-		workspace: number,
+		workspace: string,
 		connector: string,
 		event: string,
 		settings: ConnectorSettings,

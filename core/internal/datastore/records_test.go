@@ -95,7 +95,7 @@ func Test_Records(t *testing.T) {
 	destinationsUsersTable := warehouses.Table{
 		Name: "krenalis_destination_profiles",
 		Columns: []warehouses.Column{
-			{Name: "_pipeline", Type: types.Int(32)},
+			{Name: "_pipeline", Type: types.String()},
 			{Name: "_external_id", Type: types.String()},
 			{Name: "_out_matching_value", Type: types.String()},
 		},
@@ -123,19 +123,23 @@ func Test_Records(t *testing.T) {
 		t.Fatalf("cannot merge profiles: %s", err)
 	}
 
-	const pipelineID = 623
+	const (
+		pipelineID     = "6NpT4zB8QaR2"
+		otherPipeline1 = "8QaT3mN7KxP5"
+		otherPipeline2 = "5zBpR9Y2QnM3"
+	)
 
 	initDestinations := [][]any{
-		{85, "Ex1", "1"},
-		{85, "Ex2", "2"},
+		{otherPipeline1, "Ex1", "1"},
+		{otherPipeline1, "Ex2", "2"},
 		{pipelineID, "Ex1", "1"},
 		{pipelineID, "Ex2", "2"},
 		{pipelineID, "Ex3", "2"},
 		{pipelineID, "Ex4", "3"},
 		{pipelineID, "Ex5", "3"},
 		{pipelineID, "Ex6", "5"},
-		{719, "034", "a"},
-		{719, "089", "b"},
+		{otherPipeline2, "034", "a"},
+		{otherPipeline2, "089", "b"},
 	}
 	err = dw.Merge(ctx, destinationsUsersTable, initDestinations, nil)
 	if err != nil {

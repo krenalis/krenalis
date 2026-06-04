@@ -613,7 +613,7 @@ interface TransformationBoxProps {
 	transformationType: 'mappings' | 'function' | '';
 	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
 	workspaces: Workspace[];
-	selectedWorkspace: number;
+	selectedWorkspace: string;
 	pipeline: TransformedPipeline;
 	setPipeline: React.Dispatch<React.SetStateAction<TransformedPipeline>>;
 	updateMapping: (path: string, value: string) => void;

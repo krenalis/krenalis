@@ -30,7 +30,7 @@ type Record struct {
 // to an application. It filters users based on whether they have or do not have a match
 // with the application users.
 type Matching struct {
-	Pipeline           int
+	Pipeline           string
 	InProperty         string
 	ExportMode         state.ExportMode
 	UpdateOnDuplicates bool
@@ -100,7 +100,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			{
 				Table: "krenalis_destination_profiles",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, matching.Pipeline),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, matching.Pipeline),
 					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "_out_matching_value", Type: types.String()}),
 				}),
 			},
@@ -111,7 +111,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			joins[0].Type = warehouses.InnerJoin
 		case state.CreateOnly:
 			// Include only users without a corresponding match.
-			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIsNull))
+			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsNull))
 			fallthrough
 		case state.CreateOrUpdate:
 			// Perform a LEFT JOIN to also return users without a matching destination user.

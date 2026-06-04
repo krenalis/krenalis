@@ -87,7 +87,7 @@ func (ps *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
 	if ps.executor == nil {
 		return
 	}
-	var pipelines []int
+	var pipelines []string
 	for _, pipeline := range n.Connection().Pipelines() {
 		if pipeline.SchedulePeriod != 0 {
 			pipelines = append(pipelines, pipeline.ID)
@@ -109,7 +109,7 @@ func (ps *pipelineScheduler) onDeleteOrganization(n state.DeleteOrganization) {
 	if ps.executor == nil {
 		return
 	}
-	var pipelines []int
+	var pipelines []string
 	for _, workspace := range n.Organization().Workspaces() {
 		for _, connection := range workspace.Connections() {
 			for _, pipeline := range connection.Pipelines() {
@@ -134,7 +134,7 @@ func (ps *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	if ps.executor == nil {
 		return
 	}
-	var pipelines []int
+	var pipelines []string
 	for _, connection := range n.Workspace().Connections() {
 		for _, pipeline := range connection.Pipelines() {
 			if pipeline.SchedulePeriod != 0 {
@@ -193,7 +193,7 @@ type pipelineExecutor struct {
 	core      *Core
 	mu        sync.Mutex // for the pipelines and indexes fields.
 	pipelines [len(periods)]map[int16][]*state.Pipeline
-	indexes   map[int]scIndex
+	indexes   map[string]scIndex
 	close     chan struct{}
 }
 
@@ -204,7 +204,7 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 
 	pe := &pipelineExecutor{
 		core:    core,
-		indexes: map[int]scIndex{},
+		indexes: map[string]scIndex{},
 		close:   make(chan struct{}),
 	}
 	for i := range len(pe.pipelines) {
@@ -283,7 +283,7 @@ func (pe *pipelineExecutor) AddPipeline(pipeline *state.Pipeline) {
 
 // RemovePipeline removes the pipeline with identifier id from the scheduler
 // executor. If the pipeline does not exist it does nothing.
-func (pe *pipelineExecutor) RemovePipeline(id int) {
+func (pe *pipelineExecutor) RemovePipeline(id string) {
 	pe.mu.Lock()
 	index, ok := pe.indexes[id]
 	if !ok {

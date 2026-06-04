@@ -1,7 +1,7 @@
 import { Identifiers } from './identifiers';
 import { WarehouseMode } from './warehouse';
 
-type PrimarySources = Record<string, number>;
+type PrimarySources = Record<string, string>;
 
 interface Profile {
 	image: string;
@@ -15,7 +15,7 @@ interface UIPreferences {
 }
 
 interface Workspace {
-	id: number;
+	id: string;
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
@@ -25,7 +25,7 @@ interface Workspace {
 }
 
 interface CreateWorkspaceResponse {
-	id: number;
+	id: string;
 }
 
 interface LatestIdentityResolution {

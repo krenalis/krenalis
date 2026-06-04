@@ -55,8 +55,8 @@ interface PropertyDialogProps {
 	propertyToEdit: PropertyToEdit | null;
 	setPropertyToEdit: React.Dispatch<React.SetStateAction<PropertyToEdit | null>>;
 	primarySources: PrimarySources;
-	onAddProperty: (property: PropertyToEdit, primarySource: number | null) => void;
-	onEditProperty: (property: PropertyToEdit, primarySource: number | null) => void;
+	onAddProperty: (property: PropertyToEdit, primarySource: string | null) => void;
+	onEditProperty: (property: PropertyToEdit, primarySource: string | null) => void;
 }
 
 const PropertyDialog = ({
@@ -67,7 +67,7 @@ const PropertyDialog = ({
 	onEditProperty,
 }: PropertyDialogProps) => {
 	const [property, setProperty] = useState<PropertyToEdit>();
-	const [primarySource, setPrimarySource] = useState<number | null>(null);
+	const [primarySource, setPrimarySource] = useState<string | null>(null);
 	const [nameError, setNameError] = useState<string>('');
 	const [typeError, setTypeError] = useState<string>('');
 	const [isMaxBytesEnabled, setIsMaxBytesEnabled] = useState<boolean>(false);
@@ -409,7 +409,7 @@ const PropertyDialog = ({
 		if (v === 'none') {
 			setPrimarySource(null);
 		} else {
-			setPrimarySource(Number(e.target.value));
+			setPrimarySource(e.target.value);
 		}
 	};
 
@@ -817,7 +817,7 @@ const PropertyDialog = ({
 							<SlSelect
 								className='property-dialog__primary-source'
 								size='small'
-								value={primarySource == null ? 'none' : String(primarySource)}
+								value={primarySource == null ? 'none' : primarySource}
 								label='Primary Source'
 								name='primary-source'
 								onSlChange={onChangePrimarySource}
@@ -832,7 +832,7 @@ const PropertyDialog = ({
 								</div>
 								<SlOption value='none'>None</SlOption>
 								{sourceConnections.map((c) => (
-									<SlOption key={c.id} value={String(c.id)}>
+									<SlOption key={c.id} value={c.id}>
 										<div slot='prefix'>
 											<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} />
 										</div>

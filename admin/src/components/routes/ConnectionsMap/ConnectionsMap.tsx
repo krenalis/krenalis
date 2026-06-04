@@ -12,7 +12,7 @@ import { Link } from '../../base/Link/Link';
 
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);
-	const [hoveredConnection, setHoveredConnection] = useState<number | null>(null);
+	const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
 	const [isUserDbHovered, setIsUserDbHovered] = useState<boolean>(false);
 	const [isEventDbHovered, setIsEventDbHovered] = useState<boolean>(false);
 
@@ -138,7 +138,7 @@ const ConnectionsMap = () => {
 		setIsEventDbHovered(false);
 	};
 
-	const newConnectionID = Number(new URL(document.location.href).searchParams.get('newConnection'));
+	const newConnectionID = new URL(document.location.href).searchParams.get('newConnection') ?? '';
 	const sources: TransformedConnection[] = [];
 	const destinations: TransformedConnection[] = [];
 	connections.sort((a, b) => {

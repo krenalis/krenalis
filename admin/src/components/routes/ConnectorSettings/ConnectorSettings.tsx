@@ -32,7 +32,7 @@ const ConnectorSettings = () => {
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
 	const [settings, setSettings] = useState<ConnectorSettings | null>(null);
-	const [newConnectionID, setNewConnectionID] = useState<number>(0);
+	const [newConnectionID, setNewConnectionID] = useState<string>('');
 	const [notFound, setNotFound] = useState<boolean>(false);
 
 	const { api, handleError, showStatus, redirect, connectors, setIsLoadingConnections, setTitle, selectedWorkspace } =
@@ -64,7 +64,7 @@ const ConnectorSettings = () => {
 	}, []);
 
 	useEffect(() => {
-		if (newConnectionID > 0) {
+		if (newConnectionID !== '') {
 			redirect(`connections/${newConnectionID}/pipelines?new=true`);
 		}
 	}, [newConnectionID]);
@@ -152,7 +152,7 @@ const ConnectorSettings = () => {
 				}
 				return;
 			}
-			let id: number;
+			let id: string;
 			try {
 				const connection: ConnectionToAdd = {
 					name: name,

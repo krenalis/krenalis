@@ -23,7 +23,7 @@ const Members = () => {
 
 	const { api, handleError, member: loggedMember, logout, publicMetadata } = useContext(AppContext);
 
-	const pendingDeletedMember = useRef<number>(0);
+	const pendingDeletedMember = useRef<string>('');
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -47,13 +47,13 @@ const Members = () => {
 		fetchData();
 	}, [isLoading]);
 
-	const onDeleteMember = (id: number) => {
+	const onDeleteMember = (id: string) => {
 		pendingDeletedMember.current = id;
 		setIsRemoveAlertOpen(true);
 	};
 
 	const onDeleteMemberCancel = () => {
-		pendingDeletedMember.current = 0;
+		pendingDeletedMember.current = '';
 		setIsRemoveAlertOpen(false);
 	};
 
@@ -68,7 +68,7 @@ const Members = () => {
 		}
 		setIsRemoveAlertOpen(false);
 		setMembers(members.filter((member) => member.id !== pendingDeletedMember.current));
-		pendingDeletedMember.current = 0;
+		pendingDeletedMember.current = '';
 	};
 
 	const onLogout = async () => {

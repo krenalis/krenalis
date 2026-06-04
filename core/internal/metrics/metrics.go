@@ -67,7 +67,7 @@ type Collector struct {
 	db      *db.DB
 	state   *state.State
 	mu      sync.RWMutex
-	metrics map[int]*metrics
+	metrics map[string]*metrics
 	tick    int
 	buf     bytes.Buffer
 	stored  struct {
@@ -88,7 +88,7 @@ func New(db *db.DB, state *state.State) *Collector {
 	c := &Collector{
 		db:      db,
 		state:   state,
-		metrics: map[int]*metrics{},
+		metrics: map[string]*metrics{},
 		tick:    1,
 	}
 	c.stored.L = &c.mu
@@ -110,7 +110,7 @@ func (c *Collector) Close(ctx context.Context) {
 
 // Failed increases the failed count for the specified step and pipeline by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) Failed(step Step, pipeline, count int, message string) {
+func (c *Collector) Failed(step Step, pipeline string, count int, message string) {
 	c.mu.RLock()
 	if m, ok := c.metrics[pipeline]; ok {
 		m.Lock()
@@ -138,59 +138,59 @@ func (c *Collector) Failed(step Step, pipeline, count int, message string) {
 
 // FilterFailed increases the failed count for the Filter step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FilterFailed(pipeline, count int) {
+func (c *Collector) FilterFailed(pipeline string, count int) {
 	c.Failed(FilterStep, pipeline, count, "")
 }
 
 // FilterPassed increases the passed count for the Filter step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FilterPassed(pipeline, count int) {
+func (c *Collector) FilterPassed(pipeline string, count int) {
 	c.Passed(FilterStep, pipeline, count)
 }
 
 // FinalizeFailed increases the failed count for the Finalize step and pipeline
 // by the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FinalizeFailed(pipeline, count int, message string) {
+func (c *Collector) FinalizeFailed(pipeline string, count int, message string) {
 	c.Failed(FinalizeStep, pipeline, count, message)
 }
 
 // FinalizePassed increases the passed count for the Finalize step and pipeline
 // by the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FinalizePassed(pipeline, count int) {
+func (c *Collector) FinalizePassed(pipeline string, count int) {
 	c.Passed(FinalizeStep, pipeline, count)
 }
 
 // InputValidationFailed increases the failed count for the InputValidation step
 // and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) InputValidationFailed(pipeline, count int, message string) {
+func (c *Collector) InputValidationFailed(pipeline string, count int, message string) {
 	c.Failed(InputValidationStep, pipeline, count, message)
 }
 
 // InputValidationPassed increases the passed count for the InputValidation step
 // and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) InputValidationPassed(pipeline, count int) {
+func (c *Collector) InputValidationPassed(pipeline string, count int) {
 	c.Passed(InputValidationStep, pipeline, count)
 }
 
 // OutputValidationFailed increases the failed count for the OutputValidation
 // step and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) OutputValidationFailed(pipeline, count int, message string) {
+func (c *Collector) OutputValidationFailed(pipeline string, count int, message string) {
 	c.Failed(OutputValidationStep, pipeline, count, message)
 }
 
 // OutputValidationPassed increases the passed count for the OutputValidation
 // step and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) OutputValidationPassed(pipeline, count int) {
+func (c *Collector) OutputValidationPassed(pipeline string, count int) {
 	c.Passed(OutputValidationStep, pipeline, count)
 }
 
 // Passed increases the passed count for the specified step and pipeline by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) Passed(step Step, pipeline, count int) {
+func (c *Collector) Passed(step Step, pipeline string, count int) {
 	c.mu.RLock()
 	if m, ok := c.metrics[pipeline]; ok {
 		m.Lock()
@@ -212,27 +212,27 @@ func (c *Collector) Passed(step Step, pipeline, count int) {
 
 // ReceiveFailed increases the failed count for the Receive step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) ReceiveFailed(pipeline, count int, message string) {
+func (c *Collector) ReceiveFailed(pipeline string, count int, message string) {
 	c.Failed(ReceiveStep, pipeline, count, message)
 }
 
 // ReceivePassed increases the passed count for the Receive step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) ReceivePassed(pipeline, count int) {
+func (c *Collector) ReceivePassed(pipeline string, count int) {
 	c.Passed(ReceiveStep, pipeline, count)
 }
 
 // TransformationFailed increases the failed count for the Transformation step
 // and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) TransformationFailed(pipeline, count int, message string) {
+func (c *Collector) TransformationFailed(pipeline string, count int, message string) {
 	c.Failed(TransformationStep, pipeline, count, message)
 }
 
 // TransformationPassed increases the passed count for the Transformation step
 // and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) TransformationPassed(pipeline, count int) {
+func (c *Collector) TransformationPassed(pipeline string, count int) {
 	c.Passed(TransformationStep, pipeline, count)
 }
 
@@ -335,7 +335,7 @@ func (c *Collector) start() {
 
 	var isShuttingDown bool
 
-	metrics := map[int]*metrics{}
+	metrics := map[string]*metrics{}
 
 	// Wait the time to the next timeslot.
 	now := time.Now().UTC()
@@ -399,7 +399,7 @@ func (c *Collector) start() {
 
 // store stored any collected metrics in metrics for the specified timeslot to
 // the database.
-func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
+func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 
 	var hasErrors bool
 
@@ -418,7 +418,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			c.buf.WriteByte(',')
 		}
 		c.buf.WriteByte('(')
-		c.buf.WriteString(strconv.Itoa(pipeline))
+		c.buf.WriteString(db.Quote(pipeline))
 		c.buf.WriteByte(',')
 		c.buf.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		c.buf.WriteByte(',')
@@ -486,7 +486,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 				c.buf.WriteByte(',')
 			}
 			c.buf.WriteByte('(')
-			c.buf.WriteString(strconv.Itoa(pipeline))
+			c.buf.WriteString(db.Quote(pipeline))
 			c.buf.WriteByte(',')
 			c.buf.WriteString(strconv.Itoa(int(timeslot)))
 			c.buf.WriteByte(',')

@@ -36,7 +36,7 @@ const AccessKeys = () => {
 	const [isDeletingAccessKey, setIsDeletingAccessKey] = useState<boolean>(false);
 	const [accessKeyToEdit, setAccessKeyToEdit] = useState<AccessKey | null>();
 	const [accessKeyToDeleteType, setAccessKeyToDeleteType] = useState<AccessKeyType>();
-	const [warehouseByWorkspace, setWarehouseByWorkspace] = useState<Record<number, string>>();
+	const [warehouseByWorkspace, setWarehouseByWorkspace] = useState<Record<string, string>>();
 
 	const { api, handleError, workspaces } = useContext(AppContext);
 
@@ -59,7 +59,7 @@ const AccessKeys = () => {
 			}
 			setAccessKeys(res.keys);
 
-			let warehouseByWorkspace = {};
+			let warehouseByWorkspace: Record<string, string> = {};
 			for (const w of workspaces) {
 				let res: WarehouseResponse;
 				try {
@@ -175,7 +175,7 @@ const AccessKeys = () => {
 
 			const row = {
 				cells: [k.name, workspaceCell, tokenCell, createdAtCell, pipelinesCell],
-				key: String(k.id),
+				key: k.id,
 			};
 
 			if (k.type === 'API') {
@@ -382,7 +382,7 @@ interface CreateAccessKeyDialogProps {
 	setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsLoadingAPIKeys: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsLoadingMCPKeys: React.Dispatch<React.SetStateAction<boolean>>;
-	warehouseByWorkspace: Record<number, string>;
+	warehouseByWorkspace: Record<string, string>;
 }
 
 const CreateAccessKeyDialog = ({
@@ -394,7 +394,7 @@ const CreateAccessKeyDialog = ({
 	warehouseByWorkspace,
 }: CreateAccessKeyDialogProps) => {
 	const [name, setName] = useState<string>('');
-	const [workspace, setWorkspace] = useState<number | null>();
+	const [workspace, setWorkspace] = useState<string | null>();
 	const [nameError, setNameError] = useState<string>('');
 	const [workspaceError, setWorkspaceError] = useState<string>('');
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -429,7 +429,7 @@ const CreateAccessKeyDialog = ({
 		if (v === '0') {
 			setWorkspace(null);
 		} else {
-			setWorkspace(Number(v));
+			setWorkspace(v);
 		}
 	};
 
@@ -555,7 +555,7 @@ const CreateAccessKeyDialog = ({
 						label='Workspace'
 						className='access-keys__dialog-workspaces'
 						onSlChange={onChangeWorkspace}
-						value={workspace != null ? String(workspace) : isMCP ? '' : '0'}
+						value={workspace != null ? workspace : isMCP ? '' : '0'}
 						hoist={true}
 						helpText='Note that you will no longer be able to edit the workspace after the creation of the key'
 					>
@@ -565,7 +565,7 @@ const CreateAccessKeyDialog = ({
 								const hasWarehouse = warehouseByWorkspace[w.id] !== '';
 								if (!isMCP || (isMCP && hasWarehouse)) {
 									return (
-										<SlOption key={w.id} value={String(w.id)}>
+										<SlOption key={w.id} value={w.id}>
 											{w.name}
 										</SlOption>
 									);

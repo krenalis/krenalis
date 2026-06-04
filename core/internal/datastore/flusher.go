@@ -20,7 +20,7 @@ type (
 )
 
 type flusherRow[T any] struct {
-	pipeline int         // pipeline identifier; if 0, no metrics are recorded
+	pipeline string      // pipeline identifier; if empty, no metrics are recorded
 	key      any         // deduplication key; if nil, deduplication is disabled
 	row      T           // row to be flushed
 	ack      streams.Ack // ack callback; if nil, it is not invoked
@@ -103,9 +103,9 @@ func (f *flusher[T]) loop(opts flusherOptions, startOperation startOperationFunc
 		acks  = make([]streams.Ack, 0, opts.BatchSize)
 	)
 
-	var metrics map[int]int
+	var metrics map[string]int
 	if opts.MetricsFinalizer != nil {
-		metrics = make(map[int]int) // pipeline to count
+		metrics = make(map[string]int) // pipeline to count
 	}
 
 	// firstBuffered is the time when the first row was buffered.
@@ -247,7 +247,7 @@ func (f *flusher[T]) loop(opts flusherOptions, startOperation startOperationFunc
 			if row.ack != nil {
 				acks = append(acks, row.ack)
 			}
-			if metrics != nil && row.pipeline != 0 {
+			if metrics != nil && row.pipeline != "" {
 				metrics[row.pipeline]++
 			}
 
@@ -380,7 +380,7 @@ type flusherOptions struct {
 
 	// MetricsFinalizer receives the number of flushed rows per pipeline
 	// after a successful flush. It is called once per pipeline with its count.
-	MetricsFinalizer func(pipeline int, count int)
+	MetricsFinalizer func(pipeline string, count int)
 
 	// LogError is invoked when a flush attempt fails. Duplicate consecutive
 	// error messages are suppressed until the message changes.

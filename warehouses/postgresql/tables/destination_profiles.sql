@@ -3,7 +3,7 @@
 -- that can be found in the LICENSE file.
 
 CREATE TABLE IF NOT EXISTS krenalis_destination_profiles (
-    _pipeline integer NOT NULL,
+    _pipeline text NOT NULL,
     _external_id text NOT NULL DEFAULT '',
     _out_matching_value text NOT NULL,
     PRIMARY KEY (_pipeline, _external_id)

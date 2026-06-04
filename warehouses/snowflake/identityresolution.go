@@ -25,7 +25,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
+func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]string) error {
 
 	// Determine the current version of the "krenalis_profiles" table and create
 	// a copy of it with the incremented version.
@@ -123,7 +123,13 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 			if s, ok := profilePrimarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "_CONNECTION" = %d THEN %s END) WITHIN GROUP (ORDER BY "_UPDATED_AT" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
+				mergeProfiles.WriteString(`ARRAY_AGG(CASE WHEN `)
+				mergeProfiles.WriteString(quoteIdent(c.Name))
+				mergeProfiles.WriteString(` IS NOT NULL AND "_CONNECTION" = `)
+				quoteStringForDynamicSQL(&mergeProfiles, s)
+				mergeProfiles.WriteString(` THEN `)
+				mergeProfiles.WriteString(quoteIdent(c.Name))
+				mergeProfiles.WriteString(` END) WITHIN GROUP (ORDER BY "_UPDATED_AT" DESC)`)
 			} else {
 				mergeProfiles.WriteString("ARRAY_CONSTRUCT()")
 			}

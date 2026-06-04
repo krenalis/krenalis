@@ -11,7 +11,7 @@ import (
 // Event is the event schema.
 var Event = types.Object([]types.Property{
 	{Name: "kpid", Type: types.UUID(), ReadOptional: true, Description: "Krenalis Profile ID"},
-	{Name: "connectionId", Type: types.Int(32), Description: "Connection ID"},
+	{Name: "connectionId", Type: types.String(), Description: "Connection ID"},
 	{Name: "anonymousId", Type: types.String(), Description: "Anonymous ID"},
 	{Name: "channel", Type: types.String(), ReadOptional: true, Description: "Channel"},
 	{Name: "category", Type: types.String(), ReadOptional: true, Description: "Category"},
