@@ -745,54 +745,26 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (uuid.UUI
 // have the given WorkOS user ID.
 func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
 	core.mustBeOpen()
-	type memberRef struct {
-		id           int
-		organization uuid.UUID
-	}
-	var members []memberRef
-	err := core.db.QueryScan(
-		ctx,
-		"SELECT id, organization FROM members WHERE workos_user_id = $1",
-		workosUserID,
-		func(rows *db.Rows) error {
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var ids []int
+		err := tx.QueryScan(ctx, "DELETE FROM members WHERE workos_user_id = $1 RETURNING id", workosUserID, func(rows *db.Rows) error {
 			for rows.Next() {
-				var m memberRef
-				if err := rows.Scan(&m.id, &m.organization); err != nil {
+				var id int
+				if err := rows.Scan(&id); err != nil {
 					return err
 				}
-				members = append(members, m)
+				ids = append(ids, id)
 			}
 			return nil
-		},
-	)
-	if err != nil {
-		return err
-	}
-	for _, m := range members {
-		n := state.DeleteMember{
-			ID:           m.id,
-			Organization: m.organization,
-		}
-		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			result, err := tx.Exec(
-				ctx,
-				"DELETE FROM members WHERE id = $1 AND organization = $2",
-				m.id,
-				m.organization,
-			)
-			if err != nil {
-				return nil, err
-			}
-			if result.RowsAffected() == 0 {
-				return nil, nil
-			}
-			return n, nil
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
-	}
-	return nil
+		if len(ids) == 0 {
+			return nil, nil
+		}
+		return state.DeleteMembers{IDs: ids}, nil
+	})
 }
 
 // InstallationID returns the installation ID.

@@ -84,6 +84,8 @@ func (state *State) keep() {
 			org = state.deleteEventWriteKey(n)
 		case "DeleteMember":
 			org = state.deleteMember(n)
+		case "DeleteMembers":
+			org = state.deleteMembers(n)
 		case "DeleteOrganization":
 			org = state.deleteOrganization(n)
 		case "DeletePipeline":
@@ -838,6 +840,32 @@ func (state *State) deleteMember(n notification) uuid.UUID {
 	delete(org.members, e.ID)
 	org.mu.Unlock()
 	return e.Organization
+}
+
+// DeleteMembers is the event sent when multiple members are deleted at once.
+type DeleteMembers struct {
+	IDs []int
+}
+
+// deleteMembers deletes multiple members.
+func (state *State) deleteMembers(n notification) uuid.UUID {
+	e := DeleteMembers{}
+	if !decodeNotification(n, &e) {
+		return uuid.Nil
+	}
+	if len(e.IDs) == 0 {
+		return uuid.Nil
+	}
+	state.mu.Lock()
+	for _, org := range state.organizations {
+		org.mu.Lock()
+		for _, id := range e.IDs {
+			delete(org.members, id)
+		}
+		org.mu.Unlock()
+	}
+	state.mu.Unlock()
+	return uuid.Nil
 }
 
 // DeleteOrganization is the event sent when an organization is deleted.
