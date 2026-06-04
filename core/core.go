@@ -956,26 +956,6 @@ func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, nam
 	return err
 }
 
-// UpdateOrganizationName updates the name of the organization identified by
-// orgID.
-func (core *Core) UpdateOrganizationName(ctx context.Context, orgID uuid.UUID, name string) error {
-	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 255); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	n := state.UpdateOrganization{ID: orgID, Name: name}
-	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, orgID)
-		if err != nil {
-			return nil, err
-		}
-		if result.RowsAffected() == 0 {
-			return nil, nil
-		}
-		return n, nil
-	})
-}
-
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // If a password reset request with the given password reset token does not

@@ -647,7 +647,14 @@ func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request)
 		if runes := []rune(orgName); len(runes) > 255 {
 			orgName = string(runes[:255])
 		}
-		if err := s.core.UpdateOrganizationName(r.Context(), orgID, orgName); err != nil {
+		org, err := s.core.Organization(orgID)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				return nil, nil
+			}
+			return nil, err
+		}
+		if err := org.Update(r.Context(), orgName); err != nil {
 			return nil, err
 		}
 	}
