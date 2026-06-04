@@ -874,9 +874,11 @@ func (this *Pipeline) application() *connections.Application {
 
 // createRun creates a new pipeline run and returns its identifier.
 //
-// It returns a errors.NotFoundError if the pipeline no longer exists.
-// It returns a errors.UnprocessableError with code RunInProgress if a run for
-// this pipeline is already in progress.
+// It returns an errors.NotFoundError if the pipeline no longer exists.
+// It returns an errors.UnprocessableError with one of the following codes:
+//
+//   - PipelineDisabled, if the pipeline is disabled.
+//   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string, error) {
 
 	n := state.RunPipeline{
@@ -888,19 +890,22 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			var function string
-			var inc, executing bool
+			var enabled, inc, executing bool
 			var cursor time.Time
-			err := tx.QueryRow(ctx, "SELECT p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			err := tx.QueryRow(ctx, "SELECT p.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
 				"FROM pipelines AS p\n"+
 				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
 				"WHERE p.id = $1\n"+
 				"ORDER BY e.id DESC\n"+
-				"LIMIT 1", n.Pipeline).Scan(&function, &inc, &cursor, &executing)
+				"LIMIT 1", n.Pipeline).Scan(&enabled, &function, &inc, &cursor, &executing)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
 				}
 				return nil, err
+			}
+			if !enabled {
+				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 			}
 			if executing {
 				return nil, errors.Unprocessable(RunInProgress, "pipeline run %s is already in progress", this.pipeline.ID)
