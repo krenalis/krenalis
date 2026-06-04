@@ -309,15 +309,15 @@ func (wo *Workos) call(method, path string, expectedStatus int, body any, out an
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != expectedStatus {
+		return fmt.Errorf("WorkOS returned unexpected status %d", resp.StatusCode)
+	}
+
 	if out != nil {
 		err := json.NewDecoder(resp.Body).Decode(out)
 		if err != nil {
 			return err
 		}
-	}
-
-	if resp.StatusCode != expectedStatus {
-		return fmt.Errorf("WorkOS returned unexpected status %d", resp.StatusCode)
 	}
 
 	return nil
