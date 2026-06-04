@@ -112,7 +112,7 @@ func quoteString(b *strings.Builder, s string) {
 // quoteStringForDynamicSQL quotes s as a SQL string literal and escapes the
 // quote delimiters for embedding in a single-quoted dynamic SQL body.
 func quoteStringForDynamicSQL(b *strings.Builder, s string) {
-	if strings.IndexAny(s, "\x00'\b\f\n\r\t\\") == -1 {
+	if !strings.ContainsAny(s, "\x00'\b\f\n\r\t\\") {
 		b.WriteString(`''`)
 		b.WriteString(s)
 		b.WriteString(`''`)
