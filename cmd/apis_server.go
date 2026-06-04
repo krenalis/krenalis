@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	stderrors "errors"
 	"io"
 	"log/slog"
 	"math"
@@ -432,7 +431,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 
 		workosUser, workosExternalOrganizationID, err := s.workos.Authenticate(body.AccessToken)
 		if err != nil {
-			if stderrors.Is(err, workos.ErrInvalidToken) {
+			if errors.Is(err, workos.ErrInvalidToken) {
 				return nil, errors.Unauthorized("invalid WorkOS token")
 			}
 			return nil, err
