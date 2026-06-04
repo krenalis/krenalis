@@ -7,7 +7,6 @@ package collector
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -237,13 +236,13 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 // onDeleteOrganization is called when an organization is deleted.
 func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
 	for _, ws := range n.Organization().Workspaces() {
-		d.removeWorkspace(ws, "organization")
+		d.removeWorkspace(ws, errors.New("organization has been deleted"))
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
-	d.removeWorkspace(n.Workspace(), "workspace")
+	d.removeWorkspace(n.Workspace(), errors.New("workspace has been deleted"))
 }
 
 // onSetConnectionSettings is called when the settings of a connection is
@@ -353,11 +352,11 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 }
 
 // removeWorkspace removes the workspace ws from destinations.
-// deletedResource names the resource whose deletion triggered the removal:
-// "workspace" when the workspace itself was deleted, or "organization" when an
-// organization was deleted (and with it all its workspaces).
+// cause is the error used to close the pipelines: it reports whether the
+// workspace itself was deleted, or an organization was deleted (and with it all
+// its workspaces).
 // When this method is called, the state is frozen.
-func (d *destinations) removeWorkspace(ws *state.Workspace, deletedResource string) {
+func (d *destinations) removeWorkspace(ws *state.Workspace, cause error) {
 	var pipelines []*destinationPipeline
 	for _, c := range ws.Connections() {
 		if c.Role != state.Destination {
@@ -376,7 +375,7 @@ func (d *destinations) removeWorkspace(ws *state.Workspace, deletedResource stri
 	if len(pipelines) > 0 {
 		go func() {
 			for _, pipeline := range pipelines {
-				pipeline.Close(fmt.Errorf("%s has been deleted", deletedResource))
+				pipeline.Close(cause)
 			}
 		}()
 	}
