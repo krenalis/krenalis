@@ -53,8 +53,8 @@ type Workos struct {
 	transport     http.RoundTripper
 }
 
-// user holds the user information returned by WorkOS after token verification.
-type user struct {
+// User holds the User information returned by WorkOS after token verification.
+type User struct {
 	ID        string
 	Email     string
 	FirstName string
@@ -206,7 +206,7 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) Authenticate(token string) (*user, uuid.UUID, error) {
+func (wo *Workos) Authenticate(token string) (*User, uuid.UUID, error) {
 	var claims claims
 
 	parsed, err := jwt.ParseWithClaims(token, &claims, wo.publicKey, jwt.WithExpirationRequired())
@@ -249,7 +249,7 @@ func (wo *Workos) Authenticate(token string) (*user, uuid.UUID, error) {
 		return nil, uuid.UUID{}, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
-	user := &user{
+	user := &User{
 		ID:        userID,
 		Email:     userRes.Email,
 		FirstName: userRes.FirstName,
