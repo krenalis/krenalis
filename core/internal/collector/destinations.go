@@ -235,14 +235,16 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
+	cause := errors.New("organization has been deleted")
 	for _, ws := range n.Organization().Workspaces() {
-		d.removeWorkspace(ws, errors.New("organization has been deleted"))
+		d.removeWorkspace(ws, cause)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
-	d.removeWorkspace(n.Workspace(), errors.New("workspace has been deleted"))
+	cause := errors.New("workspace has been deleted")
+	d.removeWorkspace(n.Workspace(), cause)
 }
 
 // onSetConnectionSettings is called when the settings of a connection is
