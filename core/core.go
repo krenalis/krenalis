@@ -949,22 +949,11 @@ func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, nam
 	if err := validateMemberEmail(email); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		alreadyExists, err := tx.QueryExists(
-			ctx,
-			"SELECT FROM members m1 JOIN members m2 ON m2.organization = m1.organization AND m2.email = $2 AND m2.id <> m1.id WHERE m1.workos_user_id = $1",
-			workosUserID,
-			email,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if alreadyExists {
-			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-		}
-		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
-		return nil, err
-	})
+	_, err := core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
+	if db.ErrConstraintName(err) == "members_organization_email_key" {
+		return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+	}
+	return err
 }
 
 // UpdateOrganizationName updates the name of the organization identified by
