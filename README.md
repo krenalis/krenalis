@@ -1,5 +1,11 @@
 <h1>Krenalis</h1>
 
+<p align="center">
+    <a href="https://www.krenalis.com/" target="_blank" rel="noopener">
+        <img src="https://assets.krenalis.com/repo/krenalis/krenalis-admin-console.png" alt="Krenalis - The warehouse-native CDP for modern data teams" />
+    </a>
+</p>
+
 [Krenalis](https://www.krenalis.com) is a Customer Data Platform (CDP) that helps data analysts and the marketing team collect, enrich, unify, and activate user and customer data — including product events, marketing signals, and sales interactions — and syncs it to the tools your teams use every day.
 
 Krenalis is open and free to use. It's a lightweight, developer-friendly alternative to Customer Data Platforms such as Segment, RudderStack, and mParticle.
