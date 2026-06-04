@@ -531,7 +531,7 @@ func base58IDMigrationQueries() []string {
 }
 
 func addBase58Check(table, column string) string {
-	name := table + "_" + column + "_base58_check"
+	name := table + "_" + column + "_check"
 	return fmt.Sprintf(`ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s ~ '^[1-9A-HJ-NP-Za-km-z]{12}$')`, table, name, column)
 }
 
