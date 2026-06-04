@@ -24,7 +24,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]string) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -49,7 +49,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
+func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) error {
 
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
@@ -138,7 +138,9 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 			if s, ok := primarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_updated_at" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "_connection" = ` + strconv.Itoa(s) + `) || `)
+				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "_updated_at" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "_connection" = `)
+				quoteString(&mergeProfiles, s)
+				mergeProfiles.WriteString(`) || `)
 			}
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.

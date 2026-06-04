@@ -61,7 +61,7 @@ type Krenalis struct {
 	krenalisRunning        chan struct{}
 	transformationsTempDir string
 	httpClient             *http.Client
-	ws                     int
+	ws                     string
 	stopNATSContainer      func() error
 	stopPostgresContainer  func() error
 	stopWarehouseContainer func() error
@@ -553,7 +553,7 @@ func init() {
 	}
 }
 
-func (c *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (int, error) {
+func (c *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (string, error) {
 	req := map[string]any{
 		"name":          name,
 		"profileSchema": profileSchema,
@@ -564,7 +564,7 @@ func (c *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 		"uiPreferences": uiPreferences,
 	}
 	var response struct {
-		ID int `json:"id"`
+		ID string `json:"id"`
 	}
 	headers := http.Header{
 		// Workspace creation is organization-scoped.
@@ -572,7 +572,7 @@ func (c *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 	}
 	err := c.call("POST", "/v1/workspaces", headers, req, &response)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return response.ID, nil
 }
@@ -617,7 +617,7 @@ func (c *Krenalis) QueryRowTestDatabase(ctx context.Context, dest any, query str
 
 // WorkspaceID returns the ID of the workspace on which the instance of Krenalis
 // operates.
-func (c *Krenalis) WorkspaceID() int {
+func (c *Krenalis) WorkspaceID() string {
 	return c.ws
 }
 

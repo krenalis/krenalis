@@ -23,7 +23,7 @@ var maxQueuedEventIdentityTime = 200 * time.Millisecond
 
 // identityWriter represents an identity writer for a pipeline.
 type identityWriter struct {
-	pipeline    int // pipeline identifier
+	pipeline    string // pipeline identifier
 	writer      *datastore.EventIdentityWriter
 	metrics     *metrics.Collector
 	mu          sync.Mutex                // for transformer, identities, and timer

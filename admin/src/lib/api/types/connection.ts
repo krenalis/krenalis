@@ -15,12 +15,12 @@ interface EventType {
 }
 
 interface Connection {
-	id: number;
+	id: string;
 	name: string;
 	connector: string;
 	connectorType: ConnectorType;
 	role: ConnectionRole;
-	storage: number;
+	storage: string;
 	compression: Compression;
 	strategy?: Strategy | null;
 	sendingMode: SendingMode | null;
@@ -29,7 +29,7 @@ interface Connection {
 	pipelineTypes?: PipelineType[];
 	pipelines?: Pipeline[];
 	eventTypes?: EventType[]; // Only returned by 'api/connections/{id}'
-	linkedConnections?: number[];
+	linkedConnections?: string[];
 }
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
@@ -45,7 +45,7 @@ interface ConnectionToAdd {
 	strategy?: Strategy | null;
 	sendingMode?: SendingMode | null;
 	settings?: ConnectorSettings | null;
-	linkedConnections: Number[] | null;
+	linkedConnections: string[] | null;
 }
 
 interface ConnectionToSet {

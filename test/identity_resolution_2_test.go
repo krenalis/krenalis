@@ -105,7 +105,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Create and run the pipelines.
 
-	addJSONPipeline := func(source int, filename string, properties map[string]bool) int {
+	addJSONPipeline := func(source string, filename string, properties map[string]bool) string {
 		return c.CreatePipeline(source, "User", krenalistester.PipelineToSet{
 			Name:    "Pipeline",
 			Enabled: true,
@@ -198,7 +198,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// taken from the incoming identity from B, which has a value of 20 instead
 	// of 21.
 
-	primarySources := map[string]int{
+	primarySources := map[string]string{
 		"total_orders": sourceB,
 	}
 	c.AlterProfileSchema(schema, primarySources, nil)

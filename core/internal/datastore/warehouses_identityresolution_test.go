@@ -48,13 +48,25 @@ func init() {
 }
 
 type identity struct {
-	connection   int // a multiple of 100, from 100 to 900 (included)
-	pipeline     int // can be 1, 2 ... 9
+	connection   string
+	pipeline     string
 	id           string
 	isAnonymous  bool
 	anonymousIDs []string
 	attributes   map[string]any
 }
+
+const (
+	identityResolutionConnection1 = "6NpT4zB8QaR2"
+	identityResolutionConnection2 = "8QaT3mN7KxP5"
+	identityResolutionConnection3 = "5zBpR9Y2QnM3"
+	identityResolutionConnection4 = "7B3mN9qK2xA4"
+	identityResolutionPipeline1   = "3mN7Kx8QaTL8"
+	identityResolutionPipeline2   = "2Qn5zBpR9YH7"
+	identityResolutionPipeline3   = "4Tn7B3mN9qU9"
+	identityResolutionPipeline4   = "9Qa6NpT4zBV2"
+	identityResolutionTestRunID   = "9zQ4Tn7B3mS6"
+)
 
 type testSettingsLoader struct {
 	settings json.Value
@@ -74,7 +86,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 	tests := []struct {
 		name             string
 		identifiers      []string
-		primarySources   map[string]int
+		primarySources   map[string]string
 		identities       []identity
 		expectedProfiles []map[string]any
 	}{
@@ -83,8 +95,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -98,14 +110,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 100,
-					pipeline:   2,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline2,
 					id:         "c@d",
 					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -120,14 +132,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "abcd",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 100,
-					pipeline:   2,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline2,
 					id:         "abcd",
 					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -141,14 +153,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -163,14 +175,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -184,14 +196,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email", "last_name"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "c@d",
 					attributes: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 				},
@@ -205,14 +217,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email", "last_name"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "c@d",
 					attributes: map[string]any{"email": nil, "first_name": "Ray", "last_name": "Manzarek", "notes": nil},
 				},
@@ -226,14 +238,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email", "first_name"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": "a", "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": "b", "last_name": nil, "notes": nil},
 				},
@@ -247,15 +259,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection:  100,
-					pipeline:    1,
+					connection:  identityResolutionConnection1,
+					pipeline:    identityResolutionPipeline1,
 					isAnonymous: true,
 					id:          "46d59a94-6032-46d9-87f2-f006af0156f0",
 					attributes:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
 				{
-					connection:  100,
-					pipeline:    2,
+					connection:  identityResolutionConnection1,
+					pipeline:    identityResolutionPipeline2,
 					isAnonymous: true,
 					id:          "46d59a94-6032-46d9-87f2-f006af0156f0",
 					attributes:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
@@ -270,15 +282,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection:  100,
-					pipeline:    1,
+					connection:  identityResolutionConnection1,
+					pipeline:    identityResolutionPipeline1,
 					isAnonymous: true,
 					id:          "46d59a94-6032-46d9-87f2-f006af0156f0",
 					attributes:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 100,
-					pipeline:   2,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline2,
 					id:         "46d59a94-6032-46d9-87f2-f006af0156f0",
 					attributes: map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
@@ -291,13 +303,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Primary source specified for one property, just one identity",
 			identifiers: []string{},
-			primarySources: map[string]int{
-				"email": 100,
+			primarySources: map[string]string{
+				"email": identityResolutionConnection1,
 			},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -311,26 +323,26 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{
 				"email",
 			},
-			primarySources: map[string]int{
-				"first_name": 200,
-				"last_name":  200,
+			primarySources: map[string]string{
+				"first_name": identityResolutionConnection2,
+				"last_name":  identityResolutionConnection2,
 			},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": "FIRST_100", "last_name": "LAST_100", "notes": nil},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": "FIRST_200", "last_name": "LAST_200", "notes": nil},
 				},
 				{
-					connection: 300,
-					pipeline:   3,
+					connection: identityResolutionConnection3,
+					pipeline:   identityResolutionPipeline3,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": "FIRST_300", "last_name": "LAST_300", "notes": nil},
 				},
@@ -344,8 +356,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
@@ -359,20 +371,20 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
@@ -386,26 +398,26 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "A",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 				{
-					connection: 200,
-					pipeline:   2,
+					connection: identityResolutionConnection2,
+					pipeline:   identityResolutionPipeline2,
 					id:         "B",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
 				},
 				{
-					connection: 300,
-					pipeline:   3,
+					connection: identityResolutionConnection3,
+					pipeline:   identityResolutionPipeline3,
 					id:         "C",
 					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
 				{
-					connection: 400,
-					pipeline:   4,
+					connection: identityResolutionConnection4,
+					pipeline:   identityResolutionPipeline4,
 					id:         "D",
 					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
@@ -420,20 +432,20 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
 				},
@@ -447,20 +459,20 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			identifiers: []string{"email"},
 			identities: []identity{
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
 				{
-					connection: 100,
-					pipeline:   1,
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline1,
 					id:         "a@b",
 					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
@@ -597,7 +609,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							"_connection":    profile.connection,
 							"_anonymous_ids": toSliceAny(profile.anonymousIDs),
 							"_updated_at":    time.Now().UTC(),
-							"_run":           1,
+							"_run":           identityResolutionTestRunID,
 						}
 						maps.Copy(row, profile.attributes)
 						rows = append(rows, row)
@@ -692,13 +704,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 // merge operation, both when importing in batch.
 func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
 	columns := make([]warehouses.Column, 7+len(iwColumns))
-	columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	columns[0] = warehouses.Column{Name: "_pipeline", Type: types.String()}
 	columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
 	columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
-	columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	columns[3] = warehouses.Column{Name: "_connection", Type: types.String()}
 	columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
 	columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
+	columns[6] = warehouses.Column{Name: "_run", Type: types.String(), Nullable: true}
 	i := 7
 	for _, column := range iwColumns {
 		columns[i] = column
@@ -723,15 +735,22 @@ func validateIdentity(t *testing.T, id identity) {
 		t.Fatalf("the test is invalid because an identity is not defined correctly: %s", fmt.Sprintf(format, a...))
 	}
 	// connection.
-	if id.connection < 100 || id.connection > 900 {
-		fatal("connection ID must be a multiple of 100 in range [100, 900]")
-	}
-	if id.connection%100 != 0 {
-		fatal("connection ID must be a multiple of 100 in range [100, 900]")
+	switch id.connection {
+	case identityResolutionConnection1,
+		identityResolutionConnection2,
+		identityResolutionConnection3,
+		identityResolutionConnection4:
+	default:
+		fatal("connection ID must be one of the test connection IDs")
 	}
 	// pipeline.
-	if id.pipeline < 1 || id.pipeline > 9 {
-		fatal("pipeline ID must be in range [1, 9]")
+	switch id.pipeline {
+	case identityResolutionPipeline1,
+		identityResolutionPipeline2,
+		identityResolutionPipeline3,
+		identityResolutionPipeline4:
+	default:
+		fatal("pipeline ID must be one of the test pipeline IDs")
 	}
 	// id.
 	if id.id == "" {
@@ -747,7 +766,7 @@ func validateIdentity(t *testing.T, id identity) {
 	}
 }
 
-func validatePrimarySources(t *testing.T, primarySources map[string]int) {
+func validatePrimarySources(t *testing.T, primarySources map[string]string) {
 	for c := range primarySources {
 		if _, ok := columnByName[c]; !ok {
 			t.Fatalf("the test is invalid because the primary sources refer to a column %q which does not exist in the tests", c)

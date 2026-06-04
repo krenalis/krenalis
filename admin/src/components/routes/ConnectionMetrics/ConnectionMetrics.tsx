@@ -88,13 +88,13 @@ const ConnectionMetrics = () => {
 			key: 'selection',
 		},
 	]);
-	const [selectedPipeline, setSelectedPipeline] = useState<number | null>(null);
+	const [selectedPipeline, setSelectedPipeline] = useState<string | null>(null);
 
 	const { api, handleError } = useContext(AppContext);
 
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
-	const previouslySelectedPipeline = useRef<number | null>(null);
+	const previouslySelectedPipeline = useRef<string | null>(null);
 
 	const isUsersSelected = selectedTarget === 'User';
 
@@ -264,8 +264,8 @@ const ConnectionMetrics = () => {
 			}, 300);
 		};
 		const fetchData = async () => {
-			let userPipelinesIds: number[] = [];
-			let eventPipelinesIds: number[] = [];
+			let userPipelinesIds: string[] = [];
+			let eventPipelinesIds: string[] = [];
 			if (selectedPipeline == null) {
 				for (const pipeline of c.pipelines) {
 					if (pipeline.target === 'User') {
@@ -324,7 +324,7 @@ const ConnectionMetrics = () => {
 			}
 
 			let target = selectedTarget;
-			let ids: number[] = [];
+			let ids: string[] = [];
 			if (target === 'User') {
 				ids = userPipelinesIds;
 			} else if (target === 'Event') {
@@ -437,7 +437,7 @@ const ConnectionMetrics = () => {
 		if (v === '') {
 			setSelectedPipeline(null);
 		} else {
-			setSelectedPipeline(Number(v));
+			setSelectedPipeline(v);
 		}
 	};
 
@@ -563,13 +563,13 @@ const ConnectionMetrics = () => {
 									size='small'
 									placeholder='All pipelines'
 									onSlChange={onChangesetSelectedPipeline}
-									value={selectedPipeline == null ? '' : String(selectedPipeline)}
+									value={selectedPipeline == null ? '' : selectedPipeline}
 									className='connection-metrics__pipelines'
 									clearable
 								>
 									{c.pipelines?.map((p) => {
 										if (p.target == selectedTarget) {
-											return <SlOption value={String(p.id)}>{p.name}</SlOption>;
+											return <SlOption value={p.id}>{p.name}</SlOption>;
 										}
 										return null;
 									})}

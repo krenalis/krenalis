@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -71,13 +70,13 @@ func newPipelineCleaner(core *Core, provider transformers.FunctionProvider) *pip
 	core.state.AddListener(c.onUpdatePipeline)
 	core.state.AddListener(c.onUpdateWarehouse)
 	core.state.AddListener(c.onUpdateWarehouseMode)
-	var workspaces []int
+	var workspaces []string
 	for _, ws := range c.core.state.Workspaces() {
 		if ws.NumPipelinesToPurge() > 0 {
 			workspaces = append(workspaces, ws.ID)
 		}
 	}
-	var pipelines []int
+	var pipelines []string
 	for _, pipeline := range c.core.state.Pipelines() {
 		if properties := pipeline.PropertiesToUnset(); len(properties) > 0 {
 			pipelines = append(pipelines, pipeline.ID)
@@ -281,7 +280,7 @@ func (c *pipelineCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 
 // purgeWorkspace purges identities and destination users associated to
 // pipelines deleted from the workspace with the identifier id.
-func (c *pipelineCleaner) purgeWorkspace(id int) {
+func (c *pipelineCleaner) purgeWorkspace(id string) {
 
 	if _, ok := c.workspaces.Swap(id, true); ok {
 		return
@@ -327,7 +326,7 @@ func (c *pipelineCleaner) purgeWorkspace(id int) {
 			b.WriteString("pipelines_to_purge")
 			for _, pipeline := range pipelines {
 				b.WriteByte(',')
-				b.WriteString(strconv.Itoa(pipeline))
+				b.WriteString(db.Quote(pipeline))
 				b.WriteByte(')')
 			}
 			b.WriteString("\nWHERE id = $1\nRETURNING pipelines_to_purge")
@@ -380,7 +379,7 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 		pingTime := time.Now().UTC().Add(-15 * time.Second)
 		err := c.core.db.QueryScan(ctx, "SELECT pipeline FROM pipelines_runs WHERE end_time IS NULL AND ping_time < $1",
 			pingTime, func(rows *db.Rows) error {
-				var pipelineID int
+				var pipelineID string
 				for rows.Next() {
 					if err := rows.Scan(&pipelineID); err != nil {
 						return err
@@ -409,7 +408,7 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 
 // unsetIdentityProperties unsets the identity properties that are no longer
 // being transformed, for the pipeline with the provided ID.
-func (c *pipelineCleaner) unsetIdentityProperties(id int) {
+func (c *pipelineCleaner) unsetIdentityProperties(id string) {
 
 	if _, ok := c.pipelines.Swap(id, true); ok {
 		return

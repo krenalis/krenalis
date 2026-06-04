@@ -34,7 +34,7 @@ type Identity struct {
 
 // identityKey represents a key in the krenalis_identities table.
 type identityKey struct {
-	pipeline    int
+	pipeline    string
 	isAnonymous bool
 	// identityID is the identity ID for non-anonymous identities, while it is
 	// the anonymous ID for anonymous ones.
@@ -45,10 +45,10 @@ type identityKey struct {
 // when identities are imported in batch.
 type BatchIdentityWriter struct {
 	store      *Store
-	pipeline   int
-	connection int
-	workspace  int
-	run        int
+	pipeline   string
+	connection string
+	workspace  string
+	run        string
 	flatter    *flatter
 	columns    []warehouses.Column
 	identities chan<- flusherRow[map[string]any]
@@ -91,13 +91,13 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 	}
 
 	w.columns = make([]warehouses.Column, 7, 7+len(pipeline.Transformation.OutPaths))
-	w.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	w.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.String()}
 	w.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
 	w.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
-	w.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	w.columns[3] = warehouses.Column{Name: "_connection", Type: types.String()}
 	w.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
 	w.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	w.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
+	w.columns[6] = warehouses.Column{Name: "_run", Type: types.String(), Nullable: true}
 	w.columns = appendColumnsFromProperties(w.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	// Start the flusher.
@@ -145,8 +145,8 @@ func (w *BatchIdentityWriter) Close(ctx context.Context) error {
 			return ErrPurgeSkipped
 		}
 		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, w.pipeline),
-			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.Int(32)}, warehouses.OpIsNot, w.run),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, w.pipeline),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.String()}, warehouses.OpIsNot, w.run),
 		})
 		err = w.store.warehouse().Delete(ctx, "krenalis_identities", where)
 	}

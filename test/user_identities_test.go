@@ -115,7 +115,7 @@ func Test_Identities(t *testing.T) {
 
 			t.Logf(
 				"the APIs returned an identity for profile with KPID %s that has"+
-					" pipeline = %d, user ID = %v and updated at = %q",
+					" pipeline = %s, user ID = %v and updated at = %q",
 				profile.KPID, identity.Pipeline, identity.UserID, identity.UpdatedAt)
 
 			var idPrefix string
@@ -125,7 +125,7 @@ func Test_Identities(t *testing.T) {
 			case pipeline2:
 				idPrefix = "profiles2_"
 			default:
-				t.Fatalf("unexpected pipeline %d", identity.Pipeline)
+				t.Fatalf("unexpected pipeline %s", identity.Pipeline)
 			}
 
 			// Check the identity ID label.

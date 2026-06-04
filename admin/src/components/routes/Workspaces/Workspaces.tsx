@@ -9,7 +9,7 @@ import AppContext from '../../../context/AppContext';
 const Workspaces = () => {
 	const { setSelectedWorkspace, workspaces, redirect, setIsLoadingState } = useContext(AppContext);
 
-	const onWorkspaceClick = (id: number) => {
+	const onWorkspaceClick = (id: string) => {
 		setSelectedWorkspace(id);
 		setIsLoadingState(true);
 		redirect('connections');
@@ -70,7 +70,7 @@ const Workspaces = () => {
 									icon={<SlIcon name='person-workspace' />}
 									name={workspace.name}
 									showHover={true}
-									id={String(workspace.id)}
+									id={workspace.id}
 									onClick={() => onWorkspaceClick(workspace.id)}
 									action={<SlIcon name='chevron-right' />}
 								/>

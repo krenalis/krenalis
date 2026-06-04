@@ -48,14 +48,14 @@ type Connection struct {
 	core              *Core
 	connection        *state.Connection
 	store             *datastore.Store
-	ID                int           `json:"id"`
+	ID                string        `json:"id"`
 	Name              string        `json:"name"`
 	Connector         string        `json:"connector"`
 	ConnectorType     ConnectorType `json:"connectorType"`
 	Role              Role          `json:"role"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
-	LinkedConnections []int         `json:"linkedConnections,omitempty"`
+	LinkedConnections []string      `json:"linkedConnections,omitempty"`
 	Health            Health        `json:"-"` // See issue https://github.com/krenalis/krenalis/issues/1255.
 	Pipelines         []Pipeline    `json:"pipelines"`
 
@@ -72,7 +72,7 @@ type EventType struct {
 }
 
 type PipelineInfo struct {
-	ID             int             `json:"id"`
+	ID             string          `json:"id"`
 	Target         Target          `json:"target"`
 	Enabled        bool            `json:"enabled"`
 	ScheduleStart  *int            `json:"scheduleStart"`
@@ -121,7 +121,7 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 	this.core.mustBeOpen()
 	c := this.connection
 	if c.Connector().Type != state.FileStorage {
-		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
+		return "", errors.BadRequest("connection %s is not a file storage connection", c.ID)
 	}
 	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
 		return "", errors.BadRequest("%s", err)
@@ -167,13 +167,13 @@ func (this *Connection) ApplicationEventSchema(ctx context.Context, eventType st
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.Application {
-		return types.Type{}, errors.BadRequest("connection %d is not an application", c.ID)
+		return types.Type{}, errors.BadRequest("connection %s is not an application", c.ID)
 	}
 	if c.Role != state.Destination {
-		return types.Type{}, errors.BadRequest("connection %d is not a destination", c.ID)
+		return types.Type{}, errors.BadRequest("connection %s is not a destination", c.ID)
 	}
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
-		return types.Type{}, errors.BadRequest("connection %d does not support events", c.ID)
+		return types.Type{}, errors.BadRequest("connection %s does not support events", c.ID)
 	}
 	schema, err := this.application().SchemaAsRole(ctx, state.Destination, state.TargetEvent, eventType)
 	if err != nil {
@@ -222,10 +222,10 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 	this.core.mustBeOpen()
 
 	if this.connection.Connector().Type != state.Application {
-		return nil, "", errors.BadRequest("connection %d is not an application connection", this.connection.ID)
+		return nil, "", errors.BadRequest("connection %s is not an application connection", this.connection.ID)
 	}
 	if !this.connection.Connector().SourceTargets.Contains(state.TargetUser) {
-		return nil, "", errors.BadRequest("connection %d does not support reading of users", this.connection.ID)
+		return nil, "", errors.BadRequest("connection %s does not support reading of users", this.connection.ID)
 	}
 	if !schema.Valid() {
 		return nil, "", errors.BadRequest("schema is not valid")
@@ -322,7 +322,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //   - TargetExist, if a pipeline already exists for a target for the
 //     connection.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (this *Connection) CreatePipeline(ctx context.Context, target Target, eventType string, pipeline PipelineToSet) (int, error) {
+func (this *Connection) CreatePipeline(ctx context.Context, target Target, eventType string, pipeline PipelineToSet) (string, error) {
 
 	this.core.mustBeOpen()
 
@@ -337,7 +337,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	// Validate the target.
 	if target != TargetUser && target != TargetGroup && target != TargetEvent {
-		return 0, errors.BadRequest("target %d is not valid", int(target))
+		return "", errors.BadRequest("target %d is not valid", int(target))
 	}
 	var connectorsTargets state.ConnectorTargets
 	if c.Role == state.Source {
@@ -348,22 +348,22 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	if !connectorsTargets.Contains(state.Target(target)) {
 		role := strings.ToLower(c.Role.String())
 		typ := connector.Type.String()
-		return 0, errors.BadRequest("pipeline with target '%s' not allowed for %s %s connections", target, role, typ)
+		return "", errors.BadRequest("pipeline with target '%s' not allowed for %s %s connections", target, role, typ)
 	}
 
 	// Validate the event type.
 	requiresEventType := c.Role == state.Destination && connector.Type == state.Application && target == TargetEvent
 	if requiresEventType && eventType == "" {
-		return 0, errors.BadRequest("eventType is required for pipelines that send events to apps")
+		return "", errors.BadRequest("eventType is required for pipelines that send events to apps")
 	}
 	if !requiresEventType && eventType != "" {
 		role := strings.ToLower(c.Role.String())
 		typ := strings.ToLower(connector.Type.String())
-		return 0, errors.BadRequest("pipelines with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
+		return "", errors.BadRequest("pipelines with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
 	}
 	if eventType != "" {
 		if err := util.ValidateStringField("eventType", eventType, 100); err != nil {
-			return 0, errors.BadRequest("%s", err)
+			return "", errors.BadRequest("%s", err)
 		}
 	}
 
@@ -385,7 +385,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	v.provider = this.core.functionProvider
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
@@ -394,11 +394,11 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		app := this.application()
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
 		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, new(state.CreateOnly))
 		if err != nil {
-			return 0, errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
+			return "", errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
 		}
 	}
 
@@ -454,20 +454,14 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		formatCode = new(format.Code)
 	}
 
-	// Generate a random identifier.
-	n.ID, err = generateRandomID()
-	if err != nil {
-		return 0, err
-	}
-
 	// Marshal the input and the output schemas.
 	rawInSchema, err := marshalSchema(inSchema)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	rawOutSchema, err := marshalSchema(pipeline.OutSchema)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// Marshal the mapping.
@@ -475,7 +469,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	if tr := pipeline.Transformation; tr != nil && tr.Mapping != nil {
 		mapping, err = json.Marshal(tr.Mapping)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
 	}
 
@@ -484,7 +478,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		name := transformationFunctionName(n.ID)
 		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
 		function = *n.Transformation.Function
 	}
@@ -502,58 +496,65 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
-			return 0, err
+			return "", err
 		}
 	}
 
-	// Add the pipeline.
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		switch n.Target {
-		case state.TargetEvent:
-			switch connector.Type {
-			case state.SDK, state.Webhook:
-				exists, err := tx.QueryExists(ctx, "SELECT FROM pipelines WHERE connection = $1 AND target = 'Event'", n.Connection)
-				if err != nil {
+	// Create the pipeline.
+	for {
+		n.ID = generateID(this.connection.Pipeline)
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			switch n.Target {
+			case state.TargetEvent:
+				switch connector.Type {
+				case state.SDK, state.Webhook:
+					exists, err := tx.QueryExists(ctx, "SELECT FROM pipelines WHERE connection = $1 AND target = 'Event'", n.Connection)
+					if err != nil {
+						return nil, err
+					}
+					if exists {
+						return nil, errors.Unprocessable(TargetExist,
+							"pipeline with target %s already exists for %s connection %s", n.Target, connector.Type, n.Connection)
+					}
+				}
+			case state.TargetUser, state.TargetGroup:
+				// Make sure that users and groups pipelines have the same schedule start.
+				err = tx.QueryRow(ctx, "SELECT schedule_start FROM pipelines WHERE connection = $1\n"+
+					" AND target IN ('User', 'Group') LIMIT 1", n.Connection).Scan(&n.ScheduleStart)
+				if err != nil && err != sql.ErrNoRows {
 					return nil, err
 				}
-				if exists {
-					return nil, errors.Unprocessable(TargetExist,
-						"pipeline with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
-				}
 			}
-		case state.TargetUser, state.TargetGroup:
-			// Make sure that users and groups pipelines have the same schedule start.
-			err = tx.QueryRow(ctx, "SELECT schedule_start FROM pipelines WHERE connection = $1\n"+
-				" AND target IN ('User', 'Group') LIMIT 1", n.Connection).Scan(&n.ScheduleStart)
-			if err != nil && err != sql.ErrNoRows {
+			query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
+				"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
+				"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
+				"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
+				"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
+				"update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n" +
+				"updated_at_format, incremental)\n" +
+				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
+				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
+			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
+				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
+				n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
+				n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
+				n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
+				n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
+			if err != nil {
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
+					err = errors.Unprocessable(ConnectionNotExist, "connection %s does not exist", n.Connection)
+				}
 				return nil, err
 			}
-		}
-		query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
-			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
-			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
-			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
-			"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
-			"update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n" +
-			"updated_at_format, incremental)\n" +
-			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
-		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
-			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
-			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
-			n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
-			n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
+			return n, nil
+		})
 		if err != nil {
-			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
-				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "pipelines_pkey" {
+				continue
 			}
-			return nil, err
+			return "", err
 		}
-		return n, nil
-	})
-	if err != nil {
-		return 0, err
+		break
 	}
 
 	return n.ID, nil
@@ -572,10 +573,10 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 	switch connector.Type {
 	case state.SDK, state.Webhook:
 	default:
-		return "", errors.NotFound("connection %d is neither an SDK nor a webhook", c.ID)
+		return "", errors.NotFound("connection %s is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
-		return "", errors.NotFound("connection %d is not a source", c.ID)
+		return "", errors.NotFound("connection %s is not a source", c.ID)
 	}
 	key := generateEventWriteKeyToken()
 	n := state.CreateEventWriteKey{
@@ -590,14 +591,14 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 			return nil, err
 		}
 		if count == maxKeysPerConnection {
-			return nil, errors.Unprocessable(TooManyEventWriteKeys, "connection %d already has %d event write keys", n.Connection, maxKeysPerConnection)
+			return nil, errors.Unprocessable(TooManyEventWriteKeys, "connection %s already has %d event write keys", n.Connection, maxKeysPerConnection)
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
 			n.Connection, n.Key, n.CreatedAt)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "event_write_keys_connection_fkey" {
-					err = errors.NotFound("connection %d does not exist", n.Connection)
+					err = errors.NotFound("connection %s does not exist", n.Connection)
 				}
 			}
 			return nil, err
@@ -648,7 +649,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("connection %d does not exist", n.ID)
+			return nil, errors.NotFound("connection %s does not exist", n.ID)
 		}
 		role := "Source"
 		if c.Role == state.Source {
@@ -688,7 +689,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 		// is applied.
 		query := "SELECT alter_profile_schema_primary_sources FROM workspaces" +
 			" WHERE id = $1 AND alter_profile_schema_primary_sources IS NOT NULL"
-		var primarySources map[string]int
+		var primarySources map[string]string
 		err = tx.QueryRow(ctx, query, workspace.ID).Scan(&primarySources)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, err
@@ -731,10 +732,10 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 	switch t := c.Connector().Type; t {
 	case state.SDK, state.Webhook:
 	default:
-		return errors.BadRequest("connection %d is neither an SDK nor a webhook", c.ID)
+		return errors.BadRequest("connection %s is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
-		return errors.BadRequest("connection %d is not a source", c.ID)
+		return errors.BadRequest("connection %s is not a source", c.ID)
 	}
 	if connection, ok := this.core.state.ConnectionByKey(key); !ok || connection.ID != c.ID {
 		return nil
@@ -794,10 +795,10 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.Database {
-		return nil, types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("connection %s is not a database", c.ID)
 	}
 	if c.Role != state.Source {
-		return nil, types.Type{}, nil, errors.BadRequest("database %d is not a source", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("database %s is not a source", c.ID)
 	}
 
 	// Execute the query.
@@ -862,8 +863,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 // A PipelineRun describes a pipeline run as returned by Runs.
 type PipelineRun struct {
-	ID        int        `json:"id"`
-	Pipeline  int        `json:"pipeline"`
+	ID        string     `json:"id"`
+	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
 	Passed    [6]int     `json:"passed"`
@@ -906,12 +907,12 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 
 	// Validate the connection type.
 	if c.Connector().Type != state.FileStorage {
-		return nil, types.Type{}, nil, errors.BadRequest("connection %d is not a file storage connection", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("connection %s is not a file storage connection", c.ID)
 	}
 
 	// Ensure that the FileStorage connection supports read operations.
 	if !c.Connector().SourceTargets.Contains(state.TargetUser) {
-		return nil, types.Type{}, nil, errors.BadRequest("connection %d does not support read operations", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("connection %s does not support read operations", c.ID)
 	}
 
 	// Validate the path.
@@ -934,14 +935,14 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	// Validate the sheet.
 	if formatConnector.HasSheets {
 		if sheet == "" {
-			return nil, types.Type{}, nil, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+			return nil, types.Type{}, nil, errors.BadRequest("sheet cannot be empty because connection %s has sheets", c.ID)
 		}
 		if !connections.IsValidSheetName(sheet) {
 			return nil, types.Type{}, nil, errors.BadRequest("sheet is not valid")
 		}
 	} else {
 		if sheet != "" {
-			return nil, types.Type{}, nil, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
+			return nil, types.Type{}, nil, errors.BadRequest("sheet must be empty because connection %s does not have sheets", c.ID)
 		}
 	}
 
@@ -1038,9 +1039,9 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 // are already linked, the method does nothing.
 //
 // Returns an errors.NotFoundError if the destination connection does not exist.
-func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
+func (this *Connection) LinkConnection(ctx context.Context, dst string) error {
 	this.core.mustBeOpen()
-	if dst < 1 || dst > maxInt32 {
+	if !IsValidID(dst) {
 		return errors.BadRequest("dst is not a valid connection identifier")
 	}
 	// Return if the connections are already linked.
@@ -1049,21 +1050,21 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	}
 	// Validate the source connection.
 	if c := this.connection; c.Role == state.Destination {
-		return errors.BadRequest("connection %d is not a source", this.connection.ID)
+		return errors.BadRequest("connection %s is not a source", this.connection.ID)
 	} else if !c.Connector().SourceTargets.Contains(state.TargetEvent) {
-		return errors.BadRequest("source %d does not support events", this.connection.ID)
+		return errors.BadRequest("source %s does not support events", this.connection.ID)
 	}
 	// Validate the destination connection.
 	ws := this.connection.Workspace()
 	if c, ok := ws.Connection(dst); !ok {
-		return errors.NotFound("connection %d does not exist", dst)
+		return errors.NotFound("connection %s does not exist", dst)
 	} else if c.Role != state.Destination {
-		return errors.BadRequest("connection %d is not a destination", dst)
+		return errors.BadRequest("connection %s is not a destination", dst)
 	} else if connector := c.Connector(); !connector.DestinationTargets.Contains(state.TargetEvent) {
-		return errors.BadRequest("destination %d does not support events", dst)
+		return errors.BadRequest("destination %s does not support events", dst)
 	}
 	n := state.LinkConnection{
-		Connections: [2]int{this.connection.ID, dst},
+		Connections: [2]string{this.connection.ID, dst},
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		const add = "UPDATE connections\n" +
@@ -1082,7 +1083,7 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("destination %d does not exist", n.Connections[1])
+			return nil, errors.NotFound("destination %s does not exist", n.Connections[1])
 		}
 		return n, nil
 	})
@@ -1459,13 +1460,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	c := this.connection
 
 	if c.Connector().Type != state.Application {
-		return nil, errors.BadRequest("connection %d is not an application connection", c.ID)
+		return nil, errors.BadRequest("connection %s is not an application connection", c.ID)
 	}
 	if c.Role != state.Destination {
-		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
+		return nil, errors.BadRequest("connection %s is not a destination", c.ID)
 	}
 	if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
-		return nil, errors.BadRequest("connection %d does not support events", c.ID)
+		return nil, errors.BadRequest("connection %s does not support events", c.ID)
 	}
 	err := util.ValidateStringField("type", typ, 100)
 	if err != nil {
@@ -1542,7 +1543,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				Source:  transformation.Function.Source,
 				Version: "1", // no matter the version, it will be overwritten by the temporary function.
 			}
-			name := transformationFunctionName(0)
+			name := transformationFunctionName("")
 			switch transformation.Function.Language {
 			case "JavaScript":
 				pipeline.Transformation.Function.Language = state.JavaScript
@@ -1592,7 +1593,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	req, err := this.application().PreviewSendEvent(ctx, ev)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
-			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
+			err = errors.Unprocessable(EventTypeNotExist, "connection %s does not have event type %q", c.ID, typ)
 		} else {
 			switch err.(type) {
 			case *schemas.Error:
@@ -1632,7 +1633,7 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("connection %d does not exist", n.Connection)
+			return nil, errors.NotFound("connection %s does not exist", n.Connection)
 		}
 		return n, nil
 	})
@@ -1693,7 +1694,7 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	c := this.connection
 
 	if c.Connector().Type != state.FileStorage {
-		return nil, errors.BadRequest("connection %d is not a file storage", c.ID)
+		return nil, errors.BadRequest("connection %s is not a file storage", c.ID)
 	}
 	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
 		return nil, errors.BadRequest("%s", err)
@@ -1755,10 +1756,10 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.Database {
-		return types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
+		return types.Type{}, nil, errors.BadRequest("connection %s is not a database", c.ID)
 	}
 	if c.Role != state.Destination {
-		return types.Type{}, nil, errors.BadRequest("database %d is not a destination", c.ID)
+		return types.Type{}, nil, errors.BadRequest("database %s is not a destination", c.ID)
 	}
 	if err := util.ValidateStringField("table name", table, MaxTableNameSize); err != nil {
 		return types.Type{}, nil, errors.BadRequest("%s", err)
@@ -1781,9 +1782,9 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 //
 // If the destination connection does not exist, it returns an
 // errors.NotFoundError.
-func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
+func (this *Connection) UnlinkConnection(ctx context.Context, dst string) error {
 	this.core.mustBeOpen()
-	if dst < 1 || dst > maxInt32 {
+	if !IsValidID(dst) {
 		return errors.BadRequest("dst is not a valid connection identifier")
 	}
 	// Return if the connections are not linked.
@@ -1792,22 +1793,22 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 	}
 	// Validate the source connection.
 	if c := this.connection; c.Role == state.Destination {
-		return errors.BadRequest("connection %d is not a source", this.connection.ID)
+		return errors.BadRequest("connection %s is not a source", this.connection.ID)
 	} else if !c.Connector().SourceTargets.Contains(state.TargetEvent) {
-		return errors.BadRequest("source %d does not support events", this.connection.ID)
+		return errors.BadRequest("source %s does not support events", this.connection.ID)
 	}
 	// Validate the destination connection.
 	ws := this.connection.Workspace()
 	if c, ok := ws.Connection(dst); !ok {
-		return errors.NotFound("connection %d does not exist", dst)
+		return errors.NotFound("connection %s does not exist", dst)
 	} else if c.Role == state.Source {
-		return errors.BadRequest("connection %d is not a destination", dst)
+		return errors.BadRequest("connection %s is not a destination", dst)
 	} else if connector := c.Connector(); !connector.DestinationTargets.Contains(state.TargetEvent) {
-		return errors.BadRequest("destination %d does not support events", dst)
+		return errors.BadRequest("destination %s does not support events", dst)
 	}
 
 	n := state.UnlinkConnection{
-		Connections: [2]int{this.connection.ID, dst},
+		Connections: [2]string{this.connection.ID, dst},
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		const remove = "UPDATE connections\n" +
@@ -1914,10 +1915,10 @@ func (this *Connection) EventWriteKeys() ([]string, error) {
 	switch c.Connector().Type {
 	case state.SDK, state.Webhook:
 	default:
-		return nil, errors.BadRequest("connection %d is neither an SDK nor a webhook", c.ID)
+		return nil, errors.BadRequest("connection %s is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
-		return nil, errors.BadRequest("connection %d is not a source", c.ID)
+		return nil, errors.BadRequest("connection %s is not a source", c.ID)
 	}
 	return slices.Clone(c.Keys), nil
 }
@@ -1937,11 +1938,11 @@ func (this *Connection) applicationSchemas(ctx context.Context, target state.Tar
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.Application {
-		err = errors.BadRequest("connection %d is not an application", c.ID)
+		err = errors.BadRequest("connection %s is not an application", c.ID)
 		return
 	}
 	if !connector.DestinationTargets.Contains(target) {
-		err = errors.BadRequest("connection %d does not support %s", c.ID, target)
+		err = errors.BadRequest("connection %s does not support %s", c.ID, target)
 		return
 	}
 	app := this.application()
@@ -2015,14 +2016,14 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		supportedTargets = connector.DestinationTargets
 	}
 	if !supportedTargets.Contains(state.Target(target)) {
-		return types.Type{}, errors.BadRequest("connection %d does not support %s target", c.ID, target)
+		return types.Type{}, errors.BadRequest("connection %s does not support %s target", c.ID, target)
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
 		schema, err := this.application().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {
-				err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+				err = errors.Unprocessable(EventTypeNotExist, "connection %s does not have event type %q", c.ID, eventType)
 			} else if _, ok := err.(*connections.UnavailableError); ok {
 				err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 			}
@@ -2176,7 +2177,7 @@ func serializeCursor(cursor time.Time) (string, error) {
 // If the connections cannot be linked or unlinked, it returns an
 // errors.BadRequestError. If any connection does not exist, it returns an
 // errors.UnprocessableError with the code LinkedConnectionNotExist.
-func validateLinkedConnections(connections []int, c *state.Connector, ws *state.Workspace, role state.Role) ([]int, error) {
+func validateLinkedConnections(connections []string, c *state.Connector, ws *state.Workspace, role state.Role) ([]string, error) {
 	targets := c.SourceTargets
 	if role == state.Destination {
 		targets = c.DestinationTargets
@@ -2188,42 +2189,42 @@ func validateLinkedConnections(connections []int, c *state.Connector, ws *state.
 		return nil, nil
 	}
 	if connections == nil {
-		connections = []int{}
+		connections = []string{}
 	}
 	if len(connections) == 0 {
 		return connections, nil
 	}
 	for i, id := range connections {
-		if id < 1 || id > maxInt32 {
-			return nil, errors.BadRequest("event connection %d is not a valid connection identifier", id)
+		if !IsValidID(id) {
+			return nil, errors.BadRequest("event connection %q is not a valid connection identifier", id)
 		}
 		for j := i + 1; j < len(connections); j++ {
 			if connections[j] == id {
-				return nil, errors.BadRequest("event connection %d is repeated", id)
+				return nil, errors.BadRequest("event connection %s is repeated", id)
 			}
 		}
 		ec, ok := ws.Connection(id)
 		if !ok {
-			return nil, errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", id)
+			return nil, errors.Unprocessable(LinkedConnectionNotExist, "linked connection %s does not exist", id)
 		}
 		if role == state.Source {
 			// If the connector is Source, the connection's connector must
 			// support events as Destination.
 			if !ec.Connector().DestinationTargets.Contains(state.TargetEvent) {
-				return nil, errors.BadRequest("event connection %d does not support events", id)
+				return nil, errors.BadRequest("event connection %s does not support events", id)
 			}
 		} else {
 			// If the connector is Destination, the connection's connector must
 			// support events as Source.
 			if !ec.Connector().SourceTargets.Contains(state.TargetEvent) {
-				return nil, errors.BadRequest("event connection %d does not support events", id)
+				return nil, errors.BadRequest("event connection %s does not support events", id)
 			}
 		}
 		if ec.Role == role {
 			if ec.Role == state.Source {
-				return nil, errors.BadRequest("event connection %d is not a destination", id)
+				return nil, errors.BadRequest("event connection %s is not a destination", id)
 			}
-			return nil, errors.BadRequest("event connection %d is not a source", id)
+			return nil, errors.BadRequest("event connection %s is not a source", id)
 		}
 	}
 	slices.Sort(connections)

@@ -321,7 +321,7 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 
 // UnsetIdentityColumns unsets values for the specified identity columns for the
 // given pipeline.
-func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
+func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline string, columns []warehouses.Column) error {
 	var b strings.Builder
 	b.WriteString("UPDATE \"krenalis_identities\" SET ")
 	for i, column := range columns {
@@ -332,7 +332,7 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline 
 		b.WriteString(" = NULL")
 	}
 	b.WriteString(" WHERE \"_pipeline\" = ")
-	b.WriteString(strconv.Itoa(pipeline))
+	quoteString(&b, pipeline)
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err

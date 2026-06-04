@@ -21,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -58,7 +59,7 @@ type decoder struct {
 	}
 	sentAt       time.Time
 	writeKey     string
-	connectionId int
+	connectionId string
 	context      map[string]any
 	typ          string
 }
@@ -82,9 +83,9 @@ func newDecoder(r *http.Request) (*decoder, error) {
 
 // ConnectionId returns the connectionId property and a boolean indicating
 // whether the property is present.
-func (d *decoder) ConnectionId() (int, bool) {
-	if d.connectionId == 0 {
-		return 0, false
+func (d *decoder) ConnectionId() (string, bool) {
+	if d.connectionId == "" {
+		return "", false
 	}
 	return d.connectionId, true
 }
@@ -96,7 +97,7 @@ func (d *decoder) ConnectionId() (int, bool) {
 // the event IP is taken from the request's IP address.
 //
 // For malformed errors, it returns nil and the corresponding error.
-func (d *decoder) Events(connectionId int, fallbackToRequestIP bool) iter.Seq2[events.Event, error] {
+func (d *decoder) Events(connectionId string, fallbackToRequestIP bool) iter.Seq2[events.Event, error] {
 	return func(yield func(events.Event, error) bool) {
 		if d.typ != "batch" {
 			// Decode a single event.
@@ -204,7 +205,7 @@ func (d *decoder) Reset(r *http.Request) error {
 
 	d.sentAt = time.Time{}
 	d.writeKey = ""
-	d.connectionId = 0
+	d.connectionId = ""
 	d.context = nil
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
@@ -309,11 +310,11 @@ func (d *decoder) Reset(r *http.Request) error {
 				return errors.BadRequest("property 'writeKey' cannot be empty")
 			}
 		case "connectionId":
-			if tok, _ = d.dec.ReadToken(); tok.Kind() != '0' {
-				return errors.BadRequest("property 'connectionId' is not a number")
+			if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
+				return errors.BadRequest("property 'connectionId' is not a string")
 			}
-			connectionId, _ := tok.Int()
-			if connectionId < 1 || connectionId > math.MaxInt32 {
+			connectionId := tok.String()
+			if !isValidConnectionId(connectionId) {
 				return errors.BadRequest("property 'connectionId' is not a valid connection identifier")
 			}
 			d.connectionId = connectionId
@@ -345,7 +346,7 @@ func (d *decoder) WriteKey() string {
 }
 
 // decodeEvent decodes and returns an event.
-func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (events.Event, error) {
+func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (events.Event, error) {
 
 	_ = d.dec.SkipToken() // Skip '{'.
 
@@ -1147,6 +1148,11 @@ func errRead(err error) error {
 		return errors.BadRequest("error parsing the request body as JSON: it is not terminated")
 	}
 	return errReadBody
+}
+
+// isValidConnectionId reports whether s is a valid connection identifier.
+func isValidConnectionId(s string) bool {
+	return len(s) == 12 && base58.IsValid(s)
 }
 
 // mergeDefaultContext merges the default context into the event context,

@@ -51,7 +51,7 @@ func TestPipelinesCreation(t *testing.T) {
 	postgreSQLConnection := c.CreateSourcePostgreSQL()
 
 	tests := []struct {
-		conn     int
+		conn     string
 		pipeline krenalistester.PipelineToSet
 		err      string
 	}{

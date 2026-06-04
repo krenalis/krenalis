@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"runtime/debug"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -79,8 +78,8 @@ func (c *Krenalis) call(method, path string, headers http.Header, body any, resp
 
 	req.Header.Set("Content-Type", "application/json")
 	if _, ok := headers["Krenalis-Workspace"]; !ok {
-		if id := c.WorkspaceID(); id > 0 {
-			req.Header.Set("Krenalis-Workspace", strconv.Itoa(id))
+		if id := c.WorkspaceID(); id != "" {
+			req.Header.Set("Krenalis-Workspace", id)
 		}
 	}
 	for key, values := range headers {

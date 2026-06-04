@@ -25,6 +25,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	testConnectionID = "7B3mN9qK2xA4"
+	testPipelineID   = "8QaT3mN7KxP5"
+)
+
 func TestSendEvents(t *testing.T) {
 
 	posthog, settings := newPostHogForTests(t)
@@ -81,7 +86,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		received := map[string]any{
-			"connectionId": 187239,
+			"connectionId": testConnectionID,
 			"anonymousId":  anonymousID,
 			"userId":       userID,
 			"context": map[string]any{
@@ -115,7 +120,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 140261,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "identify",
@@ -162,7 +167,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		received := map[string]any{
-			"connectionId": 276219,
+			"connectionId": testConnectionID,
 			"anonymousId":  anonymousID,
 			"userId":       userID,
 			"groupId":      groupID,
@@ -196,7 +201,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 194271,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "group",
@@ -235,7 +240,7 @@ func TestSendEvents(t *testing.T) {
 		const explicitSessionID = "01946b9f-859b-7cce-ab5c-f9e68680be6e"
 
 		received := map[string]any{
-			"connectionId": 962351,
+			"connectionId": testConnectionID,
 			"anonymousId":  anonymousID,
 			"userId":       userID,
 			"event":        "Checkout Started",
@@ -269,7 +274,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 540261,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "track",
@@ -311,7 +316,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		received := map[string]any{
-			"connectionId": 408231,
+			"connectionId": testConnectionID,
 			"anonymousId":  anonymousID,
 			"context": map[string]any{
 				"ip": "203.0.113.5",
@@ -345,7 +350,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 121731,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "page",
@@ -419,7 +424,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 209715,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "screen",
@@ -461,7 +466,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		received := map[string]any{
-			"connectionId": 902351,
+			"connectionId": testConnectionID,
 			"anonymousId":  anonymousID,
 			"userId":       userID,
 			"previousId":   anonymousID,
@@ -486,7 +491,7 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &connectors.Event{
-			DestinationPipeline: 973511,
+			DestinationPipeline: testPipelineID,
 			Received:            testconnector.ReceivedEvent(received),
 			Type: connectors.EventTypeInfo{
 				ID:     "alias",

@@ -45,7 +45,7 @@ func (err RecordTransformationError) Error() string {
 
 // Transformer represents a transformer.
 type Transformer struct {
-	pipeline  int
+	pipeline  string
 	provider  FunctionProvider
 	inSchema  types.Type
 	outSchema types.Type

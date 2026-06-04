@@ -24,17 +24,17 @@ import (
 // written.
 type EventIdentityWriter struct {
 	store      *Store
-	pipeline   int
-	connection int
-	workspace  int
+	pipeline   string
+	connection string
+	workspace  string
 	columns    []warehouses.Column
 	identities chan<- flusherRow[map[string]any]
 	flusher    *flusher[map[string]any]
 
 	mu        sync.Mutex
-	pipelines map[int]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
-	aligned   bool             // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
-	flatter   *flatter         // access using 'mu'. nil for pipelines that import identities from events with no transformations.
+	pipelines map[string]struct{} // pipelines of the pipeline's connection. Access using 'mu'. If nil, it means that the pipeline does not exist anymore.
+	aligned   bool                // indicates if the pipeline's output schema is aligned with the profile schema. access using 'mu'.
+	flatter   *flatter            // access using 'mu'. nil for pipelines that import identities from events with no transformations.
 
 	closed atomic.Bool
 }
@@ -44,13 +44,13 @@ type EventIdentityWriter struct {
 // importing identities from events.
 //
 // It must be called on a frozen state.
-func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
+func newEventIdentityWriter(store *Store, pipelineID string) *EventIdentityWriter {
 
 	// Initialize the EventIdentityWriter.
 	w := &EventIdentityWriter{
 		store:     store,
 		pipeline:  pipelineID,
-		pipelines: map[int]struct{}{},
+		pipelines: map[string]struct{}{},
 	}
 
 	pipeline, _ := store.ds.state.Pipeline(pipelineID)
@@ -77,13 +77,13 @@ func newEventIdentityWriter(store *Store, pipelineID int) *EventIdentityWriter {
 	store.mu.Unlock()
 
 	w.columns = make([]warehouses.Column, 7)
-	w.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.Int(32)}
+	w.columns[0] = warehouses.Column{Name: "_pipeline", Type: types.String()}
 	w.columns[1] = warehouses.Column{Name: "_is_anonymous", Type: types.Boolean()}
 	w.columns[2] = warehouses.Column{Name: "_identity_id", Type: types.String()}
-	w.columns[3] = warehouses.Column{Name: "_connection", Type: types.Int(32)}
+	w.columns[3] = warehouses.Column{Name: "_connection", Type: types.String()}
 	w.columns[4] = warehouses.Column{Name: "_anonymous_ids", Type: types.Array(types.String()), Nullable: true}
 	w.columns[5] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
-	w.columns[6] = warehouses.Column{Name: "_run", Type: types.Int(32), Nullable: true}
+	w.columns[6] = warehouses.Column{Name: "_run", Type: types.String(), Nullable: true}
 	w.columns = appendColumnsFromProperties(w.columns, pipeline.Transformation.OutPaths, store.profileColumnByProperty())
 
 	// Start the flusher.

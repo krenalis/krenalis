@@ -10,8 +10,10 @@ import (
 
 type stubCollector struct{ Collector }
 
+const testPipelineID = "8QaT3mN7KxP5"
+
 func newStubCollector() *stubCollector {
-	c := &stubCollector{Collector{metrics: map[int]*metrics{}}}
+	c := &stubCollector{Collector{metrics: map[string]*metrics{}}}
 	c.stored.L = &c.mu
 	return c
 }
@@ -24,19 +26,19 @@ func Test_CollectorInvalidStep(t *testing.T) {
 			t.Fatalf("expected panic with invalid step")
 		}
 	}()
-	c.Passed(Step(numSteps), 1, 1)
+	c.Passed(Step(numSteps), testPipelineID, 1)
 }
 
 // Test_CollectorPassedFailed ensures that Passed and Failed record metrics
 // correctly.
 func Test_CollectorPassedFailed(t *testing.T) {
 	c := newStubCollector()
-	c.Passed(ReceiveStep, 1, 3)
-	c.Failed(FilterStep, 1, 2, "boom")
+	c.Passed(ReceiveStep, testPipelineID, 3)
+	c.Failed(FilterStep, testPipelineID, 2, "boom")
 
-	m, ok := c.metrics[1]
+	m, ok := c.metrics[testPipelineID]
 	if !ok {
-		t.Fatalf("metrics for pipeline 1 not found")
+		t.Fatalf("metrics for pipeline %s not found", testPipelineID)
 	}
 	if got := m.passed[ReceiveStep]; got != 3 {
 		t.Fatalf("expected 3 passed, got %d", got)

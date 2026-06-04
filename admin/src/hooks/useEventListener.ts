@@ -14,7 +14,7 @@ interface EventListenerEvent {
 const useEventListener = (
 	setEvents: (events: EventListenerEvent[]) => void,
 	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
-	connection?: number | null,
+	connection?: string | null,
 	filter?: Filter,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);

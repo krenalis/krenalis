@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"html"
 	"maps"
-	"math/big"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
@@ -33,7 +32,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/google/uuid"
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -50,13 +48,13 @@ const resetPasswordTokenMaxAge = 1 * 60 * 60
 type Organization struct {
 	core         *Core
 	organization *state.Organization
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
 }
 
 // Member represents a member of an organization.
 type Member struct {
-	ID         int       `json:"id"`
+	ID         string    `json:"id"`
 	Name       string    `json:"name"`
 	Email      string    `json:"email"`
 	Avatar     *Avatar   `json:"avatar"`
@@ -155,8 +153,8 @@ func (typ AccessKeyType) IsValid() bool {
 
 // AccessKey represents an access key.
 type AccessKey struct {
-	ID        int           `json:"id"`
-	Workspace *int          `json:"workspace"`
+	ID        string        `json:"id"`
+	Workspace *string       `json:"workspace"`
 	Name      string        `json:"name"`
 	Type      AccessKeyType `json:"type"`
 	Token     string        `json:"token"`
@@ -181,30 +179,43 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	n := state.AddMember{
 		Organization: this.organization.ID,
 	}
-	now := time.Now().UTC()
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
+	for {
+		n.ID = generateID(func(id string) (any, bool) {
+			return nil, this.organization.HasMember(id)
+		})
+		now := time.Now().UTC()
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
+			if err != nil {
+				return nil, err
+			}
+			if exists {
+				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+			}
+			if member.Avatar != nil {
+				_, err = tx.Exec(ctx,
+					"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+					n.ID, member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+			} else {
+				_, err = tx.Exec(ctx,
+					"INSERT INTO members (id, name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+					n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
+			}
+			if err != nil {
+				return nil, err
+			}
+			return n, nil
+		})
 		if err != nil {
-			return nil, err
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
+				continue
+			}
+			return err
 		}
-		if exists {
-			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-		}
-		if member.Avatar != nil {
-			err = tx.QueryRow(ctx,
-				"INSERT INTO members (name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-				member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now).Scan(&n.ID)
-		} else {
-			err = tx.QueryRow(ctx,
-				"INSERT INTO members (name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-				member.Name, member.Email, password, nil, this.organization.ID, now).Scan(&n.ID)
-		}
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
-	})
-	return err
+		break
+	}
+
+	return nil
 }
 
 // AccessKeys returns the access keys of the organization ordered by creation
@@ -239,40 +250,40 @@ func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) 
 // If a member with the provided email does not exist or the password does not
 // correspond, it returns an errors.UnprocessableError error with code
 // AuthenticationFailed.
-func (this *Organization) AuthenticateMember(ctx context.Context, email, password string) (int, error) {
+func (this *Organization) AuthenticateMember(ctx context.Context, email, password string) (string, error) {
 
 	this.core.mustBeOpen()
 
 	// Validate email.
 	if err := util.ValidateStringField("email", email, 120); err != nil {
-		return 0, errors.BadRequest("%s", err)
+		return "", errors.BadRequest("%s", err)
 	}
 	if !emailRegExp.MatchString(email) {
-		return 0, errors.BadRequest("email is not a valid email address")
+		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
-		return 0, errors.BadRequest("password is empty")
+		return "", errors.BadRequest("password is empty")
 	}
 	if !utf8.ValidString(password) {
-		return 0, errors.BadRequest("password is not UTF-8 encoded")
+		return "", errors.BadRequest("password is not UTF-8 encoded")
 	}
 	if n := utf8.RuneCountInString(password); n < 8 {
-		return 0, errors.BadRequest("password must be at least 8 characters long")
+		return "", errors.BadRequest("password must be at least 8 characters long")
 	}
 
-	var id int
+	var id string
 	var hashedPassword []byte
 	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
+			return "", errors.Unprocessable(AuthenticationFailed, "authentication has failed")
 		}
-		return 0, err
+		return "", err
 	}
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
-		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
+		return "", errors.Unprocessable(AuthenticationFailed, "authentication has failed")
 	}
 
 	return id, nil
@@ -280,72 +291,78 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 
 // CreateAccessKey creates a new access key for the organization with the
 // specified name, which must be between 1 and 100 runes in length, and the
-// specified type. If the workspace is not 0, the key will be restricted to that
-// specific workspace. If the created key is an MCP key the workspace is
-// required and therefore cannot be 0.
+// specified type. If the workspace is not empty, the key will be restricted to
+// that specific workspace. If the created key is an MCP key the workspace is
+// required and therefore cannot be empty.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WorkspaceNotExist, if the workspace does not exist.
-func (this *Organization) CreateAccessKey(ctx context.Context, name string, workspace int, typ AccessKeyType) (int, string, error) {
+func (this *Organization) CreateAccessKey(ctx context.Context, name, workspace string, typ AccessKeyType) (string, string, error) {
+
 	this.core.mustBeOpen()
+
 	if err := util.ValidateStringField("name", name, 100); err != nil {
-		return 0, "", errors.BadRequest("%s", err)
+		return "", "", errors.BadRequest("%s", err)
 	}
-	if workspace < 0 || workspace > maxInt32 {
-		return 0, "", errors.BadRequest("workspace is not a valid workspace identifier")
+	if workspace != "" && !IsValidID(workspace) {
+		return "", "", errors.BadRequest("workspace %q is not a valid workspace identifier", workspace)
 	}
-	if workspace > 0 {
+	if workspace != "" {
 		if _, ok := this.organization.Workspace(workspace); !ok {
-			return 0, "", errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", workspace)
+			return "", "", errors.Unprocessable(WorkspaceNotExist, "workspace %s does not exist", workspace)
 		}
 	}
 	if !typ.IsValid() {
-		return 0, "", errors.BadRequest("invalid access key type: %v", typ)
+		return "", "", errors.BadRequest("invalid access key type: %v", typ)
 	}
-	if typ == AccessKeyTypeMCP && workspace == 0 {
-		return 0, "", errors.BadRequest("workspace is required for MCP keys")
-	}
-	// Generate a random identifier.
-	id, err := generateRandomID()
-	if err != nil {
-		return 0, "", err
+	if typ == AccessKeyTypeMCP && workspace == "" {
+		return "", "", errors.BadRequest("workspace is required for MCP keys")
 	}
 	// Generate a random access key,
 	token, hmac, err := this.core.state.GenerateAccessKey(ctx)
 	if err != nil {
-		return 0, "", err
+		return "", "", err
 	}
 	defer clear(hmac)
 	hint := token[:4] + "..." + token[len(token)-6:]
 	n := state.CreateAccessKey{
-		ID:           id,
 		Organization: this.organization.ID,
 		Workspace:    workspace,
 		Type:         state.AccessKeyType(typ),
 		HMAC:         hmac,
 	}
 	createdAt := time.Now().UTC().Truncate(time.Second)
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, hmac, hint, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt)
-		if err != nil {
-			if db.IsForeignKeyViolation(err) {
-				switch db.ErrConstraintName(err) {
-				case "access_keys_organization_fkey":
-					err = errors.Unprocessable(OrganizationNotExist, "organization %q does not exist", n.Organization)
-				case "access_keys_workspace_fkey":
-					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+
+	// Create the access key.
+	for {
+		n.ID = generateID[any](nil)
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			_, err = tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, hmac, hint, created_at) "+
+				"VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt)
+			if err != nil {
+				if db.IsForeignKeyViolation(err) {
+					switch db.ErrConstraintName(err) {
+					case "access_keys_organization_fkey":
+						err = errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
+					case "access_keys_workspace_fkey":
+						err = errors.Unprocessable(WorkspaceNotExist, "workspace %s does not exist", n.Workspace)
+					}
 				}
+				return nil, err
 			}
-			return nil, err
+			return n, nil
+		})
+		if err != nil {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "access_keys_pkey" {
+				continue
+			}
+			return "", "", err
 		}
-		return n, nil
-	})
-	if err != nil {
-		return 0, "", err
+		break
 	}
+
 	return n.ID, token, nil
 }
 
@@ -370,22 +387,22 @@ type Warehouse struct {
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (int, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (string, error) {
 
 	this.core.mustBeOpen()
 
 	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// Initialize the data warehouse.
 	err = this.core.datastore.Initialize(ctx, warehouse.Platform, settings, profileSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
-			return 0, errors.Unavailable("%s", err)
+			return "", errors.Unavailable("%s", err)
 		}
-		return 0, err
+		return "", err
 	}
 
 	n := state.CreateWorkspace{
@@ -399,47 +416,49 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	n.Warehouse.Mode = state.WarehouseMode(warehouse.Mode)
 	n.Warehouse.Settings, n.Warehouse.SettingsKey, err = this.core.state.EncryptSettings(ctx, settings)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	n.Warehouse.MCPSettingsKey, err = this.core.state.GenerateKmsDataKey(ctx)
 	if err != nil {
-		return 0, err
-	}
-
-	// Generate the identifier.
-	n.ID, err = generateRandomID()
-	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// Encode the profile schema to JSON.
 	encodedProfileSchema, err := json.Marshal(n.ProfileSchema)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
-			" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
-			" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
-			n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
-			n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
-			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Warehouse.Platform,
-			n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
-		if err != nil {
-			if db.IsForeignKeyViolation(err) {
-				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
-					return nil, errors.Unprocessable(OrganizationNotExist, "organization %q does not exist", n.Organization)
+	// Create the workspace.
+	for {
+		n.ID = generateID(this.organization.Workspace)
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
+				" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
+				" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
+				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+				n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
+				n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
+				n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Warehouse.Platform,
+				n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
+			if err != nil {
+				if db.IsForeignKeyViolation(err) {
+					if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
+						return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
+					}
 				}
+				return nil, err
 			}
-			return nil, err
+			return n, nil
+		})
+		if err != nil {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "workspaces_pkey" {
+				continue
+			}
+			return "", err
 		}
-		return n, nil
-	})
-	if err != nil {
-		return 0, err
+		break
 	}
 
 	return n.ID, nil
@@ -448,10 +467,10 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 // DeleteAccessKey deletes the access key of the organization with identifier
 // id. If the access key does not exist for the organization, it returns an
 // errors.NotFound error.
-func (this *Organization) DeleteAccessKey(ctx context.Context, id int) error {
+func (this *Organization) DeleteAccessKey(ctx context.Context, id string) error {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return errors.BadRequest("identifier %d is not a valid access key identifier", id)
+	if !IsValidID(id) {
+		return errors.BadRequest("identifier %q is not a valid access key identifier", id)
 	}
 	n := state.DeleteAccessKey{
 		ID: id,
@@ -462,7 +481,7 @@ func (this *Organization) DeleteAccessKey(ctx context.Context, id int) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("access key %d does not exist", id)
+			return nil, errors.NotFound("access key %s does not exist", id)
 		}
 		return n, nil
 	})
@@ -499,10 +518,10 @@ func (this *Organization) Delete(ctx context.Context) error {
 
 // DeleteMember deletes a member of the organization with identifier id.
 // If the member does not exist, it returns an errors.NotFound error.
-func (this *Organization) DeleteMember(ctx context.Context, id int) error {
+func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return errors.BadRequest("identifier %d is not a valid member identifier", id)
+	if !IsValidID(id) {
+		return errors.BadRequest("identifier %q is not a valid member identifier", id)
 	}
 	n := state.DeleteMember{
 		ID:           id,
@@ -514,7 +533,7 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("member %d does not exist", id)
+			return nil, errors.NotFound("member %s does not exist", id)
 		}
 		return n, nil
 	})
@@ -522,10 +541,10 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 }
 
 // HasMember reports whether the organization has a member with the given ID.
-func (this *Organization) HasMember(id int) (bool, error) {
+func (this *Organization) HasMember(id string) (bool, error) {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return false, errors.BadRequest("identifier %d is not a valid member identifier", id)
+	if !IsValidID(id) {
+		return false, errors.BadRequest("identifier %q is not a valid member identifier", id)
 	}
 	return this.organization.HasMember(id), nil
 }
@@ -549,22 +568,31 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if err != nil {
 		return err
 	}
-	now := time.Now().UTC()
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
-		if err != nil {
+	for {
+		id := generateID(func(id string) (any, bool) {
+			return nil, this.organization.HasMember(id)
+		})
+		now := time.Now().UTC()
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+			if err != nil {
+				return nil, err
+			}
+			if exists {
+				return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+			}
+			_, err = tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
+				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8",
+				id, this.organization.ID, "", email, "", nil, invitationToken, now)
 			return nil, err
+		})
+		if err != nil {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
+				continue
+			}
+			return err
 		}
-		if exists {
-			return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
-		}
-		_, err = tx.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
-			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
-			this.organization.ID, "", email, "", nil, invitationToken, now)
-		return nil, err
-	})
-	if err != nil {
-		return err
+		break
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
 	emailToSend := &emailToSend{
@@ -579,10 +607,10 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 
 // Member returns the organization's member with identifier id.
 // If the member does not exist, it returns an errors.NotFound error.
-func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
+func (this *Organization) Member(ctx context.Context, id string) (*Member, error) {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid member identifier", id)
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid member identifier", id)
 	}
 	var member Member
 	var avatarImage []byte
@@ -592,7 +620,7 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 		&member.ID, &member.Name, &member.Email, &avatarImage, &avatarMimeType, &invitationToken, &member.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.NotFound("member %d does not exist", id)
+			return nil, errors.NotFound("member %s does not exist", id)
 		}
 		return nil, err
 	}
@@ -719,10 +747,10 @@ func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string
 //
 // If the access key does not exist for the organization, it returns an
 // errors.NotFound error.
-func (this *Organization) UpdateAccessKey(ctx context.Context, id int, name string) error {
+func (this *Organization) UpdateAccessKey(ctx context.Context, id, name string) error {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return errors.BadRequest("identifier %d is not a valid access key identifier", id)
+	if !IsValidID(id) {
+		return errors.BadRequest("identifier %q is not a valid access key identifier", id)
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
@@ -732,7 +760,7 @@ func (this *Organization) UpdateAccessKey(ctx context.Context, id int, name stri
 		return err
 	}
 	if result.RowsAffected() == 0 {
-		return errors.NotFound("access key %d does not exist", id)
+		return errors.NotFound("access key %s does not exist", id)
 	}
 	return nil
 }
@@ -743,10 +771,10 @@ func (this *Organization) UpdateAccessKey(ctx context.Context, id int, name stri
 // If the member does not exist, it returns an errors.NotFound error. If the
 // member to set has an email that is already used by another member, it returns
 // an errors.UnprocessableError error with code MemberEmailExists.
-func (this *Organization) UpdateMember(ctx context.Context, id int, member MemberToSet) error {
+func (this *Organization) UpdateMember(ctx context.Context, id string, member MemberToSet) error {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return errors.BadRequest("identifier %d is not a valid member identifier", id)
+	if !IsValidID(id) {
+		return errors.BadRequest("identifier %q is not a valid member identifier", id)
 	}
 	err := validateMemberToSet(member, true, true, false)
 	if err != nil {
@@ -765,7 +793,7 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 			return nil, err
 		}
 		if !exists {
-			return nil, errors.NotFound("member %d does not exist", id)
+			return nil, errors.NotFound("member %s does not exist", id)
 		}
 		exists, err = tx.QueryExists(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
 		if err != nil {
@@ -820,18 +848,18 @@ func (this *Organization) Update(ctx context.Context, name string) error {
 // Workspace returns the organization's workspace with identifier id.
 //
 // It returns an errors.NotFound error if the workspace does not exist.
-func (this *Organization) Workspace(id int) (*Workspace, error) {
+func (this *Organization) Workspace(id string) (*Workspace, error) {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid workspace identifier", id)
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid workspace identifier", id)
 	}
 	ws, ok := this.organization.Workspace(id)
 	if !ok {
-		return nil, errors.NotFound("workspace %d does not exist", id)
+		return nil, errors.NotFound("workspace %s does not exist", id)
 	}
 	store, ok := this.core.datastore.Store(id)
 	if !ok {
-		return nil, errors.NotFound("workspace %d does not exist", id)
+		return nil, errors.NotFound("workspace %s does not exist", id)
 	}
 	workspace := Workspace{
 		core:                           this.core,
@@ -970,17 +998,6 @@ func generateMemberToken() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(bytes), nil
-}
-
-var bigMaxInt32 = big.NewInt(maxInt32)
-
-// generateRandomID generates a random identifier in [1, maxInt32].
-func generateRandomID() (int, error) {
-	n, err := rand.Int(rand.Reader, bigMaxInt32)
-	if err != nil {
-		return 0, err
-	}
-	return int(n.Int64()) + 1, nil
 }
 
 // isInvitationTokenExpired checks if the invitation token of a member is

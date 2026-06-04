@@ -18,7 +18,7 @@ const useConnection = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			const connectionID = Number(params.id);
+			const connectionID = params.id ?? '';
 			let fetchedConnection: Connection;
 			try {
 				fetchedConnection = await api.workspaces.connections.get(connectionID);

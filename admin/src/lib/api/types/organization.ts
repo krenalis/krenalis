@@ -1,8 +1,8 @@
 type AccessKeyType = 'API' | 'MCP';
 
 interface AccessKey {
-	id: number;
-	workspace: number | null;
+	id: string;
+	workspace: string | null;
 	name: string;
 	type: AccessKeyType;
 	token: string;

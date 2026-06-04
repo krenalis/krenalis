@@ -24,6 +24,8 @@ var (
 	}
 )
 
+const accessKeyTestID = "6NpT4zB8QaR2"
+
 type accessKeyTestKMS struct{}
 
 func (accessKeyTestKMS) DecryptDataKey(_ context.Context, encryptedDataKey []byte) ([]byte, error) {
@@ -123,7 +125,7 @@ func TestStateAccessKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
-	key := &AccessKey{ID: 42, Type: AccessKeyTypeAPI}
+	key := &AccessKey{ID: accessKeyTestID, Type: AccessKeyTypeAPI}
 	state.accessKeyByHMAC[string(hmac[:])] = key
 	got, err := state.AccessKey(ctx, body)
 	if err != nil {

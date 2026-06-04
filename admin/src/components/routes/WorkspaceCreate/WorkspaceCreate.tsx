@@ -127,7 +127,7 @@ const WorkspaceCreate = () => {
 				});
 			}, 300);
 		} else {
-			let id: number;
+			let id: string;
 			try {
 				const res = await api.workspaces.create(
 					name,

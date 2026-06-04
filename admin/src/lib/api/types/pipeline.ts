@@ -79,8 +79,8 @@ interface Filter {
 }
 
 interface Pipeline {
-	id: number;
-	connection: number;
+	id: string;
+	connection: string;
 	target: PipelineTarget;
 	name: string;
 	enabled: boolean;
@@ -142,7 +142,7 @@ interface PipelineToSet {
 }
 
 interface PipelineError {
-	pipeline: number;
+	pipeline: string;
 	step: number;
 	count: number;
 	message: string;

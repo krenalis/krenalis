@@ -78,7 +78,7 @@ func (connection connection) CreatePipeline(w http.ResponseWriter, r *http.Reque
 		return nil, err
 	}
 	var body struct {
-		Connection int         `json:"connection"`
+		Connection string      `json:"connection"`
 		Target     core.Target `json:"target"`
 		EventType  string      `json:"eventType"`
 		core.PipelineToSet
@@ -101,7 +101,7 @@ func (connection connection) CreatePipeline(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return map[string]int{"id": id}, nil
+	return map[string]string{"id": id}, nil
 }
 
 // CreateEventWriteKey creates a new event write key for a connection.
@@ -263,11 +263,7 @@ func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	dst, ok := parseID(r.PathValue("dst"))
-	if !ok {
-		return nil, errors.BadRequest("dst is not a valid connection identifier")
-	}
-	err = src.LinkConnection(r.Context(), dst)
+	err = src.LinkConnection(r.Context(), r.PathValue("dst"))
 	return nil, err
 }
 
@@ -283,11 +279,7 @@ func (connection connection) PipelineSchemas(_ http.ResponseWriter, r *http.Requ
 	if ws == nil {
 		return nil, errMissingWorkspace
 	}
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
-	}
-	c, err := ws.Connection(r.Context(), id)
+	c, err := ws.Connection(r.Context(), r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -310,11 +302,7 @@ func (connection connection) PipelineTypes(_ http.ResponseWriter, r *http.Reques
 	if ws == nil {
 		return nil, errMissingWorkspace
 	}
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
-	}
-	c, err := ws.Connection(r.Context(), id)
+	c, err := ws.Connection(r.Context(), r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -361,11 +349,7 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 	if ws == nil {
 		return nil, errMissingWorkspace
 	}
-	id, ok := parseID(r.PathValue("id")) // ID of the connection
-	if !ok {
-		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
-	}
-	c, err := ws.Connection(r.Context(), id)
+	c, err := ws.Connection(r.Context(), r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -450,11 +434,7 @@ func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	dst, ok := parseID(r.PathValue("dst"))
-	if !ok {
-		return nil, errors.BadRequest("dst is not a valid connection identifier")
-	}
-	err = src.UnlinkConnection(r.Context(), dst)
+	err = src.UnlinkConnection(r.Context(), r.PathValue("dst"))
 	return nil, err
 }
 
@@ -526,11 +506,10 @@ func (connection connection) id(r *http.Request) (*core.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
+	if !core.IsValidID(r.PathValue("id")) {
 		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
 	}
-	return ws.Connection(r.Context(), id)
+	return ws.Connection(r.Context(), r.PathValue("id"))
 }
 
 // src authenticates the request and returns the connection identified by the
@@ -540,11 +519,7 @@ func (connection connection) src(r *http.Request) (*core.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	src, ok := parseID(r.PathValue("src"))
-	if !ok {
-		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("src"))
-	}
-	return ws.Connection(r.Context(), src)
+	return ws.Connection(r.Context(), r.PathValue("src"))
 }
 
 // target returns a Target and, if applicable, the Event type.

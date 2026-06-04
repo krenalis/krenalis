@@ -39,7 +39,7 @@ func (err ConnectionFailed) Error() string {
 type Datastore struct {
 	state   *state.State
 	mu      sync.Mutex // for the store field
-	store   map[int]*Store
+	store   map[string]*Store
 	metrics *metrics.Collector
 	closed  atomic.Bool
 }
@@ -48,7 +48,7 @@ type Datastore struct {
 func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 	ds := &Datastore{
 		state:   st,
-		store:   map[int]*Store{},
+		store:   map[string]*Store{},
 		metrics: metrics,
 	}
 	st.Freeze()
@@ -139,7 +139,7 @@ func (ds *Datastore) Initialize(ctx context.Context, platform string, settings j
 	return unavailableError(dw.Close())
 }
 
-func (ds *Datastore) Store(workspace int) (*Store, bool) {
+func (ds *Datastore) Store(workspace string) (*Store, bool) {
 	ds.mustBeOpen()
 	ds.mu.Lock()
 	store, ok := ds.store[workspace]
@@ -295,7 +295,7 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if n.SettingsHaveChanged() {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.
-		go func(workspace int) {
+		go func(workspace string) {
 			err := prevWarehouse.Close()
 			if err != nil {
 				slog.Error("core/datastore: error closing a warehouse", "workspace", workspace, "error", err)

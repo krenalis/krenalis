@@ -19,6 +19,11 @@ type testRow struct {
 	id int
 }
 
+const (
+	testPipeline1 = "8QaT3mN7KxP5"
+	testPipeline2 = "5zBpR9Y2QnM3"
+)
+
 // startOperationStub is a no-op StartOperation used in tests.
 func startOperationStub(ctx context.Context, _ allowedMode) (context.Context, func(), error) {
 	return ctx, func() {}, nil
@@ -434,11 +439,11 @@ func TestFlusherStartOperationCanceled(t *testing.T) {
 func TestFlusherMetricsAggregation(t *testing.T) {
 	finalizeCh := make(chan struct{}, 2)
 	var mu sync.Mutex
-	finalized := make(map[int]int)
+	finalized := make(map[string]int)
 	opts := baseOptions()
 	opts.BatchSize = 4
 	opts.MaxBatchSize = 4
-	opts.MetricsFinalizer = func(pipeline, count int) {
+	opts.MetricsFinalizer = func(pipeline string, count int) {
 		mu.Lock()
 		finalized[pipeline] += count
 		mu.Unlock()
@@ -450,10 +455,10 @@ func TestFlusherMetricsAggregation(t *testing.T) {
 		return nil
 	}
 	f := newTestFlusher(opts, flushFn)
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: 1}
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 2}, pipeline: 1}
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 3}, pipeline: 2}
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 4}, pipeline: 0}
+	f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: testPipeline1}
+	f.Ch() <- flusherRow[testRow]{row: testRow{id: 2}, pipeline: testPipeline1}
+	f.Ch() <- flusherRow[testRow]{row: testRow{id: 3}, pipeline: testPipeline2}
+	f.Ch() <- flusherRow[testRow]{row: testRow{id: 4}, pipeline: ""}
 
 	receiveWithin(t, flushCh, 1*time.Second, "flush")
 
@@ -462,9 +467,9 @@ func TestFlusherMetricsAggregation(t *testing.T) {
 	}
 
 	mu.Lock()
-	gotPipeline1 := finalized[1]
-	gotPipeline2 := finalized[2]
-	_, hasZero := finalized[0]
+	gotPipeline1 := finalized[testPipeline1]
+	gotPipeline2 := finalized[testPipeline2]
+	_, hasZero := finalized[""]
 	mu.Unlock()
 
 	if gotPipeline1 != 2 {
@@ -490,7 +495,7 @@ func TestFlusherRetryLogErrorDedup(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		finalizeCh := make(chan struct{}, 1)
 		var mu sync.Mutex
-		finalized := make(map[int]int)
+		finalized := make(map[string]int)
 		var logMu sync.Mutex
 		var logErrors []string
 		logFn := func(err error) {
@@ -501,7 +506,7 @@ func TestFlusherRetryLogErrorDedup(t *testing.T) {
 		opts := baseOptions()
 		opts.BatchSize = 1
 		opts.MaxBatchSize = 1
-		opts.MetricsFinalizer = func(pipeline, count int) {
+		opts.MetricsFinalizer = func(pipeline string, count int) {
 			mu.Lock()
 			finalized[pipeline] += count
 			mu.Unlock()
@@ -527,7 +532,7 @@ func TestFlusherRetryLogErrorDedup(t *testing.T) {
 			return nil
 		}
 		f := newTestFlusher(opts, flushFn)
-		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: 1, ack: ack}
+		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: testPipeline1, ack: ack}
 
 		receiveWithin(t, ackCh, 30*time.Second, "ack")
 		receiveWithin(t, finalizeCh, 30*time.Second, "metrics finalize")
@@ -545,7 +550,7 @@ func TestFlusherRetryLogErrorDedup(t *testing.T) {
 			t.Fatalf("expected %v, got %v", "beta", gotErrors[1])
 		}
 		mu.Lock()
-		gotFinalized := finalized[1]
+		gotFinalized := finalized[testPipeline1]
 		mu.Unlock()
 		if gotFinalized != 1 {
 			t.Fatalf("expected %d, got %d", 1, gotFinalized)

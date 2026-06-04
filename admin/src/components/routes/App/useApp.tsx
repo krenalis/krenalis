@@ -45,17 +45,17 @@ const useApp = (
 	const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
 	const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState<boolean>(false);
 	const [isPasswordless, setIsPasswordless] = useState<boolean>(localStorage.getItem(IS_PASSWORDLESS_KEY) != null);
-	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(Number(localStorage.getItem(WORKSPACE_ID_KEY)));
+	const [selectedWorkspace, setSelectedWorkspace] = useState<string>(localStorage.getItem(WORKSPACE_ID_KEY) ?? '');
 	const [publicMetadata, setPublicMetadata] = useState<PublicMetadata>();
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
 	const runPipelineButtonRefs = useRef<{
-		[key: number]: React.RefObject<FeedbackButtonRef>;
+		[key: string]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
 	const runPipelineDropdownButtonRefs = useRef<{
-		[key: number]: React.RefObject<FeedbackButtonRef>;
+		[key: string]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
 	const feedbackObserverRef = useRef<MutationObserver | null>(null);
@@ -133,15 +133,15 @@ const useApp = (
 
 			// Check the current workspace.
 			let workspaceID = selectedWorkspace;
-			if (workspaceID !== 0) {
+			if (workspaceID !== '') {
 				try {
 					await api.workspaces.get();
 				} catch (err) {
 					if (err instanceof NotFoundError) {
 						// The workspace has been deleted.
-						setSelectedWorkspace(0);
-						api = new API(window.location.origin, 0);
-						workspaceID = 0;
+						setSelectedWorkspace('');
+						api = new API(window.location.origin, '');
+						workspaceID = '';
 					} else {
 						handleError(err);
 						stopLoading();
@@ -166,7 +166,7 @@ const useApp = (
 			setIsLoggedIn(true);
 
 			const isDeleted = workspaces != null && ws.length < workspaces.length;
-			if (workspaceID === 0) {
+			if (workspaceID === '') {
 				if (ws.length === 1 && !isDeleted) {
 					// the user has only one workspace, so it can be
 					// automatically selected.
@@ -251,7 +251,7 @@ const useApp = (
 				if (err instanceof NotFoundError) {
 					// the workspace saved in the local storage doesn't exist
 					// anymore.
-					setSelectedWorkspace(0);
+					setSelectedWorkspace('');
 					redirect('workspaces');
 					stopLoading();
 					return;
@@ -415,7 +415,7 @@ const useApp = (
 	}, [isLoadingMember]);
 
 	useEffect(() => {
-		if (selectedWorkspace === 0) {
+		if (selectedWorkspace === '') {
 			localStorage.removeItem(WORKSPACE_ID_KEY);
 		} else {
 			localStorage.setItem(WORKSPACE_ID_KEY, String(selectedWorkspace));
@@ -424,12 +424,12 @@ const useApp = (
 
 	const runPipeline = async (
 		connection: TransformedConnection,
-		pipelineID: number,
+		pipelineID: string,
 		pipelineTarget: PipelineTarget,
 	) => {
 		runPipelineButtonRefs.current[pipelineID]?.current?.load();
 		runPipelineDropdownButtonRefs.current[pipelineID]?.current?.load();
-		let runID: number;
+		let runID: string;
 		try {
 			runID = await api.workspaces.connections.runPipeline(pipelineID);
 		} catch (err) {

@@ -13,8 +13,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 type organization struct {
@@ -97,17 +95,17 @@ func (organization organization) CreateAccessKey(w http.ResponseWriter, r *http.
 	}
 	var body struct {
 		Name      string              `json:"name"`
-		Workspace *int                `json:"workspace"`
+		Workspace *string             `json:"workspace"`
 		Type      *core.AccessKeyType `json:"type"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	var workspace int
+	var workspace string
 	if body.Workspace != nil {
-		if *body.Workspace == 0 {
-			return nil, errors.BadRequest("workspace is not a valid workspace identifier")
+		if !core.IsValidID(*body.Workspace) {
+			return nil, errors.BadRequest("workspace %q is not a valid workspace identifier", *body.Workspace)
 		}
 		workspace = *body.Workspace
 	}
@@ -156,7 +154,7 @@ func (organization organization) CreateWorkspace(w http.ResponseWriter, r *http.
 		}
 		return nil, err
 	}
-	return map[string]int{"id": id}, nil
+	return map[string]string{"id": id}, nil
 }
 
 // Delete deletes the organization with the given identifier.
@@ -167,11 +165,7 @@ func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) 
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
-	id, ok := parseOrganizationUUID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
-	}
-	org, err := organization.core.Organization(id)
+	org, err := organization.core.Organization(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -188,11 +182,7 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, err
 	}
-	id, err := organization.key(r)
-	if err != nil {
-		return nil, err
-	}
-	err = org.DeleteAccessKey(r.Context(), id)
+	err = org.DeleteAccessKey(r.Context(), r.PathValue("key"))
 	return nil, err
 }
 
@@ -205,11 +195,7 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	id, err := organization.id(r)
-	if err != nil {
-		return nil, err
-	}
-	err = org.DeleteMember(r.Context(), id)
+	err = org.DeleteMember(r.Context(), r.PathValue("id"))
 	return nil, err
 }
 
@@ -292,10 +278,6 @@ func (organization organization) UpdateAccessKey(w http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, err
 	}
-	key, err := organization.key(r) // ID of the access key
-	if err != nil {
-		return nil, err
-	}
 	var body struct {
 		Name string `json:"name"`
 	}
@@ -303,7 +285,7 @@ func (organization organization) UpdateAccessKey(w http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.UpdateAccessKey(r.Context(), key, body.Name)
+	err = org.UpdateAccessKey(r.Context(), r.PathValue("key"), body.Name)
 	return nil, err
 }
 
@@ -356,10 +338,6 @@ func (organization organization) Update(w http.ResponseWriter, r *http.Request) 
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
-	id, ok := parseOrganizationUUID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", r.PathValue("id"))
-	}
 	var body struct {
 		Name string `json:"name"`
 	}
@@ -367,7 +345,7 @@ func (organization organization) Update(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	org, err := organization.core.Organization(id)
+	org, err := organization.core.Organization(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -397,35 +375,4 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
 	}
 	return map[string]any{"workspaces": org.Workspaces()}, nil
-}
-
-// id returns the value of the 'id' path parameter parsed as a member ID.
-func (organization organization) id(r *http.Request) (int, error) {
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
-		return 0, errors.BadRequest("identifier %q is not a valid member identifier", r.PathValue("id"))
-	}
-	return id, nil
-}
-
-// key returns the value of the 'key' path parameter parsed as an access key ID.
-func (organization organization) key(r *http.Request) (int, error) {
-	key, ok := parseID(r.PathValue("key"))
-	if !ok {
-		return 0, errors.BadRequest("identifier %q is not a valid access key identifier", r.PathValue("key"))
-	}
-	return key, nil
-}
-
-// parseOrganizationUUID parses and returns a UUID representing the ID of an
-// organization, returning true if it is valid, false otherwise.
-func parseOrganizationUUID(s string) (uuid.UUID, bool) {
-	if len(s) != 36 {
-		return uuid.Nil, false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return uuid.Nil, false
-	}
-	return id, true
 }

@@ -19,6 +19,8 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
+const testConnectionID = "7B3mN9qK2xA4"
+
 func TestSendEvents(t *testing.T) {
 
 	// Read Google Analytics settings from environment variables, then prepare
@@ -89,7 +91,7 @@ func TestSendEvents(t *testing.T) {
 				{
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
-						"connectionId": 1323607634,
+						"connectionId": testConnectionID,
 						"context": map[string]any{
 							"browser": map[string]any{
 								"name":  "Other",

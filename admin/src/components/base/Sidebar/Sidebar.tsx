@@ -84,8 +84,8 @@ const sidebarItems: sidebarItem[] = [
 interface SidebarProps {
 	workspaces: Workspace[];
 	warehouse: Warehouse;
-	selectedWorkspace: number;
-	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
+	selectedWorkspace: string;
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
@@ -155,9 +155,9 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 };
 
 interface WorkspaceSelectorProps {
-	selectedWorkspace: number;
+	selectedWorkspace: string;
 	workspaces: Workspace[];
-	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<string>>;
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 	redirect: (url: string) => void;
 }
@@ -203,7 +203,7 @@ const WorkspaceSelector = ({
 		}
 	};
 
-	const onWorkspaceChange = (id: number) => {
+	const onWorkspaceChange = (id: string) => {
 		setSelectedWorkspace(id);
 		setIsLoadingState(true);
 		setIsOpen(false);

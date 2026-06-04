@@ -541,6 +541,14 @@ func IsUndefinedTable(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "42P01"
 }
 
+// IsUniqueViolation reports whether err is a unique constraint violation error.
+func IsUniqueViolation(err error) bool {
+	if err, ok := err.(*pgconn.PgError); ok {
+		return err.Code == "23505"
+	}
+	return false
+}
+
 // Quote escapes a value to safely insert it into a query.
 func Quote(value any) string {
 	if value == nil {
