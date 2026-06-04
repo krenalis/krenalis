@@ -135,7 +135,7 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	if err != nil {
 		return err
 	}
-	// Insert the member.
+	// Insert the member with password "krenalis-password".
 	memberID := base58.Generate(12)
 	email := "acme@krenalis.com"
 	if dockerMember {
