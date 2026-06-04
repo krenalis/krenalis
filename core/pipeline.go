@@ -514,7 +514,7 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (int, error) {
 		}
 	}
 	if !this.pipeline.Enabled {
-		return 0, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", c.ID)
+		return 0, errors.Unprocessable(PipelineDisabled, "pipeline %d is disabled", this.pipeline.ID)
 	}
 	if _, ok := this.pipeline.Run(); ok {
 		return 0, errors.Unprocessable(RunInProgress, "pipeline %d is already in progress", this.pipeline.ID)
