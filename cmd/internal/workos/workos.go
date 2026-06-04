@@ -131,7 +131,16 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 
 // publicKey returns the RSA public key for the given key ID and algorithm,
 // using the in-memory cache when available.
-func (wo *Workos) publicKey(kid, algorithm string) (*rsa.PublicKey, error) {
+func (wo *Workos) publicKey(token *jwt.Token) (_ any, err error) {
+	algorithm := token.Method.Alg()
+
+	_, isRSA := token.Method.(*jwt.SigningMethodRSA)
+	_, isPSS := token.Method.(*jwt.SigningMethodRSAPSS)
+	if !isRSA && !isPSS {
+		return nil, fmt.Errorf("WorkOS signed the JWT using %s, but Krenalis only supports RSA and RSA-PSS signing methods", algorithm)
+	}
+
+	kid, _ := token.Header["kid"].(string)
 	if kid == "" {
 		return nil, fmt.Errorf("WorkOS provided a JWT with an empty key identifier (kid)")
 	}
@@ -144,9 +153,9 @@ func (wo *Workos) publicKey(kid, algorithm string) (*rsa.PublicKey, error) {
 		return key, nil
 	}
 
-	key, err := wo.fetchPublicKey(kid, algorithm)
+	key, err = wo.fetchPublicKey(kid, algorithm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
 	}
 
 	wo.keyStore.set(kid, key, algorithm)
@@ -200,28 +209,7 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 func (wo *Workos) Authenticate(token string) (*user, uuid.UUID, error) {
 	var claims claims
 
-	parsed, err := jwt.ParseWithClaims(
-		token,
-		&claims,
-		func(t *jwt.Token) (any, error) {
-			_, isRSA := t.Method.(*jwt.SigningMethodRSA)
-			_, isPSS := t.Method.(*jwt.SigningMethodRSAPSS)
-			if !isRSA && !isPSS {
-				return nil, fmt.Errorf("WorkOS signed the JWT using %s, but Krenalis only supports RSA and RSA-PSS signing methods", t.Method.Alg())
-			}
-			kid, _ := t.Header["kid"].(string)
-			if kid == "" {
-				return nil, fmt.Errorf("WorkOS provided a JWT with an empty key identifier (kid)")
-			}
-			key, err := wo.publicKey(kid, t.Method.Alg())
-			if err != nil {
-				return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
-			}
-			return key, nil
-		},
-		jwt.WithExpirationRequired(),
-	)
-
+	parsed, err := jwt.ParseWithClaims(token, &claims, wo.publicKey, jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, errCannotRetrievePublicKey) {
 			return nil, uuid.UUID{}, err
