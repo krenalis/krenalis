@@ -170,6 +170,7 @@ func TestUpgradeDBMigratesBase58IDs(t *testing.T) {
 		WHERE c.relname = 'workspaces' AND a.attname = 'pipelines_to_purge'`)
 
 	assertUpgradeTestString(t, ctx, warehousePool, sourceConnectionID, `SELECT connection_id FROM krenalis_events`)
+	assertUpgradeTestString(t, ctx, warehousePool, sourceConnectionID, `SELECT connection_id FROM events`)
 	assertUpgradeTestString(t, ctx, warehousePool, destinationConnectionID, `SELECT _connection FROM krenalis_identities`)
 	assertUpgradeTestString(t, ctx, warehousePool, userPipelineID, `SELECT _pipeline FROM krenalis_identities`)
 	assertUpgradeTestString(t, ctx, warehousePool, pipelineRunID, `SELECT _run FROM krenalis_identities`)
@@ -278,6 +279,7 @@ func initializeUpgradeTestLegacyWarehouse(t *testing.T, ctx context.Context, poo
 	t.Helper()
 
 	mustExecUpgradeTestSQL(t, ctx, pool, `CREATE TABLE krenalis_events (connection_id integer NOT NULL)`)
+	mustExecUpgradeTestSQL(t, ctx, pool, `CREATE OR REPLACE VIEW events AS SELECT * FROM krenalis_events`)
 	mustExecUpgradeTestSQL(t, ctx, pool, `CREATE TABLE krenalis_identities (_connection integer NOT NULL, _pipeline integer NOT NULL, _run integer)`)
 	mustExecUpgradeTestSQL(t, ctx, pool, `CREATE TABLE krenalis_destination_profiles (
 		_pipeline integer NOT NULL,

@@ -36,6 +36,9 @@ func (warehouse *PostgreSQL) MigrateBase58IDs(ctx context.Context, migration, wo
 			return nil
 		}
 
+		if _, err := tx.Exec(ctx, `DROP VIEW IF EXISTS "events"`); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `ALTER TABLE IF EXISTS "krenalis_destination_profiles" DROP CONSTRAINT IF EXISTS "krenalis_destination_profiles_pkey"`); err != nil {
 			return err
 		}
@@ -55,6 +58,9 @@ func (warehouse *PostgreSQL) MigrateBase58IDs(ctx context.Context, migration, wo
 			return err
 		}
 		if _, err := tx.Exec(ctx, `ALTER TABLE IF EXISTS "krenalis_destination_profiles" ADD PRIMARY KEY ("_pipeline", "_external_id")`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `CREATE OR REPLACE VIEW "events" AS SELECT * FROM "krenalis_events"`); err != nil {
 			return err
 		}
 		_, err = tx.Exec(ctx, `INSERT INTO "krenalis_internal_migrations" ("id", "workspace") VALUES ($1, $2)`, migration, workspace)
