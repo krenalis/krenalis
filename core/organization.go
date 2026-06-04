@@ -233,7 +233,7 @@ func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) 
 }
 
 // AuthenticateMember authenticates a member of the organization given its email
-// and password. email's length must be in range [4, 120] and must be a valid
+// and password. email's length must be in range [4, 255] and must be a valid
 // email address. password's length must be at least 8 character long.
 //
 // If a member with the provided email does not exist or the password does not
