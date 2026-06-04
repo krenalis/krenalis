@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	stdJSON "encoding/json"
 	stderrors "errors"
 	"io"
 	"log/slog"
@@ -548,7 +547,7 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 			Email string `json:"email"`
 		} `json:"invitation"`
 	}
-	if err := stdJSON.Unmarshal(rawBody, &action); err != nil {
+	if err := json.Unmarshal(rawBody, &action); err != nil {
 		return nil, errors.BadRequest("invalid action payload")
 	}
 
@@ -606,7 +605,7 @@ func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request)
 			ExternalID *string `json:"external_id"`
 		} `json:"data"`
 	}
-	if err := stdJSON.Unmarshal(rawBody, &event); err != nil {
+	if err := json.Unmarshal(rawBody, &event); err != nil {
 		return nil, errors.BadRequest("invalid webhook payload")
 	}
 
