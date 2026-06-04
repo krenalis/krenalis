@@ -525,6 +525,7 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams
 }
 
 // removeWorkspace removes the workspace ws from the collector.
+// When this method is called, the state is frozen.
 func (c *Collector) removeWorkspace(ws *state.Workspace) {
 	c.observers.Delete(ws.ID)
 	for _, connection := range ws.Connections() {
