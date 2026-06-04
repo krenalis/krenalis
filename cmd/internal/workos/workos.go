@@ -129,8 +129,8 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 	}
 }
 
-// publicKey returns the RSA public key for the given key ID and algorithm,
-// using the in-memory cache when available.
+// publicKey returns the RSA public key for the given token, using the in-memory
+// cache when available.
 func (wo *Workos) publicKey(token *jwt.Token) (_ any, err error) {
 	algorithm := token.Method.Alg()
 
