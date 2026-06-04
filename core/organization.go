@@ -509,7 +509,7 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 		Organization: this.organization.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := this.core.db.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
 			return nil, err
 		}
