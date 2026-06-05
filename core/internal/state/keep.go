@@ -853,9 +853,6 @@ func (state *State) deleteMembers(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	if len(e.IDs) == 0 {
-		return ""
-	}
 	state.mu.Lock()
 	for _, org := range state.organizations {
 		org.mu.Lock()
