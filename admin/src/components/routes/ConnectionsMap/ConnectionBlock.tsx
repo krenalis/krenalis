@@ -9,6 +9,7 @@ import connectionMapContext from '../../../context/ConnectionMapContext';
 import appContext from '../../../context/AppContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { getWarehouseRelations } from './warehouseRelations';
 
 interface ConnectionBlockProps {
 	connection: TransformedConnection;
@@ -43,16 +44,20 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			showHead = true;
 		}
 
+		const relations = c.relations(connections);
+		const warehouseRelations = getWarehouseRelations(c);
 		const isConnected = c.pipelines.length > 0 || c.linkedConnections?.length > 0;
-		const hasRelations = c.relations(connections).length > 0;
+		const hasRelations = relations.length > 0;
+		const hasUserWarehouseRelation = warehouseRelations.includes('dwh-user');
+		const hasEventWarehouseRelation = warehouseRelations.includes('dwh-event');
 
 		const isHovered =
 			c.id === hoveredConnection ||
-			c.relations(connections).includes(hoveredConnection) ||
-			(isUserDbHovered && c.relations(connections).includes('dwh-user')) ||
-			(isEventDbHovered && c.relations(connections).includes('dwh-event'));
+			relations.includes(hoveredConnection) ||
+			(isUserDbHovered && hasUserWarehouseRelation) ||
+			(isEventDbHovered && hasEventWarehouseRelation);
 
-		const isHighlighted = isHovered && hasRelations;
+		const isHighlighted = isHovered && (hasRelations || warehouseRelations.length > 0);
 
 		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
 		const isHidden =
@@ -60,8 +65,8 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			(isSomethingHovered &&
 				!(isHovered && isConnected) &&
 				!c.linkedConnections?.includes(hoveredConnection) &&
-				!(isUserDbHovered && c.pipelines.findIndex((p) => p.target === 'User') != -1) &&
-				!(isEventDbHovered && c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1));
+				!(isUserDbHovered && hasUserWarehouseRelation) &&
+				!(isEventDbHovered && hasEventWarehouseRelation));
 
 		const arrow = (
 			<Arrow
