@@ -91,12 +91,21 @@ func (ks *keyStore) set(kid string, key *rsa.PublicKey, alg string) {
 			delete(ks.byID, kid)
 		}
 	}
-	if len(ks.byID) < publicKeyMaxCache {
-		ks.byID[kid] = &publicKey{
-			key:       key,
-			alg:       alg,
-			expiresAt: now.Add(publicKeyTTL),
+	if len(ks.byID) == publicKeyMaxCache {
+		var oldestKid string
+		var oldestExpiry time.Time
+		for k, pk := range ks.byID {
+			if oldestKid == "" || pk.expiresAt.Before(oldestExpiry) {
+				oldestKid = k
+				oldestExpiry = pk.expiresAt
+			}
 		}
+		delete(ks.byID, oldestKid)
+	}
+	ks.byID[kid] = &publicKey{
+		key:       key,
+		alg:       alg,
+		expiresAt: now.Add(publicKeyTTL),
 	}
 }
 
