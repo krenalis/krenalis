@@ -7,7 +7,7 @@ const call = async (url: string, method: string, workspaceID?: string | null, bo
 	let headers = {
 		'Content-Type': 'application/json',
 	};
-	if (workspaceID != null && workspaceID !== '') {
+	if (workspaceID != null) {
 		headers['Krenalis-Workspace'] = workspaceID;
 	}
 	const request: RequestInit = {
