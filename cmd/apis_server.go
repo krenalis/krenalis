@@ -448,11 +448,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); !ok {
-				slog.Error("WorkOS user authenticated but no matching Krenalis member found",
-					"workos_user_id", workosUser.ID,
-					"organization_id", workosExternalOrganizationID,
-				)
-				return nil, errors.Unauthorized("invalid user ID in WorkOS token")
+				return nil, err
 			}
 			name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
 			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
