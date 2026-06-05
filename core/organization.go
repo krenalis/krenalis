@@ -708,25 +708,34 @@ func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, e
 		return "", errors.BadRequest("%s", err)
 	}
 	n := state.AddMember{Organization: this.organization.ID}
-	now := time.Now().UTC()
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email)
+	for {
+		n.ID = generateID(func(id string) (any, bool) {
+			return nil, this.organization.HasMember(id)
+		})
+		now := time.Now().UTC()
+		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email)
+			if err != nil {
+				return nil, err
+			}
+			if exists {
+				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+			}
+			_, err = tx.Exec(ctx,
+				"INSERT INTO members (id, name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+				n.ID, name, email, workosUserID, this.organization.ID, now)
+			if err != nil {
+				return nil, err
+			}
+			return n, nil
+		})
 		if err != nil {
-			return nil, err
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
+				continue
+			}
+			return "", err
 		}
-		if exists {
-			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-		}
-		err = tx.QueryRow(ctx,
-			"INSERT INTO members (name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-			name, email, workosUserID, this.organization.ID, now).Scan(&n.ID)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
-	})
-	if err != nil {
-		return "", err
+		break
 	}
 	return n.ID, nil
 }
