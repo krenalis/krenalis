@@ -1005,7 +1005,7 @@ func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, nam
 		return errors.BadRequest("%s", err)
 	}
 	_, err := core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
-	if db.ErrConstraintName(err) == "members_organization_email_key" {
+	if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
 		return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 	}
 	return err
