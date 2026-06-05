@@ -853,7 +853,6 @@ func (state *State) deleteMembers(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	for _, org := range state.organizations {
 		org.mu.Lock()
 		for _, id := range e.IDs {
@@ -861,7 +860,6 @@ func (state *State) deleteMembers(n notification) string {
 		}
 		org.mu.Unlock()
 	}
-	state.mu.Unlock()
 	return ""
 }
 
