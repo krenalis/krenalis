@@ -224,7 +224,7 @@ const WorkOSWrapper = () => {
 
 	useEffect(() => {
 		const loginViaWorkOS = async () => {
-			const api = new API(window.location.origin, 0);
+			const api = new API(window.location.origin, '');
 			try {
 				const token = await getAccessToken();
 				await api.loginWithWorkOS(token);
@@ -258,7 +258,7 @@ const Root = () => {
 	const [workosDevMode, setWorkOSDevMode] = useState<boolean>(false);
 
 	useEffect(() => {
-		const api = new API(window.location.origin, 0);
+		const api = new API(window.location.origin, '');
 
 		const fetchWorkOSClientID = async () => {
 			let publicMetadata: PublicMetadata;
