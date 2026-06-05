@@ -68,7 +68,7 @@ func unavailableError(err error) error {
 var destinationsProfilesTable = warehouses.Table{
 	Name: "krenalis_destination_profiles",
 	Columns: []warehouses.Column{
-		{Name: "_pipeline", Type: types.Int(32)},
+		{Name: "_pipeline", Type: types.String()},
 		{Name: "_external_id", Type: types.String()},
 		{Name: "_out_matching_value", Type: types.String()},
 	},
@@ -78,15 +78,15 @@ var destinationsProfilesTable = warehouses.Table{
 type Store struct {
 	ds               *Datastore
 	wh               atomic.Value // warehouse
-	workspace        int
+	workspace        string
 	columnByProperty struct {
 		mu       sync.Mutex
 		user     map[string]warehouses.Column // including meta properties.
 		identity map[string]warehouses.Column // including meta properties.
 	}
 	closed               atomic.Bool
-	mu                   sync.Mutex                   // for the 'eventIdentityWriters' field
-	eventIdentityWriters map[int]*EventIdentityWriter // pipeline -> *EventIdentityWriter
+	mu                   sync.Mutex                      // for the 'eventIdentityWriters' field
+	eventIdentityWriters map[string]*EventIdentityWriter // pipeline -> *EventIdentityWriter
 	mc                   *modeCoordinator
 }
 
@@ -96,7 +96,7 @@ func newStore(ds *Datastore, ws *state.Workspace) *Store {
 	store := &Store{
 		ds:                   ds,
 		workspace:            ws.ID,
-		eventIdentityWriters: map[int]*EventIdentityWriter{},
+		eventIdentityWriters: map[string]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
 	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
@@ -179,7 +179,7 @@ func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline int) error {
+func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -187,7 +187,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline int)
 	}
 	defer done()
 	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIs, pipeline)
+		warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, pipeline)
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
@@ -280,7 +280,7 @@ type DestinationProfile struct {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) MergeDestinationUsers(ctx context.Context, pipeline int, profiles []DestinationProfile, idsToDelete []string) error {
+func (store *Store) MergeDestinationUsers(ctx context.Context, pipeline string, profiles []DestinationProfile, idsToDelete []string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -333,7 +333,7 @@ func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool)
 // identities from events.
 //
 // It must be called on a frozen state.
-func (store *Store) NewEventIdentityWriter(pipelineID int) *EventIdentityWriter {
+func (store *Store) NewEventIdentityWriter(pipelineID string) *EventIdentityWriter {
 	store.mustBeOpen()
 	return newEventIdentityWriter(store, pipelineID)
 }
@@ -435,7 +435,7 @@ func (store *Store) Profiles(ctx context.Context, query Query) ([]map[string]any
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
+func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -446,7 +446,7 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []int) error {
 	for i, pipeline := range pipelines {
 		values[i] = pipeline
 	}
-	where := warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
+	where := warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsOneOf, values...)
 	err = store.warehouse().Delete(ctx, "krenalis_identities", where)
 	if err != nil {
 		return err
@@ -531,7 +531,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	profileColumns := util.PropertiesToColumns(properties)
 
 	// Determine the primary sources for every profile column.
-	primarySources := make(map[string]int, len(ws.PrimarySources))
+	primarySources := make(map[string]string, len(ws.PrimarySources))
 	for p, s := range ws.PrimarySources {
 		c := strings.ReplaceAll(p, ".", "_")
 		primarySources[c] = s
@@ -607,7 +607,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 // UnsetIdentityProperties unsets values for the specified identity properties
 // for the given pipeline. properties contains the property paths and must not be
 // empty. If the provided pipeline does not exist, it does nothing.
-func (store *Store) UnsetIdentityProperties(ctx context.Context, pipeline int, properties []string) error {
+func (store *Store) UnsetIdentityProperties(ctx context.Context, pipeline string, properties []string) error {
 	store.mustBeOpen()
 	if len(properties) == 0 {
 		return errors.New("core/datastore: invalid empty properties")

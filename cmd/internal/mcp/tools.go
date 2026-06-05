@@ -284,7 +284,7 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
-	if workspaceID == 0 {
+	if workspaceID == "" {
 		return nil, errors.New("the MCP (Model Context Protocol) key must be restricted to a workspace")
 	}
 	ws, err := org.Workspace(workspaceID)

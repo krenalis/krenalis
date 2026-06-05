@@ -50,7 +50,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 	// Import users from Dummy.
 	t.Log("importing from Dummy...")
-	var dummy, dummyPipeline int
+	var dummy, dummyPipeline string
 	{
 
 		dummy = c.CreateDummy("Dummy", krenalistester.Source)
@@ -88,7 +88,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Imports users from CSV.
-	var fs, csvPipeline int
+	var fs, csvPipeline string
 	t.Log("importing from CSV file...")
 	{
 		fs = c.CreateSourceFileSystem()
@@ -134,7 +134,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Import users and events from a JavaScript connection.
-	var javaScript, javascriptUsersPipeline int
+	var javaScript, javascriptUsersPipeline string
 	t.Log("importing users and events...")
 	{
 		// Create a JavaScript connection with two pipelines (one for importing
@@ -262,12 +262,12 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 }
 
-func getIdentityByConnection(t *testing.T, identities []krenalistester.Identity, connection int) krenalistester.Identity {
+func getIdentityByConnection(t *testing.T, identities []krenalistester.Identity, connection string) krenalistester.Identity {
 	for _, identity := range identities {
 		if identity.Connection == connection {
 			return identity
 		}
 	}
-	t.Fatalf("identity with connection %d not found among provided identities", connection)
+	t.Fatalf("identity with connection %s not found among provided identities", connection)
 	return krenalistester.Identity{}
 }

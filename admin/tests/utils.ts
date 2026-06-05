@@ -7,7 +7,7 @@ import { IS_PASSWORDLESS_KEY, WORKSPACE_ID_KEY } from '../src/constants/storage'
 
 interface Config {
 	baseURL: string;
-	workspaceID: number;
+	workspaceID: string;
 	dbHost: string;
 	dbPort: string;
 	dbUsername: string;
@@ -50,7 +50,7 @@ const logout = async (page: Page) => {
 	await page.goto(`${adminURL}/`);
 };
 
-const addDummySource = async (page: Page): Promise<number> => {
+const addDummySource = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
@@ -72,7 +72,7 @@ const addDummySource = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addDummyDestination = async (page: Page): Promise<number> => {
+const addDummyDestination = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
@@ -94,7 +94,7 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addPostgreSQLSource = async (page: Page): Promise<number> => {
+const addPostgreSQLSource = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ config }) => {
 			const api = new (window as any).API(config.baseURL, config.workspaceID) as API;
@@ -123,7 +123,7 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addPostgreSQLDestination = async (page: Page): Promise<number> => {
+const addPostgreSQLDestination = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ config }) => {
 			const api = new (window as any).API(config.baseURL, config.workspaceID) as API;
@@ -152,7 +152,7 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addFileSystemSource = async (page: Page): Promise<number> => {
+const addFileSystemSource = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
@@ -174,7 +174,7 @@ const addFileSystemSource = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addFileSystemDestination = async (page: Page): Promise<number> => {
+const addFileSystemDestination = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
@@ -196,7 +196,7 @@ const addFileSystemDestination = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addJavascriptSource = async (page: Page): Promise<number> => {
+const addJavascriptSource = async (page: Page): Promise<string> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;

@@ -283,7 +283,7 @@ type Warehouse interface {
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
 	// same ID.
-	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]int) error
+	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]string) error
 
 	// Repair repairs the database objects on the data warehouse needed by warehouses.
 	// It also takes care of correcting other inconsistent data (such as any tables
@@ -301,7 +301,7 @@ type Warehouse interface {
 	// UnsetIdentityColumns unsets values for the specified identity columns for the
 	// given pipeline. columns must not be empty. If the provided pipeline does not
 	// exist, it does nothing.
-	UnsetIdentityColumns(ctx context.Context, pipeline int, columns []Column) error
+	UnsetIdentityColumns(ctx context.Context, pipeline string, columns []Column) error
 
 	// ValidateSettings validates the settings.
 	// If validation succeeds, it returns the settings in the canonical JSON form.

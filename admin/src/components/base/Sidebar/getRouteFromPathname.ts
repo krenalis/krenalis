@@ -20,7 +20,7 @@ const getRouteFromPathname = (route: string, connections: TransformedConnection[
 			} else if (resource === 'destinations') {
 				currentRoute = 'connections/destinations';
 			} else {
-				const connectionID = Number(resource);
+				const connectionID = resource;
 				const connection = connections.find((c) => c.id === connectionID);
 				if (connection != null) {
 					if (connection.isSource) {

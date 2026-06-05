@@ -59,7 +59,7 @@ type BatchPublisher interface {
 	// Publish adds an event to the current batch for the given topics.
 	// If a topic begins with "connection-", destinations contains the destination
 	// pipelines the event is sent to.
-	Publish(ctx context.Context, topics []string, event map[string]any, destinations []int) error
+	Publish(ctx context.Context, topics []string, event map[string]any, destinations []string) error
 
 	// Done publishes all buffered events.
 	//
@@ -77,6 +77,6 @@ type Ack func()
 // Event represents an event read from the stream.
 type Event struct {
 	Attributes   map[string]any
-	Destinations []int
+	Destinations []string
 	Ack          Ack
 }

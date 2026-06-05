@@ -120,7 +120,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		case pipeline2:
 			pipeline2Found = true
 		default:
-			t.Fatalf("unexpected identity with pipeline %d", identity.Pipeline)
+			t.Fatalf("unexpected identity with pipeline %s", identity.Pipeline)
 		}
 	}
 	if !pipeline1Found {
@@ -166,7 +166,7 @@ waitLoop:
 	// Check that the only existing identity is correct.
 	identity := identities[0]
 	if identity.Pipeline != pipeline1 {
-		t.Fatalf("identity should have pipeline %d, got %d instead", pipeline1, identity.Pipeline)
+		t.Fatalf("identity should have pipeline %s, got %s instead", pipeline1, identity.Pipeline)
 	}
 	if len(identity.AnonymousIDs) != 1 {
 		t.Fatalf("pipeline should have just one anonymous ID, got %d instead", len(identity.AnonymousIDs))

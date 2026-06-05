@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -43,14 +42,14 @@ type Workspace struct {
 	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
-	ID                             int            `json:"id"`
-	Name                           string         `json:"name"`
-	ProfileSchema                  types.Type     `json:"profileSchema"`
-	PrimarySources                 map[string]int `json:"primarySources,format:emitnull"`
-	ResolveIdentitiesOnBatchImport bool           `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string       `json:"identifiers,format:emitnull"`
-	WarehouseMode                  WarehouseMode  `json:"warehouseMode"`
-	UIPreferences                  UIPreferences  `json:"uiPreferences"`
+	ID                             string            `json:"id"`
+	Name                           string            `json:"name"`
+	ProfileSchema                  types.Type        `json:"profileSchema"`
+	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
+	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string          `json:"identifiers,format:emitnull"`
+	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
+	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }
 
 type UIPreferences struct {
@@ -114,7 +113,7 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 
 // PipelineError represents a pipeline error.
 type PipelineError struct {
-	Pipeline     int          `json:"pipeline"`
+	Pipeline     string       `json:"pipeline"`
 	Step         PipelineStep `json:"step"`
 	Count        int          `json:"count"`
 	Message      string       `json:"message"`
@@ -123,14 +122,14 @@ type PipelineError struct {
 
 // Pipeline returns the pipeline with identifier id of the workspace.
 // It returns an errors.NotFound error if the pipeline does not exist.
-func (this *Workspace) Pipeline(id int) (*Pipeline, error) {
+func (this *Workspace) Pipeline(id string) (*Pipeline, error) {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid pipeline identifier", id)
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid pipeline identifier", id)
 	}
 	p, ok := this.core.state.Pipeline(id)
 	if !ok || p.Connection().Workspace().ID != this.workspace.ID {
-		return nil, errors.NotFound("pipeline %d does not exist", id)
+		return nil, errors.NotFound("pipeline %s does not exist", id)
 	}
 	var pipeline Pipeline
 	pipeline.fromState(this.core, this.store, p)
@@ -142,7 +141,7 @@ func (this *Workspace) Pipeline(id int) (*Pipeline, error) {
 // must be within [metrics.MinTime,metrics.MaxTime]. pipelines must not be empty.
 // Returned errors are limited to [first, first+limit), where first >= 0 and
 // 0 < limit <= 100.
-func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time, pipelines []int, step *PipelineStep, first, limit int) ([]PipelineError, error) {
+func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time, pipelines []string, step *PipelineStep, first, limit int) ([]PipelineError, error) {
 
 	this.core.mustBeOpen()
 
@@ -165,8 +164,8 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 		return nil, errors.BadRequest("pipelines cannot be empty")
 	}
 	for _, pipeline := range pipelines {
-		if pipeline < 1 || pipeline > maxInt32 {
-			return nil, errors.BadRequest("pipeline %d is not valid", pipeline)
+		if !IsValidID(pipeline) {
+			return nil, errors.BadRequest("pipeline %q is not valid", pipeline)
 		}
 	}
 
@@ -292,7 +291,7 @@ func (this Workspace) ColumnTypeDescription(t types.Type) (string, error) {
 // 1970-01-01 and no later than 2262-04-10. The day of the start date must be at
 // least one day before the day of the end date. pipelines specifies the
 // pipelines for which metrics are returned and must not be empty.
-func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, pipelines []int) (PipelineMetrics, error) {
+func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, pipelines []string) (PipelineMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -315,8 +314,8 @@ func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end ti
 		return PipelineMetrics{}, errors.BadRequest("pipelines if non-nil, cannot be empty")
 	}
 	for _, pipeline := range pipelines {
-		if pipeline < 1 || pipeline > maxInt32 {
-			return PipelineMetrics{}, errors.BadRequest("pipeline %d is not valid", pipeline)
+		if !IsValidID(pipeline) {
+			return PipelineMetrics{}, errors.BadRequest("pipeline %q is not valid", pipeline)
 		}
 	}
 
@@ -349,7 +348,7 @@ func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end ti
 // the current time. number must be in the following ranges: [1,60] for minutes,
 // [1,48] for hours, and [1,30] for days. pipelines specifies the pipelines for
 // which metrics are returned and must not be empty.
-func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, pipelines []int) (PipelineMetrics, error) {
+func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, pipelines []string) (PipelineMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -374,8 +373,8 @@ func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number in
 		return PipelineMetrics{}, errors.BadRequest("pipelines if non-nil, cannot be empty")
 	}
 	for _, pipeline := range pipelines {
-		if pipeline < 1 || pipeline > maxInt32 {
-			return PipelineMetrics{}, errors.BadRequest("pipeline %d is not valid", pipeline)
+		if !IsValidID(pipeline) {
+			return PipelineMetrics{}, errors.BadRequest("pipeline %q is not valid", pipeline)
 		}
 	}
 
@@ -403,7 +402,7 @@ func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number in
 // authorizedOAuthAccount represents an authorized OAuth account that can be
 // used to create a new connection.
 type authorizedOAuthAccount struct {
-	Workspace    int
+	Workspace    string
 	Connector    string
 	Code         string
 	AccessToken  string
@@ -460,14 +459,14 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 // Connection returns the connection with identifier id of the workspace.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
+func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, error) {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("connection identifier %d is not valid", id)
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("connection identifier %q is not valid", id)
 	}
 	c, ok := this.workspace.Connection(id)
 	if !ok {
-		return nil, errors.NotFound("connection %d does not exist", id)
+		return nil, errors.NotFound("connection %s does not exist", id)
 	}
 	conn := c.Connector()
 
@@ -564,47 +563,47 @@ func (this *Workspace) Connections() []*Connection {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - LinkedConnectionNotExist, if a linked connection does not exist.
 //   - InvalidSettings, if the settings are not valid.
-func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, authToken string) (int, error) {
+func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, authToken string) (string, error) {
 
 	this.core.mustBeOpen()
 
 	if connection.Role != Source && connection.Role != Destination {
-		return 0, errors.BadRequest("role %d is not valid", int(connection.Role))
+		return "", errors.BadRequest("role %d is not valid", int(connection.Role))
 	}
 	if connection.Connector == "" {
-		return 0, errors.BadRequest("connector code is empty")
+		return "", errors.BadRequest("connector code is empty")
 	}
 	if err := util.ValidateStringField("name", connection.Name, 100); err != nil {
-		return 0, errors.BadRequest("%s", err)
+		return "", errors.BadRequest("%s", err)
 	}
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
-			return 0, errors.BadRequest("strategy %q is not valid", *s)
+			return "", errors.BadRequest("strategy %q is not valid", *s)
 		}
 		if connection.Role == Destination {
-			return 0, errors.BadRequest("destination connections cannot have a strategy")
+			return "", errors.BadRequest("destination connections cannot have a strategy")
 		}
 	}
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
-		return 0, errors.BadRequest("sending mode %q is not valid", *sm)
+		return "", errors.BadRequest("sending mode %q is not valid", *sm)
 	}
 
 	c, ok := this.core.state.Connector(connection.Connector)
 	if !ok {
-		return 0, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
+		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
 	}
 	switch c.Type {
 	case state.File:
-		return 0, errors.BadRequest("connections cannot have type file")
+		return "", errors.BadRequest("connections cannot have type file")
 	case state.MessageBroker:
-		return 0, errors.BadRequest("message broker connectors are not currently supported")
+		return "", errors.BadRequest("message broker connectors are not currently supported")
 	case state.SDK:
 		if connection.Role == Destination {
-			return 0, errors.BadRequest("SDK connections cannot be destinations")
+			return "", errors.BadRequest("SDK connections cannot be destinations")
 		}
 	case state.Webhook:
 		if connection.Role == Destination {
-			return 0, errors.BadRequest("webhook connections cannot be destinations")
+			return "", errors.BadRequest("webhook connections cannot be destinations")
 		}
 	}
 
@@ -612,7 +611,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	var err error
 	connection.LinkedConnections, err = validateLinkedConnections(connection.LinkedConnections, c, this.workspace, state.Role(connection.Role))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	n := state.CreateConnection{
@@ -632,11 +631,11 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if connection.Role == Source {
 		if c.Strategies {
 			if connection.Strategy == nil {
-				return 0, errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
+				return "", errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
 		} else {
 			if connection.Strategy != nil {
-				return 0, errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
+				return "", errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
 			}
 		}
 	}
@@ -645,34 +644,34 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if connection.Role == Destination {
 		if c.SendingMode != nil {
 			if connection.SendingMode == nil {
-				return 0, errors.BadRequest("connector %s requires a sending mode", c.Code)
+				return "", errors.BadRequest("connector %s requires a sending mode", c.Code)
 			}
 			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
-				return 0, errors.BadRequest("connector %s does not support sending mode %s", c.Code, *c.SendingMode)
+				return "", errors.BadRequest("connector %s does not support sending mode %s", c.Code, *c.SendingMode)
 			}
 		} else if connection.SendingMode != nil {
-			return 0, errors.BadRequest("connector %s does not support sending modes", c.Code)
+			return "", errors.BadRequest("connector %s does not support sending modes", c.Code)
 		}
 	} else if connection.SendingMode != nil {
-		return 0, errors.BadRequest("source connections cannot have a sending mode")
+		return "", errors.BadRequest("source connections cannot have a sending mode")
 	}
 
 	// Validate the authorization token.
 	if (authToken == "") != (c.OAuth == nil) {
 		if authToken == "" {
-			return 0, errors.BadRequest("authorization token is required by connector %s", n.Connector)
+			return "", errors.BadRequest("authorization token is required by connector %s", n.Connector)
 		}
-		return 0, errors.BadRequest("connector %s does not support authorization", n.Connector)
+		return "", errors.BadRequest("connector %s does not support authorization", n.Connector)
 	}
 
 	// Set the OAuth account. It can be an existing account or an account that needs to be created.
 	if authToken != "" {
 		account, err := this.core.decryptAuthorizedOAuthAccount(ctx, authToken)
 		if err != nil {
-			return 0, errors.BadRequest("authorization token is not valid")
+			return "", errors.BadRequest("authorization token is not valid")
 		}
 		if account.Workspace != this.workspace.ID || account.Connector != c.Code {
-			return 0, errors.BadRequest("authorization token is not valid")
+			return "", errors.BadRequest("authorization token is not valid")
 		}
 		n.Account.Code = account.Code
 		a, ok := this.workspace.AccountByCode(account.Connector, account.Code)
@@ -690,15 +689,15 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	// Validate the settings.
 	if settings := connection.Settings; settings == nil {
 		if connection.Role == Source && c.HasSourceSettings || connection.Role == Destination && c.HasDestinationSettings {
-			return 0, errors.BadRequest("settings must be provided because connector %s has %s settings", c.Code, strings.ToLower(connection.Role.String()))
+			return "", errors.BadRequest("settings must be provided because connector %s has %s settings", c.Code, strings.ToLower(connection.Role.String()))
 		}
 		n.SettingsKey, err = this.core.state.GenerateKmsDataKey(ctx)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
 	} else {
 		if connection.Role == Source && !c.HasSourceSettings || connection.Role == Destination && !c.HasDestinationSettings {
-			return 0, errors.BadRequest("settings cannot be provided because connector %s has no %s settings", c.Code, strings.ToLower(connection.Role.String()))
+			return "", errors.BadRequest("settings cannot be provided because connector %s has no %s settings", c.Code, strings.ToLower(connection.Role.String()))
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -718,18 +717,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
-			return 0, err
+			return "", err
 		}
 		n.Settings, n.SettingsKey, err = this.core.state.EncryptSettings(ctx, settings)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
-	}
-
-	// Generate the identifier.
-	n.ID, err = generateRandomID()
-	if err != nil {
-		return 0, err
 	}
 
 	// Generate an event write key.
@@ -745,69 +738,77 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteString(strconv.Itoa(id))
+			b.WriteString(db.Quote(id))
 		}
 		add = "UPDATE connections\n" +
 			"SET linked_connections = (SELECT ARRAY(SELECT unnest(array_append(linked_connections, $1)) ORDER BY 1))\n" +
 			"WHERE id IN (" + b.String() + ")"
 	}
 
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		if n.Account.Code != "" {
-			if n.Account.ID == 0 {
-				// Insert a new account.
-				err = tx.QueryRow(ctx, "INSERT INTO accounts (workspace, connector, code, access_token,"+
-					" refresh_token, expires_in) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-					n.Workspace, n.Connector, n.Account.Code, n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn).
-					Scan(&n.Account.ID)
-			} else if n.Account.AccessToken != "" {
-				// Update the current account.
-				_, err = tx.Exec(ctx, "UPDATE accounts "+
-					"SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
-					n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn, n.Account.ID)
+	// Create the connection.
+	for {
+		n.ID = generateID(this.workspace.Connection)
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			if n.Account.Code != "" {
+				if n.Account.ID == 0 {
+					// Insert a new account.
+					err = tx.QueryRow(ctx, "INSERT INTO accounts (workspace, connector, code, access_token,"+
+						" refresh_token, expires_in) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+						n.Workspace, n.Connector, n.Account.Code, n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn).
+						Scan(&n.Account.ID)
+				} else if n.Account.AccessToken != "" {
+					// Update the current account.
+					_, err = tx.Exec(ctx, "UPDATE accounts "+
+						"SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
+						n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn, n.Account.ID)
+				}
+				if err != nil {
+					if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "accounts_workspace_fkey" {
+						err = errors.Unprocessable(WorkspaceNotExist, "workspace %s does not exist", n.Workspace)
+					}
+					return nil, err
+				}
 			}
+			// Insert the connection.
+			_, err = tx.Exec(ctx, "INSERT INTO connections "+
+				"(id, workspace, name, connector, role, account,"+
+				" strategy, sending_mode, linked_connections, settings, kms_encrypted_settings_key)"+
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+				n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
+				n.SendingMode, n.LinkedConnections, n.Settings, n.SettingsKey)
 			if err != nil {
-				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "accounts_workspace_fkey" {
-					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
+					err = errors.Unprocessable(WorkspaceNotExist, "workspace %s does not exist", n.Workspace)
 				}
 				return nil, err
 			}
-		}
-		// Insert the connection.
-		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, connector, role, account,"+
-			" strategy, sending_mode, linked_connections, settings, kms_encrypted_settings_key)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
-			n.SendingMode, n.LinkedConnections, n.Settings, n.SettingsKey)
+			// Link connections.
+			if len(n.LinkedConnections) > 0 {
+				result, err := tx.Exec(ctx, add, n.ID)
+				if err != nil {
+					return nil, err
+				}
+				if int(result.RowsAffected()) < len(n.LinkedConnections) {
+					return nil, errors.Unprocessable(LinkedConnectionNotExist, "a linked connection does not exist")
+				}
+			}
+			if n.EventWriteKey != "" {
+				// Insert the event write key.
+				_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
+					n.ID, n.EventWriteKey, time.Now().UTC())
+				if err != nil {
+					return nil, err
+				}
+			}
+			return n, nil
+		})
 		if err != nil {
-			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
-				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "connections_pkey" {
+				continue
 			}
-			return nil, err
+			return "", err
 		}
-		// Link connections.
-		if len(n.LinkedConnections) > 0 {
-			result, err := tx.Exec(ctx, add, n.ID)
-			if err != nil {
-				return nil, err
-			}
-			if int(result.RowsAffected()) < len(n.LinkedConnections) {
-				return nil, errors.Unprocessable(LinkedConnectionNotExist, "a linked connection does not exist")
-			}
-		}
-		if n.EventWriteKey != "" {
-			// Insert the event write key.
-			_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
-				n.ID, n.EventWriteKey, time.Now().UTC())
-			if err != nil {
-				return nil, err
-			}
-		}
-		return n, nil
-	})
-	if err != nil {
-		return 0, err
+		break
 	}
 
 	return n.ID, nil
@@ -816,7 +817,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 // CreateEventListener creates an event listener for the workspace that listens
 // to events and returns its identifier.
 //
-// If connection is not 0, it must be the identifier of a connection on events.
+// If connection is not empty, it must be the identifier of a connection on
+// events.
 //   - If it is a source, only events received from that source will be
 //     returned.
 //   - If it is a destination, only events received from the linked connections
@@ -830,26 +832,26 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // It returns an errors.UnprocessableError with code TooManyListeners, if there
 // are already too many listeners.
-func (this *Workspace) CreateEventListener(connection, size int, filter *Filter) (string, error) {
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter) (string, error) {
 	this.core.mustBeOpen()
-	if connection < 0 || connection > maxInt32 {
-		return "", errors.BadRequest("identifier %d is not a valid connection identifier", connection)
+	if connection != "" && !IsValidID(connection) {
+		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
 	}
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
 	}
-	var connections []int
-	if connection > 0 {
+	var connections []string
+	if connection != "" {
 		c, ok := this.workspace.Connection(connection)
 		if !ok {
-			return "", errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", connection)
+			return "", errors.Unprocessable(ConnectionNotExist, "connection %s does not exist", connection)
 		}
 		if c.LinkedConnections == nil {
-			return "", errors.BadRequest("connection %d does not support events", c.ID)
+			return "", errors.BadRequest("connection %s does not support events", c.ID)
 		}
 		switch c.Role {
 		case state.Source:
-			connections = []int{c.ID}
+			connections = []string{c.ID}
 		case state.Destination:
 			connections = slices.Clone(c.LinkedConnections)
 		}
@@ -902,7 +904,7 @@ func (this *Workspace) Delete(ctx context.Context) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("workspace %d does not exist", n.ID)
+			return nil, errors.NotFound("workspace %s does not exist", n.ID)
 		}
 		return n, nil
 	})
@@ -1078,7 +1080,7 @@ func (this *Workspace) LatestIdentityResolution() (startTime, endTime *time.Time
 	this.core.mustBeOpen()
 	ws, ok := this.core.state.Workspace(this.workspace.ID)
 	if !ok {
-		return nil, nil, errors.NotFound("workspace %d does not exist", this.workspace.ID)
+		return nil, nil, errors.NotFound("workspace %s does not exist", this.workspace.ID)
 	}
 	return ws.IR.StartTime, ws.IR.EndTime, nil
 }
@@ -1106,7 +1108,7 @@ func (this *Workspace) LatestAlterProfileSchema() (startTime, endTime *time.Time
 	this.core.mustBeOpen()
 	ws, ok := this.core.state.Workspace(this.workspace.ID)
 	if !ok {
-		return nil, nil, "", errors.NotFound("workspace %d does not exist", this.workspace.ID)
+		return nil, nil, "", errors.NotFound("workspace %s does not exist", this.workspace.ID)
 	}
 	if ws.AlterProfileSchema.Err != nil {
 		alterError = *ws.AlterProfileSchema.Err
@@ -1121,7 +1123,7 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 	this.core.mustBeOpen()
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
 	if !ok {
-		return nil, 0, errors.NotFound("workspace %d does not exist", this.workspace.ID)
+		return nil, 0, errors.NotFound("workspace %s does not exist", this.workspace.ID)
 	}
 	observedEvents, omitted, err := observer.Events(listener)
 	if err != nil {
@@ -1140,10 +1142,10 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 // the workspace.
 //
 // If the run does not exist, it returns an errors.NotFound error.
-func (this *Workspace) PipelineRun(ctx context.Context, id int) (*PipelineRun, error) {
+func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun, error) {
 	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid run identifier", id)
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid run identifier", id)
 	}
 	// Check whether the run is in progress.
 	if run, ok := this.workspace.Run(id); ok {
@@ -1167,7 +1169,7 @@ func (this *Workspace) PipelineRun(ctx context.Context, id int) (*PipelineRun, e
 		&run.Failed[5], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.NotFound("pipeline run %d does not exist", id)
+			return nil, errors.NotFound("pipeline run %s does not exist", id)
 		}
 		return nil, err
 	}
@@ -1475,7 +1477,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
+			return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
 		}
 		return n, err
 	})
@@ -1677,7 +1679,7 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
+			return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
 		}
 		return n, nil
 	})
@@ -1746,7 +1748,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 			err := tx.QueryRow(ctx, "SELECT profile_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+					err = errors.NotFound("workspace %s does not exist", n.Workspace)
 				}
 				return nil, err
 			}
@@ -1871,7 +1873,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+					err = errors.NotFound("workspace %s does not exist", n.Workspace)
 				}
 				return nil, err
 			}
@@ -1918,7 +1920,7 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 				return nil, err
 			}
 			if !exists {
-				return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
+				return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
 			}
 			return nil, nil
 		}
@@ -1989,7 +1991,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	for _, row := range rows {
 
 		// Get the connection.
-		connID := row["_connection"].(int)
+		connID := row["_connection"].(string)
 		conn, ok := this.workspace.Connection(connID)
 		if !ok {
 			// The connection for this identity no longer exists, so skip this identity.
@@ -1997,7 +1999,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 		}
 
 		// Get the pipeline.
-		pipelineID := row["_pipeline"].(int)
+		pipelineID := row["_pipeline"].(string)
 		_, ok = conn.Pipeline(pipelineID)
 		if !ok {
 			// The pipeline for this identity no longer exists, so skip this identity.
@@ -2071,7 +2073,7 @@ type ConnectionToAdd struct {
 	// LinkedConnections, for connections supporting events, indicate the
 	// connections to which events can be sent or received. It must be nil if the
 	// connection do not support events.
-	LinkedConnections []int `json:"linkedConnections"`
+	LinkedConnections []string `json:"linkedConnections"`
 
 	// Settings represents the settings of the connector.
 	// It must be nil if the connector does not have settings.
@@ -2156,15 +2158,15 @@ func suitableAsIdentifier(t types.Type) bool {
 type Identity struct {
 	UserID       string    `json:"userId,omitempty"`       // is omitted if anonymous
 	AnonymousIDs []string  `json:"anonymousIds,omitempty"` // is omitted for identities not ingested from events
-	Connection   int       `json:"connection"`
-	Pipeline     int       `json:"pipeline"`
+	Connection   string    `json:"connection"`
+	Pipeline     string    `json:"pipeline"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 // filterWorkspacePipelines returns from pipelines, only the pipelines of the
 // provided workspace. It does not change pipelines.
-func filterWorkspacePipelines(ws *state.Workspace, pipelines []int) []int {
-	notExists := map[int]struct{}{}
+func filterWorkspacePipelines(ws *state.Workspace, pipelines []string) []string {
+	notExists := map[string]struct{}{}
 	for _, pipeline := range pipelines {
 		notExists[pipeline] = struct{}{}
 	}
@@ -2176,7 +2178,7 @@ func filterWorkspacePipelines(ws *state.Workspace, pipelines []int) []int {
 	if len(notExists) == 0 {
 		return pipelines
 	}
-	pipelines = slices.DeleteFunc(slices.Clone(pipelines), func(id int) bool {
+	pipelines = slices.DeleteFunc(slices.Clone(pipelines), func(id string) bool {
 		_, ok := notExists[id]
 		return ok
 	})

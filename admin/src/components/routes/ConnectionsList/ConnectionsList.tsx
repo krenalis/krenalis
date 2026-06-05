@@ -107,7 +107,7 @@ const ConnectionsList = () => {
 					const connectionLogos: ReactNode[] = [];
 					for (const ec of fullEventConnections) {
 						connectionLogos.push(
-							<LittleLogo key={String(ec.id)} code={ec.connector.code} path={CONNECTORS_ASSETS_PATH} />,
+							<LittleLogo key={ec.id} code={ec.connector.code} path={CONNECTORS_ASSETS_PATH} />,
 						);
 					}
 					cells.push(<div className='connections-list__event-connections-cell'>{connectionLogos}</div>);
@@ -117,7 +117,7 @@ const ConnectionsList = () => {
 			}
 			rows.push({
 				cells: cells,
-				id: String(c.id),
+				id: c.id,
 				onClick: () => {
 					redirect(`connections/${c.id}/pipelines`);
 				},

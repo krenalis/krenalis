@@ -25,8 +25,8 @@ interface AppContext {
 	workspaces: Workspace[];
 	setIsLoadingWorkspaces: React.Dispatch<React.SetStateAction<boolean>>;
 	warehouse: Warehouse;
-	selectedWorkspace: number;
-	setSelectedWorkspace: React.Dispatch<React.SetStateAction<number>>;
+	selectedWorkspace: string;
+	setSelectedWorkspace: React.Dispatch<React.SetStateAction<string>>;
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 	isFullscreen: boolean;
 	title: ReactNode;
@@ -35,14 +35,14 @@ interface AppContext {
 	toastRef: React.MutableRefObject<SlAlert>;
 	runPipeline: (
 		connection: TransformedConnection,
-		pipelineID: number,
+		pipelineID: string,
 		pipelineTarget: PipelineTarget,
 	) => Promise<void>;
 	runPipelineButtonRefs: React.MutableRefObject<{
-		[key: number]: React.RefObject<FeedbackButtonRef>;
+		[key: string]: React.RefObject<FeedbackButtonRef>;
 	}>;
 	runPipelineDropdownButtonRefs: React.MutableRefObject<{
-		[key: number]: React.RefObject<FeedbackButtonRef>;
+		[key: string]: React.RefObject<FeedbackButtonRef>;
 	}>;
 	isPasswordless: boolean;
 	setIsPasswordless: React.Dispatch<React.SetStateAction<boolean>>;

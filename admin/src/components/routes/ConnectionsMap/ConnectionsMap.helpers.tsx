@@ -3,7 +3,7 @@ import LinkedConnectionBlocks from './LinkedConnectionBlocks';
 import ConnectionBlock from './ConnectionBlock';
 import TransformedConnection, { getFileStorageConnections } from '../../../lib/core/connection';
 
-const getConnectionsBlocks = (connections: TransformedConnection[], newConnectionID: number) => {
+const getConnectionsBlocks = (connections: TransformedConnection[], newConnectionID: string) => {
 	const blocks: ReactNode[] = [];
 	for (const c of connections) {
 		if (c.isFile) {

@@ -20,6 +20,11 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
+const (
+	testConnectionID = "7B3mN9qK2xA4"
+	testPipelineID   = "8QaT3mN7KxP5"
+)
+
 func TestSendEvents(t *testing.T) {
 
 	// Read Klaviyo settings from environment variables, then prepare
@@ -58,10 +63,10 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*connectors.Event{
 				{
-					DestinationPipeline: 927579274,
+					DestinationPipeline: testPipelineID,
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
-						"connectionId": 347182063,
+						"connectionId": testConnectionID,
 						"context": map[string]any{
 							"browser": map[string]any{
 								"name":  "Other",
@@ -130,7 +135,7 @@ func TestSendEvents(t *testing.T) {
 														"time":           now.Format(time.RFC3339Nano),
 														"value":          9.99,
 														"value_currency": "USD",
-														"unique_id":      "927579274/8f8e652a-2518-4953-a2ed-c70e0894c791",
+														"unique_id":      testPipelineID + "/8f8e652a-2518-4953-a2ed-c70e0894c791",
 														"metric": map[string]any{
 															"data": map[string]any{
 																"type": "metric",
@@ -155,10 +160,10 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*connectors.Event{
 				{
-					DestinationPipeline: 2023196674,
+					DestinationPipeline: testPipelineID,
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
-						"connectionId": 347182063,
+						"connectionId": testConnectionID,
 						"context": map[string]any{
 							"browser": map[string]any{
 								"name":  "Other",
@@ -217,7 +222,7 @@ func TestSendEvents(t *testing.T) {
 														"time":           now.Format(time.RFC3339Nano),
 														"value":          9.99,
 														"value_currency": "USD",
-														"unique_id":      "2023196674/8f8e652a-2518-4953-a2ed-c70e0894c791",
+														"unique_id":      testPipelineID + "/8f8e652a-2518-4953-a2ed-c70e0894c791",
 														"metric": map[string]any{
 															"data": map[string]any{
 																"type": "metric",

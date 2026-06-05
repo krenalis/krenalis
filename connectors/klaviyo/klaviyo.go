@@ -619,7 +619,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events connectors.Events, pre
 		// Build a unique identifier for the event.
 		uniqueId := "[PIPELINE]"
 		if !preview {
-			uniqueId = strconv.Itoa(event.DestinationPipeline)
+			uniqueId = event.DestinationPipeline
 		}
 		uniqueId += "/" + event.Received.MessageID()
 

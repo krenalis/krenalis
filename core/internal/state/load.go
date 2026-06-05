@@ -5,7 +5,6 @@
 package state
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -17,8 +16,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
-
-	"github.com/google/uuid"
 )
 
 // load loads the state.
@@ -255,15 +252,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all organizations.
-	state.organizations = map[uuid.UUID]*Organization{}
+	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			if err := rows.Scan(&org.ID, &org.Name); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
-			org.workspaces = map[int]*Workspace{}
-			org.members = map[int]struct{}{}
+			org.workspaces = map[string]*Workspace{}
+			org.members = map[string]struct{}{}
 			state.organizations[org.ID] = org
 		}
 		return nil
@@ -276,12 +273,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
 		var org *Organization
 		for rows.Next() {
-			var id int
-			var organization uuid.UUID
+			var id, organization string
 			if err := rows.Scan(&id, &organization); err != nil {
-				return fmt.Errorf("loading member %d: %s", id, err)
+				return fmt.Errorf("loading member %s: %s", id, err)
 			}
-			if org == nil || !bytes.Equal(org.ID[:], organization[:]) {
+			if org == nil || org.ID != organization {
 				org = state.organizations[organization]
 			}
 			org.members[id] = struct{}{}
@@ -293,7 +289,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all workspaces.
-	state.workspaces = map[int]*Workspace{}
+	state.workspaces = map[string]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_name,"+
 		" warehouse_mode, warehouse_settings, kms_encrypted_warehouse_settings_key, warehouse_mcp_settings,"+
 		" kms_encrypted_warehouse_mcp_settings_key, alter_profile_schema_id, alter_profile_schema_schema,"+
@@ -304,15 +300,14 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		" pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var organizationID uuid.UUID
-				var warehousePlatform string
+				var organizationID, warehousePlatform string
 				var warehouseMode WarehouseMode
 				var profileSchema []byte
 				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
-					connections: map[int]*Connection{},
-					runs:        map[int]*PipelineRun{},
+					connections: map[string]*Connection{},
+					runs:        map[string]*PipelineRun{},
 					accounts:    map[int]*Account{},
 				}
 				var settingsKey, mcpSettingsKey []byte
@@ -326,11 +321,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.UIPreferences.Profile.Image, &ws.UIPreferences.Profile.FirstName,
 					&ws.UIPreferences.Profile.LastName, &ws.UIPreferences.Profile.Extra,
 					&ws.pipelinesToPurge); err != nil {
-					return fmt.Errorf("loading workspace %d: %s", ws.ID, err)
+					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
-					return fmt.Errorf("loading workspace %d: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)
+					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)
 				}
 				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
@@ -338,13 +333,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				ws.Warehouse.mcpSettingsKey = state.cipher.Key(mcpSettingsKey)
 				err = json.Unmarshal(profileSchema, &ws.ProfileSchema)
 				if err != nil {
-					return fmt.Errorf("cannot load profile schema for workspace %d: %s", ws.ID, err)
+					return fmt.Errorf("cannot load profile schema for workspace %s: %s", ws.ID, err)
 				}
 				err = json.Unmarshal(alterProfileSchemaSchema, &ws.AlterProfileSchema.Schema)
 				if err != nil {
-					return fmt.Errorf("cannot load alter profile schema for workspace %d: %s", ws.ID, err)
+					return fmt.Errorf("cannot load alter profile schema for workspace %s: %s", ws.ID, err)
 				}
-				ws.PrimarySources = map[string]int{}
+				ws.PrimarySources = map[string]string{}
 				ws.organization.workspaces[ws.ID] = ws
 				state.workspaces[ws.ID] = ws
 			}
@@ -360,16 +355,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				k := AccessKey{}
-				var workspace *int
+				var workspace *string
 				var hmac []byte
 				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &k.Type, &hmac); err != nil {
-					return fmt.Errorf("loading access key %d: %s", k.ID, err)
+					return fmt.Errorf("loading access key %s: %s", k.ID, err)
 				}
 				if workspace != nil {
 					k.Workspace = *workspace
 				}
 				if len(hmac) != 32 {
-					return fmt.Errorf("loading access key %d: token HMAC is invalid", k.ID)
+					return fmt.Errorf("loading access key %s: token HMAC is invalid", k.ID)
 				}
 				state.accessKeyByHMAC[string(hmac)] = &k
 				clear(hmac)
@@ -385,8 +380,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				a := Account{}
-				var workspaceID int
-				var connectorName string
+				var workspaceID, connectorName string
 				if err := rows.Scan(&a.ID, &workspaceID, &connectorName, &a.Code, &a.AccessToken, &a.RefreshToken, &a.ExpiresIn); err != nil {
 					return fmt.Errorf("loading account %d: %s", a.ID, err)
 				}
@@ -402,12 +396,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all connections.
-	state.connections = map[int]*Connection{}
+	state.connections = map[string]*Connection{}
 	err = tx.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
 		" account, strategy, sending_mode, linked_connections, settings,"+
 		" kms_encrypted_settings_key, health FROM connections", func(rows *db.Rows) error {
 		for rows.Next() {
-			var workspaceID, account int
+			var workspaceID string
+			var account int
 			var connector string
 			var settingsKey []byte
 			c := Connection{}
@@ -415,7 +410,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.settings,
 				&settingsKey, &c.Health,
 			); err != nil {
-				return fmt.Errorf("loading connection %d: %s", c.ID, err)
+				return fmt.Errorf("loading connection %s: %s", c.ID, err)
 			}
 			ws := state.workspaces[workspaceID]
 			c.mu = new(sync.Mutex)
@@ -423,10 +418,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			c.workspace = ws
 			c.connector = state.connectors[connector]
 			if c.connector == nil {
-				return fmt.Errorf("loading connection %d: the %s connector is not included in the executable. "+
+				return fmt.Errorf("loading connection %s: the %s connector is not included in the executable. "+
 					"Recompile the executable with the %s connector to resolve the issue", c.ID, connector, connector)
 			}
-			c.pipelines = map[int]*Pipeline{}
+			c.pipelines = map[string]*Pipeline{}
 			if account > 0 {
 				c.account = ws.accounts[account]
 			}
@@ -443,7 +438,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					targets = c.connector.DestinationTargets
 				}
 				if targets.Contains(TargetEvent) {
-					c.LinkedConnections = []int{}
+					c.LinkedConnections = []string{}
 				}
 			}
 			c.settingsKey = state.cipher.Key(settingsKey)
@@ -467,10 +462,9 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, created_at`,
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var connectionID int
-				var key string
+				var connectionID, key string
 				if err := rows.Scan(&connectionID, &key); err != nil {
-					return fmt.Errorf("loading key for connection %d: %s", connectionID, err)
+					return fmt.Errorf("loading key for connection %s: %s", connectionID, err)
 				}
 				connection := state.connections[connectionID]
 				connection.Keys = append(connection.Keys, key)
@@ -492,7 +486,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		"FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var connectionID int
+				var connectionID string
 				var eventType string
 				var rawInSchema, rawOutSchema, filter, mapping []byte
 				var function TransformationFunction
@@ -507,13 +501,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
 					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
-					return fmt.Errorf("loading pipeline %d: %s", pipeline.ID, err)
+					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)
 				}
 				c := state.connections[connectionID]
 				if format != nil {
 					pipeline.format = state.connectors[*format]
 					if pipeline.format == nil {
-						return fmt.Errorf("loading pipeline %d: the %s connector is not included in the executable. "+
+						return fmt.Errorf("loading pipeline %s: the %s connector is not included in the executable. "+
 							"Recompile the executable with the %s connector to resolve the issue", pipeline.ID, *format, *format)
 					}
 				}
@@ -522,22 +516,22 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline.EventType = eventType
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
-					return fmt.Errorf("loading input schema for pipeline %d: %s", pipeline.ID, err)
+					return fmt.Errorf("loading input schema for pipeline %s: %s", pipeline.ID, err)
 				}
 				err = pipeline.OutSchema.UnmarshalJSON(rawOutSchema)
 				if err != nil {
-					return fmt.Errorf("loading output schema for pipeline %d: %s", pipeline.ID, err)
+					return fmt.Errorf("loading output schema for pipeline %s: %s", pipeline.ID, err)
 				}
 				if filter != nil {
 					pipeline.Filter, err = unmarshalWhere(filter, pipeline.InSchema)
 					if err != nil {
-						return fmt.Errorf("loading filter for pipeline %d: %s", pipeline.ID, err)
+						return fmt.Errorf("loading filter for pipeline %s: %s", pipeline.ID, err)
 					}
 				}
 				if len(mapping) > 0 {
 					err = json.Unmarshal(mapping, &pipeline.Transformation.Mapping)
 					if err != nil {
-						return fmt.Errorf("loading transformation mapping for pipeline %d: %s", pipeline.ID, err)
+						return fmt.Errorf("loading transformation mapping for pipeline %s: %s", pipeline.ID, err)
 					}
 				}
 				if function.Source != "" {
@@ -560,10 +554,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				run := PipelineRun{
 					mu: &sync.Mutex{},
 				}
-				var pipelineID int
+				var pipelineID string
 				err := rows.Scan(&run.ID, &pipelineID, &run.Cursor, &run.Incremental, &run.StartTime)
 				if err != nil {
-					return fmt.Errorf("loading run %d: %s", run.ID, err)
+					return fmt.Errorf("loading run %s: %s", run.ID, err)
 				}
 				pipeline := state.pipelines[pipelineID]
 				run.pipeline = pipeline
@@ -581,10 +575,9 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	err = tx.QueryScan(ctx, "SELECT source, path FROM primary_sources",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				var source int
-				var path string
+				var source, path string
 				if err := rows.Scan(&source, &path); err != nil {
-					return fmt.Errorf("loading source %d: %s", source, err)
+					return fmt.Errorf("loading source %s: %s", source, err)
 				}
 				c := state.connections[source]
 				c.workspace.PrimarySources[path] = source

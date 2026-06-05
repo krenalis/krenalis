@@ -240,8 +240,8 @@ interface TransformedEventType {
 }
 
 interface TransformedPipeline {
-	id?: number;
-	connection?: number;
+	id?: string;
+	connection?: string;
 	target: PipelineTarget;
 	name: string;
 	enabled: boolean;

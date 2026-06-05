@@ -26,7 +26,7 @@ func TestEventsContext(t *testing.T) {
 	defer c.Stop()
 
 	// Create a webhook connection, with a pipeline to ingest the events.
-	var webhookID int
+	var webhookID string
 	var webhookEventWriteKey string
 	{
 		webhookID = c.CreateWebhookSource("Krenalis API", nil)

@@ -59,7 +59,7 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 		if (hasWorkOS) {
 			onWorkOSLogout();
 		}
-		setSelectedWorkspace(0);
+		setSelectedWorkspace('');
 		setIsLoggedIn(false);
 	};
 

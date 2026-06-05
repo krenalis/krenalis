@@ -1,5 +1,11 @@
 <h1>Krenalis</h1>
 
+<p align="center">
+    <a href="https://www.krenalis.com/" target="_blank" rel="noopener">
+        <img src="https://assets.krenalis.com/repo/krenalis/krenalis-admin-console.png" alt="Krenalis - The warehouse-native CDP for modern data teams" />
+    </a>
+</p>
+
 [Krenalis](https://www.krenalis.com) is a Customer Data Platform (CDP) that helps data analysts and the marketing team collect, enrich, unify, and activate user and customer data — including product events, marketing signals, and sales interactions — and syncs it to the tools your teams use every day.
 
 Krenalis is open and free to use. It's a lightweight, developer-friendly alternative to Customer Data Platforms such as Segment, RudderStack, and mParticle.
@@ -54,7 +60,7 @@ Navigate to the directory where you want to run Krenalis and execute:
 
 ```
 mkdir -p storage
-curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.39.0/compose.yaml"
+curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.40.0/compose.yaml"
 if [ ! -f .env ]; then printf "KRENALIS_KMS=key:%s\n" "$(openssl rand -base64 32)" > .env; fi
 docker compose up
 ```

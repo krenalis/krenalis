@@ -22,8 +22,8 @@ interface ConnectorUIResponse {
 }
 
 interface PipelineRun {
-	id: number;
-	pipeline: number;
+	id: string;
+	pipeline: string;
 	startTime: string;
 	endTime?: string;
 	passed: number[];
@@ -47,11 +47,11 @@ interface CreateEventWriteKeyResponse {
 }
 
 interface CreatePipelineResponse {
-	id: number;
+	id: string;
 }
 
 interface CreateConnectionResponse {
-	id: number;
+	id: string;
 }
 
 interface PipelineMatchingSchemas {
@@ -145,7 +145,7 @@ interface MemberAvatar {
 }
 
 interface Member {
-	id: number;
+	id: string;
 	name: string;
 	email: string;
 	avatar: MemberAvatar;
@@ -170,7 +170,7 @@ interface AccessKeyResponse {
 }
 
 interface CreateAccessKeyResponse {
-	id: number;
+	id: string;
 	token: string;
 }
 

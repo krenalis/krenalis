@@ -351,7 +351,7 @@ const usePipeline = (
 			return err;
 		}
 
-		let id: number = 0;
+		let id: string = '';
 		try {
 			if (isEditing) {
 				await api.workspaces.connections.updatePipeline(pipeline.id!, pipelineToSet);
@@ -367,7 +367,7 @@ const usePipeline = (
 			return err;
 		}
 
-		sessionStorage.setItem('newPipelineID', String(id));
+		sessionStorage.setItem('newPipelineID', id);
 		return null;
 	};
 

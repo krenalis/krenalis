@@ -27,7 +27,7 @@ func TestImportFromDatabase(t *testing.T) {
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "id", Type: types.Int(32), Nullable: true},
+			{Name: "id", Type: types.String().WithMaxLength(12), Nullable: true},
 			{Name: "email", Type: types.String(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
@@ -57,7 +57,7 @@ func TestImportFromDatabase(t *testing.T) {
 
 	for _, identity := range identities {
 		if identity.Pipeline != importUsers {
-			t.Fatalf("expected identity pipeline %d, got %d", importUsers, identity.Pipeline)
+			t.Fatalf("expected identity pipeline %s, got %s", importUsers, identity.Pipeline)
 		}
 	}
 }

@@ -297,7 +297,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, pr
 		// Build a unique identifier for the event.
 		insertId := "[PIPELINE]"
 		if !preview {
-			insertId = strconv.Itoa(event.DestinationPipeline)
+			insertId = event.DestinationPipeline
 		}
 		insertId += "*" + event.Received.MessageID()
 

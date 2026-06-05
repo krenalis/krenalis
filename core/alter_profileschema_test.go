@@ -160,6 +160,8 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 
 func Test_validatePrimarySources(t *testing.T) {
 
+	const validPrimarySourceID = "7B3mN9qK2xA4"
+
 	schema := types.Object([]types.Property{
 		{Name: "first_name", Type: types.String(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
@@ -169,38 +171,42 @@ func Test_validatePrimarySources(t *testing.T) {
 	})
 
 	tests := []struct {
-		primarySources map[string]int
+		primarySources map[string]string
 		expectedErr    string
 	}{
 		{
 			primarySources: nil,
 		},
 		{
-			primarySources: map[string]int{},
+			primarySources: map[string]string{},
 		},
 		{
-			primarySources: map[string]int{"first_name": 12345},
+			primarySources: map[string]string{"first_name": validPrimarySourceID},
 		},
 		{
-			primarySources: map[string]int{"first_name": 0},
-			expectedErr:    "primary source identifier 0 is not valid",
+			primarySources: map[string]string{"first_name": ""},
+			expectedErr:    `primary source identifier "" is not valid`,
 		},
 		{
-			primarySources: map[string]int{"first_name": 2147483648},
-			expectedErr:    "primary source identifier 2147483648 is not valid",
+			primarySources: map[string]string{"first_name": "7B3mN9qK2xA"},
+			expectedErr:    `primary source identifier "7B3mN9qK2xA" is not valid`,
 		},
 		{
-			primarySources: map[string]int{"address.street": 12345},
+			primarySources: map[string]string{"first_name": "7B3mN9qK2x0"},
+			expectedErr:    `primary source identifier "7B3mN9qK2x0" is not valid`,
 		},
 		{
-			primarySources: map[string]int{"first_name": 12345, "not_a_prop": 6789},
+			primarySources: map[string]string{"address.street": validPrimarySourceID},
+		},
+		{
+			primarySources: map[string]string{"first_name": validPrimarySourceID, "not_a_prop": "9zQ4Tn7B3mS6"},
 			expectedErr:    "property path \"not_a_prop\" does not exist",
 		},
 		{
-			primarySources: map[string]int{"address": 12345},
+			primarySources: map[string]string{"address": validPrimarySourceID},
 			expectedErr:    "primary sources cannot be specified for object properties",
 		}, {
-			primarySources: map[string]int{"phone_numbers": 12345},
+			primarySources: map[string]string{"phone_numbers": validPrimarySourceID},
 			expectedErr:    "primary sources cannot be specified for array(string) properties",
 		},
 	}

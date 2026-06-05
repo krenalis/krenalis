@@ -11,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -25,6 +24,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/prometheus"
@@ -70,9 +70,9 @@ type Collector struct {
 	destinations     *destinations // destination connections used to send events
 	identityWriters  sync.Map      // a map from pipeline identifier to a *identityWriter value
 	workers          struct {
-		cancelPipeline   map[int]context.CancelFunc // maps pipeline IDs to their worker cancel functions
-		cancelConnection map[int]context.CancelFunc // maps connection IDs to their worker cancel functions
-		sync.WaitGroup                              // wait group used to wait for all workers to exit
+		cancelPipeline   map[string]context.CancelFunc // maps pipeline IDs to their worker cancel functions
+		cancelConnection map[string]context.CancelFunc // maps connection IDs to their worker cancel functions
+		sync.WaitGroup                                 // wait group used to wait for all workers to exit
 	}
 	closed atomic.Bool
 }
@@ -95,8 +95,8 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 		functionProvider: provider,
 		destinations:     newDestinations(st, connections, provider, metrics),
 	}
-	c.workers.cancelPipeline = map[int]context.CancelFunc{}
-	c.workers.cancelConnection = map[int]context.CancelFunc{}
+	c.workers.cancelPipeline = map[string]context.CancelFunc{}
+	c.workers.cancelConnection = map[string]context.CancelFunc{}
 
 	st.Freeze()
 	st.AddListener(c.onCreateConnection)
@@ -176,7 +176,7 @@ func (c *Collector) Close(ctx context.Context) {
 // Observer returns the observer for the given workspace, or nil if the
 // workspace does not exist.
 // The bool result reports whether the workspace exists.
-func (c *Collector) Observer(workspace int) (*Observer, bool) {
+func (c *Collector) Observer(workspace string) (*Observer, bool) {
 	return c.observers.Load(workspace)
 }
 
@@ -250,7 +250,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // addWorkspace adds a workspace to the collector.
 // It is called from New and onCreateWorkspace.
-func (c *Collector) addWorkspace(id int) {
+func (c *Collector) addWorkspace(id string) {
 	c.observers.Store(id, newObserver())
 	store, _ := c.datastore.Store(id)
 	c.eventWriters.Store(id, store.NewEventWriter())
@@ -482,7 +482,7 @@ func (c *Collector) processIdentityEvents(ctx context.Context, consumer streams.
 // their destination pipelines.
 //
 // It runs in its own goroutine and exits when the context is canceled.
-func (c *Collector) processForwardedEvents(ctx context.Context, consumer streams.Consumer, destinations *destinations, connection int) {
+func (c *Collector) processForwardedEvents(ctx context.Context, consumer streams.Consumer, destinations *destinations, connection string) {
 	events, err := consumer.Events(ctx)
 	if err != nil {
 		return // ctx has been canceled or the stream has been closed.
@@ -505,7 +505,7 @@ func (c *Collector) processForwardedEvents(ctx context.Context, consumer streams
 // them to the data warehouse using the provided event writer.
 //
 // It runs in its own goroutine and exits when the context is canceled.
-func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams.Consumer, w *datastore.EventWriter, pipeline int) {
+func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams.Consumer, w *datastore.EventWriter, pipeline string) {
 	events, err := consumer.Events(ctx)
 	if err != nil {
 		return // ctx has been canceled or the stream has been closed.
@@ -525,6 +525,7 @@ func (c *Collector) processWarehouseEvents(ctx context.Context, consumer streams
 }
 
 // removeWorkspace removes the workspace ws from the collector.
+// When this method is called, the state is frozen.
 func (c *Collector) removeWorkspace(ws *state.Workspace) {
 	c.observers.Delete(ws.ID)
 	for _, connection := range ws.Connections() {
@@ -604,20 +605,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				if len(header) > 1 {
 					return errors.BadRequest(`request contains multiple "Krenalis-Workspace" headers`)
 				}
-				if key.Workspace > 0 {
+				if key.Workspace != "" {
 					return errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
 				}
-				var id int64
-				if header[0] != "" && header[0][0] != '+' {
-					id, _ = strconv.ParseInt(header[0], 10, 32)
-				}
-				if id <= 0 {
+				id := header[0]
+				if !isValidWorkspaceID(id) {
 					return errors.BadRequest(`"Krenalis-Workspace" header is invalid; use "Krenalis-Workspace: <WORKSPACE_ID>"`)
 				}
-				if _, ok = c.state.Workspace(int(id)); !ok {
-					return errors.NotFound("workspace %d does not exist", id)
+				if _, ok = c.state.Workspace(id); !ok {
+					return errors.NotFound("workspace %s does not exist", id)
 				}
-				key.Workspace = int(id)
+				key.Workspace = id
 			}
 			// Decode the request.
 			dec, err = newDecoder(r)
@@ -632,7 +630,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !ok {
 				return errors.BadRequest("parameter 'connectionId' is required when using API key authentication")
 			}
-			if key.Workspace == 0 {
+			if key.Workspace == "" {
 				connection, _ = c.state.Connection(id)
 			} else {
 				workspace, ok := c.state.Workspace(key.Workspace)
@@ -642,7 +640,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				connection, _ = workspace.Connection(id)
 			}
 			if connection == nil {
-				return errors.Unprocessable("ConnectionNotExist", "connection %d does not exist", id)
+				return errors.Unprocessable("ConnectionNotExist", "connection %s does not exist", id)
 			}
 
 		} else {
@@ -698,7 +696,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var topics []string
-	var destinations []int
+	var destinations []string
 
 	var observedEvents []events.Event
 
@@ -734,7 +732,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			c.metrics.FilterPassed(p.ID, 1)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
-				topics = append(topics, "pipeline-"+strconv.Itoa(p.ID))
+				topics = append(topics, "pipeline-"+p.ID)
 			}
 		}
 
@@ -750,7 +748,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			c.metrics.FilterPassed(p.ID, 1)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
-				topics = append(topics, "pipeline-"+strconv.Itoa(p.ID))
+				topics = append(topics, "pipeline-"+p.ID)
 			}
 		}
 
@@ -773,7 +771,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {
-				topics = append(topics, "connection-"+strconv.Itoa(id))
+				topics = append(topics, "connection-"+id)
 			}
 		}
 
@@ -849,7 +847,7 @@ func (c *Collector) startConnectionWorker(connection *state.Connection) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c.workers.cancelConnection[connection.ID] = cancel
-	consumer := c.stream.Consume("connection-"+strconv.Itoa(connection.ID), 1000)
+	consumer := c.stream.Consume("connection-"+connection.ID, 1000)
 	c.workers.Go(func() {
 		defer consumer.Close()
 		c.processForwardedEvents(ctx, consumer, c.destinations, connection.ID)
@@ -871,7 +869,7 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 		// Import the identity into the data warehouse.
 		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
 		c.identityWriters.Store(pipeline.ID, iw)
-		consumer := c.stream.Consume("pipeline-"+strconv.Itoa(pipeline.ID), 1000)
+		consumer := c.stream.Consume("pipeline-"+pipeline.ID, 1000)
 		c.workers.Go(func() {
 			defer consumer.Close()
 			c.processIdentityEvents(ctx, consumer, iw)
@@ -880,7 +878,7 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 		// Store the event into the data warehouse.
 		ws := pipeline.Connection().Workspace()
 		ew, _ := c.eventWriters.Load(ws.ID)
-		consumer := c.stream.Consume("pipeline-"+strconv.Itoa(pipeline.ID), 1000)
+		consumer := c.stream.Consume("pipeline-"+pipeline.ID, 1000)
 		c.workers.Go(func() {
 			defer consumer.Close()
 			c.processWarehouseEvents(ctx, consumer, ew.(*datastore.EventWriter), pipeline.ID)
@@ -916,4 +914,9 @@ func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 			_ = iw.(*identityWriter).Close(context.Background())
 		}()
 	}
+}
+
+// isValidWorkspaceID reports whether s is a valid workspace identifier.
+func isValidWorkspaceID(s string) bool {
+	return len(s) == 12 && base58.IsValid(s)
 }

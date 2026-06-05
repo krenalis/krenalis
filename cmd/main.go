@@ -38,7 +38,7 @@ func Main(assets fs.FS) {
 	var configStore string
 	var initDBIfEmpty bool
 	var initDockerMember bool
-	var upgradeDBAddWorkOSUserID bool
+	var upgradeDB bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.StringVar(&configStore, "config-store", "env:",
 		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<region>:<prefix>' to read from AWS Parameter Store (default: 'env:')")
@@ -46,8 +46,7 @@ func Main(assets fs.FS) {
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
-	flag.BoolVar(&upgradeDBAddWorkOSUserID, "upgrade-db-add-workos-user-id", false,
-		"upgrade the database by adding the workos_user_id column to the members table, creating the corresponding unique index, and widening the name and email columns to varchar(255)")
+	flag.BoolVar(&upgradeDB, "upgrade-db", false, "upgrade Krenalis's PostgreSQL database and workspace PostgreSQL warehouses")
 	flag.Parse()
 	if help {
 		flag.Usage()
@@ -73,12 +72,12 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
-	if upgradeDBAddWorkOSUserID && (initDBIfEmpty || initDockerMember) {
+	if upgradeDB && (initDBIfEmpty || initDockerMember) {
 		flag.Usage()
-		fatal(1, "the -upgrade-db-add-workos-user-id flag cannot be combined with -init-db-if-empty or -init-docker-member")
+		fatal(1, "the -upgrade-db flag cannot be combined with -init-db-if-empty or -init-docker-member")
 	}
 
-	if !upgradeDBAddWorkOSUserID && !devMode && assets != nil {
+	if !upgradeDB && !devMode && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
@@ -99,9 +98,10 @@ func Main(assets fs.FS) {
 	if err != nil {
 		fatal(1, err.Error())
 	}
-	if upgradeDBAddWorkOSUserID {
-		err = core.UpgradeDBAddWorkOSUserID(ctx, &core.Config{
-			DB: conf.DB,
+	if upgradeDB {
+		err = core.UpgradeDB(ctx, &core.Config{
+			DB:  conf.DB,
+			KMS: conf.KMS,
 		})
 		if err != nil {
 			fatal(1, err.Error())

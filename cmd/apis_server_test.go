@@ -9,7 +9,6 @@ import (
 	"context"
 	stderrors "errors"
 	"io"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,57 +16,6 @@ import (
 
 	"github.com/krenalis/krenalis/tools/errors"
 )
-
-func TestParseID(t *testing.T) {
-
-	tests := []struct {
-		s  string
-		v  int
-		ok bool
-	}{
-		// valid
-		{"1", 1, true},
-		{"9", 9, true},
-		{"10", 10, true},
-		{"2147483647", math.MaxInt32, true},
-
-		// invalid: format
-		{"", 0, false},
-		{"0", 0, false},
-		{"01", 0, false},
-		{"000", 0, false},
-		{"+1", 0, false},
-		{"-1", 0, false},
-		{" 1", 0, false},
-		{"1 ", 0, false},
-		{"1\n", 0, false},
-		{"\t1", 0, false},
-		{"1\t", 0, false},
-		{"1a", 0, false},
-		{"a1", 0, false},
-		{"3.14", 0, false},
-
-		// invalid: overflow
-		{"2147483648", 0, false},
-		{"9999999999", 0, false},
-		{"18446744073709551616", 0, false},
-
-		// invalid: unicode digits
-		{"１２３", 0, false},
-	}
-
-	for _, test := range tests {
-		got, ok := parseID(test.s)
-		if ok != test.ok {
-			t.Fatalf("%q: expected %t, got %t", test.s, test.ok, ok)
-		}
-		if ok {
-			if got != test.v {
-				t.Fatalf("%q: expected %d, got %d", test.s, test.v, got)
-			}
-		}
-	}
-}
 
 func TestWriteSessionCookie(t *testing.T) {
 
@@ -290,8 +238,9 @@ func TestValidateRequiredBody(t *testing.T) {
 
 	t.Run("fails when body is missing", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", nil)
+		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(req, false)
+		err := validateRequiredBody(w, req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -302,8 +251,9 @@ func TestValidateRequiredBody(t *testing.T) {
 
 	t.Run("fails when content type is missing", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(req, false)
+		err := validateRequiredBody(w, req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -315,8 +265,9 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type is not json", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "text/plain")
+		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(req, false)
+		err := validateRequiredBody(w, req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -328,8 +279,9 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type is not json or plain/text", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/xml")
+		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(req, true)
+		err := validateRequiredBody(w, req, true)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -341,8 +293,9 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type has unsupported parameters", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json; charset=utf-8; version=1")
+		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(req, false)
+		err := validateRequiredBody(w, req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -354,8 +307,9 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when charset is not utf8", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json; charset=iso-8859-1")
+		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(req, false)
+		err := validateRequiredBody(w, req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -368,8 +322,9 @@ func TestValidateRequiredBody(t *testing.T) {
 		const payload = `{"ok":true}`
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "Application/Json; Charset=UTF-8")
+		w := httptest.NewRecorder()
 
-		if err := validateRequiredBody(req, false); err != nil {
+		if err := validateRequiredBody(w, req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)
@@ -385,8 +340,9 @@ func TestValidateRequiredBody(t *testing.T) {
 		const payload = "{\"text\":\"Cafe\u0301\"}"
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		w := httptest.NewRecorder()
 
-		if err := validateRequiredBody(req, false); err != nil {
+		if err := validateRequiredBody(w, req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)
@@ -402,19 +358,20 @@ func TestValidateRequiredBody(t *testing.T) {
 		oversized := bytes.Repeat([]byte{'a'}, maxRequestSize+1)
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(oversized))
 		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
 
-		if err := validateRequiredBody(req, false); err != nil {
+		if err := validateRequiredBody(w, req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
-		if err.Error() != "request body too large" {
-			t.Fatalf("expected request body too large, got %q", err.Error())
+		if _, ok := err.(*http.MaxBytesError); !ok {
+			t.Fatalf("expected http.MaxBytesError error, got %T", err)
 		}
-		if len(body) != maxRequestSize {
-			t.Fatalf("expected to read %d bytes, got %d", maxRequestSize, len(body))
+		if len(body) > maxRequestSize {
+			t.Fatalf("expected at most %d bytes, got %d", maxRequestSize, len(body))
 		}
 	})
 

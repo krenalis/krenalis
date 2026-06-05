@@ -102,7 +102,7 @@ interface ProfileEventContext {
 interface ProfileEvent {
 	id?: string;
 	kpid?: string;
-	connectionId?: number;
+	connectionId?: string;
 	anonymousId?: string;
 	category?: string;
 	context?: ProfileEventContext;
@@ -127,12 +127,12 @@ interface Identity {
 	userId?: string;
 	anonymousIds?: string[];
 	updatedAt: string;
-	pipeline: number;
-	connection: number;
+	pipeline: string;
+	connection: string;
 }
 
 interface Profile {
-	id: number;
+	id: string;
 	events: ProfileEvent[];
 	attributes: ProfileAttributes;
 }

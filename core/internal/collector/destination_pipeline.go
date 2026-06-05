@@ -38,7 +38,7 @@ const maxQueuedEventTime = 200 * time.Millisecond
 // of the fields need to change, a new instance is created with the updated
 // values.
 type destinationPipeline struct {
-	id             int                       // ID of the pipeline
+	id             string                    // ID of the pipeline
 	eventType      string                    // type of event the pipeline handles
 	filter         *state.Where              // filter applied to incoming events
 	schema         types.Type                // schema of the event type.

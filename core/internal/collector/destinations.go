@@ -29,10 +29,10 @@ type destinations struct {
 
 	// senders maps a connection ID to its sender.
 	// No mutex is needed since all accesses occur while the state is frozen.
-	senders map[int]*sender.Sender
+	senders map[string]*sender.Sender
 
 	mu        sync.Mutex
-	pipelines map[int]destinationPipelines // maps a destination connection ID to its pipelines; it is protected by mu.
+	pipelines map[string]destinationPipelines // maps a destination connection ID to its pipelines; it is protected by mu.
 
 	close struct {
 		closed    atomic.Bool             // indicates if the writer has been closed
@@ -51,8 +51,8 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		connections: connections,
 		provider:    provider,
 		metrics:     metrics,
-		senders:     map[int]*sender.Sender{},
-		pipelines:   map[int]destinationPipelines{},
+		senders:     map[string]*sender.Sender{},
+		pipelines:   map[string]destinationPipelines{},
 	}
 	d.close.ctx, d.close.cancel = context.WithCancelCause(context.Background())
 
@@ -95,7 +95,7 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 
 // QueueEvent enqueues the given event to the pipelines of the provided
 // connection that are specified in the event.
-func (d *destinations) QueueEvent(connection int, event streams.Event) {
+func (d *destinations) QueueEvent(connection string, event streams.Event) {
 	d.mu.Lock()
 	pipelines := d.pipelines[connection]
 	d.mu.Unlock()
@@ -129,7 +129,7 @@ func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sende
 	queue.close.ctx = ctx
 	queue.close.cancel = cancel
 
-	go func(connection, pipeline int) {
+	go func(connection, pipeline string) {
 		done := queue.close.ctx.Done()
 		for {
 			select {
@@ -235,14 +235,16 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
+	cause := errors.New("organization has been deleted")
 	for _, ws := range n.Organization().Workspaces() {
-		d.removeWorkspace(ws)
+		d.removeWorkspace(ws, cause)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
-	d.removeWorkspace(n.Workspace())
+	cause := errors.New("workspace has been deleted")
+	d.removeWorkspace(n.Workspace(), cause)
 }
 
 // onSetConnectionSettings is called when the settings of a connection is
@@ -352,8 +354,11 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 }
 
 // removeWorkspace removes the workspace ws from destinations.
+// cause is the error used to close the pipelines: it reports whether the
+// workspace itself was deleted, or an organization was deleted (and with it all
+// its workspaces).
 // When this method is called, the state is frozen.
-func (d *destinations) removeWorkspace(ws *state.Workspace) {
+func (d *destinations) removeWorkspace(ws *state.Workspace, cause error) {
 	var pipelines []*destinationPipeline
 	for _, c := range ws.Connections() {
 		if c.Role != state.Destination {
@@ -372,7 +377,7 @@ func (d *destinations) removeWorkspace(ws *state.Workspace) {
 	if len(pipelines) > 0 {
 		go func() {
 			for _, pipeline := range pipelines {
-				pipeline.Close(errors.New("workspace has been deleted"))
+				pipeline.Close(cause)
 			}
 		}()
 	}
@@ -394,7 +399,7 @@ func (pp destinationPipelines) delete(index int) destinationPipelines {
 	return updated
 }
 
-func (pp destinationPipelines) find(id int) (*destinationPipeline, int) {
+func (pp destinationPipelines) find(id string) (*destinationPipeline, int) {
 	for i, pipeline := range pp {
 		if pipeline.id == id {
 			return pipeline, i

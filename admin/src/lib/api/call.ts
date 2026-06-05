@@ -3,11 +3,11 @@ import JSONbig from 'json-bigint';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../telemetry/scrubURL';
 
-const call = async (url: string, method: string, workspaceID?: number, body?: any, opt?: any) => {
+const call = async (url: string, method: string, workspaceID?: string | null, body?: any, opt?: any) => {
 	let headers = {
 		'Content-Type': 'application/json',
 	};
-	if (workspaceID != null && workspaceID !== 0) {
+	if (workspaceID != null && workspaceID !== '') {
 		headers['Krenalis-Workspace'] = workspaceID;
 	}
 	const request: RequestInit = {

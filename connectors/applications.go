@@ -467,7 +467,7 @@ type EventSender interface {
 
 // Event represents an event that will be sent to an application.
 type Event struct {
-	DestinationPipeline int           // Destination pipeline that processes the event.
+	DestinationPipeline string        // Destination pipeline that processes the event.
 	Received            ReceivedEvent // Event as it was received.
 	Type                EventTypeInfo // Event type.
 }
