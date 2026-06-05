@@ -68,13 +68,13 @@ type publicKey struct {
 }
 
 type keyStore struct {
-	mu   sync.RWMutex
+	mu   sync.Mutex
 	byID map[string]*publicKey // kid → cached key
 }
 
 func (ks *keyStore) get(kid string) (*rsa.PublicKey, string, bool) {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
 	pk, ok := ks.byID[kid]
 	if !ok || time.Now().After(pk.expiresAt) {
 		return nil, "", false
