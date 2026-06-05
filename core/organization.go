@@ -642,15 +642,15 @@ func (this *Organization) Member(ctx context.Context, id string) (*Member, error
 // MemberByWorkOSID returns the ID of the member with the given WorkOS user ID
 // in the organization. It returns an errors.NotFoundError if no member has that
 // WorkOS user ID.
-func (this *Organization) MemberByWorkOSID(ctx context.Context, workosUserID string) (int, error) {
+func (this *Organization) MemberByWorkOSID(ctx context.Context, workosUserID string) (string, error) {
 	this.core.mustBeOpen()
-	var id int
+	var id string
 	err := this.core.db.QueryRow(ctx, "SELECT id FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID).Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, errors.NotFound("member with WorkOS user ID %s does not exist", workosUserID)
+			return "", errors.NotFound("member with WorkOS user ID %s does not exist", workosUserID)
 		}
-		return 0, err
+		return "", err
 	}
 	return id, nil
 }
@@ -697,15 +697,15 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 //
 // It returns an errors.UnprocessableError error with code MemberEmailExists if
 // the email is already used by another member in the organization.
-func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, email, workosUserID string) (int, error) {
+func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, email, workosUserID string) (string, error) {
 	this.core.mustBeOpen()
 	if name != "" {
 		if err := util.ValidateStringField("name", name, 255); err != nil {
-			return 0, errors.BadRequest("%s", err)
+			return "", errors.BadRequest("%s", err)
 		}
 	}
 	if err := validateMemberEmail(email); err != nil {
-		return 0, errors.BadRequest("%s", err)
+		return "", errors.BadRequest("%s", err)
 	}
 	n := state.AddMember{Organization: this.organization.ID}
 	now := time.Now().UTC()
@@ -726,7 +726,7 @@ func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, e
 		return n, nil
 	})
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return n.ID, nil
 }

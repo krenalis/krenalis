@@ -16,7 +16,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/krenalis/cmd/internal/workos"
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -382,7 +381,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	var org *core.Organization
-	var memberID int
+	var memberID string
 	if s.workos == nil {
 		var body struct {
 			Email    string `json:"email"`
@@ -633,10 +632,7 @@ func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request)
 		if event.Data.ExternalID == nil || *event.Data.ExternalID == "" {
 			return nil, nil
 		}
-		orgID, err := uuid.Parse(*event.Data.ExternalID)
-		if err != nil {
-			return nil, nil
-		}
+		orgID := *event.Data.ExternalID
 		orgName := event.Data.Name
 		if orgName == "" {
 			return nil, nil

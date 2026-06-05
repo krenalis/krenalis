@@ -830,10 +830,10 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (string, 
 func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
 	core.mustBeOpen()
 	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var ids []int
+		var ids []string
 		err := tx.QueryScan(ctx, "DELETE FROM members WHERE workos_user_id = $1 RETURNING id", workosUserID, func(rows *db.Rows) error {
 			for rows.Next() {
-				var id int
+				var id string
 				if err := rows.Scan(&id); err != nil {
 					return err
 				}

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 const (
@@ -215,29 +214,29 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) Authenticate(token string) (*User, uuid.UUID, error) {
+func (wo *Workos) Authenticate(token string) (*User, string, error) {
 	var claims claims
 
 	parsed, err := jwt.ParseWithClaims(token, &claims, wo.publicKey, jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, errCannotRetrievePublicKey) {
-			return nil, uuid.UUID{}, err
+			return nil, "", err
 		}
-		return nil, uuid.UUID{}, ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 
 	if !parsed.Valid {
-		return nil, uuid.UUID{}, ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 
 	if claims.ClientID != wo.ClientID {
-		return nil, uuid.UUID{}, fmt.Errorf("JWT client_id does not match configured client ID")
+		return nil, "", fmt.Errorf("JWT client_id does not match configured client ID")
 	}
 	if claims.Subject == "" {
-		return nil, uuid.UUID{}, ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 	if claims.OrgID == "" {
-		return nil, uuid.UUID{}, ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 
 	userID := claims.Subject
@@ -250,12 +249,12 @@ func (wo *Workos) Authenticate(token string) (*User, uuid.UUID, error) {
 
 	err = wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
 	if err != nil {
-		return nil, uuid.UUID{}, fmt.Errorf("failed to fetch WorkOS user: %s", err)
+		return nil, "", fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
 	organizationID, err := wo.organization(claims.OrgID)
 	if err != nil {
-		return nil, uuid.UUID{}, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
+		return nil, "", fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
 	user := &User{
@@ -268,27 +267,23 @@ func (wo *Workos) Authenticate(token string) (*User, uuid.UUID, error) {
 	return user, organizationID, nil
 }
 
-// organization fetches the WorkOS organization and returns its external ID as a
-// UUID, which is the Krenalis-side organization identifier.
-func (wo *Workos) organization(orgID string) (uuid.UUID, error) {
+// organization fetches the WorkOS organization and returns its external ID,
+// which is the Krenalis-side organization identifier.
+func (wo *Workos) organization(orgID string) (string, error) {
 	if strings.TrimSpace(orgID) == "" {
-		return uuid.UUID{}, fmt.Errorf("missing organization ID")
+		return "", fmt.Errorf("missing organization ID")
 	}
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
 	err := wo.call(http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
 	if err != nil {
-		return uuid.UUID{}, fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
+		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
 	}
 	if orgRes.ExternalID == "" {
-		return uuid.UUID{}, fmt.Errorf("WorkOS organization %s has no external ID", orgID)
+		return "", fmt.Errorf("WorkOS organization %s has no external ID", orgID)
 	}
-	id, err := uuid.Parse(orgRes.ExternalID)
-	if err != nil {
-		return uuid.UUID{}, fmt.Errorf("WorkOS organization %s has invalid external ID", orgID)
-	}
-	return id, nil
+	return orgRes.ExternalID, nil
 }
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status

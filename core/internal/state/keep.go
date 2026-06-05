@@ -844,17 +844,17 @@ func (state *State) deleteMember(n notification) string {
 
 // DeleteMembers is the event sent when multiple members are deleted at once.
 type DeleteMembers struct {
-	IDs []int
+	IDs []string
 }
 
 // deleteMembers deletes multiple members.
-func (state *State) deleteMembers(n notification) uuid.UUID {
+func (state *State) deleteMembers(n notification) string {
 	e := DeleteMembers{}
 	if !decodeNotification(n, &e) {
-		return uuid.Nil
+		return ""
 	}
 	if len(e.IDs) == 0 {
-		return uuid.Nil
+		return ""
 	}
 	state.mu.Lock()
 	for _, org := range state.organizations {
@@ -865,7 +865,7 @@ func (state *State) deleteMembers(n notification) uuid.UUID {
 		org.mu.Unlock()
 	}
 	state.mu.Unlock()
-	return uuid.Nil
+	return ""
 }
 
 // DeleteOrganization is the event sent when an organization is deleted.
