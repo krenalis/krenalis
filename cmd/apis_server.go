@@ -454,14 +454,6 @@ func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCook
 	return s.cookies.SecureCookie, nil
 }
 
-// parseID parses a public row identifier.
-func parseID(s string) (string, bool) {
-	if !core.IsValidID(s) {
-		return "", false
-	}
-	return s, true
-}
-
 // validateForbiddenBody rejects requests that contain a request body.
 func validateForbiddenBody(r *http.Request) error {
 	if r.ContentLength == 0 {
