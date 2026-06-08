@@ -371,7 +371,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	// Retrieve the organization and the member.
-	organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
+	organizations, _ := s.core.Organizations(core.SortByName, 0, 2)
 	if len(organizations) == 0 {
 		return nil, errors.New("there are no organizations")
 	}
