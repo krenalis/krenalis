@@ -70,7 +70,7 @@ type Avatar struct {
 
 // MemberToSet represents a member to update with the UpdateMember method.
 type MemberToSet struct {
-	Name     string  `json:"name"`     // Name, in range [1, 60]
+	Name     string  `json:"name"`     // Name, in range [0, 45]
 	Email    string  `json:"email"`    // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
 	Password string  `json:"password"` // Password, at least 8 characters long
 	Avatar   *Avatar `json:"avatar"`
@@ -1077,7 +1077,7 @@ func validateMemberEmail(email string) error {
 // if the member is not valid.
 func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bool, validatePassword bool) error {
 	// Validate name.
-	if validateName {
+	if validateName && member.Name != "" {
 		if err := util.ValidateStringField("name", member.Name, 45); err != nil {
 			return err
 		}
