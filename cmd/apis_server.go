@@ -376,7 +376,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		return nil, errors.New("there are no organizations")
 	}
 	if len(organizations) > 1 {
-		return nil, errors.New("there are more than one organizations")
+		return nil, errors.New("there is more than one organization")
 	}
 	org := organizations[0]
 	memberID, err := org.AuthenticateMember(r.Context(), body.Email, body.Password)
