@@ -227,10 +227,7 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	if len(header) > 1 {
 		return nil, nil, "", errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 	}
-	workspaceID := ""
-	if header[0] != "" && header[0][0] != '+' {
-		workspaceID = header[0]
-	}
+	workspaceID := header[0]
 	if !core.IsValidID(workspaceID) {
 		return nil, nil, "", errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 	}
@@ -322,10 +319,7 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if len(header) > 1 {
 			return nil, nil, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 		}
-		id := ""
-		if header[0] != "" && header[0][0] != '+' {
-			id = header[0]
-		}
+		id := header[0]
 		if !core.IsValidID(id) {
 			return nil, nil, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 		}
