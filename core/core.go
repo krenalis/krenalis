@@ -421,7 +421,7 @@ func UpgradeDB(ctx context.Context, conf *Config) error {
 		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	if err := initdb.UpgradeAddWorkOSUserID(ctx, db); err != nil {
+	if err := initdb.UpgradeWorkOS(ctx, db); err != nil {
 		return err
 	}
 

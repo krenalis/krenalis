@@ -275,6 +275,7 @@ CREATE TYPE notification_name AS ENUM (
     'DeleteConnection',
     'DeleteEventWriteKey',
     'DeleteMember',
+    'DeleteMembers',
     'DeleteOrganization',
     'DeletePipeline',
     'DeleteWorkspace',
