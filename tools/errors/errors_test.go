@@ -58,27 +58,42 @@ func Test_NotFoundError(t *testing.T) {
 func Test_StdWrappers(t *testing.T) {
 	err := New("hello")
 	if err.Error() != "hello" {
-		t.Fatalf("unexpected New error string: %q", err.Error())
+		t.Fatalf("expected New error string %q, got %q", "hello", err.Error())
 	}
 
 	wrap := fmt.Errorf("wrap: %w", err)
-	if Unwrap(wrap) != err {
-		t.Fatalf("Unwrap failed")
+	if got := Unwrap(wrap); got != err {
+		t.Fatalf("expected Unwrap to return %v, got %v", err, got)
 	}
-	if !Is(wrap, err) {
-		t.Fatalf("Is failed")
+	if got := Is(wrap, err); !got {
+		t.Fatalf("expected Is to return true, got %t", got)
 	}
 	var target error
-	if !As(wrap, &target) {
-		t.Fatalf("As failed")
+	if got := As(wrap, &target); !got {
+		t.Fatalf("expected As to return true, got %t", got)
 	}
 	if target != wrap {
-		t.Fatalf("As returned %v, expected %v", target, wrap)
+		t.Fatalf("expected As target %v, got %v", wrap, target)
+	}
+
+	typedErr := NotFound("missing")
+	typedWrap := fmt.Errorf("wrap: %w", typedErr)
+	got, ok := AsType[*NotFoundError](typedWrap)
+	if got != typedErr || !ok {
+		t.Fatalf("expected AsType to return %v, true, got %v, %t", typedErr, got, ok)
+	}
+
+	missing, missingOK := AsType[*ForbiddenError](typedWrap)
+	if missing != nil || missingOK {
+		t.Fatalf("expected AsType to return nil, false, got %v, %t", missing, missingOK)
 	}
 
 	// confirm behavior matches std errors functions
-	if errors.Unwrap(wrap) != err || !errors.Is(wrap, err) {
-		t.Fatalf("stdlib mismatch")
+	if got := errors.Unwrap(wrap); got != err {
+		t.Fatalf("expected stdlib Unwrap to return %v, got %v", err, got)
+	}
+	if got := errors.Is(wrap, err); !got {
+		t.Fatalf("expected stdlib Is to return true, got %t", got)
 	}
 }
 
