@@ -57,11 +57,11 @@ type Workos struct {
 // AuthenticatedUser holds the authenticated user information returned by WorkOS
 // after token verification.
 type AuthenticatedUser struct {
+	OrganizationExternalID string
 	ID                     string
 	Email                  string
 	FirstName              string
 	LastName               string
-	OrganizationExternalID string
 }
 
 type publicKey struct {
@@ -262,11 +262,11 @@ func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
 	}
 
 	user := &AuthenticatedUser{
+		OrganizationExternalID: organizationExternalID,
 		ID:                     userID,
 		Email:                  userRes.Email,
 		FirstName:              userRes.FirstName,
 		LastName:               userRes.LastName,
-		OrganizationExternalID: organizationExternalID,
 	}
 
 	return user, nil
