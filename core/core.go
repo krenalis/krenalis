@@ -414,6 +414,7 @@ func UpgradeDB(ctx context.Context, conf *Config) error {
 		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 	defer db.Close()
+
 	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	err = db.Ping(pingCtx)
