@@ -644,6 +644,9 @@ func (this *Organization) Member(ctx context.Context, id string) (*Member, error
 // WorkOS user ID.
 func (this *Organization) MemberByWorkOSID(ctx context.Context, workosUserID string) (string, error) {
 	this.core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return "", errors.BadRequest("WorkOS user ID is empty")
+	}
 	var id string
 	err := this.core.db.QueryRow(ctx, "SELECT id FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID).Scan(&id)
 	if err != nil {

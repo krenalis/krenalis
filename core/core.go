@@ -753,6 +753,9 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (string, 
 // have the given WorkOS user ID.
 func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
 	core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return errors.BadRequest("WorkOS user ID is empty")
+	}
 	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var ids []string
 		err := tx.QueryScan(ctx, "DELETE FROM members WHERE workos_user_id = $1 RETURNING id", workosUserID, func(rows *db.Rows) error {
@@ -920,6 +923,9 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 // already in use by another member in any affected organization.
 func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, name, email string) error {
 	core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return errors.BadRequest("WorkOS user ID is empty")
+	}
 	if name != "" {
 		if err := util.ValidateStringField("name", name, 255); err != nil {
 			return errors.BadRequest("%s", err)
