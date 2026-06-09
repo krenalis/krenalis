@@ -422,7 +422,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, errors.BadRequest("")
 		}
 
-		workosUser, workosExternalOrganizationID, err := s.workos.Authenticate(body.AccessToken)
+		workosUser, err := s.workos.Authenticate(body.AccessToken)
 		if err != nil {
 			if errors.Is(err, workos.ErrInvalidToken) {
 				return nil, errors.Unauthorized("invalid WorkOS token")
@@ -430,12 +430,12 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, err
 		}
 
-		org, err = s.core.Organization(workosExternalOrganizationID)
+		org, err = s.core.Organization(workosUser.OrganizationExternalID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
 				slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
 					"workos_user_id", workosUser.ID,
-					"organization_id", workosExternalOrganizationID,
+					"organization_id", workosUser.OrganizationExternalID,
 				)
 				return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
 			}

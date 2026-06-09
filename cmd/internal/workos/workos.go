@@ -54,12 +54,14 @@ type Workos struct {
 	transport     http.RoundTripper
 }
 
-// User holds the User information returned by WorkOS after token verification.
-type User struct {
-	ID        string
-	Email     string
-	FirstName string
-	LastName  string
+// AuthenticatedUser holds the authenticated user information returned by WorkOS
+// after token verification.
+type AuthenticatedUser struct {
+	ID                     string
+	Email                  string
+	FirstName              string
+	LastName               string
+	OrganizationExternalID string
 }
 
 type publicKey struct {
@@ -216,29 +218,29 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) Authenticate(token string) (*User, string, error) {
+func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
 	var claims claims
 
 	parsed, err := jwt.ParseWithClaims(token, &claims, wo.publicKey, jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, errCannotRetrievePublicKey) {
-			return nil, "", err
+			return nil, err
 		}
-		return nil, "", ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 
 	if !parsed.Valid {
-		return nil, "", ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 
 	if claims.ClientID != wo.ClientID {
-		return nil, "", fmt.Errorf("JWT client_id does not match configured client ID")
+		return nil, fmt.Errorf("JWT client_id does not match configured client ID")
 	}
 	if claims.Subject == "" {
-		return nil, "", ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 	if claims.OrgID == "" {
-		return nil, "", ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 
 	userID := claims.Subject
@@ -251,22 +253,23 @@ func (wo *Workos) Authenticate(token string) (*User, string, error) {
 
 	err = wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to fetch WorkOS user: %s", err)
+		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
-	organizationID, err := wo.organization(claims.OrgID)
+	organizationExternalID, err := wo.organization(claims.OrgID)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
+		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
-	user := &User{
-		ID:        userID,
-		Email:     userRes.Email,
-		FirstName: userRes.FirstName,
-		LastName:  userRes.LastName,
+	user := &AuthenticatedUser{
+		ID:                     userID,
+		Email:                  userRes.Email,
+		FirstName:              userRes.FirstName,
+		LastName:               userRes.LastName,
+		OrganizationExternalID: organizationExternalID,
 	}
 
-	return user, organizationID, nil
+	return user, nil
 }
 
 // organization fetches the WorkOS organization and returns its external ID,
