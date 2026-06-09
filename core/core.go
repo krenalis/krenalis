@@ -398,8 +398,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
-// UpgradeDB upgrades Krenalis's PostgreSQL database and workspace PostgreSQL
-// warehouses that need coordinated data updates.
+// UpgradeDB upgrades Krenalis's PostgreSQL database.
 func UpgradeDB(ctx context.Context, conf *Config) error {
 	db, err := dbpkg.Open(&dbpkg.Options{
 		Host:           conf.DB.Host,
