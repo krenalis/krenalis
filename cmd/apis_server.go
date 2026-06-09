@@ -536,7 +536,8 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 			Email string `json:"email"`
 		} `json:"invitation"`
 	}
-	if err := json.Unmarshal(rawBody, &action); err != nil {
+	normalizedBody := norm.NFC.Bytes(rawBody)
+	if err := json.Unmarshal(normalizedBody, &action); err != nil {
 		return nil, errors.BadRequest("invalid action payload")
 	}
 
@@ -595,7 +596,8 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			ExternalID *string `json:"external_id"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(rawBody, &event); err != nil {
+	normalizedBody := norm.NFC.Bytes(rawBody)
+	if err := json.Unmarshal(normalizedBody, &event); err != nil {
 		return nil, errors.BadRequest("invalid webhook payload")
 	}
 
