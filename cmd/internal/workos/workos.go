@@ -30,6 +30,8 @@ import (
 const (
 	baseURL = "https://api.workos.com"
 
+	signatureMaxAge = 3 * 60 * 1000 // 3 minutes
+
 	// publicKeyTTL is an arbitrary TTL used to eventually evict cached public
 	// keys and ensure they are re-fetched periodically. It does not reflect any
 	// documented WorkOS key rotation policy.
@@ -368,7 +370,7 @@ func (wo *Workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 		return fmt.Errorf("invalid timestamp in WorkOS-Signature header")
 	}
 	diff := time.Now().UnixMilli() - ts
-	if diff < 0 || diff > 5*60*1000 {
+	if diff < 0 || diff > signatureMaxAge {
 		return fmt.Errorf("WorkOS signature timestamp is too old or in the future")
 	}
 
