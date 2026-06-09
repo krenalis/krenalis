@@ -510,13 +510,14 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 		return nil, errors.Unauthorized("WorkOS is not configured")
 	}
 
-	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
-	rawBody, err := io.ReadAll(lr)
+	r.Body = http.MaxBytesReader(w, r.Body, maxWorkOSPayloadSize)
+	rawBody, err := io.ReadAll(r.Body)
+	r.Body.Close()
 	if err != nil {
+		if _, ok := err.(*http.MaxBytesError); ok {
+			return nil, errors.BadRequest("request body too large")
+		}
 		return nil, errors.BadRequest("failed to read request body")
-	}
-	if lr.N == 0 {
-		return nil, errors.BadRequest("request body too large")
 	}
 
 	sigHeader := r.Header.Get("WorkOS-Signature")
@@ -559,18 +560,19 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 }
 
 // handleWorkOSWebhook handles incoming WorkOS webhook events.
-func (s *apisServer) handleWorkOSWebhook(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request) (any, error) {
 	if s.workos == nil {
 		return nil, errors.Unauthorized("WorkOS is not configured")
 	}
 
-	lr := &io.LimitedReader{R: r.Body, N: maxWorkOSPayloadSize + 1}
-	rawBody, err := io.ReadAll(lr)
+	r.Body = http.MaxBytesReader(w, r.Body, maxWorkOSPayloadSize)
+	rawBody, err := io.ReadAll(r.Body)
+	r.Body.Close()
 	if err != nil {
+		if _, ok := err.(*http.MaxBytesError); ok {
+			return nil, errors.BadRequest("request body too large")
+		}
 		return nil, errors.BadRequest("failed to read request body")
-	}
-	if lr.N == 0 {
-		return nil, errors.BadRequest("request body too large")
 	}
 
 	sigHeader := r.Header.Get("WorkOS-Signature")
