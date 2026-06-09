@@ -312,9 +312,7 @@ func (state *State) acceptInvitation(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	org := state.organizations[e.Organization]
-	state.mu.Unlock()
 	org.mu.Lock()
 	org.members[e.Member] = struct{}{}
 	org.mu.Unlock()
@@ -333,9 +331,7 @@ func (state *State) addMember(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	org := state.organizations[e.Organization]
-	state.mu.Unlock()
 	org.mu.Lock()
 	org.members[e.ID] = struct{}{}
 	org.mu.Unlock()
@@ -833,9 +829,7 @@ func (state *State) deleteMember(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	org := state.organizations[e.Organization]
-	state.mu.Unlock()
 	org.mu.Lock()
 	delete(org.members, e.ID)
 	org.mu.Unlock()

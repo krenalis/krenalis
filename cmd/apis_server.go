@@ -238,10 +238,7 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	if len(header) > 1 {
 		return nil, nil, "", errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 	}
-	workspaceID := ""
-	if header[0] != "" && header[0][0] != '+' {
-		workspaceID = header[0]
-	}
+	workspaceID := header[0]
 	if !core.IsValidID(workspaceID) {
 		return nil, nil, "", errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 	}
@@ -333,10 +330,7 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if len(header) > 1 {
 			return nil, nil, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
 		}
-		id := ""
-		if header[0] != "" && header[0][0] != '+' {
-			id = header[0]
-		}
+		id := header[0]
 		if !core.IsValidID(id) {
 			return nil, nil, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
 		}
@@ -394,9 +388,12 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		}
 
 		// Retrieve the organization and the member.
-		organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
+		organizations, _ := s.core.Organizations(core.SortByName, 0, 2)
 		if len(organizations) == 0 {
 			return nil, errors.New("there are no organizations")
+		}
+		if len(organizations) > 1 {
+			return nil, errors.New("there is more than one organization")
 		}
 		org = organizations[0]
 		memberID, err = org.AuthenticateMember(r.Context(), body.Email, body.Password)
@@ -665,14 +662,6 @@ func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCook
 	s.cookies.SecureCookie = securecookie.New(hashKey, blockKey)
 	s.cookies.SecureCookie.MaxAge(sessionMaxAge)
 	return s.cookies.SecureCookie, nil
-}
-
-// parseID parses a public row identifier.
-func parseID(s string) (string, bool) {
-	if !core.IsValidID(s) {
-		return "", false
-	}
-	return s, true
 }
 
 // validateForbiddenBody rejects requests that contain a request body.
