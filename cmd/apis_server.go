@@ -430,6 +430,10 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return nil, err
 		}
 
+		email := strings.TrimSpace(norm.NFC.String(workosUser.Email))
+		firstName := strings.TrimSpace(norm.NFC.String(workosUser.FirstName))
+		lastName := strings.TrimSpace(norm.NFC.String(workosUser.LastName))
+
 		org, err = s.core.Organization(workosUser.OrganizationExternalID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
@@ -447,8 +451,8 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			if _, ok := err.(*errors.NotFoundError); !ok {
 				return nil, err
 			}
-			name := strings.TrimSpace(workosUser.FirstName + " " + workosUser.LastName)
-			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, workosUser.Email, workosUser.ID)
+			name := strings.TrimSpace(firstName + " " + lastName)
+			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, workosUser.ID)
 			if err != nil {
 				return nil, err
 			}
