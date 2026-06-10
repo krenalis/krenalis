@@ -6,6 +6,7 @@ package workos
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -143,7 +144,7 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 
 // publicKey returns the RSA public key for the given token, using the in-memory
 // cache when available.
-func (wo *Workos) publicKey(token *jwt.Token) (_ any, err error) {
+func (wo *Workos) publicKey(ctx context.Context, token *jwt.Token) (_ any, err error) {
 	algorithm := token.Method.Alg()
 
 	_, isRSA := token.Method.(*jwt.SigningMethodRSA)
@@ -165,7 +166,7 @@ func (wo *Workos) publicKey(token *jwt.Token) (_ any, err error) {
 		return key, nil
 	}
 
-	key, err = wo.fetchPublicKey(kid, algorithm)
+	key, err = wo.fetchPublicKey(ctx, kid, algorithm)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
 	}
@@ -177,9 +178,9 @@ func (wo *Workos) publicKey(token *jwt.Token) (_ any, err error) {
 
 // fetchPublicKey fetches the WorkOS JWKS and returns the RSA public key for the
 // given key ID and algorithm.
-func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
+func (wo *Workos) fetchPublicKey(ctx context.Context, kid, alg string) (*rsa.PublicKey, error) {
 	var jwks jwks
-	err := wo.call(http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), http.StatusOK, nil, &jwks)
+	err := wo.call(ctx, http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), http.StatusOK, nil, &jwks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
 	}
@@ -218,10 +219,14 @@ func (wo *Workos) fetchPublicKey(kid, alg string) (*rsa.PublicKey, error) {
 
 // Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
-func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
+func (wo *Workos) Authenticate(ctx context.Context, token string) (*AuthenticatedUser, error) {
 	var claims claims
 
-	parsed, err := jwt.ParseWithClaims(token, &claims, wo.publicKey, jwt.WithExpirationRequired())
+	publicKey := func(token *jwt.Token) (any, error) {
+		return wo.publicKey(ctx, token)
+	}
+
+	parsed, err := jwt.ParseWithClaims(token, &claims, publicKey, jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, errCannotRetrievePublicKey) {
 			return nil, err
@@ -251,12 +256,12 @@ func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
 		LastName  string `json:"last_name"`
 	}
 
-	err = wo.call(http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
+	err = wo.call(ctx, http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
-	organizationExternalID, err := wo.organizationExternalID(claims.OrgID)
+	organizationExternalID, err := wo.organizationExternalID(ctx, claims.OrgID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
@@ -275,14 +280,14 @@ func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
 // organizationExternalID fetches and returns the external ID of the WorkOS
 // organization with the given ID. The external ID of a WorkOS organization is
 // the identifier of its linked organization in Krenalis.
-func (wo *Workos) organizationExternalID(orgID string) (string, error) {
+func (wo *Workos) organizationExternalID(ctx context.Context, orgID string) (string, error) {
 	if strings.TrimSpace(orgID) == "" {
 		return "", fmt.Errorf("missing organization ID")
 	}
 	var orgRes struct {
 		ExternalID string `json:"external_id"`
 	}
-	err := wo.call(http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
+	err := wo.call(ctx, http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
 	}
@@ -294,7 +299,7 @@ func (wo *Workos) organizationExternalID(orgID string) (string, error) {
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status
 // code.
-func (wo *Workos) call(method, path string, expectedStatus int, body any, out any) error {
+func (wo *Workos) call(ctx context.Context, method, path string, expectedStatus int, body any, out any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -304,7 +309,7 @@ func (wo *Workos) call(method, path string, expectedStatus int, body any, out an
 		bodyReader = bytes.NewReader(b)
 	}
 
-	req, err := http.NewRequest(method, baseURL+path, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, bodyReader)
 	if err != nil {
 		return err
 	}
