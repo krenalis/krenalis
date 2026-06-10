@@ -216,13 +216,13 @@ class API {
 	};
 
 	updateAccessKey = async (key: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.PUT, this.workspaceID, {
+		return await call(`${this.apiURL}/keys/${key}`, http.PUT, this.workspaceID, {
 			name,
 		});
 	};
 
 	deleteAccessKey = async (key: string): Promise<void> => {
-		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.DELETE, this.workspaceID);
+		return await call(`${this.apiURL}/keys/${key}`, http.DELETE, this.workspaceID);
 	};
 }
 
@@ -246,11 +246,7 @@ class Connections {
 	};
 
 	get = async (connection: string): Promise<Connection> => {
-		const c = await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}`,
-			http.GET,
-			this.workspaceID,
-		);
+		const c = await call(`${this.apiURL}/connections/${connection}`, http.GET, this.workspaceID);
 		if (!('linkedConnections' in c)) {
 			c.linkedConnections = null;
 		}
@@ -258,20 +254,11 @@ class Connections {
 	};
 
 	update = async (id: string, connection: ConnectionToSet) => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(id)}`,
-			http.PUT,
-			this.workspaceID,
-			connection,
-		);
+		return await call(`${this.apiURL}/connections/${id}`, http.PUT, this.workspaceID, connection);
 	};
 
 	delete = async (connection: string): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}`,
-			http.DELETE,
-			this.workspaceID,
-		);
+		return await call(`${this.apiURL}/connections/${connection}`, http.DELETE, this.workspaceID);
 	};
 
 	run = async (id: string): Promise<PipelineRun> => {
@@ -284,22 +271,17 @@ class Connections {
 
 	identities = async (connection: string, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/identities?first=${first}&limit=${limit}`,
+			`${this.apiURL}/connections/${connection}/identities?first=${first}&limit=${limit}`,
 			http.GET,
 			this.workspaceID,
 		);
 	};
 
 	execQuery = async (connection: string, query: string, limit: number): Promise<ExecQueryResponse> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/query`,
-			http.POST,
-			this.workspaceID,
-			{
-				query: query,
-				limit: limit,
-			},
-		);
+		return await call(`${this.apiURL}/connections/${connection}/query`, http.POST, this.workspaceID, {
+			query: query,
+			limit: limit,
+		});
 	};
 
 	records = async (
@@ -323,7 +305,7 @@ class Connections {
 		}
 		params.push(['limit', limit]);
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files` + queryString(params),
+			`${this.apiURL}/connections/${connection}/files` + queryString(params),
 			http.GET,
 			this.workspaceID,
 		);
@@ -344,44 +326,31 @@ class Connections {
 			params.push(['formatSettings', JSON.stringify(formatSettings)]);
 		}
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/sheets` + queryString(params),
+			`${this.apiURL}/connections/${connection}/files/sheets` + queryString(params),
 			http.GET,
 			this.workspaceID,
 		);
 	};
 
 	ui = async (connection: string): Promise<ConnectorUIResponse> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui`,
-			http.GET,
-			this.workspaceID,
-		);
+		return await call(`${this.apiURL}/connections/${connection}/ui`, http.GET, this.workspaceID);
 	};
 
 	uiEvent = async (connection: string, event: string, settings: ConnectorSettings): Promise<ConnectorUIResponse> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui-event`,
-			http.POST,
-			this.workspaceID,
-			{
-				event,
-				settings,
-			},
-		);
+		return await call(`${this.apiURL}/connections/${connection}/ui-event`, http.POST, this.workspaceID, {
+			event,
+			settings,
+		});
 	};
 
 	eventWriteKeys = async (connection: string): Promise<string[]> => {
-		const res = await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
-			http.GET,
-			this.workspaceID,
-		);
+		const res = await call(`${this.apiURL}/connections/${connection}/event-write-keys`, http.GET, this.workspaceID);
 		return res.keys;
 	};
 
 	createEventWriteKey = async (connection: string): Promise<string> => {
 		const res: CreateEventWriteKeyResponse = await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
+			`${this.apiURL}/connections/${connection}/event-write-keys`,
 			http.POST,
 			this.workspaceID,
 		);
@@ -390,7 +359,7 @@ class Connections {
 
 	deleteEventWriteKey = async (connection: string, key: string): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys/${encodeURIComponent(key)}`,
+			`${this.apiURL}/connections/${connection}/event-write-keys/${key}`,
 			http.DELETE,
 			this.workspaceID,
 		);
@@ -399,11 +368,7 @@ class Connections {
 	// TODO(Gianluca): this method is deprecated. See the issue
 	// https://github.com/krenalis/krenalis/issues/1265.
 	pipelineTypes = async (connection: string) => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipeline-types`,
-			http.GET,
-			this.workspaceID,
-		);
+		return await call(`${this.apiURL}/connections/${connection}/pipeline-types`, http.GET, this.workspaceID);
 	};
 
 	// TODO(Gianluca): this method is deprecated. See the issue
@@ -415,17 +380,13 @@ class Connections {
 	): Promise<PipelineSchemasResponse> => {
 		if (eventType != null) {
 			return await call(
-				`${this.apiURL}/connections/${encodeURIComponent(
-					connection,
-				)}/pipelines/schemas/Events?type=${encodeURIComponent(eventType)}`,
+				`${this.apiURL}/connections/${connection}/pipelines/schemas/Events?type=${encodeURIComponent(eventType)}`,
 				http.GET,
 				this.workspaceID,
 			);
 		} else {
 			return await call(
-				`${this.apiURL}/connections/${encodeURIComponent(connection)}/pipelines/schemas/${encodeURIComponent(
-					target,
-				)}`,
+				`${this.apiURL}/connections/${connection}/pipelines/schemas/${target}`,
 				http.GET,
 				this.workspaceID,
 			);
@@ -448,44 +409,29 @@ class Connections {
 	};
 
 	updatePipeline = async (id: string, pipeline: PipelineToSet): Promise<void> => {
-		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, pipeline);
+		return await call(`${this.apiURL}/pipelines/${id}`, http.PUT, this.workspaceID, pipeline);
 	};
 
 	deletePipeline = async (pipeline: string): Promise<void> => {
-		return await call(`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}`, http.DELETE, this.workspaceID);
+		return await call(`${this.apiURL}/pipelines/${pipeline}`, http.DELETE, this.workspaceID);
 	};
 
 	setPipelineStatus = async (pipeline: string, enabled: boolean): Promise<void> => {
-		return await call(
-			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/status`,
-			http.PUT,
-			this.workspaceID,
-			{
-				enabled,
-			},
-		);
+		return await call(`${this.apiURL}/pipelines/${pipeline}/status`, http.PUT, this.workspaceID, {
+			enabled,
+		});
 	};
 
 	setPipelineSchedulePeriod = async (pipeline: string, period: SchedulePeriod | null): Promise<void> => {
-		return await call(
-			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/schedule`,
-			http.PUT,
-			this.workspaceID,
-			{
-				period,
-			},
-		);
+		return await call(`${this.apiURL}/pipelines/${pipeline}/schedule`, http.PUT, this.workspaceID, {
+			period,
+		});
 	};
 
 	runPipeline = async (pipeline: string): Promise<string> => {
-		const res = await call(
-			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/runs`,
-			http.POST,
-			this.workspaceID,
-			{
-				incremental: null,
-			},
-		);
+		const res = await call(`${this.apiURL}/pipelines/${pipeline}/runs`, http.POST, this.workspaceID, {
+			incremental: null,
+		});
 		return res.id as string;
 	};
 
@@ -494,20 +440,15 @@ class Connections {
 		event: string,
 		formatSettings: ConnectorSettings,
 	): Promise<ConnectorUIResponse> => {
-		return await call(
-			`${this.apiURL}/pipelines/${encodeURIComponent(pipeline)}/ui-event`,
-			http.POST,
-			this.workspaceID,
-			{
-				event,
-				formatSettings,
-			},
-		);
+		return await call(`${this.apiURL}/pipelines/${pipeline}/ui-event`, http.POST, this.workspaceID, {
+			event,
+			formatSettings,
+		});
 	};
 
 	absolutePath = async (storageConnection: string, path: string): Promise<AbsolutePathResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/files/absolute?path=${encodeURIComponent(path)}`,
+			`${this.apiURL}/connections/${storageConnection}/files/absolute?path=${encodeURIComponent(path)}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -515,7 +456,7 @@ class Connections {
 
 	tableSchema = async (connection: string, tableName: string): Promise<TableSchemaResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables?name=${encodeURIComponent(tableName)}`,
+			`${this.apiURL}/connections/${connection}/tables?name=${encodeURIComponent(tableName)}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -536,7 +477,7 @@ class Connections {
 			params.push(['cursor', cursor]);
 		}
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/users` + queryString(params),
+			`${this.apiURL}/connections/${connection}/users` + queryString(params),
 			http.GET,
 			this.workspaceID,
 		);
@@ -549,33 +490,20 @@ class Connections {
 		outSchema: ObjectType,
 		transformation?: Transformation,
 	): Promise<PreviewSendEventResponse> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/preview-send-event`,
-			http.POST,
-			this.workspaceID,
-			{
-				type,
-				event,
-				outSchema,
-				transformation,
-			},
-		);
+		return await call(`${this.apiURL}/connections/${connection}/preview-send-event`, http.POST, this.workspaceID, {
+			type,
+			event,
+			outSchema,
+			transformation,
+		});
 	};
 
 	unlinkConnection = async (src: string, dst: string): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(src)}/links/${encodeURIComponent(dst)}`,
-			http.DELETE,
-			this.workspaceID,
-		);
+		return await call(`${this.apiURL}/connections/${src}/links/${dst}`, http.DELETE, this.workspaceID);
 	};
 
 	linkConnection = async (src: string, dst: string): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(src)}/links/${encodeURIComponent(dst)}`,
-			http.POST,
-			this.workspaceID,
-		);
+		return await call(`${this.apiURL}/connections/${src}/links/${dst}`, http.POST, this.workspaceID);
 	};
 }
 

@@ -418,7 +418,7 @@ const useApp = (
 		if (selectedWorkspace === '') {
 			localStorage.removeItem(WORKSPACE_ID_KEY);
 		} else {
-			localStorage.setItem(WORKSPACE_ID_KEY, String(selectedWorkspace));
+			localStorage.setItem(WORKSPACE_ID_KEY, selectedWorkspace);
 		}
 	}, [selectedWorkspace]);
 
