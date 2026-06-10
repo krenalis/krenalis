@@ -926,9 +926,14 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			_, err = tx.Exec(ctx, "INSERT INTO pipelines_runs (id, pipeline, function, cursor, incremental, start_time, ping_time)\n"+
 				"VALUES ($1, $2, $3, $4, $5, $6, $6)", n.ID, n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime)
 			if err != nil {
-				if db.IsForeignKeyViolation(err) {
+				switch {
+				case db.IsForeignKeyViolation(err):
 					if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
 						err = errors.NotFound("pipeline %s does not exit", n.Pipeline)
+					}
+				case db.IsUniqueViolation(err):
+					if db.ErrConstraintName(err) == "pipelines_one_active_run_idx" {
+						err = errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 					}
 				}
 				return nil, err
