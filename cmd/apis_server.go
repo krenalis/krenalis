@@ -113,7 +113,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 					return
 				}
 				if err == errInvalidSessionCookie {
-					_, _ = s.logout(w, r)
+					s.deleteSessionCookie(w, r)
 				}
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
@@ -338,6 +338,25 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 	return org, ws, nil
 }
 
+// deleteSessionCookie invalidates the session by removing the session cookie.
+func (s *apisServer) deleteSessionCookie(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie(sessionCookieName)
+	if cookie == nil {
+		return
+	}
+	// Remove the session.
+	c := &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     sessionCookiePath,
+		Secure:   s.runsOnHTTPS,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	}
+	writeSessionCookie(w, c)
+}
+
 // forwardSentryError forwards a telemetry error from a client to Sentry.
 // If not authorized, this method does nothing.
 func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) (any, error) {
@@ -420,21 +439,7 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
-	cookie, _ := r.Cookie(sessionCookieName)
-	if cookie == nil {
-		return nil, nil
-	}
-	// Remove the session.
-	c := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    "",
-		Path:     sessionCookiePath,
-		Secure:   s.runsOnHTTPS,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
-	}
-	writeSessionCookie(w, c)
+	s.deleteSessionCookie(w, r)
 	return nil, nil
 }
 
