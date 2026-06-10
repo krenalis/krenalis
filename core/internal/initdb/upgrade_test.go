@@ -17,7 +17,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestUpgradeAddsOneActivePipelineRunIndex(t *testing.T) {
+func TestUpgradePipelineRunIndexes(t *testing.T) {
 	const (
 		databaseName = "krenalis"
 		user         = "krenalis"
@@ -67,14 +67,32 @@ func TestUpgradeAddsOneActivePipelineRunIndex(t *testing.T) {
 	_, err = database.Exec(ctx, `CREATE TABLE pipelines_runs (
 		id text PRIMARY KEY,
 		pipeline text NOT NULL,
+		function text NOT NULL DEFAULT '',
 		end_time timestamp
-	)`)
+	);
+	CREATE INDEX pipelines_runs_function_idx
+		ON pipelines_runs (function)
+		WHERE function != '' AND end_time IS NOT NULL`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatal(err)
+	}
+	var predicate string
+	err = database.QueryRow(ctx, `
+		SELECT pg_get_expr(i.indpred, i.indrelid)
+		FROM pg_index i
+		JOIN pg_class c ON c.oid = i.indexrelid
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = current_schema() AND c.relname = $1`,
+		pipelineRunsFunctionIndex).Scan(&predicate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(predicate, "end_time IS NULL") || strings.Contains(predicate, "end_time IS NOT NULL") {
+		t.Fatalf("unexpected %s predicate: %s", pipelineRunsFunctionIndex, predicate)
 	}
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("second upgrade failed: %s", err)
