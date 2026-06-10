@@ -256,7 +256,7 @@ func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
 		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
-	organizationExternalID, err := wo.organization(claims.OrgID)
+	organizationExternalID, err := wo.organizationExternalID(claims.OrgID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
@@ -272,9 +272,10 @@ func (wo *Workos) Authenticate(token string) (*AuthenticatedUser, error) {
 	return user, nil
 }
 
-// organization fetches the WorkOS organization and returns its external ID,
-// which is the Krenalis-side organization identifier.
-func (wo *Workos) organization(orgID string) (string, error) {
+// organizationExternalID fetches and returns the external ID of the WorkOS
+// organization with the given ID. The external ID of a WorkOS organization is
+// the identifier of its linked organization in Krenalis.
+func (wo *Workos) organizationExternalID(orgID string) (string, error) {
 	if strings.TrimSpace(orgID) == "" {
 		return "", fmt.Errorf("missing organization ID")
 	}
