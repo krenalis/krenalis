@@ -1170,11 +1170,13 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 		}
 
 		// Attempt to acquire the run. If already acquired by another node, return early.
+		nodeID := core.state.ID()
 		bo := backoff.New(200)
 		for bo.Next(ctx) {
+			pingTime := time.Now().UTC()
 			result, err := core.db.Exec(core.close.ctx,
-				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL",
-				core.state.ID(), run.ID)
+				"UPDATE pipelines_runs\nSET node = $1, ping_time = $2\nWHERE id = $3 AND node IS NULL AND end_time IS NULL",
+				nodeID, pingTime, run.ID)
 			if err != nil {
 				if ctx.Err() == nil {
 					slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
