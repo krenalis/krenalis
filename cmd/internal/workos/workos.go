@@ -373,8 +373,8 @@ func (wo *Workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) 
 		return fmt.Errorf("invalid timestamp in WorkOS-Signature header")
 	}
 	diff := time.Now().UnixMilli() - ts
-	if diff < 0 || diff > signatureMaxAge {
-		return fmt.Errorf("WorkOS signature timestamp is too old or in the future")
+	if diff > signatureMaxAge {
+		return fmt.Errorf("WorkOS signature timestamp is too old")
 	}
 
 	sigBytes, err := hex.DecodeString(signature)
