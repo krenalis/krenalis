@@ -911,7 +911,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 			}
 			if executing {
-				return nil, errors.Unprocessable(RunInProgress, "pipeline run %s is already in progress", this.pipeline.ID)
+				return nil, errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 			}
 			if incremental == nil {
 				n.Incremental = inc
