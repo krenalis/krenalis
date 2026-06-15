@@ -604,12 +604,14 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 	var event struct {
 		Event string `json:"event"`
 		Data  struct {
-			ID         string  `json:"id"`
-			Email      string  `json:"email"`
-			FirstName  string  `json:"first_name"`
-			LastName   string  `json:"last_name"`
-			Name       string  `json:"name"`
-			ExternalID *string `json:"external_id"`
+			ID             string  `json:"id"`
+			Email          string  `json:"email"`
+			FirstName      string  `json:"first_name"`
+			LastName       string  `json:"last_name"`
+			Name           string  `json:"name"`
+			ExternalID     *string `json:"external_id"`
+			UserID         string  `json:"user_id"`
+			OrganizationID string  `json:"organization_id"`
 		} `json:"data"`
 	}
 	normalizedBody := norm.NFC.Bytes(rawBody)
@@ -661,6 +663,72 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			return nil, err
 		}
 		if err := org.Update(r.Context(), orgName); err != nil {
+			return nil, err
+		}
+	case "organization_membership.created":
+		if event.Data.UserID == "" || event.Data.OrganizationID == "" {
+			return nil, nil
+		}
+		workosUser, err := s.workos.User(r.Context(), event.Data.UserID)
+		if err != nil {
+			return nil, err
+		}
+		orgID, err := s.workos.OrganizationExternalID(r.Context(), event.Data.OrganizationID)
+		if err != nil {
+			if errors.Is(err, workos.ErrOrganizationNotLinked) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		org, err := s.core.Organization(orgID)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				return nil, nil
+			}
+			return nil, err
+		}
+		email := strings.TrimSpace(norm.NFC.String(workosUser.Email))
+		firstName := strings.TrimSpace(norm.NFC.String(workosUser.FirstName))
+		lastName := strings.TrimSpace(norm.NFC.String(workosUser.LastName))
+		name := strings.TrimSpace(firstName + " " + lastName)
+		if runes := []rune(name); len(runes) > 255 {
+			name = string(runes[:255])
+		}
+		if _, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, event.Data.UserID); err != nil {
+			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
+				return nil, nil
+			}
+			return nil, err
+		}
+	case "organization_membership.deleted":
+		if event.Data.UserID == "" || event.Data.OrganizationID == "" {
+			return nil, nil
+		}
+		orgID, err := s.workos.OrganizationExternalID(r.Context(), event.Data.OrganizationID)
+		if err != nil {
+			if errors.Is(err, workos.ErrOrganizationNotLinked) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		org, err := s.core.Organization(orgID)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				return nil, nil
+			}
+			return nil, err
+		}
+		memberID, err := org.MemberByWorkOSID(r.Context(), event.Data.UserID)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				return nil, nil
+			}
+			return nil, err
+		}
+		if err := org.DeleteMember(r.Context(), memberID); err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				return nil, nil
+			}
 			return nil, err
 		}
 	}

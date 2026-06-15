@@ -42,6 +42,7 @@ const (
 
 var (
 	ErrInvalidToken            = errors.New("WorkOS provided an invalid JWT token")
+	ErrOrganizationNotLinked   = errors.New("WorkOS organization has no external ID")
 	errCannotRetrievePublicKey = errors.New("cannot retrieve the WorkOS public key")
 )
 
@@ -261,7 +262,7 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
-	organizationExternalID, err := wo.organizationExternalID(ctx, claims.OrgID)
+	organizationExternalID, err := wo.OrganizationExternalID(ctx, claims.OrgID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
@@ -277,10 +278,13 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 	return user, nil
 }
 
-// organizationExternalID fetches and returns the external ID of the WorkOS
+// OrganizationExternalID fetches and returns the external ID of the WorkOS
 // organization with the given ID. The external ID of a WorkOS organization is
 // the identifier of its linked organization in Krenalis.
-func (wo *Workos) organizationExternalID(ctx context.Context, orgID string) (string, error) {
+//
+// Returns ErrOrganizationNotLinked if the WorkOS organization has no external
+// ID.
+func (wo *Workos) OrganizationExternalID(ctx context.Context, orgID string) (string, error) {
 	if strings.TrimSpace(orgID) == "" {
 		return "", fmt.Errorf("missing organization ID")
 	}
@@ -292,9 +296,23 @@ func (wo *Workos) organizationExternalID(ctx context.Context, orgID string) (str
 		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
 	}
 	if orgRes.ExternalID == "" {
-		return "", fmt.Errorf("WorkOS organization %s has no external ID", orgID)
+		return "", ErrOrganizationNotLinked
 	}
 	return orgRes.ExternalID, nil
+}
+
+// User fetches and returns the WorkOS user with the given ID.
+func (wo *Workos) User(ctx context.Context, userID string) (*AuthenticatedUser, error) {
+	var res struct {
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+	}
+	err := wo.call(ctx, http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch WorkOS user %s: %s", userID, err)
+	}
+	return &AuthenticatedUser{ID: userID, Email: res.Email, FirstName: res.FirstName, LastName: res.LastName}, nil
 }
 
 // call executes an HTTP request to the WorkOS API and returns the HTTP status
