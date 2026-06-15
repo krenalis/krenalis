@@ -26,6 +26,9 @@ type api struct {
 //
 // Authentication is not required to call AcceptInvitation.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.WorkOSEnabled, "accepting invitations is disabled when WorkOS authentication is configured")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -46,6 +49,9 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.WorkOSEnabled, "changing passwords is disabled when WorkOS authentication is configured")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -287,6 +293,9 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 //
 // Authentication is not required to call SendMemberPasswordReset.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.WorkOSEnabled, "sending password reset emails is disabled when WorkOS authentication is configured")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -315,6 +324,9 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.WorkOSEnabled, "validating password reset tokens is disabled when WorkOS authentication is configured")
+	}
 	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
 	return nil, err
 }

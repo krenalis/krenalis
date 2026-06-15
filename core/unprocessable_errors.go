@@ -52,5 +52,6 @@ const (
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
 	WarehouseNotInitializable     errors.Code = "WarehouseNotInitializable"
 	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
+	WorkOSEnabled                 errors.Code = "WorkOSEnabled"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
 )
