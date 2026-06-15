@@ -632,6 +632,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				// Email already in use, skip the update without returning
 				// errors to prevent webhook retries.
+				slog.Error("cannot synchronize WorkOS user because the email already exists", "workos_user_id", event.Data.ID)
 				return nil, nil
 			}
 			return nil, err
