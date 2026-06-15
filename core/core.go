@@ -400,7 +400,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
-// be in range [1, 60]. password's length must be at least 8 character long.
+// be in range [0, 45]. password's length must be at least 8 character long.
 //
 // If an invitation with the given token does not exist, it returns a
 // NotFoundError error. If the token is expired it returns an

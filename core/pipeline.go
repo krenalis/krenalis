@@ -897,6 +897,9 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			var function string
 			var pipelineEnabled, organizationEnabled, inc, executing bool
 			var cursor time.Time
+			// Verify that a run can be created (the pipeline exists, is enabled,
+			// and has no run in progress) and load the settings needed to
+			// initialize it.
 			err := tx.QueryRow(ctx, "SELECT p.enabled, o.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
 				"FROM pipelines AS p\n"+
 				"INNER JOIN connections AS c ON p.connection = c.id\n"+
@@ -919,7 +922,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 			}
 			if executing {
-				return nil, errors.Unprocessable(RunInProgress, "pipeline run %s is already in progress", this.pipeline.ID)
+				return nil, errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 			}
 			if incremental == nil {
 				n.Incremental = inc
@@ -929,6 +932,8 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			if n.Incremental {
 				n.Cursor = cursor
 			}
+			// Create the pending run and initialize its ping time so the cleaner
+			// does not consider it stale while it waits to be acquired by a node.
 			_, err = tx.Exec(ctx, "INSERT INTO pipelines_runs (id, pipeline, function, cursor, incremental, start_time, ping_time)\n"+
 				"VALUES ($1, $2, $3, $4, $5, $6, $6)", n.ID, n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime)
 			if err != nil {
