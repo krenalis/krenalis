@@ -145,6 +145,9 @@ func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *W
 
 // publicKey returns the RSA public key for the given token, using the in-memory
 // cache when available.
+//
+// It returns an error wrapping errCannotRetrievePublicKey if the public key
+// cannot be fetched from WorkOS.
 func (wo *Workos) publicKey(ctx context.Context, token *jwt.Token) (_ any, err error) {
 	algorithm := token.Method.Alg()
 
@@ -220,6 +223,9 @@ func (wo *Workos) fetchPublicKey(ctx context.Context, kid, alg string) (*rsa.Pub
 
 // Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
+//
+// It returns ErrInvalidToken if the token is expired, has an invalid signature,
+// or is missing required claims (sub, org_id, matching client_id, or issuer).
 func (wo *Workos) Authenticate(ctx context.Context, token string) (*AuthenticatedUser, error) {
 	var claims claims
 

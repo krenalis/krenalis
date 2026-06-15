@@ -21,6 +21,9 @@ type organization struct {
 
 // AddMember adds a new member of an organization.
 //
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
+//
 // If the ability to add new members without requiring email invitation has not
 // been enabled, it returns an errors.UnprocessableError error with code
 // EmailInvitationRequired.
@@ -190,6 +193,9 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 }
 
 // DeleteMember deletes a member of an organization.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "deleting members is disabled when WorkOS authentication is configured")
@@ -206,6 +212,9 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 }
 
 // InviteMember sends an invitation email.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (organization organization) InviteMember(w http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "inviting members is disabled when WorkOS authentication is configured")
@@ -299,6 +308,9 @@ func (organization organization) UpdateAccessKey(w http.ResponseWriter, r *http.
 }
 
 // UpdateMember updates the currently logged-in member of the organization.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (organization organization) UpdateMember(w http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "updating members is disabled when WorkOS authentication is configured")

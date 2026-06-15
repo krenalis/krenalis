@@ -25,6 +25,9 @@ type api struct {
 // AcceptInvitation accepts the invitation with a given invitation token.
 //
 // Authentication is not required to call AcceptInvitation.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "accepting invitations is disabled when WorkOS authentication is configured")
@@ -48,6 +51,9 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 // reset password token.
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "changing passwords is disabled when WorkOS authentication is configured")
@@ -292,6 +298,9 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 // SendMemberPasswordReset sends a reset password email.
 //
 // Authentication is not required to call SendMemberPasswordReset.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "sending password reset emails is disabled when WorkOS authentication is configured")
@@ -323,6 +332,9 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.WorkOSEnabled, "validating password reset tokens is disabled when WorkOS authentication is configured")
