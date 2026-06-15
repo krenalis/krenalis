@@ -20,6 +20,7 @@ import { IS_PASSWORDLESS_KEY, IS_DOCKER_KEY } from '../../../constants/storage';
 import { AuthKitProvider, useAuth } from '@workos-inc/authkit-react';
 import API from '../../../lib/api/api';
 import { PublicMetadata } from '../../../lib/api/types/responses';
+import { sleep } from '../../../utils/sleep';
 import '@radix-ui/themes/styles.css';
 import '@workos-inc/widgets/styles.css';
 
@@ -259,20 +260,26 @@ const Root = () => {
 
 	useEffect(() => {
 		const api = new API(window.location.origin, '');
+		let cancelled = false;
 
 		const fetchWorkOSClientID = async () => {
-			let publicMetadata: PublicMetadata;
-			try {
-				publicMetadata = await api.publicMetadata();
-			} catch (err) {
-				console.error('error', err);
-				return;
+			while (!cancelled) {
+				try {
+					const publicMetadata = await api.publicMetadata();
+					setWorkOSClientID(publicMetadata.workosClientID);
+					setWorkOSDevMode(publicMetadata.workosDevMode);
+					return;
+				} catch (err) {
+					console.error('error', err);
+					await sleep(2000); // Wait for 2 seconds before retrying
+				}
 			}
-			setWorkOSClientID(publicMetadata.workosClientID);
-			setWorkOSDevMode(publicMetadata.workosDevMode);
 		};
 
 		fetchWorkOSClientID();
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
 	if (workosClientID == null) {
