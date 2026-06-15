@@ -19,7 +19,6 @@ import RootError from '../RootError/RootError';
 import { IS_PASSWORDLESS_KEY, IS_DOCKER_KEY } from '../../../constants/storage';
 import { AuthKitProvider, useAuth } from '@workos-inc/authkit-react';
 import API from '../../../lib/api/api';
-import { PublicMetadata } from '../../../lib/api/types/responses';
 import { sleep } from '../../../utils/sleep';
 import '@radix-ui/themes/styles.css';
 import '@workos-inc/widgets/styles.css';
