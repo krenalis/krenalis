@@ -895,12 +895,10 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			// Verify that a run can be created (the pipeline exists, is enabled,
 			// and has no run in progress) and load the settings needed to
 			// initialize it.
-			err := tx.QueryRow(ctx, "SELECT p.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			err := tx.QueryRow(ctx, "SELECT p.enabled, p.transformation_id, p.incremental, p.cursor, r.id IS NOT NULL\n"+
 				"FROM pipelines AS p\n"+
-				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
-				"WHERE p.id = $1\n"+
-				"ORDER BY e.id DESC\n"+
-				"LIMIT 1", n.Pipeline).Scan(&enabled, &function, &inc, &cursor, &executing)
+				"LEFT JOIN pipelines_runs AS r ON p.id = r.pipeline AND r.end_time IS NULL\n"+
+				"WHERE p.id = $1", n.Pipeline).Scan(&enabled, &function, &inc, &cursor, &executing)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
