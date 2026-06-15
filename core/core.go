@@ -380,7 +380,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onRunPipeline)
-	core.state.AddListener(core.onSetOrganizationStatus)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
@@ -1592,26 +1591,6 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 			go core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
 				ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
 				ws.AlterProfileSchema.Operations)
-		}
-	}
-}
-
-// onSetOrganizationStatus is called when an organization status is updated.
-func (core *Core) onSetOrganizationStatus(n state.SetOrganizationStatus) {
-	org, _ := core.state.Organization(n.ID)
-	if n.Enabled {
-		for _, ws := range org.Workspaces() {
-			var dw warehouses.Warehouse
-			if ws.HasWarehouseMCPSettings() {
-				dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-			}
-			core.mcpMu.Lock()
-			core.mcp[ws.ID] = dw
-			core.mcpMu.Unlock()
-		}
-	} else {
-		for _, ws := range org.Workspaces() {
-			core.removeMCPWarehouse(ws.ID)
 		}
 	}
 }

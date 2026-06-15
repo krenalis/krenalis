@@ -60,7 +60,6 @@ type Organization struct {
 	//   are not started;
 	// - inbound and outbound events for that organization are not processed (as
 	//   if all the pipelines were disabled);
-	// - the organization's workspace MCP server is no longer accessible.
 	// - member account operations (login, accepting an invitation, requesting
 	//   and performing a password reset) are rejected;
 	// - currently running pipelines should be stopped (see https://github.com/krenalis/krenalis/issues/2250).
