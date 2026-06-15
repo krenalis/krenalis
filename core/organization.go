@@ -50,20 +50,9 @@ type Organization struct {
 	organization *state.Organization
 	ID           string `json:"id"`
 	Name         string `json:"name"`
-
-	// Enabled indicates whether the organization is enabled.
-	//
-	// When an organization is disabled, automatic core operations on that
-	// organization are stopped. Specifically:
-	//
-	// - pipelines for that organization (both scheduled and manually executed)
-	//   are not started;
-	// - inbound and outbound events for that organization are not processed (as
-	//   if all the pipelines were disabled);
-	// - member account operations (login, accepting an invitation, requesting
-	//   and performing a password reset) are rejected;
-	// - currently running pipelines should be stopped (see https://github.com/krenalis/krenalis/issues/2250).
-	// - currently running operations on the warehouse should be stopped (see https://github.com/krenalis/krenalis/issues/2251).
+	// Enabled indicates whether the organization is enabled. When an
+	// organization is disabled, pipelines belonging to that organization behave
+	// as if they were disabled.
 	Enabled bool `json:"enabled"`
 }
 
