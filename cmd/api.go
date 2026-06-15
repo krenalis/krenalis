@@ -295,9 +295,6 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 // SendMemberPasswordReset sends a reset password email.
 //
 // Authentication is not required to call SendMemberPasswordReset.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
