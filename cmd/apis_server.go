@@ -473,7 +473,14 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			name := strings.TrimSpace(firstName + " " + lastName)
 			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, workosUser.ID)
 			if err != nil {
-				return nil, err
+				if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
+					memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, err
+				}
 			}
 		}
 	}
