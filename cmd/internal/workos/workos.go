@@ -227,7 +227,9 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 		return wo.publicKey(ctx, token)
 	}
 
-	parsed, err := jwt.ParseWithClaims(token, &claims, publicKey, jwt.WithExpirationRequired())
+	issuer := "https://api.workos.com/user_management/" + wo.ClientID
+
+	parsed, err := jwt.ParseWithClaims(token, &claims, publicKey, jwt.WithExpirationRequired(), jwt.WithIssuer(issuer))
 	if err != nil {
 		if errors.Is(err, errCannotRetrievePublicKey) {
 			return nil, err
