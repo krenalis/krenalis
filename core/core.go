@@ -404,6 +404,9 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 // If an invitation with the given token does not exist, it returns a
 // NotFoundError error. If the token is expired it returns an
 // error.UnprocessableError error with code InvitationTokenExpired.
+//
+// If the organization is disabled, it returns an errors.UnprocessableError
+// error with code OrganizationDisabled.
 func (core *Core) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -429,6 +432,13 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		}
 		if isInvitationTokenExpired(createdAt) {
 			return nil, errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+		}
+		organization, ok := core.state.Organization(n.Organization)
+		if !ok {
+			return nil, errors.NotFound("invitation token %q does not exist", token)
+		}
+		if !organization.Enabled {
+			return nil, errors.Unprocessable(OrganizationDisabled, "organization is disabled")
 		}
 		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3 AND organization = $4",
 			name, string(pass), n.Member, n.Organization)
@@ -474,6 +484,9 @@ func (core *Core) CanSendMemberPasswordReset() bool {
 //
 // If a reset password request with the given token does not exist or if the
 // token is expired, it returns a NotFoundError error.
+//
+// If the organization is disabled, it returns an errors.UnprocessableError
+// error with code OrganizationDisabled.
 func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string, password string) error {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -502,6 +515,13 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		}
 		if isResetPasswordTokenExpired(createdAt) {
 			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		organization, ok := core.state.Organization(organizationID)
+		if !ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		if !organization.Enabled {
+			return nil, errors.Unprocessable(OrganizationDisabled, "organization is disabled")
 		}
 		_, err = tx.Exec(ctx, "UPDATE members SET password = $1, reset_password_token = '', reset_password_token_created_at = NULL WHERE id = $2",
 			string(pass), id)
@@ -760,44 +780,62 @@ func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	return uniqueProperties, nil
 }
 
-// MemberInvitation returns the organization and email of the member invited
-// with the given invitation token. If an invitation with the given token does
-// not exist, it returns a NotFoundError error. If the token is expired it
-// returns an errors.UnprocessableError error with code InvitationTokenExpired.
-func (core *Core) MemberInvitation(ctx context.Context, token string) (*Organization, string, error) {
+// MemberInvitation returns the organization's name and email of the member
+// invited with the given invitation token. If an invitation with the given
+// token does not exist, it returns a NotFoundError error.
+//
+// It returns an errors.UnprocessableError error with code:
+// - InvitationTokenExpired if the token is expired;
+// - OrganizationDisabled if the organization is disabled.
+func (core *Core) MemberInvitation(ctx context.Context, token string) (string, string, error) {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
-		return nil, "", errors.NotFound("invitation token %q does not exist", token)
+		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
 	var organizationID, email string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, email, created_at FROM members WHERE invitation_token = $1", token).Scan(&organizationID, &email, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, "", errors.NotFound("invitation token %q does not exist", token)
+			return "", "", errors.NotFound("invitation token %q does not exist", token)
 		}
-		return nil, "", err
+		return "", "", err
 	}
 	// At this point an invited member with the given token exists,
 	// and createdAt is the timestamp when the invitation was sent.
 	if isInvitationTokenExpired(createdAt) {
-		return nil, "", errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+		return "", "", errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 	}
-	organization, err := core.organization(organizationID)
-	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, "", errors.NotFound("invitation token %q does not exist", token)
-		}
-		return nil, "", err
+	organization, ok := core.state.Organization(organizationID)
+	if !ok {
+		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
-	return organization, email, nil
+	if !organization.Enabled {
+		return "", "", errors.Unprocessable(OrganizationDisabled, "organization is disabled")
+	}
+	return organization.Name, email, nil
 }
 
 // Organization returns the organization with identifier id.
 //
 // It returns an errors.NotFound error if the organization does not exist.
 func (core *Core) Organization(id string) (*Organization, error) {
-	return core.organization(id)
+	core.mustBeOpen()
+	if !IsValidID(id) {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", id)
+	}
+	org, ok := core.state.Organization(id)
+	if !ok {
+		return nil, errors.NotFound("organization %s does not exist", id)
+	}
+	organization := Organization{
+		core:         core,
+		organization: org,
+		ID:           org.ID,
+		Name:         org.Name,
+		Enabled:      org.Enabled,
+	}
+	return &organization, nil
 }
 
 // Organizations returns the organizations, in the given order, describing all
@@ -850,36 +888,38 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.collector.ServeHTTP(w, r)
 }
 
-// ValidateMemberPasswordResetToken validates the given password reset token,
-// returning the organization of reset password token's member.
+// ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // If a password reset request with the given password reset token does not
 // exist or if the token is expired, it returns a NotFoundError error.
-func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) (*Organization, error) {
+//
+// If the organization is disabled, it returns an errors.UnprocessableError
+// error with code OrganizationDisabled.
+func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
-		return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
 	var organizationID string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+			return errors.NotFound("reset password token %q does not exist or is expired", token)
 		}
-		return nil, err
+		return err
 	}
 	if isResetPasswordTokenExpired(createdAt) {
-		return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	organization, err := core.organization(organizationID)
-	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
-		}
-		return nil, err
+	organization, ok := core.state.Organization(organizationID)
+	if !ok {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	return organization, nil
+	if !organization.Enabled {
+		return errors.Unprocessable(OrganizationDisabled, "organization is disabled")
+	}
+	return nil
 }
 
 // DataTransformation represents transformation passed to (*Core).TransformData
@@ -1597,28 +1637,6 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
 		}
 	}(ws.ID)
-}
-
-// organization returns the organization with identifier id.
-//
-// It returns an errors.NotFound error if the organization does not exist.
-func (core *Core) organization(id string) (*Organization, error) {
-	core.mustBeOpen()
-	if !IsValidID(id) {
-		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", id)
-	}
-	org, ok := core.state.Organization(id)
-	if !ok {
-		return nil, errors.NotFound("organization %s does not exist", id)
-	}
-	organization := Organization{
-		core:         core,
-		organization: org,
-		ID:           org.ID,
-		Name:         org.Name,
-		Enabled:      org.Enabled,
-	}
-	return &organization, nil
 }
 
 // removeMCPWarehouse removes from core the MCP warehouse for the given
