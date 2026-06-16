@@ -705,7 +705,7 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (string, 
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, true)", n.ID, n.Name)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
 			if err != nil {
 				return nil, err
 			}
