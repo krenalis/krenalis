@@ -1297,11 +1297,11 @@ func (state *State) setOrganizationStatus(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	p := state.replaceOrganization(e.ID, func(p *Organization) {
+	o := state.replaceOrganization(e.ID, func(p *Organization) {
 		p.Enabled = e.Enabled
 	})
 	dispatchNotification(state, e)
-	return p.ID
+	return o.ID
 }
 
 // SetPipelineStatus is the event sent when the status of a pipeline is set.
