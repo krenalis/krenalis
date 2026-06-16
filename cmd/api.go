@@ -332,7 +332,6 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 		return nil, errors.New("there are no organizations")
 	}
 	org := organizations[0]
-	// Verify that the organization is enabled.
 	if !org.Enabled {
 		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}

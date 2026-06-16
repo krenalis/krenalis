@@ -313,7 +313,6 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		if err != nil {
 			return nil, nil, err
 		}
-		// Verify that the organization is enabled.
 		if !org.Enabled {
 			return nil, nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 		}
@@ -416,7 +415,6 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		}
 		return nil, err
 	}
-	// Verify that the organization is enabled.
 	if !org.Enabled {
 		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
