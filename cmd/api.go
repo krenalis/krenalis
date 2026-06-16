@@ -25,9 +25,6 @@ type api struct {
 // AcceptInvitation accepts the invitation with a given invitation token.
 //
 // Authentication is not required to call AcceptInvitation.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -40,6 +37,20 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	organizationID, _, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("invitation token %q does not exist", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
 	err = api.core.AcceptInvitation(r.Context(), r.PathValue("token"), body.Name, body.Password)
 	return nil, err
 }
@@ -48,9 +59,6 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 // reset password token.
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -61,6 +69,20 @@ func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Reques
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
 	}
 	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
 	return nil, err
@@ -191,15 +213,22 @@ func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 // invited with a given invitation token.
 //
 // Authentication is not required to call MemberInvitation.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	organization, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
+	organizationID, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"email": email, "organization": organization}, nil
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("invitation token %q does not exist", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
+	return map[string]any{"email": email, "organization": organization.Name}, nil
 }
 
 // Organization returns the organization with the given identifier.
@@ -319,11 +348,21 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
-	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
 	return nil, err
 }
 
