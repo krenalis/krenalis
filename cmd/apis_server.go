@@ -190,9 +190,6 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //
 // It returns errors.UnauthorizedError if authorization fails, or
 // errInvalidSessionCookie if the session cookie is invalid.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organization, ws *core.Workspace, userID string, err error) {
 
 	// Get the session.
@@ -281,9 +278,6 @@ func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
 //   - the session cookie is from the Admin console.
 //
 // If authorization fails, an errors.UnauthorizedError is returned.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *core.Workspace, error) {
 
 	if auth, ok := r.Header["Authorization"]; ok {
@@ -382,9 +376,6 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 }
 
 // login logs a user in.
-//
-// If the organization is disabled, an UnprocessableError error with code
-// OrganizationDisabled is returned.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
