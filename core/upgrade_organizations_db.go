@@ -43,7 +43,10 @@ func UpgradeOrganizationsDB(ctx context.Context, conf DBConfig) error {
 	// PostgreSQL, so the queries are executed individually outside of any
 	// transaction.
 	queries := []string{
-		`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS enabled boolean NOT NULL DEFAULT TRUE`,
+		// Add the column with the same definition as in a freshly created
+		// database, then enable all the existing organizations.
+		`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS enabled boolean NOT NULL DEFAULT FALSE`,
+		`UPDATE organizations SET enabled = true`,
 		`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'SetOrganizationStatus' AFTER 'SetConnectionSettings'`,
 	}
 	for _, query := range queries {

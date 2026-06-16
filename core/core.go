@@ -695,17 +695,17 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 
 // CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 45 runes.
-// The created organization is already enabled.
-func (core *Core) CreateOrganization(ctx context.Context, name string) (string, error) {
+// enabled indicates whether the created organization is enabled.
+func (core *Core) CreateOrganization(ctx context.Context, name string, enabled bool) (string, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	n := state.CreateOrganization{Name: name}
+	n := state.CreateOrganization{Name: name, Enabled: enabled}
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, $3)", n.ID, n.Name, n.Enabled)
 			if err != nil {
 				return nil, err
 			}

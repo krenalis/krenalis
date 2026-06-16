@@ -121,13 +121,14 @@ func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
+		Name    string `json:"name"`
+		Enabled bool   `json:"enabled"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := api.core.CreateOrganization(r.Context(), body.Name)
+	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled)
 	if err != nil {
 		return nil, err
 	}

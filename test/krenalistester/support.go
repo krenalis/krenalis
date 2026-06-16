@@ -303,11 +303,12 @@ func organizationsHeaders() http.Header {
 	}
 }
 
-func (c *Krenalis) CreateOrganization(name string) string {
+func (c *Krenalis) CreateOrganization(name string, enabled bool) string {
 	var response struct {
 		ID string `json:"id"`
 	}
-	c.MustCall("POST", "/v1/organizations", organizationsHeaders(), map[string]any{"name": name}, &response)
+	body := map[string]any{"name": name, "enabled": enabled}
+	c.MustCall("POST", "/v1/organizations", organizationsHeaders(), body, &response)
 	return response.ID
 }
 
