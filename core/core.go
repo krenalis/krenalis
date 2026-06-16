@@ -701,11 +701,11 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (string, 
 	if err := util.ValidateStringField("name", name, 45); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	n := state.CreateOrganization{Name: name, Enabled: true}
+	n := state.CreateOrganization{Name: name}
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, $3)", n.ID, n.Name, n.Enabled)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, true)", n.ID, n.Name)
 			if err != nil {
 				return nil, err
 			}

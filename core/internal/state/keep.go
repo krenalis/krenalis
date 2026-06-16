@@ -464,9 +464,8 @@ func (state *State) createConnection(n notification) string {
 
 // CreateOrganization is the event sent when an organization is created.
 type CreateOrganization struct {
-	ID      string
-	Name    string
-	Enabled bool
+	ID   string
+	Name string
 }
 
 // createOrganization creates an organization.
@@ -481,7 +480,7 @@ func (state *State) createOrganization(n notification) string {
 		members:    map[string]struct{}{},
 		ID:         e.ID,
 		Name:       e.Name,
-		Enabled:    e.Enabled,
+		Enabled:    true,
 	}
 	state.mu.Lock()
 	state.organizations[e.ID] = org
