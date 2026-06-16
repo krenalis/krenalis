@@ -514,8 +514,9 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error
 			return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 		}
 	}
-	if !c.Workspace().Organization().Enabled {
-		return "", errors.Unprocessable(OrganizationDisabled, "organization is disabled")
+	org := c.Workspace().Organization()
+	if !org.Enabled {
+		return "", errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
 	if !this.pipeline.Enabled {
 		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
@@ -891,6 +892,8 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		StartTime: time.Now().UTC(),
 	}
 
+	org := this.pipeline.Connection().Organization()
+
 	for {
 		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
@@ -916,7 +919,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 				return nil, err
 			}
 			if !organizationEnabled {
-				return nil, errors.Unprocessable(OrganizationDisabled, "organization is disabled")
+				return nil, errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
 			}
 			if !pipelineEnabled {
 				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
