@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
 import './Member.css';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -16,6 +16,7 @@ import { useLocation } from 'react-router-dom';
 import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
 import { UserProfile, WorkOsWidgets, UserSecurity } from '@workos-inc/widgets'; // TODO: vedi come risolvere questo errore
 import { useAuth } from '@workos-inc/authkit-react';
+import { isJwtExpired } from '../../../utils/jwt';
 
 const Member = () => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
@@ -330,17 +331,60 @@ const Member = () => {
 	);
 };
 
-const WorkOSMember = () => {
-	const { isLoading, user, getAccessToken } = useAuth();
 
-	if (isLoading || !user) {
+const WorkOSMember = () => {
+	const [mountKey, setMountKey] = useState(0);
+	const [isRefreshingToken, setIsRefreshingToken] = useState(false);
+
+	const { isLoading, user, signOut, getAccessToken } = useAuth();
+
+	const lastTokenRef = useRef<string>('');
+
+	const getAccessTokenSafe = useCallback(async () => {
+		let token: string;
+		try {
+			token = await getAccessToken();
+		} catch (e) {
+			signOut();
+			throw e;
+		}
+		lastTokenRef.current = token;
+		return token;
+	}, [getAccessToken, signOut]);
+
+	useEffect(() => {
+		const handleTabChange = async () => {
+			if (document.hidden || !isJwtExpired(lastTokenRef.current)) {
+				return;
+			}
+			// The user has switched to the Krenalis tab, but the WorkOS widget
+			// token has expired. We refresh the token and manually re-render
+			// the widget to prevent WorkOS from automatically re-rendering it
+			// and displaying an error state.
+			setIsRefreshingToken(true);
+			try {
+				const token = await getAccessToken();
+				setMountKey(k => k + 1); // force re-render of the widget
+				lastTokenRef.current = token;
+			} catch {
+				// Do nothing. If there's an error in retrieving the token, it
+				// will be handled by the WorkOS widget callback.
+			} finally {
+				setIsRefreshingToken(false);
+			}
+		};
+		document.addEventListener('visibilitychange', handleTabChange, { capture: true });
+		return () => document.removeEventListener('visibilitychange', handleTabChange, { capture: true });
+	}, [getAccessToken]);
+
+	if (isLoading || !user || isRefreshingToken) {
 		return null;
 	}
 
 	return (
-		<WorkOsWidgets>
-			<UserProfile authToken={getAccessToken} />
-			<UserSecurity authToken={getAccessToken} />
+		<WorkOsWidgets key={mountKey}>
+			<UserProfile authToken={getAccessTokenSafe} />
+			<UserSecurity authToken={getAccessTokenSafe} />
 		</WorkOsWidgets>
 	);
 };

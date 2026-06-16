@@ -211,14 +211,29 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 // WorkOSWrapper handles the WorkOS authentication flow. Once the WorkOS user is
 // available it exchanges the WorkOS access token for a Krenalis session cookie,
 // then renders the app as usual.
+//
+// When the WorkOS session expires or is revoked, the WorkOS SDK sets user to
+// null. In those cases, we invalidate the Krenalis session before redirecting
+// to WorkOS login, so the two sessions stay in sync.
 const WorkOSWrapper = () => {
 	const [isLoggedInViaWorkOS, setIsLoggedInViaWorkOS] = useState(false);
 
 	const { isLoading, user: workosUser, signIn, signOut, getAccessToken } = useAuth();
 
 	useEffect(() => {
-		if (!isLoading && workosUser == null) {
+		const handleWorkOSSessionEnd = async () => {
+			try {
+				const api = new API(window.location.origin, '');
+				await api.logout();
+			} catch {
+				// This is best-effort. Even if the Krenalis logout fails, the
+				// user cannot re-enter the admin without a valid WorkOS
+				// session.
+			}
 			signIn();
+		};
+		if (!isLoading && workosUser == null) {
+			handleWorkOSSessionEnd();
 		}
 	}, [isLoading, workosUser]);
 
