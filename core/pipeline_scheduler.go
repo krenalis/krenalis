@@ -245,8 +245,11 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 		pe.pipelines[i] = map[int16][]*state.Pipeline{}
 	}
 	for _, pipeline := range pe.core.state.Pipelines() {
-		org := pipeline.Connection().Workspace().Organization()
-		if !org.Enabled || pipeline.SchedulePeriod == 0 {
+		if pipeline.SchedulePeriod == 0 {
+			continue
+		}
+		org := pipeline.Connection().Organization()
+		if !org.Enabled {
 			continue
 		}
 		i := periodIndex(pipeline.SchedulePeriod)
