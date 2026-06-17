@@ -341,7 +341,7 @@ github.com/ebitengine/purego/internal/xreflect
 github.com/ericlagergren/decimal
 github.com/ericlagergren/decimal/internal/arith
 github.com/ericlagergren/decimal/internal/c
-# github.com/evanw/esbuild v0.28.0
+# github.com/evanw/esbuild v0.28.1
 ## explicit; go 1.13
 github.com/evanw/esbuild/internal/api_helpers
 github.com/evanw/esbuild/internal/ast
