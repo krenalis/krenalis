@@ -267,6 +267,9 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("event ingestion works again after re-enabling", func(t *testing.T) {
+		if count := c.CountEventsInWarehouse(t.Context()); count != 0 {
+			t.Fatalf("expected no events stored in warehouse before running this subtest, got %d", count)
+		}
 		// POST /v1/events: batch ingestion.
 		c.SendEvent(writeKey, analytics.Track{
 			UserId: "stored-after-reenabling",
@@ -283,7 +286,6 @@ func TestOrganizationDisabled(t *testing.T) {
 		if err != nil {
 			t.Fatalf("POST /v1/events/track must succeed after re-enabling the organization, got: %v", err)
 		}
-		time.Sleep(2 * time.Second)
 		// Exactly two events must be stored: the batch one and the typed one,
 		// both sent after re-enabling.
 		c.WaitEventsStoredIntoWarehouse(t.Context(), 2)
