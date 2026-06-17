@@ -185,13 +185,6 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 		})
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-			}
 			if member.Avatar != nil {
 				_, err = tx.Exec(ctx,
 					"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -202,6 +195,9 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 					n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
 			}
 			if err != nil {
+				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+					return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+				}
 				return nil, err
 			}
 			return n, nil
