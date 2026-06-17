@@ -41,8 +41,8 @@ func TestOrganizationDisabled(t *testing.T) {
 		t.Fatal("organization should be enabled, but it is disabled")
 	}
 
-	// Verify that the endpoint for changing the organization state requires the
-	// organization API.
+	// Test that the call to the method that sets the state of an organization
+	// fails if the organizations key is not provided.
 	t.Run("set status without organizations API key is rejected", func(t *testing.T) {
 		err := c.SetOrganizationStatusErr(orgID, false, http.Header{"Krenalis-Workspace": nil})
 		statusErr, ok := err.(*krenalistester.StatusCodeError)
