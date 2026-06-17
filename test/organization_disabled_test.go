@@ -5,7 +5,6 @@
 package test
 
 import (
-	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -89,7 +88,6 @@ func TestOrganizationDisabled(t *testing.T) {
 	// ingested through the /v1/events endpoint. This must be done while the
 	// organization is still enabled, as creating connections and pipelines is
 	// itself rejected once the organization is disabled.
-	ctx := context.Background()
 	jsSrc := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	keys := c.EventWriteKeys(jsSrc)
 	if len(keys) != 1 {
@@ -231,7 +229,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		// No event must have been stored: nothing is queued for a disabled
 		// organization, regardless of the ingestion endpoint used.
-		if count := c.CountEventsInWarehouse(ctx); count != 0 {
+		if count := c.CountEventsInWarehouse(t.Context()); count != 0 {
 			t.Fatalf("expected no events stored while the organization is disabled, got %d", count)
 		}
 	})
@@ -288,7 +286,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		// Exactly two events must be stored: the batch one and the typed one,
 		// both sent after re-enabling.
-		c.WaitEventsStoredIntoWarehouse(ctx, 2)
+		c.WaitEventsStoredIntoWarehouse(t.Context(), 2)
 	})
 }
 
