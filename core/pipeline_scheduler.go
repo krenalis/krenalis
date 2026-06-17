@@ -182,31 +182,23 @@ func (ps *pipelineScheduler) onSetOrganizationStatus(n state.SetOrganizationStat
 	if ps.executor == nil {
 		return
 	}
-	var pipelines []*state.Pipeline
 	org, _ := ps.core.state.Organization(n.ID)
 	for _, workspace := range org.Workspaces() {
 		for _, connection := range workspace.Connections() {
 			for _, pipeline := range connection.Pipelines() {
 				if pipeline.SchedulePeriod != 0 {
-					pipelines = append(pipelines, pipeline)
+					if n.Enabled {
+						ps.executor.AddPipeline(pipeline)
+					} else {
+						// Unlike deletion handlers, this listener waits for all
+						// removals to complete by calling 'RemovePipeline'
+						// synchronously. This preserves notification order: a
+						// later re-enabling cannot add the pipelines before
+						// this disabling has removed them.
+						ps.executor.RemovePipeline(pipeline.ID)
+					}
 				}
 			}
-		}
-	}
-	if pipelines == nil {
-		return
-	}
-	if n.Enabled {
-		for _, pipeline := range pipelines {
-			ps.executor.AddPipeline(pipeline)
-		}
-	} else {
-		// Unlike deletion handlers, this listener waits for all removals to
-		// complete by calling 'RemovePipeline' synchronously. This preserves
-		// notification order: a later re-enabling cannot add the pipelines
-		// before this disabling has removed them.
-		for _, pipeline := range pipelines {
-			ps.executor.RemovePipeline(pipeline.ID)
 		}
 	}
 }
