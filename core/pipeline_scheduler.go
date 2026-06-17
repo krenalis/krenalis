@@ -201,9 +201,10 @@ func (ps *pipelineScheduler) onSetOrganizationStatus(n state.SetOrganizationStat
 			ps.executor.AddPipeline(pipeline)
 		}
 	} else {
-		// Unlike other call sites, RemovePipeline is called synchronously to
-		// avoid races with 'AddPipeline' on the same pipeline IDs (when
-		// disabling and then re-enabling an organization).
+		// Unlike deletion handlers, this listener waits for all removals to
+		// complete by calling 'RemovePipeline' synchronously. This preserves
+		// notification order: a later re-enabling cannot add the pipelines
+		// before this disabling has removed them.
 		for _, pipeline := range pipelines {
 			ps.executor.RemovePipeline(pipeline.ID)
 		}
