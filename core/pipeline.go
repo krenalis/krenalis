@@ -898,20 +898,16 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			var function string
-			var pipelineEnabled, organizationEnabled, inc, executing bool
+			var pipelineEnabled, organizationEnabled, inc bool
 			var cursor time.Time
-			// Verify that a run can be created (the pipeline exists, is enabled,
-			// and has no run in progress) and load the settings needed to
-			// initialize it.
-			err := tx.QueryRow(ctx, "SELECT p.enabled, o.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			// Verify that both the organization and the pipeline are enabled
+			// and load the settings needed to initialize it.
+			err := tx.QueryRow(ctx, "SELECT p.enabled, o.enabled, p.transformation_id, p.incremental, p.cursor\n"+
 				"FROM pipelines AS p\n"+
 				"INNER JOIN connections AS c ON p.connection = c.id\n"+
 				"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 				"INNER JOIN organizations AS o ON w.organization = o.id\n"+
-				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
-				"WHERE p.id = $1\n"+
-				"ORDER BY e.id DESC\n"+
-				"LIMIT 1", n.Pipeline).Scan(&pipelineEnabled, &organizationEnabled, &function, &inc, &cursor, &executing)
+				"WHERE p.id = $1", n.Pipeline).Scan(&pipelineEnabled, &organizationEnabled, &function, &inc, &cursor)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
@@ -923,9 +919,6 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			}
 			if !pipelineEnabled {
 				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
-			}
-			if executing {
-				return nil, errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 			}
 			if incremental == nil {
 				n.Incremental = inc
@@ -940,9 +933,14 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			_, err = tx.Exec(ctx, "INSERT INTO pipelines_runs (id, pipeline, function, cursor, incremental, start_time, ping_time)\n"+
 				"VALUES ($1, $2, $3, $4, $5, $6, $6)", n.ID, n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime)
 			if err != nil {
-				if db.IsForeignKeyViolation(err) {
+				switch {
+				case db.IsForeignKeyViolation(err):
 					if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
 						err = errors.NotFound("pipeline %s does not exit", n.Pipeline)
+					}
+				case db.IsUniqueViolation(err):
+					if db.ErrConstraintName(err) == "pipelines_one_active_run_idx" {
+						err = errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 					}
 				}
 				return nil, err

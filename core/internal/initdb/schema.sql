@@ -187,6 +187,10 @@ CREATE INDEX pipelines_runs_function_idx
     ON pipelines_runs (function)
     WHERE function != '' AND end_time IS NOT NULL;
 
+CREATE UNIQUE INDEX pipelines_one_active_run_idx
+    ON pipelines_runs (pipeline)
+    WHERE end_time IS NULL;
+
 CREATE TABLE pipelines_errors (
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
     timeslot integer NOT NULL,
