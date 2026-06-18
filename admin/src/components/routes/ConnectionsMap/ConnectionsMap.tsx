@@ -120,7 +120,7 @@ const ConnectionsMap = () => {
 				</>,
 			);
 		}, 0);
-	}, [hoveredConnection, isUserDbHovered, isEventDbHovered]);
+	}, [hoveredConnection, isUserDbHovered, isEventDbHovered, connections]);
 
 	const onUserDbMouseEnter = () => {
 		setIsUserDbHovered(true);

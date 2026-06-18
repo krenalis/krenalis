@@ -21,6 +21,7 @@ interface AppContext {
 	setIsLoadingMember: React.Dispatch<React.SetStateAction<boolean>>;
 	connectors: TransformedConnector[];
 	connections: TransformedConnection[];
+	setConnections: React.Dispatch<React.SetStateAction<TransformedConnection[]>>;
 	setIsLoadingConnections: React.Dispatch<React.SetStateAction<boolean>>;
 	workspaces: Workspace[];
 	setIsLoadingWorkspaces: React.Dispatch<React.SetStateAction<boolean>>;

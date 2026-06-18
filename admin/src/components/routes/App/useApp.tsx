@@ -532,6 +532,7 @@ const useApp = (
 		setIsLoadingMember,
 		connectors,
 		connections,
+		setConnections,
 		setIsLoadingConnections,
 		warehouse,
 		workspaces,
