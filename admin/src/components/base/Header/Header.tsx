@@ -1,4 +1,4 @@
-import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react';
+﻿import React, { ReactNode, useContext, useEffect, useRef } from 'react';
 import './Header.css';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -18,8 +18,6 @@ interface HeaderProps {
 }
 
 const Header = ({ title, member }: HeaderProps) => {
-	const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
-
 	const { isPasswordless, logout, isFullscreen } = useContext(appContext);
 
 	const location = useLocation();
@@ -28,14 +26,12 @@ const Header = ({ title, member }: HeaderProps) => {
 
 	useEffect(() => {
 		if (isPasswordless && !isFullscreen) {
-			setIsTooltipOpen(true);
+			dropdownRef.current?.updateComplete.then(() => dropdownRef.current?.show());
 		}
 	}, []);
 
 	useEffect(() => {
-		if (isTooltipOpen) {
-			setIsTooltipOpen(false);
-		}
+		dropdownRef.current?.hide();
 	}, [location]);
 
 	const onLogout = async () => {
@@ -74,7 +70,7 @@ const Header = ({ title, member }: HeaderProps) => {
 				</a>
 			</SlTooltip>
 			<div className='header__account'>
-				<SlDropdown distance={17} ref={dropdownRef} open={isTooltipOpen}>
+				<SlDropdown distance={17} ref={dropdownRef}>
 					<SlAvatar
 						slot='trigger'
 						className='header__account-avatar'
