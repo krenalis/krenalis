@@ -61,8 +61,6 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 // Close closes the pipeline scheduler closing the executors and interrupting
 // pipeline runs.
 func (ps *pipelineScheduler) Close() {
-	ps.core.state.Freeze()
-	ps.core.state.Unfreeze()
 	if ps.executor != nil {
 		ps.executor.Close()
 	}
