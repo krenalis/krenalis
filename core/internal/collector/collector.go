@@ -111,11 +111,15 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onSetPipelineStatus)
 	st.AddListener(c.onUnlinkConnection)
 	st.AddListener(c.onUpdatePipeline)
-	for _, ws := range st.Workspaces() {
-		c.addWorkspace(ws.ID)
-	}
-	for _, connection := range st.Connections() {
-		c.addConnection(connection)
+	for _, org := range st.Organizations() {
+		if org.Enabled {
+			for _, ws := range org.Workspaces() {
+				c.addWorkspace(ws.ID)
+				for _, connection := range ws.Connections() {
+					c.addConnection(connection)
+				}
+			}
+		}
 	}
 	st.Unfreeze()
 
