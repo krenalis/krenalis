@@ -236,14 +236,15 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 	issuer := "https://api.workos.com/user_management/" + wo.ClientID
 
 	parsed, err := jwt.ParseWithClaims(token, &claims, publicKey, jwt.WithExpirationRequired(), jwt.WithIssuer(issuer))
-	if err != nil {
-		if errors.Is(err, errCannotRetrievePublicKey) {
-			return nil, err
-		}
-		return nil, ErrInvalidToken
+	if errors.Is(err, errCannotRetrievePublicKey) {
+		return nil, err
 	}
 
-	if !parsed.Valid {
+	// ParseWithClaims should return an error for malformed tokens, invalid
+	// signatures, and invalid registered claims. Normalize those errors to
+	// ErrInvalidToken, and keep the Valid check as a defensive guard in case
+	// the parser returns a token that is not marked as valid.
+	if err != nil || !parsed.Valid {
 		return nil, ErrInvalidToken
 	}
 
