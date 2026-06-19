@@ -35,11 +35,9 @@ func periodIndex(period int16) int8 {
 type pipelineScheduler struct {
 	core     *Core
 	executor *pipelineExecutor
-	close    struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		sync.WaitGroup
-	}
+	ctx      context.Context    // context passes to the pipeline runs.
+	cancel   context.CancelFunc // function to cancel the pipeline runs.
+	wg       sync.WaitGroup     // waiting group that includes the schedulers and pipeline runs.
 }
 
 // newPipelineScheduler returns a new pipeline scheduler.
@@ -47,7 +45,7 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 	ps := &pipelineScheduler{
 		core: core,
 	}
-	ps.close.ctx, ps.close.cancel = context.WithCancel(context.Background())
+	ps.ctx, ps.cancel = context.WithCancel(context.Background())
 	core.state.Freeze()
 	core.state.AddListener(ps.onCreatePipeline)
 	core.state.AddListener(ps.onDeleteConnection)
@@ -66,8 +64,8 @@ func (ps *pipelineScheduler) Close() {
 	if ps.executor != nil {
 		ps.executor.Close()
 	}
-	ps.close.cancel()
-	ps.close.Wait()
+	ps.cancel()
+	ps.wg.Wait()
 }
 
 // onCreatePipeline is called when a pipeline is created.
@@ -175,7 +173,7 @@ func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
 	if !ps.core.state.IsLeader() {
 		return
 	}
-	ps.executor = newPipelineExecutor(ps.core, &ps.close.WaitGroup, ps.close.ctx)
+	ps.executor = newPipelineExecutor(ps.core, &ps.wg, ps.ctx)
 }
 
 // onSetPipelineSchedulePeriod is called when the schedule period of a pipeline
