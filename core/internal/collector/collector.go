@@ -371,6 +371,9 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (c *Collector) onDeleteOrganization(n state.DeleteOrganization) {
+	if !n.Organization().Enabled {
+		return
+	}
 	for _, ws := range n.Organization().Workspaces() {
 		c.removeWorkspace(ws)
 	}

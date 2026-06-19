@@ -242,6 +242,9 @@ func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
+	if !n.Organization().Enabled {
+		return
+	}
 	cause := errors.New("organization has been deleted")
 	for _, ws := range n.Organization().Workspaces() {
 		d.removeWorkspace(ws, cause)
