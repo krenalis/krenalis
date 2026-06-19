@@ -513,6 +513,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				}
 				pipeline.mu = new(sync.Mutex)
 				pipeline.connection = c
+				pipeline.organization = c.organization
 				pipeline.EventType = eventType
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {

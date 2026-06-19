@@ -1388,10 +1388,11 @@ func (target Target) Value() (driver.Value, error) {
 }
 
 type Pipeline struct {
-	mu                 *sync.Mutex
-	ID                 string
-	connection         *Connection
-	format             *Connector
+	mu           *sync.Mutex
+	ID           string
+	connection   *Connection
+	organization *Organization
+	format       *Connector
 	run                *PipelineRun
 	propertiesToUnset  []string // is not nil only for source pipelines on users.
 	Target             Target
@@ -1455,6 +1456,14 @@ func (pipeline *Pipeline) Format() *Connector {
 	c := pipeline.format
 	pipeline.mu.Unlock()
 	return c
+}
+
+// Organization returns the organization of the pipeline.
+func (pipeline *Pipeline) Organization() *Organization {
+	pipeline.mu.Lock()
+	o := pipeline.organization
+	pipeline.mu.Unlock()
+	return o
 }
 
 // PipelineRun represents a pipeline run.

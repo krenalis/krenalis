@@ -892,7 +892,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		StartTime: time.Now().UTC(),
 	}
 
-	org := this.pipeline.Connection().Organization()
+	org := this.pipeline.Organization()
 
 	for {
 		n.ID = generateID[any](nil)

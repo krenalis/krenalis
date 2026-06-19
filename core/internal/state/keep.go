@@ -235,6 +235,7 @@ func (state *State) replaceConnection(id string, f func(*Connection)) *Connectio
 	for _, pipeline := range c.pipelines {
 		pipeline.mu.Lock()
 		pipeline.connection = cc
+		pipeline.organization = cc.organization
 		pipeline.mu.Unlock()
 	}
 	return cc
@@ -295,6 +296,11 @@ func (state *State) replaceOrganization(id string, f func(*Organization)) *Organ
 			connection.mu.Lock()
 			connection.organization = oo
 			connection.mu.Unlock()
+			for _, pipeline := range connection.pipelines {
+				pipeline.mu.Lock()
+				pipeline.organization = oo
+				pipeline.mu.Unlock()
+			}
 		}
 	}
 	return oo
@@ -542,6 +548,7 @@ func (state *State) createPipeline(n notification) string {
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
 		connection:         c,
+		organization:       c.organization,
 		format:             format,
 		Target:             e.Target,
 		Name:               e.Name,

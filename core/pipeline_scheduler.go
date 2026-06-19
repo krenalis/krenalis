@@ -244,7 +244,7 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 		if pipeline.SchedulePeriod == 0 {
 			continue
 		}
-		org := pipeline.Connection().Organization()
+		org := pipeline.Organization()
 		if !org.Enabled {
 			continue
 		}
