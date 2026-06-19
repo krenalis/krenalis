@@ -369,6 +369,8 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 }
 
 // login logs a user in.
+//
+// Authentication is performed using the email and password in the request body.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -435,6 +437,8 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 }
 
 // logout logs the user out.
+//
+// Authentication is not required to call logout.
 func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
