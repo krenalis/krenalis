@@ -162,18 +162,17 @@ func (ps *pipelineScheduler) onDeletePipeline(n state.DeletePipeline) {
 
 // onElectLeader is called when a leader is elected.
 func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
-	if ps.executor != nil {
-		if !ps.core.state.IsLeader() {
+	if ps.core.state.IsLeader() {
+		if ps.executor == nil {
+			ps.executor = newPipelineExecutor(ps.core, &ps.wg, ps.ctx)
+		}
+	} else {
+		if ps.executor != nil {
 			e := ps.executor
 			ps.executor = nil
 			go e.Close()
 		}
-		return
 	}
-	if !ps.core.state.IsLeader() {
-		return
-	}
-	ps.executor = newPipelineExecutor(ps.core, &ps.wg, ps.ctx)
 }
 
 // onSetPipelineSchedulePeriod is called when the schedule period of a pipeline
