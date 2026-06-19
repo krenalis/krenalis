@@ -6,7 +6,7 @@ package test
 
 import (
 	"net/http"
-	"strings"
+	"regexp"
 	"testing"
 	"time"
 
@@ -306,7 +306,22 @@ func assertOrganizationDisabled(t *testing.T, err error) {
 	if statusErr.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnprocessableEntity, statusErr.Code, statusErr.ResponseText)
 	}
-	if !strings.Contains(statusErr.ResponseText, `"code":"OrganizationDisabled"`) {
-		t.Fatalf("expected error code %q in response, got: %s", "OrganizationDisabled", statusErr.ResponseText)
+	var resp struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	err = json.Unmarshal([]byte(statusErr.ResponseText), &resp)
+	if err != nil {
+		t.Fatalf("cannot unmarshal JSON response: %s", err)
+	}
+	if resp.Error.Code != "OrganizationDisabled" {
+		t.Fatalf("expected error code \"OrganizationDisabled\", got %q", resp.Error.Code)
+	}
+	if !disabledMessage.MatchString(resp.Error.Message) {
+		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledMessage)
 	}
 }
+
+var disabledMessage = regexp.MustCompile(`^organization \w+ is disabled$`)
