@@ -62,8 +62,6 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 // Close closes the pipeline scheduler closing the executors and interrupting
 // pipeline runs.
 func (ps *pipelineScheduler) Close() {
-	ps.core.state.Freeze()
-	ps.core.state.Unfreeze()
 	if ps.executor != nil {
 		ps.executor.Close()
 	}
@@ -97,11 +95,11 @@ func (ps *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
 	if pipelines == nil {
 		return
 	}
-	go func() {
+	go func(e *pipelineExecutor) {
 		for _, pipeline := range pipelines {
-			ps.executor.RemovePipeline(pipeline)
+			e.RemovePipeline(pipeline)
 		}
-	}()
+	}(ps.executor)
 }
 
 // onDeleteOrganization is called when an organization is deleted from the
@@ -123,11 +121,11 @@ func (ps *pipelineScheduler) onDeleteOrganization(n state.DeleteOrganization) {
 	if pipelines == nil {
 		return
 	}
-	go func() {
+	go func(e *pipelineExecutor) {
 		for _, pipeline := range pipelines {
-			ps.executor.RemovePipeline(pipeline)
+			e.RemovePipeline(pipeline)
 		}
-	}()
+	}(ps.executor)
 }
 
 // onDeleteWorkspace is called when a workspace is deleted from the state.
@@ -146,11 +144,11 @@ func (ps *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	if pipelines == nil {
 		return
 	}
-	go func() {
+	go func(e *pipelineExecutor) {
 		for _, pipeline := range pipelines {
-			ps.executor.RemovePipeline(pipeline)
+			e.RemovePipeline(pipeline)
 		}
-	}()
+	}(ps.executor)
 }
 
 // onDeletePipeline is called when a pipeline is deleted from the state.
@@ -158,16 +156,18 @@ func (ps *pipelineScheduler) onDeletePipeline(n state.DeletePipeline) {
 	if ps.executor == nil {
 		return
 	}
-	go func() {
-		ps.executor.RemovePipeline(n.ID)
-	}()
+	go func(e *pipelineExecutor) {
+		e.RemovePipeline(n.ID)
+	}(ps.executor)
 }
 
 // onElectLeader is called when a leader is elected.
 func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
 	if ps.executor != nil {
 		if !ps.core.state.IsLeader() {
-			go ps.executor.Close()
+			e := ps.executor
+			ps.executor = nil
+			go e.Close()
 		}
 		return
 	}
