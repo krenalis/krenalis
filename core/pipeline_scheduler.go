@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"slices"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -39,7 +38,6 @@ type pipelineScheduler struct {
 	close    struct {
 		ctx    context.Context
 		cancel context.CancelFunc
-		atomic.Bool
 		sync.WaitGroup
 	}
 }
@@ -64,20 +62,10 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 
 // Close closes the pipeline scheduler closing the executors and interrupting
 // pipeline runs.
-// If ps is already closed, it does nothing and returns immediately.
 func (ps *pipelineScheduler) Close() {
-	if ps.close.Swap(true) {
-		return
+	if ps.executor != nil {
+		ps.executor.Close()
 	}
-	// Detach the executor before closing it so state notifications cannot use it.
-	ps.core.state.Freeze()
-	e := ps.executor
-	ps.executor = nil
-	ps.core.state.Unfreeze()
-	if e != nil {
-		e.Close()
-	}
-	// Cancel scheduled pipeline runs.
 	ps.close.cancel()
 	ps.close.Wait()
 }
@@ -176,9 +164,6 @@ func (ps *pipelineScheduler) onDeletePipeline(n state.DeletePipeline) {
 
 // onElectLeader is called when a leader is elected.
 func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
-	if ps.close.Load() {
-		return
-	}
 	if ps.executor != nil {
 		if !ps.core.state.IsLeader() {
 			e := ps.executor
