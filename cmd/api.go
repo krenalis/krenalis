@@ -30,7 +30,7 @@ type api struct {
 // authentication is configured.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
-		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "accepting invitations is disabled when WorkOS authentication is configured")
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "invitations cannot be accepted because WorkOS authentication is enabled")
 	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 // authentication is configured.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
-		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "changing passwords is disabled when WorkOS authentication is configured")
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "passwords cannot be changed because WorkOS authentication is enabled")
 	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -303,7 +303,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 // authentication is configured.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
-		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "sending password reset emails is disabled when WorkOS authentication is configured")
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset emails cannot be sent because WorkOS authentication is enabled")
 	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
@@ -337,7 +337,7 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 // authentication is configured.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
-		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "validating password reset tokens is disabled when WorkOS authentication is configured")
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset tokens cannot be validated because WorkOS authentication is enabled")
 	}
 	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
 	return nil, err
