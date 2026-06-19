@@ -69,7 +69,9 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 	d.state.AddListener(d.onSetPipelineStatus)
 	d.state.AddListener(d.onUpdatePipeline)
 	for _, c := range st.Connections() {
-		d.addConnection(c)
+		if c.Organization().Enabled {
+			d.addConnection(c)
+		}
 	}
 	d.state.Unfreeze()
 
