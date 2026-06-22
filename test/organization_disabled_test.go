@@ -99,6 +99,9 @@ func TestOrganizationDisabled(t *testing.T) {
 		Enabled: true,
 	})
 
+	// Create an API key while the organization is still enabled.
+	apiKey := c.CreateWorkspaceRestrictedAPIKey("Events ingestion key")
+
 	// Disable the organization.
 	c.SetOrganizationStatus(orgID, false)
 
@@ -110,7 +113,8 @@ func TestOrganizationDisabled(t *testing.T) {
 	}
 
 	// Test that API calls are rejected with the Unprocessable
-	// "OrganizationDisabled" error (except events ingestion, tested below).
+	// "OrganizationDisabled" error (event ingestion is also rejected, but on
+	// its own paths, tested separately below).
 
 	t.Run("create connection is rejected", func(t *testing.T) {
 		_, err := c.CreateConnectionErr(krenalistester.ConnectionToCreate{
@@ -201,34 +205,53 @@ func TestOrganizationDisabled(t *testing.T) {
 		assertOrganizationDisabled(t, err)
 	})
 
-	// Event ingestion must NOT be rejected: while the organization is disabled,
-	// incoming events are silently dropped (treated as if every pipeline were
-	// disabled) and the request still succeeds. This applies both to the batch
-	// endpoint (POST /v1/events) and to the single typed-event endpoint
-	// (POST /v1/events/{type}).
-	t.Run("event ingestion is accepted but dropped", func(t *testing.T) {
-		// POST /v1/events: batch ingestion through the SDK. SendEvent fails the
-		// test if the server answers with an error, so a successful call proves
-		// the ingest endpoint responded with success.
-		c.SendEvent(writeKey, analytics.Track{
-			UserId: "dropped-while-disabled",
-			Event:  "Event sent while disabled",
-		})
-		// POST /v1/events/{type}: single typed event authenticated with the
-		// event write key. Like POST /v1/events, it must not be rejected while
-		// the organization is disabled.
+	// Event ingestion must be rejected while the organization is disabled, on
+	// every authentication path, and nothing must be stored. The two write-key
+	// paths (key in the Authorization header, and key in the request body) are
+	// rejected with a 503 Service Unavailable, while the API-key path is
+	// rejected with the same 422 "OrganizationDisabled" error as the other API
+	// operations.
+	t.Run("event ingestion is rejected while disabled", func(t *testing.T) {
+
+		// POST /v1/events/track authenticated with the event write key in the
+		// Authorization header.
 		err := c.Call("POST", "/v1/events/track",
 			http.Header{"Authorization": []string{"Bearer " + writeKey}},
 			map[string]any{
-				"userId": "dropped-while-disabled-typed",
-				"event":  "Typed event sent while disabled",
+				"userId": "user1234",
+				"event":  "Event rejected while disabled (header write key)",
 			}, nil)
-		if err != nil {
-			t.Fatalf("POST /v1/events/track must not be rejected while the organization is disabled, got: %v", err)
-		}
+		assertOrganizationUnavailable(t, err)
+
+		// POST /v1/events authenticated with the event write key in the request
+		// body, without an Authorization header.
+		err = c.Call("POST", "/v1/events",
+			http.Header{"Authorization": nil},
+			map[string]any{
+				"type":     "track",
+				"userId":   "user1234",
+				"event":    "Event rejected while disabled (body write key)",
+				"writeKey": writeKey,
+			}, nil)
+		assertOrganizationUnavailable(t, err)
+
+		// POST /v1/events authenticated with an API key in the Authorization
+		// header.
+		err = c.Call("POST", "/v1/events",
+			http.Header{
+				"Krenalis-Workspace": nil,
+				"Authorization":      []string{"Bearer " + apiKey},
+			},
+			map[string]any{
+				"type":         "track",
+				"connectionId": jsSrc,
+				"userId":       "user1234",
+				"event":        "Event rejected while disabled (API key)",
+			}, nil)
+		assertOrganizationDisabled(t, err)
+
 		time.Sleep(2 * time.Second)
-		// No event must have been stored: nothing is queued for a disabled
-		// organization, regardless of the ingestion endpoint used.
+		// No event must have been stored through any of the ingestion paths.
 		if count := c.CountEventsInWarehouse(t.Context()); count != 0 {
 			t.Fatalf("expected no events stored while the organization is disabled, got %d", count)
 		}
@@ -318,6 +341,39 @@ func assertOrganizationDisabled(t *testing.T, err error) {
 	}
 	if resp.Error.Code != "OrganizationDisabled" {
 		t.Fatalf("expected error code \"OrganizationDisabled\", got %q", resp.Error.Code)
+	}
+	if !disabledMessage.MatchString(resp.Error.Message) {
+		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledMessage)
+	}
+}
+
+// assertOrganizationUnavailable fails the test if err is not the expected error
+// for event ingestion rejected (with a 503 Service Unavailable) because the
+// organization is disabled.
+func assertOrganizationUnavailable(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	statusErr, ok := err.(*krenalistester.StatusCodeError)
+	if !ok {
+		t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
+	}
+	if statusErr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusServiceUnavailable, statusErr.Code, statusErr.ResponseText)
+	}
+	var resp struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	err = json.Unmarshal([]byte(statusErr.ResponseText), &resp)
+	if err != nil {
+		t.Fatalf("cannot unmarshal JSON response: %s", err)
+	}
+	if resp.Error.Code != "ServiceUnavailable" {
+		t.Fatalf("expected error code \"ServiceUnavailable\", got %q", resp.Error.Code)
 	}
 	if !disabledMessage.MatchString(resp.Error.Message) {
 		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledMessage)

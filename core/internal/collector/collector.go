@@ -705,7 +705,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if connection == nil {
 				return errors.Unprocessable("ConnectionNotExist", "connection %s does not exist", id)
 			}
-
+			if org := connection.Organization(); !org.Enabled {
+				return errors.Unprocessable("OrganizationDisabled", "organization %s is disabled", org.ID)
+			}
 		} else {
 			// Authenticate with the event write key in the header.
 			connection, _ = c.connectionByKey(token)
@@ -713,6 +715,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				return errors.Unauthorized("event write key in the Authorization header is not valid")
 			}
 			usingWriteKey = true
+			if org := connection.Organization(); !org.Enabled {
+				return errors.Unavailable("organization %s is disabled", org.ID)
+			}
 		}
 
 	}
@@ -740,6 +745,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			return errors.Unauthorized("the event write key in the request body does not exist")
 		}
 		usingWriteKey = true
+		if org := connection.Organization(); !org.Enabled {
+			return errors.Unavailable("organization %s is disabled", org.ID)
+		}
 	}
 
 	if usingWriteKey {
@@ -752,8 +760,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	connector := connection.Connector()
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
-
-	orgEnabled := connection.Organization().Enabled
 
 	batch, err := c.stream.Batch(r.Context())
 	if err != nil {
@@ -780,12 +786,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 		if observer != nil {
 			observedEvents = append(observedEvents, event)
-		}
-
-		// When the organization is disabled, incoming events are treated as if
-		// every pipeline were disabled.
-		if !orgEnabled {
-			continue
 		}
 
 		topics = topics[0:0]
