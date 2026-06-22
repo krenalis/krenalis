@@ -50,9 +50,14 @@ type Organization struct {
 	organization *state.Organization
 	ID           string `json:"id"`
 	Name         string `json:"name"`
-	// Enabled indicates whether the organization is enabled. When an
-	// organization is disabled, pipelines belonging to that organization behave
-	// as if they were disabled.
+
+	// Enabled indicates whether the organization is enabled. Pipelines
+	// belonging to a disabled organization behave as if they were disabled,
+	// returning an OrganizationDisabled error wherever a PipelineDisabled error
+	// would otherwise be returned. Event ingestion is the exception: requests
+	// authenticated with the API key fail with an Unprocessable
+	// OrganizationDisabled error, while those authenticated with an event write
+	// key fail with a 503 Service Unavailable error.
 	Enabled bool `json:"enabled"`
 }
 
