@@ -167,6 +167,9 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 		return
 	}
 	c, _ := d.state.Connection(n.ID)
+	if !c.Organization().Enabled {
+		return
+	}
 	connector := c.Connector()
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
 		return
@@ -185,6 +188,9 @@ func (d *destinations) onCreatePipeline(n state.CreatePipeline) {
 		return
 	}
 	p, _ := d.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	c := p.Connection()
 	if c.Role != state.Destination {
 		return
@@ -201,6 +207,9 @@ func (d *destinations) onCreatePipeline(n state.CreatePipeline) {
 // onDeleteConnection is called when a connection is deleted.
 func (d *destinations) onDeleteConnection(n state.DeleteConnection) {
 	c := n.Connection()
+	if !c.Organization().Enabled {
+		return
+	}
 	if c.Role != state.Destination {
 		return
 	}
@@ -223,6 +232,9 @@ func (d *destinations) onDeleteConnection(n state.DeleteConnection) {
 // onDeletePipeline is called when a pipeline is deleted
 func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
 	p := n.Pipeline()
+	if !p.Organization().Enabled {
+		return
+	}
 	if !p.Enabled || p.Target != state.TargetEvent {
 		return
 	}
@@ -255,6 +267,9 @@ func (d *destinations) onDeleteOrganization(n state.DeleteOrganization) {
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
+	if !n.Workspace().Organization().Enabled {
+		return
+	}
 	cause := errors.New("workspace has been deleted")
 	d.removeWorkspace(n.Workspace(), cause)
 }
@@ -291,6 +306,9 @@ func (d *destinations) onSetOrganizationStatus(n state.SetOrganizationStatus) {
 // onSetPipelineStatus is called when the status of a pipeline is set.
 func (d *destinations) onSetPipelineStatus(n state.SetPipelineStatus) {
 	p, _ := d.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	if p.Target != state.TargetEvent {
 		return
 	}
@@ -323,6 +341,9 @@ func (d *destinations) onSetPipelineStatus(n state.SetPipelineStatus) {
 // onUpdatePipeline is called when a pipeline is updated.
 func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := d.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	if p.Target != state.TargetEvent {
 		return
 	}

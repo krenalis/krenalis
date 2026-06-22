@@ -282,6 +282,9 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 // onCreateConnection is called when a connection is created.
 func (c *Collector) onCreateConnection(n state.CreateConnection) {
 	connection, _ := c.state.Connection(n.ID)
+	if !connection.Organization().Enabled {
+		return
+	}
 	if connection.Role != state.Source {
 		return
 	}
@@ -299,6 +302,9 @@ func (c *Collector) onCreateConnection(n state.CreateConnection) {
 // onCreatePipeline is called when a pipeline is created.
 func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	if !p.Enabled {
 		return
 	}
@@ -318,12 +324,18 @@ func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 
 // onCreateWorkspace is called when a workspace is created.
 func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
+	if org, _ := c.state.Organization(n.Organization); !org.Enabled {
+		return
+	}
 	c.addWorkspace(n.ID)
 }
 
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
+	if !connection.Organization().Enabled {
+		return
+	}
 	if connection.LinkedConnections == nil {
 		return
 	}
@@ -347,6 +359,9 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 	p := n.Pipeline()
+	if !p.Organization().Enabled {
+		return
+	}
 	if !p.Enabled {
 		return
 	}
@@ -381,12 +396,18 @@ func (c *Collector) onDeleteOrganization(n state.DeleteOrganization) {
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
+	if !n.Workspace().Organization().Enabled {
+		return
+	}
 	c.removeWorkspace(n.Workspace())
 }
 
 // onLinkConnection is called when two unlinked connections are linked.
 func (c *Collector) onLinkConnection(n state.LinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
+	if !connection.Organization().Enabled {
+		return
+	}
 	if len(connection.LinkedConnections) > 1 {
 		return
 	}
@@ -418,6 +439,9 @@ func (c *Collector) onSetOrganizationStatus(n state.SetOrganizationStatus) {
 // onSetPipelineStatus is called when the status of a pipeline is set.
 func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 	p, _ := c.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	connection := p.Connection()
 	if connection.LinkedConnections == nil {
 		return
@@ -445,6 +469,9 @@ func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 // onUnlinkConnection is called when two linked connections are unlinked.
 func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
+	if !connection.Organization().Enabled {
+		return
+	}
 	if len(connection.LinkedConnections) == 0 {
 		c.stopConnectionWorker(connection)
 	}
@@ -453,6 +480,9 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 // onUpdatePipeline is called when a pipeline is updated.
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	if p.Enabled {
 		// The transformation might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
