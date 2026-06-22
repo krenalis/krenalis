@@ -562,13 +562,18 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 	if action.Invitation != nil {
 		if strings.EqualFold(action.UserData.Email, action.Invitation.Email) {
 			verdict, message = "Allow", ""
+			slog.Info("WorkOS action: registration allowed", "id", action.ID)
 		} else {
 			message = "You must register with the email address you were invited with."
+			slog.Info("WorkOS action: registration denied: email mismatch", "id", action.ID)
 		}
+	} else {
+		slog.Info("WorkOS action: registration denied: no invitation", "id", action.ID)
 	}
 
 	responseJSON, err := s.workos.BuildActionResponse(verdict, message)
 	if err != nil {
+		slog.Error("WorkOS action error: failed to build response", "id", action.ID)
 		return nil, err
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -626,6 +631,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 	case "user.updated":
 		name := strings.TrimSpace(event.Data.FirstName + " " + event.Data.LastName)
 		if event.Data.ID == "" || event.Data.Email == "" {
+			slog.Info("WorkOS webhook: skipping user.updated: missing user ID or email", "id", event.ID)
 			return nil, nil
 		}
 		if runes := []rune(name); len(runes) > 255 {
@@ -635,25 +641,32 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				// Email already in use, skip the update without returning
 				// errors to prevent webhook retries.
-				slog.Error("cannot synchronize WorkOS user because the email already exists", "workos_user", event.Data.ID)
+				slog.Error("WorkOS webhook error: cannot update member's email because the new email already exists", "id", event.ID, "workos_user", event.Data.ID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to update member", "id", event.ID, "workos_user", event.Data.ID, "error", err)
 			return nil, err
 		}
+		slog.Info("WorkOS webhook: member updated", "id", event.ID, "workos_user", event.Data.ID)
 	case "user.deleted":
 		if event.Data.ID == "" {
+			slog.Info("WorkOS webhook: skipping user.deleted: missing user ID", "id", event.ID)
 			return nil, nil
 		}
 		if err := s.core.DeleteMembersByWorkOSID(r.Context(), event.Data.ID); err != nil {
+			slog.Error("WorkOS webhook error: failed to delete member", "id", event.ID, "workos_user", event.Data.ID, "error", err)
 			return nil, err
 		}
+		slog.Info("WorkOS webhook: member deleted", "id", event.ID, "workos_user", event.Data.ID)
 	case "organization.updated":
 		if event.Data.ExternalID == nil || *event.Data.ExternalID == "" {
+			slog.Info("WorkOS webhook: skipping organization.updated: missing external ID", "id", event.ID)
 			return nil, nil
 		}
 		orgID := *event.Data.ExternalID
 		orgName := event.Data.Name
 		if orgName == "" {
+			slog.Info("WorkOS webhook: skipping organization.updated: missing organization name", "id", event.ID, "organization", orgID)
 			return nil, nil
 		}
 		if runes := []rune(orgName); len(runes) > 255 {
@@ -662,36 +675,51 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		org, err := s.core.Organization(orgID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
+				slog.Info("WorkOS webhook: skipping organization.updated: organization not found", "id", event.ID, "organization", orgID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to get organization", "id", event.ID, "organization", orgID, "error", err)
 			return nil, err
 		}
 		if err := org.Update(r.Context(), orgName); err != nil {
+			slog.Error("WorkOS webhook error: failed to update organization", "id", event.ID, "organization", orgID, "error", err)
 			return nil, err
 		}
+		slog.Info("WorkOS webhook: organization updated", "id", event.ID, "organization", orgID)
 	case "organization_membership.created":
 		if event.Data.UserID == "" || event.Data.OrganizationID == "" {
+			slog.Info("WorkOS webhook: skipping organization_membership.created: missing user ID or organization ID", "id", event.ID)
 			return nil, nil
 		}
 		workosUser, err := s.workos.User(r.Context(), event.Data.UserID)
 		if err != nil {
 			if errors.Is(err, workos.ErrUserNotFound) {
+				slog.Info("WorkOS webhook: skipping organization_membership.created: WorkOS user not found", "id", event.ID, "workos_user", event.Data.UserID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to get WorkOS user", "id", event.ID, "workos_user", event.Data.UserID, "error", err)
 			return nil, err
 		}
 		orgID, err := s.workos.OrganizationExternalID(r.Context(), event.Data.OrganizationID)
 		if err != nil {
-			if errors.Is(err, workos.ErrOrganizationNotLinked) || errors.Is(err, workos.ErrOrganizationNotFound) {
+			if errors.Is(err, workos.ErrOrganizationNotLinked) {
+				slog.Info("WorkOS webhook: skipping organization_membership.created: WorkOS organization doesn't have external ID", "id", event.ID, "workos_organization", event.Data.OrganizationID)
 				return nil, nil
 			}
+			if errors.Is(err, workos.ErrOrganizationNotFound) {
+				slog.Info("WorkOS webhook: skipping organization_membership.created: WorkOS organization not found", "id", event.ID, "workos_organization", event.Data.OrganizationID)
+				return nil, nil
+			}
+			slog.Error("WorkOS webhook error: failed to get WorkOS organization external ID", "id", event.ID, "workos_organization", event.Data.OrganizationID, "error", err)
 			return nil, err
 		}
 		org, err := s.core.Organization(orgID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
+				slog.Info("WorkOS webhook: skipping organization_membership.created: organization not found", "id", event.ID, "organization", orgID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to get organization", "id", event.ID, "organization", orgID, "error", err)
 			return nil, err
 		}
 		email := strings.TrimSpace(norm.NFC.String(workosUser.Email))
@@ -703,41 +731,58 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		}
 		if _, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, event.Data.UserID); err != nil {
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
+				slog.Info("WorkOS webhook: skipping organization_membership.created: member email already exists", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to provision member", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID, "error", err)
 			return nil, err
 		}
+		slog.Info("WorkOS webhook: member provisioned", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
 	case "organization_membership.deleted":
 		if event.Data.UserID == "" || event.Data.OrganizationID == "" {
+			slog.Info("WorkOS webhook: skipping organization_membership.deleted: missing user ID or organization ID", "id", event.ID)
 			return nil, nil
 		}
 		orgID, err := s.workos.OrganizationExternalID(r.Context(), event.Data.OrganizationID)
 		if err != nil {
-			if errors.Is(err, workos.ErrOrganizationNotLinked) || errors.Is(err, workos.ErrOrganizationNotFound) {
+			if errors.Is(err, workos.ErrOrganizationNotLinked) {
+				slog.Info("WorkOS webhook: skipping organization_membership.deleted: WorkOS organization doesn't have external ID", "id", event.ID, "workos_organization", event.Data.OrganizationID)
 				return nil, nil
 			}
+			if errors.Is(err, workos.ErrOrganizationNotFound) {
+				slog.Info("WorkOS webhook: skipping organization_membership.deleted: WorkOS organization not found", "id", event.ID, "workos_organization", event.Data.OrganizationID)
+				return nil, nil
+			}
+			slog.Error("WorkOS webhook error: failed to get WorkOS organization external ID", "id", event.ID, "workos_organization", event.Data.OrganizationID, "error", err)
 			return nil, err
 		}
 		org, err := s.core.Organization(orgID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
+				slog.Info("WorkOS webhook: skipping organization_membership.deleted: organization not found", "id", event.ID, "organization", orgID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to get organization", "id", event.ID, "organization", orgID, "error", err)
 			return nil, err
 		}
 		memberID, err := org.MemberByWorkOSID(r.Context(), event.Data.UserID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
+				slog.Info("WorkOS webhook: skipping organization_membership.deleted: member not found", "id", event.ID, "workos_user", event.Data.UserID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to get member by WorkOS ID", "id", event.ID, "workos_user", event.Data.UserID, "error", err)
 			return nil, err
 		}
 		if err := org.DeleteMember(r.Context(), memberID); err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
+				slog.Info("WorkOS webhook: skipping organization_membership.deleted: member not found", "id", event.ID, "workos_user", event.Data.UserID)
 				return nil, nil
 			}
+			slog.Error("WorkOS webhook error: failed to delete member", "id", event.ID, "workos_user", event.Data.UserID, "error", err)
 			return nil, err
 		}
+		slog.Info("WorkOS webhook: member deleted", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
 	}
 
 	return nil, nil
