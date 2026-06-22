@@ -541,6 +541,8 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var action struct {
+		ID       string `json:"id"`
+		Object   string `json:"object"`
 		UserData struct {
 			Email string `json:"email"`
 		} `json:"user_data"`
@@ -552,6 +554,8 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 	if err := json.Unmarshal(normalizedBody, &action); err != nil {
 		return nil, errors.BadRequest("invalid action payload")
 	}
+
+	slog.Info("WorkOS action received", "id", action.ID, "object", action.Object)
 
 	verdict, message := "Deny", "Registration is by invitation only."
 
@@ -598,6 +602,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 	}
 
 	var event struct {
+		ID    string `json:"id"`
 		Event string `json:"event"`
 		Data  struct {
 			ID             string  `json:"id"`
@@ -614,6 +619,8 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 	if err := json.Unmarshal(normalizedBody, &event); err != nil {
 		return nil, errors.BadRequest("invalid webhook payload")
 	}
+
+	slog.Info("WorkOS webhook received", "id", event.ID, "event", event.Event)
 
 	switch event.Event {
 	case "user.updated":
