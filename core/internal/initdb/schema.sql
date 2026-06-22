@@ -184,7 +184,7 @@ CREATE TABLE pipelines_runs (
 
 CREATE INDEX pipelines_runs_function_idx
     ON pipelines_runs (function)
-    WHERE function != '' AND end_time IS NOT NULL;
+    WHERE function != '' AND end_time IS NULL;
 
 CREATE UNIQUE INDEX pipelines_one_active_run_idx
     ON pipelines_runs (pipeline)
