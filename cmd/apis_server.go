@@ -559,8 +559,7 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 			Email string `json:"email"`
 		} `json:"invitation"`
 	}
-	normalizedBody := norm.NFC.Bytes(rawBody)
-	if err := json.Unmarshal(normalizedBody, &action); err != nil {
+	if err := json.Unmarshal(rawBody, &action); err != nil {
 		_ = errors.BadRequest("invalid action payload").WriteTo(w)
 		return
 	}
@@ -570,7 +569,9 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 	verdict, message := "Deny", "Registration is by invitation only."
 
 	if action.Invitation != nil {
-		if strings.EqualFold(action.UserData.Email, action.Invitation.Email) {
+		userEmail := strings.TrimSpace(norm.NFC.String(action.UserData.Email))
+		invitationEmail := strings.TrimSpace(norm.NFC.String(action.Invitation.Email))
+		if strings.EqualFold(userEmail, invitationEmail) {
 			verdict, message = "Allow", ""
 			slog.Info("WorkOS action: registration allowed", "id", action.ID)
 		} else {
@@ -635,8 +636,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			OrganizationID string  `json:"organization_id"`
 		} `json:"data"`
 	}
-	normalizedBody := norm.NFC.Bytes(rawBody)
-	if err := json.Unmarshal(normalizedBody, &event); err != nil {
+	if err := json.Unmarshal(rawBody, &event); err != nil {
 		_ = errors.BadRequest("invalid webhook payload").WriteTo(w)
 		return
 	}
@@ -645,15 +645,18 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 
 	switch event.Event {
 	case "user.updated":
-		name := strings.TrimSpace(event.Data.FirstName + " " + event.Data.LastName)
-		if event.Data.ID == "" || event.Data.Email == "" {
+		email := strings.TrimSpace(norm.NFC.String(event.Data.Email))
+		firstName := strings.TrimSpace(norm.NFC.String(event.Data.FirstName))
+		lastName := strings.TrimSpace(norm.NFC.String(event.Data.LastName))
+		name := strings.TrimSpace(firstName + " " + lastName)
+		if event.Data.ID == "" || email == "" {
 			slog.Info("WorkOS webhook: skipping user.updated: missing user ID or email", "id", event.ID)
 			return
 		}
 		if runes := []rune(name); len(runes) > 255 {
 			name = string(runes[:255])
 		}
-		if err := s.core.UpdateMembersByWorkOSID(r.Context(), event.Data.ID, name, event.Data.Email); err != nil {
+		if err := s.core.UpdateMembersByWorkOSID(r.Context(), event.Data.ID, name, email); err != nil {
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				// Email already in use, skip the update without returning
 				// errors to prevent webhook retries.
@@ -682,7 +685,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		orgID := *event.Data.ExternalID
-		orgName := event.Data.Name
+		orgName := strings.TrimSpace(norm.NFC.String(event.Data.Name))
 		if orgName == "" {
 			slog.Info("WorkOS webhook: skipping organization.updated: missing organization name", "id", event.ID, "organization", orgID)
 			return
