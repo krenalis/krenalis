@@ -44,6 +44,7 @@ var (
 	ErrInvalidToken            = errors.New("WorkOS provided an invalid JWT token")
 	ErrOrganizationNotLinked   = errors.New("WorkOS organization has no external ID")
 	errCannotRetrievePublicKey = errors.New("cannot retrieve the WorkOS public key")
+	errNotFound                = errors.New("resource not found")
 )
 
 type Workos struct {
@@ -268,11 +269,17 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 
 	err = wo.call(ctx, http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
 	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return nil, ErrInvalidToken
+		}
 		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
 
 	organizationExternalID, err := wo.OrganizationExternalID(ctx, claims.OrgID)
 	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return nil, ErrInvalidToken
+		}
 		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}
 
@@ -302,7 +309,7 @@ func (wo *Workos) OrganizationExternalID(ctx context.Context, orgID string) (str
 	}
 	err := wo.call(ctx, http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %s", orgID, err)
+		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %w", orgID, err)
 	}
 	if orgRes.ExternalID == "" {
 		return "", ErrOrganizationNotLinked
@@ -352,6 +359,9 @@ func (wo *Workos) call(ctx context.Context, method, path string, expectedStatus 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != expectedStatus {
+		if resp.StatusCode == http.StatusNotFound {
+			return fmt.Errorf("WorkOS returned status 404: %w", errNotFound)
+		}
 		return fmt.Errorf("WorkOS returned unexpected status %d", resp.StatusCode)
 	}
 
