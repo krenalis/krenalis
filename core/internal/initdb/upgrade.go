@@ -13,10 +13,12 @@ import (
 )
 
 const oneActivePipelineRunIndex = "pipelines_one_active_run_idx"
+const pipelineRunsFunctionIndex = "pipelines_runs_function_idx"
 
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
+
 	initialized, err := database.QueryExists(ctx, `
 		SELECT FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -30,41 +32,37 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		return fmt.Errorf("Krenalis's PostgreSQL database has not been initialized")
 	}
 
-	indexExists, err := database.QueryExists(ctx, `
-		SELECT FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
-		WHERE n.nspname = current_schema()
-			AND c.relname = $1
-			AND c.relkind = 'i'`, oneActivePipelineRunIndex)
-	if err != nil {
-		return err
-	}
-	if indexExists {
-		slog.Info("PostgreSQL database is already up to date")
+	err = database.Transaction(ctx, func(tx *db.Tx) error {
+		// core: prevent concurrent runs for the same pipeline.
+		// https://github.com/krenalis/krenalis/pull/2275
+		if _, err := tx.Exec(ctx, `DROP INDEX IF EXISTS `+oneActivePipelineRunIndex); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `CREATE UNIQUE INDEX `+oneActivePipelineRunIndex+`
+				ON pipelines_runs (pipeline)
+				WHERE end_time IS NULL`); err != nil {
+			if db.IsUniqueViolation(err) {
+				err = fmt.Errorf("cannot create %s: multiple active runs exist for the same pipeline; try it later", oneActivePipelineRunIndex)
+			}
+			return err
+		}
+		// core: fix pipeline run function index.
+		// https://github.com/krenalis/krenalis/pull/2276
+		if _, err := tx.Exec(ctx, `DROP INDEX IF EXISTS `+pipelineRunsFunctionIndex); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `CREATE INDEX `+pipelineRunsFunctionIndex+`
+			ON pipelines_runs (function)
+			WHERE function != '' AND end_time IS NULL`); err != nil {
+			return err
+		}
 		return nil
-	}
-
-	duplicateRuns, err := database.QueryExists(ctx, `
-		SELECT FROM pipelines_runs
-		WHERE end_time IS NULL
-		GROUP BY pipeline
-		HAVING COUNT(*) > 1`)
+	})
 	if err != nil {
 		return err
 	}
-	if duplicateRuns {
-		return fmt.Errorf("cannot create %s: multiple active runs exist for the same pipeline", oneActivePipelineRunIndex)
-	}
 
-	_, err = database.Exec(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS `+oneActivePipelineRunIndex+`
-		ON pipelines_runs (pipeline)
-		WHERE end_time IS NULL`)
-	if db.IsUniqueViolation(err) {
-		return fmt.Errorf("cannot create %s: multiple active runs exist for the same pipeline", oneActivePipelineRunIndex)
-	}
-	if err != nil {
-		return err
-	}
 	slog.Info("PostgreSQL database upgraded successfully")
+
 	return nil
 }
