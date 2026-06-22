@@ -145,6 +145,8 @@ func (api api) ExpressionsProperties(w http.ResponseWriter, r *http.Request) (an
 }
 
 // Index returns the index.
+//
+// Authentication is not required to call Index.
 func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
 	accept := strings.ToLower(r.Header.Get("Accept"))
