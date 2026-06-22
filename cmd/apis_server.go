@@ -668,11 +668,14 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		}
 		workosUser, err := s.workos.User(r.Context(), event.Data.UserID)
 		if err != nil {
+			if errors.Is(err, workos.ErrUserNotFound) {
+				return nil, nil
+			}
 			return nil, err
 		}
 		orgID, err := s.workos.OrganizationExternalID(r.Context(), event.Data.OrganizationID)
 		if err != nil {
-			if errors.Is(err, workos.ErrOrganizationNotLinked) {
+			if errors.Is(err, workos.ErrOrganizationNotLinked) || errors.Is(err, workos.ErrOrganizationNotFound) {
 				return nil, nil
 			}
 			return nil, err
@@ -703,7 +706,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		}
 		orgID, err := s.workos.OrganizationExternalID(r.Context(), event.Data.OrganizationID)
 		if err != nil {
-			if errors.Is(err, workos.ErrOrganizationNotLinked) {
+			if errors.Is(err, workos.ErrOrganizationNotLinked) || errors.Is(err, workos.ErrOrganizationNotFound) {
 				return nil, nil
 			}
 			return nil, err

@@ -43,6 +43,8 @@ const (
 var (
 	ErrInvalidToken            = errors.New("WorkOS provided an invalid JWT token")
 	ErrOrganizationNotLinked   = errors.New("WorkOS organization has no external ID")
+	ErrUserNotFound            = errors.New("WorkOS user not found")
+	ErrOrganizationNotFound    = errors.New("WorkOS organization not found")
 	errCannotRetrievePublicKey = errors.New("cannot retrieve the WorkOS public key")
 	errNotFound                = errors.New("resource not found")
 )
@@ -261,15 +263,9 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 
 	userID := claims.Subject
 
-	var userRes struct {
-		Email     string `json:"email"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-	}
-
-	err = wo.call(ctx, http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &userRes)
+	workosUser, err := wo.User(ctx, userID)
 	if err != nil {
-		if errors.Is(err, errNotFound) {
+		if errors.Is(err, ErrUserNotFound) {
 			return nil, ErrInvalidToken
 		}
 		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
@@ -277,7 +273,7 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 
 	organizationExternalID, err := wo.OrganizationExternalID(ctx, claims.OrgID)
 	if err != nil {
-		if errors.Is(err, errNotFound) {
+		if errors.Is(err, ErrOrganizationNotFound) {
 			return nil, ErrInvalidToken
 		}
 		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
@@ -286,9 +282,9 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 	user := &AuthenticatedUser{
 		OrganizationExternalID: organizationExternalID,
 		ID:                     userID,
-		Email:                  userRes.Email,
-		FirstName:              userRes.FirstName,
-		LastName:               userRes.LastName,
+		Email:                  workosUser.Email,
+		FirstName:              workosUser.FirstName,
+		LastName:               workosUser.LastName,
 	}
 
 	return user, nil
@@ -309,6 +305,9 @@ func (wo *Workos) OrganizationExternalID(ctx context.Context, orgID string) (str
 	}
 	err := wo.call(ctx, http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
 	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return "", ErrOrganizationNotFound
+		}
 		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %w", orgID, err)
 	}
 	if orgRes.ExternalID == "" {
@@ -326,6 +325,9 @@ func (wo *Workos) User(ctx context.Context, userID string) (*AuthenticatedUser, 
 	}
 	err := wo.call(ctx, http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &res)
 	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return nil, ErrUserNotFound
+		}
 		return nil, fmt.Errorf("failed to fetch WorkOS user %s: %s", userID, err)
 	}
 	return &AuthenticatedUser{ID: userID, Email: res.Email, FirstName: res.FirstName, LastName: res.LastName}, nil
