@@ -1388,11 +1388,11 @@ func (target Target) Value() (driver.Value, error) {
 }
 
 type Pipeline struct {
-	mu           *sync.Mutex
-	ID           string
-	connection   *Connection
-	organization *Organization
-	format       *Connector
+	mu                 *sync.Mutex
+	ID                 string
+	connection         *Connection
+	organization       *Organization
+	format             *Connector
 	run                *PipelineRun
 	propertiesToUnset  []string // is not nil only for source pipelines on users.
 	Target             Target
