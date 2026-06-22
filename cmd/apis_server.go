@@ -457,8 +457,8 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
 				slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
-					"workos_user_id", workosUser.ID,
-					"organization_id", workosUser.OrganizationExternalID,
+					"workos_user", workosUser.ID,
+					"organization", workosUser.OrganizationExternalID,
 				)
 				return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
 			}
@@ -628,7 +628,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				// Email already in use, skip the update without returning
 				// errors to prevent webhook retries.
-				slog.Error("cannot synchronize WorkOS user because the email already exists", "workos_user_id", event.Data.ID)
+				slog.Error("cannot synchronize WorkOS user because the email already exists", "workos_user", event.Data.ID)
 				return nil, nil
 			}
 			return nil, err
