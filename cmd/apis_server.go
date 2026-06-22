@@ -456,7 +456,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		org, err = s.core.Organization(workosUser.OrganizationExternalID)
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
-				slog.Error("WorkOS user authenticated but no matching Krenalis organization found",
+				slog.Error("WorkOS login rejected: organization does not exist",
 					"workos_user", workosUser.ID,
 					"organization", workosUser.OrganizationExternalID,
 				)
