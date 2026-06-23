@@ -66,7 +66,7 @@ func (organization organization) AddMember(w http.ResponseWriter, r *http.Reques
 		}
 		memberToSet.Avatar = avatar
 	}
-	err = org.AddMember(r.Context(), memberToSet)
+	_, err = org.AddMember(r.Context(), memberToSet)
 	return nil, err
 }
 

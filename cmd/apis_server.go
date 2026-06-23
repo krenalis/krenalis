@@ -475,7 +475,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 				return nil, err
 			}
 			name := strings.TrimSpace(firstName + " " + lastName)
-			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, workosUser.ID)
+			memberID, err = org.AddMember(r.Context(), core.MemberToSet{Name: name, Email: email, WorkOSUserID: workosUser.ID})
 			if e, ok := err.(*errors.UnprocessableError); ok && (e.Code == core.MemberEmailExists || e.Code == core.MemberWorkOSUserIDExists) {
 				memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
 			}
@@ -755,7 +755,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		if runes := []rune(name); len(runes) > 255 {
 			name = string(runes[:255])
 		}
-		if _, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, event.Data.UserID); err != nil {
+		if _, err = org.AddMember(r.Context(), core.MemberToSet{Name: name, Email: email, WorkOSUserID: event.Data.UserID}); err != nil {
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				slog.Info("WorkOS webhook: skipping organization_membership.created: member email already exists", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
 				return

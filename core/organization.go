@@ -68,12 +68,13 @@ type Avatar struct {
 	MimeType string `json:"mimeType"` // Mime type, must be `image/jpeg` or `image/png`
 }
 
-// MemberToSet represents a member to update with the UpdateMember method.
+// MemberToSet represents a member to add or update.
 type MemberToSet struct {
-	Name     string  `json:"name"`     // Name, in range [0, 255]
-	Email    string  `json:"email"`    // Email, in range [4,255] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
-	Password string  `json:"password"` // Password, at least 8 characters long
-	Avatar   *Avatar `json:"avatar"`
+	Name         string  `json:"name"`     // Name, in range [0, 255]
+	Email        string  `json:"email"`    // Email, in range [4,255] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
+	Password     string  `json:"password"` // Password, at least 8 characters long; cannot be set when WorkOSUserID is set
+	Avatar       *Avatar `json:"avatar"`
+	WorkOSUserID string  `json:"workosUserID"` // WorkOS user ID; cannot be set when Password is set
 }
 
 // emailToSend represents an email.
@@ -163,18 +164,23 @@ type AccessKey struct {
 
 // AddMember adds a new member of the organization.
 //
-// If the member to add has an email that is already used by another
-// member, it returns an errors.UnprocessableError error with code
-// MemberEmailExists.
-func (this *Organization) AddMember(ctx context.Context, member MemberToSet) error {
+// Exactly one of member.Password and member.WorkOSUserID must be set.
+//
+// It returns an errors.UnprocessableError error with code
+//   - MemberEmailExists if the email is already used by another member.
+//   - MemberWorkOSUserIDExists if the WorkOS user ID is already used by another member.
+func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (string, error) {
 	this.core.mustBeOpen()
-	err := validateMemberToSet(member, true, true, true)
+	if member.Password != "" && member.WorkOSUserID != "" {
+		return "", errors.BadRequest("WorkOSUserID and Password cannot be set at the same time")
+	}
+	err := validateMemberToSet(member, true, true, member.WorkOSUserID == "")
 	if err != nil {
-		return errors.BadRequest("%s", err)
+		return "", errors.BadRequest("%s", err)
 	}
 	password, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return "", err
 	}
 	n := state.AddMember{
 		Organization: this.organization.ID,
@@ -192,14 +198,27 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 			if exists {
 				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 			}
-			if member.Avatar != nil {
+			if member.WorkOSUserID != "" {
+				exists, err = tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, member.WorkOSUserID)
+				if err != nil {
+					return nil, err
+				}
+				if exists {
+					return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
+				}
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-					n.ID, member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+					"INSERT INTO members (id, name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+					n.ID, member.Name, member.Email, member.WorkOSUserID, this.organization.ID, now)
 			} else {
-				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-					n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
+				if member.Avatar != nil {
+					_, err = tx.Exec(ctx,
+						"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+						n.ID, member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+				} else {
+					_, err = tx.Exec(ctx,
+						"INSERT INTO members (id, name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+						n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
+				}
 			}
 			if err != nil {
 				return nil, err
@@ -210,12 +229,11 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
 				continue
 			}
-			return err
+			return "", err
 		}
 		break
 	}
-
-	return nil
+	return n.ID, nil
 }
 
 // AccessKeys returns the access keys of the organization ordered by creation
@@ -692,63 +710,6 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 		return nil, err
 	}
 	return members, nil
-}
-
-// ProvisionMemberFromWorkOS adds a member provisioned from WorkOS. The added
-// member doesn't have a password, since its authentication is managed by
-// WorkOS.
-//
-// It returns an errors.UnprocessableError error with code
-//   - MemberEmailExists if the email is already used by another member in the organization.
-//   - MemberWorkOSUserIDExists if the WorkOS user ID is already used by another member in the organization.
-func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, email, workosUserID string) (string, error) {
-	this.core.mustBeOpen()
-	if name != "" {
-		if err := util.ValidateStringField("name", name, 255); err != nil {
-			return "", errors.BadRequest("%s", err)
-		}
-	}
-	if err := validateMemberEmail(email); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
-	n := state.AddMember{Organization: this.organization.ID}
-	for {
-		n.ID = generateID(func(id string) (any, bool) {
-			return nil, this.organization.HasMember(id)
-		})
-		now := time.Now().UTC()
-		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-			}
-			exists, err = tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
-			}
-			_, err = tx.Exec(ctx,
-				"INSERT INTO members (id, name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-				n.ID, name, email, workosUserID, this.organization.ID, now)
-			if err != nil {
-				return nil, err
-			}
-			return n, nil
-		})
-		if err != nil {
-			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
-				continue
-			}
-			return "", err
-		}
-		break
-	}
-	return n.ID, nil
 }
 
 var errMemberNotFoundOrInvitationPending = errors.New("member not found or invitation pending")
