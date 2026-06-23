@@ -519,9 +519,9 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		return err
 	}
 	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-		var id, organizationID string
+		var id string
 		var createdAt time.Time
-		err := tx.QueryRow(ctx, "SELECT id, organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &organizationID, &createdAt)
+		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
