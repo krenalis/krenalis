@@ -27,8 +27,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /connections/{id}/event-write-keys/{key}":     connection.DeleteEventWriteKey,
 		"DELETE /connections/{src}/links/{dst}":               connection.UnlinkConnection,
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
-		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* only Admin */
-		"DELETE /members/{id}":                                organization.DeleteMember,    /* only Admin */
+		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* Admin console only */
+		"DELETE /members/{id}":                                organization.DeleteMember,    /* Admin console only */
 		"DELETE /organizations/{id}":                          organization.Delete,
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
@@ -42,13 +42,13 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connections/{id}/files/absolute":             connection.AbsolutePath,
 		"GET    /connections/{id}/files/sheets":               connection.Sheets,
 		"GET    /connections/{id}/identities":                 connection.Identities,
-		"GET    /connections/{id}/pipeline-types":             connection.PipelineTypes,   /* only Admin */
-		"GET    /connections/{id}/pipelines/schemas/Events":   connection.PipelineSchemas, /* only Admin */
-		"GET    /connections/{id}/pipelines/schemas/{target}": connection.PipelineSchemas, /* only Admin */
+		"GET    /connections/{id}/pipeline-types":             connection.PipelineTypes,   /* Admin console only */
+		"GET    /connections/{id}/pipelines/schemas/Events":   connection.PipelineSchemas, /* Admin console only */
+		"GET    /connections/{id}/pipelines/schemas/{target}": connection.PipelineSchemas, /* Admin console only */
 		"GET    /connections/{id}/schemas/event":              connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":               connection.ApplicationUserSchemas,
 		"GET    /connections/{id}/tables":                     connection.TableSchema,
-		"GET    /connections/{id}/ui":                         connection.ServeUI, /* only Admin */
+		"GET    /connections/{id}/ui":                         connection.ServeUI, /* Admin console only */
 		"GET    /connections/{id}/users":                      connection.ApplicationUsers,
 		"GET    /connectors":                                  api.Connectors,
 		"GET    /connectors/{code}":                           api.Connector,
@@ -59,11 +59,11 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /events/settings/{write_key}":                 api.EventsSettings,
 		"GET    /identity-resolution/latest":                  workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                workspace.IdentityResolutionSettings,
-		"GET    /keys":                                        organization.AccessKeys,              /* only Admin */
-		"GET    /members":                                     organization.Members,                 /* only Admin */
-		"GET    /members/current":                             api.Member,                           /* only Admin */
-		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* only Admin */
-		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* only Admin */
+		"GET    /keys":                                        organization.AccessKeys,              /* Admin console only */
+		"GET    /members":                                     organization.Members,                 /* Admin console only */
+		"GET    /members/current":                             api.Member,                           /* Admin console only */
+		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* Admin console only */
+		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* Admin console only */
 		"GET    /organizations/{id}":                          api.Organization,
 		"GET    /organizations":                               api.Organizations,
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
@@ -77,7 +77,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /profiles":                                    workspace.Profiles,
 		"GET    /profiles/schema":                             workspace.ProfileSchema,
 		"GET    /profiles/schema/latest-alter":                workspace.LatestAlterProfileSchema,
-		"GET    /profiles/schema/suitable-as-identifiers":     workspace.ProfilePropertiesSuitableAsIdentifiers, /* only Admin */
+		"GET    /profiles/schema/suitable-as-identifiers":     workspace.ProfilePropertiesSuitableAsIdentifiers, /* Admin console only */
 		"GET    /profiles/{kpid}/attributes":                  workspace.Attributes,
 		"GET    /profiles/{kpid}/events":                      workspace.ProfileEvents,
 		"GET    /profiles/{kpid}/identities":                  workspace.Identities,
@@ -91,37 +91,37 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /connections/{id}/event-write-keys":           connection.CreateEventWriteKey,
 		"POST   /connections/{id}/preview-send-event":         connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                      connection.ExecQuery,
-		"POST   /connections/{id}/ui-event":                   connection.ServeUI, /* only Admin */
+		"POST   /connections/{id}/ui-event":                   connection.ServeUI, /* Admin console only */
 		"POST   /connections/{src}/links/{dst}":               connection.LinkConnection,
 		"POST   /events":                                      workspace.IngestEvents,
 		"POST   /events/listeners":                            workspace.CreateEventListener,
 		"POST   /events/{type}":                               workspace.IngestEvents,
-		"POST   /expressions-properties":                      api.ExpressionsProperties, /* only Admin */
+		"POST   /expressions-properties":                      api.ExpressionsProperties, /* Admin console only */
 		"POST   /identity-resolution/start":                   workspace.StartIdentityResolution,
-		"POST   /keys":                                        organization.CreateAccessKey, /* only Admin */
-		"POST   /members":                                     organization.AddMember,       /* only Admin */
-		"POST   /members/invitations":                         organization.InviteMember,    /* only Admin */
-		"POST   /members/login":                               s.login,                      /* only Admin */
-		"POST   /members/logout":                              s.logout,                     /* only Admin */
+		"POST   /keys":                                        organization.CreateAccessKey, /* Admin console only */
+		"POST   /members":                                     organization.AddMember,       /* Admin console only */
+		"POST   /members/invitations":                         organization.InviteMember,    /* Admin console only */
+		"POST   /members/login":                               s.login,                      /* Admin console only */
+		"POST   /members/logout":                              s.logout,                     /* Admin console only */
 		"POST   /organizations":                               api.CreateOrganization,
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
-		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* only Admin */
-		"POST   /sentry/errors":                               s.forwardSentryError,   /* only Admin */
-		"POST   /transformations":                             api.TransformData,      /* only Admin */
-		"POST   /ui":                                          workspace.ServeUI,      /* only Admin */
-		"POST   /ui-event":                                    workspace.ServeUI,      /* only Admin */
-		"POST   /validate-expression":                         api.ValidateExpression, /* only Admin */
+		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */
+		"POST   /sentry/errors":                               s.forwardSentryError,   /* Admin console only */
+		"POST   /transformations":                             api.TransformData,      /* Admin console only */
+		"POST   /ui":                                          workspace.ServeUI,      /* Admin console only */
+		"POST   /ui-event":                                    workspace.ServeUI,      /* Admin console only */
+		"POST   /validate-expression":                         api.ValidateExpression, /* Admin console only */
 		"POST   /warehouse/repair":                            workspace.RepairWarehouse,
 		"POST   /workspaces":                                  organization.CreateWorkspace,
 		"POST   /workspaces/test":                             organization.TestWorkspaceCreation,
 		"PUT    /connections/{id}":                            connection.Update,
 		"PUT    /identity-resolution/settings":                workspace.UpdateIdentityResolutionSettings,
-		"PUT    /keys/{key}":                                  organization.UpdateAccessKey,    /* only Admin */
-		"PUT    /members/current":                             organization.UpdateMember,       /* only Admin */
-		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* only Admin */
-		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* only Admin */
-		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* only Admin */
+		"PUT    /keys/{key}":                                  organization.UpdateAccessKey,    /* Admin console only */
+		"PUT    /members/current":                             organization.UpdateMember,       /* Admin console only */
+		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* Admin console only */
+		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* Admin console only */
+		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* Admin console only */
 		"PUT    /organizations/{id}":                          organization.Update,
 		"PUT    /organizations/{id}/status":                   organization.SetStatus,
 		"PUT    /pipelines/{id}":                              pipeline.Update,
