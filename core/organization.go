@@ -163,9 +163,11 @@ type AccessKey struct {
 
 // AddMember adds a new member of the organization.
 //
-// If the member to add has an email that is already used by another
-// member, it returns an errors.UnprocessableError error with code
-// MemberEmailExists.
+// It returns an errors.UnprocessableError error with code
+//
+//   - MemberEmailExists, if a member with this email already exists in the
+//     organization.
+//   - OrganizationNotExist, if the organization does not exist.
 func (this *Organization) AddMember(ctx context.Context, member MemberToSet) error {
 	this.core.mustBeOpen()
 	err := validateMemberToSet(member, true, true, true)
@@ -187,14 +189,17 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			if member.Avatar != nil {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-					n.ID, member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+					"INSERT INTO members (id, organization, name, avatar.image, avatar.mime_type, email, password, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+					n.ID, this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, password, now)
 			} else {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-					n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
+					"INSERT INTO members (id, organization, name,  avatar, email, password, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+					n.ID, this.organization.ID, member.Name, nil, member.Email, password, now)
 			}
 			if err != nil {
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "members_organization_fkey" {
+					return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
+				}
 				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
 					return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 				}
