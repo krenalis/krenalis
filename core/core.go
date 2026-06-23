@@ -1241,7 +1241,6 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		timeSlot := metrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
@@ -1250,18 +1249,21 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 				// that when all slot statistics are merged into those of this run,
 				// the resulting data will be accurate and consistent.
 				"WITH s AS (\n"+
-					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
-					" -passed_4 as passed_4, -passed_5 as passed_5, -failed_0 as failed_0, -failed_1 as failed_1,"+
-					" -failed_2 as failed_2, -failed_3 as failed_3, -failed_4 as failed_4, -failed_5 as failed_5\n"+
+					"	SELECT -COALESCE(SUM(passed_0), 0) as passed_0, -COALESCE(SUM(passed_1), 0) as passed_1,"+
+					" -COALESCE(SUM(passed_2), 0) as passed_2, -COALESCE(SUM(passed_3), 0) as passed_3,"+
+					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" -COALESCE(SUM(failed_0), 0) as failed_0, -COALESCE(SUM(failed_1), 0) as failed_1,"+
+					" -COALESCE(SUM(failed_2), 0) as failed_2, -COALESCE(SUM(failed_3), 0) as failed_3,"+
+					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5\n"+
 					"	FROM pipelines_metrics\n"+
-					"	WHERE pipeline = $2 AND timeslot = $3\n"+
+					"	WHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
 					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
 					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", run.ID, pipeline.ID, timeSlot)
+					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					// The run no longer exists.
