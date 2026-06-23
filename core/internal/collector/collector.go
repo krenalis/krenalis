@@ -716,7 +716,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			usingWriteKey = true
 			if org := connection.Organization(); !org.Enabled {
-				return errors.Unavailable("organization %s is disabled", org.ID)
+				return errors.Unavailable("organization is disabled")
 			}
 		}
 
@@ -746,7 +746,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 		usingWriteKey = true
 		if org := connection.Organization(); !org.Enabled {
-			return errors.Unavailable("organization %s is disabled", org.ID)
+			return errors.Unavailable("organization is disabled")
 		}
 	}
 

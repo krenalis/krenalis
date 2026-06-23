@@ -342,8 +342,8 @@ func assertOrganizationDisabled(t *testing.T, err error) {
 	if resp.Error.Code != "OrganizationDisabled" {
 		t.Fatalf("expected error code \"OrganizationDisabled\", got %q", resp.Error.Code)
 	}
-	if !disabledMessage.MatchString(resp.Error.Message) {
-		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledMessage)
+	if !disabledOrgUnprocessable.MatchString(resp.Error.Message) {
+		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledOrgUnprocessable)
 	}
 }
 
@@ -375,9 +375,12 @@ func assertOrganizationUnavailable(t *testing.T, err error) {
 	if resp.Error.Code != "ServiceUnavailable" {
 		t.Fatalf("expected error code \"ServiceUnavailable\", got %q", resp.Error.Code)
 	}
-	if !disabledMessage.MatchString(resp.Error.Message) {
-		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledMessage)
+	if !disabledOrgUnavailable.MatchString(resp.Error.Message) {
+		t.Fatalf("response error message %q does not match the expected regexp %q", resp.Error.Message, disabledOrgUnavailable)
 	}
 }
 
-var disabledMessage = regexp.MustCompile(`^organization \w+ is disabled$`)
+var (
+	disabledOrgUnprocessable = regexp.MustCompile(`^organization \w+ is disabled$`)
+	disabledOrgUnavailable   = regexp.MustCompile(`^organization is disabled$`)
+)
