@@ -125,10 +125,10 @@ func (ps *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
 // onDeleteOrganization is called when an organization is deleted from the
 // state.
 func (ps *pipelineScheduler) onDeleteOrganization(n state.DeleteOrganization) {
-	if !n.Organization().Enabled {
+	if ps.executor == nil {
 		return
 	}
-	if ps.executor == nil {
+	if !n.Organization().Enabled {
 		return
 	}
 	var pipelines []string
