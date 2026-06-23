@@ -1243,7 +1243,7 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 		// Prepare the run metrics.
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
-			_, err := core.db.Exec(ctx,
+			res, err := core.db.Exec(ctx,
 				// If statistics from previous runs of the same pipeline are available,
 				// they are subtracted from the current run's statistics. This ensures
 				// that when all slot statistics are merged into those of this run,
@@ -1265,16 +1265,16 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 					"FROM s\n"+
 					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The run no longer exists.
-					return
-				}
 				if ctx.Err() != nil {
 					// The context has been canceled.
 					break
 				}
 				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
+			}
+			// Do nothing if the run no longer exists.
+			if res.RowsAffected() == 0 {
+				return
 			}
 			break
 		}
