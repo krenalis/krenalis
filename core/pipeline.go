@@ -506,17 +506,14 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error
 	default:
 		return "", errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
 	}
-	if incremental != nil {
-		if c.Role == state.Destination {
-			return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
-		}
-		if *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
-			return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
-		}
+	if incremental != nil && c.Role == state.Destination {
+		return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
 	}
-	org := c.Workspace().Organization()
-	if !org.Enabled {
+	if org := c.Workspace().Organization(); !org.Enabled {
 		return "", errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
+	if incremental != nil && *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
+		return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 	}
 	if !this.pipeline.Enabled {
 		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
