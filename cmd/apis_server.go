@@ -476,7 +476,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			}
 			name := strings.TrimSpace(firstName + " " + lastName)
 			memberID, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, workosUser.ID)
-			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
+			if e, ok := err.(*errors.UnprocessableError); ok && (e.Code == core.MemberEmailExists || e.Code == core.MemberWorkOSUserIDExists) {
 				memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
 			}
 			if err != nil {
@@ -758,6 +758,10 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		if _, err = org.ProvisionMemberFromWorkOS(r.Context(), name, email, event.Data.UserID); err != nil {
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				slog.Info("WorkOS webhook: skipping organization_membership.created: member email already exists", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
+				return
+			}
+			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberWorkOSUserIDExists {
+				slog.Info("WorkOS webhook: skipping organization_membership.created: member WorkOS user ID already exists", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
 				return
 			}
 			slog.Error("WorkOS webhook error: failed to provision member", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID, "error", err)

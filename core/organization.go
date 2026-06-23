@@ -698,8 +698,9 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 // member doesn't have a password, since its authentication is managed by
 // WorkOS.
 //
-// It returns an errors.UnprocessableError error with code MemberEmailExists if
-// the email is already used by another member in the organization.
+// It returns an errors.UnprocessableError error with code
+//   - MemberEmailExists if the email is already used by another member in the organization.
+//   - MemberWorkOSUserIDExists if the WorkOS user ID is already used by another member in the organization.
 func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, email, workosUserID string) (string, error) {
 	this.core.mustBeOpen()
 	if name != "" {
@@ -723,6 +724,13 @@ func (this *Organization) ProvisionMemberFromWorkOS(ctx context.Context, name, e
 			}
 			if exists {
 				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+			}
+			exists, err = tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID)
+			if err != nil {
+				return nil, err
+			}
+			if exists {
+				return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
 			}
 			_, err = tx.Exec(ctx,
 				"INSERT INTO members (id, name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
