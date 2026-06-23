@@ -235,7 +235,6 @@ func (state *State) replaceConnection(id string, f func(*Connection)) *Connectio
 	for _, pipeline := range c.pipelines {
 		pipeline.mu.Lock()
 		pipeline.connection = cc
-		pipeline.organization = cc.organization
 		pipeline.mu.Unlock()
 	}
 	return cc
