@@ -333,8 +333,11 @@ func (wo *Workos) User(ctx context.Context, userID string) (*AuthenticatedUser, 
 	return &AuthenticatedUser{ID: userID, Email: res.Email, FirstName: res.FirstName, LastName: res.LastName}, nil
 }
 
-// call executes an HTTP request to the WorkOS API and returns the HTTP status
-// code.
+// call sends an HTTP request to the WorkOS API. If out is non-nil, call decodes
+// the response body into it.
+//
+// If the response status is not expectedStatus, call returns an error; for a
+// 404 response, errors.Is(err, errNotFound) reports true.
 func (wo *Workos) call(ctx context.Context, method, path string, expectedStatus int, body any, out any) error {
 	var bodyReader io.Reader
 	if body != nil {
