@@ -172,7 +172,7 @@ type AccessKey struct {
 func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (string, error) {
 	this.core.mustBeOpen()
 	if member.Password != "" && member.WorkOSUserID != "" {
-		return "", errors.BadRequest("WorkOSUserID and Password cannot be set at the same time")
+		return "", errors.BadRequest("WorkOSUserID and password cannot be set at the same time")
 	}
 	err := validateMemberToSet(member, true, true, member.WorkOSUserID == "")
 	if err != nil {
