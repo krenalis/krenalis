@@ -11,6 +11,7 @@ import (
 const (
 	AlterSchemaInExecution        errors.Code = "AlterSchemaInExecution"
 	AuthenticationFailed          errors.Code = "AuthenticationFailed"
+	BuiltInAuthenticationDisabled errors.Code = "BuiltInAuthenticationDisabled"
 	CannotRunIncrementally        errors.Code = "CannotRunIncrementally"
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
@@ -53,6 +54,5 @@ const (
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
 	WarehouseNotInitializable     errors.Code = "WarehouseNotInitializable"
 	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
-	BuiltInAuthenticationDisabled errors.Code = "BuiltInAuthenticationDisabled"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
 )
