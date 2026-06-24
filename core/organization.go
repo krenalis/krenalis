@@ -194,26 +194,14 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 		})
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			if member.WorkOSUserID != "" {
-				if member.Avatar != nil {
-					_, err = tx.Exec(ctx,
-						"INSERT INTO members (id, name, email, workos_user_id, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-						n.ID, member.Name, member.Email, member.WorkOSUserID, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
-				} else {
-					_, err = tx.Exec(ctx,
-						"INSERT INTO members (id, name, email, workos_user_id, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-						n.ID, member.Name, member.Email, member.WorkOSUserID, nil, this.organization.ID, now)
-				}
+			if member.Avatar != nil {
+				_, err = tx.Exec(ctx,
+					"INSERT INTO members (id, name, email, password, workos_user_id, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+					n.ID, member.Name, member.Email, password, member.WorkOSUserID, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
 			} else {
-				if member.Avatar != nil {
-					_, err = tx.Exec(ctx,
-						"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-						n.ID, member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
-				} else {
-					_, err = tx.Exec(ctx,
-						"INSERT INTO members (id, name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-						n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
-				}
+				_, err = tx.Exec(ctx,
+					"INSERT INTO members (id, name, email, password, workos_user_id, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+					n.ID, member.Name, member.Email, password, member.WorkOSUserID, nil, this.organization.ID, now)
 			}
 			if err != nil {
 				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
