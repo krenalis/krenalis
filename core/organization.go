@@ -206,9 +206,15 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 				if exists {
 					return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
 				}
-				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, workos_user_id, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-					n.ID, member.Name, member.Email, member.WorkOSUserID, this.organization.ID, now)
+				if member.Avatar != nil {
+					_, err = tx.Exec(ctx,
+						"INSERT INTO members (id, name, email, workos_user_id, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+						n.ID, member.Name, member.Email, member.WorkOSUserID, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+				} else {
+					_, err = tx.Exec(ctx,
+						"INSERT INTO members (id, name, email, workos_user_id, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+						n.ID, member.Name, member.Email, member.WorkOSUserID, nil, this.organization.ID, now)
+				}
 			} else {
 				if member.Avatar != nil {
 					_, err = tx.Exec(ctx,
