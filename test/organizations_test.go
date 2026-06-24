@@ -20,7 +20,7 @@ func TestOrganizationsAPI(t *testing.T) {
 	defer c.Stop()
 
 	// Create a new organization before running the subtests.
-	orgID := c.CreateOrganization("Test Org")
+	orgID := c.CreateOrganization("Test Org", true)
 
 	t.Run("read organization by ID", func(t *testing.T) {
 		org := c.Organization(orgID)
@@ -29,6 +29,17 @@ func TestOrganizationsAPI(t *testing.T) {
 		}
 		if org.Name != "Test Org" {
 			t.Fatalf("expected name %q, got %q", "Test Org", org.Name)
+		}
+		if !org.Enabled {
+			t.Fatal("expected the organization to be enabled")
+		}
+	})
+
+	t.Run("create disabled organization", func(t *testing.T) {
+		disabledID := c.CreateOrganization("Disabled Org", false)
+		org := c.Organization(disabledID)
+		if org.Enabled {
+			t.Fatal("expected the organization to be disabled")
 		}
 	})
 

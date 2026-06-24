@@ -132,7 +132,7 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	}
 	// Insert the organization.
 	organizationID := base58.Generate(12)
-	_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, 'ACME inc')",
+	_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, 'ACME inc', true)",
 		organizationID)
 	if err != nil {
 		return err

@@ -57,6 +57,7 @@ func newPipelineScheduler(core *Core) *pipelineScheduler {
 	core.state.AddListener(ps.onDeletePipeline)
 	core.state.AddListener(ps.onDeleteWorkspace)
 	core.state.AddListener(ps.onElectLeader)
+	core.state.AddListener(ps.onSetOrganizationStatus)
 	core.state.AddListener(ps.onSetPipelineSchedulePeriod)
 	core.state.Unfreeze()
 	return ps
@@ -88,6 +89,9 @@ func (ps *pipelineScheduler) onCreatePipeline(n state.CreatePipeline) {
 		return
 	}
 	pipeline, _ := ps.core.state.Pipeline(n.ID)
+	if !pipeline.Organization().Enabled {
+		return
+	}
 	if pipeline.SchedulePeriod == 0 {
 		return
 	}
@@ -97,6 +101,9 @@ func (ps *pipelineScheduler) onCreatePipeline(n state.CreatePipeline) {
 // onDeleteConnection is called when a connection is deleted from the state.
 func (ps *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
 	if ps.executor == nil {
+		return
+	}
+	if !n.Connection().Organization().Enabled {
 		return
 	}
 	var pipelines []string
@@ -119,6 +126,9 @@ func (ps *pipelineScheduler) onDeleteConnection(n state.DeleteConnection) {
 // state.
 func (ps *pipelineScheduler) onDeleteOrganization(n state.DeleteOrganization) {
 	if ps.executor == nil {
+		return
+	}
+	if !n.Organization().Enabled {
 		return
 	}
 	var pipelines []string
@@ -146,6 +156,9 @@ func (ps *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	if ps.executor == nil {
 		return
 	}
+	if !n.Workspace().Organization().Enabled {
+		return
+	}
 	var pipelines []string
 	for _, connection := range n.Workspace().Connections() {
 		for _, pipeline := range connection.Pipelines() {
@@ -167,6 +180,9 @@ func (ps *pipelineScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 // onDeletePipeline is called when a pipeline is deleted from the state.
 func (ps *pipelineScheduler) onDeletePipeline(n state.DeletePipeline) {
 	if ps.executor == nil {
+		return
+	}
+	if !n.Pipeline().Organization().Enabled {
 		return
 	}
 	go func(e *pipelineExecutor) {
@@ -192,6 +208,32 @@ func (ps *pipelineScheduler) onElectLeader(n state.ElectLeader) {
 	}
 }
 
+// onSetOrganizationStatus is called when an organization status is updated.
+func (ps *pipelineScheduler) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	if ps.executor == nil {
+		return
+	}
+	org, _ := ps.core.state.Organization(n.ID)
+	for _, workspace := range org.Workspaces() {
+		for _, connection := range workspace.Connections() {
+			for _, pipeline := range connection.Pipelines() {
+				if pipeline.SchedulePeriod != 0 {
+					if n.Enabled {
+						ps.executor.AddPipeline(pipeline)
+					} else {
+						// Unlike deletion handlers, this listener waits for all
+						// removals to complete by calling 'RemovePipeline'
+						// synchronously. This preserves notification order: a
+						// later re-enabling cannot add the pipelines before
+						// this disabling has removed them.
+						ps.executor.RemovePipeline(pipeline.ID)
+					}
+				}
+			}
+		}
+	}
+}
+
 // onSetPipelineSchedulePeriod is called when the schedule period of a pipeline
 // is set.
 func (ps *pipelineScheduler) onSetPipelineSchedulePeriod(n state.SetPipelineSchedulePeriod) {
@@ -199,6 +241,9 @@ func (ps *pipelineScheduler) onSetPipelineSchedulePeriod(n state.SetPipelineSche
 		return
 	}
 	pipeline, _ := ps.core.state.Pipeline(n.ID)
+	if !pipeline.Organization().Enabled {
+		return
+	}
 	ps.executor.SetPeriod(pipeline)
 }
 
@@ -228,6 +273,10 @@ func newPipelineExecutor(core *Core, wg *sync.WaitGroup, ctx context.Context) *p
 	}
 	for _, pipeline := range pe.core.state.Pipelines() {
 		if pipeline.SchedulePeriod == 0 {
+			continue
+		}
+		org := pipeline.Organization()
+		if !org.Enabled {
 			continue
 		}
 		i := periodIndex(pipeline.SchedulePeriod)

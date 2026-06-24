@@ -114,6 +114,8 @@ func (state *State) keep() {
 			org = state.setAccount(n)
 		case "SetConnectionSettings":
 			org = state.setConnectionSettings(n)
+		case "SetOrganizationStatus":
+			org = state.setOrganizationStatus(n)
 		case "SetPipelineFormatSettings":
 			org = state.setPipelineFormatSettings(n)
 		case "SetPipelineSchedulePeriod":
@@ -293,6 +295,11 @@ func (state *State) replaceOrganization(id string, f func(*Organization)) *Organ
 			connection.mu.Lock()
 			connection.organization = oo
 			connection.mu.Unlock()
+			for _, pipeline := range connection.pipelines {
+				pipeline.mu.Lock()
+				pipeline.organization = oo
+				pipeline.mu.Unlock()
+			}
 		}
 	}
 	return oo
@@ -462,8 +469,9 @@ func (state *State) createConnection(n notification) string {
 
 // CreateOrganization is the event sent when an organization is created.
 type CreateOrganization struct {
-	ID   string
-	Name string
+	ID      string
+	Name    string
+	Enabled bool
 }
 
 // createOrganization creates an organization.
@@ -478,6 +486,7 @@ func (state *State) createOrganization(n notification) string {
 		members:    map[string]struct{}{},
 		ID:         e.ID,
 		Name:       e.Name,
+		Enabled:    e.Enabled,
 	}
 	state.mu.Lock()
 	state.organizations[e.ID] = org
@@ -538,6 +547,7 @@ func (state *State) createPipeline(n notification) string {
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
 		connection:         c,
+		organization:       c.organization,
 		format:             format,
 		Target:             e.Target,
 		Name:               e.Name,
@@ -1279,6 +1289,26 @@ func (state *State) setPipelineSchedulePeriod(n notification) string {
 	})
 	dispatchNotification(state, e)
 	return p.connection.organization.ID
+}
+
+// SetOrganizationStatus is the event sent when the status of an organization is
+// set.
+type SetOrganizationStatus struct {
+	ID      string
+	Enabled bool
+}
+
+// setOrganizationStatus sets the status of an organization.
+func (state *State) setOrganizationStatus(n notification) string {
+	e := SetOrganizationStatus{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	o := state.replaceOrganization(e.ID, func(p *Organization) {
+		p.Enabled = e.Enabled
+	})
+	dispatchNotification(state, e)
+	return o.ID
 }
 
 // SetPipelineStatus is the event sent when the status of a pipeline is set.

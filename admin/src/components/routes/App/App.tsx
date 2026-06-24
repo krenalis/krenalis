@@ -13,7 +13,7 @@ import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert.j
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
-import { UnauthorizedError } from '../../../lib/api/errors';
+import { UnauthorizedError, UnprocessableError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
 import RootError from '../RootError/RootError';
 import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
@@ -51,12 +51,20 @@ const App = () => {
 		setIsPasswordless(false);
 		setSelectedWorkspace('');
 		setIsLoggedIn(false);
+		setIsOrganizationDisabled(false);
 	};
 
 	const handleError = (err: Error | string) => {
 		if (err instanceof UnauthorizedError) {
 			logout();
 			return;
+		}
+		if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
+			// TODO(Gianluca): This is to prevent being redirected to the login
+			// page and starting an infinite loop that makes the error
+			// unreadable. Ideally, the case of organization disabled would be
+			// handled the same way as an unauthorized error.
+			setIsOrganizationDisabled(true);
 		}
 		if (toastRef.current == null) return;
 		toastRef.current.hide();
@@ -107,6 +115,8 @@ const App = () => {
 		isPasswordless,
 		setIsPasswordless,
 		publicMetadata,
+		isOrganizationDisabled,
+		setIsOrganizationDisabled,
 	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
@@ -180,6 +190,8 @@ const App = () => {
 					isPasswordless,
 					setIsPasswordless,
 					publicMetadata,
+					isOrganizationDisabled,
+					setIsOrganizationDisabled,
 				}}
 			>
 				<Outlet />

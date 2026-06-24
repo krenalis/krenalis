@@ -219,6 +219,10 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	if exists, err := org.HasMember(session.Member); err != nil || !exists {
 		return nil, nil, "", errInvalidSessionCookie
 	}
+	// Verify that the organization is enabled.
+	if !org.Enabled {
+		return nil, nil, "", errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
 	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.
 	header, ok := r.Header["Krenalis-Workspace"]
 	if !ok {
@@ -302,6 +306,9 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		org, err := s.core.Organization(organizationID)
 		if err != nil {
 			return nil, nil, err
+		}
+		if !org.Enabled {
+			return nil, nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 		}
 		// If the key is restricted to a workspace, return the workspace as well.
 		if workspaceID != "" {
@@ -400,6 +407,9 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return []any{"", "AuthenticationFailed"}, nil
 		}
 		return nil, err
+	}
+	if !org.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
 
 	if body.IsUnique {

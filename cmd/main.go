@@ -102,6 +102,11 @@ func Main(assets fs.FS) {
 		if err != nil {
 			fatal(1, err.Error())
 		}
+		err := core.UpgradeOrganizationsDB(ctx, conf.DB)
+		if err != nil {
+			fatal(1, err.Error())
+		}
+		slog.Info("PostgreSQL database upgraded successfully")
 		return
 	}
 

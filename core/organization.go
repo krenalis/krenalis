@@ -50,6 +50,15 @@ type Organization struct {
 	organization *state.Organization
 	ID           string `json:"id"`
 	Name         string `json:"name"`
+
+	// Enabled indicates whether the organization is enabled. Pipelines
+	// belonging to a disabled organization behave as if they were disabled,
+	// returning an OrganizationDisabled error wherever a PipelineDisabled error
+	// would otherwise be returned. Event ingestion is the exception: requests
+	// authenticated with the API key fail with an Unprocessable
+	// OrganizationDisabled error, while those authenticated with an event write
+	// key fail with a 503 Service Unavailable error.
+	Enabled bool `json:"enabled"`
 }
 
 // Member represents a member of an organization.
@@ -725,6 +734,29 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 		BodyHTML: []byte(t),
 	}
 	err = sendMail(emailToSend, this.core.smtp)
+	return err
+}
+
+// SetStatus sets the status of the organization.
+func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
+	this.core.mustBeOpen()
+	if enabled == this.organization.Enabled {
+		return nil
+	}
+	n := state.SetOrganizationStatus{
+		ID:      this.organization.ID,
+		Enabled: enabled,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, nil
+		}
+		return n, nil
+	})
 	return err
 }
 

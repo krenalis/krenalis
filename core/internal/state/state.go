@@ -511,6 +511,7 @@ type Organization struct {
 	members    map[string]struct{}
 	ID         string
 	Name       string
+	Enabled    bool
 }
 
 // HasMember reports whether the organization has a member with the given ID.
@@ -1390,6 +1391,7 @@ type Pipeline struct {
 	mu                 *sync.Mutex
 	ID                 string
 	connection         *Connection
+	organization       *Organization
 	format             *Connector
 	run                *PipelineRun
 	propertiesToUnset  []string // is not nil only for source pipelines on users.
@@ -1454,6 +1456,14 @@ func (pipeline *Pipeline) Format() *Connector {
 	c := pipeline.format
 	pipeline.mu.Unlock()
 	return c
+}
+
+// Organization returns the organization of the pipeline.
+func (pipeline *Pipeline) Organization() *Organization {
+	pipeline.mu.Lock()
+	o := pipeline.organization
+	pipeline.mu.Unlock()
+	return o
 }
 
 // PipelineRun represents a pipeline run.

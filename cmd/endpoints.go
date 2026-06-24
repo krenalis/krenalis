@@ -123,6 +123,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* Admin console only */
 		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* Admin console only */
 		"PUT    /organizations/{id}":                          organization.Update,
+		"PUT    /organizations/{id}/status":                   organization.SetStatus,
 		"PUT    /pipelines/{id}":                              pipeline.Update,
 		"PUT    /pipelines/{id}/schedule":                     pipeline.SetSchedulePeriod,
 		"PUT    /pipelines/{id}/status":                       pipeline.SetStatus,

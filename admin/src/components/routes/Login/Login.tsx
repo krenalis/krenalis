@@ -14,8 +14,16 @@ const Login = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isTryingPasswordlessLogin, setIsTryingPasswordlessLogin] = useState<boolean>(true);
 
-	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, setIsPasswordless, publicMetadata } =
-		useContext(AppContext);
+	const {
+		api,
+		handleError,
+		showStatus,
+		setIsLoadingState,
+		setIsLoggedIn,
+		setIsPasswordless,
+		publicMetadata,
+		isOrganizationDisabled,
+	} = useContext(AppContext);
 
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -29,6 +37,13 @@ const Login = () => {
 	}, []);
 
 	useEffect(() => {
+		if (isOrganizationDisabled) {
+			// The organization is disabled: skip the automatic passwordless
+			// login, otherwise it would keep re-triggering the app load that
+			// fails, making the app continuously call the APIs.
+			setIsTryingPasswordlessLogin(false);
+			return;
+		}
 		const tryPasswordlessLogin = async () => {
 			let authError: string;
 			try {

@@ -48,6 +48,8 @@ interface AppContext {
 	isPasswordless: boolean;
 	setIsPasswordless: React.Dispatch<React.SetStateAction<boolean>>;
 	publicMetadata: PublicMetadata;
+	isOrganizationDisabled: boolean;
+	setIsOrganizationDisabled: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);
