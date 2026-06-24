@@ -191,21 +191,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 		})
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-			}
 			if member.WorkOSUserID != "" {
-				exists, err = tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, member.WorkOSUserID)
-				if err != nil {
-					return nil, err
-				}
-				if exists {
-					return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
-				}
 				if member.Avatar != nil {
 					_, err = tx.Exec(ctx,
 						"INSERT INTO members (id, name, email, workos_user_id, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -227,6 +213,12 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 				}
 			}
 			if err != nil {
+				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+					return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+				}
+				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_workos_user_id_idx" {
+					return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
+				}
 				return nil, err
 			}
 			return n, nil
