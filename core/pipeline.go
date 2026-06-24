@@ -964,15 +964,10 @@ func (this *Pipeline) database() *connections.Database {
 	return this.core.connections.Database(p.Connection())
 }
 
-// endRun marks a pipeline run as completed, setting the specified error if any.
-func (this *Pipeline) endRun(err error) {
+// endRun marks the given run as completed, setting err if non-nil.
+func (this *Pipeline) endRun(id string, err error) {
 
 	ctx := this.core.close.ctx
-
-	run, ok := this.pipeline.Run()
-	if !ok {
-		return
-	}
 
 	endTime := time.Now().UTC()
 
@@ -988,7 +983,7 @@ func (this *Pipeline) endRun(err error) {
 				errorMessage = "run has been canceled"
 			} else {
 				errorMessage = "an internal error has occurred"
-				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "error", err)
+				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", id, "error", err)
 			}
 		}
 		this.core.metrics.Failed(errorStep, this.pipeline.ID, 0, errorMessage)
@@ -998,7 +993,7 @@ func (this *Pipeline) endRun(err error) {
 	this.core.metrics.WaitStore()
 
 	n := state.EndPipelineRun{
-		ID:       run.ID,
+		ID:       id,
 		Pipeline: this.pipeline.ID,
 		Health:   state.Healthy,
 	}
@@ -1024,7 +1019,7 @@ func (this *Pipeline) endRun(err error) {
 					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
 					" error = $4\n"+
 					"FROM s\n"+
-					"WHERE id = $1 AND end_time IS NULL", run.ID, this.pipeline.ID, endTime, errorMessage)
+					"WHERE id = $1 AND pipeline = $2 AND end_time IS NULL", id, this.pipeline.ID, endTime, errorMessage)
 			if err != nil {
 				return nil, err
 			}
