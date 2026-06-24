@@ -40,10 +40,10 @@ require (
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/relvacode/iso8601 v1.7.0
 	github.com/snowflakedb/gosnowflake/v2 v2.0.2
-	github.com/testcontainers/testcontainers-go v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/nats v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
+	github.com/testcontainers/testcontainers-go v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/nats v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.43.0
 	github.com/twmb/franz-go v1.21.0
 	github.com/xuri/excelize/v2 v2.10.1
 	golang.org/x/crypto v0.53.0
@@ -117,7 +117,7 @@ require (
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
-	github.com/moby/moby/api v1.54.1 // indirect
+	github.com/moby/moby/api v1.54.2 // indirect
 	github.com/moby/moby/client v0.4.0 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
@@ -142,7 +142,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/backo-go v1.1.0 // indirect
-	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
+	github.com/shirou/gopsutil/v4 v4.26.5 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
