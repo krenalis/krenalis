@@ -294,8 +294,8 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 // organization with the given ID. The external ID of a WorkOS organization is
 // the identifier of its linked organization in Krenalis.
 //
-// Returns ErrOrganizationNotLinked if the WorkOS organization has no external
-// ID.
+// It returns ErrOrganizationNotLinked if the WorkOS organization has no
+// external ID.
 func (wo *Workos) OrganizationExternalID(ctx context.Context, orgID string) (string, error) {
 	if strings.TrimSpace(orgID) == "" {
 		return "", fmt.Errorf("missing organization ID")
@@ -317,6 +317,8 @@ func (wo *Workos) OrganizationExternalID(ctx context.Context, orgID string) (str
 }
 
 // User fetches and returns the WorkOS user with the given ID.
+//
+// It returns ErrUserNotFound if the user does not exist.
 func (wo *Workos) User(ctx context.Context, userID string) (*AuthenticatedUser, error) {
 	var res struct {
 		Email     string `json:"email"`
