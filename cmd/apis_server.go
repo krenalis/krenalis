@@ -474,7 +474,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			if _, ok := err.(*errors.NotFoundError); !ok {
 				return nil, err
 			}
-			name := strings.TrimSpace(firstName + " " + lastName)
+			name := firstName + " " + lastName
 			memberID, err = org.AddMember(r.Context(), core.MemberToSet{Name: name, Email: email, WorkOSUserID: workosUser.ID})
 			if e, ok := err.(*errors.UnprocessableError); ok && (e.Code == core.MemberEmailExists || e.Code == core.MemberWorkOSUserIDExists) {
 				memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
@@ -648,7 +648,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		email := strings.TrimSpace(norm.NFC.String(event.Data.Email))
 		firstName := strings.TrimSpace(norm.NFC.String(event.Data.FirstName))
 		lastName := strings.TrimSpace(norm.NFC.String(event.Data.LastName))
-		name := strings.TrimSpace(firstName + " " + lastName)
+		name := firstName + " " + lastName
 		if event.Data.ID == "" || email == "" {
 			slog.Info("WorkOS webhook: skipping user.updated: missing user ID or email", "id", event.ID)
 			return
@@ -751,7 +751,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 		email := strings.TrimSpace(norm.NFC.String(workosUser.Email))
 		firstName := strings.TrimSpace(norm.NFC.String(workosUser.FirstName))
 		lastName := strings.TrimSpace(norm.NFC.String(workosUser.LastName))
-		name := strings.TrimSpace(firstName + " " + lastName)
+		name := firstName + " " + lastName
 		if runes := []rune(name); len(runes) > 255 {
 			name = string(runes[:255])
 		}
