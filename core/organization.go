@@ -193,7 +193,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 					n.ID, this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, password, now)
 			} else {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, organization, name,  avatar, email, password, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+					"INSERT INTO members (id, organization, name, avatar, email, password, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 					n.ID, this.organization.ID, member.Name, nil, member.Email, password, now)
 			}
 			if err != nil {
