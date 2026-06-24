@@ -162,7 +162,7 @@ type AccessKey struct {
 	CreatedAt time.Time     `json:"createdAt"`
 }
 
-// AddMember adds a new member of the organization.
+// AddMember adds a new member of the organization and returns its identifier.
 //
 // Exactly one of member.Password and member.WorkOSUserID must be set.
 //
