@@ -166,9 +166,12 @@ type AccessKey struct {
 //
 // Exactly one of member.Password and member.WorkOSUserID must be set.
 //
-// It returns an errors.UnprocessableError error with code
-//   - MemberEmailExists if the email is already used by another member.
-//   - MemberWorkOSUserIDExists if the WorkOS user ID is already used by another member.
+// It returns an errors.UnprocessableError with code:
+//
+//   - MemberEmailExists, if a member with this email already exists in the
+//     organization.
+//   - MemberWorkOSUserIDExists, if a member with this WorkOS user ID already
+//     exists in the organization.
 func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (string, error) {
 	this.core.mustBeOpen()
 	if member.Password != "" && member.WorkOSUserID != "" {
