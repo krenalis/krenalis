@@ -41,7 +41,7 @@ const (
 )
 
 var (
-	ErrInvalidToken            = errors.New("WorkOS provided an invalid JWT token")
+	ErrAuthenticationFailed    = errors.New("WorkOS authentication failed")
 	ErrOrganizationNotLinked   = errors.New("WorkOS organization has no external ID")
 	ErrUserNotFound            = errors.New("WorkOS user not found")
 	ErrOrganizationNotFound    = errors.New("WorkOS organization not found")
@@ -227,8 +227,8 @@ func (wo *Workos) fetchPublicKey(ctx context.Context, kid, alg string) (*rsa.Pub
 // Authenticate verifies the WorkOS JWT and returns the authenticated user's
 // information and their organization external ID.
 //
-// It returns ErrInvalidToken if the token is expired, has an invalid signature,
-// or is missing required claims (sub, org_id, matching client_id, or issuer).
+// It returns ErrAuthenticationFailed when the authentication fails (e.g. the
+// token is expired, has an invalid signature, or is missing required claims).
 func (wo *Workos) Authenticate(ctx context.Context, token string) (*AuthenticatedUser, error) {
 	var claims claims
 
@@ -245,20 +245,21 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 
 	// ParseWithClaims should return an error for malformed tokens, invalid
 	// signatures, and invalid registered claims. Normalize those errors to
-	// ErrInvalidToken, and keep the Valid check as a defensive guard in case
-	// the parser returns a token that is not marked as valid.
+	// ErrAuthenticationFailed, and keep the Valid check as a defensive guard in
+	// case the parser returns a token that is not marked as valid.
 	if err != nil || !parsed.Valid {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthenticationFailed
 	}
 
 	if claims.ClientID != wo.ClientID {
-		return nil, fmt.Errorf("JWT client_id does not match configured client ID")
+		slog.Warn("workos: JWT client_id does not match configured client ID")
+		return nil, ErrAuthenticationFailed
 	}
 	if claims.Subject == "" {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthenticationFailed
 	}
 	if claims.OrgID == "" {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthenticationFailed
 	}
 
 	userID := claims.Subject
@@ -266,7 +267,7 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 	workosUser, err := wo.User(ctx, userID)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
-			return nil, ErrInvalidToken
+			return nil, ErrAuthenticationFailed
 		}
 		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
 	}
@@ -274,7 +275,7 @@ func (wo *Workos) Authenticate(ctx context.Context, token string) (*Authenticate
 	organizationExternalID, err := wo.OrganizationExternalID(ctx, claims.OrgID)
 	if err != nil {
 		if errors.Is(err, ErrOrganizationNotFound) {
-			return nil, ErrInvalidToken
+			return nil, ErrAuthenticationFailed
 		}
 		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
 	}

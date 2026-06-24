@@ -447,7 +447,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 
 		workosUser, err := s.workos.Authenticate(r.Context(), body.AccessToken)
 		if err != nil {
-			if errors.Is(err, workos.ErrInvalidToken) {
+			if errors.Is(err, workos.ErrAuthenticationFailed) {
 				return nil, errors.Unauthorized("invalid WorkOS token")
 			}
 			return nil, err
