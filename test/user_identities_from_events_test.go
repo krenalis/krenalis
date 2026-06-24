@@ -20,20 +20,20 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolution(false, nil)
 
-	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
-	javaScriptKey := c.EventWriteKeys(javaScriptID)[0]
-	c.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
+	javaScriptID := k.CreateJavaScriptSource("JavaScript (source)", nil)
+	javaScriptKey := k.EventWriteKeys(javaScriptID)[0]
+	k.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
 		Name:    "JavaScript events",
 		Enabled: true,
 	})
-	importUsersPipeline := c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
+	importUsersPipeline := k.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		Filter:   krenalistester.DefaultFilterUserFromEvents,
@@ -51,7 +51,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	ctx := context.Background()
 
 	const eventProfileEmail = "event-profile@example.com"
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
 		Traits: map[string]any{
 			"email": eventProfileEmail,
@@ -62,12 +62,12 @@ func TestIdentitiesFromEvents(t *testing.T) {
 			},
 		},
 	})
-	c.WaitEventsStoredIntoWarehouse(ctx, 1)
-	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
-	c.RunIdentityResolution()
+	k.WaitEventsStoredIntoWarehouse(ctx, 1)
+	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
+	k.RunIdentityResolution()
 
 	// Retrieve the profile imported from the event.
-	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected one profile, got %d", total)
 	}
@@ -84,7 +84,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Update the pipeline to import identities through a constant mapping.
-	c.UpdatePipeline(importUsersPipeline, krenalistester.PipelineToSet{
+	k.UpdatePipeline(importUsersPipeline, krenalistester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -100,24 +100,24 @@ func TestIdentitiesFromEvents(t *testing.T) {
 
 	// Send an event identify and wait for the event to be stored in the
 	// warehouse.
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "uT8VT5tx1A",
 		Traits: map[string]any{
 			"email": eventProfileEmail,
 		},
 	})
-	c.WaitEventsStoredIntoWarehouse(ctx, 2)
-	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 2)
-	c.RunIdentityResolution()
+	k.WaitEventsStoredIntoWarehouse(ctx, 2)
+	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 2)
+	k.RunIdentityResolution()
 
 	// Check that the profile has been created.
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 2 {
 		t.Fatalf("expected 2 profiles, got %d", total)
 	}
 
 	// Update the pipeline to import identities through a transformation function.
-	c.UpdatePipeline(importUsersPipeline, krenalistester.PipelineToSet{
+	k.UpdatePipeline(importUsersPipeline, krenalistester.PipelineToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -141,18 +141,18 @@ def transform(event: dict) -> dict:
 
 	// Send an event identify and wait for the event to be stored in the
 	// warehouse.
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "Kw5vKdDYBQ",
 		Traits: map[string]any{
 			"email": eventProfileEmail,
 		},
 	})
-	c.WaitEventsStoredIntoWarehouse(ctx, 3)
-	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 3)
-	c.RunIdentityResolution()
+	k.WaitEventsStoredIntoWarehouse(ctx, 3)
+	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 3)
+	k.RunIdentityResolution()
 
 	// Check that the profile has been created.
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 3 {
 		t.Fatalf("expected 3 profiles, got %d", total)
 	}

@@ -15,15 +15,15 @@ func TestOrganizationsAPI(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create a new organization before running the subtests.
-	orgID := c.CreateOrganization("Test Org", true)
+	orgID := k.CreateOrganization("Test Org", true)
 
 	t.Run("read organization by ID", func(t *testing.T) {
-		org := c.Organization(orgID)
+		org := k.Organization(orgID)
 		if org.ID != orgID {
 			t.Fatalf("expected ID %q, got %q", orgID, org.ID)
 		}
@@ -36,15 +36,15 @@ func TestOrganizationsAPI(t *testing.T) {
 	})
 
 	t.Run("create disabled organization", func(t *testing.T) {
-		disabledID := c.CreateOrganization("Disabled Org", false)
-		org := c.Organization(disabledID)
+		disabledID := k.CreateOrganization("Disabled Org", false)
+		org := k.Organization(disabledID)
 		if org.Enabled {
 			t.Fatal("expected the organization to be disabled")
 		}
 	})
 
 	t.Run("list organizations includes new organization", func(t *testing.T) {
-		orgs := c.Organizations(0, 100)
+		orgs := k.Organizations(0, 100)
 		found := false
 		for _, org := range orgs {
 			if org.ID == orgID {
@@ -61,16 +61,16 @@ func TestOrganizationsAPI(t *testing.T) {
 	})
 
 	t.Run("update organization name", func(t *testing.T) {
-		c.UpdateOrganization(orgID, "Updated Org")
-		org := c.Organization(orgID)
+		k.UpdateOrganization(orgID, "Updated Org")
+		org := k.Organization(orgID)
 		if org.Name != "Updated Org" {
 			t.Fatalf("expected name %q after update, got %q", "Updated Org", org.Name)
 		}
 	})
 
 	t.Run("delete organization", func(t *testing.T) {
-		c.DeleteOrganization(orgID)
-		err := c.OrganizationErr(orgID)
+		k.DeleteOrganization(orgID)
+		err := k.OrganizationErr(orgID)
 		if err == nil {
 			t.Fatal("expected error when reading deleted organization, got nil")
 		}

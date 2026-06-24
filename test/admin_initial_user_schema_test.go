@@ -22,10 +22,10 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.PopulateProfileSchema(false)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.PopulateProfileSchema(false)
+	k.Start()
+	defer k.Stop()
 
 	f, err := os.Open(filepath.Join("..", "admin/src/components/routes/WorkspaceCreate/InitialSchema.json"))
 	if err != nil {
@@ -39,11 +39,11 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries := c.PreviewAlterProfileSchema(schema, nil)
+	queries := k.PreviewAlterProfileSchema(schema, nil)
 	const expectedQueriesCount = 6
 	if len(queries) != expectedQueriesCount {
 		t.Fatalf("expected %d queries, got %d", expectedQueriesCount, len(queries))
 	}
-	c.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchema(schema, nil, nil)
 
 }
