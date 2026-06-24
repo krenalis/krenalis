@@ -18,14 +18,14 @@ func TestExportToPostgreSQL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+		dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+		importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -48,13 +48,13 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		run := c.RunPipeline(importUsersID)
-		c.WaitRunsCompletion(dummySrc, run)
+		run := k.RunPipeline(importUsersID)
+		k.WaitRunsCompletion(dummySrc, run)
 	}
 
 	ctx := context.Background()
 
-	c.ExecQueryTestDatabase(ctx, `
+	k.ExecQueryTestDatabase(ctx, `
 		CREATE TABLE test_export_to_db
 			(
 				email text NOT NULL DEFAULT '',
@@ -63,11 +63,11 @@ func TestExportToPostgreSQL(t *testing.T) {
 			)
 		`)
 
-	pgsql := c.CreateDestinationPostgreSQL()
+	pgsql := k.CreateDestinationPostgreSQL()
 
 	// Check if the schema is correct.
 	{
-		schema, issues := c.TableSchema(pgsql, "test_export_to_db")
+		schema, issues := k.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
 			{Name: "email", Type: types.String()},
 			{Name: "full_name", Type: types.String()},
@@ -81,7 +81,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportPipeline := c.CreatePipeline(pgsql, "User", krenalistester.PipelineToSet{
+	exportPipeline := k.CreatePipeline(pgsql, "User", krenalistester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -102,13 +102,13 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	run := c.RunPipeline(exportPipeline)
-	c.WaitRunsCompletion(pgsql, run)
+	run := k.RunPipeline(exportPipeline)
+	k.WaitRunsCompletion(pgsql, run)
 
 	// Check if the export completed successfully.
 	const expectedCount = 10
 	var count int
-	c.QueryRowTestDatabase(ctx, &count,
+	k.QueryRowTestDatabase(ctx, &count,
 		`SELECT COUNT(*) FROM test_export_to_db WHERE email <> '' AND full_name <> ''`,
 	)
 	if expectedCount != count {
@@ -116,7 +116,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Update the pipeline to export the empty string for full_name.
-	c.UpdatePipeline(exportPipeline, krenalistester.PipelineToSet{
+	k.UpdatePipeline(exportPipeline, krenalistester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -135,11 +135,11 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	run = c.RunPipeline(exportPipeline)
-	c.WaitRunsCompletion(pgsql, run)
+	run = k.RunPipeline(exportPipeline)
+	k.WaitRunsCompletion(pgsql, run)
 
 	// Check if the export completed successfully.
-	c.QueryRowTestDatabase(ctx, &count,
+	k.QueryRowTestDatabase(ctx, &count,
 		`SELECT COUNT(*) FROM test_export_to_db WHERE email <> '' AND full_name = ''`,
 	)
 	if expectedCount != count {

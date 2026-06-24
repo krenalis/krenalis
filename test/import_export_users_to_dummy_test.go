@@ -17,16 +17,16 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
-	c.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolution(true, []string{"email"})
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+		dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+		importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -44,14 +44,14 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		run := c.RunPipeline(importUsersID)
-		c.WaitRunsCompletion(dummySrc, run)
+		run := k.RunPipeline(importUsersID)
+		k.WaitRunsCompletion(dummySrc, run)
 	}
 
 	// Export the profiles to Dummy.
 	{
-		dummyDest := c.CreateDummy("Dummy (destination)", krenalistester.Destination)
-		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", krenalistester.PipelineToSet{
+		dummyDest := k.CreateDummy("Dummy (destination)", krenalistester.Destination)
+		exportProfilesPipelineID := k.CreatePipeline(dummyDest, "User", krenalistester.PipelineToSet{
 			Name:    "Export users to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -73,15 +73,15 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		run := c.RunPipeline(exportProfilesPipelineID)
-		c.WaitRunsCompletion(dummyDest, run)
+		run := k.RunPipeline(exportProfilesPipelineID)
+		k.WaitRunsCompletion(dummyDest, run)
 	}
 
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.CreateDummy("Dummy (source 2)", krenalistester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+		dummySrc := k.CreateDummy("Dummy (source 2)", krenalistester.Source)
+		importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -102,9 +102,9 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		run := c.RunPipeline(importUsersID)
-		c.WaitRunsCompletion(dummySrc, run)
-		profiles, _, _ := c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+		run := k.RunPipeline(importUsersID)
+		k.WaitRunsCompletion(dummySrc, run)
+		profiles, _, _ := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(profiles) == 0 {
 			t.Fatal("no profiles re-imported from Dummy")
 		}

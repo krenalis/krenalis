@@ -17,13 +17,13 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Import users from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+	dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		Filter: &krenalistester.Filter{
@@ -48,10 +48,10 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 	})
-	run := c.RunPipeline(importUsersID)
-	c.WaitForRunsCompletionAllowFailed(dummySrc, run)
+	run := k.RunPipeline(importUsersID)
+	k.WaitForRunsCompletionAllowFailed(dummySrc, run)
 
-	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
 	// Dummy exposes 10 profiles, but one of them was filtered out, so there must
 	// be 9.

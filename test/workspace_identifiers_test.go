@@ -16,37 +16,37 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Test the default value for ResolveIdentitiesOnBatchImport, when a
 	// workspace is created.
-	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
+	if ws := k.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true (which is the default), got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 
-	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
+	if ws := k.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.UpdateIdentityResolution(true, []string{})
-	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
+	k.UpdateIdentityResolution(true, []string{})
+	if ws := k.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
-	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
+	if ws := k.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.UpdateIdentityResolution(true, []string{"dummy_id"})
-	if ws := c.Workspace(); len(ws.Identifiers) != 1 || ws.Identifiers[0] != "dummy_id" {
+	k.UpdateIdentityResolution(true, []string{"dummy_id"})
+	if ws := k.Workspace(); len(ws.Identifiers) != 1 || ws.Identifiers[0] != "dummy_id" {
 		t.Fatalf("expected \"dummy_id\", got %v", ws.Identifiers)
 	}
-	c.UpdateIdentityResolution(true, []string{"email", "android.id"})
-	if ws := c.Workspace(); len(ws.Identifiers) != 2 || ws.Identifiers[0] != "email" || ws.Identifiers[1] != "android.id" {
+	k.UpdateIdentityResolution(true, []string{"email", "android.id"})
+	if ws := k.Workspace(); len(ws.Identifiers) != 2 || ws.Identifiers[0] != "email" || ws.Identifiers[1] != "android.id" {
 		t.Fatalf("expected \"email\" and \"android.id\", got %v", ws.Identifiers)
 	}
 
 	// Test an invalid path.
-	err := c.UpdateIdentityResolutionErr([]string{"invalid path"})
+	err := k.UpdateIdentityResolutionErr([]string{"invalid path"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -56,7 +56,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not existent path in the profile schema.
-	err = c.UpdateIdentityResolutionErr([]string{"non_existent"})
+	err = k.UpdateIdentityResolutionErr([]string{"non_existent"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -66,7 +66,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not allowed type for identifiers.
-	err = c.UpdateIdentityResolutionErr([]string{"phone_numbers"})
+	err = k.UpdateIdentityResolutionErr([]string{"phone_numbers"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -76,14 +76,14 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test the disabling of ResolveIdentitiesOnBatchImport.
-	c.UpdateIdentityResolution(false, []string{})
-	if ws := c.Workspace(); ws.ResolveIdentitiesOnBatchImport {
+	k.UpdateIdentityResolution(false, []string{})
+	if ws := k.Workspace(); ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be false, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 
 	// Test the enabling of ResolveIdentitiesOnBatchImport.
-	c.UpdateIdentityResolution(true, []string{})
-	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
+	k.UpdateIdentityResolution(true, []string{})
+	if ws := k.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 

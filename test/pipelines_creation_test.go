@@ -39,16 +39,16 @@ func TestPipelinesCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
 	// Create some connections that will be used by the pipelines.
-	srcFsID := c.CreateSourceFileSystem()
-	dstFsID := c.CreateDestinationFilesystem()
-	javaScriptConnection := c.CreateJavaScriptSource("JavaScript (source)", nil)
-	postgreSQLConnection := c.CreateSourcePostgreSQL()
+	srcFsID := k.CreateSourceFileSystem()
+	dstFsID := k.CreateDestinationFilesystem()
+	javaScriptConnection := k.CreateJavaScriptSource("JavaScript (source)", nil)
+	postgreSQLConnection := k.CreateSourcePostgreSQL()
 
 	tests := []struct {
 		conn     string
@@ -421,7 +421,7 @@ func TestPipelinesCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			_, err := c.CreatePipelineErr(test.conn, "User", test.pipeline)
+			_, err := k.CreatePipelineErr(test.conn, "User", test.pipeline)
 			switch {
 			case test.err == "" && err == nil:
 				// Ok.

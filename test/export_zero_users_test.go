@@ -26,17 +26,17 @@ func TestExportZeroProfiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storage.Root())
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storage.Root())
+	k.Start()
+	defer k.Stop()
 
-	c.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolution(true, []string{"email"})
 
 	// Test the export of zero profiles to an application (Dummy).
 	func() {
-		dummyDest := c.CreateDummy("Dummy (destination)", krenalistester.Destination)
-		exportProfilesPipelineID := c.CreatePipeline(dummyDest, "User", krenalistester.PipelineToSet{
+		dummyDest := k.CreateDummy("Dummy (destination)", krenalistester.Destination)
+		exportProfilesPipelineID := k.CreatePipeline(dummyDest, "User", krenalistester.PipelineToSet{
 			Name:    "Export profiles to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -59,15 +59,15 @@ func TestExportZeroProfiles(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		run := c.RunPipeline(exportProfilesPipelineID)
-		c.WaitRunsCompletion(dummyDest, run)
+		run := k.RunPipeline(exportProfilesPipelineID)
+		k.WaitRunsCompletion(dummyDest, run)
 	}()
 
 	// Test the export of zero profiles to file (CSV).
 	func() {
 
 		// Create the File System connection.
-		fsID := c.CreateConnection(krenalistester.ConnectionToCreate{
+		fsID := k.CreateConnection(krenalistester.ConnectionToCreate{
 			Name:      "File System",
 			Role:      krenalistester.Destination,
 			Connector: "filesystem",
@@ -80,7 +80,7 @@ func TestExportZeroProfiles(t *testing.T) {
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 		// Create a pipeline for the File System for exporting the profiles.
-		exportProfilesPipelineID := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+		exportProfilesPipelineID := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 			Name:    "Export profiles to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -103,16 +103,16 @@ func TestExportZeroProfiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/v1/connections/"+fsID, nil, map[string]any{
+		k.MustCall("PUT", "/v1/connections/"+fsID, nil, map[string]any{
 			"name":        "Storage",
 			"compression": core.NoCompression,
 		}, nil)
 
 		// Run the pipeline that export profiles.
-		run := c.RunPipeline(exportProfilesPipelineID)
+		run := k.RunPipeline(exportProfilesPipelineID)
 
 		// Wait for the export to finish.
-		c.WaitRunsCompletion(fsID, run)
+		k.WaitRunsCompletion(fsID, run)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)
