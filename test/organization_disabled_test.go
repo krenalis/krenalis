@@ -174,7 +174,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("read events is rejected", func(t *testing.T) {
-		err := k.EventsErr([]string{"type"})
+		err := k.CanGetEvents([]string{"type"})
 		assertOrganizationDisabled(t, err)
 	})
 

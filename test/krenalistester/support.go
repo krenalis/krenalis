@@ -422,8 +422,9 @@ func (k *Krenalis) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-// EventsErr is like Events but returns an error instead of failing the test.
-func (k *Krenalis) EventsErr(properties []string) error {
+// CanGetEvents reports whether the events (passing the given properties) can be
+// retrieved, returning an error if they cannot.
+func (k *Krenalis) CanGetEvents(properties []string) error {
 	queryString := url.Values{
 		"properties": properties,
 		"first":      []string{"0"},
