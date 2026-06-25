@@ -312,8 +312,9 @@ func (k *Krenalis) Organization(id string) Organization {
 	return org
 }
 
-// OrganizationErr is like Organization but returns an error instead of failing the test.
-func (k *Krenalis) OrganizationErr(id string) error {
+// CanGetOrganization reports whether the organization with the given ID can be
+// retrieved, returning an error if it cannot.
+func (k *Krenalis) CanGetOrganization(id string) error {
 	return k.TryCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
