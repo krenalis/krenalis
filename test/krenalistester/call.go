@@ -41,15 +41,15 @@ func (k *Krenalis) TryCall(method, path string, headers http.Header, body, respo
 	return k.call(method, path, headers, body, response)
 }
 
-// MustCall calls the API endpoint serializing the given body and deserializing
-// the response into response.
+// Call calls the API endpoint serializing the given body and deserializing the
+// response into response.
 //
 // Calls (*testing.T).Fatal if the call returns an error, if the HTTP response
 // cannot be decoded into response, or if the HTTP response's status code is not
 // 200.
-// If headers contains the "Krenalis-Workspace" key, MustCall does not add it
+// If headers contains the "Krenalis-Workspace" key, Call does not add it
 // automatically. A nil value suppresses the header.
-func (k *Krenalis) MustCall(method, path string, headers http.Header, body, response any) {
+func (k *Krenalis) Call(method, path string, headers http.Header, body, response any) {
 	err := k.call(method, path, headers, body, response)
 	if err != nil {
 		k.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, strings.TrimSpace(err.Error()), body != nil, response != nil, string(debug.Stack()))

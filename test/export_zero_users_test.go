@@ -103,7 +103,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		k.MustCall("PUT", "/v1/connections/"+fsID, nil, map[string]any{
+		k.Call("PUT", "/v1/connections/"+fsID, nil, map[string]any{
 			"name":        "Storage",
 			"compression": core.NoCompression,
 		}, nil)
