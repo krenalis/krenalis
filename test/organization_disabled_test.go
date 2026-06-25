@@ -179,22 +179,22 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("read event schema is rejected", func(t *testing.T) {
-		err := k.Call("GET", "/v1/events/schema", nil, nil, nil)
+		err := k.TryCall("GET", "/v1/events/schema", nil, nil, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("create event listener is rejected", func(t *testing.T) {
-		err := k.Call("POST", "/v1/events/listeners", nil, map[string]any{}, nil)
+		err := k.TryCall("POST", "/v1/events/listeners", nil, map[string]any{}, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("read listened events is rejected", func(t *testing.T) {
-		err := k.Call("GET", "/v1/events/listeners/nonexistent", nil, nil, nil)
+		err := k.TryCall("GET", "/v1/events/listeners/nonexistent", nil, nil, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("delete event listener is rejected", func(t *testing.T) {
-		err := k.Call("DELETE", "/v1/events/listeners/nonexistent", nil, nil, nil)
+		err := k.TryCall("DELETE", "/v1/events/listeners/nonexistent", nil, nil, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
@@ -215,7 +215,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		// POST /v1/events/track authenticated with the event write key in the
 		// Authorization header.
-		err := k.Call("POST", "/v1/events/track",
+		err := k.TryCall("POST", "/v1/events/track",
 			http.Header{"Authorization": []string{"Bearer " + writeKey}},
 			map[string]any{
 				"userId": "user1234",
@@ -225,7 +225,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		// POST /v1/events authenticated with the event write key in the request
 		// body, without an Authorization header.
-		err = k.Call("POST", "/v1/events",
+		err = k.TryCall("POST", "/v1/events",
 			http.Header{"Authorization": nil},
 			map[string]any{
 				"type":     "track",
@@ -237,7 +237,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		// POST /v1/events authenticated with an API key in the Authorization
 		// header.
-		err = k.Call("POST", "/v1/events",
+		err = k.TryCall("POST", "/v1/events",
 			http.Header{
 				"Krenalis-Workspace": nil,
 				"Authorization":      []string{"Bearer " + apiKey},
@@ -300,7 +300,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		})
 		// POST /v1/events/{type}: single typed event. It too must be ingested
 		// (and stored) again now that the organization is enabled.
-		err := k.Call("POST", "/v1/events/track",
+		err := k.TryCall("POST", "/v1/events/track",
 			http.Header{"Authorization": []string{"Bearer " + writeKey}},
 			map[string]any{
 				"userId": "stored-after-reenabling-typed",

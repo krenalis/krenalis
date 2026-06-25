@@ -60,7 +60,7 @@ func (k *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[s
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	return k.Call("PUT", "/v1/profiles/schema", nil, req, nil)
+	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
 func (k *Krenalis) AbsolutePath(storage string, path string) string {
@@ -148,7 +148,7 @@ func (k *Krenalis) CreatePipelineErr(conn string, target string, pipeline Pipeli
 	var response struct {
 		ID string `json:"id"`
 	}
-	err = k.Call("POST", "/v1/pipelines", nil, body, &response)
+	err = k.TryCall("POST", "/v1/pipelines", nil, body, &response)
 	if err != nil {
 		return "", err
 	}
@@ -187,7 +187,7 @@ func (k *Krenalis) CreateConnectionErr(connection ConnectionToCreate) (string, e
 	var response struct {
 		ID string `json:"id"`
 	}
-	err := k.Call("POST", "/v1/connections", nil, connection, &response)
+	err := k.TryCall("POST", "/v1/connections", nil, connection, &response)
 	if err != nil {
 		return "", err
 	}
@@ -320,7 +320,7 @@ func (k *Krenalis) Organization(id string) Organization {
 
 // OrganizationErr is like Organization but returns an error instead of failing the test.
 func (k *Krenalis) OrganizationErr(id string) error {
-	return k.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+	return k.TryCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
 func (k *Krenalis) Organizations(first, limit int) []Organization {
@@ -386,7 +386,7 @@ func (k *Krenalis) DeleteConnection(conn string) {
 // failing the test.
 func (k *Krenalis) DeleteConnectionErr(conn string) error {
 	path := fmt.Sprintf("/v1/connections/%s", conn)
-	return k.Call("DELETE", path, nil, nil, nil)
+	return k.TryCall("DELETE", path, nil, nil, nil)
 }
 
 func (k *Krenalis) RunPipeline(pipeline string) string {
@@ -405,7 +405,7 @@ func (k *Krenalis) RunPipelineErr(pipeline string) (string, error) {
 		ID string
 	}
 	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
-	err := k.Call("POST", path, nil, map[string]any{}, &response)
+	err := k.TryCall("POST", path, nil, map[string]any{}, &response)
 	if err != nil {
 		return "", err
 	}
@@ -438,7 +438,7 @@ func (k *Krenalis) EventsErr(properties []string) error {
 		"first":      []string{"0"},
 		"limit":      []string{"10"},
 	}
-	return k.Call("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, nil)
+	return k.TryCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, nil)
 }
 
 func (k *Krenalis) File(storage string, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
@@ -521,7 +521,7 @@ func (k *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[s
 	var response struct {
 		Queries []string
 	}
-	err := k.Call("PUT", "/v1/profiles/schema/preview", nil, req, &response)
+	err := k.TryCall("PUT", "/v1/profiles/schema/preview", nil, req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -535,7 +535,7 @@ func (k *Krenalis) RepairWarehouse() {
 // RepairWarehouseErr is like RepairWarehouse but returns an error instead of
 // failing the test.
 func (k *Krenalis) RepairWarehouseErr() error {
-	return k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
+	return k.TryCall("POST", "/v1/warehouse/repair", nil, nil, nil)
 }
 
 // RunIdentityResolution starts the identity resolution and waits for it to
@@ -562,7 +562,7 @@ func (k *Krenalis) RunIdentityResolution() {
 // not wait for the identity resolution to complete, so this method is called
 // 'Start', not 'Run'.
 func (k *Krenalis) StartIdentityResolutionErr() error {
-	return k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
+	return k.TryCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
 }
 
 func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
@@ -656,7 +656,7 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 		},
 		"uiPreferences": uiPreferences,
 	}
-	return k.Call("POST", "/v1/workspaces/test", headers, body, nil)
+	return k.TryCall("POST", "/v1/workspaces/test", headers, body, nil)
 }
 
 // DeletePipeline deletes a pipeline.
@@ -669,7 +669,7 @@ func (k *Krenalis) DeletePipeline(pipelineID string) {
 // failing the test.
 func (k *Krenalis) DeletePipelineErr(pipelineID string) error {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	return k.Call("DELETE", path, nil, nil, nil)
+	return k.TryCall("DELETE", path, nil, nil, nil)
 }
 
 func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
@@ -689,7 +689,7 @@ func (k *Krenalis) UpdateIdentityResolutionErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
-	return k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
+	return k.TryCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
 func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
@@ -770,7 +770,7 @@ func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 // with the given headers and returns an error instead of failing the test.
 func (k *Krenalis) SetOrganizationStatusErr(id string, enabled bool, headers http.Header) error {
 	body := map[string]any{"enabled": enabled}
-	return k.Call("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
+	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
 }
 
 func (k *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {

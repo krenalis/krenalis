@@ -30,7 +30,7 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 
 	t.Run("list workspaces", func(t *testing.T) {
 		var response any
-		err := k.Call("GET", "/v1/workspaces", headers, nil, &response)
+		err := k.TryCall("GET", "/v1/workspaces", headers, nil, &response)
 		assertWorkspaceScopedKeyRejected(t, err, "workspaces cannot be listed with a workspace restricted API key")
 	})
 
@@ -38,7 +38,7 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 		body := map[string]any{
 			"name": "attacker-workspace",
 		}
-		err := k.Call("POST", "/v1/workspaces", headers, body, nil)
+		err := k.TryCall("POST", "/v1/workspaces", headers, body, nil)
 		assertWorkspaceScopedKeyRejected(t, err, "workspaces cannot be created with a workspace restricted API key")
 	})
 
@@ -46,7 +46,7 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 		body := map[string]any{
 			"name": "attacker-workspace",
 		}
-		err := k.Call("POST", "/v1/workspaces/test", headers, body, nil)
+		err := k.TryCall("POST", "/v1/workspaces/test", headers, body, nil)
 		assertWorkspaceScopedKeyRejected(t, err, "workspace creation cannot be tested with a workspace restricted API key")
 	})
 }
