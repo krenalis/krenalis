@@ -27,21 +27,21 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (c *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
+func (k *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
 	ts := time.Now().UTC()
-	c.MustCall("PUT", "/v1/profiles/schema", nil, req, nil)
+	k.MustCall("PUT", "/v1/profiles/schema", nil, req, nil)
 	// Waits for the alter schema that was started following the call to this
 	// method to finish.
 	for {
 		time.Sleep(50 * time.Millisecond)
-		startTime, endTime, alterError := c.LatestAlterProfileSchema()
+		startTime, endTime, alterError := k.LatestAlterProfileSchema()
 		if alterError != nil {
-			c.t.Fatalf("profile schema altering failed: %s", *alterError)
+			k.t.Fatalf("profile schema altering failed: %s", *alterError)
 		}
 		// On Windows, it may happen that 'startTime' is exactly equal to 'ts'
 		// because the precision of timestamps is lower: for this reason, it is
@@ -54,16 +54,16 @@ func (c *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[stri
 
 // AlterProfileSchemaErr is like AlterProfileSchema but returns an error instead of
 // panicking.
-func (c *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
+func (k *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	return c.Call("PUT", "/v1/profiles/schema", nil, req, nil)
+	return k.Call("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
-func (c *Krenalis) AbsolutePath(storage string, path string) string {
+func (k *Krenalis) AbsolutePath(storage string, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
@@ -71,38 +71,38 @@ func (c *Krenalis) AbsolutePath(storage string, path string) string {
 	if path != "" {
 		endpointPath += "?path=" + url.QueryEscape(path)
 	}
-	c.MustCall("GET", endpointPath, nil, nil, &response)
+	k.MustCall("GET", endpointPath, nil, nil, &response)
 	return response.Path
 }
 
-func (c *Krenalis) PipelineSchemas(conn string, target core.Target, eventType string) map[string]any {
+func (k *Krenalis) PipelineSchemas(conn string, target core.Target, eventType string) map[string]any {
 	path := fmt.Sprintf("/v1/connections/%s/pipelines/schemas/%s", conn, target)
 	if eventType != "" {
 		path += "?type=" + url.QueryEscape(eventType)
 	}
 	var schemas map[string]any
-	c.MustCall("GET", path, nil, nil, &schemas)
+	k.MustCall("GET", path, nil, nil, &schemas)
 	return schemas
 }
 
-func (c *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identity, int) {
+func (k *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identity, int) {
 	var response struct {
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
 	}
 	path := fmt.Sprintf("/v1/connections/%s/identities?first=%d&limit=%d", conn, first, limit)
-	c.MustCall("GET", path, nil, nil, &response)
+	k.MustCall("GET", path, nil, nil, &response)
 	return response.Identities, response.Total
 }
 
-func (c *Krenalis) ConnectionUI(connection string) map[string]any {
+func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 	path := fmt.Sprintf("/v1/connections/%s/ui", connection)
 	var ui map[string]any
-	c.MustCall("GET", path, nil, nil, &ui)
+	k.MustCall("GET", path, nil, nil, &ui)
 	return ui
 }
 
-func (c *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineToSet) string {
+func (k *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineToSet) string {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -122,13 +122,13 @@ func (c *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineT
 	var response struct {
 		ID string `json:"id"`
 	}
-	c.MustCall("POST", "/v1/pipelines", nil, body, &response)
+	k.MustCall("POST", "/v1/pipelines", nil, body, &response)
 	return response.ID
 }
 
 // CreatePipelineErr is like CreatePipeline but returns an error instead of
 // panicking.
-func (c *Krenalis) CreatePipelineErr(conn string, target string, pipeline PipelineToSet) (string, error) {
+func (k *Krenalis) CreatePipelineErr(conn string, target string, pipeline PipelineToSet) (string, error) {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -148,7 +148,7 @@ func (c *Krenalis) CreatePipelineErr(conn string, target string, pipeline Pipeli
 	var response struct {
 		ID string `json:"id"`
 	}
-	err = c.Call("POST", "/v1/pipelines", nil, body, &response)
+	err = k.Call("POST", "/v1/pipelines", nil, body, &response)
 	if err != nil {
 		return "", err
 	}
@@ -173,16 +173,29 @@ var DefaultFilterUserFromEvents = &Filter{
 	},
 }
 
-func (c *Krenalis) CreateConnection(connection ConnectionToCreate) string {
+func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
 	var response struct {
 		ID string `json:"id"`
 	}
-	c.MustCall("POST", "/v1/connections", nil, connection, &response)
+	k.MustCall("POST", "/v1/connections", nil, connection, &response)
 	return response.ID
 }
 
-func (c *Krenalis) CreateDestinationFilesystem() string {
-	return c.CreateConnection(ConnectionToCreate{
+// CreateConnectionErr is like CreateConnection but returns an error instead of
+// failing the test.
+func (k *Krenalis) CreateConnectionErr(connection ConnectionToCreate) (string, error) {
+	var response struct {
+		ID string `json:"id"`
+	}
+	err := k.Call("POST", "/v1/connections", nil, connection, &response)
+	if err != nil {
+		return "", err
+	}
+	return response.ID, nil
+}
+
+func (k *Krenalis) CreateDestinationFilesystem() string {
+	return k.CreateConnection(ConnectionToCreate{
 		Name:      "File System",
 		Role:      Destination,
 		Connector: "filesystem",
@@ -192,8 +205,8 @@ func (c *Krenalis) CreateDestinationFilesystem() string {
 	})
 }
 
-func (c *Krenalis) CreateDestinationPostgreSQL() string {
-	return c.CreateConnection(ConnectionToCreate{
+func (k *Krenalis) CreateDestinationPostgreSQL() string {
+	return k.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
 		Connector: "postgresql",
@@ -208,7 +221,7 @@ func (c *Krenalis) CreateDestinationPostgreSQL() string {
 	})
 }
 
-func (c *Krenalis) CreateDummy(name string, role Role) string {
+func (k *Krenalis) CreateDummy(name string, role Role) string {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
@@ -219,10 +232,10 @@ func (c *Krenalis) CreateDummy(name string, role Role) string {
 		mode := Server
 		conn.SendingMode = &mode
 	}
-	return c.CreateConnection(conn)
+	return k.CreateConnection(conn)
 }
 
-func (c *Krenalis) CreateDummyWithSettings(name string, role Role, settings DummySettings) string {
+func (k *Krenalis) CreateDummyWithSettings(name string, role Role, settings DummySettings) string {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
@@ -233,10 +246,10 @@ func (c *Krenalis) CreateDummyWithSettings(name string, role Role, settings Dumm
 		mode := Server
 		conn.SendingMode = &mode
 	}
-	return c.CreateConnection(conn)
+	return k.CreateConnection(conn)
 }
 
-func (c *Krenalis) CreateEventPipeline(conn string, eventType string, pipeline PipelineToSet) string {
+func (k *Krenalis) CreateEventPipeline(conn string, eventType string, pipeline PipelineToSet) string {
 	pipelineJSON, err := stdjson.Marshal(pipeline)
 	if err != nil {
 		panic(err)
@@ -252,12 +265,12 @@ func (c *Krenalis) CreateEventPipeline(conn string, eventType string, pipeline P
 	var response struct {
 		ID string `json:"id"`
 	}
-	c.MustCall("POST", "/v1/pipelines", nil, body, &response)
+	k.MustCall("POST", "/v1/pipelines", nil, body, &response)
 	return response.ID
 }
 
-func (c *Krenalis) CreateWebhookSource(name string, linkedConnections []string) string {
-	return c.CreateConnection(ConnectionToCreate{
+func (k *Krenalis) CreateWebhookSource(name string, linkedConnections []string) string {
+	return k.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
 		Connector:         "webhook",
@@ -265,7 +278,7 @@ func (c *Krenalis) CreateWebhookSource(name string, linkedConnections []string) 
 	})
 }
 
-func (c *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
+func (k *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 	var response struct {
 		ID    string `json:"id"`
 		Token string `json:"token"`
@@ -276,10 +289,10 @@ func (c *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 		Type      AccessKeyType `json:"type"`
 	}{
 		Name:      name,
-		Workspace: c.WorkspaceID(),
+		Workspace: k.WorkspaceID(),
 		Type:      AccessKeyTypeAPI,
 	}
-	c.MustCall("POST", "/v1/keys", nil, body, &response)
+	k.MustCall("POST", "/v1/keys", nil, body, &response)
 	return response.Token
 }
 
@@ -290,44 +303,45 @@ func organizationsHeaders() http.Header {
 	}
 }
 
-func (c *Krenalis) CreateOrganization(name string) string {
+func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
 	var response struct {
 		ID string `json:"id"`
 	}
-	c.MustCall("POST", "/v1/organizations", organizationsHeaders(), map[string]any{"name": name}, &response)
+	body := map[string]any{"name": name, "enabled": enabled}
+	k.MustCall("POST", "/v1/organizations", organizationsHeaders(), body, &response)
 	return response.ID
 }
 
-func (c *Krenalis) Organization(id string) Organization {
+func (k *Krenalis) Organization(id string) Organization {
 	var org Organization
-	c.MustCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
+	k.MustCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
 	return org
 }
 
 // OrganizationErr is like Organization but returns an error instead of failing the test.
-func (c *Krenalis) OrganizationErr(id string) error {
-	return c.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+func (k *Krenalis) OrganizationErr(id string) error {
+	return k.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
-func (c *Krenalis) Organizations(first, limit int) []Organization {
+func (k *Krenalis) Organizations(first, limit int) []Organization {
 	var response struct {
 		Organizations []Organization `json:"organizations"`
 	}
 	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
-	c.MustCall("GET", path, organizationsHeaders(), nil, &response)
+	k.MustCall("GET", path, organizationsHeaders(), nil, &response)
 	return response.Organizations
 }
 
-func (c *Krenalis) UpdateOrganization(id string, name string) {
-	c.MustCall("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
+func (k *Krenalis) UpdateOrganization(id string, name string) {
+	k.MustCall("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
 }
 
-func (c *Krenalis) DeleteOrganization(id string) {
-	c.MustCall("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+func (k *Krenalis) DeleteOrganization(id string) {
+	k.MustCall("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
-func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []string) string {
-	return c.CreateConnection(ConnectionToCreate{
+func (k *Krenalis) CreateJavaScriptSource(name string, linkedConnections []string) string {
+	return k.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
 		Connector:         "javascript",
@@ -336,8 +350,8 @@ func (c *Krenalis) CreateJavaScriptSource(name string, linkedConnections []strin
 	})
 }
 
-func (c *Krenalis) CreateSourceFileSystem() string {
-	return c.CreateConnection(ConnectionToCreate{
+func (k *Krenalis) CreateSourceFileSystem() string {
+	return k.CreateConnection(ConnectionToCreate{
 		Name:      "File System",
 		Role:      Source,
 		Connector: "filesystem",
@@ -347,8 +361,8 @@ func (c *Krenalis) CreateSourceFileSystem() string {
 	})
 }
 
-func (c *Krenalis) CreateSourcePostgreSQL() string {
-	return c.CreateConnection(ConnectionToCreate{
+func (k *Krenalis) CreateSourcePostgreSQL() string {
+	return k.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
 		Connector: "postgresql",
@@ -363,27 +377,48 @@ func (c *Krenalis) CreateSourcePostgreSQL() string {
 	})
 }
 
-func (c *Krenalis) DeleteConnection(conn string) {
+func (k *Krenalis) DeleteConnection(conn string) {
 	path := fmt.Sprintf("/v1/connections/%s", conn)
-	c.MustCall("DELETE", path, nil, nil, nil)
+	k.MustCall("DELETE", path, nil, nil, nil)
 }
 
-func (c *Krenalis) RunPipeline(pipeline string) string {
+// DeleteConnectionErr is like DeleteConnection but returns an error instead of
+// failing the test.
+func (k *Krenalis) DeleteConnectionErr(conn string) error {
+	path := fmt.Sprintf("/v1/connections/%s", conn)
+	return k.Call("DELETE", path, nil, nil, nil)
+}
+
+func (k *Krenalis) RunPipeline(pipeline string) string {
 	var response struct {
 		ID string
 	}
 	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
-	c.MustCall("POST", path, nil, map[string]any{}, &response)
+	k.MustCall("POST", path, nil, map[string]any{}, &response)
 	return response.ID
 }
 
-func (c *Krenalis) ExternalEventURL() string {
+// RunPipelineErr is like RunPipeline but returns an error instead of failing
+// the test.
+func (k *Krenalis) RunPipelineErr(pipeline string) (string, error) {
+	var response struct {
+		ID string
+	}
+	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
+	err := k.Call("POST", path, nil, map[string]any{}, &response)
+	if err != nil {
+		return "", err
+	}
+	return response.ID, nil
+}
+
+func (k *Krenalis) ExternalEventURL() string {
 	var metadata map[string]any
-	c.MustCall("GET", "/v1/public/metadata", nil, nil, &metadata)
+	k.MustCall("GET", "/v1/public/metadata", nil, nil, &metadata)
 	return metadata["externalEventURL"].(string)
 }
 
-func (c *Krenalis) Events(properties []string) []map[string]any {
+func (k *Krenalis) Events(properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"first":      []string{"0"},
@@ -392,11 +427,21 @@ func (c *Krenalis) Events(properties []string) []map[string]any {
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	c.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
+	k.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Events
 }
 
-func (c *Krenalis) File(storage string, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
+// EventsErr is like Events but returns an error instead of failing the test.
+func (k *Krenalis) EventsErr(properties []string) error {
+	queryString := url.Values{
+		"properties": properties,
+		"first":      []string{"0"},
+		"limit":      []string{"10"},
+	}
+	return k.Call("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, nil)
+}
+
+func (k *Krenalis) File(storage string, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -410,51 +455,51 @@ func (c *Krenalis) File(storage string, path, format, sheet string, compression 
 		Schema  types.Type       `json:"schema"`
 	}
 	endpointPath := fmt.Sprintf("/v1/connections/%s/files", storage)
-	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
+	k.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Records, response.Schema
 }
 
-func (c *Krenalis) JavaScriptSDKURL() string {
+func (k *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
-	c.MustCall("GET", "/v1/public/metadata", nil, nil, &metadata)
+	k.MustCall("GET", "/v1/public/metadata", nil, nil, &metadata)
 	return metadata["javascriptSDKURL"].(string)
 }
 
-func (c *Krenalis) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError *string) {
+func (k *Krenalis) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError *string) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 		Error     *string    `json:"error"`
 	}
-	c.MustCall("GET", "/v1/profiles/schema/latest-alter", nil, nil, &response)
+	k.MustCall("GET", "/v1/profiles/schema/latest-alter", nil, nil, &response)
 	return response.StartTime, response.EndTime, response.Error
 }
 
-func (c *Krenalis) LatestIdentityResolution() (startTime, endTime *time.Time) {
+func (k *Krenalis) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 	}
-	c.MustCall("GET", "/v1/identity-resolution/latest", nil, nil, &response)
+	k.MustCall("GET", "/v1/identity-resolution/latest", nil, nil, &response)
 	return response.StartTime, response.EndTime
 }
 
-func (c *Krenalis) PipelineRun(id string) PipelineRun {
+func (k *Krenalis) PipelineRun(id string) PipelineRun {
 	var run PipelineRun
 	path := fmt.Sprintf("/v1/pipelines/runs/%s", id)
-	c.MustCall("GET", path, nil, nil, &run)
+	k.MustCall("GET", path, nil, nil, &run)
 	return run
 }
 
-func (c *Krenalis) PipelineRuns() []PipelineRun {
+func (k *Krenalis) PipelineRuns() []PipelineRun {
 	var response struct {
 		Runs []PipelineRun
 	}
-	c.MustCall("GET", "/v1/pipelines/runs", nil, nil, &response)
+	k.MustCall("GET", "/v1/pipelines/runs", nil, nil, &response)
 	return response.Runs
 }
 
-func (c *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
+func (k *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -462,13 +507,13 @@ func (c *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[stri
 	var response struct {
 		Queries []string
 	}
-	c.MustCall("PUT", "/v1/profiles/schema/preview", nil, req, &response)
+	k.MustCall("PUT", "/v1/profiles/schema/preview", nil, req, &response)
 	return response.Queries
 }
 
 // PreviewAlterProfileSchemaErr is like PreviewAlterProfileSchema but returns an
 // error instead of panicking.
-func (c *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (k *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -476,27 +521,33 @@ func (c *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[s
 	var response struct {
 		Queries []string
 	}
-	err := c.Call("PUT", "/v1/profiles/schema/preview", nil, req, &response)
+	err := k.Call("PUT", "/v1/profiles/schema/preview", nil, req, &response)
 	if err != nil {
 		return nil, err
 	}
 	return response.Queries, nil
 }
 
-func (c *Krenalis) RepairWarehouse() {
-	c.MustCall("POST", "/v1/warehouse/repair", nil, nil, nil)
+func (k *Krenalis) RepairWarehouse() {
+	k.MustCall("POST", "/v1/warehouse/repair", nil, nil, nil)
+}
+
+// RepairWarehouseErr is like RepairWarehouse but returns an error instead of
+// failing the test.
+func (k *Krenalis) RepairWarehouseErr() error {
+	return k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
 }
 
 // RunIdentityResolution starts the identity resolution and waits for it to
 // complete.
-func (c *Krenalis) RunIdentityResolution() {
+func (k *Krenalis) RunIdentityResolution() {
 	ts := time.Now().UTC()
-	c.MustCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
+	k.MustCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
 	// this method to finish.
 	for {
 		time.Sleep(50 * time.Millisecond)
-		startTime, endTime := c.LatestIdentityResolution()
+		startTime, endTime := k.LatestIdentityResolution()
 		// On Windows, it may happen that 'startTime' is exactly equal to 'ts'
 		// because the precision of timestamps is lower: for this reason, it is
 		// necessary to check that 'startTime ≥ ts', not just that it is after.
@@ -506,8 +557,16 @@ func (c *Krenalis) RunIdentityResolution() {
 	}
 }
 
-func (c *Krenalis) SendEvent(writeKey string, message analytics.Message) {
-	endpoint := "http://" + c.Addr() + "/v1/events"
+// StartIdentityResolutionErr starts the identity resolution and returns an
+// error instead of failing the test. Unlike [RunIdentityResolution], it does
+// not wait for the identity resolution to complete, so this method is called
+// 'Start', not 'Run'.
+func (k *Krenalis) StartIdentityResolutionErr() error {
+	return k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
+}
+
+func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
+	endpoint := "http://" + k.Addr() + "/v1/events"
 	cb := sendEventCallback{ch: make(chan error, 1)}
 	client, err := analytics.NewWithConfig(
 		writeKey,
@@ -517,19 +576,19 @@ func (c *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 		},
 	)
 	if err != nil {
-		c.t.Fatalf("cannot create client: %s", err)
+		k.t.Fatalf("cannot create client: %s", err)
 	}
 	err = client.Enqueue(message)
 	if err != nil {
-		c.t.Fatalf("cannot enqueue event: %s", err)
+		k.t.Fatalf("cannot enqueue event: %s", err)
 	}
 	err = client.Close()
 	if err != nil {
-		c.t.Fatalf("cannot send event: %s", err)
+		k.t.Fatalf("cannot send event: %s", err)
 	}
 	err = <-cb.ch
 	if err != nil {
-		c.t.Fatalf("cannot close client when sending events: %s", err)
+		k.t.Fatalf("cannot close client when sending events: %s", err)
 	}
 }
 
@@ -547,7 +606,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 	s.ch <- err
 }
 
-func (c *Krenalis) Sheets(storage string, path string, format string, compression Compression, settings json.Value) []string {
+func (k *Krenalis) Sheets(storage string, path string, format string, compression Compression, settings json.Value) []string {
 	queryString := url.Values{
 		"path":           []string{path},
 		"format":         []string{format},
@@ -558,11 +617,11 @@ func (c *Krenalis) Sheets(storage string, path string, format string, compressio
 		Sheets []string `json:"sheets"`
 	}
 	endpointPath := fmt.Sprintf("/v1/connections/%s/files/sheets", storage)
-	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
+	k.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Sheets
 }
 
-func (c *Krenalis) TableSchema(conn string, table string) (types.Type, []string) {
+func (k *Krenalis) TableSchema(conn string, table string) (types.Type, []string) {
 	var response struct {
 		Schema types.Type `json:"schema"`
 		Issues []string   `json:"issues"`
@@ -571,18 +630,18 @@ func (c *Krenalis) TableSchema(conn string, table string) (types.Type, []string)
 	if table != "" {
 		path += "?name=" + url.QueryEscape(table)
 	}
-	c.MustCall("GET", path, nil, nil, &response)
+	k.MustCall("GET", path, nil, nil, &response)
 	return response.Schema, response.Issues
 }
 
-func (c *Krenalis) TestWarehouseUpdate(settings json.Value) {
+func (k *Krenalis) TestWarehouseUpdate(settings json.Value) {
 	body := map[string]any{
 		"settings": settings,
 	}
-	c.MustCall("PUT", "/v1/warehouse/test", nil, body, nil)
+	k.MustCall("PUT", "/v1/warehouse/test", nil, body, nil)
 }
 
-func (c *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
+func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 	uiPreferences UIPreferences, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
 	headers := http.Header{
 		"Krenalis-Workspace": nil,
@@ -597,44 +656,51 @@ func (c *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 		},
 		"uiPreferences": uiPreferences,
 	}
-	return c.Call("POST", "/v1/workspaces/test", headers, body, nil)
+	return k.Call("POST", "/v1/workspaces/test", headers, body, nil)
 }
 
 // DeletePipeline deletes a pipeline.
-func (c *Krenalis) DeletePipeline(pipelineID string) {
+func (k *Krenalis) DeletePipeline(pipelineID string) {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	c.MustCall("DELETE", path, nil, nil, nil)
+	k.MustCall("DELETE", path, nil, nil, nil)
 }
 
-func (c *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
+// DeletePipelineErr is like DeletePipeline but returns an error instead of
+// failing the test.
+func (k *Krenalis) DeletePipelineErr(pipelineID string) error {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	c.MustCall("PUT", path, nil, pipeline, nil)
+	return k.Call("DELETE", path, nil, nil, nil)
 }
 
-func (c *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
+func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
+	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
+	k.MustCall("PUT", path, nil, pipeline, nil)
+}
+
+func (k *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
 	}
-	c.MustCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
+	k.MustCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
-func (c *Krenalis) UpdateIdentityResolutionErr(identifiers []string) error {
+func (k *Krenalis) UpdateIdentityResolutionErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
-	return c.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
+	return k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
-func (c *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
+func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 	body := map[string]any{
 		"mode":     mode,
 		"settings": settings,
 	}
-	c.MustCall("PUT", "/v1/warehouse", nil, body, nil)
+	k.MustCall("PUT", "/v1/warehouse", nil, body, nil)
 }
 
-func (c *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[string]any {
+func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"first":      []string{"0"},
@@ -656,27 +722,27 @@ func (c *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[stri
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	c.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
+	k.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Events
 }
 
-func (c *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int) {
+func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int) {
 	var response struct {
 		Identities []Identity `json:"identities"`
 		Total      int        `json:"total"`
 	}
 	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", kpid, first, limit)
-	c.MustCall("GET", path, nil, nil, &response)
+	k.MustCall("GET", path, nil, nil, &response)
 	return response.Identities, response.Total
 }
 
-func (c *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
+func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	var schema types.Type
-	c.MustCall("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, nil, &schema)
+	k.MustCall("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, nil, &schema)
 	return schema
 }
 
-func (c *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
+func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
 	queryString := url.Values{
 		"properties": properties,
 		"order":      []string{order},
@@ -689,42 +755,56 @@ func (c *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 		Schema   types.Type `json:"schema"`
 		Total    int        `json:"total"`
 	}
-	c.MustCall("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
+	k.MustCall("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
 	return response.Profiles, response.Schema, response.Total
 }
 
-func (c *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {
+// SetOrganizationStatus enables or disables an organization through the
+// organizations API.
+func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
+	body := map[string]any{"enabled": enabled}
+	k.MustCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
+}
+
+// SetOrganizationStatusErr is like SetOrganizationStatus but sends the request
+// with the given headers and returns an error instead of failing the test.
+func (k *Krenalis) SetOrganizationStatusErr(id string, enabled bool, headers http.Header) error {
+	body := map[string]any{"enabled": enabled}
+	return k.Call("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
+}
+
+func (k *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {
 	bo := backoff.New(200)
 	const attempts = 20
 	bo.SetAttempts(attempts)
 	bo.SetCap(2 * time.Second)
 	bo.SetNextWaitTime(200 * time.Millisecond)
 	for bo.Next(ctx) {
-		_, count := c.ConnectionIdentities(connection, 0, 1)
+		_, count := k.ConnectionIdentities(connection, 0, 1)
 		if count == expected {
 			break
 		}
-		c.t.Logf("[attempt %d] %d connection identities stored in warehouse until now", bo.Attempt(), count)
+		k.t.Logf("[attempt %d] %d connection identities stored in warehouse until now", bo.Attempt(), count)
 		if bo.WaitTime() == 0 {
-			c.t.Fatalf("too many failed attempts (%d identities were expected, but after %d attempts %d identities are returned by Krenalis)", expected, attempts, count)
+			k.t.Fatalf("too many failed attempts (%d identities were expected, but after %d attempts %d identities are returned by Krenalis)", expected, attempts, count)
 		}
 	}
 }
 
-func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
+func (k *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
 	bo := backoff.New(200)
 	const attempts = 20
 	bo.SetAttempts(attempts)
 	bo.SetCap(2 * time.Second)
 	bo.SetNextWaitTime(200 * time.Millisecond)
 	for bo.Next(ctx) {
-		count := c.CountEventsInWarehouse(ctx)
+		count := k.CountEventsInWarehouse(ctx)
 		if count == expected {
 			break
 		}
-		c.t.Logf("[attempt %d] %d events stored in warehouse until now", bo.Attempt(), count)
+		k.t.Logf("[attempt %d] %d events stored in warehouse until now", bo.Attempt(), count)
 		if bo.WaitTime() == 0 {
-			c.t.Fatalf("too many failed attempts (%d events were expected, but after %d attempts %d events are returned by Krenalis)", expected, attempts, count)
+			k.t.Fatalf("too many failed attempts (%d events were expected, but after %d attempts %d events are returned by Krenalis)", expected, attempts, count)
 		}
 	}
 }
@@ -735,8 +815,8 @@ func (c *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected i
 //
 // If you intend to proceed even in the case of one or more "Failed" (but not an
 // error for the entire run), see the method WaitForRunsCompletionAllowFailed.
-func (c *Krenalis) WaitRunsCompletion(conn string, runs ...string) {
-	c.waitForRunsCompletion(false, runs...)
+func (k *Krenalis) WaitRunsCompletion(conn string, runs ...string) {
+	k.waitForRunsCompletion(false, runs...)
 }
 
 // WaitForRunsCompletionAllowFailed waits for the runs with the specified IDs,
@@ -746,37 +826,37 @@ func (c *Krenalis) WaitRunsCompletion(conn string, runs ...string) {
 //
 // If you want the method to result in an error even in the case of one or more
 // "Failed", see the method WaitForRunsCompletion.
-func (c *Krenalis) WaitForRunsCompletionAllowFailed(conn string, runs ...string) {
-	c.waitForRunsCompletion(true, runs...)
+func (k *Krenalis) WaitForRunsCompletionAllowFailed(conn string, runs ...string) {
+	k.waitForRunsCompletion(true, runs...)
 }
 
-func (c *Krenalis) EventWriteKeys(conn string) []string {
+func (k *Krenalis) EventWriteKeys(conn string) []string {
 	var res struct {
 		Keys []string `json:"keys"`
 	}
 	path := fmt.Sprintf("/v1/connections/%s/event-write-keys", conn)
-	c.MustCall("GET", path, nil, nil, &res)
+	k.MustCall("GET", path, nil, nil, &res)
 	return res.Keys
 }
 
-func (c *Krenalis) Workspace() Workspace {
+func (k *Krenalis) Workspace() Workspace {
 	var ws Workspace
-	c.MustCall("GET", "/v1/workspaces/current", nil, nil, &ws)
+	k.MustCall("GET", "/v1/workspaces/current", nil, nil, &ws)
 	return ws
 }
 
-func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
+func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		if len(ids) == 1 {
-			run := c.PipelineRun(ids[0])
+			run := k.PipelineRun(ids[0])
 			if run.EndTime != nil {
 				// If the pipeline run ended with an error, make the test fail.
 				if run.Error != "" {
-					c.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
+					k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
 				if !allowFailed && run.Failed != [6]int{} {
-					c.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
+					k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
 			}
@@ -784,7 +864,7 @@ func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			continue
 		}
 		completed := true
-		for _, run := range c.PipelineRuns() {
+		for _, run := range k.PipelineRuns() {
 			if !slices.Contains(ids, run.ID) {
 				continue
 			}
@@ -794,10 +874,10 @@ func (c *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			}
 			// If the pipeline run ended with an error, make the test fail.
 			if run.Error != "" {
-				c.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
+				k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
 			if !allowFailed && run.Failed != [6]int{} {
-				c.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
+				k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}
 		if completed {

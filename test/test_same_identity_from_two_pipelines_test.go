@@ -17,18 +17,18 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Prevents Identity Resolution from running automatically and ensures there
 	// are no identifiers.
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolution(false, nil)
 
-	dummy := c.CreateDummy("Dummy", krenalistester.Source)
+	dummy := k.CreateDummy("Dummy", krenalistester.Source)
 
 	// Import the "first_name" property from the first pipeline.
-	pipeline1 := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
+	pipeline1 := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users (1)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -47,7 +47,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	// Import the "last_name" property from the second pipeline: this will create
 	// separated identities that refer to the same "identity" - from the API's
 	// point of view.
-	pipeline2 := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
+	pipeline2 := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users (2)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -64,15 +64,15 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	})
 
 	// Runs the two pipelines and waits for them to complete.
-	run1 := c.RunPipeline(pipeline1)
-	run2 := c.RunPipeline(pipeline2)
-	c.WaitRunsCompletion(dummy, run1, run2)
+	run1 := k.RunPipeline(pipeline1)
+	run2 := k.RunPipeline(pipeline2)
+	k.WaitRunsCompletion(dummy, run1, run2)
 
 	// Run the Identity Resolution and wait for its completion.
-	c.RunIdentityResolution()
+	k.RunIdentityResolution()
 
 	// Check that there are 10 profiles.
-	profiles, _, total := c.Profiles([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
 	}
@@ -82,7 +82,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	}
 
 	// Check that there are 20 identities in total.
-	identities, total := c.ConnectionIdentities(dummy, 0, 100)
+	identities, total := k.ConnectionIdentities(dummy, 0, 100)
 	if total != 20 {
 		t.Fatalf("expected 20 identities, got %d", total)
 	}

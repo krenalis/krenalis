@@ -20,8 +20,6 @@ import { Variant } from '../App/App.types';
 import { serializeFilter } from '../../../utils/filters';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-import TransformedConnection from '../../../lib/core/connection';
-
 const GRID_COLUMNS_WITH_FILTERS: GridColumn[] = [
 	{ name: 'Pipeline' },
 	{ name: 'Filters' },
@@ -47,6 +45,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		api,
 		handleError,
 		setIsLoadingConnections,
+		setConnections,
 		connectors,
 		runPipelineButtonRefs,
 		runPipelineDropdownButtonRefs,
@@ -96,28 +95,34 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 
 	const onPipelineStatusSwitch = async (pipelineID: string) => {
 		const index = connection.pipelines!.findIndex((p) => p.id === pipelineID);
-		const oldEnabled = connection.pipelines![index].enabled;
-		const newEnabled = !oldEnabled;
+		const newEnabled = !connection.pipelines![index].enabled;
 
 		// Optimistically update the switch in the local state before awaiting
 		// the API call. This ensures immediate UI feedback and prevents visible
 		// flickering or delay caused by network latency. If the API request
 		// fails, the previous value will be restored.
-		const c = structuredClone(connection); // clone connection
-		Object.setPrototypeOf(c, TransformedConnection.prototype); // restore class methods (structuredClone doesn't clone functions)
-		c.pipelines![index].enabled = newEnabled;
-
+		const c = Object.assign(Object.create(Object.getPrototypeOf(connection)), connection); // maintain class methods
+		c.pipelines = connection.pipelines!.map((p, i) => (i === index ? { ...p, enabled: newEnabled } : p));
 		setConnection(c);
 
 		try {
 			await api.workspaces.connections.setPipelineStatus(pipelineID, newEnabled);
 		} catch (err) {
 			handleError(err);
-			// Reset the switch
-			c.pipelines![index].enabled = oldEnabled;
-			setConnection(c);
+			setConnection(connection);
 			return;
 		}
+
+		setConnections((prev) =>
+			prev.map((conn) => {
+				if (conn.id !== connection.id) return conn;
+				const updated = Object.assign(Object.create(Object.getPrototypeOf(conn)), conn);
+				updated.pipelines = conn.pipelines.map((p) =>
+					p.id === pipelineID ? { ...p, enabled: newEnabled } : p,
+				);
+				return updated;
+			}),
+		);
 	};
 
 	const onDeletePipeline = (pipelineID: string) => {

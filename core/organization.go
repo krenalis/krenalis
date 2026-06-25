@@ -50,6 +50,15 @@ type Organization struct {
 	organization *state.Organization
 	ID           string `json:"id"`
 	Name         string `json:"name"`
+
+	// Enabled indicates whether the organization is enabled. Pipelines
+	// belonging to a disabled organization behave as if they were disabled,
+	// returning an OrganizationDisabled error wherever a PipelineDisabled error
+	// would otherwise be returned. Event ingestion is the exception: requests
+	// authenticated with the API key fail with an Unprocessable
+	// OrganizationDisabled error, while those authenticated with an event write
+	// key fail with a 503 Service Unavailable error.
+	Enabled bool `json:"enabled"`
 }
 
 // Member represents a member of an organization.
@@ -172,6 +181,7 @@ type AccessKey struct {
 //     organization.
 //   - MemberWorkOSUserIDExists, if a member with this WorkOS user ID already
 //     exists in the organization.
+//   - OrganizationNotExist, if the organization does not exist.
 func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (string, error) {
 	this.core.mustBeOpen()
 	if member.Password != "" && member.WorkOSUserID != "" {
@@ -196,14 +206,17 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			if member.Avatar != nil {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, workos_user_id, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-					n.ID, member.Name, member.Email, password, member.WorkOSUserID, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+					"INSERT INTO members (id, organization, name, avatar.image, avatar.mime_type, email, password, workos_user_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+					n.ID, this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, password, member.WorkOSUserID, now)
 			} else {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, workos_user_id, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-					n.ID, member.Name, member.Email, password, member.WorkOSUserID, nil, this.organization.ID, now)
+					"INSERT INTO members (id, organization, name, avatar, email, password, workos_user_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+					n.ID, this.organization.ID, member.Name, nil, member.Email, password, member.WorkOSUserID, now)
 			}
 			if err != nil {
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "members_organization_fkey" {
+					return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
+				}
 				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
 					return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 				}
@@ -750,6 +763,29 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 		BodyHTML: []byte(t),
 	}
 	err = sendMail(emailToSend, this.core.smtp)
+	return err
+}
+
+// SetStatus sets the status of the organization.
+func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
+	this.core.mustBeOpen()
+	if enabled == this.organization.Enabled {
+		return nil
+	}
+	n := state.SetOrganizationStatus{
+		ID:      this.organization.ID,
+		Enabled: enabled,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, nil
+		}
+		return n, nil
+	})
 	return err
 }
 

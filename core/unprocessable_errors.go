@@ -39,6 +39,7 @@ const (
 	OperationAlreadyExecuting     errors.Code = "OperationAlreadyExecuting"
 	OrderNotExist                 errors.Code = "OrderNotExist"
 	OrderTypeNotSortable          errors.Code = "OrderTypeNotSortable"
+	OrganizationDisabled          errors.Code = "OrganizationDisabled"
 	OrganizationNotExist          errors.Code = "OrganizationNotExist"
 	PipelineDisabled              errors.Code = "PipelineDisabled"
 	PropertyNotExist              errors.Code = "PropertyNotExist"

@@ -31,13 +31,13 @@ func TestIdentityResolution(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storage.Root())
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storage.Root())
+	k.Start()
+	defer k.Stop()
 
 	// Create the File System connection.
-	fsID := c.CreateSourceFileSystem()
+	fsID := k.CreateSourceFileSystem()
 
 	properties := map[string]bool{
 		"dummyId":      true,
@@ -56,7 +56,7 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.String().WithMaxLength(300)), ReadOptional: true},
 	}
 
-	c.UpdateIdentityResolution(false, []string{"dummy_id", "email"})
+	k.UpdateIdentityResolution(false, []string{"dummy_id", "email"})
 
 	// Create a pipeline for the JSON for importing the users.
 	mapping := map[string]string{
@@ -66,7 +66,7 @@ func TestIdentityResolution(t *testing.T) {
 	}
 
 	// Create the pipeline A.
-	pipelineA := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+	pipelineA := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:      "Pipeline A",
 		Enabled:   true,
 		Path:      "users.json",
@@ -81,7 +81,7 @@ func TestIdentityResolution(t *testing.T) {
 	})
 
 	// Create the pipeline B.
-	pipelineB := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+	pipelineB := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:      "Pipeline B",
 		Enabled:   true,
 		Path:      "users.json",
@@ -100,7 +100,7 @@ func TestIdentityResolution(t *testing.T) {
 	expectProfiles := func(expectedProfiles []map[string]any) {
 
 		// Retrieve the profiles from the APIs.
-		profiles, _, _ := c.Profiles([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
+		profiles, _, _ := k.Profiles([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
 
 		// Check if the users are equal to the expected or not.
 		if len(expectedProfiles) != len(profiles) {
@@ -146,9 +146,9 @@ func TestIdentityResolution(t *testing.T) {
 		}
 
 		// Import the users in the JSON.
-		run := c.RunPipeline(pipeline)
-		c.WaitRunsCompletion(fsID, run)
-		c.RunIdentityResolution()
+		run := k.RunPipeline(pipeline)
+		k.WaitRunsCompletion(fsID, run)
+		k.RunIdentityResolution()
 
 	}
 

@@ -43,6 +43,20 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	organizationID, _, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("invitation token %q does not exist", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
 	err = api.core.AcceptInvitation(r.Context(), r.PathValue("token"), body.Name, body.Password)
 	return nil, err
 }
@@ -67,6 +81,20 @@ func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Reques
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
 	}
 	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
 	return nil, err
@@ -105,13 +133,14 @@ func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
+		Name    string `json:"name"`
+		Enabled bool   `json:"enabled"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := api.core.CreateOrganization(r.Context(), body.Name)
+	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled)
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +186,8 @@ func (api api) ExpressionsProperties(w http.ResponseWriter, r *http.Request) (an
 }
 
 // Index returns the index.
+//
+// Authentication is not required to call Index.
 func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
 	accept := strings.ToLower(r.Header.Get("Accept"))
@@ -198,11 +229,21 @@ func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 //
 // Authentication is not required to call MemberInvitation.
 func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	organization, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
+	organizationID, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"email": email, "organization": organization}, nil
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("invitation token %q does not exist", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
+	return map[string]any{"email": email, "organization": organization.Name}, nil
 }
 
 // Organization returns the organization with the given identifier.
@@ -320,6 +361,9 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 		return nil, errors.New("there are no organizations")
 	}
 	org := organizations[0]
+	if !org.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
 	resetPasswordEmail, err := static.ReadFile("static/reset_password_email.html")
 	if err != nil {
 		return nil, errors.New("embedded file 'static/reset_password_email.html' not found in executable")
@@ -339,7 +383,20 @@ func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.R
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset tokens cannot be validated because WorkOS authentication is enabled")
 	}
-	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
 	return nil, err
 }
 

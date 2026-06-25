@@ -32,11 +32,11 @@ func TestParquetTestApacheFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.PopulateProfileSchema(false)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.PopulateProfileSchema(false)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
 	tests := []struct {
 		path               string
@@ -130,14 +130,14 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 	}
 
-	fs := c.CreateSourceFileSystem()
+	fs := k.CreateSourceFileSystem()
 
 	for _, test := range tests {
 
 		t.Run(test.path, func(t *testing.T) {
 
 			// Read the file.
-			_, gotSchema := c.File(fs, test.path, "parquet", "", krenalistester.NoCompression, nil, 0)
+			_, gotSchema := k.File(fs, test.path, "parquet", "", krenalistester.NoCompression, nil, 0)
 			gotProperties := gotSchema.Properties().Slice()
 
 			// Validate the properties.

@@ -511,6 +511,7 @@ type Organization struct {
 	members    map[string]struct{}
 	ID         string
 	Name       string
+	Enabled    bool
 }
 
 // HasMember reports whether the organization has a member with the given ID.
@@ -1390,6 +1391,7 @@ type Pipeline struct {
 	mu                 *sync.Mutex
 	ID                 string
 	connection         *Connection
+	organization       *Organization
 	format             *Connector
 	run                *PipelineRun
 	propertiesToUnset  []string // is not nil only for source pipelines on users.
@@ -1456,6 +1458,14 @@ func (pipeline *Pipeline) Format() *Connector {
 	return c
 }
 
+// Organization returns the organization of the pipeline.
+func (pipeline *Pipeline) Organization() *Organization {
+	pipeline.mu.Lock()
+	o := pipeline.organization
+	pipeline.mu.Unlock()
+	return o
+}
+
 // PipelineRun represents a pipeline run.
 type PipelineRun struct {
 	mu          *sync.Mutex
@@ -1468,19 +1478,19 @@ type PipelineRun struct {
 }
 
 // Pipeline returns the pipeline associated with the run.
-func (ex *PipelineRun) Pipeline() *Pipeline {
-	ex.mu.Lock()
-	p := ex.pipeline
-	ex.mu.Unlock()
+func (run *PipelineRun) Pipeline() *Pipeline {
+	run.mu.Lock()
+	p := run.pipeline
+	run.mu.Unlock()
 	return p
 }
 
 // Node returns the node on which the run is currently executing.
 // The boolean return value indicates whether the run is assigned to a node.
-func (ex *PipelineRun) Node() (uuid.UUID, bool) {
-	ex.mu.Lock()
-	node := ex.node
-	ex.mu.Unlock()
+func (run *PipelineRun) Node() (uuid.UUID, bool) {
+	run.mu.Lock()
+	node := run.node
+	run.mu.Unlock()
 	if node == nil {
 		return uuid.UUID{}, false
 	}

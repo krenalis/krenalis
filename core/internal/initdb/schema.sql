@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE organizations (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     name varchar(255) NOT NULL DEFAULT '',
+    enabled boolean NOT NULL DEFAULT FALSE,
     PRIMARY KEY (id)
 );
 
@@ -186,7 +187,11 @@ CREATE TABLE pipelines_runs (
 
 CREATE INDEX pipelines_runs_function_idx
     ON pipelines_runs (function)
-    WHERE function != '' AND end_time IS NOT NULL;
+    WHERE function != '' AND end_time IS NULL;
+
+CREATE UNIQUE INDEX pipelines_one_active_run_idx
+    ON pipelines_runs (pipeline)
+    WHERE end_time IS NULL;
 
 CREATE TABLE pipelines_errors (
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
@@ -289,6 +294,7 @@ CREATE TYPE notification_name AS ENUM (
     'RunPipeline',
     'SetAccount',
     'SetConnectionSettings',
+    'SetOrganizationStatus',
     'SetPipelineFormatSettings',
     'SetPipelineSchedulePeriod',
     'SetPipelineStatus',

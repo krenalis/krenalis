@@ -416,11 +416,13 @@ func UpgradeDB(ctx context.Context, conf *Config) error {
 
 	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	err = db.Ping(pingCtx)
-	if err != nil {
+	if err := db.Ping(pingCtx); err != nil {
 		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
+	if err := initdb.Upgrade(ctx, db); err != nil {
+		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
+	}
 	return initdb.UpgradeWorkOS(ctx, db)
 }
 
@@ -722,16 +724,17 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 
 // CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 255 runes.
-func (core *Core) CreateOrganization(ctx context.Context, name string) (string, error) {
+// enabled indicates whether the created organization is enabled.
+func (core *Core) CreateOrganization(ctx context.Context, name string, enabled bool) (string, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	n := state.CreateOrganization{Name: name}
+	n := state.CreateOrganization{Name: name, Enabled: enabled}
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, $3)", n.ID, n.Name, n.Enabled)
 			if err != nil {
 				return nil, err
 			}
@@ -815,11 +818,10 @@ func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	return uniqueProperties, nil
 }
 
-// MemberInvitation returns the organization's name and email of the member
-// invited with the given invitation token. If an invitation with the given
-// token does not exist, it returns a NotFoundError error. If the token is
-// expired it returns an errors.UnprocessableError error with code
-// InvitationTokenExpired.
+// MemberInvitation returns the organization ID and email of the member invited
+// with the given invitation token. If an invitation with the given token does
+// not exist, it returns a NotFoundError error. If the token is expired it
+// returns an errors.UnprocessableError error with code InvitationTokenExpired.
 func (core *Core) MemberInvitation(ctx context.Context, token string) (string, string, error) {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -839,11 +841,7 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 	if isInvitationTokenExpired(createdAt) {
 		return "", "", errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 	}
-	organization, ok := core.state.Organization(organizationID)
-	if !ok {
-		return "", "", errors.NotFound("invitation token %q does not exist", token)
-	}
-	return organization.Name, email, nil
+	return organizationID, email, nil
 }
 
 // Organization returns the organization with identifier id.
@@ -863,6 +861,7 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		organization: org,
 		ID:           org.ID,
 		Name:         org.Name,
+		Enabled:      org.Enabled,
 	}
 	return &organization, nil
 }
@@ -905,6 +904,7 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			organization: organization,
 			ID:           organization.ID,
 			Name:         organization.Name,
+			Enabled:      organization.Enabled,
 		}
 	}
 	return orgs, nil
@@ -940,32 +940,29 @@ func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, nam
 	return err
 }
 
-// ValidateMemberPasswordResetToken validates the given password reset token.
+// ValidateMemberPasswordResetToken validates the given password reset token,
+// returning the organization ID of reset password token's member.
 //
 // If a password reset request with the given password reset token does not
 // exist or if the token is expired, it returns a NotFoundError error.
-func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
+func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) (string, error) {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
+		return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
 	var organizationID string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.NotFound("reset password token %q does not exist or is expired", token)
+			return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 		}
-		return err
+		return "", err
 	}
 	if isResetPasswordTokenExpired(createdAt) {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
+		return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	_, ok := core.state.Organization(organizationID)
-	if !ok {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
-	}
-	return nil
+	return organizationID, nil
 }
 
 // DataTransformation represents transformation passed to (*Core).TransformData
@@ -1293,38 +1290,40 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		timeSlot := metrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
-			_, err := core.db.Exec(ctx,
+			res, err := core.db.Exec(ctx,
 				// If statistics from previous runs of the same pipeline are available,
 				// they are subtracted from the current run's statistics. This ensures
 				// that when all slot statistics are merged into those of this run,
 				// the resulting data will be accurate and consistent.
 				"WITH s AS (\n"+
-					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
-					" -passed_4 as passed_4, -passed_5 as passed_5, -failed_0 as failed_0, -failed_1 as failed_1,"+
-					" -failed_2 as failed_2, -failed_3 as failed_3, -failed_4 as failed_4, -failed_5 as failed_5\n"+
+					"	SELECT -COALESCE(SUM(passed_0), 0) as passed_0, -COALESCE(SUM(passed_1), 0) as passed_1,"+
+					" -COALESCE(SUM(passed_2), 0) as passed_2, -COALESCE(SUM(passed_3), 0) as passed_3,"+
+					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" -COALESCE(SUM(failed_0), 0) as failed_0, -COALESCE(SUM(failed_1), 0) as failed_1,"+
+					" -COALESCE(SUM(failed_2), 0) as failed_2, -COALESCE(SUM(failed_3), 0) as failed_3,"+
+					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5\n"+
 					"	FROM pipelines_metrics\n"+
-					"	WHERE pipeline = $2 AND timeslot = $3\n"+
+					"	WHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
 					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
 					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", run.ID, pipeline.ID, timeSlot)
+					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The run no longer exists.
-					return
-				}
 				if ctx.Err() != nil {
 					// The context has been canceled.
 					break
 				}
 				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
+			}
+			// Do nothing if the run no longer exists.
+			if res.RowsAffected() == 0 {
+				return
 			}
 			break
 		}

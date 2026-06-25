@@ -16,14 +16,14 @@ func TestRepair(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// This test verifies that the Repair operation can be run multiple times on
 	// a PostgreSQL data warehouse without any error.
 	for range 3 {
-		c.RepairWarehouse()
+		k.RepairWarehouse()
 	}
 
 }

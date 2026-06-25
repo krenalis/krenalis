@@ -32,11 +32,11 @@ func TestParquetImport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.PopulateProfileSchema(false)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.PopulateProfileSchema(false)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
 	// Change the profile schema, leaving only the properties used by this test.
 	profileSchemaProperties := []types.Property{}
@@ -50,9 +50,9 @@ func TestParquetImport(t *testing.T) {
 		Type:         types.JSON(),
 		ReadOptional: true,
 	})
-	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
+	k.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
-	fs := c.CreateSourceFileSystem()
+	fs := k.CreateSourceFileSystem()
 
 	testCases := []struct {
 		name        string
@@ -69,24 +69,24 @@ func TestParquetImport(t *testing.T) {
 
 		f := func(t *testing.T) {
 
-			pipeline := c.CreatePipeline(fs, "User", parquetImportPipeline(tc.path, tc.compression))
+			pipeline := k.CreatePipeline(fs, "User", parquetImportPipeline(tc.path, tc.compression))
 			var identityResolutionStart time.Time
 			var runStarted bool
-			defer purgeParquetImportProfiles(t, c)
-			defer c.DeletePipeline(pipeline)
+			defer purgeParquetImportProfiles(t, k)
+			defer k.DeletePipeline(pipeline)
 			defer func() {
 				if runStarted {
-					waitParquetImportIdentityResolution(t, c, identityResolutionStart)
+					waitParquetImportIdentityResolution(t, k, identityResolutionStart)
 				}
 			}()
 
 			identityResolutionStart = time.Now().UTC()
-			run := c.RunPipeline(pipeline)
+			run := k.RunPipeline(pipeline)
 			runStarted = true
-			c.WaitRunsCompletion(fs, run)
+			k.WaitRunsCompletion(fs, run)
 
-			waitParquetImportProfiles(t, c, len(expectedProfiles))
-			profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+			waitParquetImportProfiles(t, k, len(expectedProfiles))
+			profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
 			checkParquetImportProfiles(t, profiles)
 
 		}
@@ -165,26 +165,26 @@ func checkParquetImportProfiles(t *testing.T, profiles []krenalistester.Profile)
 
 // waitParquetImportProfiles waits until the expected number of Parquet import
 // profiles is visible.
-func waitParquetImportProfiles(t *testing.T, c *krenalistester.Krenalis, expected int) {
+func waitParquetImportProfiles(t *testing.T, k *krenalistester.Krenalis, expected int) {
 	t.Helper()
 	for attempt := range 20 {
-		profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+		profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
 		if len(profiles) == expected {
 			return
 		}
 		t.Logf("[attempt %d] expected %d profile(s), got %d", attempt+1, expected, len(profiles))
 		time.Sleep(200 * time.Millisecond)
 	}
-	profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+	profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
 	t.Fatalf("expected %d profile(s), got %d", expected, len(profiles))
 }
 
 // waitParquetImportIdentityResolution waits for the identity resolution started
 // at or after since to complete.
-func waitParquetImportIdentityResolution(t *testing.T, c *krenalistester.Krenalis, since time.Time) {
+func waitParquetImportIdentityResolution(t *testing.T, k *krenalistester.Krenalis, since time.Time) {
 	t.Helper()
 	for attempt := range 20 {
-		startTime, endTime := c.LatestIdentityResolution()
+		startTime, endTime := k.LatestIdentityResolution()
 		if startTime != nil && (startTime.Equal(since) || startTime.After(since)) && endTime != nil {
 			return
 		}
@@ -196,18 +196,18 @@ func waitParquetImportIdentityResolution(t *testing.T, c *krenalistester.Krenali
 
 // purgeParquetImportProfiles runs identity resolution until no Parquet import
 // profiles are visible.
-func purgeParquetImportProfiles(t *testing.T, c *krenalistester.Krenalis) {
+func purgeParquetImportProfiles(t *testing.T, k *krenalistester.Krenalis) {
 	t.Helper()
 	for attempt := range 20 {
-		c.RunIdentityResolution()
-		profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+		k.RunIdentityResolution()
+		profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
 		if len(profiles) == 0 {
 			return
 		}
 		t.Logf("[attempt %d] expected 0 profile(s), got %d", attempt+1, len(profiles))
 		time.Sleep(200 * time.Millisecond)
 	}
-	profiles, _, _ := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+	profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
 	t.Fatalf("expected 0 profile(s), got %d", len(profiles))
 }
 

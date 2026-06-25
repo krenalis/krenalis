@@ -76,7 +76,6 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -upgrade-db flag cannot be combined with -init-db-if-empty or -init-docker-member")
 	}
-
 	if !upgradeDB && !devMode && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
@@ -99,13 +98,15 @@ func Main(assets fs.FS) {
 		fatal(1, err.Error())
 	}
 	if upgradeDB {
-		err = core.UpgradeDB(ctx, &core.Config{
-			DB:  conf.DB,
-			KMS: conf.KMS,
-		})
+		err = core.UpgradeDB(ctx, &core.Config{DB: conf.DB})
 		if err != nil {
 			fatal(1, err.Error())
 		}
+		err := core.UpgradeOrganizationsDB(ctx, conf.DB)
+		if err != nil {
+			fatal(1, err.Error())
+		}
+		slog.Info("PostgreSQL database upgraded successfully")
 		return
 	}
 

@@ -30,17 +30,17 @@ func TestExportUsersToFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storage.Root())
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storage.Root())
+	k.Start()
+	defer k.Stop()
 
-	c.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolution(true, []string{"email"})
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-		importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+		dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+		importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -63,12 +63,12 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		run := c.RunPipeline(importUsersID)
-		c.WaitRunsCompletion(dummySrc, run)
+		run := k.RunPipeline(importUsersID)
+		k.WaitRunsCompletion(dummySrc, run)
 	}
 
 	// Create the File System connection.
-	fsID := c.CreateConnection(krenalistester.ConnectionToCreate{
+	fsID := k.CreateConnection(krenalistester.ConnectionToCreate{
 		Name:      "File System",
 		Role:      krenalistester.Destination,
 		Connector: "filesystem",
@@ -81,7 +81,7 @@ func TestExportUsersToFile(t *testing.T) {
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 	// Create a pipeline for the CSV for exporting the users.
-	exportUsersPipelineID := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+	exportUsersPipelineID := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Export users to the CSV on File System",
 		Enabled: true,
 		Path:    exportedFilename,
@@ -119,7 +119,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/v1/pipelines/"+exportUsersPipelineID, nil, krenalistester.PipelineToSet{
+		k.MustCall("PUT", "/v1/pipelines/"+exportUsersPipelineID, nil, krenalistester.PipelineToSet{
 			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -138,10 +138,10 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Run the pipeline that export users.
-		run := c.RunPipeline(exportUsersPipelineID)
+		run := k.RunPipeline(exportUsersPipelineID)
 
 		// Wait for the export to finish.
-		c.WaitRunsCompletion(fsID, run)
+		k.WaitRunsCompletion(fsID, run)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

@@ -17,9 +17,9 @@ func TestWarehouse(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	settings := krenalistester.PostgresWarehouseSettings()
 
@@ -29,7 +29,7 @@ func TestWarehouse(t *testing.T) {
 	profileSchema := types.Object([]types.Property{
 		{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 	})
-	err := c.TestWorkspaceCreation("PostgreSQL", profileSchema, krenalistester.UIPreferences{},
+	err := k.TestWorkspaceCreation("PostgreSQL", profileSchema, krenalistester.UIPreferences{},
 		"PostgreSQL", settings, krenalistester.Normal)
 	var gotErr string
 	if err != nil {
@@ -43,10 +43,10 @@ func TestWarehouse(t *testing.T) {
 	// The call to TestWarehouseUpdate should succeed, as the warehouse
 	// being attempted to connect to is the same as the one currently connected
 	// to.
-	c.TestWarehouseUpdate(settings)
+	k.TestWarehouseUpdate(settings)
 
 	// The call to UpdateWarehouse should also succeed, as the warehouse
 	// to connect to is the same as the one currently connected to.
-	c.UpdateWarehouse("Normal", settings)
+	k.UpdateWarehouse("Normal", settings)
 
 }

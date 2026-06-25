@@ -491,6 +491,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 //     column.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OrganizationDisabled, if the organization is disabled.
 //   - PipelineDisabled, if the pipeline is disabled.
 //   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error) {
@@ -505,13 +506,14 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error
 	default:
 		return "", errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
 	}
-	if incremental != nil {
-		if c.Role == state.Destination {
-			return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
-		}
-		if *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
-			return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
-		}
+	if incremental != nil && c.Role == state.Destination {
+		return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
+	}
+	if org := c.Workspace().Organization(); !org.Enabled {
+		return "", errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
+	if incremental != nil && *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
+		return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 	}
 	if !this.pipeline.Enabled {
 		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
@@ -877,6 +879,7 @@ func (this *Pipeline) application() *connections.Application {
 // It returns an errors.NotFoundError if the pipeline no longer exists.
 // It returns an errors.UnprocessableError with one of the following codes:
 //
+//   - OrganizationDisabled, if the organization is disabled.
 //   - PipelineDisabled, if the pipeline is disabled.
 //   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string, error) {
@@ -886,32 +889,33 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		StartTime: time.Now().UTC(),
 	}
 
+	org := this.pipeline.Organization()
+
 	for {
 		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			var function string
-			var enabled, inc, executing bool
+			var pipelineEnabled, organizationEnabled, inc bool
 			var cursor time.Time
-			// Verify that a run can be created (the pipeline exists, is enabled,
-			// and has no run in progress) and load the settings needed to
-			// initialize it.
-			err := tx.QueryRow(ctx, "SELECT p.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			// Verify that both the organization and the pipeline are enabled
+			// and load the settings needed to initialize it.
+			err := tx.QueryRow(ctx, "SELECT p.enabled, o.enabled, p.transformation_id, p.incremental, p.cursor\n"+
 				"FROM pipelines AS p\n"+
-				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
-				"WHERE p.id = $1\n"+
-				"ORDER BY e.id DESC\n"+
-				"LIMIT 1", n.Pipeline).Scan(&enabled, &function, &inc, &cursor, &executing)
+				"INNER JOIN connections AS c ON p.connection = c.id\n"+
+				"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
+				"INNER JOIN organizations AS o ON w.organization = o.id\n"+
+				"WHERE p.id = $1", n.Pipeline).Scan(&pipelineEnabled, &organizationEnabled, &function, &inc, &cursor)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
 				}
 				return nil, err
 			}
-			if !enabled {
-				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
+			if !organizationEnabled {
+				return nil, errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
 			}
-			if executing {
-				return nil, errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
+			if !pipelineEnabled {
+				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 			}
 			if incremental == nil {
 				n.Incremental = inc
@@ -926,9 +930,14 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			_, err = tx.Exec(ctx, "INSERT INTO pipelines_runs (id, pipeline, function, cursor, incremental, start_time, ping_time)\n"+
 				"VALUES ($1, $2, $3, $4, $5, $6, $6)", n.ID, n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime)
 			if err != nil {
-				if db.IsForeignKeyViolation(err) {
+				switch {
+				case db.IsForeignKeyViolation(err):
 					if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
 						err = errors.NotFound("pipeline %s does not exit", n.Pipeline)
+					}
+				case db.IsUniqueViolation(err):
+					if db.ErrConstraintName(err) == "pipelines_one_active_run_idx" {
+						err = errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 					}
 				}
 				return nil, err
@@ -994,8 +1003,6 @@ func (this *Pipeline) endRun(err error) {
 		Health:   state.Healthy,
 	}
 
-	timeSlot := metrics.TimeSlotFromTime(run.StartTime)
-
 	// Mark the run as completed, summarise the metrics, and send the end notification.
 	bo := backoff.New(200)
 	for bo.Next(ctx) {
@@ -1007,17 +1014,17 @@ func (this *Pipeline) endRun(err error) {
 					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
 					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
 					" FROM pipelines_metrics\n"+
-					"\tWHERE pipeline = $2 AND timeslot >= $3\n"+
+					"\tWHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs AS e\n"+
-					"SET function = '', end_time = $4,"+
+					"SET function = '', end_time = $3,"+
 					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
 					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
 					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
 					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
-					" error = $5\n"+
+					" error = $4\n"+
 					"FROM s\n"+
-					"WHERE id = $1 AND end_time IS NULL", run.ID, this.pipeline.ID, timeSlot, endTime, errorMessage)
+					"WHERE id = $1 AND end_time IS NULL", run.ID, this.pipeline.ID, endTime, errorMessage)
 			if err != nil {
 				return nil, err
 			}

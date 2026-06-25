@@ -1,4 +1,4 @@
-import React, { forwardRef, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, ReactNode, useContext, useEffect, useRef } from 'react';
 import './Header.css';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -19,8 +19,6 @@ interface HeaderProps {
 }
 
 const Header = ({ title, member }: HeaderProps) => {
-	const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
-
 	const { isPasswordless, logout, isFullscreen, publicMetadata } = useContext(appContext);
 
 	const location = useLocation();
@@ -29,14 +27,12 @@ const Header = ({ title, member }: HeaderProps) => {
 
 	useEffect(() => {
 		if (isPasswordless && !isFullscreen) {
-			setIsTooltipOpen(true);
+			dropdownRef.current?.updateComplete.then(() => dropdownRef.current?.show());
 		}
 	}, []);
 
 	useEffect(() => {
-		if (isTooltipOpen) {
-			setIsTooltipOpen(false);
-		}
+		dropdownRef.current?.hide();
 	}, [location]);
 
 	const onLogout = async () => {
@@ -82,7 +78,6 @@ const Header = ({ title, member }: HeaderProps) => {
 						ref={dropdownRef}
 						closeMenu={closeMenu}
 						onLogout={onLogout}
-						isTooltipOpen={isTooltipOpen}
 						isPasswordless={isPasswordless}
 					/>
 				) : (
@@ -97,7 +92,6 @@ const Header = ({ title, member }: HeaderProps) => {
 						}}
 						closeMenu={closeMenu}
 						onLogout={onLogout}
-						isTooltipOpen={isTooltipOpen}
 						isPasswordless={isPasswordless}
 					/>
 				)}
@@ -109,12 +103,11 @@ const Header = ({ title, member }: HeaderProps) => {
 interface DropdownProps {
 	closeMenu: () => void;
 	onLogout: () => Promise<void>;
-	isTooltipOpen: boolean;
 	isPasswordless: boolean;
 }
 
 const WorkOSAccountDropdown = forwardRef<any, DropdownProps>(
-	({ closeMenu, onLogout, isTooltipOpen, isPasswordless }: AccountDropdownProps, ref) => {
+	({ closeMenu, onLogout, isPasswordless }: AccountDropdownProps, ref) => {
 		const { isLoading, user } = useAuth();
 
 		if (isLoading || !user) {
@@ -132,7 +125,6 @@ const WorkOSAccountDropdown = forwardRef<any, DropdownProps>(
 				}}
 				closeMenu={closeMenu}
 				onLogout={onLogout}
-				isTooltipOpen={isTooltipOpen}
 				isPasswordless={isPasswordless}
 			/>
 		);
@@ -152,7 +144,7 @@ interface AccountDropdownProps extends DropdownProps {
 }
 
 const AccountDropdown = forwardRef<any, AccountDropdownProps>(
-	({ account, closeMenu, onLogout, isTooltipOpen, isPasswordless }: AccountDropdownProps, ref) => {
+	({ account, closeMenu, onLogout, isPasswordless }: AccountDropdownProps, ref) => {
 		const imageSrc = account.isWorkOS
 			? account.avatarImage
 			: account.avatarImage
@@ -160,7 +152,7 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 				: '';
 
 		return (
-			<SlDropdown distance={17} ref={ref} open={isTooltipOpen}>
+			<SlDropdown distance={17} ref={ref}>
 				<SlAvatar slot='trigger' className='header__account-avatar' image={imageSrc} />
 				<SlMenu className='header__account-menu-wrapper'>
 					{isPasswordless && (

@@ -234,6 +234,10 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	if exists, err := org.HasMember(session.Member); err != nil || !exists {
 		return nil, nil, "", errInvalidSessionCookie
 	}
+	// Verify that the organization is enabled.
+	if !org.Enabled {
+		return nil, nil, "", errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
 	// If the 'Krenalis-Workspace' header is missing, return with a nil workspace.
 	header, ok := r.Header["Krenalis-Workspace"]
 	if !ok {
@@ -317,6 +321,9 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		org, err := s.core.Organization(organizationID)
 		if err != nil {
 			return nil, nil, err
+		}
+		if !org.Enabled {
+			return nil, nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 		}
 		// If the key is restricted to a workspace, return the workspace as well.
 		if workspaceID != "" {
@@ -426,6 +433,9 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			}
 			return nil, err
 		}
+		if !org.Enabled {
+			return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+		}
 
 		if body.IsUnique {
 			members, err := org.Members(r.Context())
@@ -467,6 +477,9 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 				return nil, errors.Unauthorized("invalid organization ID in WorkOS token")
 			}
 			return nil, err
+		}
+		if !org.Enabled {
+			return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 		}
 
 		memberID, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
@@ -510,6 +523,8 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 }
 
 // logout logs the user out.
+//
+// Authentication is not required to call logout.
 func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
