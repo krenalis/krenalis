@@ -25,9 +25,9 @@ type StatusCodeError struct {
 		HasBody bool
 	}
 	Response struct {
-		Code        int
-		Text        string
-		HasResponse bool
+		Code         int
+		Text         string
+		BodyExpected bool
 	}
 }
 
@@ -37,7 +37,7 @@ func (e *StatusCodeError) Error() string {
 	if e.Response.Text != "" {
 		fmt.Fprintf(s, ": %s", e.Response.Text)
 	}
-	fmt.Fprintf(s, " [has body: %t, has response: %t]", e.Request.HasBody, e.Response.HasResponse)
+	fmt.Fprintf(s, " [request has body: %t, response body expected: %t]", e.Request.HasBody, e.Response.BodyExpected)
 	return s.String()
 }
 
@@ -112,7 +112,7 @@ func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, r
 		scErr.Request.HasBody = body != nil
 		scErr.Response.Code = resp.StatusCode
 		scErr.Response.Text = string(bytes.TrimSpace(text))
-		scErr.Response.HasResponse = response != nil
+		scErr.Response.BodyExpected = response != nil
 		return &scErr
 	}
 
