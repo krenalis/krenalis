@@ -11,6 +11,7 @@ import (
 const (
 	AlterSchemaInExecution        errors.Code = "AlterSchemaInExecution"
 	AuthenticationFailed          errors.Code = "AuthenticationFailed"
+	BuiltInAuthenticationDisabled errors.Code = "BuiltInAuthenticationDisabled"
 	CannotRunIncrementally        errors.Code = "CannotRunIncrementally"
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
@@ -32,6 +33,7 @@ const (
 	LinkedConnectionNotExist      errors.Code = "LinkedConnectionNotExist"
 	MaintenanceMode               errors.Code = "MaintenanceMode"
 	MemberEmailExists             errors.Code = "MemberEmailExists"
+	MemberWorkOSUserIDExists      errors.Code = "MemberWorkOSUserIDExists"
 	NoColumnsFound                errors.Code = "NoColumnsFound"
 	NotReadOnlyMCPSettings        errors.Code = "NotReadOnlyMCPSettings"
 	OperationAlreadyExecuting     errors.Code = "OperationAlreadyExecuting"

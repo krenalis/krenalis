@@ -16,11 +16,16 @@ import { useApp } from './useApp';
 import { UnauthorizedError, UnprocessableError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
 import RootError from '../RootError/RootError';
-import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
+import { IS_PASSWORDLESS_KEY, IS_DOCKER_KEY } from '../../../constants/storage';
+import { AuthKitProvider, useAuth } from '@workos-inc/authkit-react';
+import API from '../../../lib/api/api';
+import { sleep } from '../../../utils/sleep';
+import '@radix-ui/themes/styles.css';
+import '@workos-inc/widgets/styles.css';
 
 setBasePath('/admin/src/shoelace/dist');
 
-const App = () => {
+const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
@@ -29,6 +34,8 @@ const App = () => {
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
+
+	const hasWorkOS = onWorkOSLogout != null;
 
 	const showStatus = (status: Status) => {
 		if (toastRef.current == null) return;
@@ -49,6 +56,9 @@ const App = () => {
 		}
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
+		if (hasWorkOS) {
+			onWorkOSLogout();
+		}
 		setSelectedWorkspace('');
 		setIsLoggedIn(false);
 		setIsOrganizationDisabled(false);
@@ -120,10 +130,13 @@ const App = () => {
 	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
-		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname)) {
+		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname) && !hasWorkOS) {
 			// if the app is initialized but the user is not logged in and they
 			// try to access a non-authentication page, redirect them to the
 			// login form first.
+			//
+			// In WorkOS mode the redirect is handled by WorkOSWrapper, so skip
+			// it.
 			redirect('');
 		}
 	}, [isLoadingState, isLoggedIn, location]);
@@ -145,7 +158,7 @@ const App = () => {
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (isLoadingState || (!isLoggedIn && !isAuthRelatedRoute(location.pathname))) {
+	if (isLoadingState || (!isLoggedIn && (hasWorkOS || !isAuthRelatedRoute(location.pathname)))) {
 		content = (
 			<SlSpinner
 				className='app-spinner'
@@ -209,8 +222,121 @@ const App = () => {
 	);
 };
 
+// WorkOSWrapper handles the WorkOS authentication flow. Once the WorkOS user is
+// available it exchanges the WorkOS access token for a Krenalis session cookie,
+// then renders the app as usual.
+//
+// When the WorkOS session expires or is revoked, the WorkOS SDK sets user to
+// null. In those cases, we invalidate the Krenalis session before redirecting
+// to WorkOS login, so the two sessions stay in sync.
+const WorkOSWrapper = () => {
+	const [isLoggedInViaWorkOS, setIsLoggedInViaWorkOS] = useState(false);
+
+	const { isLoading, user: workosUser, signIn, signOut, getAccessToken } = useAuth();
+
+	useEffect(() => {
+		const handleWorkOSSessionEnd = async () => {
+			try {
+				const api = new API(window.location.origin, '');
+				await api.logout();
+			} catch {
+				// This is best-effort. Even if the Krenalis logout fails, the
+				// user cannot re-enter the admin without a valid WorkOS
+				// session.
+			}
+			signIn();
+		};
+		if (!isLoading && workosUser == null) {
+			handleWorkOSSessionEnd();
+		}
+	}, [isLoading, workosUser]);
+
+	useEffect(() => {
+		const loginViaWorkOS = async () => {
+			const api = new API(window.location.origin, '');
+			try {
+				const token = await getAccessToken();
+				await api.loginWithWorkOS(token);
+			} catch (err) {
+				signOut();
+				return;
+			}
+			localStorage.removeItem(IS_PASSWORDLESS_KEY);
+			localStorage.removeItem(IS_DOCKER_KEY);
+			setIsLoggedInViaWorkOS(true);
+		};
+		if (workosUser == null || isLoggedInViaWorkOS) {
+			return;
+		}
+		loginViaWorkOS();
+	}, [workosUser]);
+
+	if (!isLoggedInViaWorkOS) {
+		return (
+			<SlSpinner
+				className='app-spinner'
+				style={{ fontSize: '5rem', '--track-width': '6px' } as React.CSSProperties}
+			/>
+		);
+	}
+	return <App onWorkOSLogout={signOut} />;
+};
+
+const Root = () => {
+	const [workosClientID, setWorkOSClientID] = useState<string | null>(null);
+	const [workosDevMode, setWorkOSDevMode] = useState<boolean>(false);
+
+	useEffect(() => {
+		const api = new API(window.location.origin, '');
+		let cancelled = false;
+
+		const fetchWorkOSClientID = async () => {
+			while (!cancelled) {
+				try {
+					const publicMetadata = await api.publicMetadata();
+					setWorkOSClientID(publicMetadata.workosClientID);
+					setWorkOSDevMode(publicMetadata.workosDevMode);
+					return;
+				} catch (err) {
+					console.error('error', err);
+					await sleep(2000); // Wait for 2 seconds before retrying
+				}
+			}
+		};
+
+		fetchWorkOSClientID();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (workosClientID == null) {
+		return (
+			<SlSpinner
+				className='app-spinner'
+				style={{ fontSize: '5rem', '--track-width': '6px' } as React.CSSProperties}
+			/>
+		);
+	}
+
+	const hasWorkOS = workosClientID !== '';
+	if (hasWorkOS) {
+		return (
+			<AuthKitProvider
+				clientId={workosClientID}
+				devMode={workosDevMode}
+				redirectUri={`${window.location.origin}/admin`}
+			>
+				<WorkOSWrapper />
+			</AuthKitProvider>
+		);
+	}
+
+	return <App />;
+};
+
 const isAuthRelatedRoute = (path: string): boolean => {
 	return path === UI_BASE_PATH || path.startsWith(SIGN_UP_PATH) || path.startsWith(RESET_PASSWORD_PATH);
 };
 
-export default App;
+export default Root;

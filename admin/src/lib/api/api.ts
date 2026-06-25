@@ -86,6 +86,12 @@ class API {
 		});
 	};
 
+	loginWithWorkOS = async (accessToken: string): Promise<void> => {
+		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, {
+			accessToken,
+		});
+	};
+
 	logout = async (): Promise<void> => {
 		return await call(`${this.apiURL}/members/logout`, http.POST, this.workspaceID);
 	};

@@ -25,7 +25,13 @@ type api struct {
 // AcceptInvitation accepts the invitation with a given invitation token.
 //
 // Authentication is not required to call AcceptInvitation.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "invitations cannot be accepted because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -59,7 +65,13 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 // reset password token.
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "passwords cannot be changed because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -290,6 +302,8 @@ type publicMetadata struct {
 	InviteMembersViaEmail      bool     `json:"inviteMembersViaEmail"`
 	CanSendMemberPasswordReset bool     `json:"canSendMemberPasswordReset"`
 	TelemetryLevel             string   `json:"telemetryLevel"`
+	WorkOSClientID             string   `json:"workosClientID"`
+	WorkOSDevMode              bool     `json:"workosDevMode"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -303,6 +317,8 @@ type publicMetadata struct {
 //   - inviteMembersViaEmail: should new members be added by sending invitation emails??
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
+//   - workosClientID: WorkOS client ID, it's an empty string when WorkOS authentication is not configured
+//   - workosDevMode: when true, WorkOS AuthKit stores the refresh token in LocalStorage instead of using a cookie
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -316,6 +332,10 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:             string(api.sentryTelemetry.level),
 	}
+	if api.workos != nil {
+		metadata.WorkOSClientID = api.workos.ClientID
+		metadata.WorkOSDevMode = api.workos.DevMode
+	}
 	if api.potentialConnectorsURL != "" {
 		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL
 	}
@@ -325,7 +345,13 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 // SendMemberPasswordReset sends a reset password email.
 //
 // Authentication is not required to call SendMemberPasswordReset.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset emails cannot be sent because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -356,7 +382,13 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset tokens cannot be validated because WorkOS authentication is enabled")
+	}
 	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import './Members.css';
 import AppContext from '../../../context/AppContext';
 import ListTile from '../../base/ListTile/ListTile';
@@ -14,6 +14,10 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberEmail } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
+import { useAuth } from '@workos-inc/authkit-react';
+import { UsersManagement, WorkOsWidgets } from '@workos-inc/widgets';
+import appContext from '../../../context/AppContext';
+import { isJwtExpired } from '../../../utils/jwt';
 
 const Members = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -24,6 +28,8 @@ const Members = () => {
 	const { api, handleError, member: loggedMember, logout, publicMetadata } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<string>('');
+
+	const hasWorkOS = publicMetadata.workosClientID !== '';
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -41,6 +47,11 @@ const Members = () => {
 		};
 
 		if (!isLoading) {
+			return;
+		}
+
+		if (hasWorkOS) {
+			setIsLoading(false);
 			return;
 		}
 
@@ -90,6 +101,8 @@ const Members = () => {
 				</div>
 			</div>
 		);
+	} else if (publicMetadata.workosClientID !== '') {
+		return <WorkOSMembers />;
 	} else {
 		return (
 			<div className='members'>
@@ -191,6 +204,69 @@ const Members = () => {
 			</div>
 		);
 	}
+};
+
+const WorkOSMembers = () => {
+	const [mountKey, setMountKey] = useState(0);
+	const [isRefreshingToken, setIsRefreshingToken] = useState(false);
+
+	const { isLoading, user, role, signOut, getAccessToken } = useAuth();
+	const { redirect } = useContext(appContext);
+
+	const lastTokenRef = useRef<string>('');
+
+	const getAccessTokenSafe = useCallback(async () => {
+		let token: string;
+		try {
+			token = await getAccessToken();
+		} catch (e) {
+			signOut();
+			throw e;
+		}
+		lastTokenRef.current = token;
+		return token;
+	}, [getAccessToken, signOut]);
+
+	useEffect(() => {
+		const handleTabChange = async () => {
+			if (document.hidden || !isJwtExpired(lastTokenRef.current)) {
+				return;
+			}
+			// The user has switched to the Krenalis tab, but the WorkOS widget
+			// token has expired. We refresh the token and manually re-render
+			// the widget to prevent WorkOS from automatically re-rendering it
+			// and displaying an error state.
+			setIsRefreshingToken(true);
+			try {
+				const token = await getAccessToken();
+				setMountKey((k) => k + 1); // force re-render of the widget
+				lastTokenRef.current = token;
+			} catch {
+				// Do nothing. If there's an error in retrieving the token, it
+				// will be handled by the WorkOS widget callback.
+			} finally {
+				setIsRefreshingToken(false);
+			}
+		};
+		document.addEventListener('visibilitychange', handleTabChange, { capture: true });
+		return () => document.removeEventListener('visibilitychange', handleTabChange, { capture: true });
+	}, [getAccessToken]);
+
+	useEffect(() => {
+		if (user != null && role !== 'admin') {
+			redirect('organization');
+		}
+	}, [user, role]);
+
+	if (isLoading || !user || isRefreshingToken) {
+		return null;
+	}
+
+	return (
+		<WorkOsWidgets key={mountKey}>
+			<UsersManagement authToken={getAccessTokenSafe} />
+		</WorkOsWidgets>
+	);
 };
 
 interface InviteMemberDialogProps {

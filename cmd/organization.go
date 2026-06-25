@@ -21,10 +21,16 @@ type organization struct {
 
 // AddMember adds a new member of an organization.
 //
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
+//
 // If the ability to add new members without requiring email invitation has not
 // been enabled, it returns an errors.UnprocessableError error with code
 // EmailInvitationRequired.
 func (organization organization) AddMember(w http.ResponseWriter, r *http.Request) (any, error) {
+	if organization.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be added because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -60,7 +66,7 @@ func (organization organization) AddMember(w http.ResponseWriter, r *http.Reques
 		}
 		memberToSet.Avatar = avatar
 	}
-	err = org.AddMember(r.Context(), memberToSet)
+	_, err = org.AddMember(r.Context(), memberToSet)
 	return nil, err
 }
 
@@ -189,7 +195,13 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 }
 
 // DeleteMember deletes a member of an organization.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if organization.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be deleted because WorkOS authentication is enabled")
+	}
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
@@ -202,7 +214,13 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 }
 
 // InviteMember sends an invitation email.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (organization organization) InviteMember(w http.ResponseWriter, r *http.Request) (any, error) {
+	if organization.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be invited because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -317,7 +335,13 @@ func (organization organization) UpdateAccessKey(w http.ResponseWriter, r *http.
 }
 
 // UpdateMember updates the currently logged-in member of the organization.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (organization organization) UpdateMember(w http.ResponseWriter, r *http.Request) (any, error) {
+	if organization.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be updated because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}

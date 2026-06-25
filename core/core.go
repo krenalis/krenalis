@@ -25,6 +25,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
@@ -422,7 +423,7 @@ func UpgradeDB(ctx context.Context, conf *Config) error {
 	if err := initdb.Upgrade(ctx, db); err != nil {
 		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
 	}
-	return nil
+	return initdb.UpgradeWorkOS(ctx, db)
 }
 
 // AcceptInvitation accepts the invitation with the given invitation token. It
@@ -722,11 +723,11 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 }
 
 // CreateOrganization creates a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
+// name cannot be empty and cannot be longer than 255 runes.
 // enabled indicates whether the created organization is enabled.
 func (core *Core) CreateOrganization(ctx context.Context, name string, enabled bool) (string, error) {
 	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
+	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
 	n := state.CreateOrganization{Name: name, Enabled: enabled}
@@ -748,6 +749,35 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 		break
 	}
 	return n.ID, nil
+}
+
+// DeleteMembersByWorkOSID deletes all members across all organizations that
+// have the given WorkOS user ID.
+func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
+	core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return errors.BadRequest("WorkOS user ID is empty")
+	}
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var ids []string
+		err := tx.QueryScan(ctx, "DELETE FROM members WHERE workos_user_id = $1 RETURNING id", workosUserID, func(rows *db.Rows) error {
+			for rows.Next() {
+				var id string
+				if err := rows.Scan(&id); err != nil {
+					return err
+				}
+				ids = append(ids, id)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			return nil, nil
+		}
+		return state.DeleteMembers{IDs: ids}, nil
+	})
 }
 
 // InstallationID returns the installation ID.
@@ -884,6 +914,30 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.mustBeOpen()
 	core.collector.ServeHTTP(w, r)
+}
+
+// UpdateMembersByWorkOSID updates the name and email of all members across all
+// organizations that have the given WorkOS user ID. It returns an
+// errors.UnprocessableError with code MemberEmailExists if the new email is
+// already in use by another member in any affected organization.
+func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, name, email string) error {
+	core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return errors.BadRequest("WorkOS user ID is empty")
+	}
+	if name != "" {
+		if err := util.ValidateStringField("name", name, 255); err != nil {
+			return errors.BadRequest("%s", err)
+		}
+	}
+	if err := validateMemberEmail(email); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	_, err := core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
+	if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+		return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+	}
+	return err
 }
 
 // ValidateMemberPasswordResetToken validates the given password reset token,
