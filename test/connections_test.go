@@ -71,12 +71,12 @@ func TestConnections(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *StatusCodeError error, got %T error", err)
 	}
-	if errStatusCode.Code != 400 {
+	if errStatusCode.Response.Code != 400 {
 		t.Fatalf("expected error status 400, got error: %v", errStatusCode)
 	}
 	const expectedText = `{"error":{"code":"BadRequest","message":"message broker connectors are not currently supported"}}`
-	if expectedText != errStatusCode.ResponseText {
-		t.Fatalf("expected error text %q, got %q", expectedText, errStatusCode.ResponseText)
+	if expectedText != errStatusCode.Response.Text {
+		t.Fatalf("expected error text %q, got %q", expectedText, errStatusCode.Response.Text)
 	}
 
 }
