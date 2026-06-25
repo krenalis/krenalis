@@ -113,6 +113,8 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 }
 
 // CreateOrganization creates a new organization.
+//
+// Authentication is performed using the organizations API key.
 func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -235,6 +237,8 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 }
 
 // Organization returns the organization with the given identifier.
+//
+// Authentication is performed using the organizations API key.
 func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -243,6 +247,8 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 }
 
 // Organizations returns the organizations.
+//
+// Authentication is performed using the organizations API key.
 func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err

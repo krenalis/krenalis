@@ -158,6 +158,8 @@ func (organization organization) CreateWorkspace(w http.ResponseWriter, r *http.
 }
 
 // Delete deletes the organization with the given identifier.
+//
+// Authentication is performed using the organizations API key.
 func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := organization.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -244,6 +246,8 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 }
 
 // SetStatus sets the status of an organization.
+//
+// Authentication is performed using the organizations API key.
 func (organization organization) SetStatus(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := organization.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -354,6 +358,8 @@ func (organization organization) UpdateMember(w http.ResponseWriter, r *http.Req
 }
 
 // Update updates the name of the organization with the given identifier.
+//
+// Authentication is performed using the organizations API key.
 func (organization organization) Update(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := organization.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
