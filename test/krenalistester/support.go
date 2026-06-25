@@ -52,9 +52,7 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 	}
 }
 
-// AlterProfileSchemaErr is like AlterProfileSchema but returns an error instead of
-// panicking.
-func (k *Krenalis) AlterProfileSchemaErr(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
+func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
@@ -126,9 +124,7 @@ func (k *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineT
 	return response.ID
 }
 
-// CreatePipelineErr is like CreatePipeline but returns an error instead of
-// panicking.
-func (k *Krenalis) CreatePipelineErr(conn string, target string, pipeline PipelineToSet) (string, error) {
+func (k *Krenalis) TryCreatePipeline(conn string, target string, pipeline PipelineToSet) (string, error) {
 	switch target {
 	case "Event", "User", "Group":
 	default:
@@ -181,9 +177,7 @@ func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
 	return response.ID
 }
 
-// CreateConnectionErr is like CreateConnection but returns an error instead of
-// failing the test.
-func (k *Krenalis) CreateConnectionErr(connection ConnectionToCreate) (string, error) {
+func (k *Krenalis) TryCreateConnection(connection ConnectionToCreate) (string, error) {
 	var response struct {
 		ID string `json:"id"`
 	}
@@ -382,9 +376,7 @@ func (k *Krenalis) DeleteConnection(conn string) {
 	k.Call("DELETE", path, nil, nil, nil)
 }
 
-// DeleteConnectionErr is like DeleteConnection but returns an error instead of
-// failing the test.
-func (k *Krenalis) DeleteConnectionErr(conn string) error {
+func (k *Krenalis) TryDeleteConnection(conn string) error {
 	path := fmt.Sprintf("/v1/connections/%s", conn)
 	return k.TryCall("DELETE", path, nil, nil, nil)
 }
@@ -398,9 +390,7 @@ func (k *Krenalis) StartPipelineRun(pipeline string) string {
 	return response.ID
 }
 
-// StartPipelineRunErr is like StartPipelineRun but returns an error instead of
-// failing the test.
-func (k *Krenalis) StartPipelineRunErr(pipeline string) (string, error) {
+func (k *Krenalis) TryStartPipelineRun(pipeline string) (string, error) {
 	var response struct {
 		ID string
 	}
@@ -511,9 +501,7 @@ func (k *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[stri
 	return response.Queries
 }
 
-// PreviewAlterProfileSchemaErr is like PreviewAlterProfileSchema but returns an
-// error instead of panicking.
-func (k *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (k *Krenalis) TryPreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -532,9 +520,7 @@ func (k *Krenalis) RepairWarehouse() {
 	k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
 }
 
-// RepairWarehouseErr is like RepairWarehouse but returns an error instead of
-// failing the test.
-func (k *Krenalis) RepairWarehouseErr() error {
+func (k *Krenalis) TryRepairWarehouse() error {
 	return k.TryCall("POST", "/v1/warehouse/repair", nil, nil, nil)
 }
 
@@ -557,11 +543,7 @@ func (k *Krenalis) RunIdentityResolutionAndWait() {
 	}
 }
 
-// StartIdentityResolutionErr starts the identity resolution and returns an
-// error instead of failing the test. Unlike [RunIdentityResolution], it does
-// not wait for the identity resolution to complete, so this method is called
-// 'Start', not 'Run'.
-func (k *Krenalis) StartIdentityResolutionErr() error {
+func (k *Krenalis) TryStartIdentityResolution() error {
 	return k.TryCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
 }
 
@@ -665,9 +647,7 @@ func (k *Krenalis) DeletePipeline(pipelineID string) {
 	k.Call("DELETE", path, nil, nil, nil)
 }
 
-// DeletePipelineErr is like DeletePipeline but returns an error instead of
-// failing the test.
-func (k *Krenalis) DeletePipelineErr(pipelineID string) error {
+func (k *Krenalis) TryDeletePipeline(pipelineID string) error {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
 	return k.TryCall("DELETE", path, nil, nil, nil)
 }
@@ -685,7 +665,7 @@ func (k *Krenalis) UpdateIdentityResolutionSettings(runOnBatchImport bool, ident
 	k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
-func (k *Krenalis) UpdateIdentityResolutionSettingsErr(identifiers []string) error {
+func (k *Krenalis) TryUpdateIdentityResolutionSettings(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
@@ -766,9 +746,9 @@ func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
 }
 
-// SetOrganizationStatusErr is like SetOrganizationStatus but sends the request
+// TrySetOrganizationStatus is like SetOrganizationStatus but sends the request
 // with the given headers and returns an error instead of failing the test.
-func (k *Krenalis) SetOrganizationStatusErr(id string, enabled bool, headers http.Header) error {
+func (k *Krenalis) TrySetOrganizationStatus(id string, enabled bool, headers http.Header) error {
 	body := map[string]any{"enabled": enabled}
 	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
 }

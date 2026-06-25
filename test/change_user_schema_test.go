@@ -218,7 +218,7 @@ func TestChangeProfileSchema(t *testing.T) {
 			{Name: "b", Type: types.String(), ReadOptional: true},
 		}), ReadOptional: true},
 	))
-	_, err = k.PreviewAlterProfileSchemaErr(schema, nil)
+	_, err = k.TryPreviewAlterProfileSchema(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -226,7 +226,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = k.AlterProfileSchemaErr(schema, nil, nil)
+	err = k.TryAlterProfileSchema(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -240,7 +240,7 @@ func TestChangeProfileSchema(t *testing.T) {
 			{Name: "b", Type: types.String(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
 	))
-	_, err = k.PreviewAlterProfileSchemaErr(schema, nil)
+	_, err = k.TryPreviewAlterProfileSchema(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -248,7 +248,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = k.AlterProfileSchemaErr(schema, nil, nil)
+	err = k.TryAlterProfileSchema(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -271,7 +271,7 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Set a primary source for a not existent property.
 	primarySources = map[string]string{"not_existent_property": primarySource}
-	err = k.AlterProfileSchemaErr(file.Schema, primarySources, nil)
+	err = k.TryAlterProfileSchema(file.Schema, primarySources, nil)
 	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
@@ -280,7 +280,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	// Set a not existing primary source for the first property.
 	notExistentSource := "7B3mN9qK2xA4"
 	primarySources = map[string]string{firstProperty: notExistentSource}
-	err = k.AlterProfileSchemaErr(file.Schema, primarySources, nil)
+	err = k.TryAlterProfileSchema(file.Schema, primarySources, nil)
 	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}}`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
