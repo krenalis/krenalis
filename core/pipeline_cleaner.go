@@ -377,7 +377,7 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 		case <-tick.C:
 		}
 		pingTime := time.Now().UTC().Add(-15 * time.Second)
-		err := c.core.db.QueryScan(ctx, "SELECT id, pipeline FROM pipelines_runs WHERE end_time IS NULL AND ping_time < $1",
+		err := c.core.db.QueryScan(ctx, "SELECT id, pipeline FROM pipelines_runs WHERE node IS NOT NULL AND end_time IS NULL AND ping_time < $1",
 			pingTime, func(rows *db.Rows) error {
 				var id, pipelineID string
 				for rows.Next() {
