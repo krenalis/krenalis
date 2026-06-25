@@ -619,7 +619,6 @@ func (state *State) createWorkspace(n notification) string {
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
 		connections:                    map[string]*Connection{},
-		runs:                           map[string]*PipelineRun{},
 		ID:                             e.ID,
 		organization:                   organization,
 		Name:                           e.Name,
@@ -1065,16 +1064,14 @@ func (state *State) endPipelineRun(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	p := state.pipelines[e.Pipeline]
-	ws := p.connection.workspace
-	ws.mu.Lock()
-	delete(ws.runs, e.ID)
-	ws.mu.Unlock()
-	state.replacePipeline(p.ID, func(p *Pipeline) {
+	state.mu.Lock()
+	delete(state.liveRuns, e.ID)
+	state.mu.Unlock()
+	p := state.replacePipeline(e.Pipeline, func(p *Pipeline) {
 		p.run = nil
 		p.Health = e.Health
 	})
-	return ws.organization.ID
+	return p.organization.ID
 }
 
 // LinkConnection is the event sent when two unlinked connections are linked.
@@ -1169,7 +1166,6 @@ func (state *State) runPipeline(n notification) string {
 		return ""
 	}
 	p := state.pipelines[e.Pipeline]
-	ws := p.connection.workspace
 	run := &PipelineRun{
 		mu:          &sync.Mutex{},
 		ID:          e.ID,
@@ -1178,14 +1174,14 @@ func (state *State) runPipeline(n notification) string {
 		Cursor:      e.Cursor,
 		StartTime:   e.StartTime,
 	}
-	ws.mu.Lock()
-	ws.runs[run.ID] = run
-	ws.mu.Unlock()
 	p.mu.Lock()
 	p.run = run
 	p.mu.Unlock()
+	state.mu.Lock()
+	state.liveRuns[run.ID] = run
+	state.mu.Unlock()
 	dispatchNotification(state, e)
-	return ws.organization.ID
+	return p.organization.ID
 }
 
 // SeeLeader is the event sent when the leader is seen.

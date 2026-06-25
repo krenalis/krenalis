@@ -1147,11 +1147,16 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	if !IsValidID(id) {
 		return nil, errors.BadRequest("identifier %q is not a valid run identifier", id)
 	}
-	// Check whether the run is in progress.
-	if run, ok := this.workspace.Run(id); ok {
+	// Check whether the run is live.
+	if run, ok := this.core.state.LiveRun(id); ok {
+		pipeline := run.Pipeline()
+		ws := pipeline.Connection().Workspace()
+		if ws.ID != this.workspace.ID {
+			return nil, errors.NotFound("pipeline run %s does not exist", id)
+		}
 		return &PipelineRun{
 			ID:        run.ID,
-			Pipeline:  run.Pipeline().ID,
+			Pipeline:  pipeline.ID,
 			StartTime: run.StartTime,
 		}, nil
 	}
