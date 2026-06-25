@@ -421,7 +421,7 @@ func TestPipelinesCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			_, err := k.CreatePipelineErr(test.conn, "User", test.pipeline)
+			_, err := k.TryCreatePipeline(test.conn, "User", test.pipeline)
 			switch {
 			case test.err == "" && err == nil:
 				// Ok.

@@ -43,7 +43,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Test that the call to the method that sets the state of an organization
 	// fails if the organizations key is not provided.
 	t.Run("set status without organizations API key is rejected", func(t *testing.T) {
-		err := k.SetOrganizationStatusErr(orgID, false, http.Header{"Krenalis-Workspace": nil})
+		err := k.TrySetOrganizationStatus(orgID, false, http.Header{"Krenalis-Workspace": nil})
 		statusErr, ok := err.(*krenalistester.StatusCodeError)
 		if !ok {
 			t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
@@ -117,7 +117,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	// its own paths, tested separately below).
 
 	t.Run("create connection is rejected", func(t *testing.T) {
-		_, err := k.CreateConnectionErr(krenalistester.ConnectionToCreate{
+		_, err := k.TryCreateConnection(krenalistester.ConnectionToCreate{
 			Name:      "Dummy that should not be created",
 			Role:      krenalistester.Source,
 			Connector: "dummy",
@@ -127,7 +127,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("create pipeline is rejected", func(t *testing.T) {
-		_, err := k.CreatePipelineErr(dummySrc, "User", krenalistester.PipelineToSet{
+		_, err := k.TryCreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Pipeline that should not be created",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -144,32 +144,32 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("run pipeline is rejected", func(t *testing.T) {
-		_, err := k.StartPipelineRunErr(importPipeline)
+		_, err := k.TryStartPipelineRun(importPipeline)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("delete pipeline is rejected", func(t *testing.T) {
-		err := k.DeletePipelineErr(importPipeline)
+		err := k.TryDeletePipeline(importPipeline)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("delete connection is rejected", func(t *testing.T) {
-		err := k.DeleteConnectionErr(dummySrc)
+		err := k.TryDeleteConnection(dummySrc)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("start identity resolution is rejected", func(t *testing.T) {
-		err := k.StartIdentityResolutionErr()
+		err := k.TryStartIdentityResolution()
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("repair warehouse is rejected", func(t *testing.T) {
-		err := k.RepairWarehouseErr()
+		err := k.TryRepairWarehouse()
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("update identity resolution is rejected", func(t *testing.T) {
-		err := k.UpdateIdentityResolutionSettingsErr([]string{"email"})
+		err := k.TryUpdateIdentityResolutionSettings([]string{"email"})
 		assertOrganizationDisabled(t, err)
 	})
 
@@ -199,7 +199,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("alter profile schema is rejected", func(t *testing.T) {
-		err := k.AlterProfileSchemaErr(types.Object([]types.Property{
+		err := k.TryAlterProfileSchema(types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(254), ReadOptional: true},
 		}), nil, nil)
 		assertOrganizationDisabled(t, err)
