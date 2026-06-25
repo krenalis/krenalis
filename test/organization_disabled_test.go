@@ -24,12 +24,12 @@ func TestOrganizationDisabled(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Retrieve the organization ID.
-	orgs := c.Organizations(0, 100)
+	orgs := k.Organizations(0, 100)
 	if len(orgs) != 1 {
 		t.Fatalf("expected exactly one organization, got %d", len(orgs))
 	}
@@ -43,7 +43,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Test that the call to the method that sets the state of an organization
 	// fails if the organizations key is not provided.
 	t.Run("set status without organizations API key is rejected", func(t *testing.T) {
-		err := c.SetOrganizationStatusErr(orgID, false, http.Header{"Krenalis-Workspace": nil})
+		err := k.SetOrganizationStatusErr(orgID, false, http.Header{"Krenalis-Workspace": nil})
 		statusErr, ok := err.(*krenalistester.StatusCodeError)
 		if !ok {
 			t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
@@ -53,7 +53,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		}
 		// The organization must still be enabled: the request was rejected
 		// before it could change anything.
-		if !c.Organization(orgID).Enabled {
+		if !k.Organization(orgID).Enabled {
 			t.Fatal("the unauthenticated request must not have changed the organization status")
 		}
 	})
@@ -61,9 +61,9 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Configure identity resolution, set up (and then run) a simple pipeline
 	// that imports users from a Dummy source, while the organization is
 	// enabled.
-	c.UpdateIdentityResolution(true, []string{"email"})
-	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-	importPipeline := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+	k.UpdateIdentityResolution(true, []string{"email"})
+	dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+	importPipeline := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -81,33 +81,33 @@ func TestOrganizationDisabled(t *testing.T) {
 			},
 		},
 	})
-	run := c.RunPipeline(importPipeline)
-	c.WaitRunsCompletion(dummySrc, run)
+	run := k.RunPipeline(importPipeline)
+	k.WaitRunsCompletion(dummySrc, run)
 
 	// Set up a JavaScript source with an Event pipeline so that events can be
 	// ingested through the /v1/events endpoint. This must be done while the
 	// organization is still enabled, as creating connections and pipelines is
 	// itself rejected once the organization is disabled.
-	jsSrc := c.CreateJavaScriptSource("JavaScript (source)", nil)
-	keys := c.EventWriteKeys(jsSrc)
+	jsSrc := k.CreateJavaScriptSource("JavaScript (source)", nil)
+	keys := k.EventWriteKeys(jsSrc)
 	if len(keys) != 1 {
 		t.Fatalf("expected exactly one event write key, got %d", len(keys))
 	}
 	writeKey := keys[0]
-	c.CreatePipeline(jsSrc, "Event", krenalistester.PipelineToSet{
+	k.CreatePipeline(jsSrc, "Event", krenalistester.PipelineToSet{
 		Name:    "Store events",
 		Enabled: true,
 	})
 
 	// Create an API key while the organization is still enabled.
-	apiKey := c.CreateWorkspaceRestrictedAPIKey("Events ingestion key")
+	apiKey := k.CreateWorkspaceRestrictedAPIKey("Events ingestion key")
 
 	// Disable the organization.
-	c.SetOrganizationStatus(orgID, false)
+	k.SetOrganizationStatus(orgID, false)
 
 	// The organization endpoint must still be reachable and must report the new
 	// status.
-	org := c.Organization(orgID)
+	org := k.Organization(orgID)
 	if org.Enabled {
 		t.Fatal("expected the organization to be reported as disabled after disabling it")
 	}
@@ -117,7 +117,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	// its own paths, tested separately below).
 
 	t.Run("create connection is rejected", func(t *testing.T) {
-		_, err := c.CreateConnectionErr(krenalistester.ConnectionToCreate{
+		_, err := k.CreateConnectionErr(krenalistester.ConnectionToCreate{
 			Name:      "Dummy that should not be created",
 			Role:      krenalistester.Source,
 			Connector: "dummy",
@@ -127,7 +127,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("create pipeline is rejected", func(t *testing.T) {
-		_, err := c.CreatePipelineErr(dummySrc, "User", krenalistester.PipelineToSet{
+		_, err := k.CreatePipelineErr(dummySrc, "User", krenalistester.PipelineToSet{
 			Name:    "Pipeline that should not be created",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -144,62 +144,62 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("run pipeline is rejected", func(t *testing.T) {
-		_, err := c.RunPipelineErr(importPipeline)
+		_, err := k.RunPipelineErr(importPipeline)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("delete pipeline is rejected", func(t *testing.T) {
-		err := c.DeletePipelineErr(importPipeline)
+		err := k.DeletePipelineErr(importPipeline)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("delete connection is rejected", func(t *testing.T) {
-		err := c.DeleteConnectionErr(dummySrc)
+		err := k.DeleteConnectionErr(dummySrc)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("start identity resolution is rejected", func(t *testing.T) {
-		err := c.StartIdentityResolutionErr()
+		err := k.StartIdentityResolutionErr()
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("repair warehouse is rejected", func(t *testing.T) {
-		err := c.RepairWarehouseErr()
+		err := k.RepairWarehouseErr()
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("update identity resolution is rejected", func(t *testing.T) {
-		err := c.UpdateIdentityResolutionErr([]string{"email"})
+		err := k.UpdateIdentityResolutionErr([]string{"email"})
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("read events is rejected", func(t *testing.T) {
-		err := c.EventsErr([]string{"type"})
+		err := k.EventsErr([]string{"type"})
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("read event schema is rejected", func(t *testing.T) {
-		err := c.Call("GET", "/v1/events/schema", nil, nil, nil)
+		err := k.Call("GET", "/v1/events/schema", nil, nil, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("create event listener is rejected", func(t *testing.T) {
-		err := c.Call("POST", "/v1/events/listeners", nil, map[string]any{}, nil)
+		err := k.Call("POST", "/v1/events/listeners", nil, map[string]any{}, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("read listened events is rejected", func(t *testing.T) {
-		err := c.Call("GET", "/v1/events/listeners/nonexistent", nil, nil, nil)
+		err := k.Call("GET", "/v1/events/listeners/nonexistent", nil, nil, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("delete event listener is rejected", func(t *testing.T) {
-		err := c.Call("DELETE", "/v1/events/listeners/nonexistent", nil, nil, nil)
+		err := k.Call("DELETE", "/v1/events/listeners/nonexistent", nil, nil, nil)
 		assertOrganizationDisabled(t, err)
 	})
 
 	t.Run("alter profile schema is rejected", func(t *testing.T) {
-		err := c.AlterProfileSchemaErr(types.Object([]types.Property{
+		err := k.AlterProfileSchemaErr(types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(254), ReadOptional: true},
 		}), nil, nil)
 		assertOrganizationDisabled(t, err)
@@ -215,7 +215,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		// POST /v1/events/track authenticated with the event write key in the
 		// Authorization header.
-		err := c.Call("POST", "/v1/events/track",
+		err := k.Call("POST", "/v1/events/track",
 			http.Header{"Authorization": []string{"Bearer " + writeKey}},
 			map[string]any{
 				"userId": "user1234",
@@ -225,7 +225,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		// POST /v1/events authenticated with the event write key in the request
 		// body, without an Authorization header.
-		err = c.Call("POST", "/v1/events",
+		err = k.Call("POST", "/v1/events",
 			http.Header{"Authorization": nil},
 			map[string]any{
 				"type":     "track",
@@ -237,7 +237,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		// POST /v1/events authenticated with an API key in the Authorization
 		// header.
-		err = c.Call("POST", "/v1/events",
+		err = k.Call("POST", "/v1/events",
 			http.Header{
 				"Krenalis-Workspace": nil,
 				"Authorization":      []string{"Bearer " + apiKey},
@@ -252,7 +252,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 		time.Sleep(2 * time.Second)
 		// No event must have been stored through any of the ingestion paths.
-		if count := c.CountEventsInWarehouse(t.Context()); count != 0 {
+		if count := k.CountEventsInWarehouse(t.Context()); count != 0 {
 			t.Fatalf("expected no events stored while the organization is disabled, got %d", count)
 		}
 	})
@@ -260,8 +260,8 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Updating the organization's name uses the organizations API key, so it
 	// must remain functional even while the organization is disabled.
 	t.Run("update organization name still works", func(t *testing.T) {
-		c.UpdateOrganization(orgID, "ACME inc (renamed while disabled)")
-		got := c.Organization(orgID)
+		k.UpdateOrganization(orgID, "ACME inc (renamed while disabled)")
+		got := k.Organization(orgID)
 		if got.Name != "ACME inc (renamed while disabled)" {
 			t.Fatalf("expected the organization name to be updated, got %q", got.Name)
 		}
@@ -272,35 +272,35 @@ func TestOrganizationDisabled(t *testing.T) {
 
 	// Setting the organization status to the same value it currently has.
 	t.Run("setting the same status is a no-op", func(t *testing.T) {
-		c.SetOrganizationStatus(orgID, false)
-		if c.Organization(orgID).Enabled {
+		k.SetOrganizationStatus(orgID, false)
+		if k.Organization(orgID).Enabled {
 			t.Fatal("organization should still be disabled")
 		}
 	})
 
 	// Re-enable the organization.
-	c.SetOrganizationStatus(orgID, true)
-	if !c.Organization(orgID).Enabled {
+	k.SetOrganizationStatus(orgID, true)
+	if !k.Organization(orgID).Enabled {
 		t.Fatal("expected the organization to be reported as enabled after re-enabling it")
 	}
 
 	t.Run("operations succeed again after re-enabling", func(t *testing.T) {
-		run := c.RunPipeline(importPipeline)
-		c.WaitRunsCompletion(dummySrc, run)
+		run := k.RunPipeline(importPipeline)
+		k.WaitRunsCompletion(dummySrc, run)
 	})
 
 	t.Run("event ingestion works again after re-enabling", func(t *testing.T) {
-		if count := c.CountEventsInWarehouse(t.Context()); count != 0 {
+		if count := k.CountEventsInWarehouse(t.Context()); count != 0 {
 			t.Fatalf("expected no events stored in warehouse before running this subtest, got %d", count)
 		}
 		// POST /v1/events: batch ingestion.
-		c.SendEvent(writeKey, analytics.Track{
+		k.SendEvent(writeKey, analytics.Track{
 			UserId: "stored-after-reenabling",
 			Event:  "Event sent after re-enabling",
 		})
 		// POST /v1/events/{type}: single typed event. It too must be ingested
 		// (and stored) again now that the organization is enabled.
-		err := c.Call("POST", "/v1/events/track",
+		err := k.Call("POST", "/v1/events/track",
 			http.Header{"Authorization": []string{"Bearer " + writeKey}},
 			map[string]any{
 				"userId": "stored-after-reenabling-typed",
@@ -311,7 +311,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		}
 		// Exactly two events must be stored: the batch one and the typed one,
 		// both sent after re-enabling.
-		c.WaitEventsStoredIntoWarehouse(t.Context(), 2)
+		k.WaitEventsStoredIntoWarehouse(t.Context(), 2)
 	})
 }
 

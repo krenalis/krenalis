@@ -24,14 +24,14 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
-	fs1 := c.CreateSourceFileSystem()
+	fs1 := k.CreateSourceFileSystem()
 
-	pipeline1 := c.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
+	pipeline1 := k.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
 		Name:    "CSV",
 		Enabled: true,
 		Path:    "users.csv",
@@ -65,11 +65,11 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		}),
 	})
 
-	run1 := c.RunPipeline(pipeline1)
+	run1 := k.RunPipeline(pipeline1)
 
-	c.WaitForRunsCompletionAllowFailed(fs1, run1)
+	k.WaitForRunsCompletionAllowFailed(fs1, run1)
 
-	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
 	// The CSV file contains 10 profiles, but one of them was filtered out, so
 	// there must be 9.

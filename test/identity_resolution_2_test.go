@@ -27,11 +27,11 @@ func TestIdentityResolution2(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.PopulateProfileSchema(false)
-	c.SetFileSystemRoot(storage.Root())
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.PopulateProfileSchema(false)
+	k.SetFileSystemRoot(storage.Root())
+	k.Start()
+	defer k.Stop()
 
 	// Add properties to the profile schema.
 	schema := types.Object([]types.Property{
@@ -40,7 +40,7 @@ func TestIdentityResolution2(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.String()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
 	})
-	c.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchema(schema, nil, nil)
 
 	// Set the email as the only identifier, as the 3 identities, imported from
 	// the 3 connections, will all be put together in a single profile as they
@@ -48,11 +48,11 @@ func TestIdentityResolution2(t *testing.T) {
 	//
 	// Also disable the automatic execution of the Identity Resolution, which
 	// will be explicitly executed later.
-	c.UpdateIdentityResolution(false, []string{"email"})
+	k.UpdateIdentityResolution(false, []string{"email"})
 
-	sourceA := c.CreateSourceFileSystem()
-	sourceB := c.CreateSourceFileSystem()
-	sourceC := c.CreateSourceFileSystem()
+	sourceA := k.CreateSourceFileSystem()
+	sourceB := k.CreateSourceFileSystem()
+	sourceC := k.CreateSourceFileSystem()
 
 	// Create three JSON files in storage, one for each connection. Each file
 	// will contain a single user, which will be the only identity imported
@@ -106,7 +106,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Create and run the pipelines.
 
 	addJSONPipeline := func(source string, filename string, properties map[string]bool) string {
-		return c.CreatePipeline(source, "User", krenalistester.PipelineToSet{
+		return k.CreatePipeline(source, "User", krenalistester.PipelineToSet{
 			Name:    "Pipeline",
 			Enabled: true,
 			Path:    filename,
@@ -143,19 +143,19 @@ func TestIdentityResolution2(t *testing.T) {
 	pipelineB := addJSONPipeline(sourceB, "B.json", properties)
 	pipelineC := addJSONPipeline(sourceC, "C.json", properties)
 
-	run1 := c.RunPipeline(pipelineA)
-	run2 := c.RunPipeline(pipelineB)
-	run3 := c.RunPipeline(pipelineC)
-	c.WaitRunsCompletion(sourceA, run1)
-	c.WaitRunsCompletion(sourceB, run2)
-	c.WaitRunsCompletion(sourceC, run3)
+	run1 := k.RunPipeline(pipelineA)
+	run2 := k.RunPipeline(pipelineB)
+	run3 := k.RunPipeline(pipelineC)
+	k.WaitRunsCompletion(sourceA, run1)
+	k.WaitRunsCompletion(sourceB, run2)
+	k.WaitRunsCompletion(sourceC, run3)
 
 	// Resolve the identities.
-	c.RunIdentityResolution()
+	k.RunIdentityResolution()
 
 	// Test that the execution of the Identity Resolution has ended and that its
 	// duration has a reasonable value.
-	startTime, endTime := c.LatestIdentityResolution()
+	startTime, endTime := k.LatestIdentityResolution()
 	if startTime == nil {
 		t.Fatalf("startTime should be a valid timestamp, got nil")
 	}
@@ -173,7 +173,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Check that there is only one profile, and that its properties have been
 	// merged correctly.
 
-	profiles, _, total := c.Profiles(schema.Properties().Names(), "", false, 0, 100)
+	profiles, _, total := k.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}
@@ -201,11 +201,11 @@ func TestIdentityResolution2(t *testing.T) {
 	primarySources := map[string]string{
 		"total_orders": sourceB,
 	}
-	c.AlterProfileSchema(schema, primarySources, nil)
+	k.AlterProfileSchema(schema, primarySources, nil)
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolution()
 
-	profiles, _, total = c.Profiles(schema.Properties().Names(), "", false, 0, 100)
+	profiles, _, total = k.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}

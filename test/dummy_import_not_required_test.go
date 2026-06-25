@@ -18,13 +18,13 @@ func TestDummyImportNotRequired(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Import users from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+	dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -44,13 +44,13 @@ func TestDummyImportNotRequired(t *testing.T) {
 			},
 		},
 	})
-	run := c.RunPipeline(importUsersID)
-	c.WaitRunsCompletion(dummySrc, run)
+	run := k.RunPipeline(importUsersID)
+	k.WaitRunsCompletion(dummySrc, run)
 
 	// Test that the "favorite_movie.title" property, which has been imported
 	// from a not required property in Dummy, has been imported just for some
 	// profiles.
-	profiles, _, total := c.Profiles([]string{"email", "favorite_movie"}, "email", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"email", "favorite_movie"}, "email", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d instead", total)
 	}

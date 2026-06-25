@@ -18,15 +18,15 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolution(false, nil)
 
-	dummy := c.CreateDummy("Dummy (source)", krenalistester.Source)
-	importUsersID := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
+	dummy := k.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -57,13 +57,13 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	run := c.RunPipeline(importUsersID)
-	c.WaitRunsCompletion(dummy, run)
-	c.RunIdentityResolution()
+	run := k.RunPipeline(importUsersID)
+	k.WaitRunsCompletion(dummy, run)
+	k.RunIdentityResolution()
 
 	// Check if the profiles have been imported - and then returned - correctly.
 
-	profiles, _, total := c.Profiles([]string{"email", "ios"}, "email", false, 0, 1)
+	profiles, _, total := k.Profiles([]string{"email", "ios"}, "email", false, 0, 1)
 
 	// Validate the profiles total.
 	const expectedTotal = 10

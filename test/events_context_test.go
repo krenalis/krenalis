@@ -21,32 +21,32 @@ func TestEventsContext(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create a webhook connection, with a pipeline to ingest the events.
 	var webhookID string
 	var webhookEventWriteKey string
 	{
-		webhookID = c.CreateWebhookSource("Krenalis API", nil)
-		keys := c.EventWriteKeys(webhookID)
+		webhookID = k.CreateWebhookSource("Krenalis API", nil)
+		keys := k.EventWriteKeys(webhookID)
 		if len(keys) != 1 {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		webhookEventWriteKey = keys[0]
-		c.CreatePipeline(webhookID, "Event", krenalistester.PipelineToSet{
+		k.CreatePipeline(webhookID, "Event", krenalistester.PipelineToSet{
 			Name:    "Ingest events",
 			Enabled: true,
 		})
 	}
 
 	// Send various events, with various user agent and OS configurations.
-	c.SendEvent(webhookEventWriteKey, analytics.Track{
+	k.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 1",
 	})
-	c.SendEvent(webhookEventWriteKey, analytics.Track{
+	k.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 2",
 		Context: &analytics.Context{
@@ -54,7 +54,7 @@ func TestEventsContext(t *testing.T) {
 			IP:        net.ParseIP("255.255.255.255"),
 		},
 	})
-	c.SendEvent(webhookEventWriteKey, analytics.Track{
+	k.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 3",
 		Context: &analytics.Context{
@@ -62,7 +62,7 @@ func TestEventsContext(t *testing.T) {
 			IP:        net.ParseIP("255.255.255.255"),
 		},
 	})
-	c.SendEvent(webhookEventWriteKey, analytics.Track{
+	k.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 4",
 		Context: &analytics.Context{
@@ -74,7 +74,7 @@ func TestEventsContext(t *testing.T) {
 			IP: net.ParseIP("255.255.255.0"),
 		},
 	})
-	c.SendEvent(webhookEventWriteKey, analytics.Track{
+	k.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 5",
 		Context: &analytics.Context{
@@ -86,7 +86,7 @@ func TestEventsContext(t *testing.T) {
 			},
 		},
 	})
-	c.SendEvent(webhookEventWriteKey, analytics.Track{
+	k.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 6",
 		Context: &analytics.Context{
@@ -103,8 +103,8 @@ func TestEventsContext(t *testing.T) {
 	// retrieve them.
 	ctx := context.Background()
 	const expectedEventsCount = 6
-	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
-	events := c.Events([]string{"event", "context"})
+	k.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
+	events := k.Events([]string{"event", "context"})
 	if len(events) != expectedEventsCount {
 		t.Fatal("unexpected error while retrieving events")
 	}
