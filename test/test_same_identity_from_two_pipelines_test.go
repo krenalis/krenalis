@@ -23,7 +23,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 
 	// Prevents Identity Resolution from running automatically and ensures there
 	// are no identifiers.
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	dummy := k.CreateDummy("Dummy", krenalistester.Source)
 

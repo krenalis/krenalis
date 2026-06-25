@@ -25,7 +25,7 @@ func TestImportWithTransformation(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummyID := k.CreateDummy("Dummy (source)", krenalistester.Source)
 
-	k.UpdateIdentityResolution(false, []string{"email"})
+	k.UpdateIdentityResolutionSettings(false, []string{"email"})
 
 	// Create a pipeline with a transformation function which imports users, then run it.
 	importUsersID := k.CreatePipeline(dummyID, "User", krenalistester.PipelineToSet{

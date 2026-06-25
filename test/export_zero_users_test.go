@@ -31,7 +31,7 @@ func TestExportZeroProfiles(t *testing.T) {
 	k.Start()
 	defer k.Stop()
 
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 
 	// Test the export of zero profiles to an application (Dummy).
 	func() {

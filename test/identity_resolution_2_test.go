@@ -48,7 +48,7 @@ func TestIdentityResolution2(t *testing.T) {
 	//
 	// Also disable the automatic execution of the Identity Resolution, which
 	// will be explicitly executed later.
-	k.UpdateIdentityResolution(false, []string{"email"})
+	k.UpdateIdentityResolutionSettings(false, []string{"email"})
 
 	sourceA := k.CreateSourceFileSystem()
 	sourceB := k.CreateSourceFileSystem()

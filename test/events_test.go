@@ -29,7 +29,7 @@ func TestEvents(t *testing.T) {
 	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// Load some users in the data warehouse from Dummy.
 	dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)

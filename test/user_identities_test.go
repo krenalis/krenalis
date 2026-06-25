@@ -30,7 +30,7 @@ func Test_Identities(t *testing.T) {
 	k.Start()
 	defer k.Stop()
 
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 
 	fs1 := k.CreateSourceFileSystem()
 	fs2 := k.CreateSourceFileSystem()
