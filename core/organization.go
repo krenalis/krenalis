@@ -191,10 +191,16 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 	if err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	password, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
+
+	password := member.Password
+	if password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return "", err
+		}
+		password = string(hash)
 	}
+
 	n := state.AddMember{
 		Organization: this.organization.ID,
 	}
