@@ -677,7 +677,7 @@ func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
 	k.Call("PUT", path, nil, pipeline, nil)
 }
 
-func (k *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
+func (k *Krenalis) UpdateIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
@@ -685,7 +685,7 @@ func (k *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers [
 	k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
-func (k *Krenalis) UpdateIdentityResolutionErr(identifiers []string) error {
+func (k *Krenalis) UpdateIdentityResolutionSettingsErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}

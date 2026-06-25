@@ -25,7 +25,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	javaScriptID := k.CreateJavaScriptSource("JavaScript (source)", nil)
 	javaScriptKey := k.EventWriteKeys(javaScriptID)[0]

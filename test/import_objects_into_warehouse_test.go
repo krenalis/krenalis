@@ -23,7 +23,7 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	dummy := k.CreateDummy("Dummy (source)", krenalistester.Source)
 	importUsersID := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{

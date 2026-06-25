@@ -21,7 +21,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	k.Start()
 	defer k.Stop()
 
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 
 	// Load some users in the data warehouse.
 	{

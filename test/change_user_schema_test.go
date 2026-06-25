@@ -35,7 +35,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 
 	identifiers := []string{"email", "android.id"}
-	k.UpdateIdentityResolution(true, identifiers)
+	k.UpdateIdentityResolutionSettings(true, identifiers)
 
 	// Read the schema in "testdata/change_profile_schema_test.json".
 	f, err := os.Open("testdata/change_profile_schema_test.json")

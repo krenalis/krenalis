@@ -56,7 +56,7 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.String().WithMaxLength(300)), ReadOptional: true},
 	}
 
-	k.UpdateIdentityResolution(false, []string{"dummy_id", "email"})
+	k.UpdateIdentityResolutionSettings(false, []string{"dummy_id", "email"})
 
 	// Create a pipeline for the JSON for importing the users.
 	mapping := map[string]string{

@@ -103,7 +103,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	}
 
 	// Update the workspace identifiers and run the Identity Resolution.
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 	k.RunIdentityResolutionAndWait()
 
 	// Now the profiles should be merged, resulting in a total of 10 profiles.

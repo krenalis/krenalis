@@ -40,7 +40,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Create the File System connection.
 	fsID := k.CreateSourceFileSystem()
 
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 
 	// Create a pipeline for the CSV for importing the users.
 	importUsersPipelineID := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{

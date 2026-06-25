@@ -61,7 +61,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Configure identity resolution, set up (and then run) a simple pipeline
 	// that imports users from a Dummy source, while the organization is
 	// enabled.
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 	dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
 	importPipeline := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
@@ -169,7 +169,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("update identity resolution is rejected", func(t *testing.T) {
-		err := k.UpdateIdentityResolutionErr([]string{"email"})
+		err := k.UpdateIdentityResolutionSettingsErr([]string{"email"})
 		assertOrganizationDisabled(t, err)
 	})
 

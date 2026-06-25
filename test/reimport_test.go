@@ -22,7 +22,7 @@ func TestReimport(t *testing.T) {
 	k.Start()
 	defer k.Stop()
 
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// First of all, create a Dummy connection.
 	dummy := k.CreateDummy("Dummy", krenalistester.Source)

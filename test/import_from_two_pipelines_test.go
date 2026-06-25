@@ -39,7 +39,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// Create the File System connection.
 	fsID := k.CreateSourceFileSystem()

@@ -44,7 +44,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	ctx := context.Background()
 
@@ -187,7 +187,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Set the "email" as identifier and run the Identity Resolution.
-	k.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.

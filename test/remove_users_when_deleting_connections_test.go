@@ -22,7 +22,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	k.Start()
 	defer k.Stop()
 
-	k.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// Create two Dummy connections for importing users.
 	dummy1 := k.CreateDummy("Dummy 1", krenalistester.Source)
