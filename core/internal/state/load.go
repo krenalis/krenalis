@@ -546,7 +546,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load pipelines: %s", err)
 	}
 
-	// Read pipeline runs in progress.
+	// Read live pipeline runs.
 	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
 		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
