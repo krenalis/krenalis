@@ -331,7 +331,6 @@ const Member = () => {
 	);
 };
 
-
 const WorkOSMember = () => {
 	const [mountKey, setMountKey] = useState(0);
 	const [isRefreshingToken, setIsRefreshingToken] = useState(false);
@@ -364,7 +363,7 @@ const WorkOSMember = () => {
 			setIsRefreshingToken(true);
 			try {
 				const token = await getAccessToken();
-				setMountKey(k => k + 1); // force re-render of the widget
+				setMountKey((k) => k + 1); // force re-render of the widget
 				lastTokenRef.current = token;
 			} catch {
 				// Do nothing. If there's an error in retrieving the token, it

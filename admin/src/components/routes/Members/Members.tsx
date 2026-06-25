@@ -230,7 +230,7 @@ const WorkOSMembers = () => {
 	useEffect(() => {
 		const handleTabChange = async () => {
 			if (document.hidden || !isJwtExpired(lastTokenRef.current)) {
-				 return;
+				return;
 			}
 			// The user has switched to the Krenalis tab, but the WorkOS widget
 			// token has expired. We refresh the token and manually re-render
@@ -239,7 +239,7 @@ const WorkOSMembers = () => {
 			setIsRefreshingToken(true);
 			try {
 				const token = await getAccessToken();
-				setMountKey(k => k + 1); // force re-render of the widget
+				setMountKey((k) => k + 1); // force re-render of the widget
 				lastTokenRef.current = token;
 			} catch {
 				// Do nothing. If there's an error in retrieving the token, it
