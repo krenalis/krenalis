@@ -56,7 +56,7 @@ func TestReimport(t *testing.T) {
 	k.WaitRunsCompletion(dummy, run)
 
 	// Run the Identity Resolution.
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
@@ -106,7 +106,7 @@ func TestReimport(t *testing.T) {
 	k.WaitRunsCompletion(dummy, run)
 
 	// Run the Identity Resolution.
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles again.
 	//

@@ -538,9 +538,9 @@ func (k *Krenalis) RepairWarehouseErr() error {
 	return k.TryCall("POST", "/v1/warehouse/repair", nil, nil, nil)
 }
 
-// RunIdentityResolution starts the identity resolution and waits for it to
-// complete.
-func (k *Krenalis) RunIdentityResolution() {
+// RunIdentityResolutionAndWait runs the identity resolution and waits for it to
+// complete before returning.
+func (k *Krenalis) RunIdentityResolutionAndWait() {
 	ts := time.Now().UTC()
 	k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
 	// Waits for the Identity Resolution that was started following the call to

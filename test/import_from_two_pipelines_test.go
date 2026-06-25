@@ -104,7 +104,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	// then run the Identity Resolution.
 	run := k.RunPipeline(pipelineFirstName)
 	k.WaitRunsCompletion(fsID, run)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
@@ -130,7 +130,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	// then run the Identity Resolution.
 	run = k.RunPipeline(pipelineLastName)
 	k.WaitRunsCompletion(fsID, run)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
 	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)

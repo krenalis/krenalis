@@ -59,7 +59,7 @@ def transform(user: dict) -> dict:
 	})
 	run := k.RunPipeline(importUsersID)
 	k.WaitRunsCompletion(dummy, run)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check if the profiles have been imported - and then returned - correctly.
 

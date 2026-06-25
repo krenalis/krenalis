@@ -148,7 +148,7 @@ func TestIdentityResolution(t *testing.T) {
 		// Import the users in the JSON.
 		run := k.RunPipeline(pipeline)
 		k.WaitRunsCompletion(fsID, run)
-		k.RunIdentityResolution()
+		k.RunIdentityResolutionAndWait()
 
 	}
 

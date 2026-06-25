@@ -199,7 +199,7 @@ func waitParquetImportIdentityResolution(t *testing.T, k *krenalistester.Krenali
 func purgeParquetImportProfiles(t *testing.T, k *krenalistester.Krenalis) {
 	t.Helper()
 	for attempt := range 20 {
-		k.RunIdentityResolution()
+		k.RunIdentityResolutionAndWait()
 		profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
 		if len(profiles) == 0 {
 			return

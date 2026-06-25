@@ -53,7 +53,7 @@ func TestEvents(t *testing.T) {
 	})
 	run := k.RunPipeline(importUsersID)
 	k.WaitRunsCompletion(dummySrc, run)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Create a JavaScript connection with 2 pipelines (one for importing events,
 	// one for importing identities) and retrieve its key.
@@ -125,14 +125,14 @@ func TestEvents(t *testing.T) {
 	ctx := context.Background()
 
 	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	const expectedEventsCount = 5
 
 	k.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Run the identity resolution, so that the events KPID are updated.
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profile imported from the event.
 	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)

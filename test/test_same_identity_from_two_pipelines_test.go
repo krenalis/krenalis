@@ -69,7 +69,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	k.WaitRunsCompletion(dummy, run1, run2)
 
 	// Run the Identity Resolution and wait for its completion.
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check that there are 10 profiles.
 	profiles, _, total := k.Profiles([]string{"first_name", "last_name"}, "first_name", false, 0, 100)

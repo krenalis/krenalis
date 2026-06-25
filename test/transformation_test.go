@@ -62,7 +62,7 @@ def transform(user: dict) -> dict:
 	run := k.RunPipeline(importUsersID)
 	k.WaitRunsCompletion(dummyID, run)
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profiles.
 	const expectedTotal = 10

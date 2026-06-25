@@ -58,7 +58,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	run2 := k.RunPipeline(pipeline2)
 	k.WaitRunsCompletion(dummy1, run1)
 	k.WaitRunsCompletion(dummy2, run2)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Now there should be total of 20 profiles.
 	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
@@ -70,7 +70,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// identities, and ensure that only 10 profiles remain.
 	k.DeleteConnection(dummy1)
 	time.Sleep(1 * time.Second)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
@@ -80,7 +80,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// should be zero.
 	k.DeleteConnection(dummy2)
 	time.Sleep(1 * time.Second)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 0 {
 		t.Fatalf("expected no profiles, got %d", total)

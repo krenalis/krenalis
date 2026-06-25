@@ -151,7 +151,7 @@ func TestIdentityResolution2(t *testing.T) {
 	k.WaitRunsCompletion(sourceC, run3)
 
 	// Resolve the identities.
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Test that the execution of the Identity Resolution has ended and that its
 	// duration has a reasonable value.
@@ -203,7 +203,7 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 	k.AlterProfileSchemaAndWait(schema, primarySources, nil)
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	profiles, _, total = k.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
