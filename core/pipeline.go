@@ -492,8 +492,8 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - OrganizationDisabled, if the organization is disabled.
+//   - PipelineAlreadyRunning, if the pipeline is already running.
 //   - PipelineDisabled, if the pipeline is disabled.
-//   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error) {
 	this.core.mustBeOpen()
 	c := this.pipeline.Connection()
@@ -519,7 +519,7 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error
 		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 	}
 	if _, ok := this.pipeline.Run(); ok {
-		return "", errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
+		return "", errors.Unprocessable(PipelineAlreadyRunning, "pipeline %s is already running", this.pipeline.ID)
 	}
 	switch this.connection.store.Mode() {
 	case state.Inspection:
@@ -880,8 +880,8 @@ func (this *Pipeline) application() *connections.Application {
 // It returns an errors.UnprocessableError with one of the following codes:
 //
 //   - OrganizationDisabled, if the organization is disabled.
+//   - PipelineAlreadyRunning, if the pipeline is already running.
 //   - PipelineDisabled, if the pipeline is disabled.
-//   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string, error) {
 
 	n := state.RunPipeline{
@@ -937,7 +937,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 					}
 				case db.IsUniqueViolation(err):
 					if db.ErrConstraintName(err) == "pipelines_one_active_run_idx" {
-						err = errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
+						err = errors.Unprocessable(PipelineAlreadyRunning, "pipeline %s is already running", this.pipeline.ID)
 					}
 				}
 				return nil, err
