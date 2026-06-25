@@ -1284,7 +1284,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		}
 
 		// Mark the run as ended.
-		p.endRun(run.ID, err)
+		p.endLiveRun(run.ID, err)
 
 		// Stop pinging as it is no longer required.
 		stopPing()
