@@ -936,7 +936,7 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 						err = errors.NotFound("pipeline %s does not exit", n.Pipeline)
 					}
 				case db.IsUniqueViolation(err):
-					if db.ErrConstraintName(err) == "pipelines_one_active_run_idx" {
+					if db.ErrConstraintName(err) == "pipelines_one_live_run_idx" {
 						err = errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
 					}
 				}
