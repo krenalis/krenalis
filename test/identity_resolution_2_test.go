@@ -40,7 +40,7 @@ func TestIdentityResolution2(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.String()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
 	})
-	k.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
 	// Set the email as the only identifier, as the 3 identities, imported from
 	// the 3 connections, will all be put together in a single profile as they
@@ -201,7 +201,7 @@ func TestIdentityResolution2(t *testing.T) {
 	primarySources := map[string]string{
 		"total_orders": sourceB,
 	}
-	k.AlterProfileSchema(schema, primarySources, nil)
+	k.AlterProfileSchemaAndWait(schema, primarySources, nil)
 
 	k.RunIdentityResolution()
 

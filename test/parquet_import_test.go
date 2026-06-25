@@ -50,7 +50,7 @@ func TestParquetImport(t *testing.T) {
 		Type:         types.JSON(),
 		ReadOptional: true,
 	})
-	k.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
+	k.AlterProfileSchemaAndWait(types.Object(profileSchemaProperties), nil, nil)
 
 	fs := k.CreateSourceFileSystem()
 

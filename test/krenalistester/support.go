@@ -27,7 +27,7 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (k *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
+func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
