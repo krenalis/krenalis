@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-// StatusCodeError is an error returned by Call when the HTTP call returned a
+// StatusCodeError is an error returned by TryCall when the HTTP call returned a
 // status code which is not 200.
 type StatusCodeError struct {
 	Code         int
@@ -29,15 +29,15 @@ func (e *StatusCodeError) Error() string {
 	return fmt.Sprintf("unexpected HTTP status code %d", e.Code)
 }
 
-// Call calls the API endpoint serializing the given body and deserializing the
-// response into response.
+// TryCall calls the API endpoint serializing the given body and deserializing
+// the response into response.
 //
 // Returns an error if the calls returns an error, which may be a
 // StatusCodeError error in case of a HTTP request which returned a status code
-// which is not 200, or if the HTTP response cannot be decoded into response.
-// If headers contains the "Krenalis-Workspace" key, Call does not add it
+// which is not 200, or if the HTTP response cannot be decoded into response. If
+// headers contains the "Krenalis-Workspace" key, TryCall does not add it
 // automatically. A nil value suppresses the header.
-func (k *Krenalis) Call(method, path string, headers http.Header, body, response any) error {
+func (k *Krenalis) TryCall(method, path string, headers http.Header, body, response any) error {
 	return k.call(method, path, headers, body, response)
 }
 

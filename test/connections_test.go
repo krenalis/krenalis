@@ -63,7 +63,7 @@ func TestConnections(t *testing.T) {
 		Connector: "kafka",
 	}
 	var id string
-	err := k.Call("POST", "/v1/connections", nil, broker, &id)
+	err := k.TryCall("POST", "/v1/connections", nil, broker, &id)
 	if err == nil {
 		t.Fatalf("expected Bad Request error, got no error")
 	}
