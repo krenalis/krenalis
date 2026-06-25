@@ -13,20 +13,32 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"testing"
 )
 
 // StatusCodeError is an error returned by TryCall when the HTTP call returned a
 // status code which is not 200.
 type StatusCodeError struct {
-	Code         int
-	ResponseText string
+	Request struct {
+		Method  string
+		Path    string
+		HasBody bool
+	}
+	Response struct {
+		Code        int
+		Text        string
+		HasResponse bool
+	}
 }
 
 func (e *StatusCodeError) Error() string {
-	if e.ResponseText != "" {
-		return fmt.Sprintf("unexpected HTTP status code %d: %s", e.Code, e.ResponseText)
+	s := &strings.Builder{}
+	fmt.Fprintf(s, "%s %s: unexpected status code %d", e.Request.Method, e.Request.Path, e.Response.Code)
+	if e.Response.Text != "" {
+		fmt.Fprintf(s, ": %s", e.Response.Text)
 	}
-	return fmt.Sprintf("unexpected HTTP status code %d", e.Code)
+	fmt.Fprintf(s, " [has body: %t, has response: %t]", e.Request.HasBody, e.Response.HasResponse)
+	return s.String()
 }
 
 // TryCall calls the API endpoint serializing the given body and deserializing
@@ -50,11 +62,7 @@ func (k *Krenalis) TryCall(method, path string, headers http.Header, body, respo
 // If headers contains the "Krenalis-Workspace" key, Call does not add it
 // automatically. A nil value suppresses the header.
 func (k *Krenalis) Call(method, path string, headers http.Header, body, response any) {
-	err := k.tryCall(method, path, headers, body, response)
-	if err != nil {
-		k.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, strings.TrimSpace(err.Error()), body != nil, response != nil, string(debug.Stack()))
-		k.t.Fatal("the test failed. See the error message and the stack trace above")
-	}
+	must(k.t, k.tryCall(method, path, headers, body, response))
 }
 
 func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, response any) error {
@@ -98,7 +106,14 @@ func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, r
 		if err != nil {
 			return err
 		}
-		return &StatusCodeError{Code: resp.StatusCode, ResponseText: string(bytes.TrimSpace(text))}
+		var scErr StatusCodeError
+		scErr.Request.Method = method
+		scErr.Request.Path = path
+		scErr.Request.HasBody = body != nil
+		scErr.Response.Code = resp.StatusCode
+		scErr.Response.Text = string(bytes.TrimSpace(text))
+		scErr.Response.HasResponse = response != nil
+		return &scErr
 	}
 
 	if response != nil {
@@ -121,4 +136,12 @@ func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, r
 	}
 
 	return nil
+}
+
+// must fails the test t if err is not nil, additionally printing the call
+// stack.
+func must(t *testing.T, err error) {
+	if err != nil {
+		t.Fatalf("%s\nTest call stack: %s", err, string(debug.Stack()))
+	}
 }

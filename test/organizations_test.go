@@ -78,8 +78,8 @@ func TestOrganizationsAPI(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
 		}
-		if statusErr.Code != http.StatusNotFound {
-			t.Fatalf("expected HTTP status %d, got %d", http.StatusNotFound, statusErr.Code)
+		if statusErr.Response.Code != http.StatusNotFound {
+			t.Fatalf("expected HTTP status %d, got %d", http.StatusNotFound, statusErr.Response.Code)
 		}
 	})
 }

@@ -60,10 +60,10 @@ func assertWorkspaceScopedKeyRejected(t *testing.T, err error, wantMessage strin
 	if !ok {
 		t.Fatalf("expected *StatusCodeError, got %T", err)
 	}
-	if statusErr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnauthorized, statusErr.Code, statusErr.ResponseText)
+	if statusErr.Response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnauthorized, statusErr.Response.Code, statusErr.Response.Text)
 	}
-	if !strings.Contains(statusErr.ResponseText, wantMessage) {
-		t.Fatalf("expected response to contain %q, got %q", wantMessage, statusErr.ResponseText)
+	if !strings.Contains(statusErr.Response.Text, wantMessage) {
+		t.Fatalf("expected response to contain %q, got %q", wantMessage, statusErr.Response.Text)
 	}
 }

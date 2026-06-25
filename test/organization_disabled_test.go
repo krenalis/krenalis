@@ -48,8 +48,8 @@ func TestOrganizationDisabled(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
 		}
-		if statusErr.Code != http.StatusUnauthorized {
-			t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnauthorized, statusErr.Code, statusErr.ResponseText)
+		if statusErr.Response.Code != http.StatusUnauthorized {
+			t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnauthorized, statusErr.Response.Code, statusErr.Response.Text)
 		}
 		// The organization must still be enabled: the request was rejected
 		// before it could change anything.
@@ -326,8 +326,8 @@ func assertOrganizationDisabled(t *testing.T, err error) {
 	if !ok {
 		t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
 	}
-	if statusErr.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnprocessableEntity, statusErr.Code, statusErr.ResponseText)
+	if statusErr.Response.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnprocessableEntity, statusErr.Response.Code, statusErr.Response.Text)
 	}
 	var resp struct {
 		Error struct {
@@ -335,7 +335,7 @@ func assertOrganizationDisabled(t *testing.T, err error) {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	err = json.Unmarshal([]byte(statusErr.ResponseText), &resp)
+	err = json.Unmarshal([]byte(statusErr.Response.Text), &resp)
 	if err != nil {
 		t.Fatalf("cannot unmarshal JSON response: %s", err)
 	}
@@ -359,8 +359,8 @@ func assertOrganizationUnavailable(t *testing.T, err error) {
 	if !ok {
 		t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
 	}
-	if statusErr.Code != http.StatusServiceUnavailable {
-		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusServiceUnavailable, statusErr.Code, statusErr.ResponseText)
+	if statusErr.Response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusServiceUnavailable, statusErr.Response.Code, statusErr.Response.Text)
 	}
 	var resp struct {
 		Error struct {
@@ -368,7 +368,7 @@ func assertOrganizationUnavailable(t *testing.T, err error) {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	err = json.Unmarshal([]byte(statusErr.ResponseText), &resp)
+	err = json.Unmarshal([]byte(statusErr.Response.Text), &resp)
 	if err != nil {
 		t.Fatalf("cannot unmarshal JSON response: %s", err)
 	}
