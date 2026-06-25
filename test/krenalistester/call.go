@@ -38,7 +38,7 @@ func (e *StatusCodeError) Error() string {
 // headers contains the "Krenalis-Workspace" key, TryCall does not add it
 // automatically. A nil value suppresses the header.
 func (k *Krenalis) TryCall(method, path string, headers http.Header, body, response any) error {
-	return k.call(method, path, headers, body, response)
+	return k.tryCall(method, path, headers, body, response)
 }
 
 // Call calls the API endpoint serializing the given body and deserializing the
@@ -50,14 +50,14 @@ func (k *Krenalis) TryCall(method, path string, headers http.Header, body, respo
 // If headers contains the "Krenalis-Workspace" key, Call does not add it
 // automatically. A nil value suppresses the header.
 func (k *Krenalis) Call(method, path string, headers http.Header, body, response any) {
-	err := k.call(method, path, headers, body, response)
+	err := k.tryCall(method, path, headers, body, response)
 	if err != nil {
 		k.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, strings.TrimSpace(err.Error()), body != nil, response != nil, string(debug.Stack()))
 		k.t.Fatal("the test failed. See the error message and the stack trace above")
 	}
 }
 
-func (k *Krenalis) call(method, path string, headers http.Header, body any, response any) error {
+func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, response any) error {
 
 	path = strings.TrimLeft(path, "/")
 	url := "http://" + k.Addr() + "/" + path
