@@ -70,7 +70,7 @@ func TestOrganizationsAPI(t *testing.T) {
 
 	t.Run("delete organization", func(t *testing.T) {
 		k.DeleteOrganization(orgID)
-		err := k.OrganizationErr(orgID)
+		err := k.CanGetOrganization(orgID)
 		if err == nil {
 			t.Fatal("expected error when reading deleted organization, got nil")
 		}
