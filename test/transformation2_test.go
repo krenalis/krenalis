@@ -58,7 +58,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	run := k.RunPipeline(pipeline)
+	run := k.StartPipelineRun(pipeline)
 	k.WaitRunsCompletion(dummy, run)
 
 	// Retrieve the profiles.

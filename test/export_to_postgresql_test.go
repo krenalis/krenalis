@@ -48,7 +48,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		run := k.RunPipeline(importUsersID)
+		run := k.StartPipelineRun(importUsersID)
 		k.WaitRunsCompletion(dummySrc, run)
 	}
 
@@ -102,7 +102,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	run := k.RunPipeline(exportPipeline)
+	run := k.StartPipelineRun(exportPipeline)
 	k.WaitRunsCompletion(pgsql, run)
 
 	// Check if the export completed successfully.
@@ -135,7 +135,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	run = k.RunPipeline(exportPipeline)
+	run = k.StartPipelineRun(exportPipeline)
 	k.WaitRunsCompletion(pgsql, run)
 
 	// Check if the export completed successfully.

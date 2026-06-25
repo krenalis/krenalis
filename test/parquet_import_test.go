@@ -81,7 +81,7 @@ func TestParquetImport(t *testing.T) {
 			}()
 
 			identityResolutionStart = time.Now().UTC()
-			run := k.RunPipeline(pipeline)
+			run := k.StartPipelineRun(pipeline)
 			runStarted = true
 			k.WaitRunsCompletion(fs, run)
 

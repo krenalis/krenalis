@@ -51,7 +51,7 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	})
-	run := k.RunPipeline(importUsersID)
+	run := k.StartPipelineRun(importUsersID)
 	k.WaitRunsCompletion(dummySrc, run)
 	k.RunIdentityResolutionAndWait()
 
