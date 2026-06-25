@@ -107,7 +107,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	var pipeline1Found, pipeline2Found bool
 	for _, identity := range identities {
@@ -138,7 +138,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Traits:      analytics.NewTraits().SetAge(20),
 	})
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	attempts = 0
 waitLoop:
@@ -178,7 +178,7 @@ waitLoop:
 
 	// Run the Identity Resolution explicitly (even though technically it should
 	// have already been done implicitly during import).
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check that there is actually only one profile in the workspace.
 	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)

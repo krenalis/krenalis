@@ -64,7 +64,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	})
 	k.WaitEventsStoredIntoWarehouse(ctx, 1)
 	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profile imported from the event.
 	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
@@ -108,7 +108,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	})
 	k.WaitEventsStoredIntoWarehouse(ctx, 2)
 	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 2)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check that the profile has been created.
 	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
@@ -149,7 +149,7 @@ def transform(event: dict) -> dict:
 	})
 	k.WaitEventsStoredIntoWarehouse(ctx, 3)
 	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 3)
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check that the profile has been created.
 	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)

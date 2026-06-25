@@ -79,7 +79,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		k.WaitRunsCompletion(dummy, run)
 	}
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.
 	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
@@ -125,7 +125,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		k.WaitRunsCompletion(fs, run)
 	}
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).
 	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
@@ -177,7 +177,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		})
 		time.Sleep(5 * time.Second)
 		k.WaitEventsStoredIntoWarehouse(ctx, 1)
-		k.RunIdentityResolution()
+		k.RunIdentityResolutionAndWait()
 	}
 
 	// Ensure that there are 14 profiles (10 from Dummy + 3 from CSV + 1 from event).
@@ -188,7 +188,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 	// Set the "email" as identifier and run the Identity Resolution.
 	k.UpdateIdentityResolution(true, []string{"email"})
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.
 	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 1000)

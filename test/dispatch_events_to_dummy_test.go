@@ -68,7 +68,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 		UserId: "f4ca124298",
 	})
 
-	k.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Wait for an HTTP request to be sent to Dummy, which will then send it to
 	// the test HTTP server. Then check that the request body is correct.
