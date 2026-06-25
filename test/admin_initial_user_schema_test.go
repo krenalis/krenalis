@@ -44,6 +44,6 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 	if len(queries) != expectedQueriesCount {
 		t.Fatalf("expected %d queries, got %d", expectedQueriesCount, len(queries))
 	}
-	k.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
 }

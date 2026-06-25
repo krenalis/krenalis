@@ -59,7 +59,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
-	k.AlterProfileSchema(file.Schema, file.PrimarySources, file.RePaths)
+	k.AlterProfileSchemaAndWait(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
@@ -87,7 +87,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	k.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
 	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 11 {
@@ -133,7 +133,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	k.AlterProfileSchema(schema, nil, rePaths)
+	k.AlterProfileSchemaAndWait(schema, nil, rePaths)
 	identifiers = []string{"android.identifier"}
 
 	ws = k.Workspace()
@@ -188,7 +188,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	k.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
 	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
@@ -260,7 +260,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	firstProperty := file.Schema.Properties().Names()[0]
 	primarySource := k.CreateDummy("Primary Source", krenalistester.Source)
 	primarySources := map[string]string{firstProperty: primarySource}
-	k.AlterProfileSchema(file.Schema, primarySources, nil)
+	k.AlterProfileSchemaAndWait(file.Schema, primarySources, nil)
 	ws = k.Workspace()
 	if !maps.Equal(primarySources, ws.PrimarySources) {
 		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.PrimarySources)
