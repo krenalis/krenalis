@@ -44,7 +44,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		run := k.RunPipeline(importUsersID)
+		run := k.StartPipelineRun(importUsersID)
 		k.WaitRunsCompletion(dummySrc, run)
 	}
 
@@ -73,7 +73,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		run := k.RunPipeline(exportProfilesPipelineID)
+		run := k.StartPipelineRun(exportProfilesPipelineID)
 		k.WaitRunsCompletion(dummyDest, run)
 	}
 
@@ -102,7 +102,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		run := k.RunPipeline(importUsersID)
+		run := k.StartPipelineRun(importUsersID)
 		k.WaitRunsCompletion(dummySrc, run)
 		profiles, _, _ := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(profiles) == 0 {

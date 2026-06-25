@@ -81,7 +81,7 @@ func TestOrganizationDisabled(t *testing.T) {
 			},
 		},
 	})
-	run := k.RunPipeline(importPipeline)
+	run := k.StartPipelineRun(importPipeline)
 	k.WaitRunsCompletion(dummySrc, run)
 
 	// Set up a JavaScript source with an Event pipeline so that events can be
@@ -144,7 +144,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("run pipeline is rejected", func(t *testing.T) {
-		_, err := k.RunPipelineErr(importPipeline)
+		_, err := k.StartPipelineRunErr(importPipeline)
 		assertOrganizationDisabled(t, err)
 	})
 
@@ -285,7 +285,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	}
 
 	t.Run("operations succeed again after re-enabling", func(t *testing.T) {
-		run := k.RunPipeline(importPipeline)
+		run := k.StartPipelineRun(importPipeline)
 		k.WaitRunsCompletion(dummySrc, run)
 	})
 

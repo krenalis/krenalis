@@ -52,8 +52,8 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Import from both pipelines - and implicitly trigger the identity resolution
 	// process.
-	run1 := k.RunPipeline(pipeline1)
-	run2 := k.RunPipeline(pipeline2)
+	run1 := k.StartPipelineRun(pipeline1)
+	run2 := k.StartPipelineRun(pipeline2)
 	k.WaitRunsCompletion(dummy1, run1)
 	k.WaitRunsCompletion(dummy2, run2)
 

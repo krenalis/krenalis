@@ -143,9 +143,9 @@ func TestIdentityResolution2(t *testing.T) {
 	pipelineB := addJSONPipeline(sourceB, "B.json", properties)
 	pipelineC := addJSONPipeline(sourceC, "C.json", properties)
 
-	run1 := k.RunPipeline(pipelineA)
-	run2 := k.RunPipeline(pipelineB)
-	run3 := k.RunPipeline(pipelineC)
+	run1 := k.StartPipelineRun(pipelineA)
+	run2 := k.StartPipelineRun(pipelineB)
+	run3 := k.StartPipelineRun(pipelineC)
 	k.WaitRunsCompletion(sourceA, run1)
 	k.WaitRunsCompletion(sourceB, run2)
 	k.WaitRunsCompletion(sourceC, run3)

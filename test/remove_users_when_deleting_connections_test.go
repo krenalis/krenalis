@@ -54,8 +54,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	pipeline2 := k.CreatePipeline(dummy2, "User", pipelineParams)
 
 	// Import from both pipelines, then run the identity resolution.
-	run1 := k.RunPipeline(pipeline1)
-	run2 := k.RunPipeline(pipeline2)
+	run1 := k.StartPipelineRun(pipeline1)
+	run2 := k.StartPipelineRun(pipeline2)
 	k.WaitRunsCompletion(dummy1, run1)
 	k.WaitRunsCompletion(dummy2, run2)
 	k.RunIdentityResolutionAndWait()

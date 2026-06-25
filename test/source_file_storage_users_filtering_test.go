@@ -65,7 +65,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		}),
 	})
 
-	run1 := k.RunPipeline(pipeline1)
+	run1 := k.StartPipelineRun(pipeline1)
 
 	k.WaitForRunsCompletionAllowFailed(fs1, run1)
 

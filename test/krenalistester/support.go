@@ -389,7 +389,7 @@ func (k *Krenalis) DeleteConnectionErr(conn string) error {
 	return k.TryCall("DELETE", path, nil, nil, nil)
 }
 
-func (k *Krenalis) RunPipeline(pipeline string) string {
+func (k *Krenalis) StartPipelineRun(pipeline string) string {
 	var response struct {
 		ID string
 	}
@@ -398,9 +398,9 @@ func (k *Krenalis) RunPipeline(pipeline string) string {
 	return response.ID
 }
 
-// RunPipelineErr is like RunPipeline but returns an error instead of failing
-// the test.
-func (k *Krenalis) RunPipelineErr(pipeline string) (string, error) {
+// StartPipelineRunErr is like StartPipelineRun but returns an error instead of
+// failing the test.
+func (k *Krenalis) StartPipelineRunErr(pipeline string) (string, error) {
 	var response struct {
 		ID string
 	}

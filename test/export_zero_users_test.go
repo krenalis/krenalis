@@ -59,7 +59,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		run := k.RunPipeline(exportProfilesPipelineID)
+		run := k.StartPipelineRun(exportProfilesPipelineID)
 		k.WaitRunsCompletion(dummyDest, run)
 	}()
 
@@ -109,7 +109,7 @@ func TestExportZeroProfiles(t *testing.T) {
 		}, nil)
 
 		// Run the pipeline that export profiles.
-		run := k.RunPipeline(exportProfilesPipelineID)
+		run := k.StartPipelineRun(exportProfilesPipelineID)
 
 		// Wait for the export to finish.
 		k.WaitRunsCompletion(fsID, run)

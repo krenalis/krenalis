@@ -44,7 +44,7 @@ func TestImportFromDatabase(t *testing.T) {
 		UpdatedAtFormat: "",
 	})
 
-	run := k.RunPipeline(importUsers)
+	run := k.StartPipelineRun(importUsers)
 
 	k.WaitRunsCompletion(pgSQL, run)
 

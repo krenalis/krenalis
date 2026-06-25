@@ -48,7 +48,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 	})
-	run := k.RunPipeline(importUsersID)
+	run := k.StartPipelineRun(importUsersID)
 	k.WaitForRunsCompletionAllowFailed(dummySrc, run)
 
 	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)

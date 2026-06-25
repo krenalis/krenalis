@@ -63,7 +63,7 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		run := k.RunPipeline(importUsersID)
+		run := k.StartPipelineRun(importUsersID)
 		k.WaitRunsCompletion(dummySrc, run)
 	}
 
@@ -138,7 +138,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Run the pipeline that export users.
-		run := k.RunPipeline(exportUsersPipelineID)
+		run := k.StartPipelineRun(exportUsersPipelineID)
 
 		// Wait for the export to finish.
 		k.WaitRunsCompletion(fsID, run)

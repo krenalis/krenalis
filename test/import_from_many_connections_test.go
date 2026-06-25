@@ -75,7 +75,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		run := k.RunPipeline(dummyPipeline)
+		run := k.StartPipelineRun(dummyPipeline)
 		k.WaitRunsCompletion(dummy, run)
 	}
 
@@ -121,7 +121,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"hasColumnNames": true,
 			}),
 		})
-		run := k.RunPipeline(csvPipeline)
+		run := k.StartPipelineRun(csvPipeline)
 		k.WaitRunsCompletion(fs, run)
 	}
 

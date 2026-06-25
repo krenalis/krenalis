@@ -71,7 +71,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	})
 
 	// Run the pipeline that imports users.
-	run := k.RunPipeline(importUsersPipelineID)
+	run := k.StartPipelineRun(importUsersPipelineID)
 
 	// Wait for the import to finish.
 	k.WaitRunsCompletion(fsID, run)

@@ -83,8 +83,8 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	run1 := k.RunPipeline(pipeline1)
-	run2 := k.RunPipeline(pipeline2)
+	run1 := k.StartPipelineRun(pipeline1)
+	run2 := k.StartPipelineRun(pipeline2)
 
 	k.WaitRunsCompletion(fs1, run1)
 	k.WaitRunsCompletion(fs2, run2)

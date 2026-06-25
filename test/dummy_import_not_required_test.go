@@ -44,7 +44,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 			},
 		},
 	})
-	run := k.RunPipeline(importUsersID)
+	run := k.StartPipelineRun(importUsersID)
 	k.WaitRunsCompletion(dummySrc, run)
 
 	// Test that the "favorite_movie.title" property, which has been imported
