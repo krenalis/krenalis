@@ -34,7 +34,7 @@ func (k *Krenalis) AlterProfileSchema(schema types.Type, primarySources map[stri
 		"rePaths":        rePaths,
 	}
 	ts := time.Now().UTC()
-	k.MustCall("PUT", "/v1/profiles/schema", nil, req, nil)
+	k.Call("PUT", "/v1/profiles/schema", nil, req, nil)
 	// Waits for the alter schema that was started following the call to this
 	// method to finish.
 	for {
@@ -71,7 +71,7 @@ func (k *Krenalis) AbsolutePath(storage string, path string) string {
 	if path != "" {
 		endpointPath += "?path=" + url.QueryEscape(path)
 	}
-	k.MustCall("GET", endpointPath, nil, nil, &response)
+	k.Call("GET", endpointPath, nil, nil, &response)
 	return response.Path
 }
 
@@ -81,7 +81,7 @@ func (k *Krenalis) PipelineSchemas(conn string, target core.Target, eventType st
 		path += "?type=" + url.QueryEscape(eventType)
 	}
 	var schemas map[string]any
-	k.MustCall("GET", path, nil, nil, &schemas)
+	k.Call("GET", path, nil, nil, &schemas)
 	return schemas
 }
 
@@ -91,14 +91,14 @@ func (k *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identi
 		Total      int        `json:"total"`
 	}
 	path := fmt.Sprintf("/v1/connections/%s/identities?first=%d&limit=%d", conn, first, limit)
-	k.MustCall("GET", path, nil, nil, &response)
+	k.Call("GET", path, nil, nil, &response)
 	return response.Identities, response.Total
 }
 
 func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 	path := fmt.Sprintf("/v1/connections/%s/ui", connection)
 	var ui map[string]any
-	k.MustCall("GET", path, nil, nil, &ui)
+	k.Call("GET", path, nil, nil, &ui)
 	return ui
 }
 
@@ -122,7 +122,7 @@ func (k *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineT
 	var response struct {
 		ID string `json:"id"`
 	}
-	k.MustCall("POST", "/v1/pipelines", nil, body, &response)
+	k.Call("POST", "/v1/pipelines", nil, body, &response)
 	return response.ID
 }
 
@@ -177,7 +177,7 @@ func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
 	var response struct {
 		ID string `json:"id"`
 	}
-	k.MustCall("POST", "/v1/connections", nil, connection, &response)
+	k.Call("POST", "/v1/connections", nil, connection, &response)
 	return response.ID
 }
 
@@ -265,7 +265,7 @@ func (k *Krenalis) CreateEventPipeline(conn string, eventType string, pipeline P
 	var response struct {
 		ID string `json:"id"`
 	}
-	k.MustCall("POST", "/v1/pipelines", nil, body, &response)
+	k.Call("POST", "/v1/pipelines", nil, body, &response)
 	return response.ID
 }
 
@@ -292,13 +292,13 @@ func (k *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 		Workspace: k.WorkspaceID(),
 		Type:      AccessKeyTypeAPI,
 	}
-	k.MustCall("POST", "/v1/keys", nil, body, &response)
+	k.Call("POST", "/v1/keys", nil, body, &response)
 	return response.Token
 }
 
 func organizationsHeaders() http.Header {
 	return http.Header{
-		"Krenalis-Workspace": nil, // so that MustCall does not add automatically the header.
+		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
 		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
 	}
 }
@@ -308,13 +308,13 @@ func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
 		ID string `json:"id"`
 	}
 	body := map[string]any{"name": name, "enabled": enabled}
-	k.MustCall("POST", "/v1/organizations", organizationsHeaders(), body, &response)
+	k.Call("POST", "/v1/organizations", organizationsHeaders(), body, &response)
 	return response.ID
 }
 
 func (k *Krenalis) Organization(id string) Organization {
 	var org Organization
-	k.MustCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
+	k.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
 	return org
 }
 
@@ -328,16 +328,16 @@ func (k *Krenalis) Organizations(first, limit int) []Organization {
 		Organizations []Organization `json:"organizations"`
 	}
 	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
-	k.MustCall("GET", path, organizationsHeaders(), nil, &response)
+	k.Call("GET", path, organizationsHeaders(), nil, &response)
 	return response.Organizations
 }
 
 func (k *Krenalis) UpdateOrganization(id string, name string) {
-	k.MustCall("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
+	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
 }
 
 func (k *Krenalis) DeleteOrganization(id string) {
-	k.MustCall("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+	k.Call("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
 func (k *Krenalis) CreateJavaScriptSource(name string, linkedConnections []string) string {
@@ -379,7 +379,7 @@ func (k *Krenalis) CreateSourcePostgreSQL() string {
 
 func (k *Krenalis) DeleteConnection(conn string) {
 	path := fmt.Sprintf("/v1/connections/%s", conn)
-	k.MustCall("DELETE", path, nil, nil, nil)
+	k.Call("DELETE", path, nil, nil, nil)
 }
 
 // DeleteConnectionErr is like DeleteConnection but returns an error instead of
@@ -394,7 +394,7 @@ func (k *Krenalis) RunPipeline(pipeline string) string {
 		ID string
 	}
 	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
-	k.MustCall("POST", path, nil, map[string]any{}, &response)
+	k.Call("POST", path, nil, map[string]any{}, &response)
 	return response.ID
 }
 
@@ -414,7 +414,7 @@ func (k *Krenalis) RunPipelineErr(pipeline string) (string, error) {
 
 func (k *Krenalis) ExternalEventURL() string {
 	var metadata map[string]any
-	k.MustCall("GET", "/v1/public/metadata", nil, nil, &metadata)
+	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
 	return metadata["externalEventURL"].(string)
 }
 
@@ -427,7 +427,7 @@ func (k *Krenalis) Events(properties []string) []map[string]any {
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	k.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
+	k.Call("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Events
 }
 
@@ -455,13 +455,13 @@ func (k *Krenalis) File(storage string, path, format, sheet string, compression 
 		Schema  types.Type       `json:"schema"`
 	}
 	endpointPath := fmt.Sprintf("/v1/connections/%s/files", storage)
-	k.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
+	k.Call("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Records, response.Schema
 }
 
 func (k *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
-	k.MustCall("GET", "/v1/public/metadata", nil, nil, &metadata)
+	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
 	return metadata["javascriptSDKURL"].(string)
 }
 
@@ -471,7 +471,7 @@ func (k *Krenalis) LatestAlterProfileSchema() (startTime, endTime *time.Time, al
 		EndTime   *time.Time `json:"endTime"`
 		Error     *string    `json:"error"`
 	}
-	k.MustCall("GET", "/v1/profiles/schema/latest-alter", nil, nil, &response)
+	k.Call("GET", "/v1/profiles/schema/latest-alter", nil, nil, &response)
 	return response.StartTime, response.EndTime, response.Error
 }
 
@@ -480,14 +480,14 @@ func (k *Krenalis) LatestIdentityResolution() (startTime, endTime *time.Time) {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 	}
-	k.MustCall("GET", "/v1/identity-resolution/latest", nil, nil, &response)
+	k.Call("GET", "/v1/identity-resolution/latest", nil, nil, &response)
 	return response.StartTime, response.EndTime
 }
 
 func (k *Krenalis) PipelineRun(id string) PipelineRun {
 	var run PipelineRun
 	path := fmt.Sprintf("/v1/pipelines/runs/%s", id)
-	k.MustCall("GET", path, nil, nil, &run)
+	k.Call("GET", path, nil, nil, &run)
 	return run
 }
 
@@ -495,7 +495,7 @@ func (k *Krenalis) PipelineRuns() []PipelineRun {
 	var response struct {
 		Runs []PipelineRun
 	}
-	k.MustCall("GET", "/v1/pipelines/runs", nil, nil, &response)
+	k.Call("GET", "/v1/pipelines/runs", nil, nil, &response)
 	return response.Runs
 }
 
@@ -507,7 +507,7 @@ func (k *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[stri
 	var response struct {
 		Queries []string
 	}
-	k.MustCall("PUT", "/v1/profiles/schema/preview", nil, req, &response)
+	k.Call("PUT", "/v1/profiles/schema/preview", nil, req, &response)
 	return response.Queries
 }
 
@@ -529,7 +529,7 @@ func (k *Krenalis) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[s
 }
 
 func (k *Krenalis) RepairWarehouse() {
-	k.MustCall("POST", "/v1/warehouse/repair", nil, nil, nil)
+	k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
 }
 
 // RepairWarehouseErr is like RepairWarehouse but returns an error instead of
@@ -542,7 +542,7 @@ func (k *Krenalis) RepairWarehouseErr() error {
 // complete.
 func (k *Krenalis) RunIdentityResolution() {
 	ts := time.Now().UTC()
-	k.MustCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
+	k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
 	// this method to finish.
 	for {
@@ -617,7 +617,7 @@ func (k *Krenalis) Sheets(storage string, path string, format string, compressio
 		Sheets []string `json:"sheets"`
 	}
 	endpointPath := fmt.Sprintf("/v1/connections/%s/files/sheets", storage)
-	k.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
+	k.Call("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Sheets
 }
 
@@ -630,7 +630,7 @@ func (k *Krenalis) TableSchema(conn string, table string) (types.Type, []string)
 	if table != "" {
 		path += "?name=" + url.QueryEscape(table)
 	}
-	k.MustCall("GET", path, nil, nil, &response)
+	k.Call("GET", path, nil, nil, &response)
 	return response.Schema, response.Issues
 }
 
@@ -638,7 +638,7 @@ func (k *Krenalis) TestWarehouseUpdate(settings json.Value) {
 	body := map[string]any{
 		"settings": settings,
 	}
-	k.MustCall("PUT", "/v1/warehouse/test", nil, body, nil)
+	k.Call("PUT", "/v1/warehouse/test", nil, body, nil)
 }
 
 func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
@@ -662,7 +662,7 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 // DeletePipeline deletes a pipeline.
 func (k *Krenalis) DeletePipeline(pipelineID string) {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	k.MustCall("DELETE", path, nil, nil, nil)
+	k.Call("DELETE", path, nil, nil, nil)
 }
 
 // DeletePipelineErr is like DeletePipeline but returns an error instead of
@@ -674,7 +674,7 @@ func (k *Krenalis) DeletePipelineErr(pipelineID string) error {
 
 func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	k.MustCall("PUT", path, nil, pipeline, nil)
+	k.Call("PUT", path, nil, pipeline, nil)
 }
 
 func (k *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
@@ -682,7 +682,7 @@ func (k *Krenalis) UpdateIdentityResolution(runOnBatchImport bool, identifiers [
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
 	}
-	k.MustCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
+	k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
 func (k *Krenalis) UpdateIdentityResolutionErr(identifiers []string) error {
@@ -697,7 +697,7 @@ func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 		"mode":     mode,
 		"settings": settings,
 	}
-	k.MustCall("PUT", "/v1/warehouse", nil, body, nil)
+	k.Call("PUT", "/v1/warehouse", nil, body, nil)
 }
 
 func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[string]any {
@@ -722,7 +722,7 @@ func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[stri
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	k.MustCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
+	k.Call("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Events
 }
 
@@ -732,13 +732,13 @@ func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int
 		Total      int        `json:"total"`
 	}
 	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", kpid, first, limit)
-	k.MustCall("GET", path, nil, nil, &response)
+	k.Call("GET", path, nil, nil, &response)
 	return response.Identities, response.Total
 }
 
 func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	var schema types.Type
-	k.MustCall("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, nil, &schema)
+	k.Call("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, nil, &schema)
 	return schema
 }
 
@@ -755,7 +755,7 @@ func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 		Schema   types.Type `json:"schema"`
 		Total    int        `json:"total"`
 	}
-	k.MustCall("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
+	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
 	return response.Profiles, response.Schema, response.Total
 }
 
@@ -763,7 +763,7 @@ func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 // organizations API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	body := map[string]any{"enabled": enabled}
-	k.MustCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
+	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
 }
 
 // SetOrganizationStatusErr is like SetOrganizationStatus but sends the request
@@ -835,13 +835,13 @@ func (k *Krenalis) EventWriteKeys(conn string) []string {
 		Keys []string `json:"keys"`
 	}
 	path := fmt.Sprintf("/v1/connections/%s/event-write-keys", conn)
-	k.MustCall("GET", path, nil, nil, &res)
+	k.Call("GET", path, nil, nil, &res)
 	return res.Keys
 }
 
 func (k *Krenalis) Workspace() Workspace {
 	var ws Workspace
-	k.MustCall("GET", "/v1/workspaces/current", nil, nil, &ws)
+	k.Call("GET", "/v1/workspaces/current", nil, nil, &ws)
 	return ws
 }
 

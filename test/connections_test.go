@@ -26,7 +26,7 @@ func TestConnections(t *testing.T) {
 	var res struct {
 		Connections []any
 	}
-	k.MustCall("GET", "/v1/connections", nil, nil, &res)
+	k.Call("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 0 {
 		t.Fatalf("expected 0 connections, got %d", len(res.Connections))
 	}
@@ -36,7 +36,7 @@ func TestConnections(t *testing.T) {
 
 	// Check if the Dummy connection has been created successfully.
 	res.Connections = nil
-	k.MustCall("GET", "/v1/connections", nil, nil, &res)
+	k.Call("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 1 {
 		t.Fatalf("expected 1 connections, got %d", len(res.Connections))
 	}
