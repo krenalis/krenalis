@@ -25,7 +25,21 @@ import (
 
 var defaultStrategy Strategy = "Conversion"
 
-// This file contains support methods which reduce verbosity of tests.
+// This file contains support methods which reduce the verbosity of tests.
+//
+// Conventions:
+//
+//   - Methods whose name starts with 'Try' return an error, while their
+//     counterparts fail the test instead.
+//   - Methods, together with the helper functions and variables not tied to a
+//     specific method, are ordered alphabetically, except that each 'Try*'
+//     method immediately follows its counterpart (the method with the same
+//     behavior that fails the test).
+//   - Each 'Try*' method should be called by its counterpart, using the 'must'
+//     function to fail the test, to reduce duplication.
+//   - Any declaration supporting a specific method (types, variables, helper
+//     functions) is placed right after that method, thus breaking the
+//     alphabetical ordering.
 
 func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
