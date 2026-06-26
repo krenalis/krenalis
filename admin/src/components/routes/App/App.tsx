@@ -13,7 +13,7 @@ import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert.j
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
-import { UnauthorizedError } from '../../../lib/api/errors';
+import { UnauthorizedError, UnprocessableError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
 import RootError from '../RootError/RootError';
 import { IS_PASSWORDLESS_KEY, IS_DOCKER_KEY } from '../../../constants/storage';
@@ -67,6 +67,11 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 		if (err instanceof UnauthorizedError) {
 			logout();
 			return;
+		}
+		// If the organization is disabled, log out but do not return, so that
+		// the "organization disabled" error is also printed.
+		if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
+			logout();
 		}
 		if (toastRef.current == null) return;
 		toastRef.current.hide();
