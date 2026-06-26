@@ -23,8 +23,6 @@ import (
 	"github.com/krenalis/analytics-go"
 )
 
-var defaultStrategy Strategy = "Conversion"
-
 // This file contains support methods which reduce the verbosity of tests.
 //
 // Conventions:
@@ -40,6 +38,18 @@ var defaultStrategy Strategy = "Conversion"
 //   - Any declaration supporting a specific method (types, variables, helper
 //     functions) is placed right after that method, thus breaking the
 //     alphabetical ordering.
+
+func (k *Krenalis) AbsolutePath(storage string, path string) string {
+	var response struct {
+		Path string `json:"path"`
+	}
+	endpointPath := fmt.Sprintf("/v1/connections/%s/files/absolute", storage)
+	if path != "" {
+		endpointPath += "?path=" + url.QueryEscape(path)
+	}
+	k.Call("GET", endpointPath, nil, nil, &response)
+	return response.Path
+}
 
 func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
@@ -75,26 +85,21 @@ func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[s
 	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
-func (k *Krenalis) AbsolutePath(storage string, path string) string {
-	var response struct {
-		Path string `json:"path"`
+// CanGetEvents reports whether the events (passing the given properties) can be
+// retrieved, returning an error if they cannot.
+func (k *Krenalis) CanGetEvents(properties []string) error {
+	queryString := url.Values{
+		"properties": properties,
+		"first":      []string{"0"},
+		"limit":      []string{"10"},
 	}
-	endpointPath := fmt.Sprintf("/v1/connections/%s/files/absolute", storage)
-	if path != "" {
-		endpointPath += "?path=" + url.QueryEscape(path)
-	}
-	k.Call("GET", endpointPath, nil, nil, &response)
-	return response.Path
+	return k.TryCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, nil)
 }
 
-func (k *Krenalis) PipelineSchemas(conn string, target core.Target, eventType string) map[string]any {
-	path := fmt.Sprintf("/v1/connections/%s/pipelines/schemas/%s", conn, target)
-	if eventType != "" {
-		path += "?type=" + url.QueryEscape(eventType)
-	}
-	var schemas map[string]any
-	k.Call("GET", path, nil, nil, &schemas)
-	return schemas
+// CanGetOrganization reports whether the organization with the given ID can be
+// retrieved, returning an error if it cannot.
+func (k *Krenalis) CanGetOrganization(id string) error {
+	return k.TryCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
 func (k *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identity, int) {
@@ -112,57 +117,6 @@ func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 	var ui map[string]any
 	k.Call("GET", path, nil, nil, &ui)
 	return ui
-}
-
-func (k *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineToSet) string {
-	id, err := k.TryCreatePipeline(conn, target, pipeline)
-	must(k.t, err)
-	return id
-}
-
-func (k *Krenalis) TryCreatePipeline(conn string, target string, pipeline PipelineToSet) (string, error) {
-	switch target {
-	case "Event", "User", "Group":
-	default:
-		panic(fmt.Sprintf("invalid target %q", target))
-	}
-	pipelineJSON, err := stdjson.Marshal(pipeline)
-	if err != nil {
-		panic(err)
-	}
-	var body map[string]any
-	err = stdjson.Unmarshal(pipelineJSON, &body)
-	if err != nil {
-		panic(err)
-	}
-	body["connection"] = conn
-	body["target"] = target
-	var response struct {
-		ID string `json:"id"`
-	}
-	err = k.TryCall("POST", "/v1/pipelines", nil, body, &response)
-	if err != nil {
-		return "", err
-	}
-	return response.ID, nil
-}
-
-// DefaultFilterUserFromEvents is the filter that the admin adds by default to
-// the pipelines that import users from events.
-var DefaultFilterUserFromEvents = &Filter{
-	Logical: "or",
-	Conditions: []FilterCondition{
-		{
-			Property: "type",
-			Operator: "is",
-			Values:   []string{"identify"},
-		},
-		{
-			Property: "traits",
-			Operator: "is not empty",
-			Values:   nil,
-		},
-	},
 }
 
 func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
@@ -257,39 +211,17 @@ func (k *Krenalis) CreateEventPipeline(conn string, eventType string, pipeline P
 	return response.ID
 }
 
-func (k *Krenalis) CreateWebhookSource(name string, linkedConnections []string) string {
+func (k *Krenalis) CreateJavaScriptSource(name string, linkedConnections []string) string {
 	return k.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
-		Connector:         "webhook",
+		Connector:         "javascript",
+		Strategy:          &defaultStrategy,
 		LinkedConnections: linkedConnections,
 	})
 }
 
-func (k *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
-	var response struct {
-		ID    string `json:"id"`
-		Token string `json:"token"`
-	}
-	body := struct {
-		Name      string        `json:"name"`
-		Workspace string        `json:"workspace"`
-		Type      AccessKeyType `json:"type"`
-	}{
-		Name:      name,
-		Workspace: k.WorkspaceID(),
-		Type:      AccessKeyTypeAPI,
-	}
-	k.Call("POST", "/v1/keys", nil, body, &response)
-	return response.Token
-}
-
-func organizationsHeaders() http.Header {
-	return http.Header{
-		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
-		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
-	}
-}
+var defaultStrategy Strategy = "Conversion"
 
 func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
 	var response struct {
@@ -300,43 +232,37 @@ func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
 	return response.ID
 }
 
-func (k *Krenalis) Organization(id string) Organization {
-	var org Organization
-	k.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
-	return org
+func (k *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineToSet) string {
+	id, err := k.TryCreatePipeline(conn, target, pipeline)
+	must(k.t, err)
+	return id
 }
 
-// CanGetOrganization reports whether the organization with the given ID can be
-// retrieved, returning an error if it cannot.
-func (k *Krenalis) CanGetOrganization(id string) error {
-	return k.TryCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
-}
-
-func (k *Krenalis) Organizations(first, limit int) []Organization {
-	var response struct {
-		Organizations []Organization `json:"organizations"`
+func (k *Krenalis) TryCreatePipeline(conn string, target string, pipeline PipelineToSet) (string, error) {
+	switch target {
+	case "Event", "User", "Group":
+	default:
+		panic(fmt.Sprintf("invalid target %q", target))
 	}
-	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
-	k.Call("GET", path, organizationsHeaders(), nil, &response)
-	return response.Organizations
-}
-
-func (k *Krenalis) UpdateOrganization(id string, name string) {
-	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
-}
-
-func (k *Krenalis) DeleteOrganization(id string) {
-	k.Call("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
-}
-
-func (k *Krenalis) CreateJavaScriptSource(name string, linkedConnections []string) string {
-	return k.CreateConnection(ConnectionToCreate{
-		Name:              name,
-		Role:              Source,
-		Connector:         "javascript",
-		Strategy:          &defaultStrategy,
-		LinkedConnections: linkedConnections,
-	})
+	pipelineJSON, err := stdjson.Marshal(pipeline)
+	if err != nil {
+		panic(err)
+	}
+	var body map[string]any
+	err = stdjson.Unmarshal(pipelineJSON, &body)
+	if err != nil {
+		panic(err)
+	}
+	body["connection"] = conn
+	body["target"] = target
+	var response struct {
+		ID string `json:"id"`
+	}
+	err = k.TryCall("POST", "/v1/pipelines", nil, body, &response)
+	if err != nil {
+		return "", err
+	}
+	return response.ID, nil
 }
 
 func (k *Krenalis) CreateSourceFileSystem() string {
@@ -366,6 +292,51 @@ func (k *Krenalis) CreateSourcePostgreSQL() string {
 	})
 }
 
+func (k *Krenalis) CreateWebhookSource(name string, linkedConnections []string) string {
+	return k.CreateConnection(ConnectionToCreate{
+		Name:              name,
+		Role:              Source,
+		Connector:         "webhook",
+		LinkedConnections: linkedConnections,
+	})
+}
+
+func (k *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
+	var response struct {
+		ID    string `json:"id"`
+		Token string `json:"token"`
+	}
+	body := struct {
+		Name      string        `json:"name"`
+		Workspace string        `json:"workspace"`
+		Type      AccessKeyType `json:"type"`
+	}{
+		Name:      name,
+		Workspace: k.WorkspaceID(),
+		Type:      AccessKeyTypeAPI,
+	}
+	k.Call("POST", "/v1/keys", nil, body, &response)
+	return response.Token
+}
+
+// DefaultFilterUserFromEvents is the filter that the admin adds by default to
+// the pipelines that import users from events.
+var DefaultFilterUserFromEvents = &Filter{
+	Logical: "or",
+	Conditions: []FilterCondition{
+		{
+			Property: "type",
+			Operator: "is",
+			Values:   []string{"identify"},
+		},
+		{
+			Property: "traits",
+			Operator: "is not empty",
+			Values:   nil,
+		},
+	},
+}
+
 func (k *Krenalis) DeleteConnection(conn string) {
 	must(k.t, k.TryDeleteConnection(conn))
 }
@@ -375,28 +346,18 @@ func (k *Krenalis) TryDeleteConnection(conn string) error {
 	return k.TryCall("DELETE", path, nil, nil, nil)
 }
 
-func (k *Krenalis) StartPipelineRun(pipeline string) string {
-	id, err := k.TryStartPipelineRun(pipeline)
-	must(k.t, err)
-	return id
+func (k *Krenalis) DeleteOrganization(id string) {
+	k.Call("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
-func (k *Krenalis) TryStartPipelineRun(pipeline string) (string, error) {
-	var response struct {
-		ID string
-	}
-	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
-	err := k.TryCall("POST", path, nil, map[string]any{}, &response)
-	if err != nil {
-		return "", err
-	}
-	return response.ID, nil
+// DeletePipeline deletes a pipeline.
+func (k *Krenalis) DeletePipeline(pipelineID string) {
+	must(k.t, k.TryDeletePipeline(pipelineID))
 }
 
-func (k *Krenalis) ExternalEventURL() string {
-	var metadata map[string]any
-	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
-	return metadata["externalEventURL"].(string)
+func (k *Krenalis) TryDeletePipeline(pipelineID string) error {
+	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
+	return k.TryCall("DELETE", path, nil, nil, nil)
 }
 
 func (k *Krenalis) Events(properties []string) []map[string]any {
@@ -412,15 +373,19 @@ func (k *Krenalis) Events(properties []string) []map[string]any {
 	return response.Events
 }
 
-// CanGetEvents reports whether the events (passing the given properties) can be
-// retrieved, returning an error if they cannot.
-func (k *Krenalis) CanGetEvents(properties []string) error {
-	queryString := url.Values{
-		"properties": properties,
-		"first":      []string{"0"},
-		"limit":      []string{"10"},
+func (k *Krenalis) EventWriteKeys(conn string) []string {
+	var res struct {
+		Keys []string `json:"keys"`
 	}
-	return k.TryCall("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, nil)
+	path := fmt.Sprintf("/v1/connections/%s/event-write-keys", conn)
+	k.Call("GET", path, nil, nil, &res)
+	return res.Keys
+}
+
+func (k *Krenalis) ExternalEventURL() string {
+	var metadata map[string]any
+	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
+	return metadata["externalEventURL"].(string)
 }
 
 func (k *Krenalis) File(storage string, path, format, sheet string, compression Compression, settings json.Value, limit int) ([]map[string]any, types.Type) {
@@ -441,10 +406,28 @@ func (k *Krenalis) File(storage string, path, format, sheet string, compression 
 	return response.Records, response.Schema
 }
 
+func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int) {
+	var response struct {
+		Identities []Identity `json:"identities"`
+		Total      int        `json:"total"`
+	}
+	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", kpid, first, limit)
+	k.Call("GET", path, nil, nil, &response)
+	return response.Identities, response.Total
+}
+
 func (k *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
 	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
 	return metadata["javascriptSDKURL"].(string)
+}
+
+func JSONEncodeSettings(values any) json.Value {
+	data, err := json.Marshal(values)
+	if err != nil {
+		panic(fmt.Sprintf("cannot encode connection settings to JSON: %s", err))
+	}
+	return data
 }
 
 func (k *Krenalis) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError *string) {
@@ -466,6 +449,28 @@ func (k *Krenalis) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
+func (k *Krenalis) Organization(id string) Organization {
+	var org Organization
+	k.Call("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, &org)
+	return org
+}
+
+func (k *Krenalis) Organizations(first, limit int) []Organization {
+	var response struct {
+		Organizations []Organization `json:"organizations"`
+	}
+	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
+	k.Call("GET", path, organizationsHeaders(), nil, &response)
+	return response.Organizations
+}
+
+func organizationsHeaders() http.Header {
+	return http.Header{
+		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
+		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
+	}
+}
+
 func (k *Krenalis) PipelineRun(id string) PipelineRun {
 	var run PipelineRun
 	path := fmt.Sprintf("/v1/pipelines/runs/%s", id)
@@ -479,6 +484,16 @@ func (k *Krenalis) PipelineRuns() []PipelineRun {
 	}
 	k.Call("GET", "/v1/pipelines/runs", nil, nil, &response)
 	return response.Runs
+}
+
+func (k *Krenalis) PipelineSchemas(conn string, target core.Target, eventType string) map[string]any {
+	path := fmt.Sprintf("/v1/connections/%s/pipelines/schemas/%s", conn, target)
+	if eventType != "" {
+		path += "?type=" + url.QueryEscape(eventType)
+	}
+	var schemas map[string]any
+	k.Call("GET", path, nil, nil, &schemas)
+	return schemas
 }
 
 func (k *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
@@ -500,6 +515,55 @@ func (k *Krenalis) TryPreviewAlterProfileSchema(schema types.Type, rePaths map[s
 		return nil, err
 	}
 	return response.Queries, nil
+}
+
+func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[string]any {
+	queryString := url.Values{
+		"properties": properties,
+		"first":      []string{"0"},
+		"limit":      []string{"10"},
+	}
+	filter := Filter{
+		Logical: OpAnd,
+		Conditions: []FilterCondition{
+			{Property: "kpid",
+				Operator: OpIs,
+				Values:   []string{kpid.String()}},
+		},
+	}
+	jsonFilter, err := stdjson.Marshal(filter)
+	if err != nil {
+		panic(err)
+	}
+	queryString.Add("filter", string(jsonFilter))
+	var response struct {
+		Events []map[string]any `json:"events"`
+	}
+	k.Call("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
+	return response.Events
+}
+
+func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
+	var schema types.Type
+	k.Call("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, nil, &schema)
+	return schema
+}
+
+func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
+	queryString := url.Values{
+		"properties": properties,
+		"order":      []string{order},
+		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
+		"first":      []string{strconv.Itoa(first)},
+		"limit":      []string{strconv.Itoa(limit)},
+	}
+	var response struct {
+		Profiles []Profile  `json:"profiles"`
+		Schema   types.Type `json:"schema"`
+		Total    int        `json:"total"`
+	}
+	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
+	return response.Profiles, response.Schema, response.Total
 }
 
 func (k *Krenalis) RepairWarehouse() {
@@ -527,10 +591,6 @@ func (k *Krenalis) RunIdentityResolutionAndWait() {
 			break
 		}
 	}
-}
-
-func (k *Krenalis) TryStartIdentityResolution() error {
-	return k.TryCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
 }
 
 func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
@@ -574,6 +634,37 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 	s.ch <- err
 }
 
+// SetOrganizationStatus enables or disables an organization through the
+// organizations API.
+func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
+	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
+}
+
+// TrySetOrganizationStatus is like SetOrganizationStatus but sends the request
+// with the given headers and returns an error instead of failing the test.
+func (k *Krenalis) TrySetOrganizationStatus(id string, enabled bool, headers http.Header) error {
+	body := map[string]any{"enabled": enabled}
+	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
+}
+
+func SettingsProperties(properties map[string]bool) json.Value {
+	var settings = struct {
+		Properties []KV `json:"properties"`
+	}{
+		Properties: []KV{},
+	}
+	for name, required := range properties {
+		kv := KV{Key: name}
+		if required {
+			kv.Value = "t"
+		} else {
+			kv.Value = "f"
+		}
+		settings.Properties = append(settings.Properties, kv)
+	}
+	return JSONEncodeSettings(settings)
+}
+
 func (k *Krenalis) Sheets(storage string, path string, format string, compression Compression, settings json.Value) []string {
 	queryString := url.Values{
 		"path":           []string{path},
@@ -587,6 +678,28 @@ func (k *Krenalis) Sheets(storage string, path string, format string, compressio
 	endpointPath := fmt.Sprintf("/v1/connections/%s/files/sheets", storage)
 	k.Call("GET", endpointPath+"?"+queryString.Encode(), nil, nil, &response)
 	return response.Sheets
+}
+
+func (k *Krenalis) TryStartIdentityResolution() error {
+	return k.TryCall("POST", "/v1/identity-resolution/start", nil, nil, nil)
+}
+
+func (k *Krenalis) StartPipelineRun(pipeline string) string {
+	id, err := k.TryStartPipelineRun(pipeline)
+	must(k.t, err)
+	return id
+}
+
+func (k *Krenalis) TryStartPipelineRun(pipeline string) (string, error) {
+	var response struct {
+		ID string
+	}
+	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
+	err := k.TryCall("POST", path, nil, map[string]any{}, &response)
+	if err != nil {
+		return "", err
+	}
+	return response.ID, nil
 }
 
 func (k *Krenalis) TableSchema(conn string, table string) (types.Type, []string) {
@@ -627,21 +740,6 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 	return k.TryCall("POST", "/v1/workspaces/test", headers, body, nil)
 }
 
-// DeletePipeline deletes a pipeline.
-func (k *Krenalis) DeletePipeline(pipelineID string) {
-	must(k.t, k.TryDeletePipeline(pipelineID))
-}
-
-func (k *Krenalis) TryDeletePipeline(pipelineID string) error {
-	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	return k.TryCall("DELETE", path, nil, nil, nil)
-}
-
-func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
-	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	k.Call("PUT", path, nil, pipeline, nil)
-}
-
 func (k *Krenalis) UpdateIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
 	must(k.t, k.TryUpdateIdentityResolutionSettings(runOnBatchImport, identifiers))
 }
@@ -654,84 +752,21 @@ func (k *Krenalis) TryUpdateIdentityResolutionSettings(runOnBatchImport bool, id
 	return k.TryCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
+func (k *Krenalis) UpdateOrganization(id string, name string) {
+	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
+}
+
+func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
+	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
+	k.Call("PUT", path, nil, pipeline, nil)
+}
+
 func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 	body := map[string]any{
 		"mode":     mode,
 		"settings": settings,
 	}
 	k.Call("PUT", "/v1/warehouse", nil, body, nil)
-}
-
-func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[string]any {
-	queryString := url.Values{
-		"properties": properties,
-		"first":      []string{"0"},
-		"limit":      []string{"10"},
-	}
-	filter := Filter{
-		Logical: OpAnd,
-		Conditions: []FilterCondition{
-			{Property: "kpid",
-				Operator: OpIs,
-				Values:   []string{kpid.String()}},
-		},
-	}
-	jsonFilter, err := stdjson.Marshal(filter)
-	if err != nil {
-		panic(err)
-	}
-	queryString.Add("filter", string(jsonFilter))
-	var response struct {
-		Events []map[string]any `json:"events"`
-	}
-	k.Call("GET", "/v1/events"+"?"+queryString.Encode(), nil, nil, &response)
-	return response.Events
-}
-
-func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int) {
-	var response struct {
-		Identities []Identity `json:"identities"`
-		Total      int        `json:"total"`
-	}
-	path := fmt.Sprintf("/v1/profiles/%s/identities?first=%d&limit=%d", kpid, first, limit)
-	k.Call("GET", path, nil, nil, &response)
-	return response.Identities, response.Total
-}
-
-func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
-	var schema types.Type
-	k.Call("GET", "/v1/profiles/schema/suitable-as-identifiers", nil, nil, &schema)
-	return schema
-}
-
-func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
-	queryString := url.Values{
-		"properties": properties,
-		"order":      []string{order},
-		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
-		"first":      []string{strconv.Itoa(first)},
-		"limit":      []string{strconv.Itoa(limit)},
-	}
-	var response struct {
-		Profiles []Profile  `json:"profiles"`
-		Schema   types.Type `json:"schema"`
-		Total    int        `json:"total"`
-	}
-	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-	return response.Profiles, response.Schema, response.Total
-}
-
-// SetOrganizationStatus enables or disables an organization through the
-// organizations API.
-func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
-	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
-}
-
-// TrySetOrganizationStatus is like SetOrganizationStatus but sends the request
-// with the given headers and returns an error instead of failing the test.
-func (k *Krenalis) TrySetOrganizationStatus(id string, enabled bool, headers http.Header) error {
-	body := map[string]any{"enabled": enabled}
-	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
 }
 
 func (k *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {
@@ -770,16 +805,6 @@ func (k *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected i
 	}
 }
 
-// WaitRunsCompletion waits for the runs with the specified IDs, belonging to
-// the connection, to be completed. In the event that a run ends with an error,
-// or there is at least one "Failed", this method will result in an error.
-//
-// If you intend to proceed even in the case of one or more "Failed" (but not an
-// error for the entire run), see the method WaitForRunsCompletionAllowFailed.
-func (k *Krenalis) WaitRunsCompletion(conn string, runs ...string) {
-	k.waitForRunsCompletion(false, runs...)
-}
-
 // WaitForRunsCompletionAllowFailed waits for the runs with the specified IDs,
 // belonging to the connection, to be completed. In the event that a run ends
 // with an error, this method will result in an error. If there is one or more
@@ -791,19 +816,14 @@ func (k *Krenalis) WaitForRunsCompletionAllowFailed(conn string, runs ...string)
 	k.waitForRunsCompletion(true, runs...)
 }
 
-func (k *Krenalis) EventWriteKeys(conn string) []string {
-	var res struct {
-		Keys []string `json:"keys"`
-	}
-	path := fmt.Sprintf("/v1/connections/%s/event-write-keys", conn)
-	k.Call("GET", path, nil, nil, &res)
-	return res.Keys
-}
-
-func (k *Krenalis) Workspace() Workspace {
-	var ws Workspace
-	k.Call("GET", "/v1/workspaces/current", nil, nil, &ws)
-	return ws
+// WaitRunsCompletion waits for the runs with the specified IDs, belonging to
+// the connection, to be completed. In the event that a run ends with an error,
+// or there is at least one "Failed", this method will result in an error.
+//
+// If you intend to proceed even in the case of one or more "Failed" (but not an
+// error for the entire run), see the method WaitForRunsCompletionAllowFailed.
+func (k *Krenalis) WaitRunsCompletion(conn string, runs ...string) {
+	k.waitForRunsCompletion(false, runs...)
 }
 
 func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
@@ -848,28 +868,8 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 	}
 }
 
-func JSONEncodeSettings(values any) json.Value {
-	data, err := json.Marshal(values)
-	if err != nil {
-		panic(fmt.Sprintf("cannot encode connection settings to JSON: %s", err))
-	}
-	return data
-}
-
-func SettingsProperties(properties map[string]bool) json.Value {
-	var settings = struct {
-		Properties []KV `json:"properties"`
-	}{
-		Properties: []KV{},
-	}
-	for name, required := range properties {
-		kv := KV{Key: name}
-		if required {
-			kv.Value = "t"
-		} else {
-			kv.Value = "f"
-		}
-		settings.Properties = append(settings.Properties, kv)
-	}
-	return JSONEncodeSettings(settings)
+func (k *Krenalis) Workspace() Workspace {
+	var ws Workspace
+	k.Call("GET", "/v1/workspaces/current", nil, nil, &ws)
+	return ws
 }
