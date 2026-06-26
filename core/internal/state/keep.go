@@ -785,6 +785,9 @@ func (state *State) deleteConnection(n notification) string {
 	state.mu.Lock()
 	for _, p := range e.connection.pipelines {
 		delete(state.pipelines, p.ID)
+		if p.run != nil {
+			delete(state.liveRuns, p.run.ID)
+		}
 	}
 	state.mu.Unlock()
 	// Remove the connection from the linked connections.
@@ -895,6 +898,9 @@ func (state *State) deleteOrganization(n notification) string {
 			// Delete the connection's pipelines.
 			for _, p := range c.pipelines {
 				delete(state.pipelines, p.ID)
+				if p.run != nil {
+					delete(state.liveRuns, p.run.ID)
+				}
 			}
 		}
 		delete(state.workspaces, id)
@@ -929,6 +935,9 @@ func (state *State) deletePipeline(n notification) string {
 	e.pipeline = state.pipelines[e.ID]
 	state.mu.Lock()
 	delete(state.pipelines, e.ID)
+	if run := e.pipeline.run; run != nil {
+		delete(state.liveRuns, run.ID)
+	}
 	state.mu.Unlock()
 	c := e.pipeline.connection
 	c.mu.Lock()
@@ -982,6 +991,9 @@ func (state *State) deleteWorkspace(n notification) string {
 		// Delete the connection's pipelines.
 		for _, p := range c.pipelines {
 			delete(state.pipelines, p.ID)
+			if p.run != nil {
+				delete(state.liveRuns, p.run.ID)
+			}
 		}
 	}
 	state.mu.Unlock()
