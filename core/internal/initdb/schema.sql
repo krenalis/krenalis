@@ -189,7 +189,7 @@ CREATE INDEX pipelines_runs_function_idx
     ON pipelines_runs (function)
     WHERE function != '' AND end_time IS NULL;
 
-CREATE UNIQUE INDEX pipelines_one_active_run_idx
+CREATE UNIQUE INDEX pipelines_one_live_run_idx
     ON pipelines_runs (pipeline)
     WHERE end_time IS NULL;
 

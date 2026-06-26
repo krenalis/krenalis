@@ -386,12 +386,10 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
-	// Try to start pending pipeline runs.
-	for _, pipeline := range core.state.Pipelines() {
-		if run, ok := pipeline.Run(); ok {
-			if _, ok := run.Node(); !ok {
-				core.tryStartPipelineRun(pipeline.ID)
-			}
+	// Try to start live runs that have not started yet.
+	for _, run := range core.state.LiveRuns() {
+		if _, ok := run.Node(); !ok {
+			core.tryStartPipelineRun(run)
 		}
 	}
 
@@ -1205,7 +1203,9 @@ func (core *Core) mustBeOpen() {
 
 // onRunPipeline is called when a pipeline run starts.
 func (core *Core) onRunPipeline(n state.RunPipeline) {
-	core.tryStartPipelineRun(n.Pipeline)
+	p, _ := core.state.Pipeline(n.Pipeline)
+	run, _ := p.Run()
+	core.tryStartPipelineRun(run)
 }
 
 // pipelineError represents a pipeline error.
@@ -1222,29 +1222,15 @@ func (err pipelineError) Error() string {
 	return err.err.Error()
 }
 
-// tryStartPipelineRun attempts to start a pipeline run.
+// tryStartPipelineRun attempts to start the given pipeline run.
 // It returns immediately and spawns a new goroutine to handle the run.
-func (core *Core) tryStartPipelineRun(pipelineID string) {
+func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 	core.close.Go(func() {
 
 		ctx := core.close.ctx
 
-		var pipeline *state.Pipeline
-		var run *state.PipelineRun
-
-		var ok bool
-		pipeline, ok = core.state.Pipeline(pipelineID)
-		if !ok {
-			return
-		}
-		run, ok = pipeline.Run()
-		if !ok {
-			return
-		}
-		if _, ok := run.Node(); ok {
-			return
-		}
+		pipeline := run.Pipeline()
 
 		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
@@ -1352,7 +1338,7 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 		}
 
 		// Mark the run as ended.
-		p.endRun(run.ID, err)
+		p.endLiveRun(run.ID, err)
 
 		// Stop pinging as it is no longer required.
 		stopPing()

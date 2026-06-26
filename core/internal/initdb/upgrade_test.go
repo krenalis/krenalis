@@ -107,11 +107,11 @@ func TestUpgradePipelineRunIndexes(t *testing.T) {
 		t.Fatalf("cannot insert completed run: %s", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO pipelines_runs (id, pipeline) VALUES ('run-2', 'pipeline-1')`)
-	if !db.IsUniqueViolation(err) || db.ErrConstraintName(err) != oneActivePipelineRunIndex {
-		t.Fatalf("expected violation of %s, got %v", oneActivePipelineRunIndex, err)
+	if !db.IsUniqueViolation(err) || db.ErrConstraintName(err) != oneLivePipelineRunIndex {
+		t.Fatalf("expected violation of %s, got %v", oneLivePipelineRunIndex, err)
 	}
 
-	_, err = database.Exec(ctx, `DROP INDEX `+oneActivePipelineRunIndex)
+	_, err = database.Exec(ctx, `DROP INDEX `+oneLivePipelineRunIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestUpgradePipelineRunIndexes(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = Upgrade(ctx, database)
-	if err == nil || !strings.Contains(err.Error(), "multiple active runs exist") {
-		t.Fatalf("expected duplicate active runs error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "multiple live runs exist") {
+		t.Fatalf("expected duplicate live runs error, got %v", err)
 	}
 }

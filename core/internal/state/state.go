@@ -64,6 +64,7 @@ type State struct {
 
 	mu               *sync.Mutex              // for the 'pipelines', ..., and 'workspaces' fields
 	pipelines        map[string]*Pipeline     // protected by mu
+	liveRuns         map[string]*PipelineRun  // live pipeline runs, i.e. runs that have not ended; protected by mu
 	connections      map[string]*Connection   // protected by mu
 	connectionsByKey map[string]*Connection   // protected by mu
 	accessKeyByHMAC  map[string]*AccessKey    // protected by mu
@@ -113,6 +114,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		connections:      map[string]*Connection{},
 		connectionsByKey: map[string]*Connection{},
 		pipelines:        map[string]*Pipeline{},
+		liveRuns:         map[string]*PipelineRun{},
 		sendStats:        sendStats,
 	}
 
@@ -286,6 +288,31 @@ func (state *State) IsLeader() bool {
 	election := state.election
 	state.mu.Unlock()
 	return election.leader == state.id
+}
+
+// LiveRun returns the live pipeline run with the given id.
+// The boolean return value indicates whether the live run exists.
+func (state *State) LiveRun(id string) (*PipelineRun, bool) {
+	state.mu.Lock()
+	run, ok := state.liveRuns[id]
+	state.mu.Unlock()
+	return run, ok
+}
+
+// LiveRuns returns all the live pipeline runs.
+func (state *State) LiveRuns() []*PipelineRun {
+	state.mu.Lock()
+	runs := make([]*PipelineRun, len(state.liveRuns))
+	i := 0
+	for _, run := range state.liveRuns {
+		runs[i] = run
+		i++
+	}
+	state.mu.Unlock()
+	sort.Slice(runs, func(i, j int) bool {
+		return runs[i].ID < runs[j].ID
+	})
+	return runs
 }
 
 // OAuthKey returns the key used to encrypt and decrypt OAuth keys.
@@ -615,7 +642,6 @@ type Workspace struct {
 		mcpSettingsKey *cipher.Key
 	}
 	connections                    map[string]*Connection
-	runs                           map[string]*PipelineRun // pipeline runs in progress.
 	ID                             string
 	organization                   *Organization
 	Name                           string
@@ -762,15 +788,6 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 	pipelines := workspace.pipelinesToPurge
 	workspace.mu.Unlock()
 	return slices.Clone(pipelines)
-}
-
-// Run returns the pipeline run in the workspace with the given id.
-// The boolean return value indicates whether the run exists.
-func (workspace *Workspace) Run(id string) (*PipelineRun, bool) {
-	workspace.mu.Lock()
-	exe, ok := workspace.runs[id]
-	workspace.mu.Unlock()
-	return exe, ok
 }
 
 // WarehouseSettings returns the warehouse settings.
