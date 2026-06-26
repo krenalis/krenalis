@@ -46,7 +46,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test an invalid path.
-	err := k.TryUpdateIdentityResolutionSettings([]string{"invalid path"})
+	err := k.TryUpdateIdentityResolutionSettings(false, []string{"invalid path"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -56,7 +56,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not existent path in the profile schema.
-	err = k.TryUpdateIdentityResolutionSettings([]string{"non_existent"})
+	err = k.TryUpdateIdentityResolutionSettings(false, []string{"non_existent"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -66,7 +66,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not allowed type for identifiers.
-	err = k.TryUpdateIdentityResolutionSettings([]string{"phone_numbers"})
+	err = k.TryUpdateIdentityResolutionSettings(false, []string{"phone_numbers"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}

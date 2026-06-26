@@ -169,7 +169,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	})
 
 	t.Run("update identity resolution is rejected", func(t *testing.T) {
-		err := k.TryUpdateIdentityResolutionSettings([]string{"email"})
+		err := k.TryUpdateIdentityResolutionSettings(false, []string{"email"})
 		assertOrganizationDisabled(t, err)
 	})
 

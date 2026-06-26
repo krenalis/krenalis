@@ -667,9 +667,10 @@ func (k *Krenalis) UpdateIdentityResolutionSettings(runOnBatchImport bool, ident
 	k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
-func (k *Krenalis) TryUpdateIdentityResolutionSettings(identifiers []string) error {
+func (k *Krenalis) TryUpdateIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) error {
 	body := map[string]any{
-		"identifiers": identifiers,
+		"runOnBatchImport": runOnBatchImport,
+		"identifiers":      identifiers,
 	}
 	return k.TryCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
