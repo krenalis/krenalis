@@ -60,7 +60,7 @@ def transform(user: dict) -> dict:
 		},
 	})
 	run := k.StartPipelineRun(importUsersID)
-	k.WaitRunsCompletion(dummyID, run)
+	k.WaitForRunsCompletion(dummyID, run)
 
 	k.RunIdentityResolutionAndWait()
 

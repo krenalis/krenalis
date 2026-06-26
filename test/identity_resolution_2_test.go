@@ -146,9 +146,9 @@ func TestIdentityResolution2(t *testing.T) {
 	run1 := k.StartPipelineRun(pipelineA)
 	run2 := k.StartPipelineRun(pipelineB)
 	run3 := k.StartPipelineRun(pipelineC)
-	k.WaitRunsCompletion(sourceA, run1)
-	k.WaitRunsCompletion(sourceB, run2)
-	k.WaitRunsCompletion(sourceC, run3)
+	k.WaitForRunsCompletion(sourceA, run1)
+	k.WaitForRunsCompletion(sourceB, run2)
+	k.WaitForRunsCompletion(sourceC, run3)
 
 	// Resolve the identities.
 	k.RunIdentityResolutionAndWait()

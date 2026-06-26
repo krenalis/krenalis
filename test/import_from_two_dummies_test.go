@@ -54,8 +54,8 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// process.
 	run1 := k.StartPipelineRun(pipeline1)
 	run2 := k.StartPipelineRun(pipeline2)
-	k.WaitRunsCompletion(dummy1, run1)
-	k.WaitRunsCompletion(dummy2, run2)
+	k.WaitForRunsCompletion(dummy1, run1)
+	k.WaitForRunsCompletion(dummy2, run2)
 
 	// Ensure that the connection have the correct identities associated.
 	{
