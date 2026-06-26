@@ -222,14 +222,15 @@ func TestChangeProfileSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
-	if err.Error() != expectedErr {
-		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	expectedPreviewErr := `PUT v1/profiles/schema/preview: unexpected status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}} [request has body: true, response body expected: true]`
+	if err.Error() != expectedPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedPreviewErr, err.Error())
 	}
 	err = k.TryAlterProfileSchema(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+	expectedErr := `PUT v1/profiles/schema: unexpected status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}} [request has body: true, response body expected: false]`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -244,14 +245,15 @@ func TestChangeProfileSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}}`
-	if err.Error() != expectedErr {
-		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	expectedPreviewErr = `PUT v1/profiles/schema/preview: unexpected status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}} [request has body: true, response body expected: true]`
+	if err.Error() != expectedPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedPreviewErr, err.Error())
 	}
 	err = k.TryAlterProfileSchema(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+	expectedErr = `PUT v1/profiles/schema: unexpected status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}} [request has body: true, response body expected: false]`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -272,7 +274,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	// Set a primary source for a not existent property.
 	primarySources = map[string]string{"not_existent_property": primarySource}
 	err = k.TryAlterProfileSchema(file.Schema, primarySources, nil)
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
+	expectedErr = `PUT v1/profiles/schema: unexpected status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}} [request has body: true, response body expected: false]`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -281,7 +283,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	notExistentSource := "7B3mN9qK2xA4"
 	primarySources = map[string]string{firstProperty: notExistentSource}
 	err = k.TryAlterProfileSchema(file.Schema, primarySources, nil)
-	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}}`, notExistentSource)
+	expectedErr = fmt.Sprintf(`PUT v1/profiles/schema: unexpected status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}} [request has body: true, response body expected: false]`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
