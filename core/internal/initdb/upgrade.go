@@ -12,7 +12,10 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 )
 
-const oneActivePipelineRunIndex = "pipelines_one_active_run_idx"
+const (
+	oneActivePipelineRunIndex = "pipelines_one_active_run_idx"
+	oneLivePipelineRunIndex   = "pipelines_one_live_run_idx"
+)
 const pipelineRunsFunctionIndex = "pipelines_runs_function_idx"
 
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
@@ -38,11 +41,16 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		if _, err := tx.Exec(ctx, `DROP INDEX IF EXISTS `+oneActivePipelineRunIndex); err != nil {
 			return err
 		}
-		if _, err = tx.Exec(ctx, `CREATE UNIQUE INDEX `+oneActivePipelineRunIndex+`
+		// core: rename active pipeline run index to live
+		// https://github.com/krenalis/krenalis/pull/2308
+		if _, err := tx.Exec(ctx, `DROP INDEX IF EXISTS `+oneLivePipelineRunIndex); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `CREATE UNIQUE INDEX `+oneLivePipelineRunIndex+`
 				ON pipelines_runs (pipeline)
 				WHERE end_time IS NULL`); err != nil {
 			if db.IsUniqueViolation(err) {
-				err = fmt.Errorf("cannot create %s: multiple active runs exist for the same pipeline; try it later", oneActivePipelineRunIndex)
+				err = fmt.Errorf("cannot create %s: multiple live runs exist for the same pipeline; try it later", oneLivePipelineRunIndex)
 			}
 			return err
 		}
