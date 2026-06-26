@@ -7,6 +7,7 @@ import { Link } from '../../base/Link/Link';
 import { useSearchParams } from 'react-router-dom';
 import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY, IS_PASSWORDLESS_KEY } from '../../../constants/storage';
+import { UnprocessableError } from '../../../lib/api/errors';
 
 const Login = () => {
 	const [email, setEmail] = useState<string>('');
@@ -34,7 +35,15 @@ const Login = () => {
 			try {
 				[, authError] = await api.login('docker@krenalis.com', 'krenalis-password', true);
 			} catch (err) {
-				// Do nothing.
+				// Show the "organization disabled" error instead of silently
+				// ignoring it, so the user understands why the login fails.
+				//
+				// In other circumstances besides this, we do not want the error
+				// to be displayed, as passwordless login may not work because
+				// the organization and/or default members have been changed.
+				if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
+					handleError(err);
+				}
 				setIsTryingPasswordlessLogin(false);
 				return;
 			}
@@ -58,7 +67,15 @@ const Login = () => {
 			try {
 				[, authError] = await api.login('acme@krenalis.com', 'krenalis-password', true);
 			} catch (err) {
-				// Do nothing.
+				// Show the "organization disabled" error instead of silently
+				// ignoring it, so the user understands why the login fails.
+				//
+				// In other circumstances besides this, we do not want the error
+				// to be displayed, as passwordless login may not work because
+				// the organization and/or default members have been changed.
+				if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
+					handleError(err);
+				}
 				setIsTryingPasswordlessLogin(false);
 				return;
 			}
