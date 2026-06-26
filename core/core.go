@@ -1271,7 +1271,7 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 		})
 		if err != nil {
 			if ctx.Err() == nil {
-				slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", reason)
+				slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 			}
 			continue
 		}
