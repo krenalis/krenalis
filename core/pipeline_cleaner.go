@@ -129,7 +129,7 @@ func (c *pipelineCleaner) complete(f func() error) error {
 }
 
 // deleteDiscontinuedFunctions starts the deletion task for function that have
-// been discontinued and are no longer in use by any executing pipelines.
+// been discontinued and are no longer in use by any running pipelines.
 // It must be called in its own goroutine.
 //
 // A function is considered discontinued if:
