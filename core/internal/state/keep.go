@@ -1106,6 +1106,7 @@ func (state *State) endPipelineRun(n notification) string {
 		p.run = nil
 		p.Health = e.Health
 	})
+	dispatchNotification(state, e)
 	return p.organization.ID
 }
 
