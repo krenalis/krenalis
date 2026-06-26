@@ -59,7 +59,7 @@ def transform(user: dict) -> dict:
 		},
 	})
 	run := k.StartPipelineRun(pipeline)
-	k.WaitForRunsCompletion(dummy, run)
+	k.WaitForRunsCompletion(run)
 
 	// Retrieve the profiles.
 	const expectedTotal = 10

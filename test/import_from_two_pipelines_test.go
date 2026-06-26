@@ -103,7 +103,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	// Import from the first pipeline, which should import just the first name,
 	// then run the Identity Resolution.
 	run := k.StartPipelineRun(pipelineFirstName)
-	k.WaitForRunsCompletion(fsID, run)
+	k.WaitForRunsCompletion(run)
 	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
@@ -129,7 +129,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	// and that should result in profiles with both first name and last name,
 	// then run the Identity Resolution.
 	run = k.StartPipelineRun(pipelineLastName)
-	k.WaitForRunsCompletion(fsID, run)
+	k.WaitForRunsCompletion(run)
 	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.

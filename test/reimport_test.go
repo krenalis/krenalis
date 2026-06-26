@@ -53,7 +53,7 @@ func TestReimport(t *testing.T) {
 
 	// Import the users from dummy.
 	run := k.StartPipelineRun(dummyPipeline)
-	k.WaitForRunsCompletion(dummy, run)
+	k.WaitForRunsCompletion(run)
 
 	// Run the Identity Resolution.
 	k.RunIdentityResolutionAndWait()
@@ -103,7 +103,7 @@ func TestReimport(t *testing.T) {
 
 	// Import again the users from Dummy.
 	run = k.StartPipelineRun(dummyPipeline)
-	k.WaitForRunsCompletion(dummy, run)
+	k.WaitForRunsCompletion(run)
 
 	// Run the Identity Resolution.
 	k.RunIdentityResolutionAndWait()

@@ -67,7 +67,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
 	run1 := k.StartPipelineRun(pipeline1)
 
-	k.WaitForRunsCompletionAllowFailed(fs1, run1)
+	k.WaitForRunsCompletionAllowFailed(run1)
 
 	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 

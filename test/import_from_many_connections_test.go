@@ -76,7 +76,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			},
 		})
 		run := k.StartPipelineRun(dummyPipeline)
-		k.WaitForRunsCompletion(dummy, run)
+		k.WaitForRunsCompletion(run)
 	}
 
 	k.RunIdentityResolutionAndWait()
@@ -122,7 +122,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			}),
 		})
 		run := k.StartPipelineRun(csvPipeline)
-		k.WaitForRunsCompletion(fs, run)
+		k.WaitForRunsCompletion(run)
 	}
 
 	k.RunIdentityResolutionAndWait()

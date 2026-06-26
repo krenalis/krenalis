@@ -64,7 +64,7 @@ func TestExportUsersToFile(t *testing.T) {
 			},
 		})
 		run := k.StartPipelineRun(importUsersID)
-		k.WaitForRunsCompletion(dummySrc, run)
+		k.WaitForRunsCompletion(run)
 	}
 
 	// Create the File System connection.
@@ -141,7 +141,7 @@ func TestExportUsersToFile(t *testing.T) {
 		run := k.StartPipelineRun(exportUsersPipelineID)
 
 		// Wait for the export to finish.
-		k.WaitForRunsCompletion(fsID, run)
+		k.WaitForRunsCompletion(run)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

@@ -60,7 +60,7 @@ func TestExportZeroProfiles(t *testing.T) {
 			UpdateOnDuplicates: false,
 		})
 		run := k.StartPipelineRun(exportProfilesPipelineID)
-		k.WaitForRunsCompletion(dummyDest, run)
+		k.WaitForRunsCompletion(run)
 	}()
 
 	// Test the export of zero profiles to file (CSV).
@@ -112,7 +112,7 @@ func TestExportZeroProfiles(t *testing.T) {
 		run := k.StartPipelineRun(exportProfilesPipelineID)
 
 		// Wait for the export to finish.
-		k.WaitForRunsCompletion(fsID, run)
+		k.WaitForRunsCompletion(run)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

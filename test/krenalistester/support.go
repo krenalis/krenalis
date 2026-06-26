@@ -901,24 +901,23 @@ func (k *Krenalis) WaitEventsStoredIntoWarehouse(ctx context.Context, expected i
 	}
 }
 
-// WaitForRunsCompletion waits for the runs with the specified IDs, belonging to
-// the connection, to be completed. In the event that a run ends with an error,
-// or there is at least one "Failed", this method will result in an error.
+// WaitForRunsCompletion waits for the runs with the specified IDs to be
+// completed. In the event that a run ends with an error, or there is at least
+// one "Failed", this method will result in an error.
 //
 // If you intend to proceed even in the case of one or more "Failed" (but not an
 // error for the entire run), see the method WaitForRunsCompletionAllowFailed.
-func (k *Krenalis) WaitForRunsCompletion(conn string, runs ...string) {
+func (k *Krenalis) WaitForRunsCompletion(runs ...string) {
 	k.waitForRunsCompletion(false, runs...)
 }
 
-// WaitForRunsCompletionAllowFailed waits for the runs with the specified IDs,
-// belonging to the connection, to be completed. In the event that a run ends
-// with an error, this method will result in an error. If there is one or more
-// Failed, they are ignored.
+// WaitForRunsCompletionAllowFailed waits for the runs with the specified IDs to
+// be completed. In the event that a run ends with an error, this method will
+// result in an error. If there is one or more Failed, they are ignored.
 //
 // If you want the method to result in an error even in the case of one or more
 // "Failed", see the method WaitForRunsCompletion.
-func (k *Krenalis) WaitForRunsCompletionAllowFailed(conn string, runs ...string) {
+func (k *Krenalis) WaitForRunsCompletionAllowFailed(runs ...string) {
 	k.waitForRunsCompletion(true, runs...)
 }
 
