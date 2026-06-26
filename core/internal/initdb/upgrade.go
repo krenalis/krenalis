@@ -41,7 +41,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		if _, err := tx.Exec(ctx, `DROP INDEX IF EXISTS `+oneActivePipelineRunIndex); err != nil {
 			return err
 		}
-		// core,core/internal/inidb: Rename active pipeline run index to live
+		// core: rename active pipeline run index to live
 		// https://github.com/krenalis/krenalis/pull/2308
 		if _, err := tx.Exec(ctx, `DROP INDEX IF EXISTS `+oneLivePipelineRunIndex); err != nil {
 			return err
