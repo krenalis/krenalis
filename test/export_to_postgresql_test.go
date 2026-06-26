@@ -49,7 +49,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		})
 		run := k.StartPipelineRun(importUsersID)
-		k.WaitRunsCompletion(dummySrc, run)
+		k.WaitForRunsCompletion(dummySrc, run)
 	}
 
 	ctx := context.Background()
@@ -103,7 +103,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 		},
 	})
 	run := k.StartPipelineRun(exportPipeline)
-	k.WaitRunsCompletion(pgsql, run)
+	k.WaitForRunsCompletion(pgsql, run)
 
 	// Check if the export completed successfully.
 	const expectedCount = 10
@@ -136,7 +136,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 		},
 	})
 	run = k.StartPipelineRun(exportPipeline)
-	k.WaitRunsCompletion(pgsql, run)
+	k.WaitForRunsCompletion(pgsql, run)
 
 	// Check if the export completed successfully.
 	k.QueryRowTestDatabase(ctx, &count,

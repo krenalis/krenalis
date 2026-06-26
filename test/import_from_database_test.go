@@ -46,7 +46,7 @@ func TestImportFromDatabase(t *testing.T) {
 
 	run := k.StartPipelineRun(importUsers)
 
-	k.WaitRunsCompletion(pgSQL, run)
+	k.WaitForRunsCompletion(pgSQL, run)
 
 	identities, total := k.ConnectionIdentities(pgSQL, 0, 100)
 

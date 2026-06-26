@@ -45,7 +45,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 		})
 		run := k.StartPipelineRun(importUsersID)
-		k.WaitRunsCompletion(dummySrc, run)
+		k.WaitForRunsCompletion(dummySrc, run)
 	}
 
 	// Export the profiles to Dummy.
@@ -74,7 +74,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			UpdateOnDuplicates: false,
 		})
 		run := k.StartPipelineRun(exportProfilesPipelineID)
-		k.WaitRunsCompletion(dummyDest, run)
+		k.WaitForRunsCompletion(dummyDest, run)
 	}
 
 	// Import from Dummy - again - to check if the users have been updated
@@ -103,7 +103,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 		})
 		run := k.StartPipelineRun(importUsersID)
-		k.WaitRunsCompletion(dummySrc, run)
+		k.WaitForRunsCompletion(dummySrc, run)
 		profiles, _, _ := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(profiles) == 0 {
 			t.Fatal("no profiles re-imported from Dummy")

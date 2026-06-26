@@ -83,7 +83,7 @@ func TestParquetImport(t *testing.T) {
 			identityResolutionStart = time.Now().UTC()
 			run := k.StartPipelineRun(pipeline)
 			runStarted = true
-			k.WaitRunsCompletion(fs, run)
+			k.WaitForRunsCompletion(fs, run)
 
 			waitParquetImportProfiles(t, k, len(expectedProfiles))
 			profiles, _, _ := k.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
