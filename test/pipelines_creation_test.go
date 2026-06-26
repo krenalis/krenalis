@@ -114,7 +114,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"hasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output pipeline schema property \"_email\" is a meta property"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"output pipeline schema property \"_email\" is a meta property"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: dstFsID,
@@ -161,7 +161,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"hasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"update time format is required"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"update time format is required"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: srcFsID,
@@ -190,7 +190,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"hasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"user ID column is mandatory"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"user ID column is mandatory"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: srcFsID,
@@ -218,7 +218,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"hasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"user ID column is not a valid property name"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"user ID column is not a valid property name"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: srcFsID,
@@ -260,7 +260,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"hasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be valid"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"input schema must be valid"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: srcFsID,
@@ -288,7 +288,7 @@ func TestPipelinesCreation(t *testing.T) {
 					"hasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"pipeline cannot specify an update time format"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"pipeline cannot specify an update time format"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: postgreSQLConnection,
@@ -310,7 +310,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UserIDColumn:    "my_id_column",
 				UpdatedAtColumn: "timestamp",
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"user ID column \"my_id_column\" not found within input schema"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"user ID column \"my_id_column\" not found within input schema"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: postgreSQLConnection,
@@ -355,7 +355,7 @@ func TestPipelinesCreation(t *testing.T) {
 				UserIDColumn:    "id",
 				UpdatedAtColumn: "timestamp",
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"update time format is required"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"update time format is required"}} [request has body: true, response body expected: true]`,
 		},
 		{
 			conn: postgreSQLConnection,
@@ -416,7 +416,7 @@ func TestPipelinesCreation(t *testing.T) {
 					},
 				},
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for pipelines that import identities from events"}}`,
+			err: `POST v1/pipelines: unexpected status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for pipelines that import identities from events"}} [request has body: true, response body expected: true]`,
 		},
 	}
 	for _, test := range tests {
