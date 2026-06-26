@@ -101,27 +101,9 @@ func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 }
 
 func (k *Krenalis) CreatePipeline(conn string, target string, pipeline PipelineToSet) string {
-	switch target {
-	case "Event", "User", "Group":
-	default:
-		panic(fmt.Sprintf("invalid target %q", target))
-	}
-	pipelineJSON, err := stdjson.Marshal(pipeline)
-	if err != nil {
-		panic(err)
-	}
-	var body map[string]any
-	err = stdjson.Unmarshal(pipelineJSON, &body)
-	if err != nil {
-		panic(err)
-	}
-	body["connection"] = conn
-	body["target"] = target
-	var response struct {
-		ID string `json:"id"`
-	}
-	k.Call("POST", "/v1/pipelines", nil, body, &response)
-	return response.ID
+	id, err := k.TryCreatePipeline(conn, target, pipeline)
+	must(k.t, err)
+	return id
 }
 
 func (k *Krenalis) TryCreatePipeline(conn string, target string, pipeline PipelineToSet) (string, error) {
@@ -170,11 +152,9 @@ var DefaultFilterUserFromEvents = &Filter{
 }
 
 func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
-	var response struct {
-		ID string `json:"id"`
-	}
-	k.Call("POST", "/v1/connections", nil, connection, &response)
-	return response.ID
+	id, err := k.TryCreateConnection(connection)
+	must(k.t, err)
+	return id
 }
 
 func (k *Krenalis) TryCreateConnection(connection ConnectionToCreate) (string, error) {
@@ -373,8 +353,7 @@ func (k *Krenalis) CreateSourcePostgreSQL() string {
 }
 
 func (k *Krenalis) DeleteConnection(conn string) {
-	path := fmt.Sprintf("/v1/connections/%s", conn)
-	k.Call("DELETE", path, nil, nil, nil)
+	must(k.t, k.TryDeleteConnection(conn))
 }
 
 func (k *Krenalis) TryDeleteConnection(conn string) error {
@@ -383,12 +362,9 @@ func (k *Krenalis) TryDeleteConnection(conn string) error {
 }
 
 func (k *Krenalis) StartPipelineRun(pipeline string) string {
-	var response struct {
-		ID string
-	}
-	path := fmt.Sprintf("/v1/pipelines/%s/runs", pipeline)
-	k.Call("POST", path, nil, map[string]any{}, &response)
-	return response.ID
+	id, err := k.TryStartPipelineRun(pipeline)
+	must(k.t, err)
+	return id
 }
 
 func (k *Krenalis) TryStartPipelineRun(pipeline string) (string, error) {
@@ -492,15 +468,9 @@ func (k *Krenalis) PipelineRuns() []PipelineRun {
 }
 
 func (k *Krenalis) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
-	req := map[string]any{
-		"schema":  schema,
-		"rePaths": rePaths,
-	}
-	var response struct {
-		Queries []string
-	}
-	k.Call("PUT", "/v1/profiles/schema/preview", nil, req, &response)
-	return response.Queries
+	queries, err := k.TryPreviewAlterProfileSchema(schema, rePaths)
+	must(k.t, err)
+	return queries
 }
 
 func (k *Krenalis) TryPreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) ([]string, error) {
@@ -519,7 +489,7 @@ func (k *Krenalis) TryPreviewAlterProfileSchema(schema types.Type, rePaths map[s
 }
 
 func (k *Krenalis) RepairWarehouse() {
-	k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
+	must(k.t, k.TryRepairWarehouse())
 }
 
 func (k *Krenalis) TryRepairWarehouse() error {
@@ -645,8 +615,7 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 
 // DeletePipeline deletes a pipeline.
 func (k *Krenalis) DeletePipeline(pipelineID string) {
-	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	k.Call("DELETE", path, nil, nil, nil)
+	must(k.t, k.TryDeletePipeline(pipelineID))
 }
 
 func (k *Krenalis) TryDeletePipeline(pipelineID string) error {
@@ -660,11 +629,7 @@ func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
 }
 
 func (k *Krenalis) UpdateIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
-	body := map[string]any{
-		"runOnBatchImport": runOnBatchImport,
-		"identifiers":      identifiers,
-	}
-	k.Call("PUT", "/v1/identity-resolution/settings", nil, body, nil)
+	must(k.t, k.TryUpdateIdentityResolutionSettings(runOnBatchImport, identifiers))
 }
 
 func (k *Krenalis) TryUpdateIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) error {
@@ -745,8 +710,7 @@ func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 // SetOrganizationStatus enables or disables an organization through the
 // organizations API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
-	body := map[string]any{"enabled": enabled}
-	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
+	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }
 
 // TrySetOrganizationStatus is like SetOrganizationStatus but sends the request
