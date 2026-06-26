@@ -16,8 +16,8 @@ const (
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
-	EmailSendFailed               errors.Code = "EmailSendFailed"
 	EmailInvitationRequired       errors.Code = "EmailInvitationRequired" // Returned by apisServer.
+	EmailSendFailed               errors.Code = "EmailSendFailed"
 	EventNotExist                 errors.Code = "EventNotExist"
 	EventTypeNotExist             errors.Code = "EventTypeNotExist"
 	FormatNotExist                errors.Code = "FormatNotExist"
