@@ -964,8 +964,8 @@ func (this *Pipeline) database() *connections.Database {
 	return this.core.connections.Database(p.Connection())
 }
 
-// endRun marks the given run as completed, setting err if non-nil.
-func (this *Pipeline) endRun(id string, err error) {
+// endLiveRun marks the given live run as completed, setting err if non-nil.
+func (this *Pipeline) endLiveRun(id string, err error) {
 
 	ctx := this.core.close.ctx
 

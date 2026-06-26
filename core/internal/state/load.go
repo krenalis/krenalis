@@ -307,7 +307,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[string]*Connection{},
-					runs:        map[string]*PipelineRun{},
 					accounts:    map[int]*Account{},
 				}
 				var settingsKey, mcpSettingsKey []byte
@@ -547,7 +546,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load pipelines: %s", err)
 	}
 
-	// Read pipeline runs in progress.
+	// Read live pipeline runs.
 	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
 		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
@@ -563,8 +562,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline := state.pipelines[pipelineID]
 				run.pipeline = pipeline
 				pipeline.run = &run
-				ws := run.pipeline.connection.workspace
-				ws.runs[run.ID] = &run
+				state.liveRuns[run.ID] = &run
 			}
 			return nil
 		})

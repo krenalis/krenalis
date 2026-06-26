@@ -409,7 +409,7 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 					connection := &Connection{core: c.core, store: store, connection: c2}
 					p := &Pipeline{core: c.core, pipeline: pipeline, connection: connection}
 					go func(id string) {
-						p.endRun(id, pipelineErr)
+						p.endLiveRun(id, pipelineErr)
 						ending.Lock()
 						delete(ending.runs, id)
 						ending.Unlock()
