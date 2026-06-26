@@ -9,7 +9,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"maps"
 	"slices"
 	"strings"
@@ -19,11 +18,9 @@ import (
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
-	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -962,95 +959,6 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 func (this *Pipeline) database() *connections.Database {
 	p := this.pipeline
 	return this.core.connections.Database(p.Connection())
-}
-
-// endLiveRun marks the given live run as completed, setting err if non-nil.
-func (this *Pipeline) endLiveRun(id string, err error) {
-
-	ctx := this.core.close.ctx
-
-	endTime := time.Now().UTC()
-
-	// Handle the run error, if any.
-	var errorStep = metrics.ReceiveStep
-	var errorMessage string
-	if err != nil {
-		if pipelineErr, ok := err.(*pipelineError); ok {
-			errorStep = pipelineErr.step
-			errorMessage = err.Error()
-		} else {
-			if ctx.Err() != nil {
-				errorMessage = "run has been canceled"
-			} else {
-				errorMessage = "an internal error has occurred"
-				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", id, "error", err)
-			}
-		}
-		this.core.metrics.Failed(errorStep, this.pipeline.ID, 0, errorMessage)
-	}
-
-	// Waits for the metrics to be saved.
-	this.core.metrics.WaitStore()
-
-	n := state.EndPipelineRun{
-		ID:       id,
-		Pipeline: this.pipeline.ID,
-		Health:   state.Healthy,
-	}
-
-	// Mark the run as completed, summarise the metrics, and send the end notification.
-	bo := backoff.New(200)
-	for bo.Next(ctx) {
-		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			res, err := tx.Exec(ctx,
-				"WITH s AS (\n"+
-					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
-					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
-					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
-					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
-					" FROM pipelines_metrics\n"+
-					"\tWHERE pipeline = $2\n"+
-					")\n"+
-					"UPDATE pipelines_runs AS e\n"+
-					"SET function = '', end_time = $3,"+
-					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
-					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
-					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
-					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
-					" error = $4\n"+
-					"FROM s\n"+
-					"WHERE id = $1 AND pipeline = $2 AND end_time IS NULL", id, this.pipeline.ID, endTime, errorMessage)
-			if err != nil {
-				return nil, err
-			}
-			// Do nothing if the run no longer exists or has already been closed.
-			if res.RowsAffected() == 0 {
-				return nil, nil
-			}
-			// Update the pipeline's cursor.
-			var exists bool
-			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
-				n.ID, n.Health, this.pipeline.ID).Scan(&exists)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					// The pipeline does not exist anymore.
-					return nil, nil
-				}
-				return nil, err
-			}
-			return n, nil
-		})
-		if err != nil {
-			if ctx.Err() != nil {
-				// The context has been canceled.
-				return
-			}
-			slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
-			continue
-		}
-		break
-	}
-
 }
 
 // file returns the file of the pipeline.

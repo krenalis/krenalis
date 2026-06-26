@@ -64,6 +64,7 @@ type Core struct {
 	functionProvider  transformers.FunctionProvider
 	pipelineCleaner   *pipelineCleaner
 	pipelineScheduler *pipelineScheduler
+	localLiveRuns     cancelContexts
 	memberEmailFrom   string
 	smtp              *SMTPConfig
 	close             struct {
@@ -380,6 +381,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
+	core.state.AddListener(core.onEndPipelineRun)
 	core.state.AddListener(core.onRunPipeline)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
@@ -1194,11 +1196,104 @@ func (core *Core) encryptAuthorizedOAuthAccount(ctx context.Context, account aut
 	return base64.RawURLEncoding.EncodeToString(encrypted), nil
 }
 
+// endLiveRun marks the given live run as terminated with the given reason.
+// A nil reason means the run completed normally.
+// It returns ctx.Err() if ctx is canceled.
+func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason error) error {
+
+	endTime := time.Now().UTC()
+	pipeline := run.Pipeline().ID
+
+	// Handle the run error, if any.
+	var errorStep = metrics.ReceiveStep
+	var errorMessage string
+	if reason != nil {
+		if pipelineErr, ok := reason.(*pipelineError); ok {
+			errorStep = pipelineErr.step
+			errorMessage = reason.Error()
+		} else {
+			errorMessage = "an internal error has occurred"
+			slog.Error("core: cannot run pipeline", "pipeline", pipeline, "run", run.ID, "error", reason)
+		}
+		core.metrics.Failed(errorStep, pipeline, 0, errorMessage)
+	}
+
+	// Waits for the metrics to be saved.
+	core.metrics.WaitStore()
+
+	n := state.EndPipelineRun{
+		ID:       run.ID,
+		Pipeline: pipeline,
+		Health:   state.Healthy,
+	}
+
+	// Mark the run as completed, summarise the metrics, and send the end notification.
+	bo := backoff.New(200)
+	for bo.Next(ctx) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			res, err := tx.Exec(ctx,
+				"WITH s AS (\n"+
+					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
+					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
+					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" FROM pipelines_metrics\n"+
+					"\tWHERE pipeline = $2\n"+
+					")\n"+
+					"UPDATE pipelines_runs AS e\n"+
+					"SET function = '', end_time = $3,"+
+					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
+					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
+					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
+					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
+					" error = $4\n"+
+					"FROM s\n"+
+					"WHERE id = $1 AND pipeline = $2 AND end_time IS NULL", run.ID, pipeline, endTime, errorMessage)
+			if err != nil {
+				return nil, err
+			}
+			// Do nothing if the run no longer exists or has already been closed.
+			if res.RowsAffected() == 0 {
+				return nil, nil
+			}
+			// Update the pipeline's cursor.
+			var exists bool
+			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
+				n.ID, n.Health, pipeline).Scan(&exists)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					// The pipeline does not exist anymore.
+					return nil, nil
+				}
+				return nil, err
+			}
+			return n, nil
+		})
+		if err != nil {
+			if ctx.Err() == nil {
+				slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", reason)
+			}
+			continue
+		}
+		break
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // mustBeOpen panics if core has been closed.
 func (core *Core) mustBeOpen() {
 	if core.closed.Load() {
 		panic("core is closed")
 	}
+}
+
+// onEndPipelineRun is called when a pipeline run ends.
+func (core *Core) onEndPipelineRun(n state.EndPipelineRun) {
+	core.localLiveRuns.Cancel(n.ID)
 }
 
 // onRunPipeline is called when a pipeline run starts.
@@ -1228,19 +1323,17 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 	core.close.Go(func() {
 
-		ctx := core.close.ctx
-
 		pipeline := run.Pipeline()
 
 		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
-		for bo.Next(ctx) {
+		for bo.Next(core.close.ctx) {
 			pingTime := time.Now().UTC()
 			result, err := core.db.Exec(core.close.ctx,
 				"UPDATE pipelines_runs SET node = $1, ping_time = $2 WHERE id = $3 AND node IS NULL",
 				core.state.ID(), pingTime, run.ID)
 			if err != nil {
-				if ctx.Err() == nil {
+				if core.close.ctx.Err() == nil {
 					slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
 				continue
@@ -1252,13 +1345,21 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 			}
 			break
 		}
-		if ctx.Err() != nil {
+		if core.close.ctx.Err() != nil {
 			// The context has been canceled.
 			return
 		}
 
+		// Create a context for tracking the import or export execution.
+		// The pipeline cleaner can cancel it if the current node becomes unresponsive.
+		executionCtx, ok := core.localLiveRuns.WithCancel(run.ID, core.close.ctx)
+		if !ok {
+			panic("core: duplicate local live run")
+		}
+		defer core.localLiveRuns.Cancel(run.ID)
+
 		// Ping the run.
-		pingCtx, stopPing := context.WithCancel(ctx)
+		pingCtx, stopPing := context.WithCancel(executionCtx)
 		go func(id string) {
 			ticker := time.NewTicker(5 * time.Second)
 			for {
@@ -1278,8 +1379,8 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 		// Prepare the run metrics.
 		bo = backoff.New(200)
-		for bo.Next(ctx) {
-			res, err := core.db.Exec(ctx,
+		for bo.Next(executionCtx) {
+			res, err := core.db.Exec(executionCtx,
 				// If statistics from previous runs of the same pipeline are available,
 				// they are subtracted from the current run's statistics. This ensures
 				// that when all slot statistics are merged into those of this run,
@@ -1301,7 +1402,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 					"FROM s\n"+
 					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
-				if ctx.Err() != nil {
+				if executionCtx.Err() != nil {
 					// The context has been canceled.
 					break
 				}
@@ -1314,13 +1415,13 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 			}
 			break
 		}
-		if ctx.Err() != nil {
+		if executionCtx.Err() != nil {
 			// The context has been canceled.
 			// TODO(marco): What happens if the node successfully assigns itself the run, but the context gets canceled?
 			return
 		}
 
-		// Starts the run.
+		// Start the run.
 		c := pipeline.Connection()
 		ws := c.Workspace()
 		store, ok := core.datastore.Store(ws.ID)
@@ -1332,20 +1433,27 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 		var err error
 		if c.Role == state.Source {
-			err = p.importUsers(ctx)
+			err = p.importUsers(executionCtx)
 		} else {
-			err = p.exportProfiles(ctx)
+			err = p.exportProfiles(executionCtx)
+		}
+		if executionCtx.Err() != nil {
+			return
 		}
 
-		// Mark the run as ended.
-		p.endLiveRun(run.ID, err)
+		// End the run.
+		err = core.endLiveRun(core.close.ctx, run, err)
+		if err != nil {
+			// Context has been canceled.
+			return
+		}
 
 		// Stop pinging as it is no longer required.
 		stopPing()
 
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
-			err := core.startIdentityResolution(ctx, ws.ID)
+			err := core.startIdentityResolution(core.close.ctx, ws.ID)
 			if err != nil {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
@@ -1918,4 +2026,40 @@ func (loader *mcpSettingsLoader) Load(ctx context.Context, dst any) error {
 		return err
 	}
 	return json.Unmarshal(s, dst)
+}
+
+// cancelContexts tracks cancelable contexts so they can be canceled by ID.
+type cancelContexts struct {
+	mu   sync.Mutex
+	runs map[string]context.CancelFunc
+}
+
+// Cancel cancels and forgets the context with the given ID, if any.
+func (contexts *cancelContexts) Cancel(id string) {
+	contexts.mu.Lock()
+	cancel, ok := contexts.runs[id]
+	if ok {
+		delete(contexts.runs, id)
+	}
+	contexts.mu.Unlock()
+	if ok {
+		cancel()
+	}
+}
+
+// WithCancel returns a child context and records its cancel function under id.
+// If id already exists, it does nothing and returns false.
+func (contexts *cancelContexts) WithCancel(id string, parent context.Context) (context.Context, bool) {
+	ctx, cancel := context.WithCancel(parent)
+	contexts.mu.Lock()
+	defer contexts.mu.Unlock()
+	if contexts.runs == nil {
+		contexts.runs = map[string]context.CancelFunc{}
+	}
+	if _, ok := contexts.runs[id]; ok {
+		cancel()
+		return nil, false
+	}
+	contexts.runs[id] = cancel
+	return ctx, true
 }

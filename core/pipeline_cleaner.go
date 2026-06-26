@@ -367,7 +367,7 @@ func (c *pipelineCleaner) purgeWorkspace(id string) {
 // A pipeline run is considered orphaned if it has not yet been terminated and
 // its last ping time is older than 15 seconds.
 func (c *pipelineCleaner) terminateOrphanedRuns() {
-	pipelineErr := newPipelineError(metrics.ReceiveStep, errors.New("pipeline has been terminated because the node became unresponsive"))
+	reason := newPipelineError(metrics.ReceiveStep, errors.New("pipeline has been terminated because the node became unresponsive"))
 	ctx := c.close.ctx
 	tick := time.NewTicker(15 * time.Second)
 	var ending struct {
@@ -395,21 +395,13 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 					if _, ok := ending.runs[id]; ok {
 						continue
 					}
-					pipeline, ok := c.core.state.Pipeline(pipelineID)
-					if !ok {
-						continue
-					}
-					c2 := pipeline.Connection()
-					ws := c2.Workspace()
-					store, ok := c.core.datastore.Store(ws.ID)
+					run, ok := c.core.state.LiveRun(id)
 					if !ok {
 						continue
 					}
 					ending.runs[id] = struct{}{}
-					connection := &Connection{core: c.core, store: store, connection: c2}
-					p := &Pipeline{core: c.core, pipeline: pipeline, connection: connection}
 					go func(id string) {
-						p.endLiveRun(id, pipelineErr)
+						_ = c.core.endLiveRun(ctx, run, reason)
 						ending.Lock()
 						delete(ending.runs, id)
 						ending.Unlock()
