@@ -82,7 +82,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		},
 	})
 	run := k.StartPipelineRun(importPipeline)
-	k.WaitForRunsCompletion(dummySrc, run)
+	k.WaitForRunsCompletion(run)
 
 	// Set up a JavaScript source with an Event pipeline so that events can be
 	// ingested through the /v1/events endpoint. This must be done while the
@@ -286,7 +286,7 @@ func TestOrganizationDisabled(t *testing.T) {
 
 	t.Run("operations succeed again after re-enabling", func(t *testing.T) {
 		run := k.StartPipelineRun(importPipeline)
-		k.WaitForRunsCompletion(dummySrc, run)
+		k.WaitForRunsCompletion(run)
 	})
 
 	t.Run("event ingestion works again after re-enabling", func(t *testing.T) {

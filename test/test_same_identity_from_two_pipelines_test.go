@@ -66,7 +66,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	// Runs the two pipelines and waits for them to complete.
 	run1 := k.StartPipelineRun(pipeline1)
 	run2 := k.StartPipelineRun(pipeline2)
-	k.WaitForRunsCompletion(dummy, run1, run2)
+	k.WaitForRunsCompletion(run1, run2)
 
 	// Run the Identity Resolution and wait for its completion.
 	k.RunIdentityResolutionAndWait()

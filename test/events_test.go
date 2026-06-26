@@ -52,7 +52,7 @@ func TestEvents(t *testing.T) {
 		},
 	})
 	run := k.StartPipelineRun(importUsersID)
-	k.WaitForRunsCompletion(dummySrc, run)
+	k.WaitForRunsCompletion(run)
 	k.RunIdentityResolutionAndWait()
 
 	// Create a JavaScript connection with 2 pipelines (one for importing events,

@@ -56,8 +56,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	// Import from both pipelines, then run the identity resolution.
 	run1 := k.StartPipelineRun(pipeline1)
 	run2 := k.StartPipelineRun(pipeline2)
-	k.WaitForRunsCompletion(dummy1, run1)
-	k.WaitForRunsCompletion(dummy2, run2)
+	k.WaitForRunsCompletion(run1)
+	k.WaitForRunsCompletion(run2)
 	k.RunIdentityResolutionAndWait()
 
 	// Now there should be total of 20 profiles.
