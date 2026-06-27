@@ -25,6 +25,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -775,9 +776,14 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 // SetStatus sets the status of the organization.
 func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 	this.core.mustBeOpen()
+
 	if enabled == this.organization.Enabled {
 		return nil
 	}
+
+	// Waits for the metrics to be saved.
+	this.core.metrics.WaitStore()
+
 	n := state.SetOrganizationStatus{
 		ID:      this.organization.ID,
 		Enabled: enabled,
@@ -790,10 +796,101 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 		if result.RowsAffected() == 0 {
 			return nil, nil
 		}
+		// Terminate the organization's live pipeline runs.
+		if !n.Enabled {
+			endTime := time.Now().UTC()
+			errorMessage := "organization has been disabled"
+			// Mark the live runs as terminated.
+			result, err = tx.Exec(ctx, endOrganizationLiveRunsQuery, n.ID, endTime, errorMessage)
+			if err != nil {
+				return nil, fmt.Errorf("cannot terminate organization live runs: %s", err)
+			}
+			if result.RowsAffected() > 0 {
+				// Update the pipelines for the terminated live runs.
+				const pipelinesQuery = "WITH ended_runs AS (\n" +
+					"SELECT r.pipeline, r.cursor\n" +
+					"FROM pipelines_runs AS r\n" +
+					"INNER JOIN pipelines AS p ON r.pipeline = p.id\n" +
+					"INNER JOIN connections AS c ON p.connection = c.id\n" +
+					"INNER JOIN workspaces AS w ON c.workspace = w.id\n" +
+					"WHERE w.organization = $1 AND r.end_time = $2 AND r.error = $3::text\n" +
+					")\n" +
+					"UPDATE pipelines AS p\n" +
+					"SET cursor = ended_runs.cursor, health = 'Healthy'::health\n" +
+					"FROM ended_runs\n" +
+					"WHERE p.id = ended_runs.pipeline"
+				_, err = tx.Exec(ctx, pipelinesQuery, n.ID, endTime, errorMessage)
+				if err != nil {
+					return nil, fmt.Errorf("cannot update pipelines for terminated organization live runs: %s", err)
+				}
+				// Record the termination error for the live runs.
+				const errorsQuery = "INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message)\n" +
+					"SELECT r.pipeline, $2, $3, 0, $4::text\n" +
+					"FROM pipelines_runs AS r\n" +
+					"INNER JOIN pipelines AS p ON r.pipeline = p.id\n" +
+					"INNER JOIN connections AS c ON p.connection = c.id\n" +
+					"INNER JOIN workspaces AS w ON c.workspace = w.id\n" +
+					"WHERE w.organization = $1 AND r.end_time = $5 AND r.error = $4::text"
+				_, err = tx.Exec(ctx, errorsQuery, n.ID, metrics.TimeSlotFromTime(endTime), metrics.ReceiveStep, errorMessage, endTime)
+				if err != nil {
+					return nil, fmt.Errorf("cannot record errors for terminated organization live runs: %s", err)
+				}
+			}
+		}
 		return n, nil
 	})
+
 	return err
 }
+
+// endOrganizationLiveRunsQuery ends all live pipeline runs for an organization,
+// recording their final metrics.
+const endOrganizationLiveRunsQuery = `
+WITH live_runs AS (
+	SELECT r.id, r.pipeline
+	FROM pipelines_runs AS r
+	INNER JOIN pipelines AS p ON r.pipeline = p.id
+	INNER JOIN connections AS c ON p.connection = c.id
+	INNER JOIN workspaces AS w ON c.workspace = w.id
+	WHERE w.organization = $1 AND r.end_time IS NULL
+),
+s AS (
+	SELECT r.id,
+		COALESCE(SUM(m.passed_0), 0) AS passed_0,
+		COALESCE(SUM(m.passed_1), 0) AS passed_1,
+		COALESCE(SUM(m.passed_2), 0) AS passed_2,
+		COALESCE(SUM(m.passed_3), 0) AS passed_3,
+		COALESCE(SUM(m.passed_4), 0) AS passed_4,
+		COALESCE(SUM(m.passed_5), 0) AS passed_5,
+		COALESCE(SUM(m.failed_0), 0) AS failed_0,
+		COALESCE(SUM(m.failed_1), 0) AS failed_1,
+		COALESCE(SUM(m.failed_2), 0) AS failed_2,
+		COALESCE(SUM(m.failed_3), 0) AS failed_3,
+		COALESCE(SUM(m.failed_4), 0) AS failed_4,
+		COALESCE(SUM(m.failed_5), 0) AS failed_5
+	FROM live_runs AS r
+	LEFT JOIN pipelines_metrics AS m ON m.pipeline = r.pipeline
+	GROUP BY r.id
+)
+UPDATE pipelines_runs AS r
+SET function = '',
+	end_time = $2,
+	passed_0 = r.passed_0 + s.passed_0,
+	passed_1 = r.passed_1 + s.passed_1,
+	passed_2 = r.passed_2 + s.passed_2,
+	passed_3 = r.passed_3 + s.passed_3,
+	passed_4 = r.passed_4 + s.passed_4,
+	passed_5 = r.passed_5 + s.passed_5,
+	failed_0 = r.failed_0 + s.failed_0,
+	failed_1 = r.failed_1 + s.failed_1,
+	failed_2 = r.failed_2 + s.failed_2,
+	failed_3 = r.failed_3 + s.failed_3,
+	failed_4 = r.failed_4 + s.failed_4,
+	failed_5 = r.failed_5 + s.failed_5,
+	error = $3
+FROM s
+WHERE r.id = s.id AND r.end_time IS NULL
+`
 
 // TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
 // with the provided platform and settings can be initialized.

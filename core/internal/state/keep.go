@@ -8,6 +8,7 @@ import (
 	"bytes"
 	stdjson "encoding/json"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -1326,8 +1327,17 @@ func (state *State) setPipelineSchedulePeriod(n notification) string {
 // SetOrganizationStatus is the event sent when the status of an organization is
 // set.
 type SetOrganizationStatus struct {
-	ID      string
-	Enabled bool
+	ID            string
+	Enabled       bool
+	endedLiveRuns []*PipelineRun
+}
+
+// EndedLiveRuns returns the organization's live runs that were ended.
+func (n SetOrganizationStatus) EndedLiveRuns() []*PipelineRun {
+	if n.endedLiveRuns == nil {
+		return []*PipelineRun{}
+	}
+	return n.endedLiveRuns
 }
 
 // setOrganizationStatus sets the status of an organization.
@@ -1339,6 +1349,33 @@ func (state *State) setOrganizationStatus(n notification) string {
 	o := state.replaceOrganization(e.ID, func(p *Organization) {
 		p.Enabled = e.Enabled
 	})
+	// End the organization's live pipeline runs.
+	if !e.Enabled {
+		e.endedLiveRuns = []*PipelineRun{}
+		for _, ws := range o.workspaces {
+			for _, c := range ws.connections {
+				for _, p := range c.pipelines {
+					if p.run != nil {
+						state.replacePipeline(p.ID, func(p *Pipeline) {
+							p.run = nil
+							p.Health = Healthy
+						})
+						e.endedLiveRuns = append(e.endedLiveRuns, p.run)
+					}
+				}
+			}
+		}
+		if len(e.endedLiveRuns) > 0 {
+			slices.SortFunc(e.endedLiveRuns, func(a, b *PipelineRun) int {
+				return strings.Compare(a.ID, b.ID)
+			})
+			state.mu.Lock()
+			for _, run := range e.endedLiveRuns {
+				delete(state.liveRuns, run.ID)
+			}
+			state.mu.Unlock()
+		}
+	}
 	dispatchNotification(state, e)
 	return o.ID
 }

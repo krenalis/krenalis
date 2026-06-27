@@ -102,8 +102,65 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Create an API key while the organization is still enabled.
 	apiKey := k.CreateWorkspaceRestrictedAPIKey("Events ingestion key")
 
+	longRunningPipelineParams := func(name string) krenalistester.PipelineToSet {
+		return krenalistester.PipelineToSet{
+			Name:    name,
+			Enabled: true,
+			InSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.String(), Nullable: true},
+				{Name: "firstName", Type: types.String(), Nullable: true},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+				{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			}),
+			Transformation: &krenalistester.Transformation{
+				Mapping: map[string]string{
+					"email":      "email",
+					"first_name": "firstName",
+				},
+			},
+		}
+	}
+	longRunningDummy1 := k.CreateDummyWithSettings("Long-running Dummy 1 (source)", krenalistester.Source, krenalistester.DummySettings{
+		OperationDelay: "2m",
+	})
+	longRunningPipeline1 := k.CreatePipeline(longRunningDummy1, "User", longRunningPipelineParams("Long-running import users from Dummy 1"))
+	longRunningDummy2 := k.CreateDummyWithSettings("Long-running Dummy 2 (source)", krenalistester.Source, krenalistester.DummySettings{
+		OperationDelay: "2m",
+	})
+	longRunningPipeline2 := k.CreatePipeline(longRunningDummy2, "User", longRunningPipelineParams("Long-running import users from Dummy 2"))
+	longRunningRuns := []string{
+		k.StartPipelineRun(longRunningPipeline1),
+		k.StartPipelineRun(longRunningPipeline2),
+	}
+
 	// Disable the organization.
 	k.SetOrganizationStatus(orgID, false)
+
+	t.Run("live runs are interrupted when disabled", func(t *testing.T) {
+		deadline := time.Now().Add(10 * time.Second)
+		for _, run := range longRunningRuns {
+			for {
+				var completed bool
+				k.QueryRowTestDatabase(t.Context(), &completed,
+					"SELECT end_time IS NOT NULL FROM pipelines_runs WHERE id = $1", run)
+				if completed {
+					var runError string
+					k.QueryRowTestDatabase(t.Context(), &runError,
+						"SELECT error FROM pipelines_runs WHERE id = $1", run)
+					if runError != "organization has been disabled" {
+						t.Fatalf("expected run error %q for run %s, got %q", "organization has been disabled", run, runError)
+					}
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatalf("run %s was not interrupted after disabling the organization", run)
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	})
 
 	// The organization endpoint must still be reachable and must report the new
 	// status.
