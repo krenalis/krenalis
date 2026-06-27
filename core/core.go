@@ -1215,7 +1215,6 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 			errorMessage = "an internal error has occurred"
 			slog.Error("core: cannot run pipeline", "pipeline", pipeline, "run", run.ID, "error", reason)
 		}
-		core.metrics.Failed(errorStep, pipeline, 0, errorMessage)
 	}
 
 	// Waits for the metrics to be saved.
@@ -1227,7 +1226,7 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 		Health:   state.Healthy,
 	}
 
-	// Mark the run as completed, summarise the metrics, and send the end notification.
+	// Mark the run as completed, summarize the metrics, and send the end notification.
 	bo := backoff.New(200)
 	for bo.Next(ctx) {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
@@ -1255,6 +1254,13 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 			// Do nothing if the run no longer exists or has already been closed.
 			if res.RowsAffected() == 0 {
 				return nil, nil
+			}
+			if errorMessage != "" {
+				_, err = tx.Exec(ctx, "INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message) VALUES ($1, $2, $3, 0, $4)",
+					pipeline, metrics.TimeSlotFromTime(endTime), errorStep, errorMessage)
+				if err != nil {
+					return nil, err
+				}
 			}
 			// Update the pipeline's cursor.
 			var exists bool
