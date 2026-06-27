@@ -98,7 +98,7 @@ func Main(assets fs.FS) {
 		fatal(1, err.Error())
 	}
 	if upgradeDB {
-		err = core.UpgradeDB(ctx, &core.Config{DB: conf.DB})
+		err = core.UpgradeDB(ctx, &core.Config{DB: conf.DB, KMS: conf.KMS})
 		if err != nil {
 			fatal(1, err.Error())
 		}

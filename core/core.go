@@ -420,7 +420,11 @@ func UpgradeDB(ctx context.Context, conf *Config) error {
 		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	if err := initdb.Upgrade(ctx, db); err != nil {
+	k, err := kms.New(ctx, conf.KMS)
+	if err != nil {
+		return fmt.Errorf("cannot initialize KMS: %s", err)
+	}
+	if err := initdb.Upgrade(ctx, db, k); err != nil {
 		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
 	}
 	return initdb.UpgradeWorkOS(ctx, db)

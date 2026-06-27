@@ -85,6 +85,8 @@ var (
 //go:embed customers.json
 var jsonCustomers []byte
 
+const maxOperationDelay = 24 * time.Hour // maximum operation delay
+
 func newDummyId() string {
 	b := make([]rune, 12)
 	for i := range b {
@@ -100,7 +102,10 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	if err != nil {
 		return types.Type{}, err
 	}
-	dummy.simulateHTTPDelay(&s)
+	err = dummy.applyOperationDelay(ctx, s.OperationDelay)
+	if err != nil {
+		return types.Type{}, err
+	}
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
@@ -139,7 +144,10 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*connectors.EventType, er
 	if err != nil {
 		return nil, err
 	}
-	dummy.simulateHTTPDelay(&s)
+	err = dummy.applyOperationDelay(ctx, s.OperationDelay)
+	if err != nil {
+		return nil, err
+	}
 	return []*connectors.EventType{
 		{
 			ID:          "send_add_to_cart",
@@ -182,7 +190,10 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 	if err != nil {
 		return types.Type{}, err
 	}
-	dummy.simulateHTTPDelay(&s)
+	err = dummy.applyOperationDelay(ctx, s.OperationDelay)
+	if err != nil {
+		return types.Type{}, err
+	}
 	var properties []types.Property
 	if role == connectors.Source {
 		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), Description: "Dummy ID"})
@@ -216,7 +227,10 @@ func (dummy *Dummy) Records(ctx context.Context, target connectors.Targets, upda
 	if err != nil {
 		return nil, "", err
 	}
-	dummy.simulateHTTPDelay(&s)
+	err = dummy.applyOperationDelay(ctx, s.OperationDelay)
+	if err != nil {
+		return nil, "", err
+	}
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -276,8 +290,8 @@ func init() {
 
 type innerSettings struct {
 	CustomerExportFailPercentage int    `json:"customerExportFailPercentage"`
+	OperationDelay               string `json:"operationDelay"`
 	URLForDispatchingEvents      string `json:"urlForDispatchingEvents"`
-	SimulateHTTPDelay            bool   `json:"simulateHTTPDelay"`
 }
 
 // SendEvents sends events to the API.
@@ -321,10 +335,12 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 				Placeholder: "http://127.0.0.1:1234",
 				Role:        connectors.Destination,
 			},
-			&connectors.Checkbox{
-				Name:  "simulateHTTPDelay",
-				Label: "Pretend that Dummy operates via HTTP calls, introducing fictitious delays",
-				Role:  connectors.Both,
+			&connectors.Input{
+				Name:        "operationDelay",
+				Label:       "Operation delay",
+				Placeholder: "500ms",
+				HelpText:    "If set, Dummy adds the specified delay to each operation. Examples: 500ms, 2s, 1m.",
+				Role:        connectors.Both,
 			},
 		},
 		Settings: settings,
@@ -347,7 +363,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 		return err
 	}
 
-	dummy.simulateHTTPDelay(&s)
+	err = dummy.applyOperationDelay(ctx, s.OperationDelay)
+	if err != nil {
+		return err
+	}
 
 	recordsError := make(connectors.RecordsError)
 
@@ -416,6 +435,23 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 	return nil
 }
 
+// applyOperationDelay applies an operation delay.
+func (dummy *Dummy) applyOperationDelay(ctx context.Context, operationDelay string) error {
+	if operationDelay == "" {
+		return nil
+	}
+	delay, _ := time.ParseDuration(operationDelay)
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		prometheus.Increment("Dummy.applyOperationDelay.applied_delays", 1)
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // customerExportRandomlyFails determines whether exporting (i.e., writing to
 // Dummy) a customer should randomly fail, based on the settings.
 func (dummy *Dummy) customerExportRandomlyFails(s *innerSettings) bool {
@@ -439,18 +475,22 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	if s.CustomerExportFailPercentage < 0 || s.CustomerExportFailPercentage > 100 {
 		return connectors.NewInvalidSettingsError("percentage must be in range [0, 100]")
 	}
-	return dummy.env.Settings.Store(ctx, s)
-}
-
-// simulateHTTPDelay simulates an HTTP delay. If the settings indicate not to
-// simulate delay, this method does nothing.
-func (dummy *Dummy) simulateHTTPDelay(s *innerSettings) {
-	if !s.SimulateHTTPDelay {
-		return
+	if s.OperationDelay != "" {
+		delay, err := time.ParseDuration(s.OperationDelay)
+		if err != nil {
+			return connectors.NewInvalidSettingsError("operation delay must be a valid duration")
+		}
+		if delay < 0 {
+			return connectors.NewInvalidSettingsError("operation delay cannot be negative")
+		}
+		if delay > maxOperationDelay {
+			return connectors.NewInvalidSettingsError("operation delay must be less than or equal to 24h")
+		}
+		if delay == 0 {
+			s.OperationDelay = ""
+		}
 	}
-	latency := rand.Float64()*1.3 + 1.5 // seconds.
-	time.Sleep(time.Duration(latency * 1e9))
-	prometheus.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
+	return dummy.env.Settings.Store(ctx, s)
 }
 
 // sendEvents sends the given events to the API and returns the sent HTTP
@@ -486,6 +526,10 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events connectors.Events, pr
 	req.Header["Idempotency-Key"] = nil
 	if preview {
 		return req, nil
+	}
+	err = dummy.applyOperationDelay(ctx, s.OperationDelay)
+	if err != nil {
+		return nil, err
 	}
 	res, err := dummy.env.HTTPClient.Do(req)
 	if err != nil {

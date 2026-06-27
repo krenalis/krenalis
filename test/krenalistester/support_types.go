@@ -72,6 +72,7 @@ type ConnectionToCreate struct {
 
 type DummySettings struct {
 	URLForDispatchingEvents string `json:"urlForDispatchingEvents"`
+	OperationDelay          string `json:"operationDelay,omitempty"`
 }
 
 type PipelineRun struct {
