@@ -1282,15 +1282,14 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 				return nil, nil
 			}
 			// Update the pipeline's cursor.
-			var exists bool
-			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
-				n.ID, n.Health, pipeline).Scan(&exists)
+			res, err = tx.Exec(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1), health = $2 WHERE id = $3",
+				n.ID, n.Health, pipeline)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The pipeline does not exist anymore.
-					return nil, nil
-				}
 				return nil, err
+			}
+			if res.RowsAffected() == 0 {
+				// The pipeline does not exist anymore.
+				return nil, nil
 			}
 			return n, nil
 		})
