@@ -808,7 +808,7 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 			if result.RowsAffected() > 0 {
 				// Update the pipelines for the terminated live runs.
 				const pipelinesQuery = "WITH ended_runs AS (\n" +
-					"SELECT r.pipeline, r.cursor\n" +
+					"SELECT r.pipeline\n" +
 					"FROM pipelines_runs AS r\n" +
 					"INNER JOIN pipelines AS p ON r.pipeline = p.id\n" +
 					"INNER JOIN connections AS c ON p.connection = c.id\n" +
@@ -816,7 +816,7 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 					"WHERE w.organization = $1 AND r.end_time = $2 AND r.error = $3::text\n" +
 					")\n" +
 					"UPDATE pipelines AS p\n" +
-					"SET cursor = ended_runs.cursor, health = 'Healthy'::health\n" +
+					"SET health = 'Healthy'::health\n" +
 					"FROM ended_runs\n" +
 					"WHERE p.id = ended_runs.pipeline"
 				_, err = tx.Exec(ctx, pipelinesQuery, n.ID, endTime, errorMessage)

@@ -1281,9 +1281,14 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 			if res.RowsAffected() == 0 {
 				return nil, nil
 			}
-			// Update the pipeline's cursor.
-			res, err = tx.Exec(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1), health = $2 WHERE id = $3",
-				n.ID, n.Health, pipeline)
+			// Update the pipeline's cursor only when the run completed normally.
+			if reason == nil {
+				res, err = tx.Exec(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1), health = $2 WHERE id = $3",
+					n.ID, n.Health, pipeline)
+			} else {
+				res, err = tx.Exec(ctx, "UPDATE pipelines SET health = $1 WHERE id = $2",
+					n.Health, pipeline)
+			}
 			if err != nil {
 				return nil, err
 			}
