@@ -1300,7 +1300,7 @@ func (state *State) setPipelineFormatSettings(n notification) string {
 	p := state.replacePipeline(e.Pipeline, func(p *Pipeline) {
 		p.FormatSettings = e.Settings
 	})
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // SetPipelineSchedulePeriod is the event sent when the schedule period of a
@@ -1320,7 +1320,7 @@ func (state *State) setPipelineSchedulePeriod(n notification) string {
 		p.SchedulePeriod = e.SchedulePeriod
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // SetOrganizationStatus is the event sent when the status of an organization is
@@ -1359,7 +1359,7 @@ func (state *State) setPipelineStatus(n notification) string {
 		p.Enabled = e.Enabled
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // StartAlterProfileSchema is the event sent when the alter of the profile
@@ -1477,7 +1477,7 @@ func (state *State) updateIdentityPropertiesToUnset(n notification) string {
 	p.mu.Lock()
 	p.propertiesToUnset = e.Properties
 	p.mu.Unlock()
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // UpdateIdentityResolutionSettings is the event sent when the identity
@@ -1594,7 +1594,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.Incremental = e.Incremental
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // UpdateWarehouse is the event sent when a warehouse is updated.
