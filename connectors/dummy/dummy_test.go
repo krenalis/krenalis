@@ -13,7 +13,7 @@ func TestParseOperationDelay(t *testing.T) {
 		name    string
 		delay   string
 		want    string
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name:  "single duration",
@@ -29,6 +29,11 @@ func TestParseOperationDelay(t *testing.T) {
 			name:  "range",
 			delay: "2s-5m",
 			want:  "2s-5m0s",
+		},
+		{
+			name:    "range with invalid minute suffix",
+			delay:   "2s-2min",
+			wantErr: "maximum operation delay must be a valid duration",
 		},
 		{
 			name:  "range with zero minimum",
@@ -63,60 +68,63 @@ func TestParseOperationDelay(t *testing.T) {
 		{
 			name:    "space before separator",
 			delay:   "2s -5m",
-			wantErr: true,
+			wantErr: "minimum operation delay must be a valid duration",
 		},
 		{
 			name:    "space after separator",
 			delay:   "2s- 5m",
-			wantErr: true,
+			wantErr: "maximum operation delay must be a valid duration",
 		},
 		{
 			name:    "too many separators",
 			delay:   "2s-5s-7s",
-			wantErr: true,
+			wantErr: "maximum operation delay must be a valid duration",
 		},
 		{
 			name:    "missing minimum",
 			delay:   "-5s",
-			wantErr: true,
+			wantErr: "minimum operation delay must be a valid duration",
 		},
 		{
 			name:    "missing maximum",
 			delay:   "5s-",
-			wantErr: true,
+			wantErr: "maximum operation delay must be a valid duration",
 		},
 		{
 			name:    "inverted range",
 			delay:   "5m-2s",
-			wantErr: true,
+			wantErr: "minimum operational delay cannot be greater than maximum delay",
 		},
 		{
 			name:    "negative duration",
 			delay:   "-1s",
-			wantErr: true,
+			wantErr: "minimum operation delay must be a valid duration",
 		},
 		{
 			name:    "negative maximum",
 			delay:   "1s--2s",
-			wantErr: true,
+			wantErr: "maximum operation delay cannot be negative",
 		},
 		{
 			name:    "too large duration",
 			delay:   "25h",
-			wantErr: true,
+			wantErr: "operation delay must be less than or equal to 24h",
 		},
 		{
 			name:    "range maximum too large",
 			delay:   "1s-25h",
-			wantErr: true,
+			wantErr: "maximum operation delay must be less than or equal to 24h",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseOperationDelay(tt.delay)
-			if tt.wantErr {
+			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatal("expected error")
+				}
+				if err.Error() != tt.wantErr {
+					t.Fatalf("expected error %q, got %q", tt.wantErr, err)
 				}
 				return
 			}
@@ -124,7 +132,7 @@ func TestParseOperationDelay(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got != tt.want {
-				t.Fatalf("parseOperationDelay(%q) = %q, want %q", tt.delay, got, tt.want)
+				t.Fatalf("expected %q, got %q", tt.want, got)
 			}
 		})
 	}
