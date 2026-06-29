@@ -38,7 +38,7 @@ const PipelineHeader = () => {
 		}
 
 		const handleMouseEnter = () => {
-			if (button.disabled) {
+			if (button.classList.contains('pipeline__header-save--fullscreen-closing-disabled')) {
 				button.addEventListener('mouseleave', handleMouseLeave, { once: true });
 			}
 		};
