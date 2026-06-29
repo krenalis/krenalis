@@ -18,7 +18,20 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// DBNotInitializedError is returned by New in those circumstances where the
+// Krenalis database appears not to have been initialized.
+type DBNotInitializedError struct {
+	msg string
+}
+
+func (e *DBNotInitializedError) Error() string {
+	return e.msg
+}
+
 // load loads the state.
+//
+// If a condition occurs where the Krenalis database appears not to have been
+// initialized, returns an error of type *DBNotInitializedError.
 func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
@@ -201,13 +214,21 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		_ = tx.Rollback(ctx)
 	}()
 
-	// Read the installation ID, the KMS-encrypted cookie, OAuth, and notification keys, and the API key pepper.
+	// Read the installation ID, the KMS-encrypted cookie, OAuth, and
+	// notification keys, and the API key pepper.
+	//
+	// This is the first query run against the database, so the undefined-table
+	// check below detects (with a good probability) an uninitialized database.
+	// Move it if a query is added before this one.
 	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
 	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key,"+
 		" kms_encrypted_notification_key, kms_encrypted_api_key_pepper FROM metadata").Scan(
 		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedOAuthKey,
 		&kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
 	if err != nil {
+		if db.IsUndefinedTable(err) {
+			return &DBNotInitializedError{msg: err.Error()}
+		}
 		if err == sql.ErrNoRows {
 			return errors.New("cannot load metadata: no rows found in table; expected exactly one row")
 		}

@@ -170,8 +170,20 @@ type ExpressionToBeExtracted struct {
 	Type  types.Type `json:"type"`
 }
 
+// DBNotInitializedError is returned by New in those circumstances where the
+// Krenalis database appears not to have been initialized.
+type DBNotInitializedError struct {
+	msg string
+}
+
+func (e *DBNotInitializedError) Error() string {
+	return e.msg
+}
+
 // New returns a *Core instance.
 // If another Core instance is active, it returns an error.
+// If a condition occurs where the Krenalis database appears not to have been
+// initialized, returns an error of type *DBNotInitializedError.
 func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	if !coreActive.CompareAndSwap(false, true) {
@@ -271,9 +283,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 	core.state, err = state.New(ctx, db, kms, connectorsOAuth, sendStats)
 	if err != nil {
-		// Return a clear error if the database has not been initialized.
-		if dbpkg.IsUndefinedTable(err) {
-			return nil, fmt.Errorf("%s (Krenalis's internal PostgreSQL may not be initialized. Try starting Krenalis with the -init-db-if-empty flag)", err)
+		if _, ok := errors.AsType[*state.DBNotInitializedError](err); ok {
+			return nil, &DBNotInitializedError{msg: err.Error()}
 		}
 		return nil, err
 	}

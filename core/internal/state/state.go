@@ -92,9 +92,11 @@ type OAuthCredentials struct {
 }
 
 // New returns a state given the database, the key manager, the 64-byte master
-// key, and the OAuth
-// client credentials for connectors.
-// sendStats indicates whether the state should send statistics or not.
+// key, and the OAuth client credentials for connectors. sendStats indicates
+// whether the state should send statistics or not.
+//
+// If a condition occurs where the Krenalis database appears not to have been
+// initialized, returns an error of type *DBNotInitializedError.
 func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
 	id, err := uuid.NewUUID()
@@ -129,7 +131,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	err = state.load(ctx, credentials)
 	if err != nil {
 		state.notifications.Close()
-		return nil, err
+		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
 
 	// Keep the state updated.
