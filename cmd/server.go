@@ -26,15 +26,15 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
-	"github.com/krenalis/krenalis/core"
+	corePkg "github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const telemetryLevelErrors = core.TelemetryLevelErrors
-const telemetryLevelAll = core.TelemetryLevelAll
+const telemetryLevelErrors = corePkg.TelemetryLevelErrors
+const telemetryLevelAll = corePkg.TelemetryLevelAll
 
 // Run runs the server.
 // Cancel ctx to terminate the execution. If ctx is canceled, Run does not
@@ -44,7 +44,7 @@ const telemetryLevelAll = core.TelemetryLevelAll
 // initDBIfEmpty, a member specific for Docker scenarios is initialized.
 func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
-	conf := core.Config{
+	conf := corePkg.Config{
 		KMS:                           config.KMS,
 		OrganizationsAPIKey:           config.OrganizationsAPIKey,
 		DB:                            config.DB,
@@ -61,14 +61,17 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	// Choose the transformation function provider setting.
 	if config.Transformers.Lambda.NodeJS.Runtime != "" || config.Transformers.Lambda.Python.Runtime != "" {
-		conf.FunctionProvider = core.LambdaConfig(config.Transformers.Lambda)
+		conf.FunctionProvider = corePkg.LambdaConfig(config.Transformers.Lambda)
 	}
 	if config.Transformers.Local.NodeJSExecutable != "" || config.Transformers.Local.PythonExecutable != "" {
-		conf.FunctionProvider = core.LocalConfig(config.Transformers.Local)
+		conf.FunctionProvider = corePkg.LocalConfig(config.Transformers.Local)
 	}
 
-	core, err := core.New(ctx, &conf)
+	core, err := corePkg.New(ctx, &conf)
 	if err != nil {
+		if _, ok := errors.AsType[*corePkg.DBNotInitializedError](err); ok {
+			return fmt.Errorf("%s (Krenalis's internal PostgreSQL may not be initialized. Try starting Krenalis with the -init-db-if-empty flag)", err)
+		}
 		return err
 	}
 	defer core.Close(ctx)
