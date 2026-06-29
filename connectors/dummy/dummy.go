@@ -16,6 +16,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -339,7 +340,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 				Name:        "operationDelay",
 				Label:       "Operation delay",
 				Placeholder: "500ms",
-				HelpText:    "If set, Dummy adds the specified delay to each operation. Examples: 500ms, 2s, 1m.",
+				HelpText:    "If set, Dummy adds the specified delay to each operation. Examples: 500ms, 2s, 1m, 2s-5m.",
 				Role:        connectors.Both,
 			},
 		},
@@ -440,7 +441,13 @@ func (dummy *Dummy) applyOperationDelay(ctx context.Context, operationDelay stri
 	if operationDelay == "" {
 		return nil
 	}
-	delay, _ := time.ParseDuration(operationDelay)
+	minPart, maxPart, hasMax := strings.Cut(operationDelay, "-")
+	delay, _ := time.ParseDuration(minPart)
+	if hasMax {
+		maxDelay, _ := time.ParseDuration(maxPart)
+		delayRange := maxDelay - delay
+		delay += time.Duration(rand.Int64N(int64(delayRange) + 1))
+	}
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 	select {
@@ -472,23 +479,17 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
+	// Validate customer export fail percentage.
 	if s.CustomerExportFailPercentage < 0 || s.CustomerExportFailPercentage > 100 {
 		return connectors.NewInvalidSettingsError("percentage must be in range [0, 100]")
 	}
+	// Validate operation delay.
 	if s.OperationDelay != "" {
-		delay, err := time.ParseDuration(s.OperationDelay)
+		delay, err := parseOperationDelay(s.OperationDelay)
 		if err != nil {
-			return connectors.NewInvalidSettingsError("operation delay must be a valid duration")
+			return err
 		}
-		if delay < 0 {
-			return connectors.NewInvalidSettingsError("operation delay cannot be negative")
-		}
-		if delay > maxOperationDelay {
-			return connectors.NewInvalidSettingsError("operation delay must be less than or equal to 24h")
-		}
-		if delay == 0 {
-			s.OperationDelay = ""
-		}
+		s.OperationDelay = delay
 	}
 	return dummy.env.Settings.Store(ctx, s)
 }
@@ -550,4 +551,48 @@ func deepClone(properties map[string]any) map[string]any {
 	var clone map[string]any
 	_ = json.Unmarshal(bytes, &clone)
 	return clone
+}
+
+// parseOperationDelay parses and canonicalizes an operation delay.
+func parseOperationDelay(operationDelay string) (string, error) {
+	minPart, maxPart, hasMax := strings.Cut(operationDelay, "-")
+	if minPart == "" {
+		return "", connectors.NewInvalidSettingsError("operation delay must be a valid duration")
+	}
+	minDelay, err := time.ParseDuration(minPart)
+	if err != nil {
+		return "", connectors.NewInvalidSettingsError("operation delay must be a valid duration")
+	}
+	if minDelay < 0 {
+		return "", connectors.NewInvalidSettingsError("operation delay cannot be negative")
+	}
+	if !hasMax {
+		if minDelay == 0 {
+			return "", nil
+		}
+		if minDelay > maxOperationDelay {
+			return "", connectors.NewInvalidSettingsError("operation delay must be less than or equal to 24h")
+		}
+		return minDelay.String(), nil
+	}
+	maxDelay, err := time.ParseDuration(maxPart)
+	if err != nil {
+		return "", connectors.NewInvalidSettingsError("operation delay must be a valid duration")
+	}
+	if maxDelay < 0 {
+		return "", connectors.NewInvalidSettingsError("operation delay cannot be negative")
+	}
+	if minDelay == 0 && maxDelay == 0 {
+		return "", nil
+	}
+	if maxDelay > maxOperationDelay {
+		return "", connectors.NewInvalidSettingsError("operation delay must be less than or equal to 24h")
+	}
+	if minDelay > maxDelay {
+		return "", connectors.NewInvalidSettingsError("minimum delay cannot be greater than maximum delay")
+	}
+	if minDelay == maxDelay {
+		return minDelay.String(), nil
+	}
+	return minDelay.String() + "-" + maxDelay.String(), nil
 }
