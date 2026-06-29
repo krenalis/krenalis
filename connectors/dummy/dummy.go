@@ -567,7 +567,7 @@ func parseOperationDelay(operationDelay string) error {
 			return nil
 		}
 		if minDelay > maxOperationDelay {
-			return connectors.NewInvalidSettingsError(fmt.Sprintf("maximum operation delay must be less than or equal to %s", maxOperationDelay))
+			return connectors.NewInvalidSettingsErrorf("maximum operation delay must be less than or equal to %s", maxOperationDelay)
 		}
 		return nil
 	}
@@ -585,7 +585,7 @@ func parseOperationDelay(operationDelay string) error {
 		return nil
 	}
 	if maxDelay > maxOperationDelay {
-		return connectors.NewInvalidSettingsError(fmt.Sprintf("maximum operation delay must be less than or equal to %s", maxOperationDelay))
+		return connectors.NewInvalidSettingsErrorf("maximum operation delay must be less than or equal to %s", maxOperationDelay)
 	}
 	if minDelay > maxDelay {
 		return connectors.NewInvalidSettingsError("minimum operational delay cannot be greater than maximum delay")
