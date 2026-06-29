@@ -340,7 +340,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 				Name:        "operationDelay",
 				Label:       "Operation delay",
 				Placeholder: "500ms",
-				HelpText:    "If set, Dummy adds the specified delay to each operation. Examples: 500ms, 2s, 1m, 2s-5m.",
+				HelpText:    "Delay added to each operation. Use a fixed duration, such as 500ms, 2s, or 1m, or a range for a random delay, such as 2s-5m or 30m-2h.",
 				Role:        connectors.Both,
 			},
 		},
