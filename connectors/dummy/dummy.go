@@ -485,11 +485,10 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	}
 	// Validate operation delay.
 	if s.OperationDelay != "" {
-		delay, err := parseOperationDelay(s.OperationDelay)
+		err = parseOperationDelay(s.OperationDelay)
 		if err != nil {
 			return err
 		}
-		s.OperationDelay = delay
 	}
 	return dummy.env.Settings.Store(ctx, s)
 }
@@ -553,46 +552,46 @@ func deepClone(properties map[string]any) map[string]any {
 	return clone
 }
 
-// parseOperationDelay parses and canonicalizes an operation delay.
-func parseOperationDelay(operationDelay string) (string, error) {
+// parseOperationDelay parses an operation delay.
+func parseOperationDelay(operationDelay string) error {
 	minPart, maxPart, hasMax := strings.Cut(operationDelay, "-")
 	minDelay, err := time.ParseDuration(minPart)
 	if !hasMax {
 		if err != nil {
-			return "", connectors.NewInvalidSettingsError("operation delay must be a valid duration")
+			return connectors.NewInvalidSettingsError("operation delay must be a valid duration")
 		}
 		if minDelay < 0 {
-			return "", connectors.NewInvalidSettingsError("operation delay cannot be negative")
+			return connectors.NewInvalidSettingsError("operation delay cannot be negative")
 		}
 		if minDelay == 0 {
-			return "", nil
+			return nil
 		}
 		if minDelay > maxOperationDelay {
-			return "", connectors.NewInvalidSettingsError(fmt.Sprintf("maximum operation delay must be less than or equal to %s", maxOperationDelay))
+			return connectors.NewInvalidSettingsError(fmt.Sprintf("maximum operation delay must be less than or equal to %s", maxOperationDelay))
 		}
-		return minDelay.String(), nil
+		return nil
 	}
 	if err != nil {
-		return "", connectors.NewInvalidSettingsError("minimum operation delay must be a valid duration")
+		return connectors.NewInvalidSettingsError("minimum operation delay must be a valid duration")
 	}
 	maxDelay, err := time.ParseDuration(maxPart)
 	if err != nil {
-		return "", connectors.NewInvalidSettingsError("maximum operation delay must be a valid duration")
+		return connectors.NewInvalidSettingsError("maximum operation delay must be a valid duration")
 	}
 	if maxDelay < 0 {
-		return "", connectors.NewInvalidSettingsError("maximum operation delay cannot be negative")
+		return connectors.NewInvalidSettingsError("maximum operation delay cannot be negative")
 	}
 	if minDelay == 0 && maxDelay == 0 {
-		return "", nil
+		return nil
 	}
 	if maxDelay > maxOperationDelay {
-		return "", connectors.NewInvalidSettingsError(fmt.Sprintf("maximum operation delay must be less than or equal to %s", maxOperationDelay))
+		return connectors.NewInvalidSettingsError(fmt.Sprintf("maximum operation delay must be less than or equal to %s", maxOperationDelay))
 	}
 	if minDelay > maxDelay {
-		return "", connectors.NewInvalidSettingsError("minimum operational delay cannot be greater than maximum delay")
+		return connectors.NewInvalidSettingsError("minimum operational delay cannot be greater than maximum delay")
 	}
 	if minDelay == maxDelay {
-		return minDelay.String(), nil
+		return nil
 	}
-	return minDelay.String() + "-" + maxDelay.String(), nil
+	return nil
 }

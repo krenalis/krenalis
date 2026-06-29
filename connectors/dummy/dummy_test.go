@@ -6,29 +6,24 @@ package dummy
 
 import "testing"
 
-// TestParseOperationDelay verifies operation delay validation and
-// canonicalization.
+// TestParseOperationDelay verifies operation delay validation.
 func TestParseOperationDelay(t *testing.T) {
 	tests := []struct {
 		name    string
 		delay   string
-		want    string
 		wantErr string
 	}{
 		{
 			name:  "single duration",
 			delay: "500ms",
-			want:  "500ms",
 		},
 		{
-			name:  "canonicalizes single duration",
+			name:  "minute duration",
 			delay: "1m",
-			want:  "1m0s",
 		},
 		{
 			name:  "range",
 			delay: "2s-5m",
-			want:  "2s-5m0s",
 		},
 		{
 			name:    "range with invalid minute suffix",
@@ -38,32 +33,26 @@ func TestParseOperationDelay(t *testing.T) {
 		{
 			name:  "range with zero minimum",
 			delay: "0s-2s",
-			want:  "0s-2s",
 		},
 		{
-			name:  "equal range becomes single duration",
+			name:  "equal range",
 			delay: "2s-2s",
-			want:  "2s",
 		},
 		{
-			name:  "zero duration becomes empty",
+			name:  "zero duration",
 			delay: "0s",
-			want:  "",
 		},
 		{
-			name:  "zero range becomes empty",
+			name:  "zero range",
 			delay: "0s-0s",
-			want:  "",
 		},
 		{
 			name:  "maximum duration",
 			delay: "24h",
-			want:  "24h0m0s",
 		},
 		{
 			name:  "range maximum duration",
 			delay: "1s-24h",
-			want:  "1s-24h0m0s",
 		},
 		{
 			name:    "space before separator",
@@ -108,17 +97,17 @@ func TestParseOperationDelay(t *testing.T) {
 		{
 			name:    "too large duration",
 			delay:   "25h",
-			wantErr: "operation delay must be less than or equal to 24h",
+			wantErr: "maximum operation delay must be less than or equal to 24h0m0s",
 		},
 		{
 			name:    "range maximum too large",
 			delay:   "1s-25h",
-			wantErr: "maximum operation delay must be less than or equal to 24h",
+			wantErr: "maximum operation delay must be less than or equal to 24h0m0s",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseOperationDelay(tt.delay)
+			err := parseOperationDelay(tt.delay)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatal("expected error")
@@ -130,9 +119,6 @@ func TestParseOperationDelay(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatal(err)
-			}
-			if got != tt.want {
-				t.Fatalf("expected %q, got %q", tt.want, got)
 			}
 		})
 	}
