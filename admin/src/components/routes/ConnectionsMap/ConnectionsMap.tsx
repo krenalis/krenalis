@@ -109,7 +109,7 @@ const ConnectionsMap = () => {
 							startAnchor='bottom'
 							endAnchor='top'
 							color='transparent'
-							shapeColor={'#b9b9ca'}
+							shapeColor={'#4f46e5'}
 							strokeWidth={1}
 							curveness={0}
 							dashness={false}
