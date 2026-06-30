@@ -19,7 +19,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 	const [arrow, setArrow] = useState<ReactNode>();
 
 	const { connections } = useContext(appContext);
-	const { hoveredConnection, setHoveredConnection, isUserDbHovered, isEventDbHovered } =
+	const { hoveredConnection, setHoveredConnection, isWarehouseHovered } =
 		useContext(connectionMapContext);
 
 	useEffect(() => {
@@ -46,25 +46,22 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		const relations = c.relations(connections);
 		const isConnected = c.pipelines.length > 0 || c.linkedConnections?.length > 0;
 		const hasRelations = relations.length > 0;
-		const hasUserWarehouseRelation = relations.includes('dwh-user');
-		const hasEventWarehouseRelation = relations.includes('dwh-event');
+		const hasWarehouseRelation = relations.includes('dwh-user') || relations.includes('dwh-event');
 
 		const isHovered =
 			c.id === hoveredConnection ||
 			relations.includes(hoveredConnection) ||
-			(isUserDbHovered && hasUserWarehouseRelation) ||
-			(isEventDbHovered && hasEventWarehouseRelation);
+			(isWarehouseHovered && hasWarehouseRelation);
 
 		const isHighlighted = isHovered && hasRelations;
 
-		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
+		const isSomethingHovered = hoveredConnection != null || isWarehouseHovered;
 		const isHidden =
 			!isConnected ||
 			(isSomethingHovered &&
 				!(isHovered && isConnected) &&
 				!c.linkedConnections?.includes(hoveredConnection) &&
-				!(isUserDbHovered && hasUserWarehouseRelation) &&
-				!(isEventDbHovered && hasEventWarehouseRelation));
+				!(isWarehouseHovered && hasWarehouseRelation));
 
 		const arrow = (
 			<Arrow
@@ -88,7 +85,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		setTimeout(() => {
 			setArrow(arrow);
 		}, 0);
-	}, [c, hoveredConnection, isUserDbHovered, isEventDbHovered]);
+	}, [c, hoveredConnection, isWarehouseHovered]);
 
 	const onMouseEnter = () => {
 		setHoveredConnection(c.id);

@@ -15,8 +15,7 @@ import { warehouses } from '../DataWarehouse/DataWarehouse.helpers';
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);
 	const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
-	const [isUserDbHovered, setIsUserDbHovered] = useState<boolean>(false);
-	const [isEventDbHovered, setIsEventDbHovered] = useState<boolean>(false);
+	const [isWarehouseHovered, setIsWarehouseHovered] = useState<boolean>(false);
 
 	const { connections, setTitle, warehouse } = useContext(AppContext);
 
@@ -37,7 +36,6 @@ const ConnectionsMap = () => {
 			return relations.includes('dwh-user') || relations.includes('dwh-event');
 		};
 
-		const isWarehouseHovered = isUserDbHovered || isEventDbHovered;
 		const isWarehouseConnected = connections.findIndex((c) => hasWarehouseRelation(c)) != -1;
 		let isWarehouseConnectedToHover = false;
 		let isWarehouseHighlighted = false;
@@ -135,16 +133,14 @@ const ConnectionsMap = () => {
 				),
 			);
 		}, 0);
-	}, [hoveredConnection, isUserDbHovered, isEventDbHovered, connections]);
+	}, [hoveredConnection, isWarehouseHovered, connections]);
 
 	const onWarehouseMouseEnter = () => {
-		setIsUserDbHovered(true);
-		setIsEventDbHovered(true);
+		setIsWarehouseHovered(true);
 	};
 
 	const onWarehouseMouseLeave = () => {
-		setIsUserDbHovered(false);
-		setIsEventDbHovered(false);
+		setIsWarehouseHovered(false);
 	};
 
 	const newConnectionID = new URL(document.location.href).searchParams.get('newConnection') ?? '';
@@ -173,7 +169,7 @@ const ConnectionsMap = () => {
 
 	return (
 		<ConnectionMapContext.Provider
-			value={{ hoveredConnection, setHoveredConnection, isEventDbHovered, isUserDbHovered }}
+			value={{ hoveredConnection, setHoveredConnection, isWarehouseHovered }}
 		>
 			<div className='connections-map'>
 				<div className='route-content'>
