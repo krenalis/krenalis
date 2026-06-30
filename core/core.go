@@ -25,6 +25,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
@@ -63,6 +64,7 @@ type Core struct {
 	functionProvider  transformers.FunctionProvider
 	pipelineCleaner   *pipelineCleaner
 	pipelineScheduler *pipelineScheduler
+	localLiveRuns     cancelContexts
 	memberEmailFrom   string
 	smtp              *SMTPConfig
 	close             struct {
@@ -168,8 +170,20 @@ type ExpressionToBeExtracted struct {
 	Type  types.Type `json:"type"`
 }
 
+// DBNotInitializedError is returned by New in those circumstances where the
+// Krenalis database appears not to have been initialized.
+type DBNotInitializedError struct {
+	msg string
+}
+
+func (e *DBNotInitializedError) Error() string {
+	return e.msg
+}
+
 // New returns a *Core instance.
 // If another Core instance is active, it returns an error.
+// If a condition occurs where the Krenalis database appears not to have been
+// initialized, returns an error of type *DBNotInitializedError.
 func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	if !coreActive.CompareAndSwap(false, true) {
@@ -269,9 +283,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 	core.state, err = state.New(ctx, db, kms, connectorsOAuth, sendStats)
 	if err != nil {
-		// Return a clear error if the database has not been initialized.
-		if dbpkg.IsUndefinedTable(err) {
-			return nil, fmt.Errorf("%s (Krenalis's internal PostgreSQL may not be initialized. Try starting Krenalis with the -init-db-if-empty flag)", err)
+		if _, ok := errors.AsType[*state.DBNotInitializedError](err); ok {
+			return nil, &DBNotInitializedError{msg: err.Error()}
 		}
 		return nil, err
 	}
@@ -379,27 +392,54 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
+	core.state.AddListener(core.onEndPipelineRun)
 	core.state.AddListener(core.onRunPipeline)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
-	// Try to start pending pipeline runs.
-	for _, pipeline := range core.state.Pipelines() {
-		if run, ok := pipeline.Run(); ok {
-			if _, ok := run.Node(); !ok {
-				core.tryStartPipelineRun(pipeline.ID)
-			}
+	// Try to start live runs that have not started yet.
+	for _, run := range core.state.LiveRuns() {
+		if _, ok := run.Node(); !ok {
+			core.tryStartPipelineRun(run)
 		}
 	}
 
 	return core, nil
 }
 
+// UpgradeDB upgrades Krenalis's PostgreSQL database.
+func UpgradeDB(ctx context.Context, conf *Config) error {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.DB.Host,
+		Port:           conf.DB.Port,
+		Username:       conf.DB.Username,
+		Password:       conf.DB.Password,
+		Database:       conf.DB.Database,
+		Schema:         conf.DB.Schema,
+		MaxConnections: max(2, conf.DB.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if err := db.Ping(pingCtx); err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+
+	if err := initdb.Upgrade(ctx, db); err != nil {
+		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
+	}
+	return initdb.UpgradeWorkOS(ctx, db)
+}
+
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
-// be in range [1, 60]. password's length must be at least 8 character long.
+// be in range [0, 45]. password's length must be at least 8 character long.
 //
 // If an invitation with the given token does not exist, it returns a
 // NotFoundError error. If the token is expired it returns an
@@ -694,17 +734,18 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 }
 
 // CreateOrganization creates a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) CreateOrganization(ctx context.Context, name string) (string, error) {
+// name cannot be empty and cannot be longer than 255 runes.
+// enabled indicates whether the created organization is enabled.
+func (core *Core) CreateOrganization(ctx context.Context, name string, enabled bool) (string, error) {
 	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
+	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	n := state.CreateOrganization{Name: name}
+	n := state.CreateOrganization{Name: name, Enabled: enabled}
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2)", n.ID, n.Name)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, $3)", n.ID, n.Name, n.Enabled)
 			if err != nil {
 				return nil, err
 			}
@@ -719,6 +760,35 @@ func (core *Core) CreateOrganization(ctx context.Context, name string) (string, 
 		break
 	}
 	return n.ID, nil
+}
+
+// DeleteMembersByWorkOSID deletes all members across all organizations that
+// have the given WorkOS user ID.
+func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID string) error {
+	core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return errors.BadRequest("WorkOS user ID is empty")
+	}
+	return core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var ids []string
+		err := tx.QueryScan(ctx, "DELETE FROM members WHERE workos_user_id = $1 RETURNING id", workosUserID, func(rows *db.Rows) error {
+			for rows.Next() {
+				var id string
+				if err := rows.Scan(&id); err != nil {
+					return err
+				}
+				ids = append(ids, id)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			return nil, nil
+		}
+		return state.DeleteMembers{IDs: ids}, nil
+	})
 }
 
 // InstallationID returns the installation ID.
@@ -759,11 +829,10 @@ func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 	return uniqueProperties, nil
 }
 
-// MemberInvitation returns the organization's name and email of the member
-// invited with the given invitation token. If an invitation with the given
-// token does not exist, it returns a NotFoundError error. If the token is
-// expired it returns an errors.UnprocessableError error with code
-// InvitationTokenExpired.
+// MemberInvitation returns the organization ID and email of the member invited
+// with the given invitation token. If an invitation with the given token does
+// not exist, it returns a NotFoundError error. If the token is expired it
+// returns an errors.UnprocessableError error with code InvitationTokenExpired.
 func (core *Core) MemberInvitation(ctx context.Context, token string) (string, string, error) {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
@@ -783,11 +852,7 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 	if isInvitationTokenExpired(createdAt) {
 		return "", "", errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 	}
-	organization, ok := core.state.Organization(organizationID)
-	if !ok {
-		return "", "", errors.NotFound("invitation token %q does not exist", token)
-	}
-	return organization.Name, email, nil
+	return organizationID, email, nil
 }
 
 // Organization returns the organization with identifier id.
@@ -807,6 +872,7 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		organization: org,
 		ID:           org.ID,
 		Name:         org.Name,
+		Enabled:      org.Enabled,
 	}
 	return &organization, nil
 }
@@ -849,6 +915,7 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			organization: organization,
 			ID:           organization.ID,
 			Name:         organization.Name,
+			Enabled:      organization.Enabled,
 		}
 	}
 	return orgs, nil
@@ -860,32 +927,53 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.collector.ServeHTTP(w, r)
 }
 
-// ValidateMemberPasswordResetToken validates the given password reset token.
+// UpdateMembersByWorkOSID updates the name and email of all members across all
+// organizations that have the given WorkOS user ID. It returns an
+// errors.UnprocessableError with code MemberEmailExists if the new email is
+// already in use by another member in any affected organization.
+func (core *Core) UpdateMembersByWorkOSID(ctx context.Context, workosUserID, name, email string) error {
+	core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return errors.BadRequest("WorkOS user ID is empty")
+	}
+	if name != "" {
+		if err := util.ValidateStringField("name", name, 255); err != nil {
+			return errors.BadRequest("%s", err)
+		}
+	}
+	if err := validateMemberEmail(email); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	_, err := core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE workos_user_id = $3", name, email, workosUserID)
+	if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+		return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+	}
+	return err
+}
+
+// ValidateMemberPasswordResetToken validates the given password reset token,
+// returning the organization ID of reset password token's member.
 //
 // If a password reset request with the given password reset token does not
 // exist or if the token is expired, it returns a NotFoundError error.
-func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
+func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) (string, error) {
 	core.mustBeOpen()
 	if !isValidMemberToken(token) {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
+		return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
 	var organizationID string
 	var createdAt time.Time
 	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.NotFound("reset password token %q does not exist or is expired", token)
+			return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 		}
-		return err
+		return "", err
 	}
 	if isResetPasswordTokenExpired(createdAt) {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
+		return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
-	_, ok := core.state.Organization(organizationID)
-	if !ok {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
-	}
-	return nil
+	return organizationID, nil
 }
 
 // DataTransformation represents transformation passed to (*Core).TransformData
@@ -1119,6 +1207,100 @@ func (core *Core) encryptAuthorizedOAuthAccount(ctx context.Context, account aut
 	return base64.RawURLEncoding.EncodeToString(encrypted), nil
 }
 
+// endLiveRun marks the given live run as terminated with the given reason.
+// A nil reason means the run completed normally.
+// It returns ctx.Err() if ctx is canceled.
+func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason error) error {
+
+	endTime := time.Now().UTC()
+	pipeline := run.Pipeline().ID
+
+	// Handle the run error, if any.
+	var errorStep = metrics.ReceiveStep
+	var errorMessage string
+	if reason != nil {
+		if pipelineErr, ok := reason.(*pipelineError); ok {
+			errorStep = pipelineErr.step
+			errorMessage = reason.Error()
+		} else {
+			errorMessage = "an internal error has occurred"
+			slog.Error("core: cannot run pipeline", "pipeline", pipeline, "run", run.ID, "error", reason)
+		}
+	}
+
+	// Waits for the metrics to be saved.
+	core.metrics.WaitStore()
+
+	n := state.EndPipelineRun{
+		ID:       run.ID,
+		Pipeline: pipeline,
+		Health:   state.Healthy,
+	}
+
+	// Mark the run as completed, summarize the metrics, and send the end notification.
+	bo := backoff.New(200)
+	for bo.Next(ctx) {
+		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			res, err := tx.Exec(ctx,
+				"WITH s AS (\n"+
+					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
+					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
+					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" FROM pipelines_metrics\n"+
+					"\tWHERE pipeline = $2\n"+
+					")\n"+
+					"UPDATE pipelines_runs AS e\n"+
+					"SET function = '', end_time = $3,"+
+					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
+					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
+					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
+					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
+					" error = $4\n"+
+					"FROM s\n"+
+					"WHERE id = $1 AND pipeline = $2 AND end_time IS NULL", run.ID, pipeline, endTime, errorMessage)
+			if err != nil {
+				return nil, err
+			}
+			// Do nothing if the run no longer exists or has already been closed.
+			if res.RowsAffected() == 0 {
+				return nil, nil
+			}
+			if errorMessage != "" {
+				_, err = tx.Exec(ctx, "INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message) VALUES ($1, $2, $3, 0, $4)",
+					pipeline, metrics.TimeSlotFromTime(endTime), errorStep, errorMessage)
+				if err != nil {
+					return nil, err
+				}
+			}
+			// Update the pipeline's cursor.
+			var exists bool
+			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
+				n.ID, n.Health, pipeline).Scan(&exists)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					// The pipeline does not exist anymore.
+					return nil, nil
+				}
+				return nil, err
+			}
+			return n, nil
+		})
+		if err != nil {
+			if ctx.Err() == nil {
+				slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
+			}
+			continue
+		}
+		break
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // mustBeOpen panics if core has been closed.
 func (core *Core) mustBeOpen() {
 	if core.closed.Load() {
@@ -1126,9 +1308,16 @@ func (core *Core) mustBeOpen() {
 	}
 }
 
+// onEndPipelineRun is called when a pipeline run ends.
+func (core *Core) onEndPipelineRun(n state.EndPipelineRun) {
+	core.localLiveRuns.Cancel(n.ID)
+}
+
 // onRunPipeline is called when a pipeline run starts.
 func (core *Core) onRunPipeline(n state.RunPipeline) {
-	core.tryStartPipelineRun(n.Pipeline)
+	p, _ := core.state.Pipeline(n.Pipeline)
+	run, _ := p.Run()
+	core.tryStartPipelineRun(run)
 }
 
 // pipelineError represents a pipeline error.
@@ -1145,38 +1334,23 @@ func (err pipelineError) Error() string {
 	return err.err.Error()
 }
 
-// tryStartPipelineRun attempts to start a pipeline run.
+// tryStartPipelineRun attempts to start the given pipeline run.
 // It returns immediately and spawns a new goroutine to handle the run.
-func (core *Core) tryStartPipelineRun(pipelineID string) {
+func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 	core.close.Go(func() {
 
-		ctx := core.close.ctx
-
-		var pipeline *state.Pipeline
-		var run *state.PipelineRun
-
-		var ok bool
-		pipeline, ok = core.state.Pipeline(pipelineID)
-		if !ok {
-			return
-		}
-		run, ok = pipeline.Run()
-		if !ok {
-			return
-		}
-		if _, ok := run.Node(); ok {
-			return
-		}
+		pipeline := run.Pipeline()
 
 		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
-		for bo.Next(ctx) {
+		for bo.Next(core.close.ctx) {
+			pingTime := time.Now().UTC()
 			result, err := core.db.Exec(core.close.ctx,
-				"UPDATE pipelines_runs\nSET node = $1\nWHERE id = $2 AND node IS NULL",
-				core.state.ID(), run.ID)
+				"UPDATE pipelines_runs SET node = $1, ping_time = $2 WHERE id = $3 AND node IS NULL",
+				core.state.ID(), pingTime, run.ID)
 			if err != nil {
-				if ctx.Err() == nil {
+				if core.close.ctx.Err() == nil {
 					slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
 				continue
@@ -1188,13 +1362,21 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 			}
 			break
 		}
-		if ctx.Err() != nil {
+		if core.close.ctx.Err() != nil {
 			// The context has been canceled.
 			return
 		}
 
+		// Create a context for tracking the import or export execution.
+		// The pipeline cleaner can cancel it if the current node becomes unresponsive.
+		executionCtx, ok := core.localLiveRuns.WithCancel(run.ID, core.close.ctx)
+		if !ok {
+			panic("core: duplicate local live run")
+		}
+		defer core.localLiveRuns.Cancel(run.ID)
+
 		// Ping the run.
-		pingCtx, stopPing := context.WithCancel(ctx)
+		pingCtx, stopPing := context.WithCancel(executionCtx)
 		go func(id string) {
 			ticker := time.NewTicker(5 * time.Second)
 			for {
@@ -1213,48 +1395,50 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		timeSlot := metrics.TimeSlotFromTime(run.StartTime)
 		bo = backoff.New(200)
-		for bo.Next(ctx) {
-			_, err := core.db.Exec(ctx,
+		for bo.Next(executionCtx) {
+			res, err := core.db.Exec(executionCtx,
 				// If statistics from previous runs of the same pipeline are available,
 				// they are subtracted from the current run's statistics. This ensures
 				// that when all slot statistics are merged into those of this run,
 				// the resulting data will be accurate and consistent.
 				"WITH s AS (\n"+
-					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
-					" -passed_4 as passed_4, -passed_5 as passed_5, -failed_0 as failed_0, -failed_1 as failed_1,"+
-					" -failed_2 as failed_2, -failed_3 as failed_3, -failed_4 as failed_4, -failed_5 as failed_5\n"+
+					"	SELECT -COALESCE(SUM(passed_0), 0) as passed_0, -COALESCE(SUM(passed_1), 0) as passed_1,"+
+					" -COALESCE(SUM(passed_2), 0) as passed_2, -COALESCE(SUM(passed_3), 0) as passed_3,"+
+					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" -COALESCE(SUM(failed_0), 0) as failed_0, -COALESCE(SUM(failed_1), 0) as failed_1,"+
+					" -COALESCE(SUM(failed_2), 0) as failed_2, -COALESCE(SUM(failed_3), 0) as failed_3,"+
+					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5\n"+
 					"	FROM pipelines_metrics\n"+
-					"	WHERE pipeline = $2 AND timeslot = $3\n"+
+					"	WHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
 					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
 					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", run.ID, pipeline.ID, timeSlot)
+					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The run no longer exists.
-					return
-				}
-				if ctx.Err() != nil {
+				if executionCtx.Err() != nil {
 					// The context has been canceled.
 					break
 				}
 				slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				continue
 			}
+			// Do nothing if the run no longer exists.
+			if res.RowsAffected() == 0 {
+				return
+			}
 			break
 		}
-		if ctx.Err() != nil {
+		if executionCtx.Err() != nil {
 			// The context has been canceled.
 			// TODO(marco): What happens if the node successfully assigns itself the run, but the context gets canceled?
 			return
 		}
 
-		// Starts the run.
+		// Start the run.
 		c := pipeline.Connection()
 		ws := c.Workspace()
 		store, ok := core.datastore.Store(ws.ID)
@@ -1266,20 +1450,27 @@ func (core *Core) tryStartPipelineRun(pipelineID string) {
 
 		var err error
 		if c.Role == state.Source {
-			err = p.importUsers(ctx)
+			err = p.importUsers(executionCtx)
 		} else {
-			err = p.exportProfiles(ctx)
+			err = p.exportProfiles(executionCtx)
+		}
+		if executionCtx.Err() != nil {
+			return
 		}
 
-		// Mark the run as ended.
-		p.endRun(err)
+		// End the run.
+		err = core.endLiveRun(core.close.ctx, run, err)
+		if err != nil {
+			// Context has been canceled.
+			return
+		}
 
 		// Stop pinging as it is no longer required.
 		stopPing()
 
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
-			err := core.startIdentityResolution(ctx, ws.ID)
+			err := core.startIdentityResolution(core.close.ctx, ws.ID)
 			if err != nil {
 				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
 					// Do nothing.
@@ -1852,4 +2043,40 @@ func (loader *mcpSettingsLoader) Load(ctx context.Context, dst any) error {
 		return err
 	}
 	return json.Unmarshal(s, dst)
+}
+
+// cancelContexts tracks cancelable contexts so they can be canceled by ID.
+type cancelContexts struct {
+	mu   sync.Mutex
+	runs map[string]context.CancelFunc
+}
+
+// Cancel cancels and forgets the context with the given ID, if any.
+func (contexts *cancelContexts) Cancel(id string) {
+	contexts.mu.Lock()
+	cancel, ok := contexts.runs[id]
+	if ok {
+		delete(contexts.runs, id)
+	}
+	contexts.mu.Unlock()
+	if ok {
+		cancel()
+	}
+}
+
+// WithCancel returns a child context and records its cancel function under id.
+// If id already exists, it does nothing and returns false.
+func (contexts *cancelContexts) WithCancel(id string, parent context.Context) (context.Context, bool) {
+	ctx, cancel := context.WithCancel(parent)
+	contexts.mu.Lock()
+	defer contexts.mu.Unlock()
+	if contexts.runs == nil {
+		contexts.runs = map[string]context.CancelFunc{}
+	}
+	if _, ok := contexts.runs[id]; ok {
+		cancel()
+		return nil, false
+	}
+	contexts.runs[id] = cancel
+	return ctx, true
 }

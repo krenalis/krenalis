@@ -72,7 +72,7 @@ const FileConnector = () => {
 							<SlSelect
 								label='Storage'
 								name='storages'
-								value={String(selectedStorage)}
+								value={selectedStorage}
 								onSlChange={onStorageChange}
 							>
 								{selectedStorage != null && (

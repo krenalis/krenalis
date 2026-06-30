@@ -18,17 +18,17 @@ func TestImportWithTransformation(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create a Dummy (source) connection.
-	dummyID := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	dummyID := k.CreateDummy("Dummy (source)", krenalistester.Source)
 
-	c.UpdateIdentityResolution(false, []string{"email"})
+	k.UpdateIdentityResolutionSettings(false, []string{"email"})
 
 	// Create a pipeline with a transformation function which imports users, then run it.
-	importUsersID := c.CreatePipeline(dummyID, "User", krenalistester.PipelineToSet{
+	importUsersID := k.CreatePipeline(dummyID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -59,14 +59,14 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	run := c.RunPipeline(importUsersID)
-	c.WaitRunsCompletion(dummyID, run)
+	run := k.StartPipelineRun(importUsersID)
+	k.WaitForRunsCompletion(run)
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profiles.
 	const expectedTotal = 10
-	profiles, _, total := c.Profiles([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
+	profiles, _, total := k.Profiles([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
 
 	// Validate the profiles total.
 	if total != expectedTotal {

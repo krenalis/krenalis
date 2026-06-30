@@ -17,13 +17,13 @@ func TestImportFromDatabase(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
-	pgSQL := c.CreateSourcePostgreSQL()
+	pgSQL := k.CreateSourcePostgreSQL()
 
-	importUsers := c.CreatePipeline(pgSQL, "User", krenalistester.PipelineToSet{
+	importUsers := k.CreatePipeline(pgSQL, "User", krenalistester.PipelineToSet{
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -44,11 +44,11 @@ func TestImportFromDatabase(t *testing.T) {
 		UpdatedAtFormat: "",
 	})
 
-	run := c.RunPipeline(importUsers)
+	run := k.StartPipelineRun(importUsers)
 
-	c.WaitRunsCompletion(pgSQL, run)
+	k.WaitForRunsCompletion(run)
 
-	identities, total := c.ConnectionIdentities(pgSQL, 0, 100)
+	identities, total := k.ConnectionIdentities(pgSQL, 0, 100)
 
 	const expectedCount = 1
 	if total != expectedCount {

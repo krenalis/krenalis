@@ -50,6 +50,15 @@ type Organization struct {
 	organization *state.Organization
 	ID           string `json:"id"`
 	Name         string `json:"name"`
+
+	// Enabled indicates whether the organization is enabled. Pipelines
+	// belonging to a disabled organization behave as if they were disabled,
+	// returning an OrganizationDisabled error wherever a PipelineDisabled error
+	// would otherwise be returned. Event ingestion is the exception: requests
+	// authenticated with the API key fail with an Unprocessable
+	// OrganizationDisabled error, while those authenticated with an event write
+	// key fail with a 503 Service Unavailable error.
+	Enabled bool `json:"enabled"`
 }
 
 // Member represents a member of an organization.
@@ -68,12 +77,13 @@ type Avatar struct {
 	MimeType string `json:"mimeType"` // Mime type, must be `image/jpeg` or `image/png`
 }
 
-// MemberToSet represents a member to update with the UpdateMember method.
+// MemberToSet represents a member to add or update.
 type MemberToSet struct {
-	Name     string  `json:"name"`     // Name, in range [1, 60]
-	Email    string  `json:"email"`    // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
-	Password string  `json:"password"` // Password, at least 8 characters long
-	Avatar   *Avatar `json:"avatar"`
+	Name         string  `json:"name"`     // Name, in range [0, 255]
+	Email        string  `json:"email"`    // Email, in range [4,255] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
+	Password     string  `json:"password"` // Password, at least 8 characters long; cannot be set when WorkOSUserID is set
+	Avatar       *Avatar `json:"avatar"`
+	WorkOSUserID string  `json:"workosUserID"` // WorkOS user ID; cannot be set when Password is set
 }
 
 // emailToSend represents an email.
@@ -161,21 +171,36 @@ type AccessKey struct {
 	CreatedAt time.Time     `json:"createdAt"`
 }
 
-// AddMember adds a new member of the organization.
+// AddMember adds a new member of the organization and returns its identifier.
 //
-// If the member to add has an email that is already used by another
-// member, it returns an errors.UnprocessableError error with code
-// MemberEmailExists.
-func (this *Organization) AddMember(ctx context.Context, member MemberToSet) error {
+// Exactly one of member.Password and member.WorkOSUserID must be set.
+//
+// It returns an errors.UnprocessableError with code:
+//
+//   - MemberEmailExists, if a member with this email already exists in the
+//     organization.
+//   - MemberWorkOSUserIDExists, if a member with this WorkOS user ID already
+//     exists in the organization.
+//   - OrganizationNotExist, if the organization does not exist.
+func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (string, error) {
 	this.core.mustBeOpen()
-	err := validateMemberToSet(member, true, true, true)
-	if err != nil {
-		return errors.BadRequest("%s", err)
+	if member.Password != "" && member.WorkOSUserID != "" {
+		return "", errors.BadRequest("WorkOSUserID and password cannot be set at the same time")
 	}
-	password, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
+	err := validateMemberToSet(member, true, true, member.WorkOSUserID == "")
 	if err != nil {
-		return err
+		return "", errors.BadRequest("%s", err)
 	}
+
+	password := member.Password
+	if password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return "", err
+		}
+		password = string(hash)
+	}
+
 	n := state.AddMember{
 		Organization: this.organization.ID,
 	}
@@ -185,23 +210,25 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 		})
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-			}
 			if member.Avatar != nil {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-					n.ID, member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now)
+					"INSERT INTO members (id, organization, name, avatar.image, avatar.mime_type, email, password, workos_user_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+					n.ID, this.organization.ID, member.Name, member.Avatar.Image, member.Avatar.MimeType, member.Email, password, member.WorkOSUserID, now)
 			} else {
 				_, err = tx.Exec(ctx,
-					"INSERT INTO members (id, name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-					n.ID, member.Name, member.Email, password, nil, this.organization.ID, now)
+					"INSERT INTO members (id, organization, name, avatar, email, password, workos_user_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+					n.ID, this.organization.ID, member.Name, nil, member.Email, password, member.WorkOSUserID, now)
 			}
 			if err != nil {
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "members_organization_fkey" {
+					return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
+				}
+				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+					return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+				}
+				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_workos_user_id_idx" {
+					return nil, errors.Unprocessable(MemberWorkOSUserIDExists, "a member with this WorkOS user ID already exists")
+				}
 				return nil, err
 			}
 			return n, nil
@@ -210,12 +237,11 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
 				continue
 			}
-			return err
+			return "", err
 		}
 		break
 	}
-
-	return nil
+	return n.ID, nil
 }
 
 // AccessKeys returns the access keys of the organization ordered by creation
@@ -244,7 +270,7 @@ func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) 
 }
 
 // AuthenticateMember authenticates a member of the organization given its email
-// and password. email's length must be in range [4, 120] and must be a valid
+// and password. email's length must be in range [4, 255] and must be a valid
 // email address. password's length must be at least 8 character long.
 //
 // If a member with the provided email does not exist or the password does not
@@ -255,7 +281,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 120); err != nil {
+	if err := util.ValidateStringField("email", email, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
 	if !emailRegExp.MatchString(email) {
@@ -639,6 +665,25 @@ func (this *Organization) Member(ctx context.Context, id string) (*Member, error
 	return &member, nil
 }
 
+// MemberByWorkOSID returns the ID of the member with the given WorkOS user ID
+// in the organization. It returns an errors.NotFoundError if no member has that
+// WorkOS user ID.
+func (this *Organization) MemberByWorkOSID(ctx context.Context, workosUserID string) (string, error) {
+	this.core.mustBeOpen()
+	if len(workosUserID) == 0 {
+		return "", errors.BadRequest("WorkOS user ID is empty")
+	}
+	var id string
+	err := this.core.db.QueryRow(ctx, "SELECT id FROM members WHERE organization = $1 AND workos_user_id = $2", this.organization.ID, workosUserID).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", errors.NotFound("member with WorkOS user ID %s does not exist", workosUserID)
+		}
+		return "", err
+	}
+	return id, nil
+}
+
 // Members returns the organization's members sorted by name.
 func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	this.core.mustBeOpen()
@@ -724,6 +769,29 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 		BodyHTML: []byte(t),
 	}
 	err = sendMail(emailToSend, this.core.smtp)
+	return err
+}
+
+// SetStatus sets the status of the organization.
+func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
+	this.core.mustBeOpen()
+	if enabled == this.organization.Enabled {
+		return nil
+	}
+	n := state.SetOrganizationStatus{
+		ID:      this.organization.ID,
+		Enabled: enabled,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, nil
+		}
+		return n, nil
+	})
 	return err
 }
 
@@ -829,7 +897,7 @@ func (this *Organization) UpdateMember(ctx context.Context, id string, member Me
 // Update updates the name of the organization.
 func (this *Organization) Update(ctx context.Context, name string) error {
 	this.core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
+	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	n := state.UpdateOrganization{ID: this.organization.ID, Name: name}
@@ -1064,7 +1132,7 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 // validateMemberEmail validates a member's email and returns an error if it is
 // not valid.
 func validateMemberEmail(email string) error {
-	if err := util.ValidateStringField("email", email, 120); err != nil {
+	if err := util.ValidateStringField("email", email, 255); err != nil {
 		return err
 	}
 	if !emailRegExp.MatchString(email) {
@@ -1077,8 +1145,8 @@ func validateMemberEmail(email string) error {
 // if the member is not valid.
 func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bool, validatePassword bool) error {
 	// Validate name.
-	if validateName {
-		if err := util.ValidateStringField("name", member.Name, 45); err != nil {
+	if validateName && member.Name != "" {
+		if err := util.ValidateStringField("name", member.Name, 255); err != nil {
 			return err
 		}
 	}

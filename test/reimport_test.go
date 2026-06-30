@@ -18,21 +18,21 @@ func TestReimport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// First of all, create a Dummy connection.
-	dummy := c.CreateDummy("Dummy", krenalistester.Source)
+	dummy := k.CreateDummy("Dummy", krenalistester.Source)
 
 	// Create a pipeline that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the first name
 	//
-	dummyPipeline := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
+	dummyPipeline := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -52,11 +52,11 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import the users from dummy.
-	run := c.RunPipeline(dummyPipeline)
-	c.WaitRunsCompletion(dummy, run)
+	run := k.StartPipelineRun(dummyPipeline)
+	k.WaitForRunsCompletion(run)
 
 	// Run the Identity Resolution.
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
@@ -66,7 +66,7 @@ func TestReimport(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedTotal = 10
-	profiles, _, total := c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total := k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
@@ -82,7 +82,7 @@ func TestReimport(t *testing.T) {
 	// - the email
 	// - the last name (instead of the first name)
 	//
-	c.UpdatePipeline(dummyPipeline, krenalistester.PipelineToSet{
+	k.UpdatePipeline(dummyPipeline, krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -102,16 +102,16 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from Dummy.
-	run = c.RunPipeline(dummyPipeline)
-	c.WaitRunsCompletion(dummy, run)
+	run = k.StartPipelineRun(dummyPipeline)
+	k.WaitForRunsCompletion(run)
 
 	// Run the Identity Resolution.
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles again.
 	//
 	// This time the first name must be nil, while the last name should have a value.
-	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}

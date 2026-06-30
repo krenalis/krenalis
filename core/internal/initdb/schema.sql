@@ -6,7 +6,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE organizations (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
-    name varchar(45) NOT NULL DEFAULT '',
+    name varchar(255) NOT NULL DEFAULT '',
+    enabled boolean NOT NULL DEFAULT FALSE,
     PRIMARY KEY (id)
 );
 
@@ -20,10 +21,11 @@ CREATE TYPE avatar AS (
 CREATE TABLE members (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
-    name varchar(45) NOT NULL DEFAULT '',
+    name varchar(255) NOT NULL DEFAULT '',
     avatar avatar,
-    email varchar(120) NOT NULL COLLATE case_insensitive,
+    email varchar(255) NOT NULL COLLATE case_insensitive,
     password varchar(72) NOT NULL DEFAULT '',
+    workos_user_id varchar(255) NOT NULL DEFAULT '',
     invitation_token varchar(44) NOT NULL DEFAULT '',
     reset_password_token varchar(44) NOT NULL DEFAULT '',
     reset_password_token_created_at timestamp,
@@ -34,6 +36,7 @@ CREATE TABLE members (
 
 CREATE UNIQUE INDEX invitation_token_index ON members (invitation_token) WHERE invitation_token <> '';
 CREATE UNIQUE INDEX reset_password_token_index ON members (reset_password_token) WHERE reset_password_token <> '';
+CREATE UNIQUE INDEX members_workos_user_id_idx ON members (organization, workos_user_id) WHERE workos_user_id <> '';
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
 
@@ -184,7 +187,11 @@ CREATE TABLE pipelines_runs (
 
 CREATE INDEX pipelines_runs_function_idx
     ON pipelines_runs (function)
-    WHERE function != '' AND end_time IS NOT NULL;
+    WHERE function != '' AND end_time IS NULL;
+
+CREATE UNIQUE INDEX pipelines_one_live_run_idx
+    ON pipelines_runs (pipeline)
+    WHERE end_time IS NULL;
 
 CREATE TABLE pipelines_errors (
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
@@ -273,6 +280,7 @@ CREATE TYPE notification_name AS ENUM (
     'DeleteConnection',
     'DeleteEventWriteKey',
     'DeleteMember',
+    'DeleteMembers',
     'DeleteOrganization',
     'DeletePipeline',
     'DeleteWorkspace',
@@ -286,6 +294,7 @@ CREATE TYPE notification_name AS ENUM (
     'RunPipeline',
     'SetAccount',
     'SetConnectionSettings',
+    'SetOrganizationStatus',
     'SetPipelineFormatSettings',
     'SetPipelineSchedulePeriod',
     'SetPipelineStatus',

@@ -24,16 +24,16 @@ func TestEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// Load some users in the data warehouse from Dummy.
-	dummySrc := c.CreateDummy("Dummy (source)", krenalistester.Source)
-	importUsersID := c.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
+	dummySrc := k.CreateDummy("Dummy (source)", krenalistester.Source)
+	importUsersID := k.CreatePipeline(dummySrc, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -51,26 +51,26 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	})
-	run := c.RunPipeline(importUsersID)
-	c.WaitRunsCompletion(dummySrc, run)
-	c.RunIdentityResolution()
+	run := k.StartPipelineRun(importUsersID)
+	k.WaitForRunsCompletion(run)
+	k.RunIdentityResolutionAndWait()
 
 	// Create a JavaScript connection with 2 pipelines (one for importing events,
 	// one for importing identities) and retrieve its key.
 	var javaScriptID string
 	var javaScriptKey string
 	{
-		javaScriptID = c.CreateJavaScriptSource("JavaScript (source)", nil)
-		keys := c.EventWriteKeys(javaScriptID)
+		javaScriptID = k.CreateJavaScriptSource("JavaScript (source)", nil)
+		keys := k.EventWriteKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
+		k.CreatePipeline(javaScriptID, "Event", krenalistester.PipelineToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
+		k.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
 			Filter:   krenalistester.DefaultFilterUserFromEvents,
@@ -89,7 +89,7 @@ func TestEvents(t *testing.T) {
 	const eventProfileEmail = "event-profile@example.com"
 
 	// Send an identity event. More than importing an event, this should create an identity.
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
 		Traits: map[string]any{
 			"email": eventProfileEmail,
@@ -97,14 +97,14 @@ func TestEvents(t *testing.T) {
 	})
 
 	// Make a Group call.
-	c.SendEvent(javaScriptKey, analytics.Group{
+	k.SendEvent(javaScriptKey, analytics.Group{
 		UserId:  "f4ca124298",
 		GroupId: "uy55IELNg",
 	})
 
 	// Send 3 events.
 	for i := range 3 {
-		c.SendEvent(javaScriptKey, analytics.Track{
+		k.SendEvent(javaScriptKey, analytics.Track{
 			UserId:      "f4ca124298",
 			AnonymousId: "baeeb556-96f3-4631-a22d-928431af8bf6",
 			Event:       "Signed Up",
@@ -124,18 +124,18 @@ func TestEvents(t *testing.T) {
 
 	ctx := context.Background()
 
-	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
-	c.RunIdentityResolution()
+	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
+	k.RunIdentityResolutionAndWait()
 
 	const expectedEventsCount = 5
 
-	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
+	k.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Run the identity resolution, so that the events KPID are updated.
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profile imported from the event.
-	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	const expectedProfilesTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedProfilesTotal != total {
 		t.Fatalf("expected %d profiles, got %d", expectedProfilesTotal, total)
@@ -155,7 +155,7 @@ func TestEvents(t *testing.T) {
 
 	// Retrieve the first event for the profile.
 	var event map[string]any
-	events := c.ProfileEvents(kpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
+	events := k.ProfileEvents(kpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
 		t.Fatalf("expected %d events for profile %s, got %d", expectedEventsCount, kpid, len(events))
 	}
@@ -217,16 +217,16 @@ func TestEvents(t *testing.T) {
 	}
 
 	// Test importing an identity with a pipeline that has no mapping.
-	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", nil)
-	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
-	c.CreatePipeline(javaScript2ID, "User", krenalistester.PipelineToSet{
+	javaScript2ID := k.CreateJavaScriptSource("JavaScript (source 2)", nil)
+	javaScript2Key := k.EventWriteKeys(javaScript2ID)[0]
+	k.CreatePipeline(javaScript2ID, "User", krenalistester.PipelineToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})
-	c.SendEvent(javaScript2Key, analytics.Identify{
+	k.SendEvent(javaScript2Key, analytics.Identify{
 		UserId:      "Zny0kLMyz",
 		AnonymousId: "bd857fe0-8f62-4d36-8e47-0161db0cc513",
 	})
 
-	c.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScript2ID, 1)
+	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScript2ID, 1)
 }

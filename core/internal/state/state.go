@@ -64,6 +64,7 @@ type State struct {
 
 	mu               *sync.Mutex              // for the 'pipelines', ..., and 'workspaces' fields
 	pipelines        map[string]*Pipeline     // protected by mu
+	liveRuns         map[string]*PipelineRun  // live pipeline runs, i.e. runs that have not ended; protected by mu
 	connections      map[string]*Connection   // protected by mu
 	connectionsByKey map[string]*Connection   // protected by mu
 	accessKeyByHMAC  map[string]*AccessKey    // protected by mu
@@ -91,9 +92,11 @@ type OAuthCredentials struct {
 }
 
 // New returns a state given the database, the key manager, the 64-byte master
-// key, and the OAuth
-// client credentials for connectors.
-// sendStats indicates whether the state should send statistics or not.
+// key, and the OAuth client credentials for connectors. sendStats indicates
+// whether the state should send statistics or not.
+//
+// If a condition occurs where the Krenalis database appears not to have been
+// initialized, returns an error of type *DBNotInitializedError.
 func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
 	id, err := uuid.NewUUID()
@@ -113,6 +116,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		connections:      map[string]*Connection{},
 		connectionsByKey: map[string]*Connection{},
 		pipelines:        map[string]*Pipeline{},
+		liveRuns:         map[string]*PipelineRun{},
 		sendStats:        sendStats,
 	}
 
@@ -127,7 +131,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	err = state.load(ctx, credentials)
 	if err != nil {
 		state.notifications.Close()
-		return nil, err
+		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
 
 	// Keep the state updated.
@@ -286,6 +290,31 @@ func (state *State) IsLeader() bool {
 	election := state.election
 	state.mu.Unlock()
 	return election.leader == state.id
+}
+
+// LiveRun returns the live pipeline run with the given id.
+// The boolean return value indicates whether the live run exists.
+func (state *State) LiveRun(id string) (*PipelineRun, bool) {
+	state.mu.Lock()
+	run, ok := state.liveRuns[id]
+	state.mu.Unlock()
+	return run, ok
+}
+
+// LiveRuns returns all the live pipeline runs.
+func (state *State) LiveRuns() []*PipelineRun {
+	state.mu.Lock()
+	runs := make([]*PipelineRun, len(state.liveRuns))
+	i := 0
+	for _, run := range state.liveRuns {
+		runs[i] = run
+		i++
+	}
+	state.mu.Unlock()
+	sort.Slice(runs, func(i, j int) bool {
+		return runs[i].ID < runs[j].ID
+	})
+	return runs
 }
 
 // OAuthKey returns the key used to encrypt and decrypt OAuth keys.
@@ -511,6 +540,7 @@ type Organization struct {
 	members    map[string]struct{}
 	ID         string
 	Name       string
+	Enabled    bool
 }
 
 // HasMember reports whether the organization has a member with the given ID.
@@ -614,7 +644,6 @@ type Workspace struct {
 		mcpSettingsKey *cipher.Key
 	}
 	connections                    map[string]*Connection
-	runs                           map[string]*PipelineRun // pipeline runs in progress.
 	ID                             string
 	organization                   *Organization
 	Name                           string
@@ -761,15 +790,6 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 	pipelines := workspace.pipelinesToPurge
 	workspace.mu.Unlock()
 	return slices.Clone(pipelines)
-}
-
-// Run returns the pipeline run in the workspace with the given id.
-// The boolean return value indicates whether the run exists.
-func (workspace *Workspace) Run(id string) (*PipelineRun, bool) {
-	workspace.mu.Lock()
-	exe, ok := workspace.runs[id]
-	workspace.mu.Unlock()
-	return exe, ok
 }
 
 // WarehouseSettings returns the warehouse settings.
@@ -1390,6 +1410,7 @@ type Pipeline struct {
 	mu                 *sync.Mutex
 	ID                 string
 	connection         *Connection
+	organization       *Organization
 	format             *Connector
 	run                *PipelineRun
 	propertiesToUnset  []string // is not nil only for source pipelines on users.
@@ -1456,6 +1477,14 @@ func (pipeline *Pipeline) Format() *Connector {
 	return c
 }
 
+// Organization returns the organization of the pipeline.
+func (pipeline *Pipeline) Organization() *Organization {
+	pipeline.mu.Lock()
+	o := pipeline.organization
+	pipeline.mu.Unlock()
+	return o
+}
+
 // PipelineRun represents a pipeline run.
 type PipelineRun struct {
 	mu          *sync.Mutex
@@ -1468,19 +1497,19 @@ type PipelineRun struct {
 }
 
 // Pipeline returns the pipeline associated with the run.
-func (ex *PipelineRun) Pipeline() *Pipeline {
-	ex.mu.Lock()
-	p := ex.pipeline
-	ex.mu.Unlock()
+func (run *PipelineRun) Pipeline() *Pipeline {
+	run.mu.Lock()
+	p := run.pipeline
+	run.mu.Unlock()
 	return p
 }
 
 // Node returns the node on which the run is currently executing.
 // The boolean return value indicates whether the run is assigned to a node.
-func (ex *PipelineRun) Node() (uuid.UUID, bool) {
-	ex.mu.Lock()
-	node := ex.node
-	ex.mu.Unlock()
+func (run *PipelineRun) Node() (uuid.UUID, bool) {
+	run.mu.Lock()
+	node := run.node
+	run.mu.Unlock()
 	if node == nil {
 		return uuid.UUID{}, false
 	}

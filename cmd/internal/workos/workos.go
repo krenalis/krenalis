@@ -1,0 +1,477 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
+package workos
+
+import (
+	"bytes"
+	"context"
+	"crypto/hmac"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"math/big"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	baseURL = "https://api.workos.com"
+
+	signatureMaxAge = 3 * 60 * 1000 // 3 minutes
+
+	// publicKeyTTL is an arbitrary TTL used to eventually evict cached public
+	// keys and ensure they are re-fetched periodically. It does not reflect any
+	// documented WorkOS key rotation policy.
+	publicKeyTTL      = 24 * time.Hour
+	publicKeyMaxCache = 100
+)
+
+var (
+	ErrAuthenticationFailed    = errors.New("WorkOS authentication failed")
+	ErrOrganizationNotLinked   = errors.New("WorkOS organization has no external ID")
+	ErrUserNotFound            = errors.New("WorkOS user not found")
+	ErrOrganizationNotFound    = errors.New("WorkOS organization not found")
+	errCannotRetrievePublicKey = errors.New("cannot retrieve the WorkOS public key")
+	errNotFound                = errors.New("resource not found")
+)
+
+type Workos struct {
+	ClientID      string
+	apiKey        string
+	webhookSecret string
+	actionsSecret string
+	DevMode       bool
+	keyStore      keyStore
+	transport     http.RoundTripper
+}
+
+// AuthenticatedUser holds the authenticated user information returned by WorkOS
+// after token verification.
+type AuthenticatedUser struct {
+	OrganizationExternalID string
+	ID                     string
+	Email                  string
+	FirstName              string
+	LastName               string
+}
+
+type publicKey struct {
+	key       *rsa.PublicKey
+	alg       string
+	expiresAt time.Time
+}
+
+type keyStore struct {
+	mu   sync.Mutex
+	byID map[string]*publicKey // kid → cached key
+}
+
+func (ks *keyStore) get(kid string) (*rsa.PublicKey, string, bool) {
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	pk, ok := ks.byID[kid]
+	if !ok || time.Now().After(pk.expiresAt) {
+		return nil, "", false
+	}
+	return pk.key, pk.alg, true
+}
+
+func (ks *keyStore) set(kid string, key *rsa.PublicKey, alg string) {
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
+	now := time.Now()
+	for kid, pk := range ks.byID {
+		if now.After(pk.expiresAt) {
+			delete(ks.byID, kid)
+		}
+	}
+	if len(ks.byID) == publicKeyMaxCache {
+		var oldestKid string
+		var oldestExpiry time.Time
+		for k, pk := range ks.byID {
+			if oldestKid == "" || pk.expiresAt.Before(oldestExpiry) {
+				oldestKid = k
+				oldestExpiry = pk.expiresAt
+			}
+		}
+		delete(ks.byID, oldestKid)
+	}
+	ks.byID[kid] = &publicKey{
+		key:       key,
+		alg:       alg,
+		expiresAt: now.Add(publicKeyTTL),
+	}
+}
+
+type claims struct {
+	jwt.RegisteredClaims
+	ClientID string `json:"client_id"`
+	OrgID    string `json:"org_id"`
+}
+
+type jwks struct {
+	Keys []struct {
+		Kty string `json:"kty"`
+		Use string `json:"use"`
+		Alg string `json:"alg"`
+		Kid string `json:"kid"`
+		N   string `json:"n"`
+		E   string `json:"e"`
+	} `json:"keys"`
+}
+
+func New(clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *Workos {
+	return &Workos{
+		ClientID:      clientID,
+		apiKey:        apiKey,
+		webhookSecret: webhookSecret,
+		actionsSecret: actionsSecret,
+		DevMode:       devMode,
+		keyStore:      keyStore{byID: make(map[string]*publicKey)},
+		transport:     &http.Transport{Proxy: nil},
+	}
+}
+
+// publicKey returns the RSA public key for the given token, using the in-memory
+// cache when available.
+//
+// It returns an error wrapping errCannotRetrievePublicKey if the public key
+// cannot be fetched from WorkOS.
+func (wo *Workos) publicKey(ctx context.Context, token *jwt.Token) (_ any, err error) {
+	algorithm := token.Method.Alg()
+
+	_, isRSA := token.Method.(*jwt.SigningMethodRSA)
+	_, isPSS := token.Method.(*jwt.SigningMethodRSAPSS)
+	if !isRSA && !isPSS {
+		return nil, fmt.Errorf("WorkOS signed the JWT using %s, but Krenalis only supports RSA and RSA-PSS signing methods", algorithm)
+	}
+
+	kid, _ := token.Header["kid"].(string)
+	if kid == "" {
+		return nil, fmt.Errorf("WorkOS provided a JWT with an empty key identifier (kid)")
+	}
+
+	key, alg, ok := wo.keyStore.get(kid)
+	if ok {
+		if alg != algorithm {
+			return nil, fmt.Errorf("key %s has algorithm %q, not %q", kid, alg, algorithm)
+		}
+		return key, nil
+	}
+
+	key, err = wo.fetchPublicKey(ctx, kid, algorithm)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", errCannotRetrievePublicKey, err)
+	}
+
+	wo.keyStore.set(kid, key, algorithm)
+
+	return key, nil
+}
+
+// fetchPublicKey fetches the WorkOS JWKS and returns the RSA public key for the
+// given key ID and algorithm.
+func (wo *Workos) fetchPublicKey(ctx context.Context, kid, alg string) (*rsa.PublicKey, error) {
+	var jwks jwks
+	err := wo.call(ctx, http.MethodGet, "/sso/jwks/"+url.PathEscape(wo.ClientID), http.StatusOK, nil, &jwks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch WorkOS JWKS: %s", err)
+	}
+	for _, k := range jwks.Keys {
+		if k.Kty != "RSA" {
+			slog.Warn("workos: JWKS contains non-RSA key", "kid", k.Kid, "kty", k.Kty)
+			if k.Kid == kid {
+				return nil, fmt.Errorf("WorkOS JWKS key %q has unsupported type %q", kid, k.Kty)
+			}
+			continue
+		}
+		if k.Kid != kid {
+			continue
+		}
+		if k.Use != "" && k.Use != "sig" {
+			continue
+		}
+		if k.Alg != alg {
+			continue
+		}
+		nBytes, err := base64.RawURLEncoding.DecodeString(k.N)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode WorkOS JWKS key N: %s", err)
+		}
+		eBytes, err := base64.RawURLEncoding.DecodeString(k.E)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode WorkOS JWKS key E: %s", err)
+		}
+		return &rsa.PublicKey{
+			N: new(big.Int).SetBytes(nBytes),
+			E: int(new(big.Int).SetBytes(eBytes).Int64()),
+		}, nil
+	}
+	return nil, fmt.Errorf("WorkOS JWKS does not contain key %q", kid)
+}
+
+// Authenticate verifies the WorkOS JWT and returns the authenticated user's
+// information and their organization external ID.
+//
+// It returns ErrAuthenticationFailed when the authentication fails (e.g. the
+// token is expired, has an invalid signature, or is missing required claims).
+func (wo *Workos) Authenticate(ctx context.Context, token string) (*AuthenticatedUser, error) {
+	var claims claims
+
+	publicKey := func(token *jwt.Token) (any, error) {
+		return wo.publicKey(ctx, token)
+	}
+
+	issuer := "https://api.workos.com/user_management/" + wo.ClientID
+
+	parsed, err := jwt.ParseWithClaims(token, &claims, publicKey, jwt.WithExpirationRequired(), jwt.WithIssuer(issuer))
+	if errors.Is(err, errCannotRetrievePublicKey) {
+		return nil, err
+	}
+
+	// ParseWithClaims should return an error for malformed tokens, invalid
+	// signatures, and invalid registered claims. Normalize those errors to
+	// ErrAuthenticationFailed, and keep the Valid check as a defensive guard in
+	// case the parser returns a token that is not marked as valid.
+	if err != nil || !parsed.Valid {
+		return nil, ErrAuthenticationFailed
+	}
+
+	if claims.ClientID != wo.ClientID {
+		slog.Warn("workos: JWT client_id does not match configured client ID")
+		return nil, ErrAuthenticationFailed
+	}
+	if claims.Subject == "" {
+		return nil, ErrAuthenticationFailed
+	}
+	if claims.OrgID == "" {
+		return nil, ErrAuthenticationFailed
+	}
+
+	userID := claims.Subject
+
+	workosUser, err := wo.User(ctx, userID)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return nil, ErrAuthenticationFailed
+		}
+		return nil, fmt.Errorf("failed to fetch WorkOS user: %s", err)
+	}
+
+	organizationExternalID, err := wo.OrganizationExternalID(ctx, claims.OrgID)
+	if err != nil {
+		if errors.Is(err, ErrOrganizationNotFound) {
+			return nil, ErrAuthenticationFailed
+		}
+		return nil, fmt.Errorf("cannot retrieve WorkOS organization: %s", err)
+	}
+
+	user := &AuthenticatedUser{
+		OrganizationExternalID: organizationExternalID,
+		ID:                     userID,
+		Email:                  workosUser.Email,
+		FirstName:              workosUser.FirstName,
+		LastName:               workosUser.LastName,
+	}
+
+	return user, nil
+}
+
+// OrganizationExternalID fetches and returns the external ID of the WorkOS
+// organization with the given ID. The external ID of a WorkOS organization is
+// the identifier of its linked organization in Krenalis.
+//
+// It returns ErrOrganizationNotFound if the organization does not exist and
+// ErrOrganizationNotLinked if the WorkOS organization has no external ID.
+func (wo *Workos) OrganizationExternalID(ctx context.Context, orgID string) (string, error) {
+	if strings.TrimSpace(orgID) == "" {
+		return "", fmt.Errorf("missing organization ID")
+	}
+	var orgRes struct {
+		ExternalID string `json:"external_id"`
+	}
+	err := wo.call(ctx, http.MethodGet, "/organizations/"+url.PathEscape(orgID), http.StatusOK, nil, &orgRes)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return "", ErrOrganizationNotFound
+		}
+		return "", fmt.Errorf("failed to fetch WorkOS organization %s: %w", orgID, err)
+	}
+	if orgRes.ExternalID == "" {
+		return "", ErrOrganizationNotLinked
+	}
+	return orgRes.ExternalID, nil
+}
+
+// User fetches and returns the WorkOS user with the given ID.
+//
+// It returns ErrUserNotFound if the user does not exist.
+func (wo *Workos) User(ctx context.Context, userID string) (*AuthenticatedUser, error) {
+	var res struct {
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+	}
+	err := wo.call(ctx, http.MethodGet, "/user_management/users/"+url.PathEscape(userID), http.StatusOK, nil, &res)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch WorkOS user %s: %s", userID, err)
+	}
+	return &AuthenticatedUser{ID: userID, Email: res.Email, FirstName: res.FirstName, LastName: res.LastName}, nil
+}
+
+// call sends an HTTP request to the WorkOS API. If out is non-nil, call decodes
+// the response body into it.
+//
+// If the response status is not expectedStatus, call returns an error; for a
+// 404 response, errors.Is(err, errNotFound) reports true.
+func (wo *Workos) call(ctx context.Context, method, path string, expectedStatus int, body any, out any) error {
+	var bodyReader io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("failed to encode request body: %s", err)
+		}
+		bodyReader = bytes.NewReader(b)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, bodyReader)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+wo.apiKey)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	resp, err := wo.transport.RoundTrip(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != expectedStatus {
+		if resp.StatusCode == http.StatusNotFound {
+			return fmt.Errorf("WorkOS returned status 404: %w", errNotFound)
+		}
+		return fmt.Errorf("WorkOS returned unexpected status %d", resp.StatusCode)
+	}
+
+	if out != nil {
+		err := json.NewDecoder(resp.Body).Decode(out)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// VerifyActionSignature verifies the HMAC-SHA256 signature of an incoming
+// WorkOS action request. sigHeader is the value of the "WorkOS-Signature"
+// header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
+// message is "<timestamp>.<rawBody>".
+func (wo *Workos) VerifyActionSignature(rawBody []byte, sigHeader string) error {
+	return wo.verifyHMACSignature(rawBody, sigHeader, wo.actionsSecret)
+}
+
+// VerifyWebhookSignature verifies the HMAC-SHA256 signature of an incoming
+// WorkOS webhook event. sigHeader is the value of the "WorkOS-Signature"
+// header, which has the format "t=<timestamp_ms>,v1=<hex_digest>". The signed
+// message is "<timestamp>.<rawBody>".
+func (wo *Workos) VerifyWebhookSignature(rawBody []byte, sigHeader string) error {
+	return wo.verifyHMACSignature(rawBody, sigHeader, wo.webhookSecret)
+}
+
+func (wo *Workos) verifyHMACSignature(rawBody []byte, sigHeader, secret string) error {
+	parts := strings.Split(sigHeader, ",")
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
+	timestamp, ok := strings.CutPrefix(strings.TrimSpace(parts[0]), "t=")
+	if !ok {
+		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
+	signature, ok := strings.CutPrefix(strings.TrimSpace(parts[1]), "v1=")
+	if !ok {
+		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
+	if timestamp == "" || signature == "" {
+		return fmt.Errorf("invalid WorkOS webhook")
+	}
+
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid timestamp in WorkOS-Signature header")
+	}
+	diff := time.Now().UnixMilli() - ts
+	if diff > signatureMaxAge {
+		return fmt.Errorf("WorkOS signature timestamp is too old")
+	}
+
+	sigBytes, err := hex.DecodeString(signature)
+	if err != nil {
+		return fmt.Errorf("invalid hex in WorkOS-Signature header: %s", err)
+	}
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(timestamp))
+	mac.Write([]byte("."))
+	mac.Write(rawBody)
+	if !hmac.Equal(mac.Sum(nil), sigBytes) {
+		return fmt.Errorf("WorkOS signature mismatch")
+	}
+
+	return nil
+}
+
+// BuildActionResponse builds and signs a WorkOS action response JSON payload.
+// verdict must be "Allow" or "Deny"; errorMessage is included only on Deny.
+func (wo *Workos) BuildActionResponse(verdict, errorMessage string) ([]byte, error) {
+	type actionPayload struct {
+		Timestamp    int64  `json:"timestamp"`
+		Verdict      string `json:"verdict"`
+		ErrorMessage string `json:"error_message,omitempty"`
+	}
+	t := time.Now().UnixMilli()
+	p := actionPayload{Timestamp: t, Verdict: verdict, ErrorMessage: errorMessage}
+	pJSON, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	mac := hmac.New(sha256.New, []byte(wo.actionsSecret))
+	fmt.Fprintf(mac, "%d.", t)
+	mac.Write(pJSON)
+	sig := hex.EncodeToString(mac.Sum(nil))
+	type response struct {
+		Object    string        `json:"object"`
+		Payload   actionPayload `json:"payload"`
+		Signature string        `json:"signature"`
+	}
+	return json.Marshal(
+		response{
+			Object:    "user_registration_action_response",
+			Payload:   p,
+			Signature: sig,
+		},
+	)
+}

@@ -72,6 +72,7 @@ type ConnectionToCreate struct {
 
 type DummySettings struct {
 	URLForDispatchingEvents string `json:"urlForDispatchingEvents"`
+	OperationDelay          string `json:"operationDelay,omitempty"`
 }
 
 type PipelineRun struct {
@@ -348,8 +349,9 @@ const (
 )
 
 type Organization struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
 }
 
 type Workspace struct {

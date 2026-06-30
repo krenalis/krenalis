@@ -20,21 +20,21 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create a JavaScript connection and get its key.
 	var javaScriptKey string
-	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
-	keys := c.EventWriteKeys(javaScriptID)
+	javaScriptID := k.CreateJavaScriptSource("JavaScript (source)", nil)
+	keys := k.EventWriteKeys(javaScriptID)
 	if len(keys) != 1 {
 		t.Fatalf("expected one key, got %d keys", len(keys))
 	}
 	javaScriptKey = keys[0]
 
 	// Create a first pipeline, with a filter.
-	pipeline1 := c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
+	pipeline1 := k.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 		Name:     "Pipeline 1",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -57,7 +57,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Create a second pipeline, which imports identities from events with a
 	// different filter than the first pipeline.
-	pipeline2 := c.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
+	pipeline2 := k.CreatePipeline(javaScriptID, "User", krenalistester.PipelineToSet{
 		Name:     "Pipeline 2",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -79,13 +79,13 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Import two anonymous identities; each will need to be imported from its
 	// own pipeline.
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
 		MessageId:   "message1",
 		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
 	})
 
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
 		MessageId:   "message2",
 		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
@@ -96,7 +96,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	var identities []krenalistester.Identity
 	for {
 		var total int
-		identities, total = c.ConnectionIdentities(javaScriptID, 0, 100)
+		identities, total = k.ConnectionIdentities(javaScriptID, 0, 100)
 		if total == 2 {
 			break
 		}
@@ -107,7 +107,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	var pipeline1Found, pipeline2Found bool
 	for _, identity := range identities {
@@ -131,19 +131,19 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	}
 
 	// Log in the user of the first pipeline.
-	c.SendEvent(javaScriptKey, analytics.Identify{
+	k.SendEvent(javaScriptKey, analytics.Identify{
 		UserId:      "user-id-1234",
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
 		MessageId:   "message3",
 		Traits:      analytics.NewTraits().SetAge(20),
 	})
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	attempts = 0
 waitLoop:
 	for {
-		identities, _ := c.ConnectionIdentities(javaScriptID, 0, 100)
+		identities, _ := k.ConnectionIdentities(javaScriptID, 0, 100)
 		for _, identity := range identities {
 			if identity.UserID != "" {
 				break waitLoop
@@ -158,7 +158,7 @@ waitLoop:
 
 	// Make sure there is only one identity now, as both the anonymous
 	// identities, each imported by its own pipeline, have been deleted.
-	identities, total := c.ConnectionIdentities(javaScriptID, 0, 100)
+	identities, total := k.ConnectionIdentities(javaScriptID, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected just one identity, got %d", total)
 	}
@@ -178,10 +178,10 @@ waitLoop:
 
 	// Run the Identity Resolution explicitly (even though technically it should
 	// have already been done implicitly during import).
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Check that there is actually only one profile in the workspace.
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected only one profile in the workspace, got %d instead", total)
 	}

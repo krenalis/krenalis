@@ -4,8 +4,8 @@ const validateMemberEmail = (email: string) => {
 	if (email === '') {
 		throw new Error('email must not be empty');
 	}
-	if (email.length > 120) {
-		throw new Error('email must be shorter than 120 characters');
+	if (email.length > 255) {
+		throw new Error('email must be shorter than 255 characters');
 	}
 };
 
@@ -27,8 +27,8 @@ const validateMemberToSet = (
 	if (member.name === '') {
 		throw new Error('name must not be empty');
 	}
-	if (member.name.length > 45) {
-		throw new Error('name must be shorter than 45 characters');
+	if (member.name.length > 255) {
+		throw new Error('name must be shorter than 255 characters');
 	}
 	if (validateEmail) {
 		try {

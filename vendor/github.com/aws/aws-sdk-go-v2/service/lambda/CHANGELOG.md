@@ -1,3 +1,21 @@
+# v1.92.3 (2026-06-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.92.2 (2026-06-04)
+
+* **Dependency Update**: Update to smithy-go v1.27.1 to fix several union-related deserialization bugs in schema-serde-enabled services.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.92.1 (2026-06-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.92.0 (2026-06-02)
+
+* **Feature**: Adds configuration for tag propagation to Lambda-managed resources.
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.91.0 (2026-06-01)
 
 * **Feature**: Adding new BDD representation of endpoint ruleset

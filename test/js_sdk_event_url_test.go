@@ -16,18 +16,18 @@ func TestJavaScriptSDKEventURL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	const expectedJavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
-	gotJavaScriptSDKURL := c.JavaScriptSDKURL()
+	gotJavaScriptSDKURL := k.JavaScriptSDKURL()
 	if gotJavaScriptSDKURL != expectedJavaScriptSDKURL {
 		t.Fatalf("expected JavaScript SDK URL: %q, got: %q", expectedJavaScriptSDKURL, gotJavaScriptSDKURL)
 	}
 
-	expectedExternalEventURL := "http://" + c.Addr() + "/v1/events"
-	gotExternalEventURL := c.ExternalEventURL()
+	expectedExternalEventURL := "http://" + k.Addr() + "/v1/events"
+	gotExternalEventURL := k.ExternalEventURL()
 	if gotExternalEventURL != expectedExternalEventURL {
 		t.Fatalf("expected external event URL: %q, got: %q", expectedExternalEventURL, gotExternalEventURL)
 	}

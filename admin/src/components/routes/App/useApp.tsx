@@ -47,6 +47,7 @@ const useApp = (
 	const [isPasswordless, setIsPasswordless] = useState<boolean>(localStorage.getItem(IS_PASSWORDLESS_KEY) != null);
 	const [selectedWorkspace, setSelectedWorkspace] = useState<string>(localStorage.getItem(WORKSPACE_ID_KEY) ?? '');
 	const [publicMetadata, setPublicMetadata] = useState<PublicMetadata>();
+	const [isOrganizationDisabled, setIsOrganizationDisabled] = useState<boolean>(false);
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
@@ -418,7 +419,7 @@ const useApp = (
 		if (selectedWorkspace === '') {
 			localStorage.removeItem(WORKSPACE_ID_KEY);
 		} else {
-			localStorage.setItem(WORKSPACE_ID_KEY, String(selectedWorkspace));
+			localStorage.setItem(WORKSPACE_ID_KEY, selectedWorkspace);
 		}
 	}, [selectedWorkspace]);
 
@@ -532,6 +533,7 @@ const useApp = (
 		setIsLoadingMember,
 		connectors,
 		connections,
+		setConnections,
 		setIsLoadingConnections,
 		warehouse,
 		workspaces,
@@ -545,6 +547,8 @@ const useApp = (
 		isPasswordless,
 		setIsPasswordless,
 		publicMetadata,
+		isOrganizationDisabled,
+		setIsOrganizationDisabled,
 	};
 };
 

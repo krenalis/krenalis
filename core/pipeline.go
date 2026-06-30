@@ -9,7 +9,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"maps"
 	"slices"
 	"strings"
@@ -19,11 +18,9 @@ import (
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
-	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -491,8 +488,9 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 //     column.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OrganizationDisabled, if the organization is disabled.
+//   - PipelineAlreadyRunning, if the pipeline is already running.
 //   - PipelineDisabled, if the pipeline is disabled.
-//   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error) {
 	this.core.mustBeOpen()
 	c := this.pipeline.Connection()
@@ -505,19 +503,20 @@ func (this *Pipeline) Run(ctx context.Context, incremental *bool) (string, error
 	default:
 		return "", errors.BadRequest("%s pipelines cannot be run", strings.ToLower(typ.String()))
 	}
-	if incremental != nil {
-		if c.Role == state.Destination {
-			return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
-		}
-		if *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
-			return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
-		}
+	if incremental != nil && c.Role == state.Destination {
+		return "", errors.BadRequest("incremental cannot be provided for destination pipelines")
+	}
+	if org := c.Workspace().Organization(); !org.Enabled {
+		return "", errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
+	if incremental != nil && *incremental && typ != state.Application && this.pipeline.UpdatedAtColumn == "" {
+		return "", errors.Unprocessable(CannotRunIncrementally, "incremental requires an update time column")
 	}
 	if !this.pipeline.Enabled {
 		return "", errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 	}
 	if _, ok := this.pipeline.Run(); ok {
-		return "", errors.Unprocessable(RunInProgress, "pipeline %s is already in progress", this.pipeline.ID)
+		return "", errors.Unprocessable(PipelineAlreadyRunning, "pipeline %s is already running", this.pipeline.ID)
 	}
 	switch this.connection.store.Mode() {
 	case state.Inspection:
@@ -877,8 +876,9 @@ func (this *Pipeline) application() *connections.Application {
 // It returns an errors.NotFoundError if the pipeline no longer exists.
 // It returns an errors.UnprocessableError with one of the following codes:
 //
+//   - OrganizationDisabled, if the organization is disabled.
+//   - PipelineAlreadyRunning, if the pipeline is already running.
 //   - PipelineDisabled, if the pipeline is disabled.
-//   - RunInProgress, if the pipeline already has a run in progress.
 func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string, error) {
 
 	n := state.RunPipeline{
@@ -886,29 +886,33 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 		StartTime: time.Now().UTC(),
 	}
 
+	org := this.pipeline.Organization()
+
 	for {
 		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			var function string
-			var enabled, inc, executing bool
+			var pipelineEnabled, organizationEnabled, inc bool
 			var cursor time.Time
-			err := tx.QueryRow(ctx, "SELECT p.enabled, p.transformation_id, p.incremental, p.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			// Verify that both the organization and the pipeline are enabled
+			// and load the settings needed to initialize it.
+			err := tx.QueryRow(ctx, "SELECT p.enabled, o.enabled, p.transformation_id, p.incremental, p.cursor\n"+
 				"FROM pipelines AS p\n"+
-				"LEFT JOIN pipelines_runs AS e ON p.id = e.pipeline\n"+
-				"WHERE p.id = $1\n"+
-				"ORDER BY e.id DESC\n"+
-				"LIMIT 1", n.Pipeline).Scan(&enabled, &function, &inc, &cursor, &executing)
+				"INNER JOIN connections AS c ON p.connection = c.id\n"+
+				"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
+				"INNER JOIN organizations AS o ON w.organization = o.id\n"+
+				"WHERE p.id = $1", n.Pipeline).Scan(&pipelineEnabled, &organizationEnabled, &function, &inc, &cursor)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return nil, errors.NotFound("pipeline %s does not exist", n.Pipeline)
 				}
 				return nil, err
 			}
-			if !enabled {
-				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
+			if !organizationEnabled {
+				return nil, errors.Unprocessable(OrganizationDisabled, "organization %s is disabled", org.ID)
 			}
-			if executing {
-				return nil, errors.Unprocessable(RunInProgress, "pipeline run %s is already in progress", this.pipeline.ID)
+			if !pipelineEnabled {
+				return nil, errors.Unprocessable(PipelineDisabled, "pipeline %s is disabled", this.pipeline.ID)
 			}
 			if incremental == nil {
 				n.Incremental = inc
@@ -918,12 +922,19 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 			if n.Incremental {
 				n.Cursor = cursor
 			}
+			// Create the pending run and initialize its ping time so the cleaner
+			// does not consider it stale while it waits to be acquired by a node.
 			_, err = tx.Exec(ctx, "INSERT INTO pipelines_runs (id, pipeline, function, cursor, incremental, start_time, ping_time)\n"+
 				"VALUES ($1, $2, $3, $4, $5, $6, $6)", n.ID, n.Pipeline, function, n.Cursor, n.Incremental, n.StartTime)
 			if err != nil {
-				if db.IsForeignKeyViolation(err) {
+				switch {
+				case db.IsForeignKeyViolation(err):
 					if db.ErrConstraintName(err) == "pipelines_runs_pipeline_fkey" {
 						err = errors.NotFound("pipeline %s does not exit", n.Pipeline)
+					}
+				case db.IsUniqueViolation(err):
+					if db.ErrConstraintName(err) == "pipelines_one_live_run_idx" {
+						err = errors.Unprocessable(PipelineAlreadyRunning, "pipeline %s is already running", this.pipeline.ID)
 					}
 				}
 				return nil, err
@@ -948,102 +959,6 @@ func (this *Pipeline) createRun(ctx context.Context, incremental *bool) (string,
 func (this *Pipeline) database() *connections.Database {
 	p := this.pipeline
 	return this.core.connections.Database(p.Connection())
-}
-
-// endRun marks a pipeline run as completed, setting the specified error if any.
-func (this *Pipeline) endRun(err error) {
-
-	ctx := this.core.close.ctx
-
-	run, ok := this.pipeline.Run()
-	if !ok {
-		return
-	}
-
-	endTime := time.Now().UTC()
-
-	// Handle the run error, if any.
-	var errorStep = metrics.ReceiveStep
-	var errorMessage string
-	if err != nil {
-		if pipelineErr, ok := err.(*pipelineError); ok {
-			errorStep = pipelineErr.step
-			errorMessage = err.Error()
-		} else {
-			if ctx.Err() != nil {
-				errorMessage = "run has been canceled"
-			} else {
-				errorMessage = "an internal error has occurred"
-				slog.Error("core: cannot run pipeline", "pipeline", this.pipeline.ID, "run", run.ID, "error", err)
-			}
-		}
-		this.core.metrics.Failed(errorStep, this.pipeline.ID, 0, errorMessage)
-	}
-
-	// Waits for the metrics to be saved.
-	this.core.metrics.WaitStore()
-
-	n := state.EndPipelineRun{
-		ID:       run.ID,
-		Pipeline: this.pipeline.ID,
-		Health:   state.Healthy,
-	}
-
-	timeSlot := metrics.TimeSlotFromTime(run.StartTime)
-
-	// Mark the run as completed, summarise the metrics, and send the end notification.
-	bo := backoff.New(200)
-	for bo.Next(ctx) {
-		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			res, err := tx.Exec(ctx,
-				"WITH s AS (\n"+
-					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
-					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
-					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
-					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
-					" FROM pipelines_metrics\n"+
-					"\tWHERE pipeline = $2 AND timeslot >= $3\n"+
-					")\n"+
-					"UPDATE pipelines_runs AS e\n"+
-					"SET function = '', end_time = $4,"+
-					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
-					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
-					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
-					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
-					" error = $5\n"+
-					"FROM s\n"+
-					"WHERE id = $1 AND end_time IS NULL", run.ID, this.pipeline.ID, timeSlot, endTime, errorMessage)
-			if err != nil {
-				return nil, err
-			}
-			// Do nothing if the run no longer exists or has already been closed.
-			if res.RowsAffected() == 0 {
-				return nil, nil
-			}
-			// Update the pipeline's cursor.
-			var exists bool
-			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
-				n.ID, n.Health, this.pipeline.ID).Scan(&exists)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					// The pipeline does not exist anymore.
-					return nil, nil
-				}
-				return nil, err
-			}
-			return n, nil
-		})
-		if err != nil {
-			if ctx.Err() != nil {
-				// The context has been canceled.
-				return
-			}
-			slog.Error("core: cannot end pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
-			continue
-		}
-		break
-	}
-
 }
 
 // file returns the file of the pipeline.

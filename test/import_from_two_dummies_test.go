@@ -17,13 +17,13 @@ func TestImportFromTwoDummies(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.CreateDummy("Dummy 1", krenalistester.Source)
-	dummy2 := c.CreateDummy("Dummy 2", krenalistester.Source)
+	dummy1 := k.CreateDummy("Dummy 1", krenalistester.Source)
+	dummy2 := k.CreateDummy("Dummy 2", krenalistester.Source)
 
 	// Create two identical pipelines for two different connections.
 	pipelineParams := krenalistester.PipelineToSet{
@@ -47,19 +47,19 @@ func TestImportFromTwoDummies(t *testing.T) {
 			},
 		},
 	}
-	pipeline1 := c.CreatePipeline(dummy1, "User", pipelineParams)
-	pipeline2 := c.CreatePipeline(dummy2, "User", pipelineParams)
+	pipeline1 := k.CreatePipeline(dummy1, "User", pipelineParams)
+	pipeline2 := k.CreatePipeline(dummy2, "User", pipelineParams)
 
 	// Import from both pipelines - and implicitly trigger the identity resolution
 	// process.
-	run1 := c.RunPipeline(pipeline1)
-	run2 := c.RunPipeline(pipeline2)
-	c.WaitRunsCompletion(dummy1, run1)
-	c.WaitRunsCompletion(dummy2, run2)
+	run1 := k.StartPipelineRun(pipeline1)
+	run2 := k.StartPipelineRun(pipeline2)
+	k.WaitForRunsCompletion(run1)
+	k.WaitForRunsCompletion(run2)
 
 	// Ensure that the connection have the correct identities associated.
 	{
-		identities, total := c.ConnectionIdentities(dummy1, 0, 100)
+		identities, total := k.ConnectionIdentities(dummy1, 0, 100)
 		if total != 10 {
 			t.Fatalf("expected total 10, got %d", total)
 		}
@@ -68,7 +68,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 				t.Fatalf("expected pipeline %s, got %s, ", pipeline1, identity.Pipeline)
 			}
 		}
-		identities, total = c.ConnectionIdentities(dummy2, 0, 100)
+		identities, total = k.ConnectionIdentities(dummy2, 0, 100)
 		if total != 10 {
 			t.Fatalf("expected total 10, got %d", total)
 		}
@@ -82,7 +82,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Since the profiles have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 profiles, even if they have the same properties.
-	profiles, _, total := c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedTotal := 20
 	if expectedTotal != total {
 		t.Fatalf("expected total %d, got %d", expectedTotal, total)
@@ -91,7 +91,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every profile now should have just one identity associated.
 	totalProfiles := 0
 	for _, profile := range profiles {
-		_, total := c.Identities(profile.KPID, 0, 100)
+		_, total := k.Identities(profile.KPID, 0, 100)
 		const expectedTotal = 1
 		if expectedTotal != total {
 			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.KPID, total)
@@ -103,11 +103,11 @@ func TestImportFromTwoDummies(t *testing.T) {
 	}
 
 	// Update the workspace identifiers and run the Identity Resolution.
-	c.UpdateIdentityResolution(true, []string{"email"})
-	c.RunIdentityResolution()
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
+	k.RunIdentityResolutionAndWait()
 
 	// Now the profiles should be merged, resulting in a total of 10 profiles.
-	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedTotal = 10
 	if expectedTotal != total {
 		t.Fatalf("expected total %d, got %d", expectedTotal, total)
@@ -116,7 +116,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every profile now should have two identities associated.
 	totalProfiles = 0
 	for _, profile := range profiles {
-		_, total := c.Identities(profile.KPID, 0, 100)
+		_, total := k.Identities(profile.KPID, 0, 100)
 		const expectedTotal = 2
 		if expectedTotal != total {
 			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.KPID, total)

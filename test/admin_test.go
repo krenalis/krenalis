@@ -46,10 +46,10 @@ func TestAdmin(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(fsTempDir.Root())
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(fsTempDir.Root())
+	k.Start()
+	defer k.Stop()
 
 	// Create and instantiate the PostgreSQL database referenced in pipelines.
 	const (
@@ -127,8 +127,8 @@ func TestAdmin(t *testing.T) {
 
 	// Write the "test-config.json" file.
 	testConfig := map[string]any{
-		"baseURL":     "http://" + c.Addr(),
-		"workspaceID": c.WorkspaceID(),
+		"baseURL":     "http://" + k.Addr(),
+		"workspaceID": k.WorkspaceID(),
 		"dbHost":      dbHost,
 		"dbPort":      dbPort,
 		"dbUsername":  dbUsername,

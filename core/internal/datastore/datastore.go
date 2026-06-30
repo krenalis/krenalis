@@ -139,6 +139,8 @@ func (ds *Datastore) Initialize(ctx context.Context, platform string, settings j
 	return unavailableError(dw.Close())
 }
 
+// Store returns the store for the workspace with the given ID.
+// If the workspace does not exist, Store returns nil and false.
 func (ds *Datastore) Store(workspace string) (*Store, bool) {
 	ds.mustBeOpen()
 	ds.mu.Lock()

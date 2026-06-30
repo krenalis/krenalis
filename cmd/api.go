@@ -25,7 +25,13 @@ type api struct {
 // AcceptInvitation accepts the invitation with a given invitation token.
 //
 // Authentication is not required to call AcceptInvitation.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "invitations cannot be accepted because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -37,6 +43,20 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	organizationID, _, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("invitation token %q does not exist", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
 	err = api.core.AcceptInvitation(r.Context(), r.PathValue("token"), body.Name, body.Password)
 	return nil, err
 }
@@ -45,7 +65,13 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 // reset password token.
 //
 // Authentication is not required to call ChangeMemberPasswordByToken.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "passwords cannot be changed because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -55,6 +81,20 @@ func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Reques
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
 	}
 	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
 	return nil, err
@@ -85,6 +125,8 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 }
 
 // CreateOrganization creates a new organization.
+//
+// Authentication is performed using the organizations API key.
 func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -93,13 +135,14 @@ func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
+		Name    string `json:"name"`
+		Enabled bool   `json:"enabled"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := api.core.CreateOrganization(r.Context(), body.Name)
+	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +188,8 @@ func (api api) ExpressionsProperties(w http.ResponseWriter, r *http.Request) (an
 }
 
 // Index returns the index.
+//
+// Authentication is not required to call Index.
 func (api api) Index(w http.ResponseWriter, r *http.Request) (any, error) {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
 	accept := strings.ToLower(r.Header.Get("Accept"))
@@ -186,14 +231,26 @@ func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 //
 // Authentication is not required to call MemberInvitation.
 func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	organization, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
+	organizationID, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"email": email, "organization": organization}, nil
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("invitation token %q does not exist", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
+	return map[string]any{"email": email, "organization": organization.Name}, nil
 }
 
 // Organization returns the organization with the given identifier.
+//
+// Authentication is performed using the organizations API key.
 func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -202,6 +259,8 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 }
 
 // Organizations returns the organizations.
+//
+// Authentication is performed using the organizations API key.
 func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
@@ -243,6 +302,8 @@ type publicMetadata struct {
 	InviteMembersViaEmail      bool     `json:"inviteMembersViaEmail"`
 	CanSendMemberPasswordReset bool     `json:"canSendMemberPasswordReset"`
 	TelemetryLevel             string   `json:"telemetryLevel"`
+	WorkOSClientID             string   `json:"workosClientID"`
+	WorkOSDevMode              bool     `json:"workosDevMode"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -256,6 +317,8 @@ type publicMetadata struct {
 //   - inviteMembersViaEmail: should new members be added by sending invitation emails??
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
+//   - workosClientID: WorkOS client ID, it's an empty string when WorkOS authentication is not configured
+//   - workosDevMode: when true, WorkOS AuthKit stores the refresh token in LocalStorage instead of using a cookie
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -269,6 +332,10 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:             string(api.sentryTelemetry.level),
 	}
+	if api.workos != nil {
+		metadata.WorkOSClientID = api.workos.ClientID
+		metadata.WorkOSDevMode = api.workos.DevMode
+	}
 	if api.potentialConnectorsURL != "" {
 		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL
 	}
@@ -278,7 +345,13 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 // SendMemberPasswordReset sends a reset password email.
 //
 // Authentication is not required to call SendMemberPasswordReset.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset emails cannot be sent because WorkOS authentication is enabled")
+	}
 	if err := validateRequiredBody(w, r, false); err != nil {
 		return nil, err
 	}
@@ -294,6 +367,9 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 		return nil, errors.New("there are no organizations")
 	}
 	org := organizations[0]
+	if !org.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
 	resetPasswordEmail, err := static.ReadFile("static/reset_password_email.html")
 	if err != nil {
 		return nil, errors.New("embedded file 'static/reset_password_email.html' not found in executable")
@@ -306,8 +382,27 @@ func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
+//
+// It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
+// authentication is configured.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
-	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if api.workos != nil {
+		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset tokens cannot be validated because WorkOS authentication is enabled")
+	}
+	organizationID, err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	organization, err := api.core.Organization(organizationID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", r.PathValue("token"))
+		}
+		return nil, err
+	}
+	if !organization.Enabled {
+		return nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", organization.ID)
+	}
 	return nil, err
 }
 

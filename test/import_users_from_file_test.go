@@ -32,18 +32,18 @@ func TestImportUsersFromFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
 	// Create the File System connection.
-	fsID := c.CreateSourceFileSystem()
+	fsID := k.CreateSourceFileSystem()
 
-	c.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 
 	// Create a pipeline for the CSV for importing the users.
-	importUsersPipelineID := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+	importUsersPipelineID := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -71,17 +71,17 @@ func TestImportUsersFromFile(t *testing.T) {
 	})
 
 	// Run the pipeline that imports users.
-	run := c.RunPipeline(importUsersPipelineID)
+	run := k.StartPipelineRun(importUsersPipelineID)
 
 	// Wait for the import to finish.
-	c.WaitRunsCompletion(fsID, run)
+	k.WaitForRunsCompletion(run)
 
 	// Retrieve the profiles and test them.
 	const (
 		expectedTotal       = 2
 		expectedProfilesLen = 2
 	)
-	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	profilesLen := len(profiles)
 	if profilesLen != expectedProfilesLen {
 		t.Fatalf("expected %d profiles, got %d", expectedProfilesLen, profilesLen)
@@ -91,7 +91,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	}
 
 	// Retrieve the identities and test them.
-	identities, total := c.ConnectionIdentities(fsID, 0, 100)
+	identities, total := k.ConnectionIdentities(fsID, 0, 100)
 	if total != 2 {
 		t.Fatalf("expected 2 identities, got %d", total)
 	}

@@ -39,15 +39,15 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create a connection that exports to Dummy
-	dummyID := c.CreateDummyWithSettings("Dummy", krenalistester.Destination, krenalistester.DummySettings{
+	dummyID := k.CreateDummyWithSettings("Dummy", krenalistester.Destination, krenalistester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
 	})
-	c.CreateEventPipeline(dummyID, "send_identity", krenalistester.PipelineToSet{
+	k.CreateEventPipeline(dummyID, "send_identity", krenalistester.PipelineToSet{
 		Name:    "Send events",
 		Enabled: true,
 		Transformation: &krenalistester.Transformation{
@@ -61,14 +61,14 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	})
 
 	// Create a JavaScript event source connection.
-	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", []string{dummyID})
-	key := c.EventWriteKeys(javaScriptID)[0]
+	javaScriptID := k.CreateJavaScriptSource("JavaScript (source)", []string{dummyID})
+	key := k.EventWriteKeys(javaScriptID)[0]
 
-	c.SendEvent(key, analytics.Identify{
+	k.SendEvent(key, analytics.Identify{
 		UserId: "f4ca124298",
 	})
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Wait for an HTTP request to be sent to Dummy, which will then send it to
 	// the test HTTP server. Then check that the request body is correct.

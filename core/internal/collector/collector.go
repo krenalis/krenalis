@@ -107,35 +107,16 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onDeleteOrganization)
 	st.AddListener(c.onDeleteWorkspace)
 	st.AddListener(c.onLinkConnection)
+	st.AddListener(c.onSetOrganizationStatus)
 	st.AddListener(c.onSetPipelineStatus)
 	st.AddListener(c.onUnlinkConnection)
 	st.AddListener(c.onUpdatePipeline)
-	for _, ws := range st.Workspaces() {
-		c.addWorkspace(ws.ID)
-	}
-	for _, connection := range st.Connections() {
-		if connection.LinkedConnections == nil {
-			continue
-		}
-		switch connection.Role {
-		case state.Source:
-			// There is one worker per active source SDK and webhook pipeline.
-			for _, p := range connection.Pipelines() {
-				if p.Enabled {
-					c.startPipelineWorker(p)
-				}
-			}
-		case state.Destination:
-			// There is one worker per destination app connection
-			// that has at least one active pipeline sending events
-			// and is linked to at least one source connection.
-			if len(connection.LinkedConnections) == 0 {
-				continue
-			}
-			for _, p := range connection.Pipelines() {
-				if p.Enabled && p.Target == state.TargetEvent {
-					c.startConnectionWorker(connection)
-					break
+	for _, org := range st.Organizations() {
+		if org.Enabled {
+			for _, ws := range org.Workspaces() {
+				c.addWorkspace(ws.ID)
+				for _, connection := range ws.Connections() {
+					c.addConnection(connection)
 				}
 			}
 		}
@@ -248,8 +229,40 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// addConnection adds the connection to the collector.
+// When this method is called, the state is frozen.
+func (c *Collector) addConnection(connection *state.Connection) {
+	if connection.LinkedConnections == nil {
+		return
+	}
+	switch connection.Role {
+	case state.Source:
+		// There is one worker per active source SDK and webhook pipeline.
+		for _, p := range connection.Pipelines() {
+			if p.Enabled {
+				c.startPipelineWorker(p)
+			}
+		}
+	case state.Destination:
+		// There is one worker per destination app connection
+		// that has at least one active pipeline sending events
+		// and is linked to at least one source connection.
+		if len(connection.LinkedConnections) == 0 {
+			return
+		}
+		for _, p := range connection.Pipelines() {
+			if p.Enabled && p.Target == state.TargetEvent {
+				c.startConnectionWorker(connection)
+				break
+			}
+		}
+	}
+}
+
 // addWorkspace adds a workspace to the collector.
-// It is called from New and onCreateWorkspace.
+// It is called from New, onCreateWorkspace and onSetOrganizationStatus.
+// It does not add the connections, which must be added with [addConnection].
+// When this method is called, the state is frozen.
 func (c *Collector) addWorkspace(id string) {
 	c.observers.Store(id, newObserver())
 	store, _ := c.datastore.Store(id)
@@ -269,6 +282,9 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 // onCreateConnection is called when a connection is created.
 func (c *Collector) onCreateConnection(n state.CreateConnection) {
 	connection, _ := c.state.Connection(n.ID)
+	if !connection.Organization().Enabled {
+		return
+	}
 	if connection.Role != state.Source {
 		return
 	}
@@ -286,6 +302,9 @@ func (c *Collector) onCreateConnection(n state.CreateConnection) {
 // onCreatePipeline is called when a pipeline is created.
 func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	if !p.Enabled {
 		return
 	}
@@ -305,12 +324,18 @@ func (c *Collector) onCreatePipeline(n state.CreatePipeline) {
 
 // onCreateWorkspace is called when a workspace is created.
 func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
+	if org, _ := c.state.Organization(n.Organization); !org.Enabled {
+		return
+	}
 	c.addWorkspace(n.ID)
 }
 
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
+	if !connection.Organization().Enabled {
+		return
+	}
 	if connection.LinkedConnections == nil {
 		return
 	}
@@ -334,6 +359,9 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 // onDeletePipeline is called when a pipeline is deleted.
 func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 	p := n.Pipeline()
+	if !p.Organization().Enabled {
+		return
+	}
 	if !p.Enabled {
 		return
 	}
@@ -358,6 +386,9 @@ func (c *Collector) onDeletePipeline(n state.DeletePipeline) {
 
 // onDeleteOrganization is called when an organization is deleted.
 func (c *Collector) onDeleteOrganization(n state.DeleteOrganization) {
+	if !n.Organization().Enabled {
+		return
+	}
 	for _, ws := range n.Organization().Workspaces() {
 		c.removeWorkspace(ws)
 	}
@@ -365,12 +396,18 @@ func (c *Collector) onDeleteOrganization(n state.DeleteOrganization) {
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
+	if !n.Workspace().Organization().Enabled {
+		return
+	}
 	c.removeWorkspace(n.Workspace())
 }
 
 // onLinkConnection is called when two unlinked connections are linked.
 func (c *Collector) onLinkConnection(n state.LinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
+	if !connection.Organization().Enabled {
+		return
+	}
 	if len(connection.LinkedConnections) > 1 {
 		return
 	}
@@ -382,9 +419,29 @@ func (c *Collector) onLinkConnection(n state.LinkConnection) {
 	}
 }
 
+// onSetOrganizationStatus is called when an organization status is updated.
+func (c *Collector) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	org, _ := c.state.Organization(n.ID)
+	if n.Enabled {
+		for _, ws := range org.Workspaces() {
+			c.addWorkspace(ws.ID)
+			for _, connection := range ws.Connections() {
+				c.addConnection(connection)
+			}
+		}
+	} else {
+		for _, ws := range org.Workspaces() {
+			c.removeWorkspace(ws)
+		}
+	}
+}
+
 // onSetPipelineStatus is called when the status of a pipeline is set.
 func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 	p, _ := c.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	connection := p.Connection()
 	if connection.LinkedConnections == nil {
 		return
@@ -412,6 +469,9 @@ func (c *Collector) onSetPipelineStatus(n state.SetPipelineStatus) {
 // onUnlinkConnection is called when two linked connections are unlinked.
 func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	connection, _ := c.state.Connection(n.Connections[1])
+	if !connection.Organization().Enabled {
+		return
+	}
 	if len(connection.LinkedConnections) == 0 {
 		c.stopConnectionWorker(connection)
 	}
@@ -420,6 +480,9 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 // onUpdatePipeline is called when a pipeline is updated.
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
+	if !p.Organization().Enabled {
+		return
+	}
 	if p.Enabled {
 		// The transformation might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
@@ -642,7 +705,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if connection == nil {
 				return errors.Unprocessable("ConnectionNotExist", "connection %s does not exist", id)
 			}
-
+			if org := connection.Organization(); !org.Enabled {
+				return errors.Unprocessable("OrganizationDisabled", "organization %s is disabled", org.ID)
+			}
 		} else {
 			// Authenticate with the event write key in the header.
 			connection, _ = c.connectionByKey(token)
@@ -650,6 +715,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				return errors.Unauthorized("event write key in the Authorization header is not valid")
 			}
 			usingWriteKey = true
+			if org := connection.Organization(); !org.Enabled {
+				return errors.Unavailable("organization is disabled")
+			}
 		}
 
 	}
@@ -677,6 +745,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			return errors.Unauthorized("the event write key in the request body does not exist")
 		}
 		usingWriteKey = true
+		if org := connection.Organization(); !org.Enabled {
+			return errors.Unavailable("organization is disabled")
+		}
 	}
 
 	if usingWriteKey {

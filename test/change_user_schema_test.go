@@ -22,11 +22,11 @@ func TestChangeProfileSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
-	ws := c.Workspace()
+	ws := k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
@@ -35,7 +35,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 
 	identifiers := []string{"email", "android.id"}
-	c.UpdateIdentityResolution(true, identifiers)
+	k.UpdateIdentityResolutionSettings(true, identifiers)
 
 	// Read the schema in "testdata/change_profile_schema_test.json".
 	f, err := os.Open("testdata/change_profile_schema_test.json")
@@ -55,13 +55,13 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 
 	// Alter the profile schema.
-	queries := c.PreviewAlterProfileSchema(file.Schema, file.RePaths)
+	queries := k.PreviewAlterProfileSchema(file.Schema, file.RePaths)
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
-	c.AlterProfileSchema(file.Schema, file.PrimarySources, file.RePaths)
+	k.AlterProfileSchemaAndWait(file.Schema, file.PrimarySources, file.RePaths)
 
-	ws = c.Workspace()
+	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
@@ -76,7 +76,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
 		Name: "new_prop", Type: types.String(), ReadOptional: true,
 	}))
-	queries = c.PreviewAlterProfileSchema(schema, nil)
+	queries = k.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"profiles\";",
 		"ALTER TABLE \"krenalis_profiles_0\"\n\tADD COLUMN \"new_prop\" character varying;",
@@ -87,9 +87,9 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
-	ws = c.Workspace()
+	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 11 {
 		t.Fatalf("expected 11 properties in the \"profiles\" schema, got %d", n)
 	}
@@ -120,7 +120,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 	schema = types.Object(properties)
 	rePaths := map[string]any{"android.identifier": "android.id"}
-	queries = c.PreviewAlterProfileSchema(schema, rePaths)
+	queries = k.PreviewAlterProfileSchema(schema, rePaths)
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"profiles\";", "ALTER TABLE \"krenalis_profiles_0\"\n\tDROP COLUMN \"email\";",
@@ -133,10 +133,10 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterProfileSchema(schema, nil, rePaths)
+	k.AlterProfileSchemaAndWait(schema, nil, rePaths)
 	identifiers = []string{"android.identifier"}
 
-	ws = c.Workspace()
+	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
@@ -176,7 +176,7 @@ func TestChangeProfileSchema(t *testing.T) {
 		properties = append(properties, p)
 	}
 	schema = types.Object(properties)
-	queries = c.PreviewAlterProfileSchema(schema, nil)
+	queries = k.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"profiles\";",
@@ -188,9 +188,9 @@ func TestChangeProfileSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterProfileSchema(schema, nil, nil)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
-	ws = c.Workspace()
+	ws = k.Workspace()
 	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
@@ -218,18 +218,19 @@ func TestChangeProfileSchema(t *testing.T) {
 			{Name: "b", Type: types.String(), ReadOptional: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.PreviewAlterProfileSchemaErr(schema, nil)
+	_, err = k.TryPreviewAlterProfileSchema(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
-	if err.Error() != expectedErr {
-		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	expectedPreviewErr := `PUT v1/profiles/schema/preview: unexpected status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}} [request has body: true, response body expected: true]`
+	if err.Error() != expectedPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedPreviewErr, err.Error())
 	}
-	err = c.AlterProfileSchemaErr(schema, nil, nil)
+	err = k.TryAlterProfileSchema(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+	expectedErr := `PUT v1/profiles/schema: unexpected status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}} [request has body: true, response body expected: false]`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -240,28 +241,29 @@ func TestChangeProfileSchema(t *testing.T) {
 			{Name: "b", Type: types.String(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.PreviewAlterProfileSchemaErr(schema, nil)
+	_, err = k.TryPreviewAlterProfileSchema(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}}`
-	if err.Error() != expectedErr {
-		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	expectedPreviewErr = `PUT v1/profiles/schema/preview: unexpected status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}} [request has body: true, response body expected: true]`
+	if err.Error() != expectedPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedPreviewErr, err.Error())
 	}
-	err = c.AlterProfileSchemaErr(schema, nil, nil)
+	err = k.TryAlterProfileSchema(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
+	expectedErr = `PUT v1/profiles/schema: unexpected status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}} [request has body: true, response body expected: false]`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
 
 	// Create a primary source for the first property.
 	firstProperty := file.Schema.Properties().Names()[0]
-	primarySource := c.CreateDummy("Primary Source", krenalistester.Source)
+	primarySource := k.CreateDummy("Primary Source", krenalistester.Source)
 	primarySources := map[string]string{firstProperty: primarySource}
-	c.AlterProfileSchema(file.Schema, primarySources, nil)
-	ws = c.Workspace()
+	k.AlterProfileSchemaAndWait(file.Schema, primarySources, nil)
+	ws = k.Workspace()
 	if !maps.Equal(primarySources, ws.PrimarySources) {
 		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.PrimarySources)
 	}
@@ -271,8 +273,8 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Set a primary source for a not existent property.
 	primarySources = map[string]string{"not_existent_property": primarySource}
-	err = c.AlterProfileSchemaErr(file.Schema, primarySources, nil)
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
+	err = k.TryAlterProfileSchema(file.Schema, primarySources, nil)
+	expectedErr = `PUT v1/profiles/schema: unexpected status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}} [request has body: true, response body expected: false]`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -280,8 +282,8 @@ func TestChangeProfileSchema(t *testing.T) {
 	// Set a not existing primary source for the first property.
 	notExistentSource := "7B3mN9qK2xA4"
 	primarySources = map[string]string{firstProperty: notExistentSource}
-	err = c.AlterProfileSchemaErr(file.Schema, primarySources, nil)
-	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}}`, notExistentSource)
+	err = k.TryAlterProfileSchema(file.Schema, primarySources, nil)
+	expectedErr = fmt.Sprintf(`PUT v1/profiles/schema: unexpected status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}} [request has body: true, response body expected: false]`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}

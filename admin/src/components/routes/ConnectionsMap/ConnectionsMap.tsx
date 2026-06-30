@@ -127,7 +127,7 @@ const ConnectionsMap = () => {
 				),
 			);
 		}, 0);
-	}, [connections, hoveredConnection, isUserDbHovered, isEventDbHovered]);
+	}, [hoveredConnection, isUserDbHovered, isEventDbHovered, connections]);
 
 	const onWarehouseMouseEnter = () => {
 		setIsUserDbHovered(true);

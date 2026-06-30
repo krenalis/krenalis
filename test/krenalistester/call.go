@@ -13,54 +13,62 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"testing"
 )
 
-// StatusCodeError is an error returned by Call when the HTTP call returned a
+// StatusCodeError is an error returned by TryCall when the HTTP call returned a
 // status code which is not 200.
 type StatusCodeError struct {
-	Code         int
-	ResponseText string
+	Request struct {
+		Method  string
+		Path    string
+		HasBody bool
+	}
+	Response struct {
+		Code         int
+		Text         string
+		BodyExpected bool
+	}
 }
 
 func (e *StatusCodeError) Error() string {
-	if e.ResponseText != "" {
-		return fmt.Sprintf("unexpected HTTP status code %d: %s", e.Code, e.ResponseText)
+	s := &strings.Builder{}
+	fmt.Fprintf(s, "%s %s: unexpected status code %d", e.Request.Method, e.Request.Path, e.Response.Code)
+	if e.Response.Text != "" {
+		fmt.Fprintf(s, ": %s", e.Response.Text)
 	}
-	return fmt.Sprintf("unexpected HTTP status code %d", e.Code)
+	fmt.Fprintf(s, " [request has body: %t, response body expected: %t]", e.Request.HasBody, e.Response.BodyExpected)
+	return s.String()
+}
+
+// TryCall calls the API endpoint serializing the given body and deserializing
+// the response into response.
+//
+// Returns an error if the calls returns an error, which may be a
+// StatusCodeError error in case of a HTTP request which returned a status code
+// which is not 200, or if the HTTP response cannot be decoded into response. If
+// headers contains the "Krenalis-Workspace" key, TryCall does not add it
+// automatically. A nil value suppresses the header.
+func (k *Krenalis) TryCall(method, path string, headers http.Header, body, response any) error {
+	return k.tryCall(method, path, headers, body, response)
 }
 
 // Call calls the API endpoint serializing the given body and deserializing the
 // response into response.
 //
-// Returns an error if the calls returns an error, which may be a
-// StatusCodeError error in case of a HTTP request which returned a status code
-// which is not 200, or if the HTTP response cannot be decoded into response.
-// If headers contains the "Krenalis-Workspace" key, Call does not add it
-// automatically. A nil value suppresses the header.
-func (c *Krenalis) Call(method, path string, headers http.Header, body, response any) error {
-	return c.call(method, path, headers, body, response)
-}
-
-// MustCall calls the API endpoint serializing the given body and deserializing
-// the response into response.
-//
 // Calls (*testing.T).Fatal if the call returns an error, if the HTTP response
 // cannot be decoded into response, or if the HTTP response's status code is not
 // 200.
-// If headers contains the "Krenalis-Workspace" key, MustCall does not add it
+// If headers contains the "Krenalis-Workspace" key, Call does not add it
 // automatically. A nil value suppresses the header.
-func (c *Krenalis) MustCall(method, path string, headers http.Header, body, response any) {
-	err := c.call(method, path, headers, body, response)
-	if err != nil {
-		c.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, strings.TrimSpace(err.Error()), body != nil, response != nil, string(debug.Stack()))
-		c.t.Fatal("the test failed. See the error message and the stack trace above")
-	}
+func (k *Krenalis) Call(method, path string, headers http.Header, body, response any) {
+	must(k.t, k.tryCall(method, path, headers, body, response))
 }
 
-func (c *Krenalis) call(method, path string, headers http.Header, body any, response any) error {
+func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, response any) error {
 
 	path = strings.TrimLeft(path, "/")
-	url := "http://" + c.Addr() + "/" + path
+	url := "http://" + k.Addr() + "/" + path
 
 	var data io.Reader
 	if body != nil {
@@ -78,7 +86,7 @@ func (c *Krenalis) call(method, path string, headers http.Header, body any, resp
 
 	req.Header.Set("Content-Type", "application/json")
 	if _, ok := headers["Krenalis-Workspace"]; !ok {
-		if id := c.WorkspaceID(); id != "" {
+		if id := k.WorkspaceID(); id != "" {
 			req.Header.Set("Krenalis-Workspace", id)
 		}
 	}
@@ -86,19 +94,26 @@ func (c *Krenalis) call(method, path string, headers http.Header, body any, resp
 		req.Header[key] = slices.Clone(values)
 	}
 
-	c.t.Logf("[info] %s %s: executing request", method, url)
-	resp, err := c.httpClient.Do(req)
+	k.t.Logf("[info] %s %s: executing request", method, url)
+	resp, err := k.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
-	c.t.Logf("[info] %s %s: Krenalis responded with HTTP status %d", method, url, resp.StatusCode)
+	k.t.Logf("[info] %s %s: Krenalis responded with HTTP status %d", method, url, resp.StatusCode)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		text, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
-		return &StatusCodeError{Code: resp.StatusCode, ResponseText: string(bytes.TrimSpace(text))}
+		var scErr StatusCodeError
+		scErr.Request.Method = method
+		scErr.Request.Path = path
+		scErr.Request.HasBody = body != nil
+		scErr.Response.Code = resp.StatusCode
+		scErr.Response.Text = string(bytes.TrimSpace(text))
+		scErr.Response.BodyExpected = response != nil
+		return &scErr
 	}
 
 	if response != nil {
@@ -121,4 +136,12 @@ func (c *Krenalis) call(method, path string, headers http.Header, body any, resp
 	}
 
 	return nil
+}
+
+// must fails the test t if err is not nil, additionally printing the call
+// stack.
+func must(t *testing.T, err error) {
+	if err != nil {
+		t.Fatalf("%s\nTest call stack: %s", err, string(debug.Stack()))
+	}
 }

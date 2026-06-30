@@ -18,25 +18,25 @@ func TestConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Ensure that there are no connections.
 	var res struct {
 		Connections []any
 	}
-	c.MustCall("GET", "/v1/connections", nil, nil, &res)
+	k.Call("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 0 {
 		t.Fatalf("expected 0 connections, got %d", len(res.Connections))
 	}
 
 	// Create a Dummy (source) connection.
-	dummyID := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	dummyID := k.CreateDummy("Dummy (source)", krenalistester.Source)
 
 	// Check if the Dummy connection has been created successfully.
 	res.Connections = nil
-	c.MustCall("GET", "/v1/connections", nil, nil, &res)
+	k.Call("GET", "/v1/connections", nil, nil, &res)
 	if len(res.Connections) != 1 {
 		t.Fatalf("expected 1 connections, got %d", len(res.Connections))
 	}
@@ -48,7 +48,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Retrieve the input and the output schema, which must be both valid.
-	schemas := c.PipelineSchemas(dummyID, core.TargetUser, "")
+	schemas := k.PipelineSchemas(dummyID, core.TargetUser, "")
 	if err := isValidSchema(schemas["in"]); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestConnections(t *testing.T) {
 		Connector: "kafka",
 	}
 	var id string
-	err := c.Call("POST", "/v1/connections", nil, broker, &id)
+	err := k.TryCall("POST", "/v1/connections", nil, broker, &id)
 	if err == nil {
 		t.Fatalf("expected Bad Request error, got no error")
 	}
@@ -71,12 +71,12 @@ func TestConnections(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *StatusCodeError error, got %T error", err)
 	}
-	if errStatusCode.Code != 400 {
+	if errStatusCode.Response.Code != 400 {
 		t.Fatalf("expected error status 400, got error: %v", errStatusCode)
 	}
 	const expectedText = `{"error":{"code":"BadRequest","message":"message broker connectors are not currently supported"}}`
-	if expectedText != errStatusCode.ResponseText {
-		t.Fatalf("expected error text %q, got %q", expectedText, errStatusCode.ResponseText)
+	if expectedText != errStatusCode.Response.Text {
+		t.Fatalf("expected error text %q, got %q", expectedText, errStatusCode.Response.Text)
 	}
 
 }

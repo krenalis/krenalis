@@ -18,7 +18,20 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// DBNotInitializedError is returned by New in those circumstances where the
+// Krenalis database appears not to have been initialized.
+type DBNotInitializedError struct {
+	msg string
+}
+
+func (e *DBNotInitializedError) Error() string {
+	return e.msg
+}
+
 // load loads the state.
+//
+// If a condition occurs where the Krenalis database appears not to have been
+// initialized, returns an error of type *DBNotInitializedError.
 func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
@@ -201,13 +214,21 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		_ = tx.Rollback(ctx)
 	}()
 
-	// Read the installation ID, the KMS-encrypted cookie, OAuth, and notification keys, and the API key pepper.
+	// Read the installation ID, the KMS-encrypted cookie, OAuth, and
+	// notification keys, and the API key pepper.
+	//
+	// This is the first query run against the database, so the undefined-table
+	// check below detects (with a good probability) an uninitialized database.
+	// Move it if a query is added before this one.
 	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
 	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key,"+
 		" kms_encrypted_notification_key, kms_encrypted_api_key_pepper FROM metadata").Scan(
 		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedOAuthKey,
 		&kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
 	if err != nil {
+		if db.IsUndefinedTable(err) {
+			return &DBNotInitializedError{msg: err.Error()}
+		}
 		if err == sql.ErrNoRows {
 			return errors.New("cannot load metadata: no rows found in table; expected exactly one row")
 		}
@@ -253,10 +274,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
-	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
+	err = tx.QueryScan(ctx, "SELECT id, name, enabled FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
-			if err := rows.Scan(&org.ID, &org.Name); err != nil {
+			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.workspaces = map[string]*Workspace{}
@@ -307,7 +328,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
 					connections: map[string]*Connection{},
-					runs:        map[string]*PipelineRun{},
 					accounts:    map[int]*Account{},
 				}
 				var settingsKey, mcpSettingsKey []byte
@@ -513,6 +533,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				}
 				pipeline.mu = new(sync.Mutex)
 				pipeline.connection = c
+				pipeline.organization = c.organization
 				pipeline.EventType = eventType
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
@@ -546,7 +567,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load pipelines: %s", err)
 	}
 
-	// Read pipeline runs in progress.
+	// Read live pipeline runs.
 	err = tx.QueryScan(ctx, "SELECT id, pipeline, cursor, incremental, start_time\n"+
 		"FROM pipelines_runs\nWHERE end_time IS NULL",
 		func(rows *db.Rows) error {
@@ -562,8 +583,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline := state.pipelines[pipelineID]
 				run.pipeline = pipeline
 				pipeline.run = &run
-				ws := run.pipeline.connection.workspace
-				ws.runs[run.ID] = &run
+				state.liveRuns[run.ID] = &run
 			}
 			return nil
 		})

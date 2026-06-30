@@ -447,12 +447,19 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 	done := ctx.Done()
 	go func() {
 		ccs := make([]jetstream.ConsumeContext, 0, numShards)
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		closing := false
 		defer func() {
+			mu.Lock()
+			closing = true
+			mu.Unlock()
 			// Stop the consumers.
 			for _, cc := range ccs {
 				cc.Stop()
 			}
-			// The channel is closed only after the consumers have been stopped.
+			wg.Wait()
+			// The channel is closed only after no callback can send to it.
 			close(consumer.events)
 		}()
 		err := s.waitStream(ctx)
@@ -480,6 +487,15 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 					continue
 				}
 				cc, err = jsConsumer.Consume(func(msg jetstream.Msg) {
+					mu.Lock()
+					if closing {
+						mu.Unlock()
+						_ = msg.Nak()
+						return
+					}
+					wg.Add(1)
+					mu.Unlock()
+					defer wg.Done()
 					var event streams.Event
 					var err error
 					defer func() {
@@ -534,7 +550,7 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 			}
 			ccs = append(ccs, cc)
 		}
-		<-ctx.Done()
+		<-done
 	}()
 	return consumer
 }
@@ -546,7 +562,7 @@ type consumer struct {
 	cancel context.CancelFunc
 }
 
-// Close closes the consumer and closes the events channel.
+// Close closes the consumer and eventually closes the events channel.
 func (c *consumer) Close() {
 	c.cancel()
 }

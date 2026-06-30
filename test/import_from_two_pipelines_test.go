@@ -33,19 +33,19 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// Create the File System connection.
-	fsID := c.CreateSourceFileSystem()
+	fsID := k.CreateSourceFileSystem()
 
 	// Create the first pipeline for the CSV for importing "email" and "name".
-	pipelineFirstName := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+	pipelineFirstName := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users' email and name from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -73,7 +73,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	})
 
 	// Create the second pipeline for the CSV for importing "email" and "lastName".
-	pipelineLastName := c.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
+	pipelineLastName := k.CreatePipeline(fsID, "User", krenalistester.PipelineToSet{
 		Name:    "Import users' email and lastName from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -102,9 +102,9 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 
 	// Import from the first pipeline, which should import just the first name,
 	// then run the Identity Resolution.
-	run := c.RunPipeline(pipelineFirstName)
-	c.WaitRunsCompletion(fsID, run)
-	c.RunIdentityResolution()
+	run := k.StartPipelineRun(pipelineFirstName)
+	k.WaitForRunsCompletion(run)
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
@@ -114,7 +114,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedTotal = 2
-	profiles, _, total := c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total := k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
@@ -128,12 +128,12 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	// Import from the second pipeline, which should import just the last name,
 	// and that should result in profiles with both first name and last name,
 	// then run the Identity Resolution.
-	run = c.RunPipeline(pipelineLastName)
-	c.WaitRunsCompletion(fsID, run)
-	c.RunIdentityResolution()
+	run = k.StartPipelineRun(pipelineLastName)
+	k.WaitForRunsCompletion(run)
+	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
-	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}

@@ -20,15 +20,15 @@ func TestTransformation2(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
 	// Create a Dummy (source) connection.
-	dummy := c.CreateDummy("Dummy (source)", krenalistester.Source)
+	dummy := k.CreateDummy("Dummy (source)", krenalistester.Source)
 
 	// Create a pipeline with a transformation function which imports users, then run it.
-	pipeline := c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
+	pipeline := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -58,12 +58,12 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	run := c.RunPipeline(pipeline)
-	c.WaitRunsCompletion(dummy, run)
+	run := k.StartPipelineRun(pipeline)
+	k.WaitForRunsCompletion(run)
 
 	// Retrieve the profiles.
 	const expectedTotal = 10
-	profiles, _, total := c.Profiles([]string{"email"}, "email", false, 0, expectedTotal)
+	profiles, _, total := k.Profiles([]string{"email"}, "email", false, 0, expectedTotal)
 
 	// Validate the profiles total.
 	if total != expectedTotal {

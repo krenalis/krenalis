@@ -38,13 +38,13 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
 	// Disable automatic execution of Identity Resolution.
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	ctx := context.Background()
 
@@ -53,8 +53,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy, dummyPipeline string
 	{
 
-		dummy = c.CreateDummy("Dummy", krenalistester.Source)
-		dummyPipeline = c.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
+		dummy = k.CreateDummy("Dummy", krenalistester.Source)
+		dummyPipeline = k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -75,14 +75,14 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		run := c.RunPipeline(dummyPipeline)
-		c.WaitRunsCompletion(dummy, run)
+		run := k.StartPipelineRun(dummyPipeline)
+		k.WaitForRunsCompletion(run)
 	}
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.
-	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 1000)
+	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
 	}
@@ -91,8 +91,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var fs, csvPipeline string
 	t.Log("importing from CSV file...")
 	{
-		fs = c.CreateSourceFileSystem()
-		csvPipeline = c.CreatePipeline(fs, "User", krenalistester.PipelineToSet{
+		fs = k.CreateSourceFileSystem()
+		csvPipeline = k.CreatePipeline(fs, "User", krenalistester.PipelineToSet{
 			Name:    "Import users from CSV on File System",
 			Enabled: true,
 			Path:    "users_genders.csv",
@@ -121,14 +121,14 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"hasColumnNames": true,
 			}),
 		})
-		run := c.RunPipeline(csvPipeline)
-		c.WaitRunsCompletion(fs, run)
+		run := k.StartPipelineRun(csvPipeline)
+		k.WaitForRunsCompletion(run)
 	}
 
-	c.RunIdentityResolution()
+	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 1000)
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 13 {
 		t.Fatalf("expected 13 profiles, got %d", total)
 	}
@@ -141,17 +141,17 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		// events, one for importing identities) and retrieve its key.
 		var javaScriptKey string
 		{
-			javaScript = c.CreateJavaScriptSource("JavaScript (source)", nil)
-			keys := c.EventWriteKeys(javaScript)
+			javaScript = k.CreateJavaScriptSource("JavaScript (source)", nil)
+			keys := k.EventWriteKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expected one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
-			c.CreatePipeline(javaScript, "Event", krenalistester.PipelineToSet{
+			k.CreatePipeline(javaScript, "Event", krenalistester.PipelineToSet{
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			javascriptUsersPipeline = c.CreatePipeline(javaScript, "User", krenalistester.PipelineToSet{
+			javascriptUsersPipeline = k.CreatePipeline(javaScript, "User", krenalistester.PipelineToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
 				Filter:   krenalistester.DefaultFilterUserFromEvents,
@@ -168,7 +168,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		}
 
 		// Send an identity event. More than importing an event, this should create an identity.
-		c.SendEvent(javaScriptKey, analytics.Identify{
+		k.SendEvent(javaScriptKey, analytics.Identify{
 			UserId:      "f4ca124298",
 			AnonymousId: "5ce0fd49-199a-47e7-b0c8-498f5144f0ee",
 			Traits: map[string]any{
@@ -176,22 +176,22 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			},
 		})
 		time.Sleep(5 * time.Second)
-		c.WaitEventsStoredIntoWarehouse(ctx, 1)
-		c.RunIdentityResolution()
+		k.WaitEventsStoredIntoWarehouse(ctx, 1)
+		k.RunIdentityResolutionAndWait()
 	}
 
 	// Ensure that there are 14 profiles (10 from Dummy + 3 from CSV + 1 from event).
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 1000)
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 14 {
 		t.Fatalf("expected 14 profiles, got %d", total)
 	}
 
 	// Set the "email" as identifier and run the Identity Resolution.
-	c.UpdateIdentityResolution(true, []string{"email"})
-	c.RunIdentityResolution()
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
+	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.
-	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 1000)
+	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 10 {
 		t.Fatalf("expected 10 users, got %d", total)
 	}
@@ -209,13 +209,13 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that "kbuessen0@example.com" has one event associated.
-	events := c.ProfileEvents(kBuessenKPID, []string{"timestamp"})
+	events := k.ProfileEvents(kBuessenKPID, []string{"timestamp"})
 	if len(events) != 1 {
 		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}
 
 	// Validate the identities.
-	identities, total := c.Identities(kBuessenKPID, 0, 1000)
+	identities, total := k.Identities(kBuessenKPID, 0, 1000)
 	if total != 3 {
 		t.Fatalf("expected profile %s to have 3 identities associated, got %d", kBuessenKPID, total)
 	}

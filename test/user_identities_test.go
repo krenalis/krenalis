@@ -25,17 +25,17 @@ func Test_Identities(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.SetFileSystemRoot(storageDir)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storageDir)
+	k.Start()
+	defer k.Stop()
 
-	c.UpdateIdentityResolution(true, []string{"email"})
+	k.UpdateIdentityResolutionSettings(true, []string{"email"})
 
-	fs1 := c.CreateSourceFileSystem()
-	fs2 := c.CreateSourceFileSystem()
+	fs1 := k.CreateSourceFileSystem()
+	fs2 := k.CreateSourceFileSystem()
 
-	pipeline1 := c.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
+	pipeline1 := k.CreatePipeline(fs1, "User", krenalistester.PipelineToSet{
 		Name:    "CSV 1",
 		Enabled: true,
 		Path:    "users1.csv",
@@ -59,7 +59,7 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	pipeline2 := c.CreatePipeline(fs2, "User", krenalistester.PipelineToSet{
+	pipeline2 := k.CreatePipeline(fs2, "User", krenalistester.PipelineToSet{
 		Name:    "CSV 2",
 		Enabled: true,
 		Path:    "users2.csv",
@@ -83,13 +83,13 @@ func Test_Identities(t *testing.T) {
 		}),
 	})
 
-	run1 := c.RunPipeline(pipeline1)
-	run2 := c.RunPipeline(pipeline2)
+	run1 := k.StartPipelineRun(pipeline1)
+	run2 := k.StartPipelineRun(pipeline2)
 
-	c.WaitRunsCompletion(fs1, run1)
-	c.WaitRunsCompletion(fs2, run2)
+	k.WaitForRunsCompletion(run1)
+	k.WaitForRunsCompletion(run2)
 
-	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
 	const expectedTotal = 4
 	if expectedTotal != total {
@@ -101,7 +101,7 @@ func Test_Identities(t *testing.T) {
 
 	for _, profile := range profiles {
 
-		identities, total := c.Identities(profile.KPID, 0, 1000)
+		identities, total := k.Identities(profile.KPID, 0, 1000)
 
 		if total != 1 && total != 2 {
 			t.Fatalf("expected 'total' to be 1 or 2, got %d", total)
@@ -150,7 +150,7 @@ func Test_Identities(t *testing.T) {
 			Identities []any `json:"identities"`
 			Total      int   `json:"total"`
 		}
-		err := c.Call("GET", "/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil, &res)
+		err := k.TryCall("GET", "/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil, &res)
 		if err != nil {
 			t.Fatalf("expected no identities, got error: %q", err)
 		}

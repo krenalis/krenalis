@@ -129,7 +129,7 @@ func (c *pipelineCleaner) complete(f func() error) error {
 }
 
 // deleteDiscontinuedFunctions starts the deletion task for function that have
-// been discontinued and are no longer in use by any executing pipelines.
+// been discontinued and are no longer in use by any running pipelines.
 // It must be called in its own goroutine.
 //
 // A function is considered discontinued if:
@@ -367,9 +367,14 @@ func (c *pipelineCleaner) purgeWorkspace(id string) {
 // A pipeline run is considered orphaned if it has not yet been terminated and
 // its last ping time is older than 15 seconds.
 func (c *pipelineCleaner) terminateOrphanedRuns() {
-	pipelineErr := newPipelineError(metrics.ReceiveStep, errors.New("pipeline has been terminated because the node became unresponsive"))
+	reason := newPipelineError(metrics.ReceiveStep, errors.New("pipeline has been terminated because the node became unresponsive"))
 	ctx := c.close.ctx
 	tick := time.NewTicker(15 * time.Second)
+	var ending struct {
+		sync.Mutex
+		runs map[string]struct{}
+	}
+	ending.runs = map[string]struct{}{}
 	for {
 		select {
 		case <-ctx.Done():
@@ -377,26 +382,30 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 		case <-tick.C:
 		}
 		pingTime := time.Now().UTC().Add(-15 * time.Second)
-		err := c.core.db.QueryScan(ctx, "SELECT pipeline FROM pipelines_runs WHERE end_time IS NULL AND ping_time < $1",
+		err := c.core.db.QueryScan(ctx, "SELECT id, pipeline FROM pipelines_runs WHERE node IS NOT NULL AND end_time IS NULL AND ping_time < $1",
 			pingTime, func(rows *db.Rows) error {
-				var pipelineID string
+				ending.Lock()
+				defer ending.Unlock()
+				var id, pipelineID string
 				for rows.Next() {
-					if err := rows.Scan(&pipelineID); err != nil {
+					if err := rows.Scan(&id, &pipelineID); err != nil {
 						return err
 					}
-					pipeline, ok := c.core.state.Pipeline(pipelineID)
+					// Don't start a second termination if one is already in progress.
+					if _, ok := ending.runs[id]; ok {
+						continue
+					}
+					run, ok := c.core.state.LiveRun(id)
 					if !ok {
 						continue
 					}
-					c2 := pipeline.Connection()
-					ws := c2.Workspace()
-					store, ok := c.core.datastore.Store(ws.ID)
-					if !ok {
-						continue
-					}
-					connection := &Connection{core: c.core, store: store, connection: c2}
-					p := &Pipeline{core: c.core, pipeline: pipeline, connection: connection}
-					go p.endRun(pipelineErr)
+					ending.runs[id] = struct{}{}
+					go func(id string) {
+						_ = c.core.endLiveRun(ctx, run, reason)
+						ending.Lock()
+						delete(ending.runs, id)
+						ending.Unlock()
+					}(id)
 				}
 				return nil
 			})

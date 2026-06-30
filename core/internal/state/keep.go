@@ -84,6 +84,8 @@ func (state *State) keep() {
 			org = state.deleteEventWriteKey(n)
 		case "DeleteMember":
 			org = state.deleteMember(n)
+		case "DeleteMembers":
+			org = state.deleteMembers(n)
 		case "DeleteOrganization":
 			org = state.deleteOrganization(n)
 		case "DeletePipeline":
@@ -114,6 +116,8 @@ func (state *State) keep() {
 			org = state.setAccount(n)
 		case "SetConnectionSettings":
 			org = state.setConnectionSettings(n)
+		case "SetOrganizationStatus":
+			org = state.setOrganizationStatus(n)
 		case "SetPipelineFormatSettings":
 			org = state.setPipelineFormatSettings(n)
 		case "SetPipelineSchedulePeriod":
@@ -293,6 +297,11 @@ func (state *State) replaceOrganization(id string, f func(*Organization)) *Organ
 			connection.mu.Lock()
 			connection.organization = oo
 			connection.mu.Unlock()
+			for _, pipeline := range connection.pipelines {
+				pipeline.mu.Lock()
+				pipeline.organization = oo
+				pipeline.mu.Unlock()
+			}
 		}
 	}
 	return oo
@@ -310,9 +319,7 @@ func (state *State) acceptInvitation(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	org := state.organizations[e.Organization]
-	state.mu.Unlock()
 	org.mu.Lock()
 	org.members[e.Member] = struct{}{}
 	org.mu.Unlock()
@@ -331,9 +338,7 @@ func (state *State) addMember(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	org := state.organizations[e.Organization]
-	state.mu.Unlock()
 	org.mu.Lock()
 	org.members[e.ID] = struct{}{}
 	org.mu.Unlock()
@@ -466,8 +471,9 @@ func (state *State) createConnection(n notification) string {
 
 // CreateOrganization is the event sent when an organization is created.
 type CreateOrganization struct {
-	ID   string
-	Name string
+	ID      string
+	Name    string
+	Enabled bool
 }
 
 // createOrganization creates an organization.
@@ -482,6 +488,7 @@ func (state *State) createOrganization(n notification) string {
 		members:    map[string]struct{}{},
 		ID:         e.ID,
 		Name:       e.Name,
+		Enabled:    e.Enabled,
 	}
 	state.mu.Lock()
 	state.organizations[e.ID] = org
@@ -542,6 +549,7 @@ func (state *State) createPipeline(n notification) string {
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
 		connection:         c,
+		organization:       c.organization,
 		format:             format,
 		Target:             e.Target,
 		Name:               e.Name,
@@ -613,7 +621,6 @@ func (state *State) createWorkspace(n notification) string {
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
 		connections:                    map[string]*Connection{},
-		runs:                           map[string]*PipelineRun{},
 		ID:                             e.ID,
 		organization:                   organization,
 		Name:                           e.Name,
@@ -778,6 +785,9 @@ func (state *State) deleteConnection(n notification) string {
 	state.mu.Lock()
 	for _, p := range e.connection.pipelines {
 		delete(state.pipelines, p.ID)
+		if p.run != nil {
+			delete(state.liveRuns, p.run.ID)
+		}
 	}
 	state.mu.Unlock()
 	// Remove the connection from the linked connections.
@@ -831,13 +841,32 @@ func (state *State) deleteMember(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	state.mu.Lock()
 	org := state.organizations[e.Organization]
-	state.mu.Unlock()
 	org.mu.Lock()
 	delete(org.members, e.ID)
 	org.mu.Unlock()
 	return e.Organization
+}
+
+// DeleteMembers is the event sent when multiple members are deleted at once.
+type DeleteMembers struct {
+	IDs []string
+}
+
+// deleteMembers deletes multiple members.
+func (state *State) deleteMembers(n notification) string {
+	e := DeleteMembers{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	for _, org := range state.organizations {
+		org.mu.Lock()
+		for _, id := range e.IDs {
+			delete(org.members, id)
+		}
+		org.mu.Unlock()
+	}
+	return ""
 }
 
 // DeleteOrganization is the event sent when an organization is deleted.
@@ -869,6 +898,9 @@ func (state *State) deleteOrganization(n notification) string {
 			// Delete the connection's pipelines.
 			for _, p := range c.pipelines {
 				delete(state.pipelines, p.ID)
+				if p.run != nil {
+					delete(state.liveRuns, p.run.ID)
+				}
 			}
 		}
 		delete(state.workspaces, id)
@@ -903,6 +935,9 @@ func (state *State) deletePipeline(n notification) string {
 	e.pipeline = state.pipelines[e.ID]
 	state.mu.Lock()
 	delete(state.pipelines, e.ID)
+	if run := e.pipeline.run; run != nil {
+		delete(state.liveRuns, run.ID)
+	}
 	state.mu.Unlock()
 	c := e.pipeline.connection
 	c.mu.Lock()
@@ -956,6 +991,9 @@ func (state *State) deleteWorkspace(n notification) string {
 		// Delete the connection's pipelines.
 		for _, p := range c.pipelines {
 			delete(state.pipelines, p.ID)
+			if p.run != nil {
+				delete(state.liveRuns, p.run.ID)
+			}
 		}
 	}
 	state.mu.Unlock()
@@ -1061,16 +1099,15 @@ func (state *State) endPipelineRun(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	p := state.pipelines[e.Pipeline]
-	ws := p.connection.workspace
-	ws.mu.Lock()
-	delete(ws.runs, e.ID)
-	ws.mu.Unlock()
-	state.replacePipeline(p.ID, func(p *Pipeline) {
+	state.mu.Lock()
+	delete(state.liveRuns, e.ID)
+	state.mu.Unlock()
+	p := state.replacePipeline(e.Pipeline, func(p *Pipeline) {
 		p.run = nil
 		p.Health = e.Health
 	})
-	return ws.organization.ID
+	dispatchNotification(state, e)
+	return p.organization.ID
 }
 
 // LinkConnection is the event sent when two unlinked connections are linked.
@@ -1165,7 +1202,6 @@ func (state *State) runPipeline(n notification) string {
 		return ""
 	}
 	p := state.pipelines[e.Pipeline]
-	ws := p.connection.workspace
 	run := &PipelineRun{
 		mu:          &sync.Mutex{},
 		ID:          e.ID,
@@ -1174,14 +1210,14 @@ func (state *State) runPipeline(n notification) string {
 		Cursor:      e.Cursor,
 		StartTime:   e.StartTime,
 	}
-	ws.mu.Lock()
-	ws.runs[run.ID] = run
-	ws.mu.Unlock()
 	p.mu.Lock()
 	p.run = run
 	p.mu.Unlock()
+	state.mu.Lock()
+	state.liveRuns[run.ID] = run
+	state.mu.Unlock()
 	dispatchNotification(state, e)
-	return ws.organization.ID
+	return p.organization.ID
 }
 
 // SeeLeader is the event sent when the leader is seen.
@@ -1264,7 +1300,7 @@ func (state *State) setPipelineFormatSettings(n notification) string {
 	p := state.replacePipeline(e.Pipeline, func(p *Pipeline) {
 		p.FormatSettings = e.Settings
 	})
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // SetPipelineSchedulePeriod is the event sent when the schedule period of a
@@ -1284,7 +1320,27 @@ func (state *State) setPipelineSchedulePeriod(n notification) string {
 		p.SchedulePeriod = e.SchedulePeriod
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.ID
+	return p.organization.ID
+}
+
+// SetOrganizationStatus is the event sent when the status of an organization is
+// set.
+type SetOrganizationStatus struct {
+	ID      string
+	Enabled bool
+}
+
+// setOrganizationStatus sets the status of an organization.
+func (state *State) setOrganizationStatus(n notification) string {
+	e := SetOrganizationStatus{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	o := state.replaceOrganization(e.ID, func(p *Organization) {
+		p.Enabled = e.Enabled
+	})
+	dispatchNotification(state, e)
+	return o.ID
 }
 
 // SetPipelineStatus is the event sent when the status of a pipeline is set.
@@ -1303,7 +1359,7 @@ func (state *State) setPipelineStatus(n notification) string {
 		p.Enabled = e.Enabled
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // StartAlterProfileSchema is the event sent when the alter of the profile
@@ -1421,7 +1477,7 @@ func (state *State) updateIdentityPropertiesToUnset(n notification) string {
 	p.mu.Lock()
 	p.propertiesToUnset = e.Properties
 	p.mu.Unlock()
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // UpdateIdentityResolutionSettings is the event sent when the identity
@@ -1538,7 +1594,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.Incremental = e.Incremental
 	})
 	dispatchNotification(state, e)
-	return p.connection.organization.ID
+	return p.organization.ID
 }
 
 // UpdateWarehouse is the event sent when a warehouse is updated.

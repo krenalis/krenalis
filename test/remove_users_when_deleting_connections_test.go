@@ -18,15 +18,15 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := krenalistester.NewKrenalisInstance(t)
-	c.Start()
-	defer c.Stop()
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
 
-	c.UpdateIdentityResolution(false, nil)
+	k.UpdateIdentityResolutionSettings(false, nil)
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.CreateDummy("Dummy 1", krenalistester.Source)
-	dummy2 := c.CreateDummy("Dummy 2", krenalistester.Source)
+	dummy1 := k.CreateDummy("Dummy 1", krenalistester.Source)
+	dummy2 := k.CreateDummy("Dummy 2", krenalistester.Source)
 
 	// Create two identical pipelines for two different connections.
 	pipelineParams := krenalistester.PipelineToSet{
@@ -50,38 +50,38 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 			},
 		},
 	}
-	pipeline1 := c.CreatePipeline(dummy1, "User", pipelineParams)
-	pipeline2 := c.CreatePipeline(dummy2, "User", pipelineParams)
+	pipeline1 := k.CreatePipeline(dummy1, "User", pipelineParams)
+	pipeline2 := k.CreatePipeline(dummy2, "User", pipelineParams)
 
 	// Import from both pipelines, then run the identity resolution.
-	run1 := c.RunPipeline(pipeline1)
-	run2 := c.RunPipeline(pipeline2)
-	c.WaitRunsCompletion(dummy1, run1)
-	c.WaitRunsCompletion(dummy2, run2)
-	c.RunIdentityResolution()
+	run1 := k.StartPipelineRun(pipeline1)
+	run2 := k.StartPipelineRun(pipeline2)
+	k.WaitForRunsCompletion(run1)
+	k.WaitForRunsCompletion(run2)
+	k.RunIdentityResolutionAndWait()
 
 	// Now there should be total of 20 profiles.
-	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 20 {
 		t.Fatalf("expected 20 profiles, got %d", total)
 	}
 
 	// Delete one Dummy, wait for the identities to be purged, resolve
 	// identities, and ensure that only 10 profiles remain.
-	c.DeleteConnection(dummy1)
+	k.DeleteConnection(dummy1)
 	time.Sleep(1 * time.Second)
-	c.RunIdentityResolution()
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
+	k.RunIdentityResolutionAndWait()
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
 	}
 
 	// Delete also the other Dummy connection; now the total number of profiles
 	// should be zero.
-	c.DeleteConnection(dummy2)
+	k.DeleteConnection(dummy2)
 	time.Sleep(1 * time.Second)
-	c.RunIdentityResolution()
-	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
+	k.RunIdentityResolutionAndWait()
+	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 0 {
 		t.Fatalf("expected no profiles, got %d", total)
 	}
