@@ -120,13 +120,14 @@
 }
 
 .connections-map__central-flow-logo {
-	width: 82px;
-	height: 56px;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	gap: 11px;
-	overflow: hidden;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 11px;
+    overflow: hidden;
+    border-radius: 100%;
 }
 
 .connections-map__central-flow-row {
@@ -172,9 +173,9 @@
 
 .connections-map__central-flow-dot {
 	position: absolute;
-	left: -8px;
-	width: 8px;
-	height: 8px;
+	left: 0;
+	width: 7px;
+	height: 7px;
 	border-radius: 50%;
 	animation: central-flow-dot-slide 1400ms linear infinite;
 }
@@ -223,18 +224,18 @@
 
 .connections-map__warehouse-flow-anchor {
 	position: absolute;
-	top: -22px;
+	top: -50px;
 	width: 1px;
 	height: 1px;
 	pointer-events: none;
 }
 
 .connections-map__warehouse-flow-anchor--left {
-	left: calc(50% - 2px);
+	left: calc(50% - 10px);
 }
 
 .connections-map__warehouse-flow-anchor--right {
-	left: calc(50% + 2px);
+	left: calc(50% + 10px);
 }
 
 .connections-map__warehouse-block .connection-block__content {

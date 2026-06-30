@@ -55,25 +55,18 @@ const ConnectionsMap = () => {
 			setDatabaseArrows(
 				isWarehouseHighlighted ? (
 					<>
+
+						{/* Left arrow */}
 						<Arrow
 							start='central-logo'
 							end='warehouse-database-flow-left'
-							startAnchor={{ position: 'bottom', offset: { x: -2 } }}
+							startAnchor={{ position: 'bottom', offset: { x: -11 } }}
 							endAnchor='middle'
 							color='#4f46e5'
 							strokeWidth={1}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: -2 }}
+							curveness={0}
 							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-						/>
-						<Arrow
-							start='warehouse-database-flow-right'
-							end='central-logo'
-							startAnchor='middle'
-							endAnchor={{ position: 'bottom', offset: { x: 2 } }}
-							color='#4f46e5'
-							strokeWidth={1}
 							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
 						/>
 						<Arrow
 							start='warehouse-database-flow-left'
@@ -82,10 +75,12 @@ const ConnectionsMap = () => {
 							endAnchor='top'
 							color='#4f46e5'
 							strokeWidth={1}
-							curveness={0.35}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: -2 }}
+							curveness={0.5}
 							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
+							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
 						/>
+
+						{/* Right arrow */}
 						<Arrow
 							start='warehouse-database'
 							end='warehouse-database-flow-right'
@@ -93,18 +88,32 @@ const ConnectionsMap = () => {
 							endAnchor='middle'
 							color='#4f46e5'
 							strokeWidth={1}
-							curveness={0.35}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
+							curveness={0.5}
 							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
+							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
 						/>
+						<Arrow
+							start='warehouse-database-flow-right'
+							end='central-logo'
+							startAnchor='middle'
+							endAnchor={{ position: 'bottom', offset: { x: 11 } }}
+							color='#4f46e5'
+							strokeWidth={1}
+							curveness={0}
+							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
+							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
+						/>
+
+						{/* Central arrow, used only to display the head */}
 						<Arrow
 							start='central-logo'
 							end='warehouse-database'
 							startAnchor='bottom'
 							endAnchor='top'
 							color='transparent'
-							shapeColor='#B9B9CA'
+							shapeColor={'#b9b9ca'}
 							strokeWidth={1}
+							curveness={0}
 							dashness={false}
 							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
 							showHead={isWarehouseConnected}
