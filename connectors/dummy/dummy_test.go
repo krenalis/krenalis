@@ -97,7 +97,7 @@ func TestParseOperationDelay(t *testing.T) {
 		{
 			name:    "too large duration",
 			delay:   "25h",
-			wantErr: "maximum operation delay must be less than or equal to 24h0m0s",
+			wantErr: "operation delay must be less than or equal to 24h0m0s",
 		},
 		{
 			name:    "range maximum too large",
