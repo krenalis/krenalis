@@ -9,7 +9,6 @@ import connectionMapContext from '../../../context/ConnectionMapContext';
 import appContext from '../../../context/AppContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-import { getWarehouseRelations } from './warehouseRelations';
 
 interface ConnectionBlockProps {
 	connection: TransformedConnection;
@@ -45,11 +44,10 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		}
 
 		const relations = c.relations(connections);
-		const warehouseRelations = getWarehouseRelations(c);
 		const isConnected = c.pipelines.length > 0 || c.linkedConnections?.length > 0;
 		const hasRelations = relations.length > 0;
-		const hasUserWarehouseRelation = warehouseRelations.includes('dwh-user');
-		const hasEventWarehouseRelation = warehouseRelations.includes('dwh-event');
+		const hasUserWarehouseRelation = relations.includes('dwh-user');
+		const hasEventWarehouseRelation = relations.includes('dwh-event');
 
 		const isHovered =
 			c.id === hoveredConnection ||
@@ -57,7 +55,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			(isUserDbHovered && hasUserWarehouseRelation) ||
 			(isEventDbHovered && hasEventWarehouseRelation);
 
-		const isHighlighted = isHovered && (hasRelations || warehouseRelations.length > 0);
+		const isHighlighted = isHovered && hasRelations;
 
 		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
 		const isHidden =

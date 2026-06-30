@@ -11,7 +11,6 @@ import { Link } from '../../base/Link/Link';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 import { warehouses } from '../DataWarehouse/DataWarehouse.helpers';
-import { getWarehouseRelations } from './warehouseRelations';
 
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);
@@ -34,7 +33,7 @@ const ConnectionsMap = () => {
 		}
 
 		const hasWarehouseRelation = (c: TransformedConnection) => {
-			const relations = getWarehouseRelations(c);
+			const relations = c.relations(connections);
 			return relations.includes('dwh-user') || relations.includes('dwh-event');
 		};
 
