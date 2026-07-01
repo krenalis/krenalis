@@ -222,6 +222,7 @@ const ConnectionsMap = () => {
 											id='warehouse-database'
 											onMouseEnter={onWarehouseMouseEnter}
 											onMouseLeave={onWarehouseMouseLeave}
+											data-is-hovered={isWarehouseHovered}
 										>
 											<span
 												className='connections-map__warehouse-flow-anchor connections-map__warehouse-flow-anchor--left'
