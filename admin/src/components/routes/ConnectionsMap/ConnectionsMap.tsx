@@ -37,70 +37,96 @@ const ConnectionsMap = () => {
 			return relations.includes('dwh-user') || relations.includes('dwh-event');
 		};
 
-		const isWarehouseConnected = connections.findIndex((c) => hasWarehouseRelation(c)) != -1;
-		let isWarehouseConnectedToHover = false;
-		let isWarehouseHighlighted = false;
-		if (hovered != null) {
-			isWarehouseConnectedToHover = hasWarehouseRelation(hovered);
-			isWarehouseHighlighted = hasWarehouseRelation(hovered);
+		let isImportWarehouseConnected = false;
+		let isImportWarehouseHighlighted = false;
+		if (hovered != null && hovered.isSource) {
+			isImportWarehouseConnected =
+				hovered.pipelines.findIndex((p) => p.target === 'User' || p.target === 'Event') != -1;
+			isImportWarehouseHighlighted = hasWarehouseRelation(hovered);
 		} else if (isWarehouseHovered) {
-			isWarehouseConnectedToHover = isWarehouseConnected;
-			isWarehouseHighlighted = connections.findIndex((c) => hasWarehouseRelation(c)) != -1;
+			isImportWarehouseConnected =
+				connections.findIndex(
+					(c) =>
+						c.isSource && c.pipelines.findIndex((p) => p.target === 'User' || p.target === 'Event') != -1,
+				) != -1;
+			isImportWarehouseHighlighted = connections.findIndex((c) => c.isSource && hasWarehouseRelation(c)) != -1;
+		}
+
+		let isExportWarehouseConnected = false;
+		let isExportWarehouseHighlighted = false;
+		if (hovered != null && hovered.isDestination) {
+			isExportWarehouseConnected =
+				hovered.pipelines.findIndex((p) => p.target === 'User' || p.target === 'Event') != -1;
+			isExportWarehouseHighlighted = hasWarehouseRelation(hovered);
+		} else if (isWarehouseHovered) {
+			isExportWarehouseConnected =
+				connections.findIndex(
+					(c) =>
+						c.isDestination &&
+						c.pipelines.findIndex((p) => p.target === 'User' || p.target === 'Event') != -1,
+				) != -1;
+			isExportWarehouseHighlighted =
+				connections.findIndex((c) => c.isDestination && hasWarehouseRelation(c)) != -1;
 		}
 
 		const isSomethingHovered = hoveredConnection != null || isWarehouseHovered;
+		const isWarehouseHighlighted = isImportWarehouseHighlighted || isExportWarehouseHighlighted;
 
 		setTimeout(() => {
 			setDatabaseArrows(
 				isWarehouseHighlighted ? (
 					<>
-						{/* Left arrow */}
-						<Arrow
-							start='central-logo'
-							end='warehouse-database-flow-left'
-							startAnchor={{ position: 'bottom', offset: { x: -11 } }}
-							endAnchor='middle'
-							color='#4f46e5'
-							strokeWidth={1}
-							curveness={0}
-							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-						/>
-						<Arrow
-							start='warehouse-database-flow-left'
-							end='warehouse-database'
-							startAnchor='middle'
-							endAnchor='top'
-							color='#4f46e5'
-							strokeWidth={1}
-							curveness={0.5}
-							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-						/>
+						{isImportWarehouseHighlighted && (
+							<>
+								{/* Left arrow */}
+								<Arrow
+									start='central-logo'
+									end='warehouse-database-flow-left'
+									startAnchor={{ position: 'bottom', offset: { x: -11 } }}
+									endAnchor='middle'
+									color='#4f46e5'
+									strokeWidth={1}
+									curveness={0}
+									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
+								/>
+								<Arrow
+									start='warehouse-database-flow-left'
+									end='warehouse-database'
+									startAnchor='middle'
+									endAnchor='top'
+									color='#4f46e5'
+									strokeWidth={1}
+									curveness={0.5}
+									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
+								/>
+							</>
+						)}
 
-						{/* Right arrow */}
-						<Arrow
-							start='warehouse-database'
-							end='warehouse-database-flow-right'
-							startAnchor='top'
-							endAnchor='middle'
-							color='#4f46e5'
-							strokeWidth={1}
-							curveness={0.5}
-							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-						/>
-						<Arrow
-							start='warehouse-database-flow-right'
-							end='central-logo'
-							startAnchor='middle'
-							endAnchor={{ position: 'bottom', offset: { x: 11 } }}
-							color='#4f46e5'
-							strokeWidth={1}
-							curveness={0}
-							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-							dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-						/>
+						{isExportWarehouseHighlighted && (
+							<>
+								{/* Right arrow */}
+								<Arrow
+									start='warehouse-database'
+									end='warehouse-database-flow-right'
+									startAnchor='top'
+									endAnchor='middle'
+									color='#4f46e5'
+									strokeWidth={1}
+									curveness={0.5}
+									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
+								/>
+								<Arrow
+									start='warehouse-database-flow-right'
+									end='central-logo'
+									startAnchor='middle'
+									endAnchor={{ position: 'bottom', offset: { x: 11 } }}
+									color='#4f46e5'
+									strokeWidth={1}
+									curveness={0}
+									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
+								/>
+							</>
+						)}
 
 						{/* Central arrow, used only to display the head */}
 						<Arrow
@@ -113,8 +139,6 @@ const ConnectionsMap = () => {
 							strokeWidth={1}
 							curveness={0}
 							dashness={false}
-							isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-							showHead={isWarehouseConnected}
 							useCircleShape={true}
 						/>
 					</>
@@ -126,8 +150,7 @@ const ConnectionsMap = () => {
 						endAnchor='top'
 						strokeWidth={1.3}
 						dashness={false}
-						isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
-						showHead={isWarehouseConnected}
+						isHidden={isSomethingHovered && !isImportWarehouseConnected && !isExportWarehouseConnected}
 						useCircleShape={true}
 					/>
 				),
