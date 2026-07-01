@@ -244,6 +244,13 @@
 	justify-content: center;
 }
 
+.connections-map__warehouse-block .status-dot {
+	display: block!important;
+	position: absolute;
+	top: 7px;
+	right: 7px;
+}
+
 .connections-map__warehouse-content {
 	display: flex;
 	flex-direction: column;
