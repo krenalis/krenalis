@@ -3,7 +3,7 @@
 # Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 # Keep in sync with the version within "go.mod".
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.23 AS build
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.24 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -39,7 +39,7 @@ RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${
 # not, a multi-stage build is used here to have, as the resulting image, an
 # image that contains only the Krenalis executable and the Python and JavaScript
 # (node) interpreters, for the transformation functions.
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Install Python and Node.js.
 RUN apk add --no-cache python3
