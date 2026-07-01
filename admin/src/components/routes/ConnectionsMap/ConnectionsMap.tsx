@@ -124,7 +124,7 @@ const ConnectionsMap = () => {
 						end='warehouse-database'
 						startAnchor='bottom'
 						endAnchor='top'
-						strokeWidth={1}
+						strokeWidth={1.3}
 						dashness={false}
 						isHidden={!isWarehouseConnected || (isSomethingHovered && !isWarehouseConnectedToHover)}
 						showHead={isWarehouseConnected}
