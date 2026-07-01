@@ -61,7 +61,6 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 		}
 		setSelectedWorkspace('');
 		setIsLoggedIn(false);
-		setIsOrganizationDisabled(false);
 	};
 
 	const handleError = (err: Error | string) => {
@@ -69,12 +68,10 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 			logout();
 			return;
 		}
+		// If the organization is disabled, log out but do not return, so that
+		// the "organization disabled" error is also printed.
 		if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
-			// TODO(Gianluca): This is to prevent being redirected to the login
-			// page and starting an infinite loop that makes the error
-			// unreadable. Ideally, the case of organization disabled would be
-			// handled the same way as an unauthorized error.
-			setIsOrganizationDisabled(true);
+			logout();
 		}
 		if (toastRef.current == null) return;
 		toastRef.current.hide();
@@ -125,8 +122,6 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 		isPasswordless,
 		setIsPasswordless,
 		publicMetadata,
-		isOrganizationDisabled,
-		setIsOrganizationDisabled,
 	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
@@ -203,8 +198,6 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 					isPasswordless,
 					setIsPasswordless,
 					publicMetadata,
-					isOrganizationDisabled,
-					setIsOrganizationDisabled,
 				}}
 			>
 				<Outlet />

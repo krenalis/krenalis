@@ -389,11 +389,14 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	// Listen to state changes.
 	core.state.Freeze()
 	core.state.AddListener(core.onCreateWorkspace)
+	core.state.AddListener(core.onDeleteConnection)
 	core.state.AddListener(core.onDeleteOrganization)
+	core.state.AddListener(core.onDeletePipeline)
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onEndPipelineRun)
 	core.state.AddListener(core.onRunPipeline)
+	core.state.AddListener(core.onSetOrganizationStatus)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
@@ -1174,6 +1177,24 @@ func (core *Core) WarehousePlatforms() []WarehousePlatform {
 	return warehousePlatforms
 }
 
+// cancelConnectionLocalLiveRuns cancels any local live runs in the provided
+// connection.
+func (core *Core) cancelConnectionLocalLiveRuns(c *state.Connection) {
+	for _, p := range c.Pipelines() {
+		if run, ok := p.Run(); ok {
+			core.localLiveRuns.Cancel(run.ID)
+		}
+	}
+}
+
+// cancelWorkspaceLocalLiveRuns cancels any local live runs in the provided
+// workspace.
+func (core *Core) cancelWorkspaceLocalLiveRuns(ws *state.Workspace) {
+	for _, c := range ws.Connections() {
+		core.cancelConnectionLocalLiveRuns(c)
+	}
+}
+
 // decryptAuthorizedOAuthAccount decrypts an authorized OAuth account encrypted
 // with encryptAuthorizedOAuthAccount.
 func (core *Core) decryptAuthorizedOAuthAccount(ctx context.Context, account string) (authorizedOAuthAccount, error) {
@@ -1273,16 +1294,20 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 					return nil, err
 				}
 			}
-			// Update the pipeline's cursor.
-			var exists bool
-			err = tx.QueryRow(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
-				n.ID, n.Health, pipeline).Scan(&exists)
+			// Update the pipeline's cursor only when the run completed normally.
+			if reason == nil {
+				res, err = tx.Exec(ctx, "UPDATE pipelines SET cursor = (SELECT cursor FROM pipelines_runs WHERE id = $1), health = $2 WHERE id = $3",
+					n.ID, n.Health, pipeline)
+			} else {
+				res, err = tx.Exec(ctx, "UPDATE pipelines SET health = $1 WHERE id = $2",
+					n.Health, pipeline)
+			}
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// The pipeline does not exist anymore.
-					return nil, nil
-				}
 				return nil, err
+			}
+			if res.RowsAffected() == 0 {
+				// The pipeline does not exist anymore.
+				return nil, nil
 			}
 			return n, nil
 		})
@@ -1719,16 +1744,34 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	core.mcpMu.Unlock()
 }
 
+// onDeleteConnection is called when a connection is deleted.
+func (core *Core) onDeleteConnection(n state.DeleteConnection) {
+	core.cancelConnectionLocalLiveRuns(n.Connection())
+}
+
 // onDeleteOrganization is called when an organization is deleted.
 func (core *Core) onDeleteOrganization(n state.DeleteOrganization) {
-	for _, ws := range n.Organization().Workspaces() {
+	org := n.Organization()
+	for _, ws := range org.Workspaces() {
 		core.removeMCPWarehouse(ws.ID)
+		core.cancelWorkspaceLocalLiveRuns(ws)
+	}
+}
+
+// onDeletePipeline is called when a pipeline is deleted.
+func (core *Core) onDeletePipeline(n state.DeletePipeline) {
+	p := n.Pipeline()
+	// Cancel any local live runs.
+	if run, ok := p.Run(); ok {
+		core.localLiveRuns.Cancel(run.ID)
 	}
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
+	ws := n.Workspace()
 	core.removeMCPWarehouse(n.ID)
+	core.cancelWorkspaceLocalLiveRuns(ws)
 }
 
 // onElectLeader is called when a leader is elected.
@@ -1749,6 +1792,16 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 				ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
 				ws.AlterProfileSchema.Operations)
 		}
+	}
+}
+
+// onSetOrganizationStatus is called when an organization status is set.
+func (core *Core) onSetOrganizationStatus(n state.SetOrganizationStatus) {
+	if n.Enabled {
+		return
+	}
+	for _, run := range n.EndedLiveRuns() {
+		core.localLiveRuns.Cancel(run.ID)
 	}
 }
 
