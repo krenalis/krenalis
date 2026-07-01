@@ -695,7 +695,7 @@ github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.9.4
 ## explicit; go 1.17
 github.com/sirupsen/logrus
-# github.com/snowflakedb/gosnowflake/v2 v2.0.2
+# github.com/snowflakedb/gosnowflake/v2 v2.1.0
 ## explicit; go 1.24.0
 github.com/snowflakedb/gosnowflake/v2
 github.com/snowflakedb/gosnowflake/v2/internal/arrow
@@ -705,6 +705,7 @@ github.com/snowflakedb/gosnowflake/v2/internal/errors
 github.com/snowflakedb/gosnowflake/v2/internal/logger
 github.com/snowflakedb/gosnowflake/v2/internal/os
 github.com/snowflakedb/gosnowflake/v2/internal/query
+github.com/snowflakedb/gosnowflake/v2/internal/spcs
 github.com/snowflakedb/gosnowflake/v2/internal/types
 github.com/snowflakedb/gosnowflake/v2/sflog
 # github.com/spf13/cast v1.7.1
