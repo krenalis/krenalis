@@ -814,8 +814,8 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 }
 
 // endOrganizationLiveRunsQuery ends all live pipeline runs for an organization.
-// For each run it terminates, it records the final metrics, advances the related
-// pipeline cursor, marks the pipeline as healthy, and records the termination error.
+// For each run it terminates, it records the final metrics, marks the pipeline
+// as healthy, and records the termination error.
 const endOrganizationLiveRunsQuery = `
 WITH live_runs AS (
 	SELECT r.id, r.pipeline
@@ -862,12 +862,11 @@ ended_runs AS (
 		error = $3
 	FROM s
 	WHERE r.id = s.id AND r.end_time IS NULL
-	RETURNING r.pipeline, r.cursor
+	RETURNING r.pipeline
 ),
 updated_pipelines AS (
 	UPDATE pipelines AS p
-	SET cursor = ended_runs.cursor,
-		health = 'Healthy'::health
+	SET health = 'Healthy'::health
 	FROM ended_runs
 	WHERE p.id = ended_runs.pipeline
 	RETURNING p.id
