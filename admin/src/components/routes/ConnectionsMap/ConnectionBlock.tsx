@@ -19,8 +19,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 	const [arrow, setArrow] = useState<ReactNode>();
 
 	const { connections } = useContext(appContext);
-	const { hoveredConnection, setHoveredConnection, isWarehouseHovered } =
-		useContext(connectionMapContext);
+	const { hoveredConnection, setHoveredConnection, isWarehouseHovered } = useContext(connectionMapContext);
 
 	useEffect(() => {
 		let arrowStart: string,
@@ -61,7 +60,11 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			(isSomethingHovered &&
 				!(isHovered && isConnected) &&
 				!c.linkedConnections?.includes(hoveredConnection) &&
-				!(isWarehouseHovered && ((c.pipelines.findIndex((p) => p.target === 'User') != -1 || c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1))));
+				!(
+					isWarehouseHovered &&
+					(c.pipelines.findIndex((p) => p.target === 'User') != -1 ||
+						(c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1))
+				));
 
 		const arrow = (
 			<Arrow

@@ -120,14 +120,14 @@
 }
 
 .connections-map__central-flow-logo {
-    width: 130px;
-    height: 130px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 11px;
-    overflow: hidden;
-    border-radius: 100%;
+	width: 130px;
+	height: 130px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 11px;
+	overflow: hidden;
+	border-radius: 100%;
 }
 
 .connections-map__central-flow-row {
@@ -245,7 +245,7 @@
 }
 
 .connections-map__warehouse-block .status-dot {
-	display: block!important;
+	display: block !important;
 	position: absolute;
 	top: 7px;
 	right: 7px;
