@@ -412,34 +412,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
-// UpgradeDB upgrades Krenalis's PostgreSQL database.
-func UpgradeDB(ctx context.Context, conf *Config) error {
-	db, err := dbpkg.Open(&dbpkg.Options{
-		Host:           conf.DB.Host,
-		Port:           conf.DB.Port,
-		Username:       conf.DB.Username,
-		Password:       conf.DB.Password,
-		Database:       conf.DB.Database,
-		Schema:         conf.DB.Schema,
-		MaxConnections: max(2, conf.DB.MaxConnections),
-	})
-	if err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-	defer db.Close()
-
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	if err := db.Ping(pingCtx); err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-
-	if err := initdb.Upgrade(ctx, db); err != nil {
-		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
-	}
-	return initdb.UpgradeWorkOS(ctx, db)
-}
-
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [0, 45]. password's length must be at least 8 character long.
