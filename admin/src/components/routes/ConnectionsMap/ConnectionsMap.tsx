@@ -55,15 +55,12 @@ const ConnectionsMap = () => {
 		let isExportWarehouseConnected = false;
 		let isExportWarehouseHighlighted = false;
 		if (hovered != null && hovered.isDestination) {
-			isExportWarehouseConnected =
-				hovered.pipelines.findIndex((p) => p.target === 'User' || p.target === 'Event') != -1;
+			isExportWarehouseConnected = hovered.pipelines.findIndex((p) => p.target === 'User') != -1;
 			isExportWarehouseHighlighted = hasWarehouseRelation(hovered);
 		} else if (isWarehouseHovered) {
 			isExportWarehouseConnected =
 				connections.findIndex(
-					(c) =>
-						c.isDestination &&
-						c.pipelines.findIndex((p) => p.target === 'User' || p.target === 'Event') != -1,
+					(c) => c.isDestination && c.pipelines.findIndex((p) => p.target === 'User') != -1,
 				) != -1;
 			isExportWarehouseHighlighted =
 				connections.findIndex((c) => c.isDestination && hasWarehouseRelation(c)) != -1;
