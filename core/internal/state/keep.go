@@ -973,10 +973,12 @@ func (state *State) deleteWorkspace(n notification) string {
 	}
 	e.workspace = state.workspaces[e.ID]
 	organization := e.workspace.organization
-	state.mu.Lock()
 	// Delete the workspace.
-	delete(state.workspaces, e.ID)
+	organization.mu.Lock()
 	delete(organization.workspaces, e.ID)
+	organization.mu.Unlock()
+	state.mu.Lock()
+	delete(state.workspaces, e.ID)
 	// Delete access keys restricted to the workspace.
 	for hmac, key := range state.accessKeyByHMAC {
 		if key.Workspace == e.ID {
