@@ -66,90 +66,66 @@ const ConnectionsMap = () => {
 		}
 
 		const isSomethingHovered = hoveredConnection != null || isWarehouseHovered;
-		const isWarehouseHighlighted = isImportWarehouseHighlighted || isExportWarehouseHighlighted;
 
 		setTimeout(() => {
 			setDatabaseArrows(
-				isWarehouseHighlighted ? (
-					<>
-						{isImportWarehouseHighlighted && (
-							<>
-								{/* Left arrow */}
-								<Arrow
-									start='central-logo'
-									end='warehouse-database-flow-left'
-									startAnchor={{ position: 'bottom', offset: { x: -11 } }}
-									endAnchor='middle'
-									color='#4f46e5'
-									strokeWidth={1}
-									curveness={0}
-									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-								/>
-								<Arrow
-									start='warehouse-database-flow-left'
-									end='warehouse-database'
-									startAnchor='middle'
-									endAnchor='top'
-									color='#4f46e5'
-									strokeWidth={1}
-									curveness={0.5}
-									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-								/>
-							</>
-						)}
-
-						{isExportWarehouseHighlighted && (
-							<>
-								{/* Right arrow */}
-								<Arrow
-									start='warehouse-database'
-									end='warehouse-database-flow-right'
-									startAnchor='top'
-									endAnchor='middle'
-									color='#4f46e5'
-									strokeWidth={1}
-									curveness={0.5}
-									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-								/>
-								<Arrow
-									start='warehouse-database-flow-right'
-									end='central-logo'
-									startAnchor='middle'
-									endAnchor={{ position: 'bottom', offset: { x: 11 } }}
-									color='#4f46e5'
-									strokeWidth={1}
-									curveness={0}
-									dashness={{ strokeLen: 5, nonStrokeLen: 5, animation: 2 }}
-								/>
-							</>
-						)}
-
-						{/* Central arrow, used only to display the head */}
-						<Arrow
-							start='central-logo'
-							end='warehouse-database'
-							startAnchor='bottom'
-							endAnchor='top'
-							color='transparent'
-							shapeColor={'#4f46e5'}
-							strokeWidth={1}
-							curveness={0}
-							dashness={false}
-							useCircleShape={true}
-						/>
-					</>
-				) : (
+				<>
+					{/* Left arrow */}
 					<Arrow
 						start='central-logo'
-						end='warehouse-database'
-						startAnchor='bottom'
-						endAnchor='top'
-						strokeWidth={1.3}
-						dashness={false}
-						isHidden={isSomethingHovered && !isImportWarehouseConnected && !isExportWarehouseConnected}
-						useCircleShape={true}
+						end='warehouse-database-flow-left'
+						startAnchor={{ position: 'bottom', offset: { x: -11 } }}
+						endAnchor='middle'
+						color={isImportWarehouseHighlighted ? '#4f46e5' : undefined}
+						strokeWidth={1}
+						curveness={0}
+						dashness={
+							isImportWarehouseHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: 2 } : false
+						}
+						isHidden={isSomethingHovered && !isImportWarehouseConnected}
 					/>
-				),
+					<Arrow
+						start='warehouse-database-flow-left'
+						end='warehouse-database'
+						startAnchor='middle'
+						endAnchor='top'
+						color={isImportWarehouseHighlighted ? '#4f46e5' : undefined}
+						strokeWidth={1}
+						curveness={0.5}
+						dashness={
+							isImportWarehouseHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: 2 } : false
+						}
+						isHidden={isSomethingHovered && !isImportWarehouseConnected}
+					/>
+
+					{/* Right arrow */}
+					<Arrow
+						start='warehouse-database'
+						end='warehouse-database-flow-right'
+						startAnchor='top'
+						endAnchor='middle'
+						color={isExportWarehouseHighlighted ? '#4f46e5' : undefined}
+						strokeWidth={1}
+						curveness={0.5}
+						dashness={
+							isExportWarehouseHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: 2 } : false
+						}
+						isHidden={isSomethingHovered && !isExportWarehouseConnected}
+					/>
+					<Arrow
+						start='warehouse-database-flow-right'
+						end='central-logo'
+						startAnchor='middle'
+						endAnchor={{ position: 'bottom', offset: { x: 11 } }}
+						color={isExportWarehouseHighlighted ? '#4f46e5' : undefined}
+						strokeWidth={1}
+						curveness={0}
+						dashness={
+							isExportWarehouseHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: 2 } : false
+						}
+						isHidden={isSomethingHovered && !isExportWarehouseConnected}
+					/>
+				</>,
 			);
 		}, 0);
 	}, [hoveredConnection, isWarehouseHovered, connections]);
