@@ -174,8 +174,8 @@
 .connections-map__central-flow-dot {
 	position: absolute;
 	left: 0;
-	width: 7px;
-	height: 7px;
+	width: 6px;
+	height: 6px;
 	border-radius: 50%;
 	animation: central-flow-dot-slide 1400ms linear infinite;
 }
