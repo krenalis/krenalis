@@ -26,6 +26,7 @@ interface ArrowProps {
 	showTail?: boolean;
 	showHead?: boolean;
 	useCircleShape?: boolean;
+	shapeColor?: string;
 }
 
 const Arrow = ({
@@ -45,12 +46,13 @@ const Arrow = ({
 	showTail = false,
 	showHead = false,
 	useCircleShape = false,
+	shapeColor,
 }: ArrowProps) => {
 	const circleShape = {
 		svgElem: (
 			<path
 				d='M 1,0 V 1.0000008 A 0.81233699,0.50003097 0 0 1 0.18813242,0.50025884 0.81233699,0.50003097 0 0 1 1,0 Z'
-				style={{ fill: color ? color : '#B9B9CA' }}
+				style={{ fill: shapeColor ? shapeColor : color ? color : '#B9B9CA' }}
 			/>
 		),
 	};
@@ -63,8 +65,8 @@ const Arrow = ({
 				startAnchor={startAnchor}
 				endAnchor={endAnchor}
 				color={color ? color : '#B9B9CA'}
-				strokeWidth={strokeWidth ? strokeWidth : 1}
-				curveness={curveness ? curveness : 0.7}
+				strokeWidth={strokeWidth ?? 1}
+				curveness={curveness ?? 0.7}
 				dashness={dashness}
 				path={path}
 				headSize={6}

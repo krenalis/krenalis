@@ -20,6 +20,10 @@
 	color: var(--sl-color-neutral-300);
 }
 
+.status-dot__icon--warning {
+	color: var(--sl-color-warning-600);
+}
+
 .status-dot__icon--danger {
 	color: var(--sl-color-danger-600);
 }

@@ -19,8 +19,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 	const [arrow, setArrow] = useState<ReactNode>();
 
 	const { connections } = useContext(appContext);
-	const { hoveredConnection, setHoveredConnection, isUserDbHovered, isEventDbHovered } =
-		useContext(connectionMapContext);
+	const { hoveredConnection, setHoveredConnection, isWarehouseHovered } = useContext(connectionMapContext);
 
 	useEffect(() => {
 		let arrowStart: string,
@@ -43,25 +42,29 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			showHead = true;
 		}
 
+		const relations = c.relations(connections);
 		const isConnected = c.pipelines.length > 0 || c.linkedConnections?.length > 0;
-		const hasRelations = c.relations(connections).length > 0;
+		const hasRelations = relations.length > 0;
+		const hasWarehouseRelation = relations.includes('dwh-user') || relations.includes('dwh-event');
 
 		const isHovered =
 			c.id === hoveredConnection ||
-			c.relations(connections).includes(hoveredConnection) ||
-			(isUserDbHovered && c.relations(connections).includes('dwh-user')) ||
-			(isEventDbHovered && c.relations(connections).includes('dwh-event'));
+			relations.includes(hoveredConnection) ||
+			(isWarehouseHovered && hasWarehouseRelation);
 
 		const isHighlighted = isHovered && hasRelations;
 
-		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
+		const isSomethingHovered = hoveredConnection != null || isWarehouseHovered;
 		const isHidden =
 			!isConnected ||
 			(isSomethingHovered &&
 				!(isHovered && isConnected) &&
 				!c.linkedConnections?.includes(hoveredConnection) &&
-				!(isUserDbHovered && c.pipelines.findIndex((p) => p.target === 'User') != -1) &&
-				!(isEventDbHovered && c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1));
+				!(
+					isWarehouseHovered &&
+					(c.pipelines.findIndex((p) => p.target === 'User') != -1 ||
+						(c.isSource && c.pipelines.findIndex((p) => p.target === 'Event') != -1))
+				));
 
 		const arrow = (
 			<Arrow
@@ -85,7 +88,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		setTimeout(() => {
 			setArrow(arrow);
 		}, 0);
-	}, [c, hoveredConnection, isUserDbHovered, isEventDbHovered]);
+	}, [c, hoveredConnection, isWarehouseHovered]);
 
 	const onMouseEnter = () => {
 		setHoveredConnection(c.id);
