@@ -44,7 +44,7 @@ func init() {
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Import customers as users",
+				Summary:  "Import customers as users from Stripe",
 				Overview: sourceOverview,
 			},
 		},
@@ -52,7 +52,7 @@ func init() {
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export profiles as customers",
+				Summary:  "Export profiles as customers to Stripe",
 				Overview: destinationOverview,
 			},
 		},

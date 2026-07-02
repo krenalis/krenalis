@@ -53,7 +53,7 @@ func init() {
         //     HasSettings: true,
         //     SendingMode: connectors.Server, // Client / Server / ClientAndServer; must not be None if TargetEvent is set
         //     Documentation: connectors.RoleDocumentation{
-        //         Summary:  "Export profiles to <App> and/or send events",
+        //         Summary:  "Export profiles to <App> and/or send events to <App>",
         //         Overview: "<longer description>",
         //     },
         // },
