@@ -56,7 +56,7 @@ func init() {
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as contacts to Mailchimp",
+				Summary:  "Export profiles as contacts to Mailchimp",
 				Overview: destinationOverview,
 			},
 		},

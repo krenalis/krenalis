@@ -50,7 +50,7 @@ func init() {
 			SendingMode: connectors.Server,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as customers and send events to Dummy",
+				Summary:  "Export profiles as customers and send events to Dummy",
 				Overview: destinationOverview,
 			},
 		},
