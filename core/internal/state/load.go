@@ -114,7 +114,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				c.Documentation.Source.Summary = "Import users from " + article(c.Label) + " " + c.Label + " database"
 			}
 			if summary := c.Documentation.Destination.Summary; summary == "" {
-				c.Documentation.Destination.Summary = "Exports profiles to " + article(c.Label) + " " + c.Label + " database"
+				c.Documentation.Destination.Summary = "Export profiles to " + article(c.Label) + " " + c.Label + " database"
 			}
 		case connectors.FileSpec:
 			c.Code = connector.Code
@@ -163,7 +163,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				c.HasDestinationSettings = true
 				c.Documentation.Destination = asDest.Documentation
 				if c.Documentation.Destination.Summary == "" {
-					c.Documentation.Destination.Summary = "Exports profiles to a file on " + c.Label
+					c.Documentation.Destination.Summary = "Export profiles to a file on " + c.Label
 				}
 			}
 		case connectors.MessageBrokerSpec:
