@@ -162,8 +162,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				// settings.
 				c.HasDestinationSettings = true
 				c.Documentation.Destination = asDest.Documentation
-				if c.Documentation.Source.Summary == "" {
-					c.Documentation.Source.Summary = "Exports users to a file on " + c.Label
+				if c.Documentation.Destination.Summary == "" {
+					c.Documentation.Destination.Summary = "Exports users to a file on " + c.Label
 				}
 			}
 		case connectors.MessageBrokerSpec:
