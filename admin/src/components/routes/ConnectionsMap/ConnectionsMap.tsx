@@ -11,14 +11,13 @@ import { Link } from '../../base/Link/Link';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 import { warehouses } from '../DataWarehouse/DataWarehouse.helpers';
-import StatusDot from '../../base/StatusDot/StatusDot';
 
 const ConnectionsMap = () => {
 	const [databaseArrows, setDatabaseArrows] = useState<ReactNode>([]);
 	const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
 	const [isWarehouseHovered, setIsWarehouseHovered] = useState<boolean>(false);
 
-	const { connections, setTitle, warehouse, workspaces, selectedWorkspace } = useContext(AppContext);
+	const { connections, setTitle, warehouse } = useContext(AppContext);
 
 	useLayoutEffect(() => {
 		setTitle('Connections');
@@ -183,7 +182,8 @@ const ConnectionsMap = () => {
 	const sourcesBlocks = getConnectionsBlocks(sources, newConnectionID);
 	const destinationsBlocks = getConnectionsBlocks(destinations, newConnectionID);
 
-	const warehouseMode = workspaces.find((w) => w.id === selectedWorkspace).warehouseMode;
+	// const warehouseMode = workspaces.find((w) => w.id === selectedWorkspace).warehouseMode; TODO: enable when re-enabling the status dot of the warehouse mode
+
 	const warehouseInfo =
 		warehouses.find((w) => w.name === warehouse.platform || w.code === warehouse.platform.toLowerCase()) ??
 		warehouses[0];
@@ -254,31 +254,33 @@ const ConnectionsMap = () => {
 											></span>
 											<div className='connection-block__content'>
 												<div className='connections-map__warehouse-content'>
-													{warehouseMode === 'Normal' ? (
-														<StatusDot
-															status={{
-																text: 'The warehouse is in Normal mode (full read and write access)',
-																variant: 'success',
-															}}
-															placement='right'
-														/>
-													) : warehouseMode === 'Inspection' ? (
-														<StatusDot
-															status={{
-																text: 'The warehouse is in Inspection mode (read-only for data inspection)',
-																variant: 'warning',
-															}}
-															placement='right'
-														/>
-													) : (
-														<StatusDot
-															status={{
-																text: 'The warehouse is in Maintenance mode (init and alter schema operations only)',
-																variant: 'warning',
-															}}
-															placement='right'
-														/>
-													)}
+													{/*
+														{warehouseMode === 'Normal' ? (
+															<StatusDot
+																status={{
+																	text: 'The warehouse is in Normal mode (full read and write access)',
+																	variant: 'success',
+																}}
+																placement='right'
+															/>
+														) : warehouseMode === 'Inspection' ? (
+															<StatusDot
+																status={{
+																	text: 'The warehouse is in Inspection mode (read-only for data inspection)',
+																	variant: 'warning',
+																}}
+																placement='right'
+															/>
+														) : (
+															<StatusDot
+																status={{
+																	text: 'The warehouse is in Maintenance mode (init and alter schema operations only)',
+																	variant: 'warning',
+																}}
+																placement='right'
+															/>
+														)}
+													*/}
 													<LittleLogo
 														code={warehouseInfo.code}
 														path={WAREHOUSES_ASSETS_PATH}
