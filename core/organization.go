@@ -742,24 +742,15 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 		return err
 	}
 	now := time.Now().UTC()
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2`+
-			` WHERE organization = $3 AND email = $4 AND invitation_token = ''`, resetToken, now, this.organization.ID, email)
-		if err != nil {
-			return nil, err
-		}
-		if result.RowsAffected() == 0 {
-			return nil, errMemberNotFoundOrInvitationPending
-		}
-		return nil, nil
-	})
+	result, err := this.core.db.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2`+
+		` WHERE organization = $3 AND email = $4 AND invitation_token = ''`, resetToken, now, this.organization.ID, email)
 	if err != nil {
-		if err == errMemberNotFoundOrInvitationPending {
-			// Do not return an error, to avoid revealing whether the email
-			// belongs to an existing member or to a member with a pending invitation.
-			return nil
-		}
 		return err
+	}
+	if result.RowsAffected() == 0 {
+		// Do not return an error, to avoid revealing whether the email
+		// belongs to an existing member or to a member with a pending invitation.
+		return nil
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
 	emailToSend := &emailToSend{
