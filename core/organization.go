@@ -577,11 +577,12 @@ func (this *Organization) HasMember(id string) (bool, error) {
 }
 
 // InviteMember sends an invitation email to the given email address using the
-// given template. It then creates a new invited member.
+// given template. It then creates a new invited member, or updates an existing
+// pending invitation.
 //
 // It returns an errors.UnprocessableError error with code
 //   - EmailSendFailed, if emails cannot be sent.
-//   - MemberEmailExists, if the email address has already been invited.
+//   - MemberEmailExists, if the email address belongs to an existing member.
 func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
 	this.core.mustBeOpen()
 	err := validateMemberEmail(email)
@@ -601,17 +602,16 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 		})
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+			result, err := tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
+				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8 WHERE members.invitation_token <> ''",
+				id, this.organization.ID, "", email, "", nil, invitationToken, now)
 			if err != nil {
 				return nil, err
 			}
-			if exists {
+			if result.RowsAffected() == 0 {
 				return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
 			}
-			_, err = tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
-				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8",
-				id, this.organization.ID, "", email, "", nil, invitationToken, now)
-			return nil, err
+			return nil, nil
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
