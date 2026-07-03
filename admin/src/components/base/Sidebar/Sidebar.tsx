@@ -4,7 +4,7 @@ import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { useLocation } from 'react-router-dom';
-import getRouteFromPathname from './getRouteFromPathname';
+import getCurrentRoute from './getCurrentRoute';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from '../../routes/App/App.types';
 import { Link } from '../Link/Link';
@@ -92,7 +92,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 	const { redirect, connections, setIsLoadingState } = useContext(AppContext);
 
 	const location = useLocation();
-	const currentRoute = getRouteFromPathname(location.pathname, connections);
+	const currentRoute = getCurrentRoute(location, connections);
 
 	const items: ReactNode[] = [];
 	for (const item of sidebarItems) {
