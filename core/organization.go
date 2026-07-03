@@ -743,16 +743,15 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		result, err := tx.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2`+
+			` WHERE organization = $3 AND email = $4 AND invitation_token = ''`, resetToken, now, this.organization.ID, email)
 		if err != nil {
 			return nil, err
 		}
-		if !exists {
+		if result.RowsAffected() == 0 {
 			return nil, errMemberNotFoundOrInvitationPending
 		}
-		_, err = tx.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
-			resetToken, now, this.organization.ID, email)
-		return nil, err
+		return nil, nil
 	})
 	if err != nil {
 		if err == errMemberNotFoundOrInvitationPending {
