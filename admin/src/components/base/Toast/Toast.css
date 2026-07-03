@@ -29,5 +29,5 @@
 
 .toast::part(close-button) {
 	align-self: start;
-	padding-top: 1.25rem;
+	padding-top: 1rem;
 }
