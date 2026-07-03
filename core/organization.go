@@ -592,14 +592,15 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
-	invitationToken, err := generateMemberToken()
-	if err != nil {
-		return err
-	}
+	var invitationToken string
 	for {
 		id := generateID(func(id string) (any, bool) {
 			return nil, this.organization.HasMember(id)
 		})
+		invitationToken, err = generateMemberToken()
+		if err != nil {
+			return err
+		}
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			result, err := tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
@@ -615,6 +616,9 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
+				continue
+			}
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "invitation_token_index" {
 				continue
 			}
 			return err
