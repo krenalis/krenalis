@@ -739,20 +739,27 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
-	resetToken, err := generateMemberToken()
-	if err != nil {
-		return err
-	}
-	now := time.Now().UTC()
-	result, err := this.core.db.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2`+
-		` WHERE organization = $3 AND email = $4 AND invitation_token = ''`, resetToken, now, this.organization.ID, email)
-	if err != nil {
-		return err
-	}
-	if result.RowsAffected() == 0 {
-		// Do not return an error, to avoid revealing whether the email
-		// belongs to an existing member or to a member with a pending invitation.
-		return nil
+	var resetToken string
+	for {
+		resetToken, err = generateMemberToken()
+		if err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		result, err := this.core.db.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2`+
+			` WHERE organization = $3 AND email = $4 AND invitation_token = ''`, resetToken, now, this.organization.ID, email)
+		if err != nil {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "reset_password_token_index" {
+				continue
+			}
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			// Do not return an error, to avoid revealing whether the email
+			// belongs to an existing member or to a member with a pending invitation.
+			return nil
+		}
+		break
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
 	emailToSend := &emailToSend{
