@@ -721,8 +721,6 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
-var errMemberNotFoundOrInvitationPending = errors.New("member not found or invitation pending")
-
 // SendMemberPasswordReset sends a reset password email to the given email
 // address using the given template.
 //
