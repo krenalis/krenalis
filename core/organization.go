@@ -602,17 +602,17 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			return err
 		}
 		now := time.Now().UTC()
-		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err = this.core.db.Transaction(ctx, func(tx *db.Tx) error {
 			result, err := tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
 				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8 WHERE members.invitation_token <> ''",
 				id, this.organization.ID, "", email, "", nil, invitationToken, now)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if result.RowsAffected() == 0 {
-				return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+				return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
 			}
-			return nil, nil
+			return nil
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
