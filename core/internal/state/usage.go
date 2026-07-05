@@ -32,9 +32,6 @@ func (usage *organizationUsage) addConnection(connector *Connector) {
 
 // addConnector adds one connector use.
 func (usage *organizationUsage) addConnector(connector *Connector) {
-	if usage.connectorUsage == nil {
-		usage.connectorUsage = map[*Connector]int{}
-	}
 	if count, ok := usage.connectorUsage[connector]; ok {
 		usage.connectorUsage[connector] = count + 1
 		return
