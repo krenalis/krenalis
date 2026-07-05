@@ -251,9 +251,31 @@ func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
 	var response struct {
 		ID string `json:"id"`
 	}
-	body := map[string]any{"name": name, "enabled": enabled}
+	body := map[string]any{
+		"name":    name,
+		"enabled": enabled,
+		"limits":  defaultOrganizationLimits,
+	}
 	k.Call("POST", "/v1/organizations", organizationsHeaders(), body, &response)
 	return response.ID
+}
+
+// defaultOrganizationLimits are resource limits for tests that are not
+// specifically testing organization limits.
+var defaultOrganizationLimits = struct {
+	Members     int `json:"members"`
+	AccessKeys  int `json:"access_keys"`
+	Workspaces  int `json:"workspaces"`
+	Connectors  int `json:"connectors"`
+	Connections int `json:"connections"`
+	Pipelines   int `json:"pipelines"`
+}{
+	Members:     20,
+	AccessKeys:  20,
+	Workspaces:  20,
+	Connectors:  20,
+	Connections: 100,
+	Pipelines:   100,
 }
 
 // CreatePipeline creates a pipeline for the connection and target, returning
@@ -843,7 +865,11 @@ func (k *Krenalis) TryUpdateIdentityResolutionSettings(runOnBatchImport bool, id
 
 // UpdateOrganization updates the name of the organization with the given ID.
 func (k *Krenalis) UpdateOrganization(id string, name string) {
-	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
+	body := map[string]any{
+		"name":   name,
+		"limits": defaultOrganizationLimits,
+	}
+	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), body, nil)
 }
 
 // UpdatePipeline updates the pipeline with the given ID.

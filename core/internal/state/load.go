@@ -274,12 +274,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
-	err = tx.QueryScan(ctx, "SELECT id, name, enabled FROM organizations", func(rows *db.Rows) error {
+	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
+		" connectors_limit, connections_limit, pipelines_limit FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
-			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled); err != nil {
+			var limits OrganizationLimits
+			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
+				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
+			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]struct{}{}
 			state.organizations[org.ID] = org
@@ -565,6 +569,26 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		})
 	if err != nil {
 		return fmt.Errorf("cannot load pipelines: %s", err)
+	}
+
+	// Load organization usage from the state loaded so far.
+	for _, organization := range state.organizations {
+		organization.usage = newOrganizationUsage(organization.usage.currentLimits())
+		for range organization.members {
+			organization.usage.addMember()
+		}
+		for _, workspace := range organization.workspaces {
+			organization.usage.addWorkspace()
+			for _, connection := range workspace.connections {
+				organization.usage.addConnection(connection.connector)
+				for _, pipeline := range connection.pipelines {
+					organization.usage.addPipeline(pipeline.format)
+				}
+			}
+		}
+	}
+	for _, key := range state.accessKeyByHMAC {
+		state.organizations[key.Organization].usage.addAccessKey()
 	}
 
 	// Read live pipeline runs.

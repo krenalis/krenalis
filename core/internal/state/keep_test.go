@@ -5,7 +5,9 @@
 package state
 
 import (
+	stdjson "encoding/json"
 	"slices"
+	"sync"
 	"testing"
 )
 
@@ -60,4 +62,60 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 		}
 	}
 
+}
+
+func TestUpdatePipelineUpdatesConnectorUsage(t *testing.T) {
+	csv := &Connector{Code: "csv"}
+	json := &Connector{Code: "json"}
+	org := &Organization{
+		mu:    new(sync.Mutex),
+		usage: newOrganizationUsage(OrganizationLimits{}),
+		ID:    "111111111111",
+	}
+	org.usage.addPipeline(csv)
+	connection := &Connection{
+		mu:        new(sync.Mutex),
+		pipelines: map[string]*Pipeline{},
+	}
+	pipeline := &Pipeline{
+		ID:           "222222222222",
+		organization: org,
+		connection:   connection,
+		format:       csv,
+	}
+	connection.pipelines[pipeline.ID] = pipeline
+	state := &State{
+		mu:         new(sync.Mutex),
+		connectors: map[string]*Connector{"csv": csv, "json": json},
+		pipelines:  map[string]*Pipeline{pipeline.ID: pipeline},
+	}
+
+	payload, err := stdjson.Marshal(UpdatePipeline{ID: pipeline.ID, Format: "json"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := state.updatePipeline(notification{Payload: string(payload)}); got != org.ID {
+		t.Fatalf("updated organization = %s, want %s", got, org.ID)
+	}
+	if got := org.usage.currentCounts().Connectors; got != 1 {
+		t.Fatalf("connectors count = %d, want 1", got)
+	}
+	if org.usage.isConnectorUsed(csv) {
+		t.Fatal("old connector is still marked as used")
+	}
+	if !org.usage.isConnectorUsed(json) {
+		t.Fatal("new connector is not marked as used")
+	}
+
+	payload, err = stdjson.Marshal(UpdatePipeline{ID: pipeline.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.updatePipeline(notification{Payload: string(payload)})
+	if got := org.usage.currentCounts().Connectors; got != 0 {
+		t.Fatalf("connectors count after removing format = %d, want 0", got)
+	}
+	if org.usage.isConnectorUsed(json) {
+		t.Fatal("connector is still marked as used after removing format")
+	}
 }

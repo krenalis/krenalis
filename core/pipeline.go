@@ -817,6 +817,11 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 			}
 			function = *fn
 		}
+		if formatCode != nil {
+			if err := checkUpdatePipelineConnectorLimit(ctx, tx, n.ID, *formatCode); err != nil {
+				return nil, err
+			}
+		}
 		// Mark the pipeline’s function as discontinued if its identifier changes.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
@@ -864,6 +869,69 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	})
 
 	return err
+}
+
+// checkUpdatePipelineConnectorLimit checks whether the pipeline can be updated
+// to use the given format without exceeding the organization's connector limit.
+// The pipeline currently being updated is excluded from the usage count because
+// its current format will be replaced by format.
+func checkUpdatePipelineConnectorLimit(ctx context.Context, tx *db.Tx, pipeline, format string) error {
+
+	var (
+		organization  string
+		limit         int
+		currentFormat sql.NullString
+	)
+
+	err := tx.QueryRow(ctx, `
+	SELECT o.id, o.connectors_limit, p.format
+	FROM pipelines p
+	JOIN connections c ON c.id = p.connection
+	JOIN workspaces ws ON ws.id = c.workspace
+	JOIN organizations o ON o.id = ws.organization
+	WHERE p.id = $1
+	FOR UPDATE`, pipeline).Scan(&organization, &limit, &currentFormat)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+	if currentFormat.Valid && currentFormat.String == format {
+		return nil
+	}
+
+	var count int
+	var used bool
+	err = tx.QueryRow(ctx, `
+	WITH used_connectors AS (
+		SELECT c.connector
+		FROM connections c
+		JOIN workspaces ws ON ws.id = c.workspace
+		WHERE ws.organization = $1
+
+		UNION
+
+		SELECT p.format AS connector
+		FROM pipelines p
+		JOIN connections c ON c.id = p.connection
+		JOIN workspaces ws ON ws.id = c.workspace
+		WHERE ws.organization = $1
+		  AND p.id <> $2
+		  AND p.format IS NOT NULL
+	)
+	SELECT
+		COUNT(*) AS connectors_count,
+		COALESCE(BOOL_OR(connector = $3), false) AS connector_used
+	FROM used_connectors`, organization, pipeline, format).Scan(&count, &used)
+	if err != nil {
+		return err
+	}
+	if !used && count >= limit {
+		return errors.Unprocessable(ConnectorsLimitReached, "organization cannot use more than %d connectors", limit)
+	}
+
+	return nil
 }
 
 // application returns the application of the pipeline.

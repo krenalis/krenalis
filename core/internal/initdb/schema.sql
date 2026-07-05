@@ -8,6 +8,12 @@ CREATE TABLE organizations (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     name varchar(255) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
+    members_limit integer NOT NULL CHECK (members_limit BETWEEN 1 AND 10000),
+    access_keys_limit integer NOT NULL CHECK (access_keys_limit BETWEEN 0 AND 1000),
+    workspaces_limit integer NOT NULL CHECK (workspaces_limit BETWEEN 0 AND 1000),
+    connectors_limit integer NOT NULL CHECK (connectors_limit BETWEEN 0 AND 1000),
+    connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
+    pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
     PRIMARY KEY (id)
 );
 
@@ -71,6 +77,8 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
+CREATE INDEX workspaces_organization_idx ON workspaces (organization);
+
 CREATE TYPE access_key_type AS ENUM ('API', 'MCP');
 
 CREATE TABLE access_keys (
@@ -110,6 +118,8 @@ CREATE TABLE connections (
     health health NOT NULL DEFAULT 'Healthy',
     PRIMARY KEY (id)
 );
+
+CREATE INDEX connections_workspace_idx ON connections (workspace);
 
 CREATE TYPE export_mode AS ENUM ('', 'CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');
