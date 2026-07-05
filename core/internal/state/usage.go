@@ -156,13 +156,6 @@ func (usage *organizationUsage) setLimits(limits OrganizationLimits) {
 
 // updatePipelineFormat updates connector usage for a pipeline format change.
 func (usage *organizationUsage) updatePipelineFormat(oldFormat, newFormat *Connector) {
-	if oldFormat == newFormat {
-		return
-	}
-	if oldFormat != nil {
-		usage.removeConnector(oldFormat)
-	}
-	if newFormat != nil {
-		usage.addConnector(newFormat)
-	}
+	usage.removeConnector(oldFormat)
+	usage.addConnector(newFormat)
 }
