@@ -981,6 +981,8 @@ func (this *Organization) UpdateMember(ctx context.Context, id string, member Me
 }
 
 // Update updates the name of the organization.
+//
+// It returns an errors.NotFound error if the organization does not exist.
 func (this *Organization) Update(ctx context.Context, name string) error {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 255); err != nil {
