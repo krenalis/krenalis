@@ -890,7 +890,7 @@ func checkUpdatePipelineConnectorLimit(ctx context.Context, tx *db.Tx, pipeline,
 	JOIN workspaces ws ON ws.id = c.workspace
 	JOIN organizations o ON o.id = ws.organization
 	WHERE p.id = $1
-	FOR UPDATE`, pipeline).Scan(&organization, &limit, &currentFormat)
+	FOR UPDATE OF o`, pipeline).Scan(&organization, &limit, &currentFormat)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil
