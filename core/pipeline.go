@@ -877,14 +877,11 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 // its current format will be replaced by format.
 func checkUpdatePipelineConnectorLimit(ctx context.Context, tx *db.Tx, pipeline, format string) error {
 
-	var (
-		organization  string
-		limit         int
-		currentFormat sql.NullString
-	)
+	var organization, currentFormat string
+	var limit int
 
 	err := tx.QueryRow(ctx, `
-	SELECT o.id, o.connectors_limit, p.format
+	SELECT o.id, o.connectors_limit, COALESCE(p.format, '') AS current_format
 	FROM pipelines p
 	JOIN connections c ON c.id = p.connection
 	JOIN workspaces ws ON ws.id = c.workspace
@@ -897,12 +894,13 @@ func checkUpdatePipelineConnectorLimit(ctx context.Context, tx *db.Tx, pipeline,
 		}
 		return err
 	}
-	if currentFormat.Valid && currentFormat.String == format {
+	if format == "" || currentFormat == format {
 		return nil
 	}
 
 	var count int
 	var used bool
+
 	err = tx.QueryRow(ctx, `
 	WITH used_connectors AS (
 		SELECT c.connector
