@@ -1680,6 +1680,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.Incremental = e.Incremental
 	})
 	org := p.organization
+	// When the format changes, both oldFormat and format are non-nil.
 	if oldFormat != format {
 		org.mu.Lock()
 		org.usage.updatePipelineFormat(oldFormat, format)
