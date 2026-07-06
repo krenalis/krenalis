@@ -3,7 +3,7 @@ S3 (Simple Storage Service) is a scalable object storage service provided by Ama
 
 ## What can you do with this?
 
-This connector exports unified users (i.e., users consolidated through identity resolution) from your data warehouse in various file formats, such as CSV or Excel, and sends them directly to S3 buckets
+This connector exports unified profiles (i.e., users consolidated through identity resolution) from your data warehouse in various file formats, such as CSV or Excel, and sends them directly to S3 buckets
 
 ## What does it require?
 

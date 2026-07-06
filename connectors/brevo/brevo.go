@@ -55,7 +55,7 @@ func init() {
 			HasSettings: true,
 			SendingMode: connectors.Server,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as contacts and send events to Brevo",
+				Summary:  "Export profiles as contacts and send events to Brevo",
 				Overview: destinationOverview,
 			},
 		},

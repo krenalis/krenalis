@@ -52,7 +52,7 @@ func init() {
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as customers",
+				Summary:  "Export profiles as customers",
 				Overview: destinationOverview,
 			},
 		},

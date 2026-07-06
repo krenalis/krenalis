@@ -3,7 +3,7 @@ MySQL is an open-source relational database management system. It's popular for 
 
 ## What can you do with this?
 
-This connector lets you read users from a MySQL database, store them in your data warehouse, and unify them as users within Krenalis.
+This connector lets you read users from a MySQL database, store them in your data warehouse, and unify them as profiles within Krenalis.
 
 ## What does it require?
 

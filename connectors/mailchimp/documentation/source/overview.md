@@ -3,7 +3,7 @@ Mailchimp is an email marketing platform that helps businesses design and send m
 
 ## What can you do with this?
 
-Using this connector you can read contacts from Mailchimp, import them into your data warehouse, and unify them as users in Krenalis.
+Using this connector you can read contacts from Mailchimp, import them into your data warehouse, and unify them as profiles in Krenalis.
 
 ## What does it require?
 
