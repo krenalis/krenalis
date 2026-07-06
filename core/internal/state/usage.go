@@ -20,17 +20,20 @@ func newOrganizationUsage(limits OrganizationLimits) organizationUsage {
 }
 
 // addAccessKey records an access key in the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) addAccessKey() {
 	usage.counts.AccessKeys++
 }
 
 // addConnection records a connection in the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) addConnection(connector *Connector) {
 	usage.addConnector(connector)
 	usage.counts.Connections++
 }
 
 // addConnector adds one connector use.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) addConnector(connector *Connector) {
 	if count, ok := usage.connectorUsage[connector]; ok {
 		usage.connectorUsage[connector] = count + 1
@@ -41,11 +44,13 @@ func (usage *organizationUsage) addConnector(connector *Connector) {
 }
 
 // addMember records a member in the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) addMember() {
 	usage.counts.Members++
 }
 
 // addPipeline records a pipeline in the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) addPipeline(format *Connector) {
 	if format != nil {
 		usage.addConnector(format)
@@ -54,6 +59,7 @@ func (usage *organizationUsage) addPipeline(format *Connector) {
 }
 
 // addWorkspace records a workspace in the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) addWorkspace() {
 	usage.counts.Workspaces++
 }
@@ -105,11 +111,13 @@ func (usage *organizationUsage) isWorkspaceLimitReached() (bool, int) {
 }
 
 // removeAccessKey removes an access key from the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) removeAccessKey() {
 	usage.counts.AccessKeys--
 }
 
 // removeConnection removes a connection and its pipelines from the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) removeConnection(connection *Connection) {
 	usage.removeConnector(connection.connector)
 	usage.counts.Connections--
@@ -119,6 +127,7 @@ func (usage *organizationUsage) removeConnection(connection *Connection) {
 }
 
 // removeConnector removes one connector use.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) removeConnector(connector *Connector) {
 	if count := usage.connectorUsage[connector]; count > 1 {
 		usage.connectorUsage[connector] = count - 1
@@ -129,11 +138,13 @@ func (usage *organizationUsage) removeConnector(connector *Connector) {
 }
 
 // removeMember removes a member from the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) removeMember() {
 	usage.counts.Members--
 }
 
 // removePipeline removes a pipeline from the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) removePipeline(format *Connector) {
 	if format != nil {
 		usage.removeConnector(format)
@@ -142,6 +153,7 @@ func (usage *organizationUsage) removePipeline(format *Connector) {
 }
 
 // removeWorkspace removes a workspace and its connections from the usage state.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) removeWorkspace(workspace *Workspace) {
 	usage.counts.Workspaces--
 	for _, connection := range workspace.connections {
@@ -150,11 +162,13 @@ func (usage *organizationUsage) removeWorkspace(workspace *Workspace) {
 }
 
 // setLimits updates the resource limits.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) setLimits(limits OrganizationLimits) {
 	usage.limits = limits
 }
 
 // updatePipelineFormat updates connector usage for a pipeline format change.
+// The organization lock must be held by the caller.
 func (usage *organizationUsage) updatePipelineFormat(oldFormat, newFormat *Connector) {
 	usage.removeConnector(oldFormat)
 	usage.addConnector(newFormat)
