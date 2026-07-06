@@ -3,11 +3,11 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 
 ## What can you do with this?
 
-Using this connector you can write the unified users from your data warehouse into a ClickHouse table and keep it synchronized.
+Using this connector you can write the unified profiles from your data warehouse into a ClickHouse table and keep it synchronized.
 
 ## What does it require?
 
-* A ClickHouse database with a table in which to store the users.
+* A ClickHouse database with a table in which to store the profiles.
 
 > ClickHouse is a trademark of ClickHouse, Inc.
 > This connector is not affiliated with or endorsed by ClickHouse, Inc.

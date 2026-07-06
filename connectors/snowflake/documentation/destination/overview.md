@@ -3,11 +3,11 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 
 ## What can you do with this?
 
-This connector lets you write the unified users from your data warehouse into a Snowflake table and keep it synchronized.
+This connector lets you write the unified profiles from your data warehouse into a Snowflake table and keep it synchronized.
 
 ## What does it require?
 
-* A Snowflake database with a table in which to store the users.
+* A Snowflake database with a table in which to store the profiles.
 
 > Snowflake is a trademark of Snowflake Inc.
 > This connector is not affiliated with or endorsed by Snowflake Inc.
