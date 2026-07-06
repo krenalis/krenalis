@@ -301,7 +301,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 
 	var id string
 	var hashedPassword []byte
-	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email).Scan(&id, &hashedPassword)
+	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''",
+		this.organization.ID, email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.Unprocessable(AuthenticationFailed, "authentication has failed")
