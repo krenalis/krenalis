@@ -68,7 +68,7 @@ type Organization struct {
 // OrganizationCounts stores the resource counts for an organization.
 type OrganizationCounts struct {
 	Members     int `json:"members"`
-	AccessKeys  int `json:"access_keys"`
+	AccessKeys  int `json:"accessKeys"`
 	Workspaces  int `json:"workspaces"`
 	Connectors  int `json:"connectors"`
 	Connections int `json:"connections"`
@@ -78,7 +78,7 @@ type OrganizationCounts struct {
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
 	Members     int `json:"members"`
-	AccessKeys  int `json:"access_keys"`
+	AccessKeys  int `json:"accessKeys"`
 	Workspaces  int `json:"workspaces"`
 	Connectors  int `json:"connectors"`
 	Connections int `json:"connections"`

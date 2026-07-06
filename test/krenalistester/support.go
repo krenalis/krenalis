@@ -264,7 +264,7 @@ func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
 // specifically testing organization limits.
 var defaultOrganizationLimits = struct {
 	Members     int `json:"members"`
-	AccessKeys  int `json:"access_keys"`
+	AccessKeys  int `json:"accessKeys"`
 	Workspaces  int `json:"workspaces"`
 	Connectors  int `json:"connectors"`
 	Connections int `json:"connections"`

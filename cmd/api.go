@@ -139,7 +139,7 @@ func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, 
 		Enabled bool   `json:"enabled"`
 		Limits  struct {
 			Members     *int `json:"members"`
-			AccessKeys  *int `json:"access_keys"`
+			AccessKeys  *int `json:"accessKeys"`
 			Workspaces  *int `json:"workspaces"`
 			Connectors  *int `json:"connectors"`
 			Connections *int `json:"connections"`
