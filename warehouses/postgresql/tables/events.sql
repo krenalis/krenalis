@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS krenalis_events (
     "context_campaign_medium" character varying,
     "context_campaign_term" character varying,
     "context_campaign_content" character varying,
+    "context_consent" jsonb,
     "context_device_id" character varying,
     "context_device_advertising_id" character varying,
     "context_device_ad_tracking_enabled" boolean,

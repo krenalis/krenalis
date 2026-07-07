@@ -119,6 +119,19 @@ func (c receivedEventContext) Campaign() (connectors.ReceivedEventContextCampaig
 	return nil, false
 }
 
+func (c receivedEventContext) Consent() (map[string]bool, bool) {
+	if consent, ok := c.context["consent"].(map[string]any); ok {
+		m := make(map[string]bool, len(consent))
+		for purpose, consented := range consent {
+			if v, ok := consented.(bool); ok {
+				m[purpose] = v
+			}
+		}
+		return m, true
+	}
+	return nil, false
+}
+
 func (c receivedEventContext) Device() (connectors.ReceivedEventContextDevice, bool) {
 	if campaign, ok := c.context["device"].(map[string]any); ok {
 		return receivedEventContextDevice{campaign}, true

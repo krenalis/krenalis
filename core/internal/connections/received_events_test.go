@@ -92,6 +92,11 @@ func Test_ReceivedEvent(t *testing.T) {
 				"id":    1751031467043,
 				"start": true,
 			},
+			"consent": map[string]any{
+				"analytics":            false,
+				"essential_services":   true,
+				"targeted_advertising": false,
+			},
 			"timezone":  "Europe/Rome",
 			"userAgent": "UA",
 		},
@@ -352,6 +357,15 @@ func Test_ReceivedEvent(t *testing.T) {
 	if start, _ := session.Start(); !start {
 		t.Fatalf("unexpected session context")
 	}
+
+	consent, ok := ctx.Consent()
+	if !ok {
+		t.Fatalf("unexpected consent context")
+	}
+	if len(consent) != 3 || consent["analytics"] || !consent["essential_services"] || consent["targeted_advertising"] {
+		t.Fatalf("unexpected consent %v", consent)
+	}
+
 	if tz, _ := ctx.Timezone(); tz != "Europe/Rome" {
 		t.Fatalf("unexpected timezone %q", tz)
 	}
@@ -415,6 +429,9 @@ func Test_ReceivedEventMissingFields(t *testing.T) {
 	}
 	if _, ok := ctx.Session(); ok {
 		t.Fatalf("expected no session context")
+	}
+	if _, ok := ctx.Consent(); ok {
+		t.Fatalf("expected no consent context")
 	}
 	if _, ok := ctx.Locale(); ok {
 		t.Fatal("expected no locale")

@@ -590,6 +590,7 @@ type ReceivedEventContext interface {
 	App() (ReceivedEventContextApp, bool)
 	Browser() (ReceivedEventContextBrowser, bool)
 	Campaign() (ReceivedEventContextCampaign, bool)
+	Consent() (map[string]bool, bool)
 	Device() (ReceivedEventContextDevice, bool)
 	IP() (string, bool)
 	Library() (ReceivedEventContextLibrary, bool)
