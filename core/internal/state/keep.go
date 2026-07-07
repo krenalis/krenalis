@@ -60,6 +60,9 @@ func (state *State) keep() {
 		}
 		var org string
 		state.changing.Lock()
+		// Multiple goroutines may read different parts of the state concurrently, but
+		// only this goroutine can write to it. Therefore, this goroutine can read the
+		// state without acquiring the corresponding locks.
 		switch n.Name {
 		case "AcceptInvitation":
 			org = state.acceptInvitation(n)
