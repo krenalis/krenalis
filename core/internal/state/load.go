@@ -291,7 +291,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all members.
-	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
+	err = tx.QueryScan(ctx, "SELECT id, organization FROM members WHERE invitation_token = '' ORDER BY organization", func(rows *db.Rows) error {
 		var org *Organization
 		for rows.Next() {
 			var id, organization string
