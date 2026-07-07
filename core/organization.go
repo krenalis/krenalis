@@ -668,9 +668,6 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
-	if reached, limit := this.organization.IsMemberLimitReached(); reached {
-		return errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
-	}
 	var invitationToken string
 	for {
 		id := generateID(func(id string) (any, bool) {
@@ -682,25 +679,33 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 		}
 		now := time.Now().UTC()
 		err = this.core.db.Transaction(ctx, func(tx *db.Tx) error {
-			// Ensure the organization can accept another member.
-			var count, limit int
-			err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM members m WHERE m.organization = o.id), o.members_limit\n"+
-				"FROM organizations o\nWHERE o.id = $1 FOR UPDATE", this.organization.ID).Scan(&count, &limit)
+			var member string
+			var inserted bool
+			// Query; xmax is 0 for rows inserted by this statement; updated rows have a non-zero xmax.
+			const query = `
+				INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				ON CONFLICT (organization, email)
+				DO UPDATE SET invitation_token = $7, created_at = $8
+				WHERE members.invitation_token <> ''
+				RETURNING id, (xmax = 0) AS inserted`
+			err = tx.QueryRow(ctx, query, id, this.organization.ID, "", email, "", nil, invitationToken, now).Scan(&member, &inserted)
 			if err != nil {
+				if err == sql.ErrNoRows {
+					return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+				}
 				return err
 			}
-			if count >= limit {
-				return errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
-			}
-			// Insert the member.
-			result, err := tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
-				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8 WHERE members.invitation_token <> ''",
-				id, this.organization.ID, "", email, "", nil, invitationToken, now)
-			if err != nil {
-				return err
-			}
-			if result.RowsAffected() == 0 {
-				return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+			if inserted {
+				var count, limit int
+				err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM members m WHERE m.organization = o.id), o.members_limit\n"+
+					"FROM organizations o\nWHERE o.id = $1 FOR UPDATE", this.organization.ID).Scan(&count, &limit)
+				if err != nil {
+					return err
+				}
+				if count > limit {
+					return errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
+				}
 			}
 			return nil
 		})
@@ -710,6 +715,9 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			}
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "invitation_token_index" {
 				continue
+			}
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+				return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
 			}
 			return err
 		}
