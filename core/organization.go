@@ -340,7 +340,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 
 	var id string
 	var hashedPassword []byte
-	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email).Scan(&id, &hashedPassword)
+	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''",
+		this.organization.ID, email).Scan(&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.Unprocessable(AuthenticationFailed, "authentication has failed")
@@ -625,12 +626,16 @@ func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 		Organization: this.organization.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		var invited bool
+		err := tx.QueryRow(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2 RETURNING invitation_token <> ''", id, this.organization.ID).Scan(&invited)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, errors.NotFound("member %s does not exist", id)
+			}
 			return nil, err
 		}
-		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("member %s does not exist", id)
+		if invited {
+			return nil, nil
 		}
 		return n, nil
 	})
@@ -676,28 +681,28 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			return err
 		}
 		now := time.Now().UTC()
-		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err = this.core.db.Transaction(ctx, func(tx *db.Tx) error {
 			// Ensure the organization can accept another member.
 			var count, limit int
 			err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM members m WHERE m.organization = o.id), o.members_limit\n"+
 				"FROM organizations o\nWHERE o.id = $1 FOR UPDATE", this.organization.ID).Scan(&count, &limit)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if count >= limit {
-				return nil, errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
+				return errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
 			}
 			// Insert the member.
 			result, err := tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
 				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8 WHERE members.invitation_token <> ''",
 				id, this.organization.ID, "", email, "", nil, invitationToken, now)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if result.RowsAffected() == 0 {
-				return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+				return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
 			}
-			return nil, nil
+			return nil
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
@@ -1062,6 +1067,8 @@ func (this *Organization) UpdateMember(ctx context.Context, id string, member Me
 }
 
 // Update updates the organization's name and its limits when limits is not nil.
+//
+// It returns an errors.NotFound error if the organization does not exist.
 func (this *Organization) Update(ctx context.Context, name string, limits *OrganizationLimits) error {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 255); err != nil {

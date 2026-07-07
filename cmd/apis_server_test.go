@@ -238,9 +238,8 @@ func TestValidateRequiredBody(t *testing.T) {
 
 	t.Run("fails when body is missing", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", nil)
-		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(w, req, false)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -251,9 +250,8 @@ func TestValidateRequiredBody(t *testing.T) {
 
 	t.Run("fails when content type is missing", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
-		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(w, req, false)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -265,9 +263,8 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type is not json", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "text/plain")
-		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(w, req, false)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -279,9 +276,8 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type is not json or plain/text", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/xml")
-		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(w, req, true)
+		err := validateRequiredBody(req, true)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -293,9 +289,8 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when content type has unsupported parameters", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json; charset=utf-8; version=1")
-		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(w, req, false)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -307,9 +302,8 @@ func TestValidateRequiredBody(t *testing.T) {
 	t.Run("fails when charset is not utf8", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json; charset=iso-8859-1")
-		w := httptest.NewRecorder()
 
-		err := validateRequiredBody(w, req, false)
+		err := validateRequiredBody(req, false)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
@@ -322,9 +316,8 @@ func TestValidateRequiredBody(t *testing.T) {
 		const payload = `{"ok":true}`
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "Application/Json; Charset=UTF-8")
-		w := httptest.NewRecorder()
 
-		if err := validateRequiredBody(w, req, false); err != nil {
+		if err := validateRequiredBody(req, false); err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 		body, err := io.ReadAll(req.Body)
@@ -336,15 +329,17 @@ func TestValidateRequiredBody(t *testing.T) {
 		}
 	})
 
+}
+
+// TestMaxBytesNormalizedReader tests the maxBytesNormalizedReader function.
+func TestMaxBytesNormalizedReader(t *testing.T) {
+
 	t.Run("normalizes body", func(t *testing.T) {
 		const payload = "{\"text\":\"Cafe\u0301\"}"
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		w := httptest.NewRecorder()
-
-		if err := validateRequiredBody(w, req, false); err != nil {
-			t.Fatalf("expected nil error, got %v", err)
-		}
+		req.Body = maxBytesNormalizedReader(w, req.Body, maxRequestSize)
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			t.Fatalf("expected to read body, got %v", err)
@@ -359,10 +354,7 @@ func TestValidateRequiredBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(oversized))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-
-		if err := validateRequiredBody(w, req, false); err != nil {
-			t.Fatalf("expected nil error, got %v", err)
-		}
+		req.Body = maxBytesNormalizedReader(w, req.Body, maxRequestSize)
 		body, err := io.ReadAll(req.Body)
 		if err == nil {
 			t.Fatalf("expected error, got nil")

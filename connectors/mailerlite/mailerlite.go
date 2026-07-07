@@ -65,7 +65,7 @@ func init() {
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as subscribers to MailerLite",
+				Summary:  "Export profiles as subscribers to MailerLite",
 				Overview: destinationOverview,
 			},
 		},

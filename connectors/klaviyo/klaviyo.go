@@ -55,7 +55,7 @@ func init() {
 			HasSettings: true,
 			SendingMode: connectors.Server,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as profiles and send events to Klaviyo",
+				Summary:  "Export profiles and send events to Klaviyo",
 				Overview: destinationOverview,
 			},
 		},
