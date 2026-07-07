@@ -20,7 +20,7 @@ func TestOrganizationsAPI(t *testing.T) {
 	defer k.Stop()
 
 	// Create a new organization before running the subtests.
-	orgID := k.CreateOrganization("Test Org", true)
+	orgID := k.CreateOrganization("Test Org", true, krenalistester.DefaultOrganizationLimits)
 
 	t.Run("read organization by ID", func(t *testing.T) {
 		org := k.Organization(orgID)
@@ -36,7 +36,7 @@ func TestOrganizationsAPI(t *testing.T) {
 	})
 
 	t.Run("create disabled organization", func(t *testing.T) {
-		disabledID := k.CreateOrganization("Disabled Org", false)
+		disabledID := k.CreateOrganization("Disabled Org", false, krenalistester.DefaultOrganizationLimits)
 		org := k.Organization(disabledID)
 		if org.Enabled {
 			t.Fatal("expected the organization to be disabled")
@@ -61,7 +61,7 @@ func TestOrganizationsAPI(t *testing.T) {
 	})
 
 	t.Run("update organization name", func(t *testing.T) {
-		k.UpdateOrganization(orgID, "Updated Org")
+		k.UpdateOrganization(orgID, "Updated Org", krenalistester.DefaultOrganizationLimits)
 		org := k.Organization(orgID)
 		if org.Name != "Updated Org" {
 			t.Fatalf("expected name %q after update, got %q", "Updated Org", org.Name)
