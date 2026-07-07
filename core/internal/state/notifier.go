@@ -331,8 +331,8 @@ func parsePayload(s string) (id int64, name, payload string, err error) {
 	if s[0] != '@' {
 		return 0, "", "", errors.New("invalid identifier")
 	}
-	id, _ = strconv.ParseInt(s[1:], 10, 64)
-	if id < 1 {
+	id, err = strconv.ParseInt(s[1:], 10, 64)
+	if err != nil || id < 1 {
 		return 0, "", "", errors.New("invalid identifier")
 	}
 	return
