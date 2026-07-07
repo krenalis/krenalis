@@ -17,6 +17,26 @@ const (
 	connectionsWorkspaceIndex   = "connections_workspace_idx"
 )
 
+const organizationConnectorReferencesView = `
+	CREATE OR REPLACE VIEW organization_connector_references AS
+	SELECT
+		ws.organization,
+		c.connector,
+		'connection' AS resource_type,
+		c.id AS resource
+	FROM connections c
+	JOIN workspaces ws ON ws.id = c.workspace
+	UNION ALL
+	SELECT
+		ws.organization,
+		p.format AS connector,
+		'pipeline' AS resource_type,
+		p.id AS resource
+	FROM pipelines p
+	JOIN connections c ON c.id = p.connection
+	JOIN workspaces ws ON ws.id = c.workspace
+	WHERE p.format IS NOT NULL`
+
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
@@ -50,6 +70,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ALTER COLUMN pipelines_limit DROP DEFAULT`,
 			`CREATE INDEX IF NOT EXISTS ` + workspacesOrganizationIndex + ` ON workspaces (organization)`,
 			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceIndex + ` ON connections (workspace)`,
+			organizationConnectorReferencesView,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

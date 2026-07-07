@@ -169,6 +169,30 @@ CREATE TABLE pipelines (
 
 CREATE UNIQUE INDEX pipelines_transformation_id_idx ON pipelines (transformation_id) WHERE transformation_id <> '';
 
+-- Connectors can be referenced by both connections and pipeline formats.
+-- Keep those references in one place so limit checks do not need to duplicate
+-- that rule. References are intentionally not deduplicated: callers decide
+-- whether to count distinct connectors, check for a specific connector, or
+-- exclude a resource.
+CREATE VIEW organization_connector_references AS
+SELECT
+    ws.organization,
+    c.connector,
+    'connection' AS resource_type,
+    c.id AS resource
+FROM connections c
+JOIN workspaces ws ON ws.id = c.workspace
+UNION ALL
+SELECT
+    ws.organization,
+    p.format AS connector,
+    'pipeline' AS resource_type,
+    p.id AS resource
+FROM pipelines p
+JOIN connections c ON c.id = p.connection
+JOIN workspaces ws ON ws.id = c.workspace
+WHERE p.format IS NOT NULL;
+
 CREATE TABLE pipelines_runs (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,

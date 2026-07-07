@@ -75,11 +75,18 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 		);
 		CREATE TABLE connections (
 			id varchar(12) PRIMARY KEY,
-			workspace varchar(12) NOT NULL REFERENCES workspaces (id)
+			workspace varchar(12) NOT NULL REFERENCES workspaces (id),
+			connector varchar NOT NULL
+		);
+		CREATE TABLE pipelines (
+			id varchar(12) PRIMARY KEY,
+			connection varchar(12) NOT NULL REFERENCES connections (id),
+			format varchar
 		);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
-		INSERT INTO connections (id, workspace) VALUES ('333333333333', '222222222222')`)
+		INSERT INTO connections (id, workspace, connector) VALUES ('333333333333', '222222222222', 'dummy');
+		INSERT INTO pipelines (id, connection, format) VALUES ('444444444444', '333333333333', 'csv')`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,6 +98,7 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 	assertOrganizationLimitsHaveNoDefaults(t, database)
 	assertIndexExists(t, database, workspacesOrganizationIndex)
 	assertIndexExists(t, database, connectionsWorkspaceIndex)
+	assertOrganizationConnectorReferences(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("second upgrade failed: %s", err)
@@ -165,5 +173,25 @@ func assertIndexExists(t *testing.T, database *db.DB, name string) {
 	}
 	if !exists {
 		t.Fatalf("index %s does not exist", name)
+	}
+}
+
+func assertOrganizationConnectorReferences(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	var count int
+	err := database.QueryRow(t.Context(), `
+		SELECT COUNT(*)
+		FROM organization_connector_references
+		WHERE organization = '111111111111'
+			AND (
+				(resource_type = 'connection' AND resource = '333333333333' AND connector = 'dummy')
+				OR (resource_type = 'pipeline' AND resource = '444444444444' AND connector = 'csv')
+			)`).Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("unexpected organization connector references count: %d", count)
 	}
 }

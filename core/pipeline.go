@@ -903,26 +903,12 @@ func checkUpdatePipelineConnectorLimit(ctx context.Context, tx *db.Tx, pipeline,
 	var used bool
 
 	err = tx.QueryRow(ctx, `
-	WITH used_connectors AS (
-		SELECT c.connector
-		FROM connections c
-		JOIN workspaces ws ON ws.id = c.workspace
-		WHERE ws.organization = $1
-
-		UNION
-
-		SELECT p.format AS connector
-		FROM pipelines p
-		JOIN connections c ON c.id = p.connection
-		JOIN workspaces ws ON ws.id = c.workspace
-		WHERE ws.organization = $1
-		  AND p.id <> $2
-		  AND p.format IS NOT NULL
-	)
 	SELECT
-		COUNT(*) AS connectors_count,
+		COUNT(DISTINCT connector) AS connectors_count,
 		COALESCE(BOOL_OR(connector = $3), false) AS connector_used
-	FROM used_connectors`, organization, pipeline, format).Scan(&count, &used)
+	FROM organization_connector_references
+	WHERE organization = $1
+	  AND NOT (resource_type = 'pipeline' AND resource = $2)`, organization, pipeline, format).Scan(&count, &used)
 	if err != nil {
 		return err
 	}
