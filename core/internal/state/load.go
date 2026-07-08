@@ -294,18 +294,22 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load organizations: %s", err)
 	}
 
-	// Read all members who have accepted their invitation.
-	err = tx.QueryScan(ctx, "SELECT id, organization FROM members WHERE invitation_token = '' ORDER BY organization", func(rows *db.Rows) error {
+	// Read all members.
+	err = tx.QueryScan(ctx, "SELECT id, organization, invitation_token <> '' FROM members ORDER BY organization", func(rows *db.Rows) error {
 		var org *Organization
 		for rows.Next() {
 			var id, organization string
-			if err := rows.Scan(&id, &organization); err != nil {
+			var hasPendingInvitation bool
+			if err := rows.Scan(&id, &organization, &hasPendingInvitation); err != nil {
 				return fmt.Errorf("loading member %s: %s", id, err)
 			}
 			if org == nil || org.ID != organization {
 				org = state.organizations[organization]
 			}
-			org.members[id] = struct{}{}
+			org.usage.addMember()
+			if !hasPendingInvitation {
+				org.members[id] = struct{}{}
+			}
 		}
 		return nil
 	})
@@ -572,11 +576,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Load organization usage from the state loaded so far.
+	// Limits and member counts are already loaded.
 	for _, organization := range state.organizations {
-		organization.usage = newOrganizationUsage(organization.usage.currentLimits())
-		for range organization.members {
-			organization.usage.addMember()
-		}
 		for _, workspace := range organization.workspaces {
 			organization.usage.addWorkspace()
 			for _, connection := range workspace.connections {
