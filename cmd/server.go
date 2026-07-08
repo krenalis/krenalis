@@ -27,6 +27,7 @@ import (
 
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
 	corePkg "github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/netdial"
 	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
@@ -43,6 +44,8 @@ const telemetryLevelAll = corePkg.TelemetryLevelAll
 // in case it is empty; if initDockerMember is true in addition to
 // initDBIfEmpty, a member specific for Docker scenarios is initialized.
 func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
+
+	netdial.SetEnabled(config.PrometheusMetricsEnabled)
 
 	conf := corePkg.Config{
 		KMS:                           config.KMS,

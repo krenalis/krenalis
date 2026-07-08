@@ -13,6 +13,7 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/netdial"
 )
 
 type uiHandlerConnection interface {
@@ -86,6 +87,7 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 		var database any
 		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 			Settings: settingsStore,
+			Dial:     netdial.Dial(connection.Organization().ID),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
@@ -148,7 +150,8 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore})
+		// TODO: capire questo punto.
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial("")})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
@@ -196,7 +199,7 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial("")})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:

@@ -15,6 +15,7 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/netdial"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -86,6 +87,7 @@ func (c *Connections) Database(connection *state.Connection) *Database {
 	}
 	inner, err := connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
+		Dial:     netdial.Dial(connection.Organization().ID),
 	})
 	database.inner = inner.(databaseConnection)
 	database.err = connectorError(err)

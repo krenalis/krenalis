@@ -5,6 +5,8 @@
 package connectors
 
 import (
+	"context"
+	"net"
 	"reflect"
 
 	"github.com/krenalis/krenalis/tools/types"
@@ -42,6 +44,11 @@ type DatabaseEnv struct {
 
 	// Settings holds the settings.
 	Settings SettingsStore
+
+	// Dial is the function the connector must use to establish its outbound
+	// network connections, in place of its own default dialer. It is never nil,
+	// and behaves like net.Dialer.DialContext.
+	Dial func(ctx context.Context, network, address string) (net.Conn, error)
 }
 
 // DatabaseNewFunc represents functions that create new database connector

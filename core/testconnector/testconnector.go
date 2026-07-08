@@ -20,6 +20,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/netdial"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -97,6 +98,8 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredDatabases.New(&connectors.DatabaseEnv{
 		Settings: newSettingsStore(s),
+		// TODO: capire questo punto.
+		Dial: netdial.Dial(""),
 	})
 	return app.(T), err
 }
