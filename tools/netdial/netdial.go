@@ -5,7 +5,7 @@
 // Package netdial provides the dial function Krenalis passes to connectors and
 // warehouses to establish outbound network connections.
 //
-// When Prometheus metrics are enabled (see [SetEnabled]), the dial function
+// When Prometheus metrics are enabled (see [Enabled]), the dial function
 // returned by [Dial] attributes the bytes read and written by the connections
 // it establishes to the given organization, exposing them as the
 // krenalis_organization_network_bytes_total Prometheus counter. Otherwise, it
@@ -38,12 +38,12 @@ var networkBytes = prometheus.RegisterCounterVec(
 // so that [Dial] returns a plain, unwrapped dialer unless explicitly enabled.
 var enabled atomic.Bool
 
-// SetEnabled enables or disables the attribution of connectors' network traffic
-// to organizations. It should be called once, at startup, before any connector
+// Enabled enables or disables the attribution of connectors' network traffic to
+// organizations. It should be called once, at startup, before any connector
 // dials a connection.
 //
 // When disabled, [Dial] returns a plain, unwrapped dialer.
-func SetEnabled(v bool) {
+func Enabled(v bool) {
 	enabled.Store(v)
 }
 
@@ -79,11 +79,11 @@ func countersFor(organizationID string) *counterPair {
 // the given ID.
 //
 // If organizationID is empty, or Prometheus metrics are disabled (see
-// [SetEnabled]), the returned function is a plain, unwrapped dialer; otherwise
-// every connection it establishes has the bytes it reads and writes recorded
-// as the krenalis_organization_network_bytes_total Prometheus counter,
-// labeled by organization and direction ("ingress" for bytes read, "egress"
-// for bytes written).
+// [Enabled]), the returned function is a plain, unwrapped dialer; otherwise
+// every connection it establishes has the bytes it reads and writes recorded as
+// the krenalis_organization_network_bytes_total Prometheus counter, labeled by
+// organization and direction ("ingress" for bytes read, "egress" for bytes
+// written).
 func Dial(organizationID string) DialFunc {
 	var d net.Dialer
 	if organizationID == "" || !enabled.Load() {
