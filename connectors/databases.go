@@ -46,8 +46,7 @@ type DatabaseEnv struct {
 	Settings SettingsStore
 
 	// Dial is the function the connector must use to establish its outbound
-	// network connections, in place of its own default dialer. It is never nil,
-	// and behaves like net.Dialer.DialContext.
+	// network connections, in place of its own default dialer.
 	Dial func(ctx context.Context, network, address string) (net.Conn, error)
 }
 

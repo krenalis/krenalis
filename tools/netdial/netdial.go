@@ -2,9 +2,8 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package netdial provides the dial function Krenalis passes to connectors to
-// establish outbound network connections. Connectors are unaware of
-// organizations or metrics: they simply use the dial function they are given.
+// Package netdial provides the dial function Krenalis passes to connectors and
+// warehouses to establish outbound network connections.
 //
 // When Prometheus metrics are enabled (see [SetEnabled]), the dial function
 // returned by [Dial] attributes the bytes read and written by the connections
@@ -39,10 +38,9 @@ var networkBytes = prometheus.RegisterCounterVec(
 // so that [Dial] returns a plain, unwrapped dialer unless explicitly enabled.
 var enabled atomic.Bool
 
-// SetEnabled enables or disables the attribution of connectors' network
-// traffic to organizations. It should be called once, at startup, before any
-// connector dials a connection; it corresponds to whether Prometheus metrics
-// are enabled (KRENALIS_PROMETHEUS_METRICS_ENABLED).
+// SetEnabled enables or disables the attribution of connectors' network traffic
+// to organizations. It should be called once, at startup, before any connector
+// dials a connection.
 //
 // When disabled, [Dial] returns a plain, unwrapped dialer.
 func SetEnabled(v bool) {
