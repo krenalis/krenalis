@@ -1,0 +1,14 @@
+apiVersion: 1
+
+# This is the root (and, for now, only) notification policy: since this is
+# currently the only alert rule provisioned, its contact point is also used as
+# the default receiver. If more alert rules are added later needing different
+# channels, add nested 'routes' matching on 'alertname' instead of changing
+# this receiver.
+policies:
+  - orgId: 1
+    receiver: Organization Network Usage Alerts
+    group_by: ['organization']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 3h

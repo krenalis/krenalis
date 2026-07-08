@@ -1,0 +1,46 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Organization Network Usage
+    folder: Provisioned from Docker Compose
+    interval: 5m
+    rules:
+      - uid: org-egress-traffic-over-1gb-per-hour
+        title: Organization egress traffic over 1GB/hour
+        # Query A already aggregates a full hour via increase(...[1h]), so no
+        # additional 'for' delay is needed: a single breach is meaningful.
+        for: 0s
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: P55CC9602DBCEADDB
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            model:
+              refId: A
+              editorMode: code
+              expr: sum by (organization) (increase(krenalis_organization_network_bytes_total{direction="egress"}[1h]))
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 1000000000 # 1 GB (decimal)
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          summary: 'Organization {{ $labels.organization }} egress traffic exceeded 1GB in the last hour'
+          description: 'Egress traffic for organization {{ $labels.organization }} was {{ $values.A.Value | humanizeBytes }} over the last hour, above the 1GB/hour threshold.'
+        labels:
+          severity: warning
