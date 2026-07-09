@@ -104,6 +104,8 @@ func (state *State) keep() {
 			org = state.endIdentityResolution(n)
 		case "EndPipelineRun":
 			org = state.endPipelineRun(n)
+		case "InviteMember":
+			org = state.inviteMember(n)
 		case "LinkConnection":
 			org = state.linkConnection(n)
 		case "PurgePipelines":
@@ -326,7 +328,6 @@ func (state *State) acceptInvitation(n notification) string {
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
 	org.members[e.Member] = struct{}{}
-	org.usage.addMember()
 	org.mu.Unlock()
 	return org.ID
 }
@@ -1161,6 +1162,25 @@ func (state *State) endPipelineRun(n notification) string {
 // LinkConnection is the event sent when two unlinked connections are linked.
 type LinkConnection struct {
 	Connections [2]string
+}
+
+// InviteMember is the event sent when a member is invited.
+type InviteMember struct {
+	Member       string
+	Organization string
+}
+
+// inviteMember invites a member.
+func (state *State) inviteMember(n notification) string {
+	e := InviteMember{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	org := state.organizations[e.Organization]
+	org.mu.Lock()
+	org.usage.addMember()
+	org.mu.Unlock()
+	return org.ID
 }
 
 // linkConnection links two unlinked connections.
