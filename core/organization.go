@@ -626,16 +626,12 @@ func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 		Organization: this.organization.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var invited bool
-		err := tx.QueryRow(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2 RETURNING invitation_token <> ''", id, this.organization.ID).Scan(&invited)
+		result, err := tx.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, errors.NotFound("member %s does not exist", id)
-			}
 			return nil, err
 		}
-		if invited {
-			return nil, nil
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("member %s does not exist", id)
 		}
 		return n, nil
 	})

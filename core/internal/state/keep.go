@@ -875,7 +875,7 @@ func (state *State) deleteMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	delete(org.members, e.ID)
+	delete(org.members, e.ID) // This is a no-op for invited members, which are not in org.members.
 	org.usage.removeMember()
 	org.mu.Unlock()
 	return e.Organization
