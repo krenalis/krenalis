@@ -2,11 +2,11 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package requestid implements Request-Id values for HTTP APIs.
+// Package requestid provides Request-Id values for HTTP APIs.
 //
-// A newly created RequestID contains a random ID and an encrypted state
-// version encoded with Base58. The random ID contains 12 cryptographically
-// random bytes and is used as the AES-GCM nonce when encrypting the state
+// A RequestID is Base58-encoded. Its binary payload contains a 12-byte
+// cryptographically random ID followed by an encrypted state version.
+// The random ID is also used as the AES-GCM nonce when encrypting the state
 // version.
 package requestid
 
@@ -32,7 +32,8 @@ const (
 	requestIDSize             = encryptedStateVersionSize + randomIDSize // requestIDSize is the binary length of a RequestID.
 )
 
-var errInvalidRequestID = errors.New("invalid requestid")
+// errInvalidRequestID reports an invalid Request-Id value.
+var errInvalidRequestID = errors.New("invalid request id")
 
 // Codec creates and parses RequestID values using one encryption key.
 //

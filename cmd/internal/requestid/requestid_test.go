@@ -351,7 +351,8 @@ func expectedRequestIDUint64(t *testing.T, key [keySize]byte, randomID []byte, s
 	return base58.Encode(payload)
 }
 
-// assertRequestIDEncoding verifies that requestID is valid Base58 for a RequestID.
+// assertRequestIDEncoding verifies that requestID is valid Base58 for a
+// RequestID.
 func assertRequestIDEncoding(t *testing.T, requestID string) {
 	t.Helper()
 
@@ -364,7 +365,8 @@ func assertRequestIDEncoding(t *testing.T, requestID string) {
 	}
 }
 
-// assertRequestIDRandomIDPrefix verifies that requestID starts with randomID.
+// assertRequestIDRandomIDPrefix verifies that requestID's binary payload starts
+// with randomID.
 func assertRequestIDRandomIDPrefix(t *testing.T, requestID string, randomID []byte) {
 	t.Helper()
 

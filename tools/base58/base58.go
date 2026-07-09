@@ -12,8 +12,9 @@ import (
 // alphabet is a Base58 alphabet without 0, O, I, and l to avoid ambiguity.
 const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
-const maxValid = byte(58 * (256 / 58)) // 232
+const maxValid = byte(58 * (256 / 58)) // maxValid is the largest accepted random byte without modulo bias.
 
+// errInvalidBase58 reports an invalid Base58 character.
 var errInvalidBase58 = errors.New("base58: invalid character")
 
 // IsValid reports whether s contains only Base58 characters.
@@ -145,6 +146,7 @@ func isBase58(c byte) bool {
 	return decodeBase58[c] != 0 || c == alphabet[0]
 }
 
+// decodeBase58 maps Base58 characters to their numeric values.
 var decodeBase58 = [256]byte{
 	'1': 0,
 	'2': 1,

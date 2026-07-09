@@ -81,6 +81,7 @@ func TestGenerateZero(t *testing.T) {
 	}
 }
 
+// TestEncode verifies Base58 encoding examples.
 func TestEncode(t *testing.T) {
 	tests := []struct {
 		name string
@@ -149,6 +150,7 @@ func TestEncode(t *testing.T) {
 	}
 }
 
+// TestDecode verifies Base58 decoding examples.
 func TestDecode(t *testing.T) {
 	tests := []struct {
 		name string
@@ -215,6 +217,7 @@ func TestDecode(t *testing.T) {
 	}
 }
 
+// TestDecodeInvalid verifies that Decode rejects non-Base58 strings.
 func TestDecodeInvalid(t *testing.T) {
 	tests := []string{
 		"0",
@@ -238,6 +241,7 @@ func TestDecodeInvalid(t *testing.T) {
 	}
 }
 
+// TestRoundTrip verifies that Encode and Decode round trip binary values.
 func TestRoundTrip(t *testing.T) {
 	tests := [][]byte{
 		nil,
@@ -277,6 +281,7 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
+// TestEncodeOutputIsValid verifies that Encode returns valid Base58 strings.
 func TestEncodeOutputIsValid(t *testing.T) {
 	for n := 0; n <= 64; n++ {
 		src := make([]byte, n)
@@ -291,12 +296,13 @@ func TestEncodeOutputIsValid(t *testing.T) {
 	}
 }
 
+// TestAlphabetCompatibility verifies the alphabet order used by Decode.
 func TestAlphabetCompatibility(t *testing.T) {
 	if len(alphabet) != 58 {
 		t.Fatalf("expected alphabet length 58, got %d", len(alphabet))
 	}
 
-	for i := 0; i < len(alphabet); i++ {
+	for i := range len(alphabet) {
 		s := string(alphabet[i])
 
 		if !IsValid(s) {
@@ -315,6 +321,7 @@ func TestAlphabetCompatibility(t *testing.T) {
 	}
 }
 
+// TestEncodeDoesNotModifySource verifies that Encode does not mutate src.
 func TestEncodeDoesNotModifySource(t *testing.T) {
 	src := []byte{0x00, 0x01, 0x02, 0x03, 0xff}
 	want := append([]byte(nil), src...)
@@ -326,6 +333,7 @@ func TestEncodeDoesNotModifySource(t *testing.T) {
 	}
 }
 
+// TestDecodeReturnsNewSlice verifies that Decode returns independent slices.
 func TestDecodeReturnsNewSlice(t *testing.T) {
 	got, err := Decode("2")
 	if err != nil {
@@ -345,6 +353,7 @@ func TestDecodeReturnsNewSlice(t *testing.T) {
 	}
 }
 
+// TestDecodeEmptyReturnsNewSlice verifies that Decode returns a non-nil empty slice.
 func TestDecodeEmptyReturnsNewSlice(t *testing.T) {
 	got, err := Decode("")
 	if err != nil {
