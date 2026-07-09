@@ -537,7 +537,7 @@ type AccessKey struct {
 type Organization struct {
 	mu         *sync.Mutex
 	workspaces map[string]*Workspace
-	members    map[string]struct{}
+	members    map[string]bool // true when the member can log in.
 	usage      organizationUsage
 	ID         string
 	Name       string
@@ -564,20 +564,21 @@ type OrganizationLimits struct {
 	Pipelines   int
 }
 
+// CanMemberLogin reports whether the member with the given ID can log in and
+// whether the member exists.
+func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
+	organization.mu.Lock()
+	canLogin, ok := organization.members[id]
+	organization.mu.Unlock()
+	return canLogin, ok
+}
+
 // Counts returns the organization's counts.
 func (organization *Organization) Counts() OrganizationCounts {
 	organization.mu.Lock()
 	counts := organization.usage.currentCounts()
 	organization.mu.Unlock()
 	return counts
-}
-
-// HasMember reports whether the organization has a member with the given ID.
-func (organization *Organization) HasMember(id string) bool {
-	organization.mu.Lock()
-	_, ok := organization.members[id]
-	organization.mu.Unlock()
-	return ok
 }
 
 // IsAccessKeyLimitReached returns whether the organization has reached its
