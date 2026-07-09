@@ -321,6 +321,7 @@ CREATE TYPE notification_name AS ENUM (
     'EndAlterProfileSchema',
     'EndIdentityResolution',
     'EndPipelineRun',
+    'InviteMember',
     'LinkConnection',
     'PurgePipelines',
     'RenameConnection',

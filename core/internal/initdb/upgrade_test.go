@@ -64,6 +64,7 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 	t.Cleanup(database.Close)
 
 	_, err = database.Exec(ctx, `
+		CREATE TYPE notification_name AS ENUM ('EndPipelineRun');
 		CREATE TABLE organizations (
 			id varchar(12) PRIMARY KEY,
 			name varchar(255) NOT NULL DEFAULT '',
