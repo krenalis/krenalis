@@ -85,6 +85,15 @@ CREATE TABLE access_keys (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE consent_purposes (
+    id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(100) NOT NULL,
+    code varchar(100) NOT NULL,
+    UNIQUE (workspace, code),
+    PRIMARY KEY (id)
+);
+
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError');
@@ -272,12 +281,14 @@ CREATE TYPE notification_name AS ENUM (
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',
+    'CreateConsentPurpose',
     'CreateEventWriteKey',
     'CreateOrganization',
     'CreatePipeline',
     'CreateWorkspace',
     'DeleteAccessKey',
     'DeleteConnection',
+    'DeleteConsentPurpose',
     'DeleteEventWriteKey',
     'DeleteMember',
     'DeleteMembers',
@@ -302,6 +313,7 @@ CREATE TYPE notification_name AS ENUM (
     'StartIdentityResolution',
     'UnlinkConnection',
     'UpdateConnection',
+    'UpdateConsentPurpose',
     'UpdateIdentityPropertiesToUnset',
     'UpdateIdentityResolutionSettings',
     'UpdateOrganization',

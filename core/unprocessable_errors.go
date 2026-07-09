@@ -15,6 +15,8 @@ const (
 	CannotRunIncrementally        errors.Code = "CannotRunIncrementally"
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
+	ConsentPurposeCodeExists      errors.Code = "ConsentPurposeCodeExists"
+	ConsentPurposeInUse           errors.Code = "ConsentPurposeInUse"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
 	EmailInvitationRequired       errors.Code = "EmailInvitationRequired" // Returned by apisServer.
 	EmailSendFailed               errors.Code = "EmailSendFailed"

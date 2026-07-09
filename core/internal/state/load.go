@@ -326,9 +326,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var profileSchema []byte
 				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
-					mu:          new(sync.Mutex),
-					connections: map[string]*Connection{},
-					accounts:    map[int]*Account{},
+					mu:              new(sync.Mutex),
+					connections:     map[string]*Connection{},
+					accounts:        map[int]*Account{},
+					consentPurposes: map[string]*ConsentPurpose{},
 				}
 				var settingsKey, mcpSettingsKey []byte
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
@@ -413,6 +414,25 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		})
 	if err != nil {
 		return fmt.Errorf("cannot load accounts: %s", err)
+	}
+
+	// Read all consent purposes.
+	err = tx.QueryScan(ctx, "SELECT id, workspace, name, code FROM consent_purposes",
+		func(rows *db.Rows) error {
+			for rows.Next() {
+				cp := ConsentPurpose{}
+				var workspaceID string
+				if err := rows.Scan(&cp.ID, &workspaceID, &cp.Name, &cp.Code); err != nil {
+					return fmt.Errorf("loading consent purpose %s: %s", cp.ID, err)
+				}
+				cp.mu = new(sync.Mutex)
+				cp.workspace = state.workspaces[workspaceID]
+				cp.workspace.consentPurposes[cp.ID] = &cp
+			}
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf("cannot load consent purposes: %s", err)
 	}
 
 	// Read all connections.

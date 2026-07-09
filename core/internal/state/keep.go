@@ -69,6 +69,8 @@ func (state *State) keep() {
 			org = state.createAccessKey(n)
 		case "CreateConnection":
 			org = state.createConnection(n)
+		case "CreateConsentPurpose":
+			org = state.createConsentPurpose(n)
 		case "CreateOrganization":
 			org = state.createOrganization(n)
 		case "CreatePipeline":
@@ -81,6 +83,8 @@ func (state *State) keep() {
 			org = state.deleteAccessKey(n)
 		case "DeleteConnection":
 			org = state.deleteConnection(n)
+		case "DeleteConsentPurpose":
+			org = state.deleteConsentPurpose(n)
 		case "DeleteEventWriteKey":
 			org = state.deleteEventWriteKey(n)
 		case "DeleteMember":
@@ -133,6 +137,8 @@ func (state *State) keep() {
 			org = state.unlinkConnection(n)
 		case "UpdateConnection":
 			org = state.updateConnection(n)
+		case "UpdateConsentPurpose":
+			org = state.updateConsentPurpose(n)
 		case "UpdateIdentityPropertiesToUnset":
 			org = state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
@@ -194,6 +200,20 @@ func (workspace *Workspace) replaceAccount(id int, f func(*Account)) *Account {
 		}
 	}
 	return aa
+}
+
+// replaceConsentPurpose calls the function f passing a copy of the consent
+// purpose with identifier id. After f is returned, it replaces the consent
+// purpose with its copy in the workspace and returns the latter.
+func (workspace *Workspace) replaceConsentPurpose(id string, f func(*ConsentPurpose)) *ConsentPurpose {
+	cp := workspace.consentPurposes[id]
+	cc := new(ConsentPurpose)
+	*cc = *cp
+	f(cc)
+	workspace.mu.Lock()
+	workspace.consentPurposes[id] = cc
+	workspace.mu.Unlock()
+	return cc
 }
 
 // replacePipeline calls the function f passing a copy of the pipeline with
@@ -470,6 +490,36 @@ func (state *State) createConnection(n notification) string {
 	return ws.organization.ID
 }
 
+// CreateConsentPurpose is the event sent when a new consent purpose is
+// created.
+type CreateConsentPurpose struct {
+	ID        string
+	Workspace string
+	Name      string
+	Code      string
+}
+
+// createConsentPurpose creates a new consent purpose.
+func (state *State) createConsentPurpose(n notification) string {
+	e := CreateConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	cp := &ConsentPurpose{
+		mu:        new(sync.Mutex),
+		ID:        e.ID,
+		workspace: ws,
+		Name:      e.Name,
+		Code:      e.Code,
+	}
+	ws.mu.Lock()
+	ws.consentPurposes[cp.ID] = cp
+	ws.mu.Unlock()
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
 // CreateOrganization is the event sent when an organization is created.
 type CreateOrganization struct {
 	ID      string
@@ -628,6 +678,7 @@ func (state *State) createWorkspace(n notification) string {
 		ProfileSchema:                  e.ProfileSchema,
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
+		consentPurposes:                map[string]*ConsentPurpose{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
 		UIPreferences:                  e.UIPreferences,
@@ -797,6 +848,26 @@ func (state *State) deleteConnection(n notification) string {
 			lc.LinkedConnections = removeLinkedConnection(lc.LinkedConnections, e.ID)
 		})
 	}
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
+// DeleteConsentPurpose is the event sent when a consent purpose is deleted.
+type DeleteConsentPurpose struct {
+	ID        string
+	Workspace string
+}
+
+// deleteConsentPurpose deletes a consent purpose.
+func (state *State) deleteConsentPurpose(n notification) string {
+	e := DeleteConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.mu.Lock()
+	delete(ws.consentPurposes, e.ID)
+	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
 }
@@ -1496,6 +1567,29 @@ func (state *State) updateConnection(n notification) string {
 	})
 	dispatchNotification(state, e)
 	return c.organization.ID
+}
+
+// UpdateConsentPurpose is the event sent when a consent purpose is updated.
+type UpdateConsentPurpose struct {
+	ID        string
+	Workspace string
+	Name      string
+	Code      string
+}
+
+// updateConsentPurpose updates a consent purpose.
+func (state *State) updateConsentPurpose(n notification) string {
+	e := UpdateConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
+		cp.Name = e.Name
+		cp.Code = e.Code
+	})
+	dispatchNotification(state, e)
+	return ws.organization.ID
 }
 
 // UpdateIdentityPropertiesToUnset is the event sent when the identity

@@ -650,6 +650,7 @@ type Workspace struct {
 	ProfileSchema                  types.Type // without meta properties.
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
+	consentPurposes                map[string]*ConsentPurpose
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 	UIPreferences                  UIPreferences
@@ -692,6 +693,28 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 	}
 	workspace.mu.Unlock()
 	return a, a != nil
+}
+
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
+	workspace.mu.Lock()
+	cp, ok := workspace.consentPurposes[id]
+	workspace.mu.Unlock()
+	return cp, ok
+}
+
+// ConsentPurposes returns all the consent purposes of the workspace.
+func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
+	workspace.mu.Lock()
+	purposes := make([]*ConsentPurpose, len(workspace.consentPurposes))
+	i := 0
+	for _, cp := range workspace.consentPurposes {
+		purposes[i] = cp
+		i++
+	}
+	workspace.mu.Unlock()
+	return purposes
 }
 
 // Connection returns the connection of the workspace with identifier id.
@@ -1067,6 +1090,23 @@ func (account *Account) Connector() *Connector {
 	c := account.connector
 	account.mu.Unlock()
 	return c
+}
+
+// ConsentPurpose represents a consent purpose.
+type ConsentPurpose struct {
+	mu        *sync.Mutex
+	ID        string
+	workspace *Workspace
+	Name      string
+	Code      string
+}
+
+// Workspace returns the workspace of the consent purpose.
+func (cp *ConsentPurpose) Workspace() *Workspace {
+	cp.mu.Lock()
+	w := cp.workspace
+	cp.mu.Unlock()
+	return w
 }
 
 // Strategy represents a strategy.

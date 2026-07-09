@@ -59,6 +59,8 @@ import {
 	authTokenResponse,
 	profileAttributesResponse,
 	PublicMetadata,
+	ConsentPurposesResponse,
+	CreateConsentPurposeResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
@@ -888,6 +890,22 @@ class Workspaces {
 
 	LatestAlterProfileSchema = async (): Promise<LatestAlterProfileSchema> => {
 		return await call(`${this.apiURL}/profiles/schema/latest-alter`, http.GET, this.workspaceID);
+	};
+
+	consentPurposes = async (): Promise<ConsentPurposesResponse> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
+	};
+
+	createConsentPurpose = async (name: string, code: string): Promise<CreateConsentPurposeResponse> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { name, code });
+	};
+
+	updateConsentPurpose = async (id: string, name: string, code: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, { name, code });
+	};
+
+	deleteConsentPurpose = async (id: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.DELETE, this.workspaceID);
 	};
 }
 

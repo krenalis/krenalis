@@ -85,6 +85,19 @@ func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (
 	return map[string]any{"connections": ws.Connections()}, nil
 }
 
+// ConsentPurposes returns the consent purposes of the current workspace.
+func (workspace workspace) ConsentPurposes(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	purposes, err := ws.ConsentPurposes(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string][]*core.ConsentPurpose{"purposes": purposes}, nil
+}
+
 // CreateConnection creates a connection for a workspace.
 func (workspace workspace) CreateConnection(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(w, r, false); err != nil {
@@ -106,6 +119,30 @@ func (workspace workspace) CreateConnection(w http.ResponseWriter, r *http.Reque
 		body.Settings = nil
 	}
 	id, err := ws.CreateConnection(r.Context(), body.ConnectionToAdd, body.AuthToken)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id}, nil
+}
+
+// CreateConsentPurpose creates a consent purpose for the current workspace.
+func (workspace workspace) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(w, r, false); err != nil {
+		return nil, err
+	}
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Name string `json:"name"`
+		Code string `json:"code"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	id, err := ws.CreateConsentPurpose(r.Context(), body.Name, body.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +193,19 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	err = ws.Delete(r.Context())
+	return nil, err
+}
+
+// DeleteConsentPurpose deletes a consent purpose of the current workspace.
+func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("id"))
 	return nil, err
 }
 
@@ -802,6 +852,27 @@ func (workspace workspace) Update(w http.ResponseWriter, r *http.Request) (any, 
 		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.Update(r.Context(), body.Name, body.UIPreferences)
+	return nil, err
+}
+
+// UpdateConsentPurpose updates a consent purpose of the current workspace.
+func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(w, r, false); err != nil {
+		return nil, err
+	}
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Name string `json:"name"`
+		Code string `json:"code"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("id"), body.Name, body.Code)
 	return nil, err
 }
 
