@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/krenalis/krenalis/cmd/internal/requestid"
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
@@ -223,11 +224,124 @@ func TestValidateForbiddenBody(t *testing.T) {
 	})
 }
 
+// TestRequestIDResponseWriter tests that Request-Id is written before the response.
+func TestRequestIDResponseWriter(t *testing.T) {
+
+	t.Run("sets request id before write", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
+		if err != nil {
+			t.Fatalf("expected Request-Id codec, got %v", err)
+		}
+		requestID := codec.New(0)
+		w := &requestIDResponseWriter{
+			ResponseWriter: recorder,
+			requestID:      requestID,
+			stateVersion:   func() int { return 12 },
+		}
+
+		_, _ = w.Write([]byte("ok"))
+
+		got := recorder.Header().Get("Request-Id")
+		gotID, err := codec.Parse(got)
+		if err != nil {
+			t.Fatalf("expected decoded Request-Id, got %v", err)
+		}
+		gotVersion := gotID.StateVersion()
+		if gotVersion != 12 {
+			t.Fatalf("expected state version 12, got %d", gotVersion)
+		}
+	})
+
+	t.Run("sets request id before write header", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
+		if err != nil {
+			t.Fatalf("expected Request-Id codec, got %v", err)
+		}
+		requestID := codec.New(0)
+		w := &requestIDResponseWriter{
+			ResponseWriter: recorder,
+			requestID:      requestID,
+			stateVersion:   func() int { return 34 },
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+
+		got := recorder.Header().Get("Request-Id")
+		gotID, err := codec.Parse(got)
+		if err != nil {
+			t.Fatalf("expected decoded Request-Id, got %v", err)
+		}
+		gotVersion := gotID.StateVersion()
+		if gotVersion != 34 {
+			t.Fatalf("expected state version 34, got %d", gotVersion)
+		}
+	})
+
+	t.Run("sets request id before copy", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
+		if err != nil {
+			t.Fatalf("expected Request-Id codec, got %v", err)
+		}
+		requestID := codec.New(0)
+		w := &requestIDResponseWriter{
+			ResponseWriter: recorder,
+			requestID:      requestID,
+			stateVersion:   func() int { return 56 },
+		}
+
+		_, _ = io.Copy(w, strings.NewReader("ok"))
+
+		got := recorder.Header().Get("Request-Id")
+		gotID, err := codec.Parse(got)
+		if err != nil {
+			t.Fatalf("expected decoded Request-Id, got %v", err)
+		}
+		gotVersion := gotID.StateVersion()
+		if gotVersion != 56 {
+			t.Fatalf("expected state version 56, got %d", gotVersion)
+		}
+	})
+
+	t.Run("memoizes request id", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
+		if err != nil {
+			t.Fatalf("expected Request-Id codec, got %v", err)
+		}
+		version := 10
+		requestID := codec.New(0)
+		w := &requestIDResponseWriter{
+			ResponseWriter: recorder,
+			requestID:      requestID,
+			stateVersion: func() int {
+				version++
+				return version
+			},
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		first := recorder.Header().Get("Request-Id")
+		w.WriteHeader(http.StatusNoContent)
+		second := recorder.Header().Get("Request-Id")
+		if second != first {
+			t.Fatalf("expected memoized Request-Id %q, got %q", first, second)
+		}
+		if version != 11 {
+			t.Fatalf("expected state version callback once, got %d", version-10)
+		}
+	})
+}
+
+// cookieTestKMS records cookie key load calls in tests.
 type cookieTestKMS struct {
 	calls int
 	load  func(context.Context) ([]byte, []byte, error)
 }
 
+// Load returns cookie test keys.
 func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, []byte, error) {
 	k.calls++
 	return k.load(ctx)

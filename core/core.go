@@ -970,10 +970,22 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 	return orgs, nil
 }
 
+// RequestIDKey decrypts and returns the key used to encrypt and decrypt
+// Request-Id state versions.
+func (core *Core) RequestIDKey(ctx context.Context) ([]byte, error) {
+	return core.state.RequestIDKey(ctx)
+}
+
 // ServeEvents serves the events sent via HTTP.
 func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.mustBeOpen()
 	core.collector.ServeHTTP(w, r)
+}
+
+// StateVersion returns the current state version.
+func (core *Core) StateVersion() int {
+	core.mustBeOpen()
+	return core.state.Version()
 }
 
 // UpdateMembersByWorkOSID updates the name and email of all members across all
@@ -1023,6 +1035,11 @@ func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token st
 		return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
 	return organizationID, nil
+}
+
+// WaitStateVersion waits until the given state version has been reached.
+func (core *Core) WaitStateVersion(ctx context.Context, version int) error {
+	return core.state.WaitVersion(ctx, version)
 }
 
 // DataTransformation represents transformation passed to (*Core).TransformData

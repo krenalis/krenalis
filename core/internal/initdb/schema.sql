@@ -347,17 +347,18 @@ CREATE TYPE notification_name AS ENUM (
 );
 
 CREATE TABLE notifications (
-    id bigint NOT NULL,
+    version bigint NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name notification_name NOT NULL,
     payload jsonb NOT NULL,
-    PRIMARY KEY (id)
+    PRIMARY KEY (version)
 );
 
 CREATE TABLE metadata (
     singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
     installation_id text UNIQUE NOT NULL,
     kms_encrypted_cookie_key bytea NOT NULL,
+    kms_encrypted_request_id_key bytea NOT NULL,
     kms_encrypted_oauth_key bytea NOT NULL,
     kms_encrypted_notification_key bytea NOT NULL,
     kms_encrypted_api_key_pepper bytea NOT NULL
@@ -366,11 +367,13 @@ CREATE TABLE metadata (
 INSERT INTO metadata (
     installation_id,
     kms_encrypted_cookie_key,
+    kms_encrypted_request_id_key,
     kms_encrypted_oauth_key,
     kms_encrypted_notification_key,
     kms_encrypted_api_key_pepper
 ) VALUES (
     gen_random_uuid(),
+    '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea,
