@@ -660,7 +660,7 @@ github.com/rabbitmq/amqp091-go
 # github.com/relvacode/iso8601 v1.7.0
 ## explicit; go 1.13
 github.com/relvacode/iso8601
-# github.com/richardlehane/mscfb v1.0.6
+# github.com/richardlehane/mscfb v1.0.7
 ## explicit; go 1.18
 github.com/richardlehane/mscfb
 # github.com/richardlehane/msoleps v1.0.6
@@ -761,8 +761,8 @@ github.com/twmb/franz-go/pkg/kmsg/internal/kbin
 # github.com/xuri/efp v0.0.1
 ## explicit; go 1.11
 github.com/xuri/efp
-# github.com/xuri/excelize/v2 v2.10.1
-## explicit; go 1.24.0
+# github.com/xuri/excelize/v2 v2.11.0
+## explicit; go 1.25.0
 github.com/xuri/excelize/v2
 # github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9
 ## explicit; go 1.15
