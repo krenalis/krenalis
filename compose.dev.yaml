@@ -15,6 +15,7 @@
 #     Password:             no password set (auth method = trust)
 #     Database:             krenalis
 #     Connecting from CLI:  psql -h 127.0.0.1 -p 15432 -U krenalis krenalis
+#     Dump from CLI:        pg_dump -h 127.0.0.1 -p 15432 -U krenalis krenalis
 #
 # =============================================================================
 # Krenalis PostgreSQL warehouse
@@ -26,6 +27,7 @@
 #     Password:             no password set (auth method = trust)
 #     Database:             warehouse
 #     Connecting from CLI:  psql -h 127.0.0.1 -p 15433 -U warehouse warehouse
+#     Dump from CLI:        pg_dump -h 127.0.0.1 -p 15433 -U warehouse warehouse
 #
 # =============================================================================
 # Krenalis PostgreSQL warehouse (MCP user)
