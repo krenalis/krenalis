@@ -412,6 +412,34 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
+// UpgradeDB upgrades Krenalis's PostgreSQL database.
+func UpgradeDB(ctx context.Context, conf *Config) error {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.DB.Host,
+		Port:           conf.DB.Port,
+		Username:       conf.DB.Username,
+		Password:       conf.DB.Password,
+		Database:       conf.DB.Database,
+		Schema:         conf.DB.Schema,
+		MaxConnections: max(2, conf.DB.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if err := db.Ping(pingCtx); err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+
+	if err := initdb.Upgrade(ctx, db); err != nil {
+		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
+	}
+	return nil
+}
+
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [0, 45]. password's length must be at least 8 character long.
@@ -708,19 +736,61 @@ func (core *Core) CountOrganizations(ctx context.Context) int {
 	return len(core.state.Organizations())
 }
 
+const (
+	MembersLimit     = 10000
+	AccessKeysLimit  = 1000
+	WorkspacesLimit  = 1000
+	ConnectorsLimit  = 1000
+	ConnectionsLimit = 10000
+	PipelinesLimit   = 10000
+)
+
 // CreateOrganization creates a new organization and returns its identifier.
 // name cannot be empty and cannot be longer than 255 runes.
 // enabled indicates whether the created organization is enabled.
-func (core *Core) CreateOrganization(ctx context.Context, name string, enabled bool) (string, error) {
+// limits define how many resources the organization can have.
+func (core *Core) CreateOrganization(ctx context.Context, name string, enabled bool, limits OrganizationLimits) (string, error) {
 	core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	n := state.CreateOrganization{Name: name, Enabled: enabled}
+	if limits.Members < 1 || limits.Members > MembersLimit {
+		return "", errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
+	}
+	if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
+		return "", errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
+	}
+	if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
+		return "", errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
+	}
+	if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
+		return "", errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
+	}
+	if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
+		return "", errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
+	}
+	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
+		return "", errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+	}
+	n := state.CreateOrganization{
+		Name:    name,
+		Enabled: enabled,
+		Limits: state.OrganizationLimits{
+			Members:     limits.Members,
+			AccessKeys:  limits.AccessKeys,
+			Workspaces:  limits.Workspaces,
+			Connectors:  limits.Connectors,
+			Connections: limits.Connections,
+			Pipelines:   limits.Pipelines,
+		},
+	}
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled) VALUES ($1, $2, $3)", n.ID, n.Name, n.Enabled)
+			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
+				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit)"+
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", n.ID, n.Name, n.Enabled, n.Limits.Members,
+				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines)
 			if err != nil {
 				return nil, err
 			}
@@ -848,6 +918,8 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		ID:           org.ID,
 		Name:         org.Name,
 		Enabled:      org.Enabled,
+		Limits:       OrganizationLimits(org.Limits()),
+		Counts:       OrganizationCounts(org.Counts()),
 	}
 	return &organization, nil
 }
@@ -891,6 +963,8 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			ID:           organization.ID,
 			Name:         organization.Name,
 			Enabled:      organization.Enabled,
+			Limits:       OrganizationLimits(organization.Limits()),
+			Counts:       OrganizationCounts(organization.Counts()),
 		}
 	}
 	return orgs, nil

@@ -719,7 +719,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		if err := org.Update(r.Context(), orgName); err != nil {
+		if err := org.Update(r.Context(), orgName, nil); err != nil {
 			slog.Error("WorkOS webhook error: failed to update organization", "id", event.ID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return

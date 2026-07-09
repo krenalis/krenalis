@@ -314,9 +314,11 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 // anymore, and returns an errors.UnprocessableError error with code
 //
 //   - ConnectionNotExist, if the connection does not exist.
+//   - ConnectorsLimitReached, if the organization cannot have more connectors.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
+//   - PipelinesLimitReached, if the organization cannot have more pipelines.
 //   - SchemaNotAligned, if the output schema is not aligned with the event type
 //     schema.
 //   - TargetExist, if a pipeline already exists for a target for the
@@ -500,10 +502,25 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		}
 	}
 
+	// Check the connector and pipeline limits.
+	org := this.connection.Organization()
+	if format != nil {
+		if reached, limit := org.IsConnectorLimitReached(); reached && !org.IsConnectorUsed(format) {
+			return "", errors.Unprocessable(ConnectorsLimitReached, "organization cannot use more than %d connectors", limit)
+		}
+	}
+	if reached, limit := org.IsPipelineLimitReached(); reached {
+		return "", errors.Unprocessable(PipelinesLimitReached, "organization cannot have more than %d pipelines", limit)
+	}
+
 	// Create the pipeline.
 	for {
 		n.ID = generateID(this.connection.Pipeline)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Check the connector and pipeline limits.
+			if err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format); err != nil {
+				return nil, err
+			}
 			switch n.Target {
 			case state.TargetEvent:
 				switch connector.Type {
@@ -2032,6 +2049,53 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return schema, nil // schema can be invalid.
 	}
 	return types.Type{}, nil
+}
+
+// checkCreatePipelineLimits checks whether the organization can add a pipeline
+// with the given format, if any, without exceeding its pipeline or connector
+// limits. It locks the organization row so concurrent pipeline creations for
+// the same organization are serialized.
+//
+// An empty format means that the new pipeline does not use a connector.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - PipelinesLimitReached, if the organization cannot have more pipelines.
+func checkCreatePipelineLimits(ctx context.Context, tx *db.Tx, organization, format string) error {
+
+	var (
+		pipelinesCount  int
+		pipelinesLimit  int
+		connectorsLimit int
+	)
+
+	err := tx.QueryRow(ctx, `
+	SELECT
+		(
+			SELECT COUNT(*)
+			FROM pipelines p
+			JOIN connections c ON c.id = p.connection
+			JOIN workspaces ws ON ws.id = c.workspace
+			WHERE ws.organization = o.id
+		) AS pipelines_count,
+		o.pipelines_limit,
+		o.connectors_limit
+	FROM organizations o
+	WHERE o.id = $1
+	FOR UPDATE`, organization).Scan(&pipelinesCount, &pipelinesLimit, &connectorsLimit)
+	if err != nil {
+		return err
+	}
+
+	if pipelinesCount >= pipelinesLimit {
+		return errors.Unprocessable(PipelinesLimitReached, "organization cannot have more than %d pipelines", pipelinesLimit)
+	}
+	if format != "" {
+		return checkConnectorLimit(ctx, tx, organization, format, connectorsLimit)
+	}
+
+	return nil
 }
 
 // deserializeCursor deserializes a cursor passed to the application.

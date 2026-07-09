@@ -137,12 +137,46 @@ func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, 
 	var body struct {
 		Name    string `json:"name"`
 		Enabled bool   `json:"enabled"`
+		Limits  struct {
+			Members     *int `json:"members"`
+			AccessKeys  *int `json:"accessKeys"`
+			Workspaces  *int `json:"workspaces"`
+			Connectors  *int `json:"connectors"`
+			Connections *int `json:"connections"`
+			Pipelines   *int `json:"pipelines"`
+		} `json:"limits"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled)
+	if body.Limits.Members == nil {
+		return nil, errors.BadRequest("organization limit for members is required")
+	}
+	if body.Limits.AccessKeys == nil {
+		return nil, errors.BadRequest("organization limit for access keys is required")
+	}
+	if body.Limits.Workspaces == nil {
+		return nil, errors.BadRequest("organization limit for workspaces is required")
+	}
+	if body.Limits.Connectors == nil {
+		return nil, errors.BadRequest("organization limit for connectors is required")
+	}
+	if body.Limits.Connections == nil {
+		return nil, errors.BadRequest("organization limit for connections is required")
+	}
+	if body.Limits.Pipelines == nil {
+		return nil, errors.BadRequest("organization limit for pipelines is required")
+	}
+	limits := core.OrganizationLimits{
+		Members:     *body.Limits.Members,
+		AccessKeys:  *body.Limits.AccessKeys,
+		Workspaces:  *body.Limits.Workspaces,
+		Connectors:  *body.Limits.Connectors,
+		Connections: *body.Limits.Connections,
+		Pipelines:   *body.Limits.Pipelines,
+	}
+	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled, limits)
 	if err != nil {
 		return nil, err
 	}

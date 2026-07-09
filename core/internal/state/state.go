@@ -538,9 +538,38 @@ type Organization struct {
 	mu         *sync.Mutex
 	workspaces map[string]*Workspace
 	members    map[string]struct{}
+	usage      organizationUsage
 	ID         string
 	Name       string
 	Enabled    bool
+}
+
+// OrganizationCounts stores the resource counts for an organization.
+type OrganizationCounts struct {
+	Members     int
+	AccessKeys  int
+	Workspaces  int
+	Connectors  int
+	Connections int
+	Pipelines   int
+}
+
+// OrganizationLimits stores the resource limits for an organization.
+type OrganizationLimits struct {
+	Members     int
+	AccessKeys  int
+	Workspaces  int
+	Connectors  int
+	Connections int
+	Pipelines   int
+}
+
+// Counts returns the organization's counts.
+func (organization *Organization) Counts() OrganizationCounts {
+	organization.mu.Lock()
+	counts := organization.usage.currentCounts()
+	organization.mu.Unlock()
+	return counts
 }
 
 // HasMember reports whether the organization has a member with the given ID.
@@ -549,6 +578,77 @@ func (organization *Organization) HasMember(id string) bool {
 	_, ok := organization.members[id]
 	organization.mu.Unlock()
 	return ok
+}
+
+// IsAccessKeyLimitReached returns whether the organization has reached its
+// access key limit, along with the configured access key limit.
+func (organization *Organization) IsAccessKeyLimitReached() (bool, int) {
+	organization.mu.Lock()
+	reached, limit := organization.usage.isAccessKeyLimitReached()
+	organization.mu.Unlock()
+	return reached, limit
+}
+
+// IsConnectionLimitReached returns whether the organization has reached its
+// connection limit, along with the configured connection limit.
+func (organization *Organization) IsConnectionLimitReached() (bool, int) {
+	organization.mu.Lock()
+	reached, limit := organization.usage.isConnectionLimitReached()
+	organization.mu.Unlock()
+	return reached, limit
+}
+
+// IsConnectorLimitReached returns whether the organization has reached its
+// connector limit, along with the configured connector limit.
+func (organization *Organization) IsConnectorLimitReached() (bool, int) {
+	organization.mu.Lock()
+	reached, limit := organization.usage.isConnectorLimitReached()
+	organization.mu.Unlock()
+	return reached, limit
+}
+
+// IsConnectorUsed returns whether the organization has at least one connection
+// using the given connector.
+func (organization *Organization) IsConnectorUsed(connector *Connector) bool {
+	organization.mu.Lock()
+	used := organization.usage.isConnectorUsed(connector)
+	organization.mu.Unlock()
+	return used
+}
+
+// IsMemberLimitReached returns whether the organization has reached its member
+// limit, along with the configured member limit.
+func (organization *Organization) IsMemberLimitReached() (bool, int) {
+	organization.mu.Lock()
+	reached, limit := organization.usage.isMemberLimitReached()
+	organization.mu.Unlock()
+	return reached, limit
+}
+
+// IsPipelineLimitReached returns whether the organization has reached its
+// pipeline limit, along with the configured pipeline limit.
+func (organization *Organization) IsPipelineLimitReached() (bool, int) {
+	organization.mu.Lock()
+	reached, limit := organization.usage.isPipelineLimitReached()
+	organization.mu.Unlock()
+	return reached, limit
+}
+
+// IsWorkspaceLimitReached returns whether the organization has reached its
+// workspace limit, along with the configured workspace limit.
+func (organization *Organization) IsWorkspaceLimitReached() (bool, int) {
+	organization.mu.Lock()
+	reached, limit := organization.usage.isWorkspaceLimitReached()
+	organization.mu.Unlock()
+	return reached, limit
+}
+
+// Limits returns the organization's limits.
+func (organization *Organization) Limits() OrganizationLimits {
+	organization.mu.Lock()
+	limits := organization.usage.currentLimits()
+	organization.mu.Unlock()
+	return limits
 }
 
 // Workspace returns the workspace of the organization with identifier id.

@@ -274,12 +274,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
-	err = tx.QueryScan(ctx, "SELECT id, name, enabled FROM organizations", func(rows *db.Rows) error {
+	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
+		" connectors_limit, connections_limit, pipelines_limit FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
-			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled); err != nil {
+			var limits OrganizationLimits
+			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
+				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
+			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]struct{}{}
 			state.organizations[org.ID] = org
@@ -290,18 +294,22 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load organizations: %s", err)
 	}
 
-	// Read all members who have accepted their invitation.
-	err = tx.QueryScan(ctx, "SELECT id, organization FROM members WHERE invitation_token = '' ORDER BY organization", func(rows *db.Rows) error {
+	// Read all members.
+	err = tx.QueryScan(ctx, "SELECT id, organization, invitation_token <> '' FROM members ORDER BY organization", func(rows *db.Rows) error {
 		var org *Organization
 		for rows.Next() {
 			var id, organization string
-			if err := rows.Scan(&id, &organization); err != nil {
+			var hasPendingInvitation bool
+			if err := rows.Scan(&id, &organization, &hasPendingInvitation); err != nil {
 				return fmt.Errorf("loading member %s: %s", id, err)
 			}
 			if org == nil || org.ID != organization {
 				org = state.organizations[organization]
 			}
-			org.members[id] = struct{}{}
+			org.usage.addMember()
+			if !hasPendingInvitation {
+				org.members[id] = struct{}{}
+			}
 		}
 		return nil
 	})
@@ -565,6 +573,23 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		})
 	if err != nil {
 		return fmt.Errorf("cannot load pipelines: %s", err)
+	}
+
+	// Load organization usage from the state loaded so far.
+	// Limits and member counts are already loaded.
+	for _, organization := range state.organizations {
+		for _, workspace := range organization.workspaces {
+			organization.usage.addWorkspace()
+			for _, connection := range workspace.connections {
+				organization.usage.addConnection(connection.connector)
+				for _, pipeline := range connection.pipelines {
+					organization.usage.addPipeline(pipeline.format)
+				}
+			}
+		}
+	}
+	for _, key := range state.accessKeyByHMAC {
+		state.organizations[key.Organization].usage.addAccessKey()
 	}
 
 	// Read live pipeline runs.

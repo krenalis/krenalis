@@ -560,7 +560,10 @@ func (this *Workspace) Connections() []*Connection {
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - ConnectionsLimitReached, if the organization cannot have more
+//     connections.
 //   - ConnectorNotExist, if the connector does not exist.
+//   - ConnectorsLimitReached, if the organization cannot have more connectors.
 //   - LinkedConnectionNotExist, if a linked connection does not exist.
 //   - InvalidSettings, if the settings are not valid.
 func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, authToken string) (string, error) {
@@ -725,6 +728,15 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 	}
 
+	// Check the connector and connection limits.
+	org := this.workspace.Organization()
+	if reached, limit := org.IsConnectorLimitReached(); reached && !org.IsConnectorUsed(c) {
+		return "", errors.Unprocessable(ConnectorsLimitReached, "organization cannot use more than %d connectors", limit)
+	}
+	if reached, limit := org.IsConnectionLimitReached(); reached {
+		return "", errors.Unprocessable(ConnectionsLimitReached, "organization cannot have more than %d connections", limit)
+	}
+
 	// Generate an event write key.
 	if c.Type == state.SDK || c.Type == state.Webhook {
 		n.EventWriteKey = generateEventWriteKeyToken()
@@ -749,6 +761,11 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	for {
 		n.ID = generateID(this.workspace.Connection)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Check the connector and connection limits.
+			if err := checkCreateConnectionLimits(ctx, tx, org.ID, n.Connector); err != nil {
+				return nil, err
+			}
+			// Insert or update the account.
 			if n.Account.Code != "" {
 				if n.Account.ID == 0 {
 					// Insert a new account.
@@ -2050,6 +2067,73 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	total = max(len(identities), total)
 
 	return identities, total, nil
+}
+
+// checkConnectorLimit checks whether the organization can use the given
+// connector without exceeding limit.
+func checkConnectorLimit(ctx context.Context, tx *db.Tx, organization, connector string, limit int) error {
+
+	var count int
+	var used bool
+
+	err := tx.QueryRow(ctx, `
+	SELECT
+		COUNT(DISTINCT connector) AS connectors_count,
+		COALESCE(BOOL_OR(connector = $2), false) AS connector_used
+	FROM organization_connector_references
+	WHERE organization = $1`, organization, connector).Scan(&count, &used)
+	if err != nil {
+		return err
+	}
+
+	if !used && count >= limit {
+		return errors.Unprocessable(ConnectorsLimitReached, "organization cannot use more than %d connectors", limit)
+	}
+
+	return nil
+}
+
+// checkCreateConnectionLimits checks whether the organization can add a
+// connection with the given connector without exceeding its connection or
+// connector limits. It locks the organization row so concurrent connection
+// creations for the same organization are serialized.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - ConnectionsLimitReached, if the organization cannot have more
+//     connections.
+//   - ConnectorsLimitReached, if the organization cannot have more connectors.
+func checkCreateConnectionLimits(ctx context.Context, tx *db.Tx, organization, connector string) error {
+
+	var (
+		connectionsCount int
+		connectionsLimit int
+		connectorsLimit  int
+	)
+
+	err := tx.QueryRow(ctx, `
+	SELECT
+		(
+			SELECT COUNT(*)
+			FROM connections c
+			JOIN workspaces ws ON ws.id = c.workspace
+			WHERE ws.organization = o.id
+		) AS connections_count,
+		o.connections_limit,
+		o.connectors_limit
+	FROM organizations o
+	WHERE o.id = $1
+	FOR UPDATE`, organization).Scan(&connectionsCount, &connectionsLimit, &connectorsLimit)
+	if err != nil {
+		return err
+	}
+
+	if connectionsCount >= connectionsLimit {
+		return errors.Unprocessable(ConnectionsLimitReached, "organization cannot have more than %d connections", connectionsLimit)
+	}
+	err = checkConnectorLimit(ctx, tx, organization, connector, connectorsLimit)
+
+	return err
 }
 
 // ConnectionToAdd represents a connection to add to a workspace.

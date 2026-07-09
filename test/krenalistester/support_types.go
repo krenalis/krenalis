@@ -348,12 +348,36 @@ const (
 	Maintenance WarehouseMode = "Maintenance"
 )
 
-type Organization struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Enabled bool   `json:"enabled"`
+// OrganizationCounts stores the resource counts for an organization.
+type OrganizationCounts struct {
+	Members     int `json:"members"`
+	AccessKeys  int `json:"accessKeys"`
+	Workspaces  int `json:"workspaces"`
+	Connectors  int `json:"connectors"`
+	Connections int `json:"connections"`
+	Pipelines   int `json:"pipelines"`
 }
 
+// OrganizationLimits stores the resource limits for an organization.
+type OrganizationLimits struct {
+	Members     int `json:"members"`
+	AccessKeys  int `json:"accessKeys"`
+	Workspaces  int `json:"workspaces"`
+	Connectors  int `json:"connectors"`
+	Connections int `json:"connections"`
+	Pipelines   int `json:"pipelines"`
+}
+
+// Organization represents an organization returned by the APIs.
+type Organization struct {
+	ID      string             `json:"id"`
+	Name    string             `json:"name"`
+	Enabled bool               `json:"enabled"`
+	Limits  OrganizationLimits `json:"limits"`
+	Counts  OrganizationCounts `json:"counts"`
+}
+
+// Workspace represents a workspace returned by the APIs.
 type Workspace struct {
 	ID                             string            `json:"id"`
 	Name                           string            `json:"name"`
