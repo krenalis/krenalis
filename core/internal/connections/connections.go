@@ -152,7 +152,7 @@ type Connections struct {
 
 // New returns a new *Connections value.
 func New(state *state.State) *Connections {
-	h := httpclient.New(state, http.DefaultTransport)
+	h := httpclient.New(state, http.DefaultTransport.(*http.Transport))
 	return &Connections{state: state, http: h}
 }
 

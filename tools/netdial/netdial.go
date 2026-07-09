@@ -15,6 +15,7 @@ package netdial
 import (
 	"context"
 	"net"
+	"net/http"
 	"sync"
 	"sync/atomic"
 
@@ -85,13 +86,44 @@ func countersFor(organizationID string) *counterPair {
 // organization and direction ("ingress" for bytes read, "egress" for bytes
 // written).
 func Dial(organizationID string) DialFunc {
-	var d net.Dialer
-	if organizationID == "" || !enabled.Load() {
-		return d.DialContext
+	return dialWith(organizationID, nil)
+}
+
+// Transport returns the transport Krenalis uses for the HTTP requests of the
+// organization with the given ID, attributing to it the bytes they transfer.
+//
+// If organizationID is empty, or Prometheus metrics are disabled (see
+// [Enabled]), base is returned unwrapped; otherwise the returned transport is a
+// clone of base dialing with [Dial], so that base's timeouts and options are
+// preserved.
+//
+// The returned transport has its own connection pool, so callers should reuse
+// it for all the requests of the organization.
+func Transport(base *http.Transport, organizationID string) http.RoundTripper {
+	if !enabled.Load() || organizationID == "" {
+		return base
+	}
+	t := base.Clone()
+	t.DialContext = dialWith(organizationID, t.DialContext)
+	return t
+}
+
+// dialWith is like [Dial], but the connections are established by dial instead
+// of by a plain net.Dialer. If dial is nil, a plain net.Dialer is used.
+//
+// It allows counting the bytes transferred by an already configured dialer,
+// like the one of an http.Transport, preserving its timeouts and options.
+func dialWith(organizationID string, dial DialFunc) DialFunc {
+	if dial == nil {
+		var d net.Dialer
+		dial = d.DialContext
+	}
+	if !enabled.Load() || organizationID == "" {
+		return dial
 	}
 	c := countersFor(organizationID)
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
-		conn, err := d.DialContext(ctx, network, addr)
+		conn, err := dial(ctx, network, addr)
 		if err != nil {
 			return nil, err
 		}

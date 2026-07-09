@@ -76,7 +76,7 @@ func NewApplication[T any](code string, settings any) (T, error) {
 		Code:           code,
 		EndpointGroups: registeredApplications.EndpointGroups,
 	}
-	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
+	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).ConnectorClient(connector, "", "")
 	app, err := registeredApplications.New(&connectors.ApplicationEnv{
 		Settings:   newSettingsStore(s),
 		HTTPClient: httpClient,
