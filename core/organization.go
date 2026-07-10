@@ -60,6 +60,29 @@ type Organization struct {
 	// OrganizationDisabled error, while those authenticated with an event write
 	// key fail with a 503 Service Unavailable error.
 	Enabled bool `json:"enabled"`
+
+	Limits OrganizationLimits `json:"limits"`
+	Counts OrganizationCounts `json:"counts"`
+}
+
+// OrganizationCounts stores the resource counts for an organization.
+type OrganizationCounts struct {
+	Members     int `json:"members"`
+	AccessKeys  int `json:"accessKeys"`
+	Workspaces  int `json:"workspaces"`
+	Connectors  int `json:"connectors"`
+	Connections int `json:"connections"`
+	Pipelines   int `json:"pipelines"`
+}
+
+// OrganizationLimits stores the resource limits for an organization.
+type OrganizationLimits struct {
+	Members     int `json:"members"`
+	AccessKeys  int `json:"accessKeys"`
+	Workspaces  int `json:"workspaces"`
+	Connectors  int `json:"connectors"`
+	Connections int `json:"connections"`
+	Pipelines   int `json:"pipelines"`
 }
 
 // Member represents a member of an organization.
@@ -182,6 +205,7 @@ type AccessKey struct {
 //     organization.
 //   - MemberWorkOSUserIDExists, if a member with this WorkOS user ID already
 //     exists in the organization.
+//   - MembersLimitReached, if the organization cannot have more members.
 //   - OrganizationNotExist, if the organization does not exist.
 func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (string, error) {
 	this.core.mustBeOpen()
@@ -191,6 +215,10 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 	err := validateMemberToSet(member, true, true, member.WorkOSUserID == "")
 	if err != nil {
 		return "", errors.BadRequest("%s", err)
+	}
+
+	if reached, limit := this.organization.IsMemberLimitReached(); reached {
+		return "", errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
 	}
 
 	password := member.Password
@@ -211,6 +239,17 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 		})
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Ensure the organization can accept another member.
+			var count, limit int
+			err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM members m WHERE m.organization = o.id), o.members_limit"+
+				" FROM organizations o WHERE o.id = $1 FOR UPDATE", n.Organization).Scan(&count, &limit)
+			if err != nil {
+				return nil, err
+			}
+			if count >= limit {
+				return nil, errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
+			}
+			// Add the member.
 			if member.Avatar != nil {
 				_, err = tx.Exec(ctx,
 					"INSERT INTO members (id, organization, name, avatar.image, avatar.mime_type, email, password, workos_user_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
@@ -325,6 +364,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 //
 // It returns an errors.UnprocessableError error with code
 //
+//   - AccessKeysLimitReached, if the organization cannot have more access keys.
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WorkspaceNotExist, if the workspace does not exist.
 func (this *Organization) CreateAccessKey(ctx context.Context, name, workspace string, typ AccessKeyType) (string, string, error) {
@@ -348,6 +388,9 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name, workspace s
 	if typ == AccessKeyTypeMCP && workspace == "" {
 		return "", "", errors.BadRequest("workspace is required for MCP keys")
 	}
+	if reached, limit := this.organization.IsAccessKeyLimitReached(); reached {
+		return "", "", errors.Unprocessable(AccessKeysLimitReached, "organization cannot have more than %d access keys", limit)
+	}
 	// Generate a random access key,
 	token, hmac, err := this.core.state.GenerateAccessKey(ctx)
 	if err != nil {
@@ -367,6 +410,17 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name, workspace s
 	for {
 		n.ID = generateID[any](nil)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Ensure the organization can accept another access key.
+			var count, limit int
+			err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM access_keys ak WHERE ak.organization = o.id), o.access_keys_limit"+
+				" FROM organizations o WHERE o.id = $1 FOR UPDATE", this.organization.ID).Scan(&count, &limit)
+			if err != nil {
+				return nil, err
+			}
+			if count >= limit {
+				return nil, errors.Unprocessable(AccessKeysLimitReached, "organization cannot have more than %d access keys", limit)
+			}
+			// Add the access key.
 			_, err = tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, hmac, hint, created_at) "+
 				"VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8)", n.ID, n.Organization, n.Workspace, name, n.Type, hmac, hint, createdAt)
 			if err != nil {
@@ -415,6 +469,7 @@ type Warehouse struct {
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
+//   - WorkspacesLimitReached, if the organization cannot have more workspaces.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (string, error) {
 
 	this.core.mustBeOpen()
@@ -431,6 +486,10 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 			return "", errors.Unavailable("%s", err)
 		}
 		return "", err
+	}
+
+	if reached, limit := this.organization.IsWorkspaceLimitReached(); reached {
+		return "", errors.Unprocessable(WorkspacesLimitReached, "organization cannot have more than %d workspaces", limit)
 	}
 
 	n := state.CreateWorkspace{
@@ -461,6 +520,17 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	for {
 		n.ID = generateID(this.organization.Workspace)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Ensure the organization can accept another workspace.
+			var count, limit int
+			err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM workspaces ws WHERE ws.organization = o.id), o.workspaces_limit"+
+				" FROM organizations o WHERE o.id = $1 FOR UPDATE", this.organization.ID).Scan(&count, &limit)
+			if err != nil {
+				return nil, err
+			}
+			if count >= limit {
+				return nil, errors.Unprocessable(WorkspacesLimitReached, "organization cannot have more than %d workspaces", limit)
+			}
+			// Add the workspace.
 			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 				" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
 				" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
@@ -556,16 +626,12 @@ func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 		Organization: this.organization.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var invited bool
-		err := tx.QueryRow(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2 RETURNING invitation_token <> ''", id, this.organization.ID).Scan(&invited)
+		result, err := tx.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, errors.NotFound("member %s does not exist", id)
-			}
 			return nil, err
 		}
-		if invited {
-			return nil, nil
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("member %s does not exist", id)
 		}
 		return n, nil
 	})
@@ -588,6 +654,7 @@ func (this *Organization) HasMember(id string) (bool, error) {
 // It returns an errors.UnprocessableError error with code
 //   - EmailSendFailed, if emails cannot be sent.
 //   - MemberEmailExists, if the email address belongs to an existing member.
+//   - MembersLimitReached, if the organization cannot have more members.
 func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
 	this.core.mustBeOpen()
 	err := validateMemberEmail(email)
@@ -597,9 +664,12 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
+	n := state.InviteMember{
+		Organization: this.organization.ID,
+	}
 	var invitationToken string
 	for {
-		id := generateID(func(id string) (any, bool) {
+		n.Member = generateID(func(id string) (any, bool) {
 			return nil, this.organization.HasMember(id)
 		})
 		invitationToken, err = generateMemberToken()
@@ -607,17 +677,37 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			return err
 		}
 		now := time.Now().UTC()
-		err = this.core.db.Transaction(ctx, func(tx *db.Tx) error {
-			result, err := tx.Exec(ctx, "INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "+
-				"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $7, created_at = $8 WHERE members.invitation_token <> ''",
-				id, this.organization.ID, "", email, "", nil, invitationToken, now)
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			var member string
+			var inserted bool
+			// Query; xmax is 0 for rows inserted by this statement; updated rows have a non-zero xmax.
+			const query = `
+				INSERT INTO members (id, organization, name, email, password, avatar, invitation_token, created_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				ON CONFLICT (organization, email)
+				DO UPDATE SET invitation_token = $7, created_at = $8
+				WHERE members.invitation_token <> ''
+				RETURNING id, (xmax = 0) AS inserted`
+			err = tx.QueryRow(ctx, query, n.Member, n.Organization, "", email, "", nil, invitationToken, now).Scan(&member, &inserted)
 			if err != nil {
-				return err
+				if err == sql.ErrNoRows {
+					return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+				}
+				return nil, err
 			}
-			if result.RowsAffected() == 0 {
-				return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
+			if !inserted {
+				return nil, nil
 			}
-			return nil
+			var count, limit int
+			err = tx.QueryRow(ctx, "SELECT (SELECT COUNT(*) FROM members m WHERE m.organization = o.id), o.members_limit\n"+
+				"FROM organizations o\nWHERE o.id = $1 FOR UPDATE", n.Organization).Scan(&count, &limit)
+			if err != nil {
+				return nil, err
+			}
+			if count > limit {
+				return nil, errors.Unprocessable(MembersLimitReached, "organization cannot have more than %d members", limit)
+			}
+			return n, nil
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_pkey" {
@@ -625,6 +715,9 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			}
 			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "invitation_token_index" {
 				continue
+			}
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "members_organization_email_key" {
+				return errors.Unprocessable(MemberEmailExists, "member with this email already exists")
 			}
 			return err
 		}
@@ -890,6 +983,7 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
+//   - WorkspacesLimitReached, if the organization cannot have more workspaces.
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
 	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
@@ -980,15 +1074,60 @@ func (this *Organization) UpdateMember(ctx context.Context, id string, member Me
 	return err
 }
 
-// Update updates the name of the organization.
-func (this *Organization) Update(ctx context.Context, name string) error {
+// Update updates the organization's name and its limits when limits is not nil.
+//
+// It returns an errors.NotFound error if the organization does not exist.
+func (this *Organization) Update(ctx context.Context, name string, limits *OrganizationLimits) error {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	n := state.UpdateOrganization{ID: this.organization.ID, Name: name}
+	if limits != nil {
+		if limits.Members < 1 || limits.Members > MembersLimit {
+			return errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
+		}
+		if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
+			return errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
+		}
+		if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
+			return errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
+		}
+		if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
+			return errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
+		}
+		if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
+			return errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
+		}
+		if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
+			return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+		}
+	}
+	n := state.UpdateOrganization{
+		ID:   this.organization.ID,
+		Name: name,
+	}
+	if limits != nil {
+		n.Limits = &state.OrganizationLimits{
+			Members:     limits.Members,
+			AccessKeys:  limits.AccessKeys,
+			Workspaces:  limits.Workspaces,
+			Connectors:  limits.Connectors,
+			Connections: limits.Connections,
+			Pipelines:   limits.Pipelines,
+		}
+	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
+		var result *db.Result
+		var err error
+		if limits == nil {
+			result, err = tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
+		} else {
+			result, err = tx.Exec(ctx, "UPDATE organizations"+
+				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4,"+
+				" connectors_limit = $5, connections_limit = $6, pipelines_limit = $7 WHERE id = $8",
+				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors,
+				n.Limits.Connections, n.Limits.Pipelines, this.organization.ID)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -1071,6 +1210,7 @@ func (this *Organization) Workspaces() []*Workspace {
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
+//   - WorkspacesLimitReached, if the organization cannot have more workspaces.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (json.Value, error) {
 
 	// Validate the parameters.
@@ -1125,6 +1265,11 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
+	}
+
+	// Check the workspace limit.
+	if reached, limit := this.organization.IsWorkspaceLimitReached(); reached {
+		return nil, errors.Unprocessable(WorkspacesLimitReached, "organization cannot have more than %d workspaces", limit)
 	}
 
 	return settings, nil

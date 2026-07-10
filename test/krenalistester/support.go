@@ -247,13 +247,28 @@ func (k *Krenalis) CreateJavaScriptSource(name string, linkedConnections []strin
 var defaultStrategy Strategy = "Conversion"
 
 // CreateOrganization creates an organization and returns its ID.
-func (k *Krenalis) CreateOrganization(name string, enabled bool) string {
+func (k *Krenalis) CreateOrganization(name string, enabled bool, limits OrganizationLimits) string {
 	var response struct {
 		ID string `json:"id"`
 	}
-	body := map[string]any{"name": name, "enabled": enabled}
+	body := map[string]any{
+		"name":    name,
+		"enabled": enabled,
+		"limits":  limits,
+	}
 	k.Call("POST", "/v1/organizations", organizationsHeaders(), body, &response)
 	return response.ID
+}
+
+// DefaultOrganizationLimits are resource limits for tests that are not
+// specifically testing organization limits.
+var DefaultOrganizationLimits = OrganizationLimits{
+	Members:     20,
+	AccessKeys:  20,
+	Workspaces:  20,
+	Connectors:  20,
+	Connections: 100,
+	Pipelines:   100,
 }
 
 // CreatePipeline creates a pipeline for the connection and target, returning
@@ -841,15 +856,24 @@ func (k *Krenalis) TryUpdateIdentityResolutionSettings(runOnBatchImport bool, id
 	return k.TryCall("PUT", "/v1/identity-resolution/settings", nil, body, nil)
 }
 
-// UpdateOrganization updates the name of the organization with the given ID.
-func (k *Krenalis) UpdateOrganization(id string, name string) {
-	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), map[string]any{"name": name}, nil)
+// UpdateOrganization updates the name and limits of an organization.
+func (k *Krenalis) UpdateOrganization(id string, name string, limits OrganizationLimits) {
+	body := map[string]any{
+		"name":   name,
+		"limits": limits,
+	}
+	k.Call("PUT", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), body, nil)
 }
 
 // UpdatePipeline updates the pipeline with the given ID.
 func (k *Krenalis) UpdatePipeline(pipelineID string, pipeline PipelineToSet) {
+	must(k.t, k.TryUpdatePipeline(pipelineID, pipeline))
+}
+
+// TryUpdatePipeline is like UpdatePipeline but returns an error.
+func (k *Krenalis) TryUpdatePipeline(pipelineID string, pipeline PipelineToSet) error {
 	path := fmt.Sprintf("/v1/pipelines/%s", pipelineID)
-	k.Call("PUT", path, nil, pipeline, nil)
+	return k.TryCall("PUT", path, nil, pipeline, nil)
 }
 
 // UpdateWarehouse updates the warehouse with the given mode and settings.

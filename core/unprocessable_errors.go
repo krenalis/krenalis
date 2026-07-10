@@ -9,12 +9,15 @@ import (
 )
 
 const (
+	AccessKeysLimitReached        errors.Code = "AccessKeysLimitReached"
 	AlterSchemaInExecution        errors.Code = "AlterSchemaInExecution"
 	AuthenticationFailed          errors.Code = "AuthenticationFailed"
 	BuiltInAuthenticationDisabled errors.Code = "BuiltInAuthenticationDisabled"
 	CannotRunIncrementally        errors.Code = "CannotRunIncrementally"
 	ConnectionNotExist            errors.Code = "ConnectionNotExist"
+	ConnectionsLimitReached       errors.Code = "ConnectionsLimitReached"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
+	ConnectorsLimitReached        errors.Code = "ConnectorsLimitReached"
 	ConsentPurposeCodeExists      errors.Code = "ConsentPurposeCodeExists"
 	ConsentPurposeInUse           errors.Code = "ConsentPurposeInUse"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
@@ -36,6 +39,7 @@ const (
 	MaintenanceMode               errors.Code = "MaintenanceMode"
 	MemberEmailExists             errors.Code = "MemberEmailExists"
 	MemberWorkOSUserIDExists      errors.Code = "MemberWorkOSUserIDExists"
+	MembersLimitReached           errors.Code = "MembersLimitReached"
 	NoColumnsFound                errors.Code = "NoColumnsFound"
 	NotReadOnlyMCPSettings        errors.Code = "NotReadOnlyMCPSettings"
 	OperationAlreadyExecuting     errors.Code = "OperationAlreadyExecuting"
@@ -45,6 +49,7 @@ const (
 	OrganizationNotExist          errors.Code = "OrganizationNotExist"
 	PipelineAlreadyRunning        errors.Code = "PipelineAlreadyRunning"
 	PipelineDisabled              errors.Code = "PipelineDisabled"
+	PipelinesLimitReached         errors.Code = "PipelinesLimitReached"
 	PropertyNotExist              errors.Code = "PropertyNotExist"
 	SchemaNotAligned              errors.Code = "SchemaNotAligned"
 	SheetNotExist                 errors.Code = "SheetNotExist"
@@ -58,4 +63,5 @@ const (
 	WarehouseNotInitializable     errors.Code = "WarehouseNotInitializable"
 	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
+	WorkspacesLimitReached        errors.Code = "WorkspacesLimitReached"
 )

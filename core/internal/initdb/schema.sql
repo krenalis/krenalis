@@ -8,6 +8,12 @@ CREATE TABLE organizations (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     name varchar(255) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
+    members_limit integer NOT NULL CHECK (members_limit BETWEEN 1 AND 10000),
+    access_keys_limit integer NOT NULL CHECK (access_keys_limit BETWEEN 0 AND 1000),
+    workspaces_limit integer NOT NULL CHECK (workspaces_limit BETWEEN 0 AND 1000),
+    connectors_limit integer NOT NULL CHECK (connectors_limit BETWEEN 0 AND 1000),
+    connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
+    pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
     PRIMARY KEY (id)
 );
 
@@ -71,6 +77,8 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
+CREATE INDEX workspaces_organization_idx ON workspaces (organization);
+
 CREATE TYPE access_key_type AS ENUM ('API', 'MCP');
 
 CREATE TABLE access_keys (
@@ -120,6 +128,8 @@ CREATE TABLE connections (
     PRIMARY KEY (id)
 );
 
+CREATE INDEX connections_workspace_idx ON connections (workspace);
+
 CREATE TYPE export_mode AS ENUM ('', 'CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');
 
@@ -167,6 +177,30 @@ CREATE TABLE pipelines (
 );
 
 CREATE UNIQUE INDEX pipelines_transformation_id_idx ON pipelines (transformation_id) WHERE transformation_id <> '';
+
+-- Connectors can be referenced by both connections and pipeline formats.
+-- Keep those references in one place so limit checks do not need to duplicate
+-- that rule. References are intentionally not deduplicated: callers decide
+-- whether to count distinct connectors, check for a specific connector, or
+-- exclude a resource.
+CREATE VIEW organization_connector_references AS
+SELECT
+    ws.organization,
+    c.connector,
+    'connection' AS resource_type,
+    c.id AS resource
+FROM connections c
+JOIN workspaces ws ON ws.id = c.workspace
+UNION ALL
+SELECT
+    ws.organization,
+    p.format AS connector,
+    'pipeline' AS resource_type,
+    p.id AS resource
+FROM pipelines p
+JOIN connections c ON c.id = p.connection
+JOIN workspaces ws ON ws.id = c.workspace
+WHERE p.format IS NOT NULL;
 
 CREATE TABLE pipelines_runs (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
@@ -298,6 +332,7 @@ CREATE TYPE notification_name AS ENUM (
     'EndAlterProfileSchema',
     'EndIdentityResolution',
     'EndPipelineRun',
+    'InviteMember',
     'LinkConnection',
     'PurgePipelines',
     'RenameConnection',

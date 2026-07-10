@@ -185,7 +185,8 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-
+		// Wrap the request body to enforce the size limit and normalize it before decoding.
+		r.Body = maxBytesNormalizedReader(w, r.Body, maxRequestSize)
 	}
 
 	r.URL.Path = r.URL.Path[len("/v1"):]
@@ -400,7 +401,7 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 // If workOS is not configured, it uses Krenalis native email and password
 // login.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 
@@ -718,7 +719,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		if err := org.Update(r.Context(), orgName); err != nil {
+		if err := org.Update(r.Context(), orgName, nil); err != nil {
 			slog.Error("WorkOS webhook error: failed to update organization", "id", event.ID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -852,6 +853,19 @@ func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCook
 	return s.cookies.SecureCookie, nil
 }
 
+// maxBytesNormalizedReader returns a reader that enforces a maximum size and
+// normalizes the stream to NFC.
+func maxBytesNormalizedReader(w http.ResponseWriter, r io.ReadCloser, n int64) io.ReadCloser {
+	b := http.MaxBytesReader(w, r, n)
+	return struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: norm.NFC.Reader(b),
+		Closer: b,
+	}
+}
+
 // validateForbiddenBody rejects requests that contain a request body.
 func validateForbiddenBody(r *http.Request) error {
 	if r.ContentLength == 0 {
@@ -876,10 +890,10 @@ func validateForbiddenBody(r *http.Request) error {
 	return nil
 }
 
-// validateRequiredBody validates that the request body is present and is JSON,
-// then applies size limiting and NFC normalization.
-// If allowPlainText is true, it also allows "text/plain" as a content type.
-func validateRequiredBody(w http.ResponseWriter, r *http.Request, allowPlainText bool) error {
+// validateRequiredBody validates that the request body is present and has an
+// allowed content type with an optional UTF-8 charset. If allowPlainText is
+// true, "text/plain" is allowed in addition to "application/json".
+func validateRequiredBody(r *http.Request, allowPlainText bool) error {
 	if r.ContentLength == 0 {
 		return errors.BadRequest("request's body is missing")
 	}
@@ -894,14 +908,6 @@ func validateRequiredBody(w http.ResponseWriter, r *http.Request, allowPlainText
 	}
 	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
 		return errors.BadRequest("request's content type charset must be 'utf-8'")
-	}
-	b := http.MaxBytesReader(w, r.Body, maxRequestSize)
-	r.Body = struct {
-		io.Reader
-		io.Closer
-	}{
-		Reader: norm.NFC.Reader(b),
-		Closer: b,
 	}
 	return nil
 }

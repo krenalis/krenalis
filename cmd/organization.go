@@ -27,11 +27,11 @@ type organization struct {
 // If the ability to add new members without requiring email invitation has not
 // been enabled, it returns an errors.UnprocessableError error with code
 // EmailInvitationRequired.
-func (organization organization) AddMember(w http.ResponseWriter, r *http.Request) (any, error) {
+func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be added because WorkOS authentication is enabled")
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -91,8 +91,8 @@ func (organization organization) AccessKeys(_ http.ResponseWriter, r *http.Reque
 }
 
 // CreateAccessKey creates a new access key for an organization.
-func (organization organization) CreateAccessKey(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -132,8 +132,8 @@ func (organization organization) CreateAccessKey(w http.ResponseWriter, r *http.
 }
 
 // CreateWorkspace creates a workspace for the organization.
-func (organization organization) CreateWorkspace(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, ws, err := organization.authenticateRequest(r)
@@ -217,11 +217,11 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 //
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
-func (organization organization) InviteMember(w http.ResponseWriter, r *http.Request) (any, error) {
+func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be invited because WorkOS authentication is enabled")
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, memberID, err := organization.authenticateAdminRequest(r)
@@ -266,11 +266,11 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 // SetStatus sets the status of an organization.
 //
 // Authentication is performed using the organizations API key.
-func (organization organization) SetStatus(w http.ResponseWriter, r *http.Request) (any, error) {
+func (organization organization) SetStatus(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := organization.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -289,8 +289,8 @@ func (organization organization) SetStatus(w http.ResponseWriter, r *http.Reques
 }
 
 // TestWorkspaceCreation tests a workspace creation.
-func (organization organization) TestWorkspaceCreation(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, ws, err := organization.authenticateRequest(r)
@@ -315,8 +315,8 @@ func (organization organization) TestWorkspaceCreation(w http.ResponseWriter, r 
 }
 
 // UpdateAccessKey updates the name of an access key for an organization.
-func (organization organization) UpdateAccessKey(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -338,11 +338,11 @@ func (organization organization) UpdateAccessKey(w http.ResponseWriter, r *http.
 //
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
-func (organization organization) UpdateMember(w http.ResponseWriter, r *http.Request) (any, error) {
+func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be updated because WorkOS authentication is enabled")
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	org, _, memberID, err := organization.authenticateAdminRequest(r)
@@ -381,28 +381,63 @@ func (organization organization) UpdateMember(w http.ResponseWriter, r *http.Req
 	return nil, err
 }
 
-// Update updates the name of the organization with the given identifier.
+// Update updates the name and the limits of the organization with the given
+// identifier.
 //
 // Authentication is performed using the organizations API key.
-func (organization organization) Update(w http.ResponseWriter, r *http.Request) (any, error) {
+func (organization organization) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := organization.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
+		Name   string `json:"name"`
+		Limits struct {
+			Members     *int `json:"members"`
+			AccessKeys  *int `json:"accessKeys"`
+			Workspaces  *int `json:"workspaces"`
+			Connectors  *int `json:"connectors"`
+			Connections *int `json:"connections"`
+			Pipelines   *int `json:"pipelines"`
+		} `json:"limits"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.Limits.Members == nil {
+		return nil, errors.BadRequest("organization limit for members is required")
+	}
+	if body.Limits.AccessKeys == nil {
+		return nil, errors.BadRequest("organization limit for access keys is required")
+	}
+	if body.Limits.Workspaces == nil {
+		return nil, errors.BadRequest("organization limit for workspaces is required")
+	}
+	if body.Limits.Connectors == nil {
+		return nil, errors.BadRequest("organization limit for connectors is required")
+	}
+	if body.Limits.Connections == nil {
+		return nil, errors.BadRequest("organization limit for connections is required")
+	}
+	if body.Limits.Pipelines == nil {
+		return nil, errors.BadRequest("organization limit for pipelines is required")
+	}
+	limits := &core.OrganizationLimits{
+		Members:     *body.Limits.Members,
+		AccessKeys:  *body.Limits.AccessKeys,
+		Workspaces:  *body.Limits.Workspaces,
+		Connectors:  *body.Limits.Connectors,
+		Connections: *body.Limits.Connections,
+		Pipelines:   *body.Limits.Pipelines,
+	}
 	org, err := organization.core.Organization(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
-	err = org.Update(r.Context(), body.Name)
+	err = org.Update(r.Context(), body.Name, limits)
 	return nil, err
 }
 

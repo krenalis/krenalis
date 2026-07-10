@@ -3,7 +3,7 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 ## What can you do with this?
 
-Using this connector you can read contacts from HubSpot, import them into your data warehouse, and unify them as users in Krenalis.
+Using this connector you can read contacts from HubSpot, import them into your data warehouse, and unify them as profiles in Krenalis.
 
 ## What does it require?
 

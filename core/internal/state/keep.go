@@ -60,6 +60,9 @@ func (state *State) keep() {
 		}
 		var org string
 		state.changing.Lock()
+		// Multiple goroutines may read different parts of the state concurrently, but
+		// only this goroutine can write to it. Therefore, this goroutine can read the
+		// state without acquiring the corresponding locks.
 		switch n.Name {
 		case "AcceptInvitation":
 			org = state.acceptInvitation(n)
@@ -105,6 +108,8 @@ func (state *State) keep() {
 			org = state.endIdentityResolution(n)
 		case "EndPipelineRun":
 			org = state.endPipelineRun(n)
+		case "InviteMember":
+			org = state.inviteMember(n)
 		case "LinkConnection":
 			org = state.linkConnection(n)
 		case "PurgePipelines":
@@ -362,6 +367,7 @@ func (state *State) addMember(n notification) string {
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
 	org.members[e.ID] = struct{}{}
+	org.usage.addMember()
 	org.mu.Unlock()
 	return org.ID
 }
@@ -390,6 +396,10 @@ func (state *State) createAccessKey(n notification) string {
 	state.mu.Lock()
 	state.accessKeyByHMAC[string(e.HMAC)] = &key
 	state.mu.Unlock()
+	org := state.organizations[e.Organization]
+	org.mu.Lock()
+	org.usage.addAccessKey()
+	org.mu.Unlock()
 	return e.Organization
 }
 
@@ -476,6 +486,11 @@ func (state *State) createConnection(n notification) string {
 		state.connectionsByKey[e.EventWriteKey] = c
 	}
 	state.mu.Unlock()
+	// Update the organization.
+	org := c.organization
+	org.mu.Lock()
+	org.usage.addConnection(c.connector)
+	org.mu.Unlock()
 	// Update the workspace.
 	ws.mu.Lock()
 	ws.connections[c.ID] = c
@@ -525,6 +540,7 @@ type CreateOrganization struct {
 	ID      string
 	Name    string
 	Enabled bool
+	Limits  OrganizationLimits
 }
 
 // createOrganization creates an organization.
@@ -537,6 +553,7 @@ func (state *State) createOrganization(n notification) string {
 		mu:         &sync.Mutex{},
 		workspaces: map[string]*Workspace{},
 		members:    map[string]struct{}{},
+		usage:      newOrganizationUsage(e.Limits),
 		ID:         e.ID,
 		Name:       e.Name,
 		Enabled:    e.Enabled,
@@ -637,6 +654,10 @@ func (state *State) createPipeline(n notification) string {
 	state.mu.Lock()
 	state.pipelines[e.ID] = pipeline
 	state.mu.Unlock()
+	org := c.organization
+	org.mu.Lock()
+	org.usage.addPipeline(pipeline.format)
+	org.mu.Unlock()
 	c.mu.Lock()
 	c.pipelines[e.ID] = pipeline
 	c.mu.Unlock()
@@ -694,6 +715,7 @@ func (state *State) createWorkspace(n notification) string {
 	state.mu.Unlock()
 	organization.mu.Lock()
 	organization.workspaces[e.ID] = &ws
+	organization.usage.addWorkspace()
 	organization.mu.Unlock()
 	dispatchNotification(state, e)
 	return organization.ID
@@ -735,17 +757,21 @@ func (state *State) deleteAccessKey(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	var org string
 	state.mu.Lock()
-	for hmac, key := range state.accessKeyByHMAC {
+	var hmac string
+	var key *AccessKey
+	for hmac, key = range state.accessKeyByHMAC {
 		if key.ID == e.ID {
-			delete(state.accessKeyByHMAC, hmac)
-			org = key.Organization
 			break
 		}
 	}
+	delete(state.accessKeyByHMAC, hmac)
 	state.mu.Unlock()
-	return org
+	org := state.organizations[key.Organization]
+	org.mu.Lock()
+	org.usage.removeAccessKey()
+	org.mu.Unlock()
+	return org.ID
 }
 
 // DeleteConnection is the event sent when a connection is deleted.
@@ -773,6 +799,11 @@ func (state *State) deleteConnection(n notification) string {
 		delete(state.connectionsByKey, key)
 	}
 	state.mu.Unlock()
+	// Update the organization.
+	org := e.connection.organization
+	org.mu.Lock()
+	org.usage.removeConnection(e.connection)
+	org.mu.Unlock()
 	// Update the workspace.
 	ws := e.connection.workspace
 	if e.Account {
@@ -915,7 +946,8 @@ func (state *State) deleteMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	delete(org.members, e.ID)
+	delete(org.members, e.ID) // This is a no-op for invited members, which are not in org.members.
+	org.usage.removeMember()
 	org.mu.Unlock()
 	return e.Organization
 }
@@ -934,7 +966,10 @@ func (state *State) deleteMembers(n notification) string {
 	for _, org := range state.organizations {
 		org.mu.Lock()
 		for _, id := range e.IDs {
-			delete(org.members, id)
+			if _, ok := org.members[id]; ok {
+				delete(org.members, id)
+				org.usage.removeMember()
+			}
 		}
 		org.mu.Unlock()
 	}
@@ -1011,6 +1046,10 @@ func (state *State) deletePipeline(n notification) string {
 		delete(state.liveRuns, run.ID)
 	}
 	state.mu.Unlock()
+	org := e.pipeline.organization
+	org.mu.Lock()
+	org.usage.removePipeline(e.pipeline.format)
+	org.mu.Unlock()
 	c := e.pipeline.connection
 	c.mu.Lock()
 	delete(c.pipelines, e.ID)
@@ -1023,7 +1062,7 @@ func (state *State) deletePipeline(n notification) string {
 		ws.mu.Unlock()
 	}
 	dispatchNotification(state, e)
-	return ws.organization.ID
+	return org.ID
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
@@ -1043,11 +1082,18 @@ func (state *State) deleteWorkspace(n notification) string {
 		return ""
 	}
 	e.workspace = state.workspaces[e.ID]
-	organization := e.workspace.organization
+	org := e.workspace.organization
+	// Update the organization.
+	org.mu.Lock()
+	delete(org.workspaces, e.ID)
+	for _, key := range state.accessKeyByHMAC {
+		if key.Workspace == e.ID {
+			org.usage.removeAccessKey()
+		}
+	}
+	org.usage.removeWorkspace(e.workspace)
+	org.mu.Unlock()
 	// Delete the workspace.
-	organization.mu.Lock()
-	delete(organization.workspaces, e.ID)
-	organization.mu.Unlock()
 	state.mu.Lock()
 	delete(state.workspaces, e.ID)
 	// Delete access keys restricted to the workspace.
@@ -1072,7 +1118,7 @@ func (state *State) deleteWorkspace(n notification) string {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
-	return organization.ID
+	return org.ID
 }
 
 // ElectLeader is the event sent when a leader is elected.
@@ -1187,6 +1233,25 @@ func (state *State) endPipelineRun(n notification) string {
 // LinkConnection is the event sent when two unlinked connections are linked.
 type LinkConnection struct {
 	Connections [2]string
+}
+
+// InviteMember is the event sent when a member is invited.
+type InviteMember struct {
+	Member       string
+	Organization string
+}
+
+// inviteMember invites a member.
+func (state *State) inviteMember(n notification) string {
+	e := InviteMember{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	org := state.organizations[e.Organization]
+	org.mu.Lock()
+	org.usage.addMember()
+	org.mu.Unlock()
+	return org.ID
 }
 
 // linkConnection links two unlinked connections.
@@ -1637,8 +1702,9 @@ func (state *State) updateIdentityResolutionSettings(n notification) string {
 
 // UpdateOrganization is the event sent when an organization is updated.
 type UpdateOrganization struct {
-	ID   string
-	Name string
+	ID     string
+	Name   string
+	Limits *OrganizationLimits // if nil, limits is not updated.
 }
 
 // updateOrganization updates an organization.
@@ -1649,6 +1715,9 @@ func (state *State) updateOrganization(n notification) string {
 	}
 	state.replaceOrganization(e.ID, func(org *Organization) {
 		org.Name = e.Name
+		if e.Limits != nil {
+			org.usage.setLimits(*e.Limits)
+		}
 	})
 	return e.ID
 }
@@ -1701,6 +1770,7 @@ func (state *State) updatePipeline(n notification) string {
 	if e.Filter != nil {
 		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
+	oldFormat := state.pipelines[e.ID].format
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.format = format
 		p.propertiesToUnset = e.PropertiesToUnset
@@ -1726,8 +1796,15 @@ func (state *State) updatePipeline(n notification) string {
 		p.UpdatedAtFormat = e.UpdatedAtFormat
 		p.Incremental = e.Incremental
 	})
+	org := p.organization
+	// When the format changes, both oldFormat and format are non-nil.
+	if oldFormat != format {
+		org.mu.Lock()
+		org.usage.updatePipelineFormat(oldFormat, format)
+		org.mu.Unlock()
+	}
 	dispatchNotification(state, e)
-	return p.organization.ID
+	return org.ID
 }
 
 // UpdateWarehouse is the event sent when a warehouse is updated.

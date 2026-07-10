@@ -28,11 +28,11 @@ type api struct {
 //
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
-func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, error) {
+func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "invitations cannot be accepted because WorkOS authentication is enabled")
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -68,11 +68,11 @@ func (api api) AcceptInvitation(w http.ResponseWriter, r *http.Request) (any, er
 //
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
-func (api api) ChangeMemberPasswordByToken(w http.ResponseWriter, r *http.Request) (any, error) {
+func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "passwords cannot be changed because WorkOS authentication is enabled")
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -127,22 +127,56 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 // CreateOrganization creates a new organization.
 //
 // Authentication is performed using the organizations API key.
-func (api api) CreateOrganization(w http.ResponseWriter, r *http.Request) (any, error) {
+func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
 		Name    string `json:"name"`
 		Enabled bool   `json:"enabled"`
+		Limits  struct {
+			Members     *int `json:"members"`
+			AccessKeys  *int `json:"accessKeys"`
+			Workspaces  *int `json:"workspaces"`
+			Connectors  *int `json:"connectors"`
+			Connections *int `json:"connections"`
+			Pipelines   *int `json:"pipelines"`
+		} `json:"limits"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled)
+	if body.Limits.Members == nil {
+		return nil, errors.BadRequest("organization limit for members is required")
+	}
+	if body.Limits.AccessKeys == nil {
+		return nil, errors.BadRequest("organization limit for access keys is required")
+	}
+	if body.Limits.Workspaces == nil {
+		return nil, errors.BadRequest("organization limit for workspaces is required")
+	}
+	if body.Limits.Connectors == nil {
+		return nil, errors.BadRequest("organization limit for connectors is required")
+	}
+	if body.Limits.Connections == nil {
+		return nil, errors.BadRequest("organization limit for connections is required")
+	}
+	if body.Limits.Pipelines == nil {
+		return nil, errors.BadRequest("organization limit for pipelines is required")
+	}
+	limits := core.OrganizationLimits{
+		Members:     *body.Limits.Members,
+		AccessKeys:  *body.Limits.AccessKeys,
+		Workspaces:  *body.Limits.Workspaces,
+		Connectors:  *body.Limits.Connectors,
+		Connections: *body.Limits.Connections,
+		Pipelines:   *body.Limits.Pipelines,
+	}
+	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled, limits)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +203,8 @@ func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, erro
 
 // ExpressionsProperties returns all the unique properties contained inside a
 // list of expressions.
-func (api api) ExpressionsProperties(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
@@ -348,11 +382,11 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 //
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
-func (api api) SendMemberPasswordReset(w http.ResponseWriter, r *http.Request) (any, error) {
+func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if api.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "password reset emails cannot be sent because WorkOS authentication is enabled")
 	}
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -408,8 +442,8 @@ func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.R
 
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data.
-func (api api) TransformData(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
@@ -443,8 +477,8 @@ func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (
 }
 
 // ValidateExpression validates an expression.
-func (api api) ValidateExpression(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {

@@ -52,7 +52,7 @@ func init() {
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
 			Documentation: connectors.RoleDocumentation{
-				Summary:  "Export users as contacts to HubSpot",
+				Summary:  "Export profiles as contacts to HubSpot",
 				Overview: destinationOverview,
 			},
 		},

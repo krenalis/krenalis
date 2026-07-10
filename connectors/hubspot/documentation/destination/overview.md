@@ -3,7 +3,7 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 ## What can you do with this?
 
-Using this connector you can create and update unified Krenalis users from your data warehouse in HubSpot as contacts.
+Using this connector you can create and update unified Krenalis profiles from your data warehouse in HubSpot as contacts.
 
 ## What does it require?
 

@@ -317,7 +317,7 @@ func TestOrganizationDisabled(t *testing.T) {
 	// Updating the organization's name uses the organizations API key, so it
 	// must remain functional even while the organization is disabled.
 	t.Run("update organization name still works", func(t *testing.T) {
-		k.UpdateOrganization(orgID, "ACME inc (renamed while disabled)")
+		k.UpdateOrganization(orgID, "ACME inc (renamed while disabled)", krenalistester.DefaultOrganizationLimits)
 		got := k.Organization(orgID)
 		if got.Name != "ACME inc (renamed while disabled)" {
 			t.Fatalf("expected the organization name to be updated, got %q", got.Name)

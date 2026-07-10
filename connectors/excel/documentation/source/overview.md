@@ -1,7 +1,7 @@
 
 ## What can you do with this?
 
-This connector lets you import users from an Excel file into your data warehouse and unify them as users within Krenalis.
+This connector lets you import users from an Excel file into your data warehouse and unify them as profiles within Krenalis.
 
 ## What does it require?
 
