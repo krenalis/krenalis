@@ -145,6 +145,7 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
+    required_consents varchar(12)[] NOT NULL DEFAULT '{}',
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
     transformation_version varchar(128) NOT NULL DEFAULT '',

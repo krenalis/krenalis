@@ -91,6 +91,7 @@ interface Pipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
+	requiredConsents: string[] | null;
 	transformation: Transformation | null;
 	query: string | null;
 	path: string | null;
@@ -120,6 +121,7 @@ interface PipelineToSet {
 	name: string;
 	enabled?: boolean;
 	filter?: Filter | null;
+	requiredConsents?: string[] | null;
 	inSchema?: ObjectType;
 	outSchema?: ObjectType;
 	transformation?: Transformation;

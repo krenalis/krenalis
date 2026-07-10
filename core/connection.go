@@ -328,6 +328,11 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	this.core.mustBeOpen()
 
+	// Normalize the required consents.
+	if pipeline.RequiredConsents == nil {
+		pipeline.RequiredConsents = []string{}
+	}
+
 	// Retrieve the format, if specified in the pipeline.
 	var format *state.Connector
 	if pipeline.Format != "" {
@@ -385,6 +390,9 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
+	if len(pipeline.RequiredConsents) > 0 {
+		v.knownConsentPurposeIDs = knownConsentPurposeIDs(c.Workspace())
+	}
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return "", err
@@ -421,6 +429,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		EventType:          eventType,
 		InSchema:           inSchema,
 		OutSchema:          pipeline.OutSchema,
+		RequiredConsents:   pipeline.RequiredConsents,
 		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
 		Query:              pipeline.Query,
 		Format:             pipeline.Format,
@@ -543,17 +552,17 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				}
 			}
 			query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
-				"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
+				"schedule_start, schedule_period, in_schema, out_schema, filter, required_consents, transformation_mapping,\n" +
 				"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
 				"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
 				"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
 				"update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n" +
 				"updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
+				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37)"
 			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-				n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
+				n.Filter, n.RequiredConsents, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 				n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
 				n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 				n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)

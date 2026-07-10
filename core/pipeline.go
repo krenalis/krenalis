@@ -65,6 +65,7 @@ type Pipeline struct {
 	InSchema           types.Type      `json:"inSchema"`
 	OutSchema          types.Type      `json:"outSchema"`
 	Filter             *Filter         `json:"filter"`
+	RequiredConsents   []string        `json:"requiredConsents"`
 	Transformation     *Transformation `json:"transformation"`
 	Query              *string         `json:"query"`
 	Format             string          `json:"format"`
@@ -455,15 +456,17 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 		if p.Target == TargetEvent {
 			serialized = struct {
 				serializedPipeline
-				EventType      string          `json:"eventType"`
-				Filter         *Filter         `json:"filter"`
-				Transformation *Transformation `json:"transformation"`
-				InSchema       types.Type      `json:"inSchema"`
-				OutSchema      types.Type      `json:"outSchema"`
+				EventType        string          `json:"eventType"`
+				Filter           *Filter         `json:"filter"`
+				RequiredConsents []string        `json:"requiredConsents"`
+				Transformation   *Transformation `json:"transformation"`
+				InSchema         types.Type      `json:"inSchema"`
+				OutSchema        types.Type      `json:"outSchema"`
 			}{
 				serializedPipeline: p,
 				EventType:          *this.EventType,
 				Filter:             this.Filter,
+				RequiredConsents:   this.RequiredConsents,
 				Transformation:     this.Transformation,
 				InSchema:           this.InSchema,
 				OutSchema:          this.OutSchema,
@@ -641,6 +644,10 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 
 	this.core.mustBeOpen()
 
+	if pipeline.RequiredConsents == nil {
+		pipeline.RequiredConsents = []string{}
+	}
+
 	// Retrieve the file format, if specified in the pipeline.
 	var format *state.Connector
 	if pipeline.Format != "" {
@@ -665,6 +672,9 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
+	if len(pipeline.RequiredConsents) > 0 {
+		v.knownConsentPurposeIDs = knownConsentPurposeIDs(c.Workspace())
+	}
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return err
@@ -699,6 +709,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		Enabled:            pipeline.Enabled,
 		InSchema:           inSchema,
 		OutSchema:          pipeline.OutSchema,
+		RequiredConsents:   pipeline.RequiredConsents,
 		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
 		Query:              pipeline.Query,
 		Format:             pipeline.Format,
@@ -786,18 +797,18 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	update := "UPDATE pipelines SET\n" +
-		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, " +
-		"transformation_mapping = $6, transformation_id = $7, transformation_version = $8, transformation_language = $9, " +
-		"transformation_source = $10, transformation_preserve_json = $11, transformation_in_paths = $12, " +
-		"transformation_out_paths = $13, query = $14, format = $15, path = $16, sheet = $17, " +
-		"compression = $18, order_by = $19, format_settings = $20, export_mode = $21, matching_in = $22, " +
-		"matching_out = $23, update_on_duplicates = $24, table_name = $25, table_key = $26, " +
-		"user_id_column = $27, updated_at_column = $28, updated_at_format = $29, incremental = $30, " +
-		"properties_to_unset = $31"
+		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, required_consents = $6, " +
+		"transformation_mapping = $7, transformation_id = $8, transformation_version = $9, transformation_language = $10, " +
+		"transformation_source = $11, transformation_preserve_json = $12, transformation_in_paths = $13, " +
+		"transformation_out_paths = $14, query = $15, format = $16, path = $17, sheet = $18, " +
+		"compression = $19, order_by = $20, format_settings = $21, export_mode = $22, matching_in = $23, " +
+		"matching_out = $24, update_on_duplicates = $25, table_name = $26, table_key = $27, " +
+		"user_id_column = $28, updated_at_column = $29, updated_at_format = $30, incremental = $31, " +
+		"properties_to_unset = $32"
 	if (c.Role == state.Source && !pipeline.Incremental) || shouldReload(this.pipeline, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
 	}
-	update += "\nWHERE id = $32"
+	update += "\nWHERE id = $33"
 
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var function state.TransformationFunction
@@ -853,7 +864,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		}
 		// Update the pipeline.
 		result, err := tx.Exec(ctx, update,
-			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, mapping,
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, n.RequiredConsents, mapping,
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
@@ -1049,6 +1060,7 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	if pipeline.Filter != nil {
 		this.Filter = convertWhereToFilter(pipeline.Filter, pipeline.InSchema)
 	}
+	this.RequiredConsents = pipeline.RequiredConsents
 	if pipeline.Transformation.Mapping != nil {
 		this.Transformation = &Transformation{
 			Mapping: maps.Clone(pipeline.Transformation.Mapping),
@@ -1128,6 +1140,10 @@ type PipelineToSet struct {
 
 	// Filter is the filter of the pipeline, if it has one, otherwise is nil.
 	Filter *Filter `json:"filter"`
+
+	// RequiredConsents is the list of consent purposes that must be present in
+	// an event's consent for it to be delivered.
+	RequiredConsents []string `json:"requiredConsents"`
 
 	// InSchema is the input schema of the pipeline.
 	//

@@ -1563,6 +1563,7 @@ type Pipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             *Where
+	RequiredConsents   []string
 	Transformation     Transformation
 	Query              string
 	Path               string

@@ -577,6 +577,7 @@ type CreatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
+	RequiredConsents   []string
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -627,6 +628,7 @@ func (state *State) createPipeline(n notification) string {
 		SchedulePeriod:     e.SchedulePeriod,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
+		RequiredConsents:   e.RequiredConsents,
 		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
@@ -1730,6 +1732,7 @@ type UpdatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
+	RequiredConsents   []string
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -1779,6 +1782,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.InSchema = e.InSchema
 		p.OutSchema = e.OutSchema
 		p.Filter = filter
+		p.RequiredConsents = e.RequiredConsents
 		p.Transformation = e.Transformation
 		p.Query = e.Query
 		p.Path = e.Path

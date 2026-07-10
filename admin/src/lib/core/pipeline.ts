@@ -210,6 +210,7 @@ interface TransformedTransformation {
 
 type PipelineTypeField =
 	| 'Filter'
+	| 'Consents'
 	| 'Transformation'
 	| 'Matching'
 	| 'UpdateOnDuplicates'
@@ -252,6 +253,7 @@ interface TransformedPipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
+	requiredConsents: string[] | null;
 	transformation: TransformedTransformation | null;
 	query?: string | null;
 	path?: string | null;
@@ -629,6 +631,7 @@ const transformPipeline = (
 		inSchema: pipeline.inSchema,
 		outSchema: pipeline.outSchema,
 		filter: pipeline.filter,
+		requiredConsents: pipeline.requiredConsents,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
 			function: pipeline.transformation?.function,
@@ -976,6 +979,14 @@ const transformInPipelineToSet = async (
 		}
 	}
 
+	let requiredConsents: string[] = null;
+	if (pipeline.requiredConsents != null) {
+		const codes = Array.from(new Set(pipeline.requiredConsents));
+		if (codes.length > 0) {
+			requiredConsents = codes;
+		}
+	}
+
 	if (pipeline.query != null) {
 		query = pipeline.query.trim();
 	}
@@ -1091,6 +1102,7 @@ const transformInPipelineToSet = async (
 		name: pipeline.name,
 		enabled: pipeline.enabled,
 		filter: filter,
+		requiredConsents: requiredConsents,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: mapping == null && func == null ? null : { mapping: mapping, function: func },
@@ -1150,6 +1162,7 @@ const computeDefaultPipeline = (
 			pipelineType.target == 'User' &&
 			(connection.isApplication || connection.isDatabase || connection.isFileStorage),
 		filter: null,
+		requiredConsents: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
 			function: null,
@@ -1157,6 +1170,9 @@ const computeDefaultPipeline = (
 		inSchema: null,
 		outSchema: null,
 	};
+	if (fields.includes('Consents')) {
+		pipeline.requiredConsents = [];
+	}
 	if (fields.includes('Filter')) {
 		const eventType = connection.eventTypes.find((t) => t.id === pipelineType.eventType);
 		if (eventType != null && eventType.defaultFilter != null) {
@@ -1214,11 +1230,20 @@ const hasFilters = (connection: TransformedConnection, target: PipelineTarget) =
 	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'User');
 };
 
+const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
+	// Required consents are only allowed for pipelines that send events.
+	return connection.role === 'Destination' && connection.connector.type === 'Application' && target === 'Event';
+};
+
 const computePipelineTypeFields = (connection: TransformedConnection, pipelineType: PipelineType) => {
 	const fields: PipelineTypeField[] = [];
 
 	if (hasFilters(connection, pipelineType.target)) {
 		fields.push('Filter');
+	}
+
+	if (hasRequiredConsents(connection, pipelineType.target)) {
+		fields.push('Consents');
 	}
 
 	const type = connection.connector.type;

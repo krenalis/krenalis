@@ -60,6 +60,11 @@ type validationState struct {
 
 	// provider is the transformers.FunctionProvider instantiated on the Core.
 	provider transformers.FunctionProvider
+
+	// knownConsentPurposeIDs is the set of identifiers of the consent purposes
+	// defined in the pipeline's workspace. It is only populated by the caller
+	// when the pipeline to validate has a non-empty RequiredConsents.
+	knownConsentPurposeIDs map[string]bool
 }
 
 // validatePipelineToSet validates the given PipelineToSet, in the context of
@@ -162,6 +167,25 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		if !exportUsersToFile {
 			usedInPaths = properties
+		}
+	}
+	// Validate the required consents.
+	if len(pipeline.RequiredConsents) > 0 {
+		if !dispatchEventsToAplications {
+			return errors.BadRequest("required consents are not allowed")
+		}
+		seen := make(map[string]bool, len(pipeline.RequiredConsents))
+		for _, id := range pipeline.RequiredConsents {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
+			}
+			if seen[id] {
+				return errors.BadRequest("required consent purpose %q is duplicated", id)
+			}
+			seen[id] = true
+			if !v.knownConsentPurposeIDs[id] {
+				return errors.Unprocessable(UnknownConsentPurpose, "consent purpose %q does not exist", id)
+			}
 		}
 	}
 	// Validate the transformation.

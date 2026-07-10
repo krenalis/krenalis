@@ -59,6 +59,7 @@ const (
 	TooManyListeners              errors.Code = "TooManyListeners"
 	TransformationFailed          errors.Code = "TransformationFailed"
 	TypeNotAllowed                errors.Code = "TypeNotAllowed"
+	UnknownConsentPurpose         errors.Code = "UnknownConsentPurpose"
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
 	WarehouseNotInitializable     errors.Code = "WarehouseNotInitializable"
 	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
