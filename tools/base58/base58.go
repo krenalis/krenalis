@@ -41,7 +41,10 @@ func Decode(s string) ([]byte, error) {
 		leadingZeros++
 	}
 
-	decoded := make([]byte, 0, (len(s)-leadingZeros)*733/1000+1)
+	const sizeNumerator = 733 // ceil(log(58)/log(256) * sizeDenominator)
+	const sizeDenominator = 1000
+
+	decoded := make([]byte, 0, (len(s)-leadingZeros)*sizeNumerator/sizeDenominator+1)
 	for i := leadingZeros; i < len(s); i++ {
 		c := s[i]
 		if !isBase58(c) {
@@ -79,7 +82,10 @@ func Encode(src []byte) string {
 		leadingZeros++
 	}
 
-	digits := make([]byte, 0, (len(src)-leadingZeros)*138/100+1)
+	const sizeNumerator = 138 // ceil(log(256)/log(58) * sizeDenominator)
+	const sizeDenominator = 100
+
+	digits := make([]byte, 0, (len(src)-leadingZeros)*sizeNumerator/sizeDenominator+1)
 	for _, b := range src[leadingZeros:] {
 		carry := int(b)
 		for i := 0; i < len(digits); i++ {
