@@ -327,7 +327,7 @@ func (state *State) acceptInvitation(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	org.members[e.Member] = struct{}{}
+	org.members[e.Member] = true
 	org.mu.Unlock()
 	return org.ID
 }
@@ -346,7 +346,7 @@ func (state *State) addMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	org.members[e.ID] = struct{}{}
+	org.members[e.ID] = true
 	org.usage.addMember()
 	org.mu.Unlock()
 	return org.ID
@@ -502,7 +502,7 @@ func (state *State) createOrganization(n notification) string {
 	org := &Organization{
 		mu:         &sync.Mutex{},
 		workspaces: map[string]*Workspace{},
-		members:    map[string]struct{}{},
+		members:    map[string]bool{},
 		usage:      newOrganizationUsage(e.Limits),
 		ID:         e.ID,
 		Name:       e.Name,
@@ -875,7 +875,7 @@ func (state *State) deleteMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	delete(org.members, e.ID) // This is a no-op for invited members, which are not in org.members.
+	delete(org.members, e.ID)
 	org.usage.removeMember()
 	org.mu.Unlock()
 	return e.Organization
@@ -1178,6 +1178,7 @@ func (state *State) inviteMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
+	org.members[e.Member] = false
 	org.usage.addMember()
 	org.mu.Unlock()
 	return org.ID

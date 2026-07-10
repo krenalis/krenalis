@@ -234,9 +234,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) (st
 		Organization: this.organization.ID,
 	}
 	for {
-		n.ID = generateID(func(id string) (any, bool) {
-			return nil, this.organization.HasMember(id)
-		})
+		n.ID = generateID(this.organization.CanMemberLogin)
 		now := time.Now().UTC()
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			// Ensure the organization can accept another member.
@@ -354,6 +352,22 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	}
 
 	return id, nil
+}
+
+// CanMemberLogin reports whether the member with the given ID can log in to the
+// organization.
+//
+// If the member does not exist, it returns an errors.NotFound error.
+func (this *Organization) CanMemberLogin(id string) (bool, error) {
+	this.core.mustBeOpen()
+	if !IsValidID(id) {
+		return false, errors.BadRequest("identifier %q is not a valid member identifier", id)
+	}
+	canLogin, ok := this.organization.CanMemberLogin(id)
+	if !ok {
+		return false, errors.NotFound("member %s does not exist", id)
+	}
+	return canLogin, nil
 }
 
 // CreateAccessKey creates a new access key for the organization with the
@@ -638,15 +652,6 @@ func (this *Organization) DeleteMember(ctx context.Context, id string) error {
 	return err
 }
 
-// HasMember reports whether the organization has a member with the given ID.
-func (this *Organization) HasMember(id string) (bool, error) {
-	this.core.mustBeOpen()
-	if !IsValidID(id) {
-		return false, errors.BadRequest("identifier %q is not a valid member identifier", id)
-	}
-	return this.organization.HasMember(id), nil
-}
-
 // InviteMember sends an invitation email to the given email address using the
 // given template. It then creates a new invited member, or updates an existing
 // pending invitation.
@@ -669,9 +674,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	}
 	var invitationToken string
 	for {
-		n.Member = generateID(func(id string) (any, bool) {
-			return nil, this.organization.HasMember(id)
-		})
+		n.Member = generateID(this.organization.CanMemberLogin)
 		invitationToken, err = generateMemberToken()
 		if err != nil {
 			return err

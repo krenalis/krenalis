@@ -285,7 +285,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			}
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
-			org.members = map[string]struct{}{}
+			org.members = map[string]bool{}
 			state.organizations[org.ID] = org
 		}
 		return nil
@@ -295,21 +295,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all members.
-	err = tx.QueryScan(ctx, "SELECT id, organization, invitation_token <> '' FROM members ORDER BY organization", func(rows *db.Rows) error {
+	err = tx.QueryScan(ctx, "SELECT id, organization, invitation_token = '' FROM members ORDER BY organization", func(rows *db.Rows) error {
 		var org *Organization
 		for rows.Next() {
 			var id, organization string
-			var hasPendingInvitation bool
-			if err := rows.Scan(&id, &organization, &hasPendingInvitation); err != nil {
+			var canLogin bool
+			if err := rows.Scan(&id, &organization, &canLogin); err != nil {
 				return fmt.Errorf("loading member %s: %s", id, err)
 			}
 			if org == nil || org.ID != organization {
 				org = state.organizations[organization]
 			}
 			org.usage.addMember()
-			if !hasPendingInvitation {
-				org.members[id] = struct{}{}
-			}
+			org.members[id] = canLogin
 		}
 		return nil
 	})
