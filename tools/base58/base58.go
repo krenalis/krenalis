@@ -36,34 +36,32 @@ func Decode(s string) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	zeros := 0
-	for zeros < len(s) && s[zeros] == alphabet[0] {
-		zeros++
+	leadingZeros := 0
+	for i := 0; i < len(s) && s[i] == alphabet[0]; i++ {
+		leadingZeros++
 	}
 
-	decoded := make([]byte, 0, (len(s)-zeros)*733/1000+1)
-	for i := zeros; i < len(s); i++ {
+	decoded := make([]byte, 0, (len(s)-leadingZeros)*733/1000+1)
+	for i := leadingZeros; i < len(s); i++ {
 		c := s[i]
 		if !isBase58(c) {
 			return nil, errInvalidBase58
 		}
-
 		carry := int(decodeBase58[c])
 		for j := 0; j < len(decoded); j++ {
 			carry += int(decoded[j]) * 58
 			decoded[j] = byte(carry)
 			carry >>= 8
 		}
-
 		for carry > 0 {
 			decoded = append(decoded, byte(carry))
 			carry >>= 8
 		}
 	}
 
-	out := make([]byte, zeros+len(decoded))
+	out := make([]byte, leadingZeros+len(decoded))
 	for i := 0; i < len(decoded); i++ {
-		out[zeros+i] = decoded[len(decoded)-1-i]
+		out[leadingZeros+i] = decoded[len(decoded)-1-i]
 	}
 
 	return out, nil
@@ -76,33 +74,31 @@ func Encode(src []byte) string {
 		return ""
 	}
 
-	zeros := 0
-	for zeros < len(src) && src[zeros] == 0 {
-		zeros++
+	leadingZeros := 0
+	for i := 0; i < len(src) && src[i] == 0; i++ {
+		leadingZeros++
 	}
 
-	digits := make([]byte, 0, (len(src)-zeros)*138/100+1)
-	for _, b := range src[zeros:] {
+	digits := make([]byte, 0, (len(src)-leadingZeros)*138/100+1)
+	for _, b := range src[leadingZeros:] {
 		carry := int(b)
-
 		for i := 0; i < len(digits); i++ {
 			carry += int(digits[i]) << 8
 			digits[i] = byte(carry % 58)
 			carry /= 58
 		}
-
 		for carry > 0 {
 			digits = append(digits, byte(carry%58))
 			carry /= 58
 		}
 	}
 
-	out := make([]byte, zeros+len(digits))
-	for i := 0; i < zeros; i++ {
+	out := make([]byte, leadingZeros+len(digits))
+	for i := 0; i < leadingZeros; i++ {
 		out[i] = alphabet[0]
 	}
 	for i := 0; i < len(digits); i++ {
-		out[zeros+i] = alphabet[digits[len(digits)-1-i]]
+		out[leadingZeros+i] = alphabet[digits[len(digits)-1-i]]
 	}
 
 	return string(out)
