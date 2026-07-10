@@ -74,7 +74,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return errors.New("language is not supported")
 	}
 
-	if v, _ := strconv.Atoi(version); v <= 0 || version[0] == '+' {
+	if v, err := strconv.Atoi(version); err != nil || v <= 0 || version[0] == '+' {
 		return fmt.Errorf("invalid version %q", version)
 	}
 	filename := fn.filename(name, version, language)
