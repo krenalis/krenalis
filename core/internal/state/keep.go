@@ -17,7 +17,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/analytics-go"
 )
 
@@ -1053,7 +1052,7 @@ func (state *State) deleteWorkspace(n notification) string {
 // ElectLeader is the event sent when a leader is elected.
 type ElectLeader struct {
 	Number int
-	Leader uuid.UUID
+	Leader string
 }
 
 // electLeader elects a leader.
