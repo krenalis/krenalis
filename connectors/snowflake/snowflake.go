@@ -166,15 +166,10 @@ type innerSettings struct {
 
 var falseStrPtr = new("false")
 
-// connector returns a driver.Connector from the settings.
-//
-// Unlike the other database connectors, Snowflake does not dial with
-// env.Dial, so the bytes it transfers are not attributed to the organization.
-// The driver has no dial hook: its only extension point is Config.Transporter,
-// which replaces the transport the driver builds, and with it the certificate
-// revocation checks, the proxy handling and the TLS configuration it sets up.
-// TODO(gianluca): count the bytes transferred by Snowflake connections.
-func connector(s *innerSettings) driver.Connector {
+// connector returns a driver.Connector from the settings, whose connections are
+// established dialing with dialWith, so that the dial options of the driver's
+// own dialer are preserved.
+func connector(s *innerSettings, dialWith func(connectors.DialFunc) connectors.DialFunc) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -189,6 +184,7 @@ func connector(s *innerSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
+		WrapDialContext: dialWith,
 	}
 	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
@@ -210,7 +206,7 @@ func (sf *Snowflake) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	db := sql.OpenDB(connector(&s))
+	db := sql.OpenDB(connector(&s, sf.env.DialWith))
 	db.SetMaxIdleConns(0)
 	sf.db = db
 	return nil
@@ -313,17 +309,18 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
 		return connectors.NewInvalidSettingsError("warehouse length must be in range [1,255]")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, sf.env.DialWith)
 	if err != nil || test {
 		return err
 	}
 	return sf.env.Settings.Store(ctx, s)
 }
 
-// testConnection tests a connection with the given settings.
+// testConnection tests a connection with the given settings, established
+// dialing with dialWith, so that the driver's own dialer is preserved.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings) error {
-	db := sql.OpenDB(connector(settings))
+func testConnection(ctx context.Context, settings *innerSettings, dialWith func(connectors.DialFunc) connectors.DialFunc) error {
+	db := sql.OpenDB(connector(settings, dialWith))
 	defer db.Close()
 	db.SetMaxIdleConns(0)
 	return db.PingContext(ctx)

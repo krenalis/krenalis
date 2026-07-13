@@ -695,7 +695,7 @@ github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.9.4
 ## explicit; go 1.17
 github.com/sirupsen/logrus
-# github.com/snowflakedb/gosnowflake/v2 v2.1.0
+# github.com/snowflakedb/gosnowflake/v2 v2.1.0 => /home/gianluca/Scaricati/gosnowflake
 ## explicit; go 1.24.0
 github.com/snowflakedb/gosnowflake/v2
 github.com/snowflakedb/gosnowflake/v2/internal/arrow
@@ -937,3 +937,4 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
+# github.com/snowflakedb/gosnowflake/v2 => /home/gianluca/Scaricati/gosnowflake
