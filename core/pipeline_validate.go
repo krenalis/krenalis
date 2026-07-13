@@ -72,6 +72,7 @@ type validationState struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - FormatNotExist, if the pipeline is on file and the specified format does
 //     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
@@ -184,7 +185,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			}
 			seen[id] = true
 			if !v.knownConsentPurposeIDs[id] {
-				return errors.Unprocessable(UnknownConsentPurpose, "consent purpose %q does not exist", id)
+				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
 			}
 		}
 	}

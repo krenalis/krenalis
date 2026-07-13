@@ -315,6 +315,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.

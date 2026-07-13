@@ -635,6 +635,7 @@ func (this *Pipeline) SetStatus(ctx context.Context, enabled bool) error {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - FormatNotExist, if the format does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - SchemaNotAligned, if the output schema is not aligned with the event type

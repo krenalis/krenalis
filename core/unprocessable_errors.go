@@ -20,6 +20,7 @@ const (
 	ConnectorsLimitReached        errors.Code = "ConnectorsLimitReached"
 	ConsentPurposeCodeExists      errors.Code = "ConsentPurposeCodeExists"
 	ConsentPurposeInUse           errors.Code = "ConsentPurposeInUse"
+	ConsentPurposeNotExist        errors.Code = "ConsentPurposeNotExist"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
 	EmailInvitationRequired       errors.Code = "EmailInvitationRequired" // Returned by apisServer.
 	EmailSendFailed               errors.Code = "EmailSendFailed"
@@ -59,7 +60,6 @@ const (
 	TooManyListeners              errors.Code = "TooManyListeners"
 	TransformationFailed          errors.Code = "TransformationFailed"
 	TypeNotAllowed                errors.Code = "TypeNotAllowed"
-	UnknownConsentPurpose         errors.Code = "UnknownConsentPurpose"
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
 	WarehouseNotInitializable     errors.Code = "WarehouseNotInitializable"
 	WarehousePlatformNotExist     errors.Code = "WarehousePlatformNotExist"
