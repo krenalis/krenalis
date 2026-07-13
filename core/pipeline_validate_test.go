@@ -429,6 +429,81 @@ func Test_validatePipeline(t *testing.T) {
 			connectionConnectorType: state.SDK,
 		},
 		{
+			name: "GOOD: Source/SDK/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:             "Import events into the data warehouse",
+				RequiredConsents: []string{"111111111111", "222222222222"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true, "222222222222": true},
+		},
+		{
+			name: "BAD: Source/SDK/Event - unknown consent purpose",
+			pipeline: PipelineToSet{
+				Name:             "Import events into the data warehouse",
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{},
+			err:                     `consent purpose "111111111111" does not exist`,
+		},
+		{
+			name: "GOOD: Source/SDK/User - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+		},
+		{
+			name: "BAD: Source/SDK/User - unknown consent purpose",
+			pipeline: PipelineToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{},
+			err:                     `consent purpose "111111111111" does not exist`,
+		},
+		{
+			name: "GOOD: Source/Webhook/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:             "Import events into the data warehouse",
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+		},
+		{
 			name: "GOOD: Source/Webhook/User - with mapping",
 			pipeline: PipelineToSet{
 				Name:     "Import users",

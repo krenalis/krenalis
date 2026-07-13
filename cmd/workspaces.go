@@ -160,9 +160,10 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Connection *string      `json:"connection"`
-		Size       *int         `json:"size"`
-		Filter     *core.Filter `json:"filter"`
+		Connection       *string      `json:"connection"`
+		Size             *int         `json:"size"`
+		Filter           *core.Filter `json:"filter"`
+		RequiredConsents []string     `json:"requiredConsents"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -176,7 +177,7 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 	if body.Size != nil {
 		size = *body.Size
 	}
-	id, err := ws.CreateEventListener(connection, size, body.Filter)
+	id, err := ws.CreateEventListener(connection, size, body.Filter, body.RequiredConsents)
 	if err != nil {
 		return nil, err
 	}

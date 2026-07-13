@@ -16,6 +16,7 @@ const useEventListener = (
 	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
 	connection?: string | null,
 	filter?: Filter,
+	requiredConsents?: string[] | null,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
@@ -37,7 +38,7 @@ const useEventListener = (
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventListeners.create(connection, 3, filter);
+				listener = await api.workspaces.eventListeners.create(connection, 3, filter, requiredConsents);
 			} catch (err) {
 				setIsStarted(false);
 				if (err instanceof UnprocessableError) {

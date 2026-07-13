@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/events"
@@ -797,7 +798,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.ReceivePassed(p.ID, 1)
-			if !filters.Applies(p.Filter, event) {
+			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, event) {
 				c.metrics.FilterFailed(p.ID, 1)
 				continue
 			}
@@ -813,7 +814,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.ReceivePassed(p.ID, 1)
-			if !filters.Applies(p.Filter, event) {
+			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, event) {
 				c.metrics.FilterFailed(p.ID, 1)
 				continue
 			}
@@ -834,7 +835,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.ReceivePassed(p.ID, 1)
-				if !filters.Applies(p.Filter, event) {
+				if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, event) {
 					c.metrics.FilterFailed(p.ID, 1)
 					continue
 				}

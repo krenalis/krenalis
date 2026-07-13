@@ -347,13 +347,15 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case SDK, Webhook:
 				serialized = struct {
 					serializedPipeline
-					Filter         *Filter         `json:"filter"`
-					Transformation *Transformation `json:"transformation"`
-					InSchema       types.Type      `json:"inSchema"`
-					OutSchema      types.Type      `json:"outSchema"`
+					Filter           *Filter         `json:"filter"`
+					RequiredConsents []string        `json:"requiredConsents"`
+					Transformation   *Transformation `json:"transformation"`
+					InSchema         types.Type      `json:"inSchema"`
+					OutSchema        types.Type      `json:"outSchema"`
 				}{
 					serializedPipeline: p,
 					Filter:             this.Filter,
+					RequiredConsents:   this.RequiredConsents,
 					Transformation:     this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -363,11 +365,13 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 		if p.Target == TargetEvent {
 			serialized = struct {
 				serializedPipeline
-				Filter   *Filter    `json:"filter"`
-				InSchema types.Type `json:"inSchema"`
+				Filter           *Filter    `json:"filter"`
+				RequiredConsents []string   `json:"requiredConsents"`
+				InSchema         types.Type `json:"inSchema"`
 			}{
 				serializedPipeline: p,
 				Filter:             this.Filter,
+				RequiredConsents:   this.RequiredConsents,
 				InSchema:           this.InSchema,
 			}
 		}

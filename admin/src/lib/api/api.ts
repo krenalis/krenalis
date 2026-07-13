@@ -528,11 +528,13 @@ class EventListeners {
 		connection: string | null,
 		size: number | null,
 		filter: Filter | null,
+		requiredConsents?: string[] | null,
 	): Promise<CreateEventListenerResponse> => {
 		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
 			connection,
 			size,
 			filter,
+			requiredConsents,
 		});
 	};
 

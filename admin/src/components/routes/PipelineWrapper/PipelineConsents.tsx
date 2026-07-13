@@ -34,7 +34,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		<Section
 			className='pipeline__consents'
 			title='Privacy'
-			description='Choose which purposes an event must have consent for before it is sent to this destination. Leave empty to send every event regardless of consent.'
+			description='Choose which purposes an event must have consent for before it is processed by this pipeline. Leave empty to process every event regardless of consent.'
 			padded={true}
 			ref={ref}
 			annotated={true}

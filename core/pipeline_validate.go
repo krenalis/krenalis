@@ -171,8 +171,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
+	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
 	if len(pipeline.RequiredConsents) > 0 {
-		if !dispatchEventsToAplications {
+		if !requiredConsentsAllowed {
 			return errors.BadRequest("required consents are not allowed")
 		}
 		seen := make(map[string]bool, len(pipeline.RequiredConsents))

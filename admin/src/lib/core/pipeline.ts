@@ -1231,8 +1231,11 @@ const hasFilters = (connection: TransformedConnection, target: PipelineTarget) =
 };
 
 const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
-	// Required consents are only allowed for pipelines that send events.
-	return connection.role === 'Destination' && connection.connector.type === 'Application' && target === 'Event';
+	// Required consents are allowed on any pipeline that handles events.
+	if (connection.role === 'Destination') {
+		return connection.connector.type === 'Application' && target === 'Event';
+	}
+	return connection.isEventBased && (target === 'Event' || target === 'User');
 };
 
 const computePipelineTypeFields = (connection: TransformedConnection, pipelineType: PipelineType) => {

@@ -1322,6 +1322,7 @@ const FullscreenTransformation = ({
 		null,
 		connection.id,
 		normalizedFilter,
+		pipeline.requiredConsents,
 	);
 
 	useEffect(() => {
@@ -1344,7 +1345,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter]);
+	}, [pipeline.filter, pipeline.requiredConsents]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);
