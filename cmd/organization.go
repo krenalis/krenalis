@@ -7,7 +7,9 @@ package cmd
 import (
 	"html"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -263,6 +265,89 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 	return org.Members(r.Context())
 }
 
+// PipelineMetricsPerDate returns metrics by day for a time interval between
+// specified start and end dates.
+func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	// Parse start.
+	s := r.PathValue("start")
+	start, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+	// Parse end.
+	e := r.PathValue("end")
+	end, err := time.Parse(time.DateOnly, e)
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+	scope, err := parsePipelineMetricsScope(r, ws)
+	if err != nil {
+		return nil, err
+	}
+	return org.PipelineMetricsPerDate(r.Context(), start, end, scope)
+}
+
+// PipelineMetricsPerDay returns the pipeline metrics for a specified number of
+// days.
+func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	n := r.PathValue("days")
+	days, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, errors.NotFound("days is not valid")
+	}
+	scope, err := parsePipelineMetricsScope(r, ws)
+	if err != nil {
+		return nil, err
+	}
+	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, scope)
+}
+
+// PipelineMetricsPerHour returns the pipeline metrics for a specified number of
+// hours.
+func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	n := r.PathValue("hours")
+	hours, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, errors.NotFound("hours is not valid")
+	}
+	scope, err := parsePipelineMetricsScope(r, ws)
+	if err != nil {
+		return nil, err
+	}
+	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, scope)
+}
+
+// PipelineMetricsPerMinute returns the pipeline metrics for a specified number
+// of minutes.
+func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	n := r.PathValue("minutes")
+	minutes, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, errors.NotFound("minutes is not valid")
+	}
+	scope, err := parsePipelineMetricsScope(r, ws)
+	if err != nil {
+		return nil, err
+	}
+	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, scope)
+}
+
 // SetStatus sets the status of an organization.
 //
 // Authentication is performed using the organizations API key.
@@ -463,4 +548,103 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
 	}
 	return map[string]any{"workspaces": org.Workspaces()}, nil
+}
+
+// parsePipelineMetricsScope parses the pipeline metrics query parameters into a
+// PipelineMetricsScope. Exactly one of the pipelines, workspaces, or
+// connections parameters must be specified.
+func parsePipelineMetricsScope(r *http.Request, ws *core.Workspace) (core.PipelineMetricsScope, error) {
+	q := r.URL.Query()
+	pipelines, hasPipelines, err := parseStrictQueryIDs(q, "pipelines")
+	if err != nil {
+		return core.PipelineMetricsScope{}, err
+	}
+	workspaces, hasWorkspaces, err := parseStrictQueryIDs(q, "workspaces")
+	if err != nil {
+		return core.PipelineMetricsScope{}, err
+	}
+	connections, hasConnections, err := parseStrictQueryIDs(q, "connections")
+	if err != nil {
+		return core.PipelineMetricsScope{}, err
+	}
+	if hasPipelines && hasWorkspaces || hasPipelines && hasConnections || hasWorkspaces && hasConnections {
+		return core.PipelineMetricsScope{}, errors.BadRequest("'pipelines', 'workspaces' and 'connections' parameters cannot be used together")
+	}
+	if !hasPipelines && !hasWorkspaces && !hasConnections {
+		return core.PipelineMetricsScope{}, errors.BadRequest("one of 'pipelines', 'workspaces' or 'connections' parameters is required")
+	}
+	if _, ok := q["role"]; ok {
+		return core.PipelineMetricsScope{}, errors.BadRequest("'role' parameter is not supported")
+	}
+	target, err := parsePipelineMetricsTarget(q)
+	if err != nil {
+		return core.PipelineMetricsScope{}, err
+	}
+	scope := core.PipelineMetricsScope{
+		Workspaces:  workspaces,
+		Connections: connections,
+		Pipelines:   pipelines,
+		Target:      target,
+	}
+	if ws != nil {
+		scope.Workspace = ws.ID
+	}
+	return scope, nil
+}
+
+// parsePipelineMetricsTarget parses the optional target query parameter into a
+// core.Target. If omitted, it returns nil. If specified, the parameter must
+// appear exactly once and its value must be either User or Event.
+func parsePipelineMetricsTarget(q map[string][]string) (*core.Target, error) {
+	values, ok := q["target"]
+	if !ok {
+		return nil, nil
+	}
+	if len(values) != 1 {
+		return nil, errors.BadRequest("'target' parameter cannot be specified multiple times")
+	}
+	target := strings.TrimSpace(values[0])
+	if target == "" {
+		return nil, errors.BadRequest("'target' parameter cannot be empty")
+	}
+	var t core.Target
+	switch target {
+	case "User":
+		t = core.TargetUser
+	case "Event":
+		t = core.TargetEvent
+	default:
+		return nil, errors.BadRequest("'target' parameter is not valid")
+	}
+	return &t, nil
+}
+
+// parseStrictQueryIDs parses a query parameter containing a comma-separated
+// list of IDs. It reports whether the parameter was present and rejects empty
+// parameter values, empty list items, and invalid IDs.
+func parseStrictQueryIDs(q map[string][]string, name string) ([]string, bool, error) {
+	values, ok := q[name]
+	if !ok {
+		return nil, false, nil
+	}
+	ids := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" {
+			return nil, true, errors.BadRequest("'%s' parameter cannot be empty", name)
+		}
+		for part := range strings.SplitSeq(value, ",") {
+			id := strings.TrimSpace(part)
+			if id == "" {
+				return nil, true, errors.BadRequest("'%s' parameter contains an empty identifier", name)
+			}
+			if !core.IsValidID(id) {
+				return nil, true, errors.BadRequest("'%s' parameter contains an invalid identifier", name)
+			}
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, true, errors.BadRequest("'%s' parameter cannot be empty", name)
+	}
+	return ids, true, nil
 }

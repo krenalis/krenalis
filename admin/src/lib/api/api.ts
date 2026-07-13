@@ -64,6 +64,13 @@ import { AccessKeyType } from './types/organization';
 
 const API_BASE_PATH = '/v1';
 
+type PipelineMetricsFilter = {
+	pipelines?: string[];
+	workspaces?: string[];
+	connections?: string[];
+	target?: PipelineTarget;
+};
+
 class API {
 	apiURL: string;
 	workspaceID: string;
@@ -827,14 +834,41 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsQuery = (filter?: PipelineMetricsFilter): string => {
+		if (!filter) {
+			return '';
+		}
+		const filterCount = [filter.pipelines, filter.workspaces, filter.connections].filter((v) => v != null).length;
+		if (filterCount > 1) {
+			throw new Error('pipelines, workspaces and connections filters cannot be used together');
+		}
+		let params = [];
+		if (filter.pipelines != null) {
+			params.push(`pipelines=${filter.pipelines.map(encodeURIComponent).join(',')}`);
+		}
+		if (filter.workspaces != null) {
+			params.push(`workspaces=${filter.workspaces.map(encodeURIComponent).join(',')}`);
+		}
+		if (filter.connections != null) {
+			params.push(`connections=${filter.connections.map(encodeURIComponent).join(',')}`);
+		}
+		if (filter.target != null) {
+			params.push(`target=${encodeURIComponent(filter.target)}`);
+		}
+		return params.length > 0 ? `?${params.join('&')}` : '';
+	};
+
+	pipelineMetricsPerDate = async (
+		start: Date,
+		end: Date,
+		pipelines?: string[],
+		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+	): Promise<PipelineMetrics> => {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
+		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/dates/` +
-				`${encodeURIComponent(sd)}/` +
-				`${encodeURIComponent(ed)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/dates/` + `${encodeURIComponent(sd)}/` + `${encodeURIComponent(ed)}` + q,
 			http.GET,
 			this.workspaceID,
 		);
@@ -843,11 +877,14 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDay = async (days: number, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerDay = async (
+		days: number,
+		pipelines?: string[],
+		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+	): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/days/` +
-				`${encodeURIComponent(days)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/days/` + `${encodeURIComponent(days)}` + q,
 			http.GET,
 			this.workspaceID,
 		);
@@ -856,11 +893,14 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerHour = async (hours: number, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerHour = async (
+		hours: number,
+		pipelines?: string[],
+		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+	): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/hours/` +
-				`${encodeURIComponent(hours)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/hours/` + `${encodeURIComponent(hours)}` + q,
 			http.GET,
 			this.workspaceID,
 		);
@@ -869,11 +909,14 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerMinute = async (minutes: number, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerMinute = async (
+		minutes: number,
+		pipelines?: string[],
+		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+	): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/minutes/` +
-				`${encodeURIComponent(minutes)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/minutes/` + `${encodeURIComponent(minutes)}` + q,
 			http.GET,
 			this.workspaceID,
 		);

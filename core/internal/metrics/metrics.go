@@ -9,6 +9,7 @@ package metrics
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"math"
 	"strconv"
@@ -126,7 +127,12 @@ func (c *Collector) Failed(step Step, pipeline string, count int, message string
 	c.mu.Lock()
 	m, ok := c.metrics[pipeline]
 	if !ok {
-		m = &metrics{}
+		var err error
+		m, err = c.newMetrics(pipeline)
+		if err != nil {
+			c.mu.Unlock()
+			return
+		}
 		c.metrics[pipeline] = m
 	}
 	m.failed[step] += count
@@ -203,7 +209,12 @@ func (c *Collector) Passed(step Step, pipeline string, count int) {
 	c.mu.Lock()
 	m, ok := c.metrics[pipeline]
 	if !ok {
-		m = &metrics{}
+		var err error
+		m, err = c.newMetrics(pipeline)
+		if err != nil {
+			c.mu.Unlock()
+			return
+		}
 		c.metrics[pipeline] = m
 	}
 	m.passed[step] += count
@@ -273,6 +284,10 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 	query := `WITH aggregated AS (
 	SELECT
 		pipeline,
+		organization,
+		workspace,
+		connection,
+		target,
 		timeslot - (timeslot % $1) AS slot,
 		SUM(passed_0) AS passed_0,
 		SUM(passed_1) AS passed_1,
@@ -289,11 +304,11 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 		ARRAY_AGG(ctid) AS row_ctids
 	FROM pipelines_metrics
 	WHERE timeslot < $2 AND timeslot % $1 <> 0
-	GROUP BY pipeline, slot
+	GROUP BY pipeline, organization, workspace, connection, target, slot
 ),
 inserted AS (
-	INSERT INTO pipelines_metrics (pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)
-	SELECT pipeline, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+	INSERT INTO pipelines_metrics (organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)
+	SELECT organization, workspace, connection, pipeline, target, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
 	FROM aggregated
 	ON CONFLICT (pipeline, timeslot)
 	DO UPDATE SET
@@ -404,7 +419,7 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 	var hasErrors bool
 
 	c.buf.Reset()
-	c.buf.WriteString("WITH t(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5) AS (\n\tVALUES ")
+	c.buf.WriteString("WITH t(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5) AS (\n\tVALUES ")
 	i := 0
 	for pipeline, m := range metrics {
 		hasErrors = hasErrors || len(m.errors) > 0
@@ -418,7 +433,16 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 			c.buf.WriteByte(',')
 		}
 		c.buf.WriteByte('(')
+		c.buf.WriteString(db.Quote(m.organization))
+		c.buf.WriteByte(',')
+		c.buf.WriteString(db.Quote(m.workspace))
+		c.buf.WriteByte(',')
+		c.buf.WriteString(db.Quote(m.connection))
+		c.buf.WriteByte(',')
 		c.buf.WriteString(db.Quote(pipeline))
+		c.buf.WriteByte(',')
+		c.buf.WriteString(db.Quote(m.target.String()))
+		c.buf.WriteString("::pipeline_target")
 		c.buf.WriteByte(',')
 		c.buf.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		c.buf.WriteByte(',')
@@ -439,8 +463,8 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 	if i > 0 {
 
 		c.buf.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
-			`(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
-			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM pipelines p WHERE p.id = t.pipeline)` +
+			`(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
+			` SELECT t.* FROM t` +
 			` ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
 			`passed_1 = m.passed_1 + EXCLUDED.passed_1, ` +
@@ -543,7 +567,25 @@ type pipelineError struct {
 // period, pending their eventual write to the database.
 type metrics struct {
 	sync.Mutex
-	passed [numSteps]int
-	failed [numSteps]int
-	errors []pipelineError
+	organization string
+	workspace    string
+	connection   string
+	target       state.Target
+	passed       [numSteps]int
+	failed       [numSteps]int
+	errors       []pipelineError
+}
+
+func (c *Collector) newMetrics(pipeline string) (*metrics, error) {
+	p, ok := c.state.Pipeline(pipeline)
+	if !ok {
+		return nil, errors.New("pipeline not found")
+	}
+	connection := p.Connection()
+	return &metrics{
+		organization: connection.Organization().ID,
+		workspace:    connection.Workspace().ID,
+		connection:   connection.ID,
+		target:       p.Target,
+	}, nil
 }

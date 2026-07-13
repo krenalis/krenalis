@@ -826,6 +826,297 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
+// PipelineMetrics represents pipeline metrics for a time period.
+type PipelineMetrics struct {
+	Start   time.Time              `json:"start"`
+	End     time.Time              `json:"end"`
+	Metrics []PipelineMetricSeries `json:"metrics"`
+}
+
+// PipelineMetricSeries represents metrics for a single grouping.
+type PipelineMetricSeries struct {
+	Workspace  string   `json:"workspace,omitempty"`
+	Connection string   `json:"connection,omitempty"`
+	Pipeline   string   `json:"pipeline,omitempty"`
+	Passed     [][6]int `json:"passed"`
+	Failed     [][6]int `json:"failed"`
+}
+
+// PipelineMetricsScope describes the pipeline metrics scope. Exactly one of
+// Workspaces, Connections, or Pipelines must be provided. Workspace limits the
+// visible organization scope to a single workspace. Workspaces limits metrics to
+// the specified existing workspaces and groups the result by workspace.
+// Connections limits metrics to the specified existing connections and groups
+// the result by connection. Pipelines limits metrics to the specified existing
+// pipelines and groups the result by pipeline.
+type PipelineMetricsScope struct {
+	Workspace   string
+	Workspaces  []string
+	Connections []string
+	Pipelines   []string
+	Target      *Target
+}
+
+// MetricUnit represents the unit of time used for aggregating metrics.
+// It can be:
+// - Minute: aggregates metrics by minute
+// - Hour: aggregates metrics by hour
+// - Day: aggregates metrics by day
+type MetricUnit int
+
+const (
+	Minute = MetricUnit(metrics.Minute)
+	Hour   = MetricUnit(metrics.Hour)
+	Day    = MetricUnit(metrics.Day)
+)
+
+// PipelineMetricsPerDate returns metrics aggregated by day for the time
+// interval between the specified start and end dates. The dates are truncated
+// to UTC days, must be no earlier than 1970-01-01 and no later than
+// 2262-04-10, and the day of the start date must be before the day of the end
+// date.
+func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, scope PipelineMetricsScope) (PipelineMetrics, error) {
+
+	this.core.mustBeOpen()
+
+	start = start.UTC().Truncate(24 * time.Hour)
+	end = end.UTC().Truncate(24 * time.Hour)
+
+	if start.Before(metrics.MinTime) {
+		return PipelineMetrics{}, errors.NotFound("start date is too far in the past")
+	}
+	if end.After(metrics.MaxTime) {
+		return PipelineMetrics{}, errors.NotFound("end date is too far in the future")
+	}
+	if !end.After(start) {
+		return PipelineMetrics{}, errors.NotFound("day of the end date must be after the day of the start date")
+	}
+	if err := validatePipelineMetricsScope(scope); err != nil {
+		return PipelineMetrics{}, err
+	}
+	group := pipelineMetricsGroup(scope)
+	scope = this.filterPipelineMetricsScope(scope)
+	if pipelineMetricsGroupHasNoSeries(group, scope) {
+		return emptyPipelineMetrics(start, end), nil
+	}
+
+	m, err := this.core.metrics.Metrics(ctx, metrics.Query{
+		Start:        start,
+		End:          end,
+		Resolution:   24 * time.Hour,
+		Organization: this.ID,
+		Filter:       pipelineMetricsFilter(scope),
+		GroupBy:      group,
+	})
+	if err != nil {
+		return PipelineMetrics{}, err
+	}
+	return pipelineMetricsFromInternal(m), nil
+}
+
+// PipelineMetricsPerTimeUnit returns metrics for the specified number of
+// minutes, hours, or days based on the unit, up to the current time. number
+// must be in the following ranges: [1,60] for minutes, [1,48] for hours, and
+// [1,30] for days.
+func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, scope PipelineMetricsScope) (PipelineMetrics, error) {
+
+	this.core.mustBeOpen()
+
+	switch unit {
+	case Minute:
+		if number < 1 || number > 60 {
+			return PipelineMetrics{}, errors.NotFound("minutes must be in range [1,60]")
+		}
+	case Hour:
+		if number < 1 || number > 48 {
+			return PipelineMetrics{}, errors.NotFound("hours must be in range [1,48]")
+		}
+	case Day:
+		if number < 1 || number > 30 {
+			return PipelineMetrics{}, errors.NotFound("days must be in range [1,30]")
+		}
+	default:
+		return PipelineMetrics{}, errors.BadRequest("metric unit is not valid")
+	}
+	if err := validatePipelineMetricsScope(scope); err != nil {
+		return PipelineMetrics{}, err
+	}
+
+	resolution := time.Duration(unit)
+	end := time.Now().UTC().Truncate(resolution).Add(resolution)
+	start := end.Add(-time.Duration(number) * resolution)
+	group := pipelineMetricsGroup(scope)
+	scope = this.filterPipelineMetricsScope(scope)
+	if pipelineMetricsGroupHasNoSeries(group, scope) {
+		return emptyPipelineMetrics(start, end), nil
+	}
+
+	m, err := this.core.metrics.Metrics(ctx, metrics.Query{
+		Start:        start,
+		End:          end,
+		Resolution:   resolution,
+		Organization: this.ID,
+		Filter:       pipelineMetricsFilter(scope),
+		GroupBy:      group,
+	})
+	if err != nil {
+		return PipelineMetrics{}, err
+	}
+	return pipelineMetricsFromInternal(m), nil
+}
+
+// validatePipelineMetricsScope validates the pipeline metrics scope before
+// converting it to an internal metrics query.
+func validatePipelineMetricsScope(scope PipelineMetricsScope) error {
+	groups := 0
+	if len(scope.Workspaces) > 0 {
+		groups++
+	}
+	if len(scope.Connections) > 0 {
+		groups++
+	}
+	if len(scope.Pipelines) > 0 {
+		groups++
+	}
+	if groups == 0 {
+		return errors.BadRequest("one of workspaces, connections or pipelines must be provided")
+	}
+	if groups > 1 {
+		return errors.BadRequest("workspaces, connections and pipelines cannot be used together")
+	}
+	if scope.Target != nil && *scope.Target != TargetUser && *scope.Target != TargetEvent {
+		return errors.BadRequest("target is not valid")
+	}
+	for _, workspace := range scope.Workspaces {
+		if !IsValidID(workspace) {
+			return errors.BadRequest("workspace %q is not valid", workspace)
+		}
+	}
+	for _, pipeline := range scope.Pipelines {
+		if !IsValidID(pipeline) {
+			return errors.BadRequest("pipeline %q is not valid", pipeline)
+		}
+	}
+	for _, connection := range scope.Connections {
+		if !IsValidID(connection) {
+			return errors.BadRequest("connection %q is not valid", connection)
+		}
+	}
+	if scope.Workspace != "" && !IsValidID(scope.Workspace) {
+		return errors.BadRequest("workspace %q is not valid", scope.Workspace)
+	}
+	return nil
+}
+
+// filterPipelineMetricsScope removes deleted entities from grouped metrics
+// scopes. Aggregated organization, workspace and connection totals keep
+// historical metrics for deleted lower-level entities.
+func (this *Organization) filterPipelineMetricsScope(scope PipelineMetricsScope) PipelineMetricsScope {
+	if len(scope.Pipelines) > 0 {
+		pipelines := make([]string, 0, len(scope.Pipelines))
+		for _, id := range scope.Pipelines {
+			pipeline, ok := this.core.state.Pipeline(id)
+			if ok && pipeline.Organization().ID == this.ID &&
+				(scope.Workspace == "" || pipeline.Connection().Workspace().ID == scope.Workspace) {
+				pipelines = append(pipelines, id)
+			}
+		}
+		scope.Pipelines = pipelines
+	}
+	if len(scope.Workspaces) > 0 {
+		workspaces := make([]string, 0, len(scope.Workspaces))
+		for _, id := range scope.Workspaces {
+			if _, ok := this.organization.Workspace(id); ok && (scope.Workspace == "" || id == scope.Workspace) {
+				workspaces = append(workspaces, id)
+			}
+		}
+		scope.Workspaces = workspaces
+	}
+	if len(scope.Connections) > 0 {
+		connections := make([]string, 0, len(scope.Connections))
+		for _, id := range scope.Connections {
+			connection, ok := this.core.state.Connection(id)
+			if ok && connection.Organization().ID == this.ID {
+				if scope.Workspace == "" || connection.Workspace().ID == scope.Workspace {
+					connections = append(connections, id)
+				}
+			}
+		}
+		scope.Connections = connections
+	}
+	return scope
+}
+
+// pipelineMetricsFilter converts a core metrics scope to an internal metrics
+// filter.
+func pipelineMetricsFilter(scope PipelineMetricsScope) metrics.Filter {
+	workspaces := scope.Workspaces
+	if scope.Workspace != "" {
+		workspaces = []string{scope.Workspace}
+	}
+	return metrics.Filter{
+		Workspaces:  workspaces,
+		Connections: scope.Connections,
+		Pipelines:   scope.Pipelines,
+		Target:      pipelineMetricsTargetFilter(scope),
+	}
+}
+
+func pipelineMetricsTargetFilter(scope PipelineMetricsScope) string {
+	if scope.Target == nil {
+		return ""
+	}
+	return scope.Target.String()
+}
+
+func pipelineMetricsGroupHasNoSeries(group metrics.Group, scope PipelineMetricsScope) bool {
+	return group == metrics.GroupByPipeline && len(scope.Pipelines) == 0 ||
+		group == metrics.GroupByWorkspace && len(scope.Workspaces) == 0 ||
+		group == metrics.GroupByConnection && len(scope.Connections) == 0
+}
+
+func emptyPipelineMetrics(start, end time.Time) PipelineMetrics {
+	return PipelineMetrics{
+		Start:   start,
+		End:     end,
+		Metrics: []PipelineMetricSeries{},
+	}
+}
+
+// pipelineMetricsGroup returns the internal metrics group implied by scope.
+func pipelineMetricsGroup(scope PipelineMetricsScope) metrics.Group {
+	if len(scope.Pipelines) > 0 {
+		return metrics.GroupByPipeline
+	}
+	if len(scope.Workspaces) > 0 {
+		return metrics.GroupByWorkspace
+	}
+	if len(scope.Connections) > 0 {
+		return metrics.GroupByConnection
+	}
+	return metrics.GroupByOrganization
+}
+
+// pipelineMetricsFromInternal converts internal metrics to the public core
+// representation.
+func pipelineMetricsFromInternal(m metrics.Metrics) PipelineMetrics {
+	res := PipelineMetrics{
+		Start:   m.Start,
+		End:     m.End,
+		Metrics: make([]PipelineMetricSeries, len(m.Series)),
+	}
+	for i, series := range m.Series {
+		res.Metrics[i] = PipelineMetricSeries{
+			Workspace:  series.Workspace,
+			Connection: series.Connection,
+			Pipeline:   series.Pipeline,
+			Passed:     series.Passed,
+			Failed:     series.Failed,
+		}
+	}
+	return res
+}
+
 // SendMemberPasswordReset sends a reset password email to the given email
 // address using the given template.
 //

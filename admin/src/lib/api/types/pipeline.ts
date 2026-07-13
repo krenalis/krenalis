@@ -149,11 +149,18 @@ interface PipelineError {
 	lastOccurred: Date;
 }
 
+interface PipelineMetricSeries {
+	workspace?: string;
+	connection?: string;
+	pipeline?: string;
+	passed: [number, number, number, number, number, number][];
+	failed: [number, number, number, number, number, number][];
+}
+
 interface PipelineMetrics {
 	start: Date;
 	end: Date;
-	passed: [number, number, number, number, number, number][];
-	failed: [number, number, number, number, number, number][];
+	metrics: PipelineMetricSeries[];
 }
 
 export type {
@@ -175,5 +182,6 @@ export type {
 	TransformationPurpose,
 	PipelineStep,
 	PipelineError,
+	PipelineMetricSeries,
 	PipelineMetrics,
 };
