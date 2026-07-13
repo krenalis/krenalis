@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -168,7 +169,7 @@ func (my *MySQL) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	mysqlConnector, err := mysql.NewConnector(config(&s))
+	mysqlConnector, err := mysql.NewConnector(config(&s, my.env.Dial))
 	if err != nil {
 		return err
 	}
@@ -248,7 +249,7 @@ func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test boo
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
 		return connectors.NewInvalidSettingsError("database length must be in range [1,64]")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, my.env.Dial)
 	if err != nil || test {
 		return err
 	}
@@ -263,7 +264,9 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-func config(s *innerSettings) *mysql.Config {
+// config returns the driver configuration from s. The connections are
+// established using dial, in place of the driver's default dialer.
+func config(s *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
@@ -271,13 +274,15 @@ func config(s *innerSettings) *mysql.Config {
 	c.DBName = s.Database
 	c.AllowOldPasswords = true
 	c.ParseTime = true
+	c.DialFunc = dial
 	return c
 }
 
-// testConnection tests a connection with the given settings.
+// testConnection tests a connection with the given settings, established
+// using dial.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings) error {
-	mysqlConnector, err := mysql.NewConnector(config(settings))
+func testConnection(ctx context.Context, settings *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
+	mysqlConnector, err := mysql.NewConnector(config(settings, dial))
 	if err != nil {
 		return err
 	}

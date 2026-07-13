@@ -164,7 +164,7 @@ func (ch *ClickHouse) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	db, err := clickhouse.Open(options(&settings))
+	db, err := clickhouse.Open(options(&settings, ch.env.Dial))
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 	if n := len(s.Database); n > 64 {
 		return connectors.NewInvalidSettingsError("database length in bytes must be in range [0,64]")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, ch.env.Dial)
 	if err != nil || test {
 		return err
 	}
@@ -246,9 +246,10 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-// options returns the connection options, from s.
-func options(s *innerSettings) *clickhouse.Options {
-	return &clickhouse.Options{
+// options returns the connection options, from s. The connections are
+// established using dial, in place of the driver's default dialer.
+func options(s *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) *clickhouse.Options {
+	o := &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
 			Database: s.Database,
@@ -256,6 +257,14 @@ func options(s *innerSettings) *clickhouse.Options {
 			Password: s.Password,
 		},
 	}
+	if dial != nil {
+		// The driver dials with the "tcp" network, and applies its dial timeout
+		// to the context it passes to DialContext.
+		o.DialContext = func(ctx context.Context, address string) (net.Conn, error) {
+			return dial(ctx, "tcp", address)
+		}
+	}
+	return o
 }
 
 // propertyType returns the property type of the column type and a boolean
@@ -270,10 +279,11 @@ func propertyType(t driver.ColumnType) (types.Type, bool, string) {
 	return typ, nullable, ""
 }
 
-// testConnection tests a connection with the given settings.
+// testConnection tests a connection with the given settings, established
+// using dial.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings) error {
-	conn, err := clickhouse.Open(options(settings))
+func testConnection(ctx context.Context, settings *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
+	conn, err := clickhouse.Open(options(settings, dial))
 	if err != nil {
 		return err
 	}

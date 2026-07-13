@@ -167,6 +167,13 @@ type innerSettings struct {
 var falseStrPtr = new("false")
 
 // connector returns a driver.Connector from the settings.
+//
+// Unlike the other database connectors, Snowflake does not dial with
+// env.Dial, so the bytes it transfers are not attributed to the organization.
+// The driver has no dial hook: its only extension point is Config.Transporter,
+// which replaces the transport the driver builds, and with it the certificate
+// revocation checks, the proxy handling and the TLS configuration it sets up.
+// TODO(gianluca): count the bytes transferred by Snowflake connections.
 func connector(s *innerSettings) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
