@@ -88,12 +88,15 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 			Settings: settingsStore,
 			Dial:     netdial.Dial(connection.Organization().ID),
+			DialWith: netdial.DialWith(connection.Organization().ID),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 			Settings: settingsStore,
+			Dial:     netdial.Dial(connection.Organization().ID),
+			DialWith: netdial.DialWith(connection.Organization().ID),
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
@@ -151,13 +154,13 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	case state.Database:
 		var database any
 		// TODO: capire questo punto.
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial("")})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
 	case state.SDK:
@@ -199,13 +202,13 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial("")})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
 	case state.SDK:

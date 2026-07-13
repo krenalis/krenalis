@@ -99,7 +99,8 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 	app, err := registeredDatabases.New(&connectors.DatabaseEnv{
 		Settings: newSettingsStore(s),
 		// TODO: capire questo punto.
-		Dial: netdial.Dial(""),
+		Dial:     netdial.Dial(""),
+		DialWith: netdial.DialWith(""),
 	})
 	return app.(T), err
 }
@@ -118,6 +119,9 @@ func NewStorage[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredStorage.New(&connectors.FileStorageEnv{
 		Settings: newSettingsStore(s),
+		// TODO: capire questo punto.
+		Dial:     netdial.Dial(""),
+		DialWith: netdial.DialWith(""),
 	})
 	return app.(T), err
 }

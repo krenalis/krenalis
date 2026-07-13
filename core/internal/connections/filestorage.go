@@ -16,6 +16,7 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/netdial"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -63,6 +64,8 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 	}
 	s.inner, s.err = connectors.RegisteredFileStorage(storage.Connector().Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(c.state, storage),
+		Dial:     netdial.Dial(storage.Organization().ID),
+		DialWith: netdial.DialWith(storage.Organization().ID),
 	})
 	s.err = connectorError(s.err)
 	return s

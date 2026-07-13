@@ -5,8 +5,6 @@
 package connectors
 
 import (
-	"context"
-	"net"
 	"reflect"
 
 	"github.com/krenalis/krenalis/tools/types"
@@ -47,7 +45,16 @@ type DatabaseEnv struct {
 
 	// Dial is the function the connector must use to establish its outbound
 	// network connections, in place of its own default dialer.
-	Dial func(ctx context.Context, network, address string) (net.Conn, error)
+	Dial DialFunc
+
+	// DialWith is the function a connector that has its own dialer must use, in
+	// place of Dial, to establish its outbound network connections. It returns a
+	// dial function that dials with the given one, so that the connector keeps
+	// its own dial options, like its timeouts and its keep-alive.
+	//
+	// If the given dial function is nil, the returned one dials with a plain
+	// dialer, as Dial does.
+	DialWith func(dial DialFunc) DialFunc
 }
 
 // DatabaseNewFunc represents functions that create new database connector

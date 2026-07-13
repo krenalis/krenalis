@@ -88,6 +88,7 @@ func (c *Connections) Database(connection *state.Connection) *Database {
 	inner, err := connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
 		Dial:     netdial.Dial(connection.Organization().ID),
+		DialWith: netdial.DialWith(connection.Organization().ID),
 	})
 	database.inner = inner.(databaseConnection)
 	database.err = connectorError(err)

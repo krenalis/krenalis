@@ -7,12 +7,18 @@ package connectors
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
 )
+
+// A DialFunc establishes an outbound network connection to the given address.
+// It is the type of the dial functions Krenalis provides to the connectors, so
+// that it can count the bytes they transfer.
+type DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
 
 // Categories represents connector categories.
 type Categories int

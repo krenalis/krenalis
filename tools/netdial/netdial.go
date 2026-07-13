@@ -89,6 +89,20 @@ func Dial(organizationID string) DialFunc {
 	return dialWith(organizationID, nil)
 }
 
+// DialWith returns the function Krenalis passes to a connector that has its own
+// dialer, to count the bytes the dialer transfers, attributing them to the
+// organization with the given ID.
+//
+// Unlike [Dial], which replaces the connector's dialer with a plain one, the
+// returned function wraps the dial function it is given, so that the connector
+// keeps its own dial options, like its timeouts and its keep-alive. If it is
+// given a nil dial function, a plain net.Dialer is used, as in [Dial].
+func DialWith(organizationID string) func(dial DialFunc) DialFunc {
+	return func(dial DialFunc) DialFunc {
+		return dialWith(organizationID, dial)
+	}
+}
+
 // Transport returns the transport Krenalis uses for the HTTP requests of the
 // organization with the given ID, attributing to it the bytes they transfer.
 //

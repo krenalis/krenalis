@@ -67,11 +67,15 @@ func init() {
 
 // New returns a new connector instance for S3.
 func New(env *connectors.FileStorageEnv) (*S3, error) {
-	return &S3{env: env}, nil
+	return &S3{env: env, httpClient: newHTTPClient(env)}, nil
 }
 
 type S3 struct {
 	env *connectors.FileStorageEnv
+
+	// httpClient returns the HTTP client used by the S3 clients of this
+	// connector instance, so that they all share the same connection pool.
+	httpClient func() aws.HTTPClient
 }
 
 type innerSettings struct {
@@ -218,17 +222,26 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	return err
 }
 
-var httpClient = sync.OnceValue(func() aws.HTTPClient {
-	return awsHTTP.NewBuildableClient().
-		WithTransportOptions(func(transport *http.Transport) {
-			transport.Proxy = nil
-			transport.MaxConnsPerHost = maxConnsPerHost
-			transport.MaxIdleConns = maxIdleConns
-			transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
-			transport.IdleConnTimeout = idleConnTimeout
-			transport.ResponseHeaderTimeout = responseHeaderTimeout
-		})
-})
+// newHTTPClient returns a function that returns, creating it on the first call,
+// the HTTP client to use for the requests of the connector instance with the
+// given environment.
+//
+// The transport dials with env.DialWith, which counts the bytes the requests
+// transfer, keeping the dial options of the transport's own dialer.
+func newHTTPClient(env *connectors.FileStorageEnv) func() aws.HTTPClient {
+	return sync.OnceValue(func() aws.HTTPClient {
+		return awsHTTP.NewBuildableClient().
+			WithTransportOptions(func(transport *http.Transport) {
+				transport.Proxy = nil
+				transport.MaxConnsPerHost = maxConnsPerHost
+				transport.MaxIdleConns = maxIdleConns
+				transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
+				transport.IdleConnTimeout = idleConnTimeout
+				transport.ResponseHeaderTimeout = responseHeaderTimeout
+				transport.DialContext = env.DialWith(transport.DialContext)
+			})
+	})
+}
 
 // client returns a S3 client.
 func (s3 *S3) client(s *innerSettings) *awsS3.Client {
@@ -241,7 +254,7 @@ func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 				"",
 			),
 		),
-		HTTPClient: httpClient(),
+		HTTPClient: s3.httpClient(),
 	}
 	return awsS3.NewFromConfig(cfg)
 }

@@ -95,7 +95,7 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	client, err := openClient(ctx, &s)
+	client, err := openClient(ctx, &s, sf.env.Dial)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -171,7 +171,7 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	if err != nil {
 		return err
 	}
-	client, err := openClient(ctx, &s)
+	client, err := openClient(ctx, &s, sf.env.Dial)
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role conn
 	} else if s.TempPath != "" {
 		return connectors.NewInvalidSettingsError("temporary directory path must be empty for source destinations")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, sf.env.Dial)
 	if err != nil || test {
 		return err
 	}
@@ -369,11 +369,12 @@ func newSSHClientConfig(s *innerSettings) (*ssh.ClientConfig, error) {
 	return sshConfig, nil
 }
 
-// openClient opens a client for the SFTP server based on the provided settings.
+// openClient opens a client for the SFTP server based on the provided settings,
+// establishing the connection with dial.
 // The returned client must be closed using the close method. If the context is
 // canceled before the client is closed, the underlying network connection, not
 // the client, will be automatically closed.
-func openClient(ctx context.Context, s *innerSettings) (*client, error) {
+func openClient(ctx context.Context, s *innerSettings, dial connectors.DialFunc) (*client, error) {
 	sshConfig, err := newSSHClientConfig(s)
 	if err != nil {
 		return nil, err
@@ -384,8 +385,7 @@ func openClient(ctx context.Context, s *innerSettings) (*client, error) {
 	// ssh.NewClientConn function does not accept a context, so we have to close
 	// the connection passed to it to stop its execution if the context is
 	// canceled.
-	d := &net.Dialer{}
-	conn, err := d.DialContext(ctx, "tcp", addr)
+	conn, err := dial(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
@@ -438,13 +438,13 @@ func parseHostPublicKey(k string) (ssh.PublicKey, error) {
 	return key, nil
 }
 
-// testConnection tests a connection using the provided settings. It returns an
-// error if the connection cannot be established or if the server does not
-// respond within 5 seconds.
-func testConnection(ctx context.Context, settings *innerSettings) error {
+// testConnection tests a connection using the provided settings, established
+// with dial. It returns an error if the connection cannot be established or if
+// the server does not respond within 5 seconds.
+func testConnection(ctx context.Context, settings *innerSettings, dial connectors.DialFunc) error {
 	openCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	client, err := openClient(openCtx, settings)
+	client, err := openClient(openCtx, settings, dial)
 	if err != nil {
 		if err := ctx.Err(); err != nil {
 			return err

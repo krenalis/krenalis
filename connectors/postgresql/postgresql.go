@@ -232,7 +232,7 @@ func (pg *PostgreSQL) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	config.ConnConfig.DialFunc = pg.env.Dial
+	config.ConnConfig.DialFunc = pg.env.DialWith(config.ConnConfig.DialFunc)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return err
@@ -273,7 +273,7 @@ func (pg *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	if n := len(s.Schema); n < 1 || n > 63 {
 		return connectors.NewInvalidSettingsError("schema length in bytes must be in range [1,63]")
 	}
-	err = testConnection(ctx, &s, pg.env.Dial)
+	err = testConnection(ctx, &s, pg.env.DialWith)
 	if err != nil || test {
 		return err
 	}
@@ -281,14 +281,14 @@ func (pg *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 }
 
 // testConnection tests a connection with the given settings, established
-// using dial.
+// dialing with dialWith, so that the driver's own dialer is preserved.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
+func testConnection(ctx context.Context, settings *innerSettings, dialWith func(connectors.DialFunc) connectors.DialFunc) error {
 	connConfig, err := pgx.ParseConfig(dsn(settings))
 	if err != nil {
 		return err
 	}
-	connConfig.DialFunc = dial
+	connConfig.DialFunc = dialWith(connConfig.DialFunc)
 	driverName := stdlib.RegisterConnConfig(connConfig)
 	defer stdlib.UnregisterConnConfig(driverName)
 	db, err := sql.Open("pgx", driverName)

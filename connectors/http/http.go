@@ -54,11 +54,14 @@ func init() {
 
 // New returns a new connection instance for HTTP GET/HTTP POST requests.
 func New(env *connectors.FileStorageEnv) (*HTTP, error) {
-	return &HTTP{env: env}, nil
+	t := transport.Clone()
+	t.DialContext = env.DialWith(t.DialContext)
+	return &HTTP{env: env, transport: t}, nil
 }
 
 type HTTP struct {
-	env *connectors.FileStorageEnv
+	env       *connectors.FileStorageEnv
+	transport *http.Transport
 }
 
 type innerSettings struct {
@@ -115,7 +118,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	res, err := transport.RoundTrip(req)
+	res, err := h.transport.RoundTrip(req)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -189,7 +192,7 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 	for _, header := range s.Headers {
 		req.Header[header.Key] = []string{header.Value}
 	}
-	res, err := transport.RoundTrip(req)
+	res, err := h.transport.RoundTrip(req)
 	if err != nil {
 		return err
 	}
@@ -236,6 +239,8 @@ var dialer = &net.Dialer{
 	KeepAlive: -1, // disable keep-alive probes.
 }
 
+// transport is the template from which the transport of each connector
+// instance is cloned.
 var transport = &http.Transport{
 	Proxy:                 nil,
 	DialContext:           dialer.DialContext,
