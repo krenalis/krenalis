@@ -127,7 +127,7 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 
 // CreateConsentPurpose creates a consent purpose for the current workspace.
 func (workspace workspace) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
@@ -857,7 +857,7 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 
 // UpdateConsentPurpose updates a consent purpose of the current workspace.
 func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(w, r, false); err != nil {
+	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	ws, err := workspace.workspace(r)
