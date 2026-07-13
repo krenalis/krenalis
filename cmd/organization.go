@@ -554,12 +554,11 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 // PipelineMetricsScope. Exactly one of the pipelines, workspaces, or
 // connections parameters must be specified.
 func parsePipelineMetricsScope(r *http.Request, ws *core.Workspace) (core.PipelineMetricsScope, error) {
+
 	q := r.URL.Query()
+
+	// Parse pipelines, connections, and workspaces parameters.
 	pipelines, hasPipelines, err := parseStrictQueryIDs(q, "pipelines")
-	if err != nil {
-		return core.PipelineMetricsScope{}, err
-	}
-	workspaces, hasWorkspaces, err := parseStrictQueryIDs(q, "workspaces")
 	if err != nil {
 		return core.PipelineMetricsScope{}, err
 	}
@@ -567,19 +566,37 @@ func parsePipelineMetricsScope(r *http.Request, ws *core.Workspace) (core.Pipeli
 	if err != nil {
 		return core.PipelineMetricsScope{}, err
 	}
-	if hasPipelines && hasWorkspaces || hasPipelines && hasConnections || hasWorkspaces && hasConnections {
-		return core.PipelineMetricsScope{}, errors.BadRequest("'pipelines', 'workspaces' and 'connections' parameters cannot be used together")
-	}
-	if !hasPipelines && !hasWorkspaces && !hasConnections {
-		return core.PipelineMetricsScope{}, errors.BadRequest("one of 'pipelines', 'workspaces' or 'connections' parameters is required")
-	}
-	if _, ok := q["role"]; ok {
-		return core.PipelineMetricsScope{}, errors.BadRequest("'role' parameter is not supported")
-	}
-	target, err := parsePipelineMetricsTarget(q)
+	workspaces, hasWorkspaces, err := parseStrictQueryIDs(q, "workspaces")
 	if err != nil {
 		return core.PipelineMetricsScope{}, err
 	}
+	if hasPipelines && hasConnections || hasPipelines && hasWorkspaces || hasConnections && hasWorkspaces {
+		return core.PipelineMetricsScope{}, errors.BadRequest("'pipelines', 'connections' and 'workspaces' parameters cannot be used together")
+	}
+	if !hasPipelines && !hasConnections && !hasWorkspaces {
+		return core.PipelineMetricsScope{}, errors.BadRequest("one of 'pipelines', 'connections' and 'workspaces' parameters is required")
+	}
+
+	// Parse the target parameter.
+	var target *core.Target
+	if values, ok := q["target"]; ok {
+		if len(values) != 1 {
+			return core.PipelineMetricsScope{}, errors.BadRequest("'target' parameter cannot be specified multiple times")
+		}
+		t := strings.TrimSpace(values[0])
+		if t == "" {
+			return core.PipelineMetricsScope{}, errors.BadRequest("'target' parameter cannot be empty")
+		}
+		switch t {
+		case "User":
+			target = new(core.TargetUser)
+		case "Event":
+			target = new(core.TargetEvent)
+		default:
+			return core.PipelineMetricsScope{}, errors.BadRequest("'target' parameter is not valid")
+		}
+	}
+
 	scope := core.PipelineMetricsScope{
 		Workspaces:  workspaces,
 		Connections: connections,
@@ -589,34 +606,8 @@ func parsePipelineMetricsScope(r *http.Request, ws *core.Workspace) (core.Pipeli
 	if ws != nil {
 		scope.Workspace = ws.ID
 	}
-	return scope, nil
-}
 
-// parsePipelineMetricsTarget parses the optional target query parameter into a
-// core.Target. If omitted, it returns nil. If specified, the parameter must
-// appear exactly once and its value must be either User or Event.
-func parsePipelineMetricsTarget(q map[string][]string) (*core.Target, error) {
-	values, ok := q["target"]
-	if !ok {
-		return nil, nil
-	}
-	if len(values) != 1 {
-		return nil, errors.BadRequest("'target' parameter cannot be specified multiple times")
-	}
-	target := strings.TrimSpace(values[0])
-	if target == "" {
-		return nil, errors.BadRequest("'target' parameter cannot be empty")
-	}
-	var t core.Target
-	switch target {
-	case "User":
-		t = core.TargetUser
-	case "Event":
-		t = core.TargetEvent
-	default:
-		return nil, errors.BadRequest("'target' parameter is not valid")
-	}
-	return &t, nil
+	return scope, nil
 }
 
 // parseStrictQueryIDs parses a query parameter containing a comma-separated

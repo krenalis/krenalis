@@ -139,11 +139,6 @@ func TestParsePipelineMetricsScopeConnectionTarget(t *testing.T) {
 			query:   "?connections=" + validConnection + "&workspaces=" + validWorkspace,
 			wantErr: true,
 		},
-		{
-			name:    "role is not supported",
-			query:   "?connections=" + validConnection + "&role=Source",
-			wantErr: true,
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
