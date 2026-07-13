@@ -284,11 +284,15 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, errors.NotFound("end is not valid")
 	}
-	scope, err := parsePipelineMetricsScope(r, ws)
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+	scope, err := parsePipelineMetricsScope(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerDate(r.Context(), start, end, scope)
+	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, scope)
 }
 
 // PipelineMetricsPerDay returns the pipeline metrics for a specified number of
@@ -303,11 +307,15 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.NotFound("days is not valid")
 	}
-	scope, err := parsePipelineMetricsScope(r, ws)
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+	scope, err := parsePipelineMetricsScope(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, scope)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, scope)
 }
 
 // PipelineMetricsPerHour returns the pipeline metrics for a specified number of
@@ -322,11 +330,15 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, errors.NotFound("hours is not valid")
 	}
-	scope, err := parsePipelineMetricsScope(r, ws)
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+	scope, err := parsePipelineMetricsScope(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, scope)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, scope)
 }
 
 // PipelineMetricsPerMinute returns the pipeline metrics for a specified number
@@ -341,11 +353,15 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 	if err != nil {
 		return nil, errors.NotFound("minutes is not valid")
 	}
-	scope, err := parsePipelineMetricsScope(r, ws)
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+	scope, err := parsePipelineMetricsScope(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, scope)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, scope)
 }
 
 // SetStatus sets the status of an organization.
@@ -553,7 +569,7 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 // parsePipelineMetricsScope parses the pipeline metrics query parameters into a
 // PipelineMetricsScope. Exactly one of the pipelines, workspaces, or
 // connections parameters must be specified.
-func parsePipelineMetricsScope(r *http.Request, ws *core.Workspace) (core.PipelineMetricsScope, error) {
+func parsePipelineMetricsScope(r *http.Request) (core.PipelineMetricsScope, error) {
 
 	q := r.URL.Query()
 
@@ -602,9 +618,6 @@ func parsePipelineMetricsScope(r *http.Request, ws *core.Workspace) (core.Pipeli
 		Connections: connections,
 		Pipelines:   pipelines,
 		Target:      target,
-	}
-	if ws != nil {
-		scope.Workspace = ws.ID
 	}
 
 	return scope, nil

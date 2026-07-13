@@ -826,14 +826,15 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
-// PipelineMetrics represents pipeline metrics for a time period.
+// PipelineMetrics contains pipeline metrics over a time range.
 type PipelineMetrics struct {
 	Start   time.Time              `json:"start"`
 	End     time.Time              `json:"end"`
 	Metrics []PipelineMetricSeries `json:"metrics"`
 }
 
-// PipelineMetricSeries represents metrics for a single grouping.
+// PipelineMetricSeries contains metrics for a single workspace, connection,
+// or pipeline.
 type PipelineMetricSeries struct {
 	Workspace  string   `json:"workspace,omitempty"`
 	Connection string   `json:"connection,omitempty"`
@@ -842,15 +843,14 @@ type PipelineMetricSeries struct {
 	Failed     [][6]int `json:"failed"`
 }
 
-// PipelineMetricsScope describes the pipeline metrics scope. Exactly one of
-// Workspaces, Connections, or Pipelines must be provided. Workspace limits the
-// visible organization scope to a single workspace. Workspaces limits metrics to
-// the specified existing workspaces and groups the result by workspace.
-// Connections limits metrics to the specified existing connections and groups
-// the result by connection. Pipelines limits metrics to the specified existing
-// pipelines and groups the result by pipeline.
+// PipelineMetricsScope defines the scope and grouping of pipeline metrics.
+// Exactly one of Workspaces, Connections, or Pipelines must be non-empty.
+//
+// Workspaces restricts metrics to the specified workspaces and groups the
+// results by workspace. Connections restricts metrics to the specified
+// connections and groups the results by connection. Pipelines restricts
+// metrics to the specified pipelines and groups the results by pipeline.
 type PipelineMetricsScope struct {
-	Workspace   string
 	Workspaces  []string
 	Connections []string
 	Pipelines   []string
@@ -871,11 +871,12 @@ const (
 )
 
 // PipelineMetricsPerDate returns metrics aggregated by day for the time
-// interval between the specified start and end dates. The dates are truncated
+// interval between the specified start and end dates. If workspace is not
+// empty, the request is restricted to that workspace. The dates are truncated
 // to UTC days, must be no earlier than 1970-01-01 and no later than
 // 2262-04-10, and the day of the start date must be before the day of the end
 // date.
-func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, scope PipelineMetricsScope) (PipelineMetrics, error) {
+func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, scope PipelineMetricsScope) (PipelineMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -894,8 +895,11 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	if err := validatePipelineMetricsScope(scope); err != nil {
 		return PipelineMetrics{}, err
 	}
+	if workspace != "" && !IsValidID(workspace) {
+		return PipelineMetrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+	}
 	group := pipelineMetricsGroup(scope)
-	scope = this.filterPipelineMetricsScope(scope)
+	scope = this.filterPipelineMetricsScope(workspace, scope)
 	if pipelineMetricsGroupHasNoSeries(group, scope) {
 		return emptyPipelineMetrics(start, end), nil
 	}
@@ -905,7 +909,7 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 		End:          end,
 		Resolution:   24 * time.Hour,
 		Organization: this.ID,
-		Filter:       pipelineMetricsFilter(scope),
+		Filter:       pipelineMetricsFilter(workspace, scope),
 		GroupBy:      group,
 	})
 	if err != nil {
@@ -915,10 +919,11 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 }
 
 // PipelineMetricsPerTimeUnit returns metrics for the specified number of
-// minutes, hours, or days based on the unit, up to the current time. number
+// minutes, hours, or days based on the unit, up to the current time. If
+// workspace is not empty, the request is restricted to that workspace. number
 // must be in the following ranges: [1,60] for minutes, [1,48] for hours, and
 // [1,30] for days.
-func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, scope PipelineMetricsScope) (PipelineMetrics, error) {
+func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, scope PipelineMetricsScope) (PipelineMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -941,12 +946,15 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	if err := validatePipelineMetricsScope(scope); err != nil {
 		return PipelineMetrics{}, err
 	}
+	if workspace != "" && !IsValidID(workspace) {
+		return PipelineMetrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+	}
 
 	resolution := time.Duration(unit)
 	end := time.Now().UTC().Truncate(resolution).Add(resolution)
 	start := end.Add(-time.Duration(number) * resolution)
 	group := pipelineMetricsGroup(scope)
-	scope = this.filterPipelineMetricsScope(scope)
+	scope = this.filterPipelineMetricsScope(workspace, scope)
 	if pipelineMetricsGroupHasNoSeries(group, scope) {
 		return emptyPipelineMetrics(start, end), nil
 	}
@@ -956,7 +964,7 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 		End:          end,
 		Resolution:   resolution,
 		Organization: this.ID,
-		Filter:       pipelineMetricsFilter(scope),
+		Filter:       pipelineMetricsFilter(workspace, scope),
 		GroupBy:      group,
 	})
 	if err != nil {
@@ -1002,22 +1010,18 @@ func validatePipelineMetricsScope(scope PipelineMetricsScope) error {
 			return errors.BadRequest("connection %q is not valid", connection)
 		}
 	}
-	if scope.Workspace != "" && !IsValidID(scope.Workspace) {
-		return errors.BadRequest("workspace %q is not valid", scope.Workspace)
-	}
 	return nil
 }
 
-// filterPipelineMetricsScope removes deleted entities from grouped metrics
-// scopes. Aggregated organization, workspace and connection totals keep
-// historical metrics for deleted lower-level entities.
-func (this *Organization) filterPipelineMetricsScope(scope PipelineMetricsScope) PipelineMetricsScope {
+// filterPipelineMetricsScope removes identifiers that do not exist, do not
+// belong to the organization, or are outside the restricted workspace.
+func (this *Organization) filterPipelineMetricsScope(workspace string, scope PipelineMetricsScope) PipelineMetricsScope {
 	if len(scope.Pipelines) > 0 {
 		pipelines := make([]string, 0, len(scope.Pipelines))
 		for _, id := range scope.Pipelines {
 			pipeline, ok := this.core.state.Pipeline(id)
 			if ok && pipeline.Organization().ID == this.ID &&
-				(scope.Workspace == "" || pipeline.Connection().Workspace().ID == scope.Workspace) {
+				(workspace == "" || pipeline.Connection().Workspace().ID == workspace) {
 				pipelines = append(pipelines, id)
 			}
 		}
@@ -1026,7 +1030,7 @@ func (this *Organization) filterPipelineMetricsScope(scope PipelineMetricsScope)
 	if len(scope.Workspaces) > 0 {
 		workspaces := make([]string, 0, len(scope.Workspaces))
 		for _, id := range scope.Workspaces {
-			if _, ok := this.organization.Workspace(id); ok && (scope.Workspace == "" || id == scope.Workspace) {
+			if _, ok := this.organization.Workspace(id); ok && (workspace == "" || id == workspace) {
 				workspaces = append(workspaces, id)
 			}
 		}
@@ -1037,7 +1041,7 @@ func (this *Organization) filterPipelineMetricsScope(scope PipelineMetricsScope)
 		for _, id := range scope.Connections {
 			connection, ok := this.core.state.Connection(id)
 			if ok && connection.Organization().ID == this.ID {
-				if scope.Workspace == "" || connection.Workspace().ID == scope.Workspace {
+				if workspace == "" || connection.Workspace().ID == workspace {
 					connections = append(connections, id)
 				}
 			}
@@ -1049,10 +1053,10 @@ func (this *Organization) filterPipelineMetricsScope(scope PipelineMetricsScope)
 
 // pipelineMetricsFilter converts a core metrics scope to an internal metrics
 // filter.
-func pipelineMetricsFilter(scope PipelineMetricsScope) metrics.Filter {
+func pipelineMetricsFilter(workspace string, scope PipelineMetricsScope) metrics.Filter {
 	workspaces := scope.Workspaces
-	if scope.Workspace != "" {
-		workspaces = []string{scope.Workspace}
+	if workspace != "" {
+		workspaces = []string{workspace}
 	}
 	return metrics.Filter{
 		Workspaces:  workspaces,

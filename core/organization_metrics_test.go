@@ -65,14 +65,13 @@ func TestValidatePipelineMetricsScopeRequiresOneGroup(t *testing.T) {
 	}
 }
 
-// TestValidatePipelineMetricsScopeAllowsWorkspaceGroupInWorkspaceScope verifies
-// that a workspace-scoped metrics request may still group by workspace.
-func TestValidatePipelineMetricsScopeAllowsWorkspaceGroupInWorkspaceScope(t *testing.T) {
+// TestValidatePipelineMetricsScopeAllowsWorkspaceGroup verifies that workspace
+// grouping is valid when workspaces are provided as the grouping parameter.
+func TestValidatePipelineMetricsScopeAllowsWorkspaceGroup(t *testing.T) {
 	err := validatePipelineMetricsScope(PipelineMetricsScope{
-		Workspace:  "9RbU4nP8LyQ6",
 		Workspaces: []string{"9RbU4nP8LyQ6"},
 	})
 	if err != nil {
-		t.Fatalf("expected workspace group in workspace scope to be valid, got %v", err)
+		t.Fatalf("expected workspace group to be valid, got %v", err)
 	}
 }

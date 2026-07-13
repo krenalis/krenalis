@@ -143,7 +143,7 @@ func TestParsePipelineMetricsScopeConnectionTarget(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/pipelines/metrics/minutes/15"+test.query, nil)
-			scope, err := parsePipelineMetricsScope(req, nil)
+			scope, err := parsePipelineMetricsScope(req)
 			if test.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -169,19 +169,15 @@ func TestParsePipelineMetricsScopeConnectionTarget(t *testing.T) {
 	}
 }
 
-// TestParsePipelineMetricsScopeWorkspaceScopedWorkspaces verifies that
-// workspace grouping is still parsed when the request is already scoped to a
-// workspace.
-func TestParsePipelineMetricsScopeWorkspaceScopedWorkspaces(t *testing.T) {
+// TestParsePipelineMetricsScopeWorkspaces verifies that workspace grouping is
+// parsed from the query parameters without an implicit workspace scope.
+func TestParsePipelineMetricsScopeWorkspaces(t *testing.T) {
 	const validWorkspace = "9RbU4nP8LyQ6"
 
 	req := httptest.NewRequest("GET", "/pipelines/metrics/minutes/15?workspaces="+validWorkspace, nil)
-	scope, err := parsePipelineMetricsScope(req, &core.Workspace{ID: validWorkspace})
+	scope, err := parsePipelineMetricsScope(req)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if scope.Workspace != validWorkspace {
-		t.Fatalf("expected workspace scope %q, got %q", validWorkspace, scope.Workspace)
 	}
 	if !slices.Equal(scope.Workspaces, []string{validWorkspace}) {
 		t.Fatalf("expected workspaces %v, got %v", []string{validWorkspace}, scope.Workspaces)
