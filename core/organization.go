@@ -896,7 +896,7 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 		return PipelineMetrics{}, err
 	}
 	if workspace != "" && !IsValidID(workspace) {
-		return PipelineMetrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+		return PipelineMetrics{}, errors.BadRequest("workspace %s is not valid", workspace)
 	}
 	group := pipelineMetricsGroup(scope)
 	scope = this.filterPipelineMetricsScope(workspace, scope)
@@ -947,7 +947,7 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 		return PipelineMetrics{}, err
 	}
 	if workspace != "" && !IsValidID(workspace) {
-		return PipelineMetrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+		return PipelineMetrics{}, errors.BadRequest("workspace %s is not valid", workspace)
 	}
 
 	resolution := time.Duration(unit)
@@ -997,7 +997,7 @@ func validatePipelineMetricsScope(scope PipelineMetricsScope) error {
 	}
 	for _, workspace := range scope.Workspaces {
 		if !IsValidID(workspace) {
-			return errors.BadRequest("workspace %q is not valid", workspace)
+			return errors.BadRequest("workspace %s is not valid", workspace)
 		}
 	}
 	for _, pipeline := range scope.Pipelines {
