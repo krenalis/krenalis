@@ -187,10 +187,3 @@ func TestParsePipelineMetricsScopeWorkspaceScopedWorkspaces(t *testing.T) {
 		t.Fatalf("expected workspaces %v, got %v", []string{validWorkspace}, scope.Workspaces)
 	}
 }
-
-// targetPtr returns a pointer to v.
-//
-//go:fix inline
-func targetPtr(v core.Target) *core.Target {
-	return new(v)
-}
