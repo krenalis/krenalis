@@ -19,12 +19,11 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -35,7 +34,7 @@ var (
 // election represents a leader election.
 type election struct {
 	number   int
-	leader   uuid.UUID
+	leader   string
 	lastSeen time.Time
 }
 
@@ -53,7 +52,7 @@ type metadata struct {
 
 // State represents the application state.
 type State struct {
-	id uuid.UUID
+	id string
 	db *db.DB
 
 	changing           *sync.RWMutex
@@ -106,13 +105,8 @@ type OAuthCredentials struct {
 // initialized, returns an error of type *DBNotInitializedError.
 func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
 	state := &State{
-		id:               id,
+		id:               base58.Generate(22),
 		db:               db,
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
@@ -136,7 +130,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
 
 	// Load the state.
-	err = state.load(ctx, credentials)
+	err := state.load(ctx, credentials)
 	if err != nil {
 		state.notifications.Close()
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
@@ -283,7 +277,7 @@ func (state *State) GenerateKmsDataKey(ctx context.Context) ([]byte, error) {
 }
 
 // ID returns the node identifier.
-func (state *State) ID() uuid.UUID {
+func (state *State) ID() string {
 	return state.id
 }
 
@@ -589,7 +583,7 @@ type AccessKey struct {
 type Organization struct {
 	mu         *sync.Mutex
 	workspaces map[string]*Workspace
-	members    map[string]struct{}
+	members    map[string]bool // true when the member can log in.
 	usage      organizationUsage
 	ID         string
 	Name       string
@@ -616,20 +610,21 @@ type OrganizationLimits struct {
 	Pipelines   int
 }
 
+// CanMemberLogin reports whether the member with the given ID can log in and
+// whether the member exists.
+func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
+	organization.mu.Lock()
+	canLogin, ok := organization.members[id]
+	organization.mu.Unlock()
+	return canLogin, ok
+}
+
 // Counts returns the organization's counts.
 func (organization *Organization) Counts() OrganizationCounts {
 	organization.mu.Lock()
 	counts := organization.usage.currentCounts()
 	organization.mu.Unlock()
 	return counts
-}
-
-// HasMember reports whether the organization has a member with the given ID.
-func (organization *Organization) HasMember(id string) bool {
-	organization.mu.Lock()
-	_, ok := organization.members[id]
-	organization.mu.Unlock()
-	return ok
 }
 
 // IsAccessKeyLimitReached returns whether the organization has reached its
@@ -1641,7 +1636,7 @@ func (pipeline *Pipeline) Organization() *Organization {
 type PipelineRun struct {
 	mu          *sync.Mutex
 	ID          string
-	node        *uuid.UUID
+	node        *string
 	pipeline    *Pipeline
 	Incremental bool
 	Cursor      time.Time
@@ -1658,12 +1653,12 @@ func (run *PipelineRun) Pipeline() *Pipeline {
 
 // Node returns the node on which the run is currently executing.
 // The boolean return value indicates whether the run is assigned to a node.
-func (run *PipelineRun) Node() (uuid.UUID, bool) {
+func (run *PipelineRun) Node() (string, bool) {
 	run.mu.Lock()
 	node := run.node
 	run.mu.Unlock()
 	if node == nil {
-		return uuid.UUID{}, false
+		return "", false
 	}
 	return *node, true
 }

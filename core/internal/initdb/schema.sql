@@ -197,7 +197,7 @@ CREATE TABLE pipelines_runs (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
     function varchar(200) NOT NULL DEFAULT '',
-    node uuid,
+    node varchar(22) CHECK (node IS NULL OR node ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
     incremental boolean NOT NULL DEFAULT FALSE,
     cursor timestamp NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     start_time timestamp NOT NULL,
@@ -268,12 +268,12 @@ CREATE TABLE discontinued_functions (
 
 CREATE TABLE election (
     number integer NOT NULL,
-    leader uuid NOT NULL,
+    leader varchar(22) NOT NULL CHECK (leader = '' OR leader ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
     date timestamp NOT NULL,
     PRIMARY KEY (number)
 );
 
-INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
+INSERT INTO election (number, leader, date) VALUES (1, '', '2023-01-01 00:00:00.000000');
 
 CREATE TABLE event_write_keys (
     connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,

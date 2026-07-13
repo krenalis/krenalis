@@ -37,6 +37,52 @@ const organizationConnectorReferencesView = `
 	JOIN workspaces ws ON ws.id = c.workspace
 	WHERE p.format IS NOT NULL`
 
+const nodeIDUpgrade = `
+	DO $$
+	BEGIN
+		IF EXISTS (
+			SELECT FROM information_schema.columns
+			WHERE table_schema = current_schema()
+				AND table_name = 'pipelines_runs'
+				AND column_name = 'node'
+				AND data_type = 'uuid'
+		) THEN
+			ALTER TABLE pipelines_runs
+				ALTER COLUMN node TYPE varchar(22) USING NULL;
+		END IF;
+
+		IF EXISTS (
+			SELECT FROM information_schema.columns
+			WHERE table_schema = current_schema()
+				AND table_name = 'election'
+				AND column_name = 'leader'
+				AND data_type = 'uuid'
+		) THEN
+			ALTER TABLE election
+				ALTER COLUMN leader TYPE varchar(22) USING '';
+		END IF;
+
+		IF NOT EXISTS (
+			SELECT FROM pg_constraint
+			WHERE conrelid = 'pipelines_runs'::regclass
+				AND conname = 'pipelines_runs_node_check'
+		) THEN
+			ALTER TABLE pipelines_runs
+				ADD CONSTRAINT pipelines_runs_node_check
+				CHECK (node IS NULL OR node ~ '^[1-9A-HJ-NP-Za-km-z]{22}$');
+		END IF;
+
+		IF NOT EXISTS (
+			SELECT FROM pg_constraint
+			WHERE conrelid = 'election'::regclass
+				AND conname = 'election_leader_check'
+		) THEN
+			ALTER TABLE election
+				ADD CONSTRAINT election_leader_check
+				CHECK (leader = '' OR leader ~ '^[1-9A-HJ-NP-Za-km-z]{22}$');
+		END IF;
+	END $$`
+
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
@@ -71,6 +117,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`CREATE INDEX IF NOT EXISTS ` + workspacesOrganizationIndex + ` ON workspaces (organization)`,
 			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceIndex + ` ON connections (workspace)`,
 			organizationConnectorReferencesView,
+			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
 		}
 		for _, query := range queries {

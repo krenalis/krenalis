@@ -331,8 +331,8 @@ func parsePayload(s string) (version int, name, payload string, err error) {
 	if s[0] != '@' {
 		return 0, "", "", errors.New("invalid version")
 	}
-	v, _ := strconv.ParseInt(s[1:], 10, 64)
-	if v < 1 {
+	v, err := strconv.ParseInt(s[1:], 10, 64)
+	if err != nil || v < 1 {
 		return 0, "", "", errors.New("invalid version")
 	}
 	return int(v), name, payload, nil

@@ -84,10 +84,22 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			format varchar
 		);
+		CREATE TABLE pipelines_runs (
+			id varchar(12) PRIMARY KEY,
+			pipeline varchar(12) NOT NULL REFERENCES pipelines (id),
+			node uuid
+		);
+		CREATE TABLE election (
+			number integer PRIMARY KEY,
+			leader uuid NOT NULL,
+			date timestamp NOT NULL
+		);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
 		INSERT INTO connections (id, workspace, connector) VALUES ('333333333333', '222222222222', 'dummy');
-		INSERT INTO pipelines (id, connection, format) VALUES ('444444444444', '333333333333', 'csv')`)
+		INSERT INTO pipelines (id, connection, format) VALUES ('444444444444', '333333333333', 'csv');
+		INSERT INTO pipelines_runs (id, pipeline, node) VALUES ('555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW())`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,9 +112,57 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 	assertIndexExists(t, database, workspacesOrganizationIndex)
 	assertIndexExists(t, database, connectionsWorkspaceIndex)
 	assertOrganizationConnectorReferences(t, database)
+	assertNodeIDsUpgraded(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("second upgrade failed: %s", err)
+	}
+}
+
+func assertNodeIDsUpgraded(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []struct {
+		table string
+		name  string
+	}{
+		{"pipelines_runs", "node"},
+		{"election", "leader"},
+	} {
+		var (
+			dataType string
+			length   int
+		)
+		err := database.QueryRow(t.Context(), `
+			SELECT data_type, character_maximum_length
+			FROM information_schema.columns
+			WHERE table_schema = current_schema()
+				AND table_name = $1
+				AND column_name = $2`, column.table, column.name).Scan(&dataType, &length)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if dataType != "character varying" || length != 22 {
+			t.Fatalf("expected %s.%s to be varchar(22), got %s(%d)", column.table, column.name, dataType, length)
+		}
+	}
+
+	var node *string
+	err := database.QueryRow(t.Context(), "SELECT node FROM pipelines_runs WHERE id = '555555555555'").Scan(&node)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if node != nil {
+		t.Fatalf("expected upgraded pipeline run node to be NULL, got %q", *node)
+	}
+
+	var leader string
+	err = database.QueryRow(t.Context(), "SELECT leader FROM election WHERE number = 1").Scan(&leader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leader != "" {
+		t.Fatalf("expected upgraded election leader to be empty, got %q", leader)
 	}
 }
 

@@ -276,8 +276,8 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		}
 		return nil, nil, "", err
 	}
-	// Verify that the member still exists.
-	if exists, err := org.HasMember(session.Member); err != nil || !exists {
+	// Verify that the member can still log in.
+	if canLogin, err := org.CanMemberLogin(session.Member); err != nil || !canLogin {
 		return nil, nil, "", errInvalidSessionCookie
 	}
 	// Verify that the organization is enabled.
