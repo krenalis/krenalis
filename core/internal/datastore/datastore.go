@@ -336,10 +336,9 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 	return nil
 }
 
-// WarehouseEnv returns the environment of the data warehouse of the
-// organization with the given ID, whose settings are loaded by settings.
-//
-// The network traffic of the warehouse is attributed to the organization.
+// WarehouseEnv returns the environment for a data warehouse relative to a
+// workspace in the organization with the given ID, whose settings are loaded by
+// settings.
 func WarehouseEnv(organization string, settings warehouses.SettingsLoader) *warehouses.Env {
 	return &warehouses.Env{
 		Settings: settings,
