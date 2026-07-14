@@ -239,8 +239,6 @@ var dialer = &net.Dialer{
 	KeepAlive: -1, // disable keep-alive probes.
 }
 
-// transport is the template from which the transport of each connector
-// instance is cloned.
 var transport = &http.Transport{
 	Proxy:                 nil,
 	DialContext:           dialer.DialContext,

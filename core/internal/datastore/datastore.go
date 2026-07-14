@@ -16,8 +16,8 @@ import (
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/countdial"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )

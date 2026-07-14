@@ -6,12 +6,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	sfconfig "github.com/snowflakedb/gosnowflake/v2/internal/config"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	sfconfig "github.com/snowflakedb/gosnowflake/v2/internal/config"
 
 	"golang.org/x/net/http/httpproxy"
 )

@@ -20,8 +20,8 @@ import (
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/core/internal/transformers/embed"
 	"github.com/krenalis/krenalis/tools/backoff"
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/countdial"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -35,16 +35,11 @@ import (
 
 type function struct {
 	settings Settings
-
-	// mu protects config and clients.
-	mu sync.Mutex
-
-	// config is the AWS configuration, loaded on the first use.
-	config *aws.Config
-
-	// clients holds a Lambda client for each organization, so that the bytes the
-	// client sends are attributed to it. The client with the empty key is the one
-	// used when the bytes are not counted (see [countdial.IsEnabled]).
+	mu       sync.Mutex
+	config   *aws.Config
+	// clients holds a Lambda client for each organization, so that the bytes
+	// the client sends are attributed to it. The client with the empty key is
+	// the one used when the bytes are not counted (see [countdial.IsEnabled]).
 	clients map[string]*lambda.Client // by organization ID
 }
 

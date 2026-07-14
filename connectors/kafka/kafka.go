@@ -248,8 +248,6 @@ type innerSettings struct {
 	Topic     string             `json:"topic"`
 }
 
-// dialTimeout is the maximum time to establish a connection to a broker,
-// including the TLS handshake.
 const dialTimeout = 5 * time.Second
 
 // opts returns s as options to configure a client. The connections are

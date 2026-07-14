@@ -264,8 +264,6 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-// config returns the driver configuration from s. The connections are
-// established using dial, in place of the driver's default dialer.
 func config(s *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username

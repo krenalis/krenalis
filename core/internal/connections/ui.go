@@ -12,8 +12,8 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/countdial"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 type uiHandlerConnection interface {

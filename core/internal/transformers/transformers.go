@@ -65,14 +65,15 @@ type Transformer struct {
 // attributed and the provider, if it needs to attribute it, must know the
 // organization on its own.
 //
-// It only accesses the ID, Organization, InSchema, OutSchema, and Transformation
-// fields of pipeline.
+// It only accesses the ID, Organization, InSchema, OutSchema, and
+// Transformation fields of pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
 func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	var organization string
+	// TODO(Gianluca): questo 'if' si può rimuovere?
 	if o := pipeline.Organization(); o != nil {
 		organization = o.ID
 	}
