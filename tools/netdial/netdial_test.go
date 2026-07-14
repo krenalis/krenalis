@@ -251,15 +251,12 @@ func TestTransport(t *testing.T) {
 	}
 }
 
-func TestCounting(t *testing.T) {
-	if Counting("org-counting") {
-		t.Fatal("the bytes are counted, expecting them not to be counted when the metrics are disabled")
+func TestIsEnabled(t *testing.T) {
+	if IsEnabled() {
+		t.Fatal("enabled, expecting it to be disabled by default")
 	}
 	enable(t)
-	if !Counting("org-counting") {
-		t.Fatal("the bytes are not counted, expecting them to be counted")
-	}
-	if Counting("") {
-		t.Fatal("the bytes are counted, expecting them not to be counted when the organization is unknown")
+	if !IsEnabled() {
+		t.Fatal("disabled, expecting it to be enabled")
 	}
 }

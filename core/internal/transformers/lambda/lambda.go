@@ -44,7 +44,7 @@ type function struct {
 
 	// clients holds a Lambda client for each organization, so that the bytes the
 	// client sends are attributed to it. The client with the empty key is the one
-	// used when the bytes are not counted (see [netdial.Counting]).
+	// used when the bytes are not counted (see [netdial.IsEnabled]).
 	clients map[string]*lambda.Client // by organization ID
 }
 
@@ -453,7 +453,7 @@ def _handler(event, context):
 // apart.
 func (fn *function) lambdaClient(ctx context.Context, organization string) (*lambda.Client, error) {
 
-	if !netdial.Counting(organization) {
+	if !netdial.IsEnabled() {
 		organization = ""
 	}
 

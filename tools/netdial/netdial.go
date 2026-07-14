@@ -49,14 +49,13 @@ func Enabled(v bool) {
 	enabled.Store(v)
 }
 
-// Counting reports whether the bytes sent for the organization with the given
-// ID are counted, that is whether Prometheus metrics are enabled (see [Enabled])
-// and organizationID is not empty.
+// IsEnabled reports whether the attribution of connectors' network traffic to
+// organizations is enabled (see [Enabled]).
 //
 // It lets a caller that keeps a client per organization, like the Lambda
 // transformer, keep a single shared client when the bytes are not counted.
-func Counting(organizationID string) bool {
-	return enabled.Load() && organizationID != ""
+func IsEnabled() bool {
+	return enabled.Load()
 }
 
 var (
