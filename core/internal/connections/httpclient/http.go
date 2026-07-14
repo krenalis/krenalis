@@ -114,9 +114,12 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // OAuth-related Client methods cannot be invoked, as their behavior may be
 // undefined or cause a panic.
 //
-// A connector, unlike a connection, does not belong to an organization, so the
-// bytes sent by the returned client are not counted.
-func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessToken string) *Client {
+// A connector, unlike a connection, does not belong to an organization, but the
+// requests it sends are made on behalf of one, like when it serves the UI of a
+// connection that is being created. organizationID is the ID of that
+// organization, and the bytes the returned client sends are attributed to it.
+// If it is empty, the bytes are not counted.
+func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
 	}
@@ -125,7 +128,7 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 		connector:    connector.Code,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
-		transport:    h.transport,
+		transport:    h.transportFor(organizationID),
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
@@ -134,9 +137,10 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 
 // GrantAuthorization grants an OAuth authorization code and returns the access
 // token, the refresh token and the expiration time. redirectionURI is the
-// redirection URI.
-func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (string, string, time.Time, error) {
-	client := h.ConnectorClient(connector, "", "")
+// redirection URI, and organizationID is the ID of the organization on behalf
+// of which the authorization is granted.
+func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, organizationID, code, redirectionURI string) (string, string, time.Time, error) {
+	client := h.ConnectorClient(connector, organizationID, "", "")
 	return client.retrieveOAuthToken(ctx, connector.OAuth, code, redirectionURI, "")
 }
 

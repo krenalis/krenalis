@@ -750,7 +750,8 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Format settings.
 	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
-			Role: this.pipeline.Connection().Role,
+			Role:         this.pipeline.Connection().Role,
+			Organization: this.pipeline.Organization().ID,
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {

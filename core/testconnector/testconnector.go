@@ -76,7 +76,7 @@ func NewApplication[T any](code string, settings any) (T, error) {
 		Code:           code,
 		EndpointGroups: registeredApplications.EndpointGroups,
 	}
-	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).ConnectorClient(connector, "", "")
+	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).ConnectorClient(connector, "", "", "")
 	app, err := registeredApplications.New(&connectors.ApplicationEnv{
 		Settings:   newSettingsStore(s),
 		HTTPClient: httpClient,
@@ -98,7 +98,8 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredDatabases.New(&connectors.DatabaseEnv{
 		Settings: newSettingsStore(s),
-		// TODO: capire questo punto.
+		// A connector under test is not used on behalf of an organization, so
+		// the bytes it sends are not counted and it dials with a plain dialer.
 		Dial:     netdial.Dial(""),
 		DialWith: netdial.DialWith(""),
 	})
@@ -119,7 +120,8 @@ func NewStorage[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredStorage.New(&connectors.FileStorageEnv{
 		Settings: newSettingsStore(s),
-		// TODO: capire questo punto.
+		// A connector under test is not used on behalf of an organization, so
+		// the bytes it sends are not counted and it dials with a plain dialer.
 		Dial:     netdial.Dial(""),
 		DialWith: netdial.DialWith(""),
 	})

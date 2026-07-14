@@ -124,7 +124,15 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 }
 
 type ConnectorConfig struct {
-	Role  state.Role
+	Role state.Role
+
+	// Organization is the ID of the organization on behalf of which the
+	// connector is used. A connector, unlike a connection, does not belong to an
+	// organization, but it is always used on behalf of one, like when it serves
+	// the UI of a connection that is being created. The bytes it sends are
+	// attributed to that organization.
+	Organization string
+
 	OAuth struct {
 		Account      string
 		ClientSecret string
@@ -151,20 +159,31 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			Settings:     settingStore,
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			HTTPClient:   c.http.ConnectorClient(connector, conf.Organization, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
 	case state.Database:
 		var database any
-		// TODO: capire questo punto.
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{
+			Settings: settingStore,
+			Dial:     netdial.Dial(conf.Organization),
+			DialWith: netdial.DialWith(conf.Organization),
+		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
+			Settings: settingStore,
+			Dial:     netdial.Dial(conf.Organization),
+			DialWith: netdial.DialWith(conf.Organization),
+		})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
+			Settings: settingStore,
+			Dial:     netdial.Dial(conf.Organization),
+			DialWith: netdial.DialWith(conf.Organization),
+		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:
@@ -199,20 +218,32 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			HTTPClient:   c.http.ConnectorClient(connector, conf.Organization, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			Settings:     settingStore,
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{
+			Settings: settingStore,
+			Dial:     netdial.Dial(conf.Organization),
+			DialWith: netdial.DialWith(conf.Organization),
+		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
+			Settings: settingStore,
+			Dial:     netdial.Dial(conf.Organization),
+			DialWith: netdial.DialWith(conf.Organization),
+		})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
+			Settings: settingStore,
+			Dial:     netdial.Dial(conf.Organization),
+			DialWith: netdial.DialWith(conf.Organization),
+		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:

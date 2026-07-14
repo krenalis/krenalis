@@ -436,7 +436,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
 
-	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
+	auth, err := this.core.connections.GrantAuthorization(ctx, c, this.workspace.Organization().ID, code, redirectionURI)
 	if err != nil {
 		if err, ok := err.(*connections.UnavailableError); ok {
 			return "", errors.Unavailable("%w", err)
@@ -707,7 +707,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			clientSecret = c.OAuth.ClientSecret
 		}
 		conf := &connections.ConnectorConfig{
-			Role: n.Role,
+			Role:         n.Role,
+			Organization: this.workspace.Organization().ID,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -1571,7 +1572,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connections.ConnectorConfig{
-		Role: state.Role(role),
+		Role:         state.Role(role),
+		Organization: this.workspace.Organization().ID,
 	}
 	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret

@@ -489,7 +489,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	// Format settings.
 	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
-			Role: this.connection.Role,
+			Role:         this.connection.Role,
+			Organization: this.connection.Organization().ID,
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
