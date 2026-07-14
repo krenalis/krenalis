@@ -57,9 +57,6 @@ func New(settings Settings) transformers.FunctionProvider {
 // error), it returns a FunctionExecError.
 // Even if the call succeeds, individual records may still encounter errors,
 // which are stored in the Err field of each record.
-//
-// The organization is ignored, as the function is executed on the same machine
-// and no network traffic is sent.
 func (fn *function) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	name, language, err := parseID(id)
@@ -159,9 +156,6 @@ func (fn *function) Close(ctx context.Context) error {
 
 // Create creates a new function with the given name, language, and source and
 // returns its identifier and version.
-//
-// The organization is ignored, as the function is created on the same machine
-// and no network traffic is sent.
 func (fn *function) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", "", errors.New("function name is not valid")
@@ -387,9 +381,6 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 // Update updates the source of the function with the given identifier and
 // returns a new version, which has a length in the range [1, 128].
 // If the function does not exist, it returns the ErrFunctionNotExist error.
-//
-// The organization is ignored, as the function is updated on the same machine
-// and no network traffic is sent.
 func (fn *function) Update(ctx context.Context, organization, id, source string) (string, error) {
 	name, language, err := parseID(id)
 	if err != nil {
