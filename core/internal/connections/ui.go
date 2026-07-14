@@ -101,6 +101,8 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
 			Settings: settingsStore,
+			Dial:     netdial.Dial(connection.Organization().ID),
+			DialWith: netdial.DialWith(connection.Organization().ID),
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(connector.Code).New(&connectors.SDKEnv{
@@ -162,7 +164,7 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:
@@ -210,7 +212,7 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore, Dial: netdial.Dial(""), DialWith: netdial.DialWith("")})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:

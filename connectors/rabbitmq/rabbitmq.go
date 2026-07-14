@@ -171,10 +171,13 @@ func (rmq *RabbitMQ) connect(ctx context.Context, settings *innerSettings, deliv
 			_ = netConn.Close()
 		}
 	}()
+	dial := rmq.env.DialWith(func(ctx context.Context, network, address string) (net.Conn, error) {
+		d := net.Dialer{Timeout: defaultConnectionTimeout}
+		return d.DialContext(ctx, network, address)
+	})
 	config := amqp.Config{
 		Dial: func(network, address string) (net.Conn, error) {
-			d := net.Dialer{Timeout: defaultConnectionTimeout}
-			netConn, err = d.DialContext(ctx, network, address)
+			netConn, err = dial(ctx, network, address)
 			if err != nil {
 				return nil, err
 			}
