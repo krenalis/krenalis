@@ -212,7 +212,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = maxBytesNormalizedReader(w, r.Body, maxRequestSize)
 	}
 
-	// Get the Sync-Token codec for this request.
+	// Get the Sync-Token codec to use while handling this request.
 	codec, err := s.syncTokenCodec(r.Context())
 	if err != nil {
 		slog.Error("cmd: cannot create the Sync-Token codec", "request_id", requestID, "error", err)
@@ -902,8 +902,8 @@ func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCook
 	if err != nil {
 		return nil, err
 	}
-	hashKey := append([]byte(nil), key[:32]...)
-	blockKey := append([]byte(nil), key[32:]...)
+	hashKey := bytes.Clone(key[:32])
+	blockKey := bytes.Clone(key[32:])
 	clear(key)
 	s.cookies.SecureCookie = securecookie.New(hashKey, blockKey)
 	s.cookies.SecureCookie.MaxAge(sessionMaxAge)
@@ -938,24 +938,20 @@ func (s *apisServer) syncTokenCodec(ctx context.Context) (*synctoken.Codec, erro
 		return nil, err
 	}
 	defer clear(key)
-	syncTokenKey := deriveSyncTokenKey(key)
-	defer clear(syncTokenKey[:])
-	codec, err := synctoken.NewCodec(syncTokenKey[:])
+
+	// Derive a dedicated Sync-Token encryption key from the HTTP secret
+	// using a fixed label for domain separation.
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte("krenalis sync-token key v1"))
+	syncTokenKey := mac.Sum(nil)
+	defer clear(syncTokenKey)
+
+	codec, err := synctoken.NewCodec(syncTokenKey)
 	if err != nil {
 		return nil, err
 	}
 	s.syncTokens.codec = codec
 	return s.syncTokens.codec, nil
-}
-
-// deriveSyncTokenKey derives the AES-256 key used for Sync-Token values from
-// the HTTP secret key material.
-func deriveSyncTokenKey(key []byte) [32]byte {
-	mac := hmac.New(sha256.New, key)
-	_, _ = mac.Write([]byte("krenalis sync-token key v1"))
-	var derived [32]byte
-	copy(derived[:], mac.Sum(nil))
-	return derived
 }
 
 // validateForbiddenBody rejects requests that contain a request body.

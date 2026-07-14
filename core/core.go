@@ -591,11 +591,6 @@ func (core *Core) Close(ctx context.Context) {
 	coreActive.Store(false)
 }
 
-// HTTPSecretKey decrypts and returns the HTTP secret key material.
-func (core *Core) HTTPSecretKey(ctx context.Context) ([]byte, error) {
-	return core.state.HTTPSecretKey(ctx)
-}
-
 // Connector returns the connector with the provided code.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
@@ -833,6 +828,11 @@ func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID stri
 		}
 		return state.DeleteMembers{IDs: ids}, nil
 	})
+}
+
+// HTTPSecretKey decrypts and returns the HTTP secret key material.
+func (core *Core) HTTPSecretKey(ctx context.Context) ([]byte, error) {
+	return core.state.HTTPSecretKey(ctx)
 }
 
 // InstallationID returns the installation ID.

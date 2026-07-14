@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package synctoken creates and parses Sync-Token HTTP header values.
+// Package synctoken creates, parses, and writes Sync-Token HTTP header values.
 package synctoken
 
 import (
@@ -15,8 +15,8 @@ import (
 	"github.com/krenalis/krenalis/tools/base58"
 )
 
-// NonceSize is the number of random bytes required as the nonce passed
-// to Encode.
+// NonceSize is the number of random bytes required as the nonce passed to
+// Encode.
 const NonceSize = 12
 
 const (
