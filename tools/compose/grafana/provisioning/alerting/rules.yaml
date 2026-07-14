@@ -21,7 +21,7 @@ groups:
             model:
               refId: A
               editorMode: code
-              expr: sum by (organization) (increase(krenalis_organization_network_bytes_total{direction="egress"}[1h]))
+              expr: sum by (organization) (increase(krenalis_organization_network_egress_bytes_total[1h]))
               instant: true
               range: false
               intervalMs: 1000

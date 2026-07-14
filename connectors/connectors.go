@@ -17,7 +17,7 @@ import (
 
 // A DialFunc establishes an outbound network connection to the given address.
 // It is the type of the dial functions Krenalis provides to the connectors, so
-// that it can count the bytes they transfer.
+// that it can count the bytes they send.
 type DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
 
 // Categories represents connector categories.

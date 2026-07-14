@@ -6,10 +6,10 @@
 // warehouses to establish outbound network connections.
 //
 // When Prometheus metrics are enabled (see [Enabled]), the dial function
-// returned by [Dial] attributes the bytes read and written by the connections
-// it establishes to the given organization, exposing them as the
-// krenalis_organization_network_bytes_total Prometheus counter. Otherwise, it
-// behaves like a plain net.Dialer.
+// returned by [Dial] attributes the bytes written by the connections it
+// establishes to the given organization, exposing them as the
+// krenalis_organization_network_egress_bytes_total Prometheus counter.
+// Otherwise, it behaves like a plain net.Dialer.
 package netdial
 
 import (
@@ -26,12 +26,13 @@ import (
 // among others, pgconn.Config.DialFunc.
 type DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
 
-// networkBytes is the Prometheus counter exposing the bytes transferred by
-// each organization, partitioned by direction ("ingress" or "egress").
-var networkBytes = prometheus.RegisterCounterVec(
-	"krenalis_organization_network_bytes_total",
-	"Total bytes transferred per organization",
-	[]string{"organization", "direction"},
+// egressBytes is the Prometheus counter exposing the bytes written by each
+// organization, that is its outbound (egress) traffic. Inbound traffic is not
+// counted.
+var egressBytes = prometheus.RegisterCounterVec(
+	"krenalis_organization_network_egress_bytes_total",
+	"Total bytes sent per organization",
+	[]string{"organization"},
 )
 
 // enabled reports whether connectors' network traffic must be attributed to
@@ -48,28 +49,19 @@ func Enabled(v bool) {
 	enabled.Store(v)
 }
 
-// counterPair holds the ingress and egress counters for an organization.
-type counterPair struct {
-	ingress *prometheus.Counter
-	egress  *prometheus.Counter
-}
-
 var (
 	countersMu sync.Mutex
-	counters   = map[string]*counterPair{} // organization ID -> counters
+	counters   = map[string]*prometheus.Counter{} // organization ID -> egress counter
 )
 
-// countersFor returns the ingress/egress counters for the given organization,
-// registering them the first time the organization is seen.
-func countersFor(organizationID string) *counterPair {
+// counterFor returns the egress counter for the given organization, registering
+// it the first time the organization is seen.
+func counterFor(organizationID string) *prometheus.Counter {
 	countersMu.Lock()
 	defer countersMu.Unlock()
 	c, ok := counters[organizationID]
 	if !ok {
-		c = &counterPair{
-			ingress: networkBytes.Register(organizationID, "ingress"),
-			egress:  networkBytes.Register(organizationID, "egress"),
-		}
+		c = egressBytes.Register(organizationID)
 		counters[organizationID] = c
 	}
 	return c
@@ -81,16 +73,15 @@ func countersFor(organizationID string) *counterPair {
 //
 // If organizationID is empty, or Prometheus metrics are disabled (see
 // [Enabled]), the returned function is a plain, unwrapped dialer; otherwise
-// every connection it establishes has the bytes it reads and writes recorded as
-// the krenalis_organization_network_bytes_total Prometheus counter, labeled by
-// organization and direction ("ingress" for bytes read, "egress" for bytes
-// written).
+// every connection it establishes has the bytes it writes recorded as the
+// krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
+// by organization. The bytes it reads are not counted.
 func Dial(organizationID string) DialFunc {
 	return dialWith(organizationID, nil)
 }
 
 // DialWith returns the function Krenalis passes to a connector that has its own
-// dialer, to count the bytes the dialer transfers, attributing them to the
+// dialer, to count the bytes the dialer sends, attributing them to the
 // organization with the given ID.
 //
 // Unlike [Dial], which replaces the connector's dialer with a plain one, the
@@ -104,7 +95,7 @@ func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 }
 
 // Transport returns the transport Krenalis uses for the HTTP requests of the
-// organization with the given ID, attributing to it the bytes they transfer.
+// organization with the given ID, attributing to it the bytes they send.
 //
 // If organizationID is empty, or Prometheus metrics are disabled (see
 // [Enabled]), base is returned unwrapped; otherwise the returned transport is a
@@ -125,8 +116,8 @@ func Transport(base *http.Transport, organizationID string) http.RoundTripper {
 // dialWith is like [Dial], but the connections are established by dial instead
 // of by a plain net.Dialer. If dial is nil, a plain net.Dialer is used.
 //
-// It allows counting the bytes transferred by an already configured dialer,
-// like the one of an http.Transport, preserving its timeouts and options.
+// It allows counting the bytes sent by an already configured dialer, like the
+// one of an http.Transport, preserving its timeouts and options.
 func dialWith(organizationID string, dial DialFunc) DialFunc {
 	if dial == nil {
 		var d net.Dialer
@@ -135,35 +126,27 @@ func dialWith(organizationID string, dial DialFunc) DialFunc {
 	if !enabled.Load() || organizationID == "" {
 		return dial
 	}
-	c := countersFor(organizationID)
+	c := counterFor(organizationID)
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
 		conn, err := dial(ctx, network, addr)
 		if err != nil {
 			return nil, err
 		}
-		return &instrumentedConn{Conn: conn, counters: c}, nil
+		return &instrumentedConn{Conn: conn, egress: c}, nil
 	}
 }
 
-// instrumentedConn wraps a net.Conn, recording the bytes it reads and writes
-// into its organization's counters.
+// instrumentedConn wraps a net.Conn, recording the bytes it writes into its
+// organization's egress counter.
 type instrumentedConn struct {
 	net.Conn
-	counters *counterPair
-}
-
-func (c *instrumentedConn) Read(b []byte) (int, error) {
-	n, err := c.Conn.Read(b)
-	if n > 0 {
-		c.counters.ingress.Add(n)
-	}
-	return n, err
+	egress *prometheus.Counter
 }
 
 func (c *instrumentedConn) Write(b []byte) (int, error) {
 	n, err := c.Conn.Write(b)
 	if n > 0 {
-		c.counters.egress.Add(n)
+		c.egress.Add(n)
 	}
 	return n, err
 }

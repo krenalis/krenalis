@@ -227,7 +227,7 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 // given environment.
 //
 // The transport dials with env.DialWith, which counts the bytes the requests
-// transfer, keeping the dial options of the transport's own dialer.
+// send, keeping the dial options of the transport's own dialer.
 func newHTTPClient(env *connectors.FileStorageEnv) func() aws.HTTPClient {
 	return sync.OnceValue(func() aws.HTTPClient {
 		return awsHTTP.NewBuildableClient().

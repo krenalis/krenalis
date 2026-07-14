@@ -68,7 +68,7 @@ func New(state *state.State, transport *http.Transport) *HTTP {
 }
 
 // transportFor returns the transport to use for the requests of the
-// organization with the given ID, attributing to it the bytes they transfer.
+// organization with the given ID, attributing to it the bytes they send.
 //
 // The transport is created once per organization, so that all the connections
 // of an organization share the same connection pool.
@@ -115,7 +115,7 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // undefined or cause a panic.
 //
 // A connector, unlike a connection, does not belong to an organization, so the
-// bytes transferred by the returned client are not counted.
+// bytes sent by the returned client are not counted.
 func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")

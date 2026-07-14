@@ -36,7 +36,7 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Shows the outbound (egress) network bandwidth used by connectors, broken down by organization. Computed as the rate of bytes written to connector connections, in bytes per second.",
+      "description": "Shows the outbound (egress) network bandwidth used by connectors, broken down by organization. Computed as the rate of bytes written to connector connections, in bytes per second. Inbound traffic is not counted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -112,7 +112,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (organization) (rate(krenalis_organization_network_bytes_total{direction=\"egress\"}[5m]))",
+          "expr": "sum by (organization) (rate(krenalis_organization_network_egress_bytes_total[5m]))",
           "legendFormat": "{{organization}}",
           "refId": "A"
         }
@@ -121,98 +121,12 @@
       "type": "timeseries"
     },
     {
-      "datasource": "${datasource}",
-      "description": "Shows the inbound (ingress) network bandwidth used by connectors, broken down by organization. Computed as the rate of bytes read from connector connections, in bytes per second.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "binBps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 10
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (organization) (rate(krenalis_organization_network_bytes_total{direction=\"ingress\"}[5m]))",
-          "legendFormat": "{{organization}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Inbound (Ingress) Bandwidth",
-      "type": "timeseries"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 10
       },
       "id": 4,
       "title": "Totals",
@@ -220,7 +134,7 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Total bytes transferred per organization and direction over the selected time range.",
+      "description": "Total bytes sent per organization over the selected time range.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -264,7 +178,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 11
       },
       "id": 5,
       "options": {
@@ -287,14 +201,14 @@
       },
       "targets": [
         {
-          "expr": "sum by (organization, direction) (increase(krenalis_organization_network_bytes_total[$__range]))",
+          "expr": "sum by (organization) (increase(krenalis_organization_network_egress_bytes_total[$__range]))",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
           "refId": "A"
         }
       ],
-      "title": "Total Bytes Transferred by Organization",
+      "title": "Total Bytes Sent by Organization",
       "type": "table"
     }
   ],
