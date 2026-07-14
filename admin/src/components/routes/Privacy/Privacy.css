@@ -1,0 +1,86 @@
+.privacy .grid__loading {
+	padding: 90px 30px 120px 30px;
+}
+
+.privacy {
+    max-width: 900px;
+    margin: auto;
+    padding: 30px;
+}
+
+.privacy__title {
+	display: flex;
+	margin-bottom: 15px;
+	justify-content: space-between;
+	align-items: end;
+	gap: 30px;
+}
+
+.privacy__title-text {
+	font-size: 23px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.privacy__description {
+	color: var(--sl-color-neutral-600);
+	font-size: 14px;
+	margin-bottom: 20px;
+}
+
+.privacy__grid-buttons {
+	display: flex;
+	gap: 10px;
+}
+
+.privacy__grid-code {
+    font-family: var(--monospace-fonts);
+    background-color: var(--sl-color-neutral-100);
+    font-size: 13px;
+    padding: 2px 8px;
+    border-radius: 5px;
+}
+
+.privacy__grid-pipelines {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.privacy__grid-pipelines-empty {
+	color: var(--sl-color-neutral-500);
+}
+
+.privacy__grid-pipeline-logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+	border-radius: var(--sl-border-radius-medium);
+}
+
+.privacy__dialog-error {
+	color: var(--sl-color-danger-600);
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin-top: 3px;
+	font-size: 15px;
+}
+
+.privacy__dialog-error sl-icon {
+	color: var(--sl-color-danger-600);
+	font-size: 14px;
+}
+
+.privacy__dialog-code {
+	margin-top: 15px;
+}
+
+.privacy__dialog-save {
+	margin-top: 30px;
+	display: block;
+}

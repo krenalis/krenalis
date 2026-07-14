@@ -46,6 +46,8 @@ func Test_validatePipeline(t *testing.T) {
 		formatHasSettings bool
 		formatHasSheets   bool
 
+		knownConsentPurposeIDs map[string]bool
+
 		provider transformers.FunctionProvider
 
 		err string // empty string if no validation error is expected
@@ -427,6 +429,84 @@ func Test_validatePipeline(t *testing.T) {
 			connectionConnectorType: state.SDK,
 		},
 		{
+			name: "GOOD: Source/SDK/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:                    "Import events into the data warehouse",
+				RequiredConsents:        []string{"111111111111", "222222222222"},
+				RequiredConsentsLogical: ConsentsAnd,
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true, "222222222222": true},
+		},
+		{
+			name: "BAD: Source/SDK/Event - unknown consent purpose",
+			pipeline: PipelineToSet{
+				Name:             "Import events into the data warehouse",
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{},
+			err:                     `consent purpose "111111111111" does not exist`,
+		},
+		{
+			name: "GOOD: Source/SDK/User - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents:        []string{"111111111111"},
+				RequiredConsentsLogical: ConsentsAnd,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+		},
+		{
+			name: "BAD: Source/SDK/User - unknown consent purpose",
+			pipeline: PipelineToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			knownConsentPurposeIDs:  map[string]bool{},
+			err:                     `consent purpose "111111111111" does not exist`,
+		},
+		{
+			name: "GOOD: Source/Webhook/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:                    "Import events into the data warehouse",
+				RequiredConsents:        []string{"111111111111"},
+				RequiredConsentsLogical: ConsentsOr,
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+		},
+		{
 			name: "GOOD: Source/Webhook/User - with mapping",
 			pipeline: PipelineToSet{
 				Name:     "Import users",
@@ -600,6 +680,133 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
+		},
+		{
+			name: "GOOD: Destination/Application/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents:        []string{"111111111111", "222222222222"},
+				RequiredConsentsLogical: ConsentsAnd,
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true, "222222222222": true},
+		},
+		{
+			name: "BAD: Destination/Application/Event - unknown consent purpose",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{},
+			err:                     `consent purpose "111111111111" does not exist`,
+		},
+		{
+			name: "BAD: Destination/Application/Event - duplicated required consent purpose",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111", "111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+			err:                     `required consent purpose "111111111111" is duplicated`,
+		},
+		{
+			name: "BAD: Source/Application/User - required consents are not allowed",
+			pipeline: PipelineToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+			err:                     "required consents are not allowed",
+		},
+		{
+			name: "BAD: Destination/Application/Event - missing required consents logical",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+			err:                     `required consents logical must be "and" or "or"`,
+		},
+		{
+			name: "BAD: Destination/Application/Event - required consents logical without required consents",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsentsLogical: ConsentsAnd,
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "required consents logical cannot be specified without required consents",
 		},
 		{
 			name: "GOOD: Destination/Application/Event - with a constant mapping",
@@ -3441,6 +3648,7 @@ func Test_validatePipeline(t *testing.T) {
 			v.format.targets = test.formatTargets
 			v.format.hasSheets = test.formatHasSheets
 			v.format.hasSettings = test.formatHasSettings
+			v.knownConsentPurposeIDs = test.knownConsentPurposeIDs
 			v.provider = test.provider
 			err := validatePipelineToSet(test.pipeline, v)
 			var gotErr string

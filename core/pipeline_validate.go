@@ -60,6 +60,11 @@ type validationState struct {
 
 	// provider is the transformers.FunctionProvider instantiated on the Core.
 	provider transformers.FunctionProvider
+
+	// knownConsentPurposeIDs is the set of identifiers of the consent purposes
+	// defined in the pipeline's workspace. It is only populated by the caller
+	// when the pipeline to validate has a non-empty RequiredConsents.
+	knownConsentPurposeIDs map[string]bool
 }
 
 // validatePipelineToSet validates the given PipelineToSet, in the context of
@@ -67,6 +72,7 @@ type validationState struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - FormatNotExist, if the pipeline is on file and the specified format does
 //     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
@@ -163,6 +169,31 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if !exportUsersToFile {
 			usedInPaths = properties
 		}
+	}
+	// Validate the required consents.
+	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
+	if len(pipeline.RequiredConsents) > 0 {
+		if !requiredConsentsAllowed {
+			return errors.BadRequest("required consents are not allowed")
+		}
+		seen := make(map[string]bool, len(pipeline.RequiredConsents))
+		for _, id := range pipeline.RequiredConsents {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
+			}
+			if seen[id] {
+				return errors.BadRequest("required consent purpose %q is duplicated", id)
+			}
+			seen[id] = true
+			if !v.knownConsentPurposeIDs[id] {
+				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
+			}
+		}
+		if op := pipeline.RequiredConsentsLogical; op != ConsentsAnd && op != ConsentsOr {
+			return errors.BadRequest(`required consents logical must be "and" or "or"`)
+		}
+	} else if pipeline.RequiredConsentsLogical != ConsentsNone {
+		return errors.BadRequest("required consents logical cannot be specified without required consents")
 	}
 	// Validate the transformation.
 	var usedOutPaths []string

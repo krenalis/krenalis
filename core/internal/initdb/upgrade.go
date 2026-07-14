@@ -17,6 +17,16 @@ const (
 	connectionsWorkspaceIndex   = "connections_workspace_idx"
 )
 
+const consentPurposesTable = `
+	CREATE TABLE IF NOT EXISTS consent_purposes (
+		id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		name varchar(100) NOT NULL,
+		code varchar(100) NOT NULL,
+		UNIQUE (workspace, code),
+		PRIMARY KEY (id)
+	)`
+
 const organizationConnectorReferencesView = `
 	CREATE OR REPLACE VIEW organization_connector_references AS
 	SELECT
@@ -119,6 +129,12 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
+			consentPurposesTable,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_logical varchar(3) NOT NULL DEFAULT '' CHECK (required_consents_logical IN ('', 'and', 'or'))`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

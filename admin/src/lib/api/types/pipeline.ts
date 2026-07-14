@@ -10,6 +10,8 @@ type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' |
 
 type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
 
+type RequiredConsentsLogical = 'and' | 'or';
+
 type Mapping = Record<string, string>;
 
 type TransformationPurpose = 'Import' | 'Create' | 'Update';
@@ -91,6 +93,8 @@ interface Pipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
+	requiredConsents: string[] | null;
+	requiredConsentsLogical: RequiredConsentsLogical | null;
 	transformation: Transformation | null;
 	query: string | null;
 	path: string | null;
@@ -120,6 +124,8 @@ interface PipelineToSet {
 	name: string;
 	enabled?: boolean;
 	filter?: Filter | null;
+	requiredConsents?: string[] | null;
+	requiredConsentsLogical?: RequiredConsentsLogical | null;
 	inSchema?: ObjectType;
 	outSchema?: ObjectType;
 	transformation?: Transformation;
@@ -166,6 +172,7 @@ export type {
 	Filter,
 	FilterOperator,
 	FilterLogical,
+	RequiredConsentsLogical,
 	FilterCondition,
 	Pipeline,
 	PipelineType,

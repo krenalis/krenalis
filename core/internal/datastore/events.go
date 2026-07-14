@@ -40,6 +40,7 @@ var eventColumnNameFromPropertyPath = map[string]string{
 	"context.campaign.medium":          "context_campaign_medium",
 	"context.campaign.term":            "context_campaign_term",
 	"context.campaign.content":         "context_campaign_content",
+	"context.consent":                  "context_consent",
 	"context.device.id":                "context_device_id",
 	"context.device.advertisingId":     "context_device_advertising_id",
 	"context.device.adTrackingEnabled": "context_device_ad_tracking_enabled",

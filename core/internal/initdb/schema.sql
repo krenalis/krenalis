@@ -93,6 +93,15 @@ CREATE TABLE access_keys (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE consent_purposes (
+    id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(100) NOT NULL,
+    code varchar(100) NOT NULL,
+    UNIQUE (workspace, code),
+    PRIMARY KEY (id)
+);
+
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError');
@@ -136,6 +145,8 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
+    required_consents varchar(12)[] NOT NULL DEFAULT '{}',
+    required_consents_logical varchar(3) NOT NULL DEFAULT '' CHECK (required_consents_logical IN ('', 'and', 'or')),
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
     transformation_version varchar(128) NOT NULL DEFAULT '',
@@ -306,12 +317,14 @@ CREATE TYPE notification_name AS ENUM (
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',
+    'CreateConsentPurpose',
     'CreateEventWriteKey',
     'CreateOrganization',
     'CreatePipeline',
     'CreateWorkspace',
     'DeleteAccessKey',
     'DeleteConnection',
+    'DeleteConsentPurpose',
     'DeleteEventWriteKey',
     'DeleteMember',
     'DeleteMembers',
@@ -337,6 +350,7 @@ CREATE TYPE notification_name AS ENUM (
     'StartIdentityResolution',
     'UnlinkConnection',
     'UpdateConnection',
+    'UpdateConsentPurpose',
     'UpdateIdentityPropertiesToUnset',
     'UpdateIdentityResolutionSettings',
     'UpdateOrganization',

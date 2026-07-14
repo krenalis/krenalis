@@ -46,7 +46,7 @@ func newEventWriter(store *Store) *EventWriter {
 // It returns an error only if the context is canceled.
 func (w *EventWriter) Write(ctx context.Context, event streams.Event, pipeline string) error {
 
-	row := make([]any, 66)
+	row := make([]any, 67)
 
 	// connectionId
 	row[0] = event.Attributes["connectionId"]
@@ -87,123 +87,126 @@ func (w *EventWriter) Write(ctx context.Context, event streams.Event, pipeline s
 			row[15] = campaign["content"]
 		}
 
+		// consent
+		row[16] = eventContext["consent"]
+
 		// device
 		if device, ok := eventContext["device"].(map[string]any); ok {
-			row[16] = device["id"]
-			row[17] = device["advertisingId"]
-			row[18] = device["adTrackingEnabled"]
-			row[19] = device["manufacturer"]
-			row[20] = device["model"]
-			row[21] = device["name"]
-			row[22] = device["type"]
-			row[23] = device["token"]
+			row[17] = device["id"]
+			row[18] = device["advertisingId"]
+			row[19] = device["adTrackingEnabled"]
+			row[20] = device["manufacturer"]
+			row[21] = device["model"]
+			row[22] = device["name"]
+			row[23] = device["type"]
+			row[24] = device["token"]
 		}
 
 		// ip
-		row[24] = eventContext["ip"]
+		row[25] = eventContext["ip"]
 
 		// library
 		if library, ok := eventContext["library"].(map[string]any); ok {
-			row[25] = library["name"]
-			row[26] = library["version"]
+			row[26] = library["name"]
+			row[27] = library["version"]
 		}
 		// locale
-		row[27] = eventContext["locale"]
+		row[28] = eventContext["locale"]
 
 		// location
 		if location, ok := eventContext["location"].(map[string]any); ok {
-			row[28] = location["city"]
-			row[29] = location["country"]
-			row[30] = location["latitude"]
-			row[31] = location["longitude"]
-			row[32] = location["speed"]
+			row[29] = location["city"]
+			row[30] = location["country"]
+			row[31] = location["latitude"]
+			row[32] = location["longitude"]
+			row[33] = location["speed"]
 		}
 
 		// network
 		if network, ok := eventContext["network"].(map[string]any); ok {
-			row[33] = network["bluetooth"]
-			row[34] = network["carrier"]
-			row[35] = network["cellular"]
-			row[36] = network["wifi"]
+			row[34] = network["bluetooth"]
+			row[35] = network["carrier"]
+			row[36] = network["cellular"]
+			row[37] = network["wifi"]
 		}
 
 		// os
 		if os, ok := eventContext["os"].(map[string]any); ok {
-			row[37] = os["name"]
-			row[38] = os["other"]
-			row[39] = os["version"]
+			row[38] = os["name"]
+			row[39] = os["other"]
+			row[40] = os["version"]
 		}
 
 		// page
 		if page, ok := eventContext["page"].(map[string]any); ok {
-			row[40] = page["path"]
-			row[41] = page["referrer"]
-			row[42] = page["search"]
-			row[43] = page["title"]
-			row[44] = page["url"]
+			row[41] = page["path"]
+			row[42] = page["referrer"]
+			row[43] = page["search"]
+			row[44] = page["title"]
+			row[45] = page["url"]
 		}
 
 		// referrer
 		if referrer, ok := eventContext["referrer"].(map[string]any); ok {
-			row[45] = referrer["id"]
-			row[46] = referrer["type"]
+			row[46] = referrer["id"]
+			row[47] = referrer["type"]
 		}
 
 		// screen
 		if screen, ok := eventContext["screen"].(map[string]any); ok {
-			row[47] = screen["width"]
-			row[48] = screen["height"]
-			row[49] = screen["density"]
+			row[48] = screen["width"]
+			row[49] = screen["height"]
+			row[50] = screen["density"]
 		}
 
 		// session
 		if session, ok := eventContext["session"].(map[string]any); ok {
-			row[50] = session["id"]
-			row[51] = session["start"]
+			row[51] = session["id"]
+			row[52] = session["start"]
 		}
 
 		// timezone
-		row[52] = eventContext["timezone"]
+		row[53] = eventContext["timezone"]
 
 		// userAgent
-		row[53] = eventContext["userAgent"]
+		row[54] = eventContext["userAgent"]
 	}
 
 	// event
-	row[54] = event.Attributes["event"]
+	row[55] = event.Attributes["event"]
 
 	// groupId
-	row[55] = event.Attributes["groupId"]
+	row[56] = event.Attributes["groupId"]
 
 	// messageId
-	row[56] = event.Attributes["messageId"]
+	row[57] = event.Attributes["messageId"]
 
 	// name
-	row[57] = event.Attributes["name"]
+	row[58] = event.Attributes["name"]
 
 	// properties
-	row[58] = event.Attributes["properties"]
+	row[59] = event.Attributes["properties"]
 
 	// receivedAt
-	row[59] = event.Attributes["receivedAt"]
+	row[60] = event.Attributes["receivedAt"]
 
 	// sentAt
-	row[60] = event.Attributes["sentAt"]
+	row[61] = event.Attributes["sentAt"]
 
 	// timestamp
-	row[61] = event.Attributes["timestamp"]
+	row[62] = event.Attributes["timestamp"]
 
 	// traits
-	row[62] = event.Attributes["traits"]
+	row[63] = event.Attributes["traits"]
 
 	// type
-	row[63] = event.Attributes["type"]
+	row[64] = event.Attributes["type"]
 
 	// previousId
-	row[64] = event.Attributes["previousId"]
+	row[65] = event.Attributes["previousId"]
 
 	// userId
-	row[65] = event.Attributes["userId"]
+	row[66] = event.Attributes["userId"]
 
 	select {
 	case w.events <- flusherRow[[]any]{pipeline: pipeline, row: row, ack: event.Ack}:

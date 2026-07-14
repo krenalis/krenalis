@@ -745,6 +745,7 @@ type Workspace struct {
 	ProfileSchema                  types.Type // without meta properties.
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
+	consentPurposes                map[string]*ConsentPurpose
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 	UIPreferences                  UIPreferences
@@ -787,6 +788,28 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 	}
 	workspace.mu.Unlock()
 	return a, a != nil
+}
+
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
+	workspace.mu.Lock()
+	cp, ok := workspace.consentPurposes[id]
+	workspace.mu.Unlock()
+	return cp, ok
+}
+
+// ConsentPurposes returns all the consent purposes of the workspace.
+func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
+	workspace.mu.Lock()
+	purposes := make([]*ConsentPurpose, len(workspace.consentPurposes))
+	i := 0
+	for _, cp := range workspace.consentPurposes {
+		purposes[i] = cp
+		i++
+	}
+	workspace.mu.Unlock()
+	return purposes
 }
 
 // Connection returns the connection of the workspace with identifier id.
@@ -1164,6 +1187,23 @@ func (account *Account) Connector() *Connector {
 	return c
 }
 
+// ConsentPurpose represents a consent purpose.
+type ConsentPurpose struct {
+	mu        *sync.Mutex
+	ID        string
+	workspace *Workspace
+	Name      string
+	Code      string
+}
+
+// Workspace returns the workspace of the consent purpose.
+func (cp *ConsentPurpose) Workspace() *Workspace {
+	cp.mu.Lock()
+	w := cp.workspace
+	cp.mu.Unlock()
+	return w
+}
+
 // Strategy represents a strategy.
 // Can be "Conversion", "Fusion", "Isolation", and "Preservation".
 type Strategy string
@@ -1502,40 +1542,42 @@ func (target Target) Value() (driver.Value, error) {
 }
 
 type Pipeline struct {
-	mu                 *sync.Mutex
-	ID                 string
-	connection         *Connection
-	organization       *Organization
-	format             *Connector
-	run                *PipelineRun
-	propertiesToUnset  []string // is not nil only for source pipelines on users.
-	Target             Target
-	Name               string
-	Enabled            bool
-	EventType          string
-	ScheduleStart      int16
-	SchedulePeriod     int16
-	InSchema           types.Type
-	OutSchema          types.Type
-	Filter             *Where
-	Transformation     Transformation
-	Query              string
-	Path               string
-	Sheet              string
-	Compression        Compression
-	OrderBy            string
-	FormatSettings     json.Value
-	ExportMode         ExportMode
-	Matching           Matching
-	UpdateOnDuplicates bool
-	TableName          string
-	TableKey           string
-	UserIDColumn       string
-	UpdatedAtColumn    string
-	UpdatedAtFormat    string
-	Reload             bool
-	Incremental        bool
-	Health             Health
+	mu                      *sync.Mutex
+	ID                      string
+	connection              *Connection
+	organization            *Organization
+	format                  *Connector
+	run                     *PipelineRun
+	propertiesToUnset       []string // is not nil only for source pipelines on users.
+	Target                  Target
+	Name                    string
+	Enabled                 bool
+	EventType               string
+	ScheduleStart           int16
+	SchedulePeriod          int16
+	InSchema                types.Type
+	OutSchema               types.Type
+	Filter                  *Where
+	RequiredConsents        []string
+	RequiredConsentsLogical RequiredConsentsLogical
+	Transformation          Transformation
+	Query                   string
+	Path                    string
+	Sheet                   string
+	Compression             Compression
+	OrderBy                 string
+	FormatSettings          json.Value
+	ExportMode              ExportMode
+	Matching                Matching
+	UpdateOnDuplicates      bool
+	TableName               string
+	TableKey                string
+	UserIDColumn            string
+	UpdatedAtColumn         string
+	UpdatedAtFormat         string
+	Reload                  bool
+	Incremental             bool
+	Health                  Health
 }
 
 // Connection returns the connection of the pipeline.
@@ -1701,4 +1743,14 @@ const (
 	CreateOnly     ExportMode = "CreateOnly"
 	UpdateOnly     ExportMode = "UpdateOnly"
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
+)
+
+// RequiredConsentsLogical represents the logical operator applied to the
+// pipeline's required consents.
+type RequiredConsentsLogical string
+
+const (
+	ConsentsNone RequiredConsentsLogical = ""
+	ConsentsAnd  RequiredConsentsLogical = "and"
+	ConsentsOr   RequiredConsentsLogical = "or"
 )

@@ -3,6 +3,7 @@ import { AccessKey } from './organization';
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { ProfileEvent, Identity, ProfileAttributes } from './profile';
+import { ConsentPurpose } from './workspace';
 
 interface authURLResponse {
 	authUrl: string;
@@ -174,6 +175,14 @@ interface CreateAccessKeyResponse {
 	token: string;
 }
 
+interface ConsentPurposesResponse {
+	purposes: ConsentPurpose[];
+}
+
+interface CreateConsentPurposeResponse {
+	id: string;
+}
+
 type RePaths = Record<string, string | null>;
 
 interface PreviewAlterProfileSchemaResponse {
@@ -226,6 +235,8 @@ export type {
 	AccessKey,
 	AccessKeyResponse,
 	CreateAccessKeyResponse,
+	ConsentPurposesResponse,
+	CreateConsentPurposeResponse,
 	PreviewSendEventResponse,
 	PreviewAlterProfileSchemaResponse,
 	RePaths,
