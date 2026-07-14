@@ -5,6 +5,8 @@ module github.com/krenalis/krenalis
 // Keep in sync with the version within "Dockerfile".
 go 1.26
 
+replace github.com/snowflakedb/gosnowflake/v2 v2.1.0 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
+
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.47.0
 	github.com/LumenResearch/uasurfer v0.0.0-20260126094926-dace53404a8d
@@ -171,5 +173,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/snowflakedb/gosnowflake/v2 => /home/gianluca/Scaricati/gosnowflake

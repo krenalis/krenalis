@@ -202,11 +202,7 @@ func (sfa *snowflakeFileTransferAgent) execute() error {
 			return err
 		}
 	} else {
-		// Local-stage downloads place their file metadata in smallFileMetas (see the
-		// stageLocationType == local branch above); cloud downloads use largeFileMetas.
-		// Passing only largeFileMetas drops every file for a LOCAL_FS stage, so download()
-		// reports "downloading 0 files" and result() returns ErrNotImplemented (264011).
-		if err = sfa.download(append(largeFileMetas, smallFileMetas...)); err != nil {
+		if err = sfa.download(largeFileMetas); err != nil {
 			return err
 		}
 	}
@@ -654,12 +650,6 @@ func (sfa *snowflakeFileTransferAgent) transferAccelerateConfigWithUtil(s3Util s
 	if err != nil {
 		return err
 	}
-	// role used in Snowflake stage (bucket sfc-*) operations doesn't have s3:GetAccelerateConfiguration
-	// thus get-bucket-accelerate-configuration API calls will surely fail with HTTP 403
-	if strings.HasPrefix(strings.ToLower(s3Loc.bucketName), "sfc-") {
-		logger.WithContext(sfa.sc.ctx).Debugf("Not attempting to get bucket transfer accelerate endpoint for internal stage.")
-		return nil
-	}
 	s3Cli, err := s3Util.createClientWithConfig(sfa.stageInfo, false, sfa.sc.cfg, sfa.sc.telemetry)
 	if err != nil {
 		return err
@@ -673,16 +663,12 @@ func (sfa *snowflakeFileTransferAgent) transferAccelerateConfigWithUtil(s3Util s
 			Message:  errors2.ErrMsgFailedToConvertToS3Client,
 		}, sfa.sc)
 	}
-	logger.WithContext(sfa.sc.ctx).Debugf("Getting accelerate endpoint for bucket %v.", s3Loc.bucketName)
 	ret, err := withCloudStorageTimeout(sfa.ctx, sfa.sc.cfg, func(ctx context.Context) (*s3.GetBucketAccelerateConfigurationOutput, error) {
 		return client.GetBucketAccelerateConfiguration(ctx, &s3.GetBucketAccelerateConfigurationInput{
 			Bucket: &s3Loc.bucketName,
 		})
 	})
 	sfa.useAccelerateEndpoint = ret != nil && ret.Status == "Enabled"
-	if sfa.useAccelerateEndpoint {
-		logger.WithContext(sfa.sc.ctx).Debugf("Transfer acceleration enabled for bucket %v.", s3Loc.bucketName)
-	}
 	if err != nil {
 		logger.WithContext(sfa.sc.ctx).Warnf("An error occurred when getting accelerate config: %v", err)
 	}
