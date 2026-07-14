@@ -76,7 +76,7 @@ func Test_Records(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	dw := warehouses.Registered("PostgreSQL").New(WarehouseEnv("", newTestSettingsLoader(settings)))
 	defer dw.Close()
 
 	profilesTable := warehouses.Table{

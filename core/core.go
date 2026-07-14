@@ -369,7 +369,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	for _, ws := range core.state.Workspaces() {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
-			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+			dw = warehouses.Registered(ws.Warehouse.Platform).New(datastore.WarehouseEnv(ws.Organization().ID, newMCPStateSettingsLoader(ws)))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -1783,7 +1783,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
-		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		dw = warehouses.Registered(ws.Warehouse.Platform).New(datastore.WarehouseEnv(ws.Organization().ID, newMCPStateSettingsLoader(ws)))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1877,7 +1877,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	ws, _ := core.state.Workspace(n.Workspace)
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
-		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(datastore.WarehouseEnv(ws.Organization().ID, newMCPStateSettingsLoader(ws)))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]

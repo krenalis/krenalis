@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"net/netip"
 	"reflect"
 	"slices"
@@ -37,10 +38,35 @@ func (platform Platform) ReflectType() reflect.Type {
 }
 
 // New returns a new data warehouse instance.
-func (platform Platform) New(settings SettingsLoader) Warehouse {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
+func (platform Platform) New(env *Env) Warehouse {
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
+}
+
+// A DialFunc establishes an outbound network connection to the given address.
+// It is the type of the dial functions Krenalis provides to the warehouses, so
+// that it can count the bytes they transfer.
+type DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+// Env is the environment Krenalis provides to a data warehouse.
+type Env struct {
+
+	// Settings loads the settings.
+	Settings SettingsLoader
+
+	// Dial is the function the warehouse must use to establish its outbound
+	// network connections, in place of its own default dialer.
+	Dial DialFunc
+
+	// DialWith is the function a warehouse that has its own dialer must use, in
+	// place of Dial, to establish its outbound network connections. It returns a
+	// dial function that dials with the given one, so that the warehouse keeps
+	// its own dial options, like its timeouts and its keep-alive.
+	//
+	// If the given dial function is nil, the returned one dials with a plain
+	// dialer, as Dial does.
+	DialWith func(dial DialFunc) DialFunc
 }
 
 type SettingsLoader interface {
@@ -50,7 +76,7 @@ type SettingsLoader interface {
 }
 
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(SettingsLoader) T
+type NewFunc[T Warehouse] func(*Env) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.

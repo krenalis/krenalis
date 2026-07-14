@@ -48,14 +48,14 @@ func init() {
 }
 
 // New returns a new Snowflake data warehouse instance.
-func New(settings warehouses.SettingsLoader) *Snowflake {
-	return &Snowflake{settings: settings}
+func New(env *warehouses.Env) *Snowflake {
+	return &Snowflake{env: env}
 }
 
 type Snowflake struct {
-	mu       sync.Mutex // for the db field
-	db       *sql.DB
-	settings warehouses.SettingsLoader
+	mu  sync.Mutex // for the db field
+	db  *sql.DB
+	env *warehouses.Env
 }
 
 type sfSettings struct {
@@ -407,7 +407,7 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline s
 // ValidateSettings validates the settings.
 func (warehouse *Snowflake) ValidateSettings(ctx context.Context) (json.Value, error) {
 	var s sfSettings
-	err := warehouse.settings.Load(ctx, &s)
+	err := warehouse.env.Settings.Load(ctx, &s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
@@ -451,7 +451,7 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 		return warehouse.db, nil
 	}
 	var s sfSettings
-	err := warehouse.settings.Load(ctx, &s)
+	err := warehouse.env.Settings.Load(ctx, &s)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +459,7 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector(&s))
+	db := sql.OpenDB(connector(&s, warehouse.env.DialWith))
 	warehouse.db = db
 	return db, nil
 }
@@ -535,8 +535,10 @@ func validateSettings(s *sfSettings) error {
 
 var falseStrPtr = new("false")
 
-// connector returns a driver.Connector from the settings.
-func connector(s *sfSettings) driver.Connector {
+// connector returns a driver.Connector from the settings, whose connections are
+// established dialing with dialWith, so that the dial options of the driver's
+// own dialer are preserved.
+func connector(s *sfSettings, dialWith func(warehouses.DialFunc) warehouses.DialFunc) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -551,6 +553,7 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
+		WrapDialContext: dialWith,
 	}
 	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation

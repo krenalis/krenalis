@@ -99,7 +99,7 @@ func newStore(ds *Datastore, ws *state.Workspace) *Store {
 		eventIdentityWriters: map[string]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
+	dw := warehouses.Registered(ws.Warehouse.Platform).New(WarehouseEnv(ws.Organization().ID, newStateSettingsLoader(ws)))
 	store.wh.Store(dw)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
 	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
@@ -579,7 +579,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	}
 
 	// Count the users on the warehouse that will be connected.
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
+	dw := warehouses.Registered(ws.Warehouse.Platform).New(WarehouseEnv(ws.Organization().ID, newStateSettingsLoader(ws)))
 	defer func() {
 		err := dw.Close()
 		if err != nil {

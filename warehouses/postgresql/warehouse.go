@@ -47,14 +47,14 @@ func init() {
 }
 
 // New returns a new PostgreSQL data warehouse instance.
-func New(settings warehouses.SettingsLoader) *PostgreSQL {
-	return &PostgreSQL{settings: settings}
+func New(env *warehouses.Env) *PostgreSQL {
+	return &PostgreSQL{env: env}
 }
 
 type PostgreSQL struct {
-	mu       sync.Mutex // for the pool field
-	pool     *pgxpool.Pool
-	settings warehouses.SettingsLoader
+	mu   sync.Mutex // for the pool field
+	pool *pgxpool.Pool
+	env  *warehouses.Env
 }
 
 type pgSettings struct {
@@ -344,7 +344,7 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline 
 // ValidateSettings validates the settings.
 func (warehouse *PostgreSQL) ValidateSettings(ctx context.Context) (json.Value, error) {
 	var s pgSettings
-	err := warehouse.settings.Load(ctx, &s)
+	err := warehouse.env.Settings.Load(ctx, &s)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 
 	var s pgSettings
 	if warehouse.pool == nil || returnSchema {
-		err := warehouse.settings.Load(ctx, &s)
+		err := warehouse.env.Settings.Load(ctx, &s)
 		if err != nil {
 			return nil, "", err
 		}
@@ -393,6 +393,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	if err != nil {
 		return nil, "", err
 	}
+	config.ConnConfig.DialFunc = warehouse.env.DialWith(config.ConnConfig.DialFunc)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, "", err

@@ -494,7 +494,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, warehouse.Platform, settings, profileSchema)
+	err = this.core.datastore.Initialize(ctx, this.ID, warehouse.Platform, settings, profileSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return "", errors.Unavailable("%s", err)
@@ -1244,7 +1244,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Validate the warehouse settings.
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, warehouse.Platform, warehouse.Settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, this.ID, warehouse.Platform, warehouse.Settings)
 	if err != nil {
 		if err == datastore.ErrWarehousePlatformNotExist {
 			return nil, errors.Unprocessable(WarehousePlatformNotExist, "warehouse platform %s does not exist", warehouse.Platform)
@@ -1259,7 +1259,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, warehouse.Platform, settings)
+	err = this.core.datastore.CanInitialize(ctx, this.ID, warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
 			return nil, errors.Unprocessable(WarehouseNotInitializable, "cannot initialize the data warehouse: %w", err.Err)

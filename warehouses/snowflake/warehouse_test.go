@@ -15,6 +15,7 @@ import (
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/netdial"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -104,7 +105,7 @@ func Test_Merge(t *testing.T) {
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()))
+	dw := warehouses.Registered("Snowflake").New(newTestEnv(testEnv.Settings().JSON()))
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
@@ -258,4 +259,14 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
+}
+
+// newTestEnv returns the environment for a test data warehouse, with the given
+// settings.
+func newTestEnv(settings json.Value) *warehouses.Env {
+	return &warehouses.Env{
+		Settings: newTestSettingsLoader(settings),
+		Dial:     netdial.Dial(""),
+		DialWith: netdial.DialWith(""),
+	}
 }
