@@ -57,7 +57,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var transformer *transformers.Transformer
 	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline, this.core.functionProvider, &connector.TimeLayouts)
 		if err != nil {
 			return err
 		}

@@ -1134,7 +1134,9 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		// no need to list sub-property paths (as the behavior is the same).
 		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
+		// The transformation is not made on behalf of an organization, as it is
+		// only used by the admin console, so its traffic is not attributed.
+		provider = newTempTransformerProvider("", name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
@@ -1145,10 +1147,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Transform the attributes.
-	//
-	// The transformation is not made on behalf of an organization, as it is only
-	// used by the admin console, so its network traffic is not attributed.
-	transformer, err := transformers.New("", pipeline, provider, nil)
+	transformer, err := transformers.New(pipeline, provider, nil)
 	if err != nil {
 		return nil, err
 	}

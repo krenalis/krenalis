@@ -1574,13 +1574,14 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			// the same).
 			pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 			pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-			provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
+			organization := this.connection.Organization().ID
+			provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(this.connection.Organization().ID, pipeline, provider, nil)
+		transformer, err := transformers.New(pipeline, provider, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2414,18 +2415,24 @@ type ConnectionToSet struct {
 // call and deletes it after the call returns. Any call to a method that is not
 // CallFunction panics.
 type tempFunctionProvider struct {
-	name     string                        // function name.
-	language state.Language                // language.
-	source   string                        // source code.
-	provider transformers.FunctionProvider // underlying function provider.
+	organization string                        // ID of the organization the network traffic is attributed to; empty if it is not attributed.
+	name         string                        // function name.
+	language     state.Language                // language.
+	source       string                        // source code.
+	provider     transformers.FunctionProvider // underlying function provider.
 }
 
-func newTempTransformerProvider(name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
-	return &tempFunctionProvider{name, language, source, provider}
+func newTempTransformerProvider(organization, name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
+	return &tempFunctionProvider{organization, name, language, source, provider}
 }
 
-func (tp *tempFunctionProvider) Call(ctx context.Context, organization, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
-	id, version, err := tp.provider.Create(ctx, organization, tp.name, tp.language, tp.source)
+// Call creates the function, calls it, and deletes it.
+//
+// It ignores the organization it is given, as the pipeline of a preview is not a
+// stored one and has none, and attributes the network traffic to the
+// organization it has been created with.
+func (tp *tempFunctionProvider) Call(ctx context.Context, _, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+	id, version, err := tp.provider.Create(ctx, tp.organization, tp.name, tp.language, tp.source)
 	if err != nil {
 		return err
 	}
@@ -2437,7 +2444,7 @@ func (tp *tempFunctionProvider) Call(ctx context.Context, organization, _, _ str
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, organization, id, version, inSchema, outSchema, preserveJSON, records)
+	return tp.provider.Call(ctx, tp.organization, id, version, inSchema, outSchema, preserveJSON, records)
 }
 
 func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supported") }
