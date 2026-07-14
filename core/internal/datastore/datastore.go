@@ -17,7 +17,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -343,8 +343,8 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 func WarehouseEnv(organization string, settings warehouses.SettingsLoader) *warehouses.Env {
 	return &warehouses.Env{
 		Settings: settings,
-		Dial:     netdial.Dial(organization),
-		DialWith: netdial.DialWith(organization),
+		Dial:     countdial.Dial(organization),
+		DialWith: countdial.DialWith(organization),
 	}
 }
 

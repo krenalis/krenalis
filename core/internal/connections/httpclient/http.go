@@ -17,7 +17,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 )
 
 type noOpHandler struct{}
@@ -77,7 +77,7 @@ func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 	defer h.transportsMu.Unlock()
 	transport, ok := h.transports[organizationID]
 	if !ok {
-		transport = netdial.Transport(h.transport, organizationID)
+		transport = countdial.Transport(h.transport, organizationID)
 		h.transports[organizationID] = transport
 	}
 	return transport

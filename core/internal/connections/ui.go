@@ -13,7 +13,7 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 )
 
 type uiHandlerConnection interface {
@@ -87,22 +87,22 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 		var database any
 		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 			Settings: settingsStore,
-			Dial:     netdial.Dial(connection.Organization().ID),
-			DialWith: netdial.DialWith(connection.Organization().ID),
+			Dial:     countdial.Dial(connection.Organization().ID),
+			DialWith: countdial.DialWith(connection.Organization().ID),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 			Settings: settingsStore,
-			Dial:     netdial.Dial(connection.Organization().ID),
-			DialWith: netdial.DialWith(connection.Organization().ID),
+			Dial:     countdial.Dial(connection.Organization().ID),
+			DialWith: countdial.DialWith(connection.Organization().ID),
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
 			Settings: settingsStore,
-			Dial:     netdial.Dial(connection.Organization().ID),
-			DialWith: netdial.DialWith(connection.Organization().ID),
+			Dial:     countdial.Dial(connection.Organization().ID),
+			DialWith: countdial.DialWith(connection.Organization().ID),
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(connector.Code).New(&connectors.SDKEnv{
@@ -165,8 +165,8 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 		var database any
 		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{
 			Settings: settingStore,
-			Dial:     netdial.Dial(conf.Organization),
-			DialWith: netdial.DialWith(conf.Organization),
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
@@ -175,14 +175,14 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
 			Settings: settingStore,
-			Dial:     netdial.Dial(conf.Organization),
-			DialWith: netdial.DialWith(conf.Organization),
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
 			Settings: settingStore,
-			Dial:     netdial.Dial(conf.Organization),
-			DialWith: netdial.DialWith(conf.Organization),
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
@@ -225,8 +225,8 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 		var database any
 		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{
 			Settings: settingStore,
-			Dial:     netdial.Dial(conf.Organization),
-			DialWith: netdial.DialWith(conf.Organization),
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
@@ -235,14 +235,14 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
 			Settings: settingStore,
-			Dial:     netdial.Dial(conf.Organization),
-			DialWith: netdial.DialWith(conf.Organization),
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
 			Settings: settingStore,
-			Dial:     netdial.Dial(conf.Organization),
-			DialWith: netdial.DialWith(conf.Organization),
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})

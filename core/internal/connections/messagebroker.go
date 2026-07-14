@@ -9,7 +9,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 )
 
 // messageBrokerConnection is the interface implemented by message broker
@@ -59,8 +59,8 @@ func (c *Connections) MessageBroker(connection *state.Connection) (*MessageBroke
 	}
 	inner, err := connectors.RegisteredMessageBroker(connection.Connector().Code).New(&connectors.MessageBrokerEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
-		Dial:     netdial.Dial(connection.Organization().ID),
-		DialWith: netdial.DialWith(connection.Organization().ID),
+		Dial:     countdial.Dial(connection.Organization().ID),
+		DialWith: countdial.DialWith(connection.Organization().ID),
 	})
 	if err != nil {
 		return nil, connectorError(err)

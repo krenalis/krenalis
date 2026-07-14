@@ -20,7 +20,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -100,8 +100,8 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 		Settings: newSettingsStore(s),
 		// A connector under test is not used on behalf of an organization, so
 		// the bytes it sends are not counted and it dials with a plain dialer.
-		Dial:     netdial.Dial(""),
-		DialWith: netdial.DialWith(""),
+		Dial:     countdial.Dial(""),
+		DialWith: countdial.DialWith(""),
 	})
 	return app.(T), err
 }
@@ -122,8 +122,8 @@ func NewStorage[T any](code string, settings any) (T, error) {
 		Settings: newSettingsStore(s),
 		// A connector under test is not used on behalf of an organization, so
 		// the bytes it sends are not counted and it dials with a plain dialer.
-		Dial:     netdial.Dial(""),
-		DialWith: netdial.DialWith(""),
+		Dial:     countdial.Dial(""),
+		DialWith: countdial.DialWith(""),
 	})
 	return app.(T), err
 }

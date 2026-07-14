@@ -11,13 +11,13 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// egressBytesMetric is the name of the metric netdial exposes.
+// egressBytesMetric is the name of the metric countdial exposes.
 const egressBytesMetric = "krenalis_organization_network_egress_bytes_total"
 
 // egressBytes returns the bytes counted, so far, as the egress traffic of the
@@ -70,8 +70,8 @@ var (
 // counted as the egress traffic of the organization the function belongs to.
 func TestCallCountsEgress(t *testing.T) {
 
-	netdial.Enabled(true)
-	t.Cleanup(func() { netdial.Enabled(false) })
+	countdial.Enabled(true)
+	t.Cleanup(func() { countdial.Enabled(false) })
 
 	var invocations int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -114,8 +114,8 @@ func TestCallCountsEgress(t *testing.T) {
 // invoking a function are only attributed to the organization it belongs to.
 func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 
-	netdial.Enabled(true)
-	t.Cleanup(func() { netdial.Enabled(false) })
+	countdial.Enabled(true)
+	t.Cleanup(func() { countdial.Enabled(false) })
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))
@@ -150,7 +150,7 @@ func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 // with a single, shared, client.
 func TestCallWithMetricsDisabled(t *testing.T) {
 
-	netdial.Enabled(false)
+	countdial.Enabled(false)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))

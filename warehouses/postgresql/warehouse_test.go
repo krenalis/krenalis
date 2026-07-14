@@ -16,7 +16,7 @@ import (
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/netdial"
+	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -50,8 +50,8 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 func newTestEnv(settings json.Value) *warehouses.Env {
 	return &warehouses.Env{
 		Settings: newTestSettingsLoader(settings),
-		Dial:     netdial.Dial(""),
-		DialWith: netdial.DialWith(""),
+		Dial:     countdial.Dial(""),
+		DialWith: countdial.DialWith(""),
 	}
 }
 
