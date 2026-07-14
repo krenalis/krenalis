@@ -87,6 +87,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_logical varchar(3) NOT NULL DEFAULT '' CHECK (required_consents_logical IN ('', 'and', 'or'))`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

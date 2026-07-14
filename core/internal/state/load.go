@@ -526,12 +526,12 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all pipelines.
 	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-		"schedule_period, in_schema, out_schema, filter, required_consents, transformation_mapping, transformation_id,\n"+
-		"transformation_version, transformation_language, transformation_source, transformation_preserve_json,\n"+
-		"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression::TEXT,\n"+
-		"order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates, table_name,\n"+
-		"table_key, user_id_column, updated_at_column, updated_at_format, health, properties_to_unset\n"+
-		"FROM pipelines",
+		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_logical,\n"+
+		"transformation_mapping, transformation_id, transformation_version, transformation_language,\n"+
+		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
+		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
+		"matching_out, update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n"+
+		"updated_at_format, health, properties_to_unset FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID string
@@ -542,11 +542,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline := Pipeline{}
 				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &pipeline.RequiredConsents, &mapping, &function.ID, &function.Version, &function.Language, &function.Source, &function.PreserveJSON,
-					&pipeline.Transformation.InPaths, &pipeline.Transformation.OutPaths, &pipeline.Query, &format,
-					&pipeline.Path, &pipeline.Sheet, &pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
-					&pipeline.Matching.In, &pipeline.Matching.Out, &pipeline.UpdateOnDuplicates, &pipeline.TableName,
-					&pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
+					&filter, &pipeline.RequiredConsents, &pipeline.RequiredConsentsLogical, &mapping, &function.ID, &function.Version,
+					&function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
+					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
+					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
+					&pipeline.UpdateOnDuplicates, &pipeline.TableName, &pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
 					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)

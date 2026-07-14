@@ -47,41 +47,42 @@ func init() {
 
 // Pipeline represents a pipeline of a connection.
 type Pipeline struct {
-	core               *Core
-	pipeline           *state.Pipeline
-	connection         *Connection
-	ID                 string          `json:"id"`
-	Connector          string          `json:"connector"`
-	ConnectorType      ConnectorType   `json:"connectorType"`
-	Connection         string          `json:"connection"`
-	ConnectionRole     Role            `json:"connectionRole"`
-	Target             Target          `json:"target"`
-	Name               string          `json:"name"`
-	Enabled            bool            `json:"enabled"`
-	EventType          *string         `json:"eventType"`
-	Running            bool            `json:"running"`
-	ScheduleStart      *int            `json:"scheduleStart"`
-	SchedulePeriod     *SchedulePeriod `json:"schedulePeriod"`
-	InSchema           types.Type      `json:"inSchema"`
-	OutSchema          types.Type      `json:"outSchema"`
-	Filter             *Filter         `json:"filter"`
-	RequiredConsents   []string        `json:"requiredConsents"`
-	Transformation     *Transformation `json:"transformation"`
-	Query              *string         `json:"query"`
-	Format             string          `json:"format"`
-	Path               *string         `json:"path"`
-	Sheet              *string         `json:"sheet"`
-	Compression        Compression     `json:"compression"`
-	OrderBy            *string         `json:"orderBy"`
-	ExportMode         *ExportMode     `json:"exportMode"`
-	Matching           *Matching       `json:"matching"`
-	UpdateOnDuplicates *bool           `json:"updateOnDuplicates"`
-	TableName          *string         `json:"tableName"`
-	TableKey           *string         `json:"tableKey"`
-	UserIDColumn       *string         `json:"userIDColumn"`
-	UpdatedAtColumn    *string         `json:"updatedAtColumn"`
-	UpdatedAtFormat    *string         `json:"updatedAtFormat"`
-	Incremental        bool            `json:"incremental"`
+	core                    *Core
+	pipeline                *state.Pipeline
+	connection              *Connection
+	ID                      string                  `json:"id"`
+	Connector               string                  `json:"connector"`
+	ConnectorType           ConnectorType           `json:"connectorType"`
+	Connection              string                  `json:"connection"`
+	ConnectionRole          Role                    `json:"connectionRole"`
+	Target                  Target                  `json:"target"`
+	Name                    string                  `json:"name"`
+	Enabled                 bool                    `json:"enabled"`
+	EventType               *string                 `json:"eventType"`
+	Running                 bool                    `json:"running"`
+	ScheduleStart           *int                    `json:"scheduleStart"`
+	SchedulePeriod          *SchedulePeriod         `json:"schedulePeriod"`
+	InSchema                types.Type              `json:"inSchema"`
+	OutSchema               types.Type              `json:"outSchema"`
+	Filter                  *Filter                 `json:"filter"`
+	RequiredConsents        []string                `json:"requiredConsents"`
+	RequiredConsentsLogical RequiredConsentsLogical `json:"requiredConsentsLogical"`
+	Transformation          *Transformation         `json:"transformation"`
+	Query                   *string                 `json:"query"`
+	Format                  string                  `json:"format"`
+	Path                    *string                 `json:"path"`
+	Sheet                   *string                 `json:"sheet"`
+	Compression             Compression             `json:"compression"`
+	OrderBy                 *string                 `json:"orderBy"`
+	ExportMode              *ExportMode             `json:"exportMode"`
+	Matching                *Matching               `json:"matching"`
+	UpdateOnDuplicates      *bool                   `json:"updateOnDuplicates"`
+	TableName               *string                 `json:"tableName"`
+	TableKey                *string                 `json:"tableKey"`
+	UserIDColumn            *string                 `json:"userIDColumn"`
+	UpdatedAtColumn         *string                 `json:"updatedAtColumn"`
+	UpdatedAtFormat         *string                 `json:"updatedAtFormat"`
+	Incremental             bool                    `json:"incremental"`
 }
 
 // Matching establishes a relationship between a property in Krenalis (input
@@ -148,6 +149,16 @@ const (
 	TargetEvent Target = iota + 1
 	TargetUser
 	TargetGroup
+)
+
+// RequiredConsentsLogical represents the logical operator applied to a
+// pipeline's required consents.
+type RequiredConsentsLogical string
+
+const (
+	ConsentsNone RequiredConsentsLogical = ""
+	ConsentsAnd  RequiredConsentsLogical = "and"
+	ConsentsOr   RequiredConsentsLogical = "or"
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -347,32 +358,36 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case SDK, Webhook:
 				serialized = struct {
 					serializedPipeline
-					Filter           *Filter         `json:"filter"`
-					RequiredConsents []string        `json:"requiredConsents"`
-					Transformation   *Transformation `json:"transformation"`
-					InSchema         types.Type      `json:"inSchema"`
-					OutSchema        types.Type      `json:"outSchema"`
+					Filter                  *Filter                 `json:"filter"`
+					RequiredConsents        []string                `json:"requiredConsents"`
+					RequiredConsentsLogical RequiredConsentsLogical `json:"requiredConsentsLogical"`
+					Transformation          *Transformation         `json:"transformation"`
+					InSchema                types.Type              `json:"inSchema"`
+					OutSchema               types.Type              `json:"outSchema"`
 				}{
-					serializedPipeline: p,
-					Filter:             this.Filter,
-					RequiredConsents:   this.RequiredConsents,
-					Transformation:     this.Transformation,
-					InSchema:           this.InSchema,
-					OutSchema:          this.OutSchema,
+					serializedPipeline:      p,
+					Filter:                  this.Filter,
+					RequiredConsents:        this.RequiredConsents,
+					RequiredConsentsLogical: this.RequiredConsentsLogical,
+					Transformation:          this.Transformation,
+					InSchema:                this.InSchema,
+					OutSchema:               this.OutSchema,
 				}
 			}
 		}
 		if p.Target == TargetEvent {
 			serialized = struct {
 				serializedPipeline
-				Filter           *Filter    `json:"filter"`
-				RequiredConsents []string   `json:"requiredConsents"`
-				InSchema         types.Type `json:"inSchema"`
+				Filter                  *Filter                 `json:"filter"`
+				RequiredConsents        []string                `json:"requiredConsents"`
+				RequiredConsentsLogical RequiredConsentsLogical `json:"requiredConsentsLogical"`
+				InSchema                types.Type              `json:"inSchema"`
 			}{
-				serializedPipeline: p,
-				Filter:             this.Filter,
-				RequiredConsents:   this.RequiredConsents,
-				InSchema:           this.InSchema,
+				serializedPipeline:      p,
+				Filter:                  this.Filter,
+				RequiredConsents:        this.RequiredConsents,
+				RequiredConsentsLogical: this.RequiredConsentsLogical,
+				InSchema:                this.InSchema,
 			}
 		}
 	}
@@ -460,20 +475,22 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 		if p.Target == TargetEvent {
 			serialized = struct {
 				serializedPipeline
-				EventType        string          `json:"eventType"`
-				Filter           *Filter         `json:"filter"`
-				RequiredConsents []string        `json:"requiredConsents"`
-				Transformation   *Transformation `json:"transformation"`
-				InSchema         types.Type      `json:"inSchema"`
-				OutSchema        types.Type      `json:"outSchema"`
+				EventType               string                  `json:"eventType"`
+				Filter                  *Filter                 `json:"filter"`
+				RequiredConsents        []string                `json:"requiredConsents"`
+				RequiredConsentsLogical RequiredConsentsLogical `json:"requiredConsentsLogical"`
+				Transformation          *Transformation         `json:"transformation"`
+				InSchema                types.Type              `json:"inSchema"`
+				OutSchema               types.Type              `json:"outSchema"`
 			}{
-				serializedPipeline: p,
-				EventType:          *this.EventType,
-				Filter:             this.Filter,
-				RequiredConsents:   this.RequiredConsents,
-				Transformation:     this.Transformation,
-				InSchema:           this.InSchema,
-				OutSchema:          this.OutSchema,
+				serializedPipeline:      p,
+				EventType:               *this.EventType,
+				Filter:                  this.Filter,
+				RequiredConsents:        this.RequiredConsents,
+				RequiredConsentsLogical: this.RequiredConsentsLogical,
+				Transformation:          this.Transformation,
+				InSchema:                this.InSchema,
+				OutSchema:               this.OutSchema,
 			}
 		}
 	}
@@ -649,6 +666,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 
 	this.core.mustBeOpen()
 
+	// Normalize the required consents.
 	if pipeline.RequiredConsents == nil {
 		pipeline.RequiredConsents = []string{}
 	}
@@ -709,28 +727,29 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	n := state.UpdatePipeline{
-		ID:                 this.pipeline.ID,
-		Name:               pipeline.Name,
-		Enabled:            pipeline.Enabled,
-		InSchema:           inSchema,
-		OutSchema:          pipeline.OutSchema,
-		RequiredConsents:   pipeline.RequiredConsents,
-		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
-		Query:              pipeline.Query,
-		Format:             pipeline.Format,
-		Path:               pipeline.Path,
-		Sheet:              pipeline.Sheet,
-		Compression:        state.Compression(pipeline.Compression),
-		OrderBy:            pipeline.OrderBy,
-		ExportMode:         state.ExportMode(pipeline.ExportMode),
-		Matching:           state.Matching(pipeline.Matching),
-		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
-		TableName:          pipeline.TableName,
-		TableKey:           pipeline.TableKey,
-		UserIDColumn:       pipeline.UserIDColumn,
-		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
-		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
-		Incremental:        pipeline.Incremental,
+		ID:                      this.pipeline.ID,
+		Name:                    pipeline.Name,
+		Enabled:                 pipeline.Enabled,
+		InSchema:                inSchema,
+		OutSchema:               pipeline.OutSchema,
+		RequiredConsents:        pipeline.RequiredConsents,
+		RequiredConsentsLogical: state.RequiredConsentsLogical(pipeline.RequiredConsentsLogical),
+		Transformation:          toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
+		Query:                   pipeline.Query,
+		Format:                  pipeline.Format,
+		Path:                    pipeline.Path,
+		Sheet:                   pipeline.Sheet,
+		Compression:             state.Compression(pipeline.Compression),
+		OrderBy:                 pipeline.OrderBy,
+		ExportMode:              state.ExportMode(pipeline.ExportMode),
+		Matching:                state.Matching(pipeline.Matching),
+		UpdateOnDuplicates:      pipeline.UpdateOnDuplicates,
+		TableName:               pipeline.TableName,
+		TableKey:                pipeline.TableKey,
+		UserIDColumn:            pipeline.UserIDColumn,
+		UpdatedAtColumn:         pipeline.UpdatedAtColumn,
+		UpdatedAtFormat:         pipeline.UpdatedAtFormat,
+		Incremental:             pipeline.Incremental,
 	}
 
 	// Add the filter to the notification.
@@ -802,18 +821,18 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	update := "UPDATE pipelines SET\n" +
-		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, required_consents = $6, " +
-		"transformation_mapping = $7, transformation_id = $8, transformation_version = $9, transformation_language = $10, " +
-		"transformation_source = $11, transformation_preserve_json = $12, transformation_in_paths = $13, " +
-		"transformation_out_paths = $14, query = $15, format = $16, path = $17, sheet = $18, " +
-		"compression = $19, order_by = $20, format_settings = $21, export_mode = $22, matching_in = $23, " +
-		"matching_out = $24, update_on_duplicates = $25, table_name = $26, table_key = $27, " +
-		"user_id_column = $28, updated_at_column = $29, updated_at_format = $30, incremental = $31, " +
-		"properties_to_unset = $32"
+		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, required_consents = $6, required_consents_logical = $7, " +
+		"transformation_mapping = $8, transformation_id = $9, transformation_version = $10, transformation_language = $11, " +
+		"transformation_source = $12, transformation_preserve_json = $13, transformation_in_paths = $14, " +
+		"transformation_out_paths = $15, query = $16, format = $17, path = $18, sheet = $19, " +
+		"compression = $20, order_by = $21, format_settings = $22, export_mode = $23, matching_in = $24, " +
+		"matching_out = $25, update_on_duplicates = $26, table_name = $27, table_key = $28, " +
+		"user_id_column = $29, updated_at_column = $30, updated_at_format = $31, incremental = $32, " +
+		"properties_to_unset = $33"
 	if (c.Role == state.Source && !pipeline.Incremental) || shouldReload(this.pipeline, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
 	}
-	update += "\nWHERE id = $33"
+	update += "\nWHERE id = $34"
 
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var function state.TransformationFunction
@@ -869,7 +888,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		}
 		// Update the pipeline.
 		result, err := tx.Exec(ctx, update,
-			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, n.RequiredConsents, mapping,
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, n.RequiredConsents, n.RequiredConsentsLogical, mapping,
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
@@ -1066,6 +1085,7 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 		this.Filter = convertWhereToFilter(pipeline.Filter, pipeline.InSchema)
 	}
 	this.RequiredConsents = pipeline.RequiredConsents
+	this.RequiredConsentsLogical = RequiredConsentsLogical(pipeline.RequiredConsentsLogical)
 	if pipeline.Transformation.Mapping != nil {
 		this.Transformation = &Transformation{
 			Mapping: maps.Clone(pipeline.Transformation.Mapping),
@@ -1149,6 +1169,10 @@ type PipelineToSet struct {
 	// RequiredConsents is the list of consent purposes that must be present in
 	// an event's consent for it to be delivered.
 	RequiredConsents []string `json:"requiredConsents"`
+
+	// RequiredConsentsLogical determines whether an event's consent must
+	// satisfy every purpose in RequiredConsents or at least one.
+	RequiredConsentsLogical RequiredConsentsLogical `json:"requiredConsentsLogical"`
 
 	// InSchema is the input schema of the pipeline.
 	//

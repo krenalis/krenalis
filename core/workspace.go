@@ -847,17 +847,24 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
-// If requiredConsents is non-empty, only events whose consent satisfies every
-// given consent purpose identifier will be observed.
+// If requiredConsents is non-empty, only events whose consent satisfies
+// requiredConsents, according to requiredConsentsLogical, will be observed.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents []string) (string, error) {
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents []string, requiredConsentsLogical RequiredConsentsLogical) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
+	}
+	if len(requiredConsents) > 0 {
+		if requiredConsentsLogical != ConsentsAnd && requiredConsentsLogical != ConsentsOr {
+			return "", errors.BadRequest(`required consents logical must be "and" or "or"`)
+		}
+	} else if requiredConsentsLogical != ConsentsNone {
+		return "", errors.BadRequest("required consents logical cannot be specified without required consents")
 	}
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -904,7 +911,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 	if !ok {
 		return "", errors.New("observer either has not been created yet or has already been removed")
 	}
-	id, err := observer.CreateListener(connections, size, where, consents)
+	id, err := observer.CreateListener(connections, size, where, consents, state.RequiredConsentsLogical(requiredConsentsLogical))
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)

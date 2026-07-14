@@ -189,6 +189,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
 			}
 		}
+		if op := pipeline.RequiredConsentsLogical; op != ConsentsAnd && op != ConsentsOr {
+			return errors.BadRequest(`required consents logical must be "and" or "or"`)
+		}
+	} else if pipeline.RequiredConsentsLogical != ConsentsNone {
+		return errors.BadRequest("required consents logical cannot be specified without required consents")
 	}
 	// Validate the transformation.
 	var usedOutPaths []string

@@ -2,7 +2,7 @@ import { useEffect, useContext, useState, useRef } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
-import { Filter } from '../lib/api/types/pipeline';
+import { Filter, RequiredConsentsLogical } from '../lib/api/types/pipeline';
 
 interface EventListenerEvent {
 	id: number;
@@ -17,6 +17,7 @@ const useEventListener = (
 	connection?: string | null,
 	filter?: Filter,
 	requiredConsents?: string[] | null,
+	requiredConsentsLogical?: RequiredConsentsLogical | null,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
@@ -38,7 +39,13 @@ const useEventListener = (
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventListeners.create(connection, 3, filter, requiredConsents);
+				listener = await api.workspaces.eventListeners.create(
+					connection,
+					3,
+					filter,
+					requiredConsents,
+					requiredConsentsLogical,
+				);
 			} catch (err) {
 				setIsStarted(false);
 				if (err instanceof UnprocessableError) {

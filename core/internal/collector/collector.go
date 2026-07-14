@@ -798,7 +798,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.ReceivePassed(p.ID, 1)
-			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, event) {
+			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
 				c.metrics.FilterFailed(p.ID, 1)
 				continue
 			}
@@ -814,7 +814,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.ReceivePassed(p.ID, 1)
-			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, event) {
+			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
 				c.metrics.FilterFailed(p.ID, 1)
 				continue
 			}
@@ -835,7 +835,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.ReceivePassed(p.ID, 1)
-				if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, event) {
+				if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
 					c.metrics.FilterFailed(p.ID, 1)
 					continue
 				}

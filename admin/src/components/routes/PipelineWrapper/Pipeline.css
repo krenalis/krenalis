@@ -1970,3 +1970,23 @@ inherit the disabled style */
 	margin-top: -10px;
 	margin-bottom: -4px;
 }
+
+.pipeline__consents-details {
+	margin-top: 30px;
+	display: flex;
+	flex-flow: column;
+	gap: 20px;
+}
+
+.pipeline__consents-logical-sentence {
+	display: flex;
+	flex-flow: row wrap;
+	align-items: center;
+	gap: 8px;
+	font-size: 15px;
+}
+
+.pipeline__consents-logical-select {
+	width: 90px;
+}
+

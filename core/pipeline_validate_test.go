@@ -431,8 +431,9 @@ func Test_validatePipeline(t *testing.T) {
 		{
 			name: "GOOD: Source/SDK/Event - with required consents",
 			pipeline: PipelineToSet{
-				Name:             "Import events into the data warehouse",
-				RequiredConsents: []string{"111111111111", "222222222222"},
+				Name:                    "Import events into the data warehouse",
+				RequiredConsents:        []string{"111111111111", "222222222222"},
+				RequiredConsentsLogical: ConsentsAnd,
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Source,
@@ -464,7 +465,8 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
-				RequiredConsents: []string{"111111111111"},
+				RequiredConsents:        []string{"111111111111"},
+				RequiredConsentsLogical: ConsentsAnd,
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
@@ -495,8 +497,9 @@ func Test_validatePipeline(t *testing.T) {
 		{
 			name: "GOOD: Source/Webhook/Event - with required consents",
 			pipeline: PipelineToSet{
-				Name:             "Import events into the data warehouse",
-				RequiredConsents: []string{"111111111111"},
+				Name:                    "Import events into the data warehouse",
+				RequiredConsents:        []string{"111111111111"},
+				RequiredConsentsLogical: ConsentsOr,
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Source,
@@ -691,7 +694,8 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
-				RequiredConsents: []string{"111111111111", "222222222222"},
+				RequiredConsents:        []string{"111111111111", "222222222222"},
+				RequiredConsentsLogical: ConsentsAnd,
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
@@ -762,6 +766,47 @@ func Test_validatePipeline(t *testing.T) {
 			connectionConnectorType: state.Application,
 			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
 			err:                     "required consents are not allowed",
+		},
+		{
+			name: "BAD: Destination/Application/Event - missing required consents logical",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: []string{"111111111111"},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+			err:                     `required consents logical must be "and" or "or"`,
+		},
+		{
+			name: "BAD: Destination/Application/Event - required consents logical without required consents",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsentsLogical: ConsentsAnd,
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "required consents logical cannot be specified without required consents",
 		},
 		{
 			name: "GOOD: Destination/Application/Event - with a constant mapping",

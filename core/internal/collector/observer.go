@@ -65,14 +65,15 @@ type Observer struct {
 
 // listener represents an event listener.
 type listener struct {
-	id               string
-	connections      []string
-	filter           *state.Where
-	requiredConsents []string
-	sync.Mutex       // for the events and omitted fields
-	events           []json.Value
-	times            []time.Time
-	omitted          int
+	id                      string
+	connections             []string
+	filter                  *state.Where
+	requiredConsents        []string
+	requiredConsentsLogical state.RequiredConsentsLogical
+	sync.Mutex              // for the events and omitted fields
+	events                  []json.Value
+	times                   []time.Time
+	omitted                 int
 }
 
 // newObserver returns a new observer.
@@ -89,22 +90,23 @@ func newObserver() *Observer {
 // subsequent call to the Events method. size must be in range [1, 1000]. If
 // filter is non-nil, only events that satisfy the filter will be observed. If
 // requiredConsents is non-empty, only events that have the required consents
-// will be observed.
+// will be observed, according to requiredConsentsLogical.
 //
 // CreateListener does not validate its arguments, so it is the caller's
 // responsibility to pass valid arguments.
 //
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
-func (observer *Observer) CreateListener(connections []string, size int, filter *state.Where, requiredConsents []string) (string, error) {
+func (observer *Observer) CreateListener(connections []string, size int, filter *state.Where, requiredConsents []string, requiredConsentsLogical state.RequiredConsentsLogical) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
-		id:               id,
-		connections:      connections,
-		filter:           filter,
-		requiredConsents: requiredConsents,
-		events:           make([]json.Value, 0, size),
-		times:            make([]time.Time, 0, size),
+		id:                      id,
+		connections:             connections,
+		filter:                  filter,
+		requiredConsents:        requiredConsents,
+		requiredConsentsLogical: requiredConsentsLogical,
+		events:                  make([]json.Value, 0, size),
+		times:                   make([]time.Time, 0, size),
 	}
 	observer.Lock()
 	defer observer.Unlock()
@@ -178,7 +180,7 @@ func (observer *Observer) addEvent(event events.Event) {
 		if !filters.Applies(listener.filter, event) {
 			continue
 		}
-		if !consents.Satisfies(listener.requiredConsents, event) {
+		if !consents.Satisfies(listener.requiredConsents, listener.requiredConsentsLogical != state.ConsentsOr, event) {
 			continue
 		}
 		listener.Lock()

@@ -7,7 +7,9 @@ package consents
 import "github.com/krenalis/krenalis/core/internal/state"
 
 // Satisfies reports whether the given attributes satisfy the required consents.
-func Satisfies(requiredConsents []string, attributes map[string]any) bool {
+// If matchAll is true, the attributes must satisfy every required consent;
+// otherwise, satisfying at least one is enough.
+func Satisfies(requiredConsents []string, matchAll bool, attributes map[string]any) bool {
 	if len(requiredConsents) == 0 {
 		return true
 	}
@@ -20,17 +22,22 @@ func Satisfies(requiredConsents []string, attributes map[string]any) bool {
 		return false
 	}
 	for _, code := range requiredConsents {
-		v, ok := consent[code].(bool)
-		if !ok || !v {
+		granted, _ := consent[code].(bool)
+		if granted {
+			if !matchAll {
+				return true
+			}
+		} else if matchAll {
 			return false
 		}
 	}
-	return true
+	return matchAll
 }
 
 // SatisfiesByIDs reports whether the given attributes satisfy the required
-// consents, given the consent's IDs.
-func SatisfiesByIDs(ws *state.Workspace, requiredConsentIDs []string, attributes map[string]any) bool {
+// consents, given the consent's IDs. If matchAll is true, the attributes must
+// satisfy every required consent; otherwise, satisfying at least one is enough.
+func SatisfiesByIDs(ws *state.Workspace, requiredConsentIDs []string, matchAll bool, attributes map[string]any) bool {
 	if len(requiredConsentIDs) == 0 {
 		return true
 	}
@@ -42,5 +49,5 @@ func SatisfiesByIDs(ws *state.Workspace, requiredConsentIDs []string, attributes
 		}
 		codes[i] = cp.Code
 	}
-	return Satisfies(codes, attributes)
+	return Satisfies(codes, matchAll, attributes)
 }
