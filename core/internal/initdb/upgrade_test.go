@@ -65,6 +65,21 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 
 	_, err = database.Exec(ctx, `
 		CREATE TYPE notification_name AS ENUM ('EndPipelineRun');
+		CREATE TABLE metadata (
+			singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+			installation_id text UNIQUE NOT NULL,
+			kms_encrypted_cookie_key bytea NOT NULL,
+			kms_encrypted_oauth_key bytea NOT NULL,
+			kms_encrypted_notification_key bytea NOT NULL,
+			kms_encrypted_api_key_pepper bytea NOT NULL
+		);
+		CREATE TABLE notifications (
+			id bigint NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+			name notification_name NOT NULL,
+			payload jsonb NOT NULL,
+			PRIMARY KEY (id)
+		);
 		CREATE TABLE organizations (
 			id varchar(12) PRIMARY KEY,
 			name varchar(255) NOT NULL DEFAULT '',
@@ -99,7 +114,10 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 		INSERT INTO connections (id, workspace, connector) VALUES ('333333333333', '222222222222', 'dummy');
 		INSERT INTO pipelines (id, connection, format) VALUES ('444444444444', '333333333333', 'csv');
 		INSERT INTO pipelines_runs (id, pipeline, node) VALUES ('555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW())`)
+		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW());
+		INSERT INTO metadata (installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper)
+			VALUES ('test-installation', '\x01'::bytea, '\x02'::bytea, '\x03'::bytea, '\x04'::bytea);
+		INSERT INTO notifications (id, name, payload) VALUES (1, 'EndPipelineRun', '{}'::jsonb)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,9 +131,37 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 	assertIndexExists(t, database, connectionsWorkspaceIndex)
 	assertOrganizationConnectorReferences(t, database)
 	assertNodeIDsUpgraded(t, database)
+	assertStateRequestSyncSchemaUpgraded(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("second upgrade failed: %s", err)
+	}
+}
+
+func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	assertColumnExists(t, database, "metadata", "kms_encrypted_http_secret_key")
+	assertColumnDoesNotExist(t, database, "metadata", "kms_encrypted_cookie_key")
+	assertColumnExists(t, database, "notifications", "version")
+	assertColumnDoesNotExist(t, database, "notifications", "id")
+
+	var httpSecretKey []byte
+	err := database.QueryRow(t.Context(), "SELECT kms_encrypted_http_secret_key FROM metadata WHERE singleton").Scan(&httpSecretKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(httpSecretKey) != "\x01" {
+		t.Fatalf("expected HTTP secret key %v, got %v", []byte{0x01}, httpSecretKey)
+	}
+
+	var version int
+	err = database.QueryRow(t.Context(), "SELECT version FROM notifications").Scan(&version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != 1 {
+		t.Fatalf("expected notification version %d, got %d", 1, version)
 	}
 }
 
@@ -235,6 +281,40 @@ func assertIndexExists(t *testing.T, database *db.DB, name string) {
 	if !exists {
 		t.Fatalf("index %s does not exist", name)
 	}
+}
+
+func assertColumnExists(t *testing.T, database *db.DB, table, column string) {
+	t.Helper()
+
+	exists, err := columnExists(t, database, table, column)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatalf("expected column %s.%s to exist, got missing column", table, column)
+	}
+}
+
+func assertColumnDoesNotExist(t *testing.T, database *db.DB, table, column string) {
+	t.Helper()
+
+	exists, err := columnExists(t, database, table, column)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatalf("expected column %s.%s to be missing, got existing column", table, column)
+	}
+}
+
+func columnExists(t *testing.T, database *db.DB, table, column string) (bool, error) {
+	t.Helper()
+
+	return database.QueryExists(t.Context(), `
+		SELECT FROM information_schema.columns
+		WHERE table_schema = current_schema()
+			AND table_name = $1
+			AND column_name = $2`, table, column)
 }
 
 func assertOrganizationConnectorReferences(t *testing.T, database *db.DB) {

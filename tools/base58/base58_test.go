@@ -142,7 +142,7 @@ func TestEncode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Encode(tt.src)
+			got := EncodeToString(tt.src)
 			if got != tt.want {
 				t.Fatalf("expected %q, got %q", tt.want, got)
 			}
@@ -206,7 +206,7 @@ func TestDecode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Decode(tt.s)
+			got, err := DecodeString(tt.s)
 			if err != nil {
 				t.Fatalf("expected nil error, got %v", err)
 			}
@@ -217,7 +217,7 @@ func TestDecode(t *testing.T) {
 	}
 }
 
-// TestDecodeInvalid verifies that Decode rejects non-Base58 strings.
+// TestDecodeInvalid verifies that DecodeString rejects non-Base58 strings.
 func TestDecodeInvalid(t *testing.T) {
 	tests := []string{
 		"0",
@@ -234,14 +234,14 @@ func TestDecodeInvalid(t *testing.T) {
 	}
 
 	for _, s := range tests {
-		_, err := Decode(s)
+		_, err := DecodeString(s)
 		if err == nil {
 			t.Fatalf("expected error for %q, got nil", s)
 		}
 	}
 }
 
-// TestRoundTrip verifies that Encode and Decode round trip binary values.
+// TestRoundTrip verifies that EncodeToString and DecodeString round trip binary values.
 func TestRoundTrip(t *testing.T) {
 	tests := [][]byte{
 		nil,
@@ -269,9 +269,9 @@ func TestRoundTrip(t *testing.T) {
 	}
 
 	for _, src := range tests {
-		encoded := Encode(src)
+		encoded := EncodeToString(src)
 
-		got, err := Decode(encoded)
+		got, err := DecodeString(encoded)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -281,7 +281,7 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
-// TestEncodeOutputIsValid verifies that Encode returns valid Base58 strings.
+// TestEncodeOutputIsValid verifies that EncodeToString returns valid Base58 strings.
 func TestEncodeOutputIsValid(t *testing.T) {
 	for n := 0; n <= 64; n++ {
 		src := make([]byte, n)
@@ -289,14 +289,14 @@ func TestEncodeOutputIsValid(t *testing.T) {
 			src[i] = byte((i*17 + 23) % 256)
 		}
 
-		got := Encode(src)
+		got := EncodeToString(src)
 		if !IsValid(got) {
 			t.Fatalf("expected valid Base58 string, got %q", got)
 		}
 	}
 }
 
-// TestAlphabetCompatibility verifies the alphabet order used by Decode.
+// TestAlphabetCompatibility verifies the alphabet order used by DecodeString.
 func TestAlphabetCompatibility(t *testing.T) {
 	if len(alphabet) != 58 {
 		t.Fatalf("expected alphabet length 58, got %d", len(alphabet))
@@ -309,7 +309,7 @@ func TestAlphabetCompatibility(t *testing.T) {
 			t.Fatalf("expected %q to be valid, got invalid", s)
 		}
 
-		got, err := Decode(s)
+		got, err := DecodeString(s)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -321,28 +321,28 @@ func TestAlphabetCompatibility(t *testing.T) {
 	}
 }
 
-// TestEncodeDoesNotModifySource verifies that Encode does not mutate src.
+// TestEncodeDoesNotModifySource verifies that EncodeToString does not mutate src.
 func TestEncodeDoesNotModifySource(t *testing.T) {
 	src := []byte{0x00, 0x01, 0x02, 0x03, 0xff}
 	want := append([]byte(nil), src...)
 
-	_ = Encode(src)
+	_ = EncodeToString(src)
 
 	if !bytes.Equal(src, want) {
 		t.Fatalf("expected %v, got %v", want, src)
 	}
 }
 
-// TestDecodeReturnsNewSlice verifies that Decode returns independent slices.
+// TestDecodeReturnsNewSlice verifies that DecodeString returns independent slices.
 func TestDecodeReturnsNewSlice(t *testing.T) {
-	got, err := Decode("2")
+	got, err := DecodeString("2")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 
 	got[0] = 99
 
-	again, err := Decode("2")
+	again, err := DecodeString("2")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -353,9 +353,9 @@ func TestDecodeReturnsNewSlice(t *testing.T) {
 	}
 }
 
-// TestDecodeEmptyReturnsNewSlice verifies that Decode returns a non-nil empty slice.
+// TestDecodeEmptyReturnsNewSlice verifies that DecodeString returns a non-nil empty slice.
 func TestDecodeEmptyReturnsNewSlice(t *testing.T) {
-	got, err := Decode("")
+	got, err := DecodeString("")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

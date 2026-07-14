@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/cmd/internal/requestid"
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
@@ -75,21 +74,21 @@ func TestWriteSessionCookie(t *testing.T) {
 
 }
 
-func TestNewAPIsServerInitializesCookieKeys(t *testing.T) {
+func TestNewAPIsServerInitializesHTTPSecretKey(t *testing.T) {
 	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", "", nil, "", "", "", "", false)
-	if s.cookieKeys == nil {
-		t.Fatal("expected newAPIsServer to initialize cookieKeys")
+	if s.httpSecretKey == nil {
+		t.Fatal("expected newAPIsServer to initialize httpSecretKey")
 	}
 }
 
 func TestSecureCookieCachesResult(t *testing.T) {
 	kms := &cookieTestKMS{
-		load: func(context.Context) ([]byte, []byte, error) {
-			return make([]byte, 32), make([]byte, 32), nil
+		load: func(context.Context) ([]byte, error) {
+			return make([]byte, 64), nil
 		},
 	}
 
-	s := &apisServer{cookieKeys: kms.Load}
+	s := &apisServer{httpSecretKey: kms.Load}
 
 	first, err := s.secureCookie(context.Background())
 	if err != nil {
@@ -103,7 +102,7 @@ func TestSecureCookieCachesResult(t *testing.T) {
 		t.Fatal("expected secureCookie to cache and reuse the same SecureCookie instance")
 	}
 	if kms.calls != 1 {
-		t.Fatalf("expected CookieKeys loading to be performed once, got %d", kms.calls)
+		t.Fatalf("expected HTTP secret key loading to be performed once, got %d", kms.calls)
 	}
 }
 
@@ -112,7 +111,7 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 	release := make(chan struct{})
 
 	kms := &cookieTestKMS{
-		load: func(ctx context.Context) ([]byte, []byte, error) {
+		load: func(ctx context.Context) ([]byte, error) {
 			select {
 			case <-started:
 			default:
@@ -120,13 +119,13 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 			}
 			select {
 			case <-release:
-				return make([]byte, 32), make([]byte, 32), nil
+				return make([]byte, 64), nil
 			case <-ctx.Done():
-				return nil, nil, ctx.Err()
+				return nil, ctx.Err()
 			}
 		},
 	}
-	s := &apisServer{cookieKeys: kms.Load}
+	s := &apisServer{httpSecretKey: kms.Load}
 
 	firstCtx, cancelFirst := context.WithCancel(context.Background())
 	firstDone := make(chan error, 1)
@@ -153,7 +152,7 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 		t.Fatal("expected secureCookie retry to return a SecureCookie instance, got nil")
 	}
 	if kms.calls != 2 {
-		t.Fatalf("expected CookieKeys loading to be retried once, got %d calls", kms.calls)
+		t.Fatalf("expected HTTP secret key loading to be retried once, got %d calls", kms.calls)
 	}
 }
 
@@ -224,125 +223,14 @@ func TestValidateForbiddenBody(t *testing.T) {
 	})
 }
 
-// TestRequestIDResponseWriter tests that Request-Id is written before the response.
-func TestRequestIDResponseWriter(t *testing.T) {
-
-	t.Run("sets request id before write", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
-		if err != nil {
-			t.Fatalf("expected Request-Id codec, got %v", err)
-		}
-		requestID := codec.New(0)
-		w := &requestIDResponseWriter{
-			ResponseWriter: recorder,
-			requestID:      requestID,
-			stateVersion:   func() int { return 12 },
-		}
-
-		_, _ = w.Write([]byte("ok"))
-
-		got := recorder.Header().Get("Request-Id")
-		gotID, err := codec.Parse(got)
-		if err != nil {
-			t.Fatalf("expected decoded Request-Id, got %v", err)
-		}
-		gotVersion := gotID.StateVersion()
-		if gotVersion != 12 {
-			t.Fatalf("expected state version 12, got %d", gotVersion)
-		}
-	})
-
-	t.Run("sets request id before write header", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
-		if err != nil {
-			t.Fatalf("expected Request-Id codec, got %v", err)
-		}
-		requestID := codec.New(0)
-		w := &requestIDResponseWriter{
-			ResponseWriter: recorder,
-			requestID:      requestID,
-			stateVersion:   func() int { return 34 },
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-
-		got := recorder.Header().Get("Request-Id")
-		gotID, err := codec.Parse(got)
-		if err != nil {
-			t.Fatalf("expected decoded Request-Id, got %v", err)
-		}
-		gotVersion := gotID.StateVersion()
-		if gotVersion != 34 {
-			t.Fatalf("expected state version 34, got %d", gotVersion)
-		}
-	})
-
-	t.Run("sets request id before copy", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
-		if err != nil {
-			t.Fatalf("expected Request-Id codec, got %v", err)
-		}
-		requestID := codec.New(0)
-		w := &requestIDResponseWriter{
-			ResponseWriter: recorder,
-			requestID:      requestID,
-			stateVersion:   func() int { return 56 },
-		}
-
-		_, _ = io.Copy(w, strings.NewReader("ok"))
-
-		got := recorder.Header().Get("Request-Id")
-		gotID, err := codec.Parse(got)
-		if err != nil {
-			t.Fatalf("expected decoded Request-Id, got %v", err)
-		}
-		gotVersion := gotID.StateVersion()
-		if gotVersion != 56 {
-			t.Fatalf("expected state version 56, got %d", gotVersion)
-		}
-	})
-
-	t.Run("memoizes request id", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		codec, err := requestid.NewCodec(bytes.Repeat([]byte{1}, 32))
-		if err != nil {
-			t.Fatalf("expected Request-Id codec, got %v", err)
-		}
-		version := 10
-		requestID := codec.New(0)
-		w := &requestIDResponseWriter{
-			ResponseWriter: recorder,
-			requestID:      requestID,
-			stateVersion: func() int {
-				version++
-				return version
-			},
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-		first := recorder.Header().Get("Request-Id")
-		w.WriteHeader(http.StatusNoContent)
-		second := recorder.Header().Get("Request-Id")
-		if second != first {
-			t.Fatalf("expected memoized Request-Id %q, got %q", first, second)
-		}
-		if version != 11 {
-			t.Fatalf("expected state version callback once, got %d", version-10)
-		}
-	})
-}
-
 // cookieTestKMS records cookie key load calls in tests.
 type cookieTestKMS struct {
 	calls int
-	load  func(context.Context) ([]byte, []byte, error)
+	load  func(context.Context) ([]byte, error)
 }
 
 // Load returns cookie test keys.
-func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, []byte, error) {
+func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, error) {
 	k.calls++
 	return k.load(ctx)
 }

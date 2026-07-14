@@ -357,8 +357,7 @@ CREATE TABLE notifications (
 CREATE TABLE metadata (
     singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
     installation_id text UNIQUE NOT NULL,
-    kms_encrypted_cookie_key bytea NOT NULL,
-    kms_encrypted_request_id_key bytea NOT NULL,
+    kms_encrypted_http_secret_key bytea NOT NULL,
     kms_encrypted_oauth_key bytea NOT NULL,
     kms_encrypted_notification_key bytea NOT NULL,
     kms_encrypted_api_key_pepper bytea NOT NULL
@@ -366,14 +365,12 @@ CREATE TABLE metadata (
 
 INSERT INTO metadata (
     installation_id,
-    kms_encrypted_cookie_key,
-    kms_encrypted_request_id_key,
+    kms_encrypted_http_secret_key,
     kms_encrypted_oauth_key,
     kms_encrypted_notification_key,
     kms_encrypted_api_key_pepper
 ) VALUES (
     gen_random_uuid(),
-    '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea,

@@ -214,16 +214,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		_ = tx.Rollback(ctx)
 	}()
 
-	// Read the installation ID, the KMS-encrypted cookie, Request-Id, OAuth,
-	// and notification keys, and the API key pepper.
+	// Read the installation ID, the KMS-encrypted HTTP secret, OAuth, and
+	// notification keys, and the API key pepper.
 	//
 	// This is the first query run against the database, so the undefined-table
 	// check below detects (with a good probability) an uninitialized database.
 	// Move it if a query is added before this one.
-	var kmsEncryptedCookieKey, kmsEncryptedRequestIDKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
-	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_request_id_key,"+
+	var kmsEncryptedHTTPSecretKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
+	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_http_secret_key,"+
 		" kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper FROM metadata").Scan(
-		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedRequestIDKey,
+		&state.metadata.installationID, &kmsEncryptedHTTPSecretKey,
 		&kmsEncryptedOAuthKey, &kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
 	if err != nil {
 		if db.IsUndefinedTable(err) {
@@ -240,16 +240,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	if state.metadata.installationID == "" {
 		return errors.New("cannot load state: missing installation ID in metadata table")
 	}
-	// Cookie key.
-	if len(kmsEncryptedCookieKey) == 0 {
-		return errors.New("cannot load state: missing KMS encrypted cookie key in metadata table")
+	// HTTP secret key.
+	if len(kmsEncryptedHTTPSecretKey) == 0 {
+		return errors.New("cannot load state: missing KMS encrypted HTTP secret key in metadata table")
 	}
-	state.metadata.kmsEncryptedCookieKey = kmsEncryptedCookieKey
-	// Request-Id key.
-	if len(kmsEncryptedRequestIDKey) == 0 {
-		return errors.New("cannot load state: missing KMS encrypted Request-Id key in metadata table")
-	}
-	state.metadata.kmsEncryptedRequestIDKey = kmsEncryptedRequestIDKey
+	state.metadata.kmsEncryptedHTTPSecretKey = kmsEncryptedHTTPSecretKey
 	// OAuth key.
 	state.metadata.oAuthKey = state.cipher.Key(kmsEncryptedOAuthKey)
 	clear(kmsEncryptedOAuthKey)

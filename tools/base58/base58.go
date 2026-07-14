@@ -28,9 +28,9 @@ func IsValid(s string) bool {
 	return true
 }
 
-// Decode returns the bytes encoded in s.
+// DecodeString returns the bytes encoded in s.
 // It returns an error if s contains a non-Base58 character.
-func Decode(s string) ([]byte, error) {
+func DecodeString(s string) ([]byte, error) {
 
 	if len(s) == 0 {
 		return []byte{}, nil
@@ -70,8 +70,8 @@ func Decode(s string) ([]byte, error) {
 	return out, nil
 }
 
-// Encode returns src encoded as a Base58 string.
-func Encode(src []byte) string {
+// EncodeToString returns src encoded as a Base58 string.
+func EncodeToString(src []byte) string {
 
 	if len(src) == 0 {
 		return ""

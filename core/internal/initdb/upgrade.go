@@ -101,6 +101,14 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 	}
 
 	err = database.Transaction(ctx, func(tx *db.Tx) error {
+		err := renameColumnIfExists(ctx, tx, "metadata", "kms_encrypted_cookie_key", "kms_encrypted_http_secret_key")
+		if err != nil {
+			return err
+		}
+		err = renameColumnIfExists(ctx, tx, "notifications", "id", "version")
+		if err != nil {
+			return err
+		}
 		queries := []string{
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS members_limit integer NOT NULL DEFAULT 10000 CHECK (members_limit BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS access_keys_limit integer NOT NULL DEFAULT 1000 CHECK (access_keys_limit BETWEEN 0 AND 1000)`,
@@ -134,4 +142,37 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 	slog.Info("PostgreSQL database upgraded successfully")
 
 	return nil
+}
+
+// renameColumnIfExists renames oldName to newName when oldName exists and
+// newName does not. It is safe to run repeatedly.
+func renameColumnIfExists(ctx context.Context, tx *db.Tx, table, oldName, newName string) error {
+	oldExists, err := upgradeColumnExists(ctx, tx, table, oldName)
+	if err != nil {
+		return err
+	}
+	if !oldExists {
+		return nil
+	}
+	newExists, err := upgradeColumnExists(ctx, tx, table, newName)
+	if err != nil {
+		return err
+	}
+	if newExists {
+		return nil
+	}
+	_, err = tx.Exec(ctx, fmt.Sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s", table, oldName, newName))
+	if err != nil {
+		return fmt.Errorf("cannot rename column %s.%s to %s: %s", table, oldName, newName, err)
+	}
+	return nil
+}
+
+// upgradeColumnExists reports whether table has a column named column.
+func upgradeColumnExists(ctx context.Context, tx *db.Tx, table, column string) (bool, error) {
+	return tx.QueryExists(ctx, `
+		SELECT FROM information_schema.columns
+		WHERE table_schema = current_schema()
+			AND table_name = $1
+			AND column_name = $2`, table, column)
 }

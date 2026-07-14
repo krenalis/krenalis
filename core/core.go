@@ -591,10 +591,9 @@ func (core *Core) Close(ctx context.Context) {
 	coreActive.Store(false)
 }
 
-// CookieKeys decrypts and returns the two 32-byte keys stored in the cookie
-// key material.
-func (core *Core) CookieKeys(ctx context.Context) ([]byte, []byte, error) {
-	return core.state.CookieKeys(ctx)
+// HTTPSecretKey decrypts and returns the HTTP secret key material.
+func (core *Core) HTTPSecretKey(ctx context.Context) ([]byte, error) {
+	return core.state.HTTPSecretKey(ctx)
 }
 
 // Connector returns the connector with the provided code.
@@ -968,12 +967,6 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 		}
 	}
 	return orgs, nil
-}
-
-// RequestIDKey decrypts and returns the key used to encrypt and decrypt
-// Request-Id state versions.
-func (core *Core) RequestIDKey(ctx context.Context) ([]byte, error) {
-	return core.state.RequestIDKey(ctx)
 }
 
 // ServeEvents serves the events sent via HTTP.
