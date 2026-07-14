@@ -45,25 +45,29 @@ func (err RecordTransformationError) Error() string {
 
 // Transformer represents a transformer.
 type Transformer struct {
-	pipeline  string
-	provider  FunctionProvider
-	inSchema  types.Type
-	outSchema types.Type
-	mapping   *mappings.Mapping
-	function  *state.TransformationFunction
+	organization string
+	pipeline     string
+	provider     FunctionProvider
+	inSchema     types.Type
+	outSchema    types.Type
+	mapping      *mappings.Mapping
+	function     *state.TransformationFunction
 }
 
 // New returns a new transformer that transforms values for the provided
-// pipeline. provider is the transformer provider used for transformation
-// functions and should be nil for mappings. layouts, if not nil, represents the
-// layouts used to format datetime, date, and time values as strings.
+// pipeline. organization is the ID of the organization the pipeline belongs to,
+// to which the network traffic of the transformation functions is attributed;
+// it is empty for a pipeline that does not belong to an organization. provider
+// is the transformer provider used for transformation functions and should be
+// nil for mappings. layouts, if not nil, represents the layouts used to format
+// datetime, date, and time values as strings.
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
 // pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
-func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(organization string, pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if m := pipeline.Transformation.Mapping; m != nil {
 		inPlace := pipeline.Target != state.TargetEvent
@@ -86,10 +90,11 @@ func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.Tim
 
 	if f := pipeline.Transformation.Function; f != nil {
 		t := Transformer{
-			pipeline:  pipeline.ID,
-			provider:  provider,
-			outSchema: schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
-			function:  f,
+			organization: organization,
+			pipeline:     pipeline.ID,
+			provider:     provider,
+			outSchema:    schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
+			function:     f,
 		}
 		if len(pipeline.Transformation.InPaths) > 0 {
 			t.inSchema = schemaSubset(pipeline.InSchema, pipeline.Transformation.InPaths)
@@ -150,7 +155,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 	// Transform using the function.
 	fn := t.function
-	err := t.provider.Call(ctx, fn.ID, fn.Version, t.inSchema, t.outSchema, fn.PreserveJSON, records)
+	err := t.provider.Call(ctx, t.organization, fn.ID, fn.Version, t.inSchema, t.outSchema, fn.PreserveJSON, records)
 	if err != nil {
 		if err, ok := err.(FunctionExecError); ok {
 			err.msg = fmt.Sprintf("%s: %s ", t.function.Language.String(), err.msg)

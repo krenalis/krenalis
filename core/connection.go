@@ -478,7 +478,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	var function state.TransformationFunction
 	if fn := n.Transformation.Function; fn != nil {
 		name := transformationFunctionName(n.ID)
-		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
+		organization := this.connection.Organization().ID
+		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, organization, name, fn.Language, fn.Source)
 		if err != nil {
 			return "", err
 		}
@@ -1579,7 +1580,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(pipeline, provider, nil)
+		transformer, err := transformers.New(this.connection.Organization().ID, pipeline, provider, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2423,8 +2424,8 @@ func newTempTransformerProvider(name string, language state.Language, source str
 	return &tempFunctionProvider{name, language, source, provider}
 }
 
-func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
-	id, version, err := tp.provider.Create(ctx, tp.name, tp.language, tp.source)
+func (tp *tempFunctionProvider) Call(ctx context.Context, organization, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+	id, version, err := tp.provider.Create(ctx, organization, tp.name, tp.language, tp.source)
 	if err != nil {
 		return err
 	}
@@ -2436,11 +2437,11 @@ func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema,
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, id, version, inSchema, outSchema, preserveJSON, records)
+	return tp.provider.Call(ctx, organization, id, version, inSchema, outSchema, preserveJSON, records)
 }
 
 func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supported") }
-func (tp *tempFunctionProvider) Create(_ context.Context, _ string, _ state.Language, _ string) (string, string, error) {
+func (tp *tempFunctionProvider) Create(_ context.Context, _, _ string, _ state.Language, _ string) (string, string, error) {
 	panic("not supported")
 }
 func (tp *tempFunctionProvider) Delete(_ context.Context, _ string) error {
@@ -2449,6 +2450,6 @@ func (tp *tempFunctionProvider) Delete(_ context.Context, _ string) error {
 func (tp *tempFunctionProvider) SupportLanguage(_ state.Language) bool {
 	panic("not supported")
 }
-func (tp *tempFunctionProvider) Update(_ context.Context, _, _ string) (string, error) {
+func (tp *tempFunctionProvider) Update(_ context.Context, _, _, _ string) (string, error) {
 	panic("not supported")
 }

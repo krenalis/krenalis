@@ -767,15 +767,16 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Transformation.
 	if fn := n.Transformation.Function; fn != nil {
 		current := this.pipeline.Transformation.Function
+		organization := this.pipeline.Organization().ID
 		if current == nil || fn.Language != current.Language {
 			name := transformationFunctionName(n.ID)
-			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
+			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, organization, name, fn.Language, fn.Source)
 			if err != nil {
 				return err
 			}
 		} else if fn.Source != current.Source {
 			fn.ID = current.ID
-			fn.Version, err = this.core.functionProvider.Update(ctx, fn.ID, fn.Source)
+			fn.Version, err = this.core.functionProvider.Update(ctx, organization, fn.ID, fn.Source)
 			if err != nil {
 				return err
 			}

@@ -11,7 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -19,11 +21,12 @@ import (
 	"github.com/krenalis/krenalis/core/internal/transformers/embed"
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/netdial"
 	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
@@ -32,7 +35,17 @@ import (
 
 type function struct {
 	settings Settings
-	client   *lambda.Client
+
+	// mu protects config and clients.
+	mu sync.Mutex
+
+	// config is the AWS configuration, loaded on the first use.
+	config *aws.Config
+
+	// clients holds a Lambda client for each organization, so that the bytes the
+	// client sends are attributed to it. The client with the empty key is the one
+	// used when the bytes are not counted (see [netdial.Counting]).
+	clients map[string]*lambda.Client // by organization ID
 }
 
 type Settings struct {
@@ -56,6 +69,9 @@ func New(settings Settings) transformers.FunctionProvider {
 // Call calls the function with the given identifier and version for each record
 // updating its Attributes field with the result of each invocation.
 //
+// The bytes sent invoking the function are attributed to the organization with
+// the given ID.
+//
 // Before transformation, record attributes must conform to inSchema.
 // After transformation, they should conform to outSchema, unless an error
 // occurs on the record.
@@ -65,14 +81,14 @@ func New(settings Settings) transformers.FunctionProvider {
 // error), it returns a FunctionExecError.
 // Even if the call succeeds, individual records may still encounter errors,
 // which are stored in the Err field of each record.
-func (fn *function) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (fn *function) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	arn, language, err := parseID(id)
 	if err != nil {
 		return err
 	}
 
-	client, err := fn.lambdaClient(ctx)
+	client, err := fn.lambdaClient(ctx, organization)
 	if err != nil {
 		return err
 	}
@@ -177,13 +193,18 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 
 // Close closes the function.
 func (fn *function) Close(ctx context.Context) error {
-	fn.client = nil
+	fn.mu.Lock()
+	fn.clients = nil
+	fn.mu.Unlock()
 	return nil
 }
 
 // Create creates a new function with the given name, language, and source and
 // returns its identifier and version.
-func (fn *function) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+//
+// The bytes sent uploading the code of the function are attributed to the
+// organization with the given ID.
+func (fn *function) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", "", errors.New("function name is not valid")
 	}
@@ -194,7 +215,7 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 	if err != nil {
 		return "", "", err
 	}
-	client, err := fn.lambdaClient(ctx)
+	client, err := fn.lambdaClient(ctx, organization)
 	if err != nil {
 		return "", "", err
 	}
@@ -247,12 +268,15 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 
 // Delete deletes the function with the given identifier.
 // If a function with the given identifier does not exist, it does nothing.
+//
+// The bytes it sends are not attributed to any organization, as a function is
+// also deleted when the organization it belonged to is no longer known.
 func (fn *function) Delete(ctx context.Context, id string) error {
 	arn, _, err := parseID(id)
 	if err != nil {
 		return err
 	}
-	client, err := fn.lambdaClient(ctx)
+	client, err := fn.lambdaClient(ctx, "")
 	if err != nil {
 		return err
 	}
@@ -280,7 +304,10 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 // Update updates the source of the function with the given identifier and
 // returns a new version, which has a length in the range [1, 128].
 // If the function does not exist, it returns the ErrFunctionNotExist error.
-func (fn *function) Update(ctx context.Context, id, source string) (string, error) {
+//
+// The bytes sent uploading the code of the function are attributed to the
+// organization with the given ID.
+func (fn *function) Update(ctx context.Context, organization, id, source string) (string, error) {
 	arn, language, err := parseID(id)
 	if err != nil {
 		return "", err
@@ -289,7 +316,7 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	client, err := fn.lambdaClient(ctx)
+	client, err := fn.lambdaClient(ctx, organization)
 	if err != nil {
 		return "", err
 	}
@@ -414,18 +441,74 @@ def _handler(event, context):
 	return b.Bytes(), nil
 }
 
-// lambdaClient returns the Lambda client, loading the AWS configuration from
-// the environment (IAM role, etc.) on first call.
-func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
-	if fn.client != nil {
-		return fn.client, nil
+// lambdaClient returns the Lambda client of the organization with the given ID,
+// which counts the bytes it sends as the egress traffic of the organization. It
+// loads the AWS configuration from the environment (IAM role, etc.) on first
+// call.
+//
+// The client is created once per organization and is then reused, so that all
+// the requests of an organization share the same connection pool. If the bytes
+// sent for the organization are not counted, a single client, shared by every
+// organization, is returned, as the Lambda traffic does not need to be kept
+// apart.
+func (fn *function) lambdaClient(ctx context.Context, organization string) (*lambda.Client, error) {
+
+	if !netdial.Counting(organization) {
+		organization = ""
 	}
-	cfg, err := awsconfig.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
+
+	fn.mu.Lock()
+	defer fn.mu.Unlock()
+
+	if client, ok := fn.clients[organization]; ok {
+		return client, nil
 	}
-	fn.client = lambda.NewFromConfig(cfg)
-	return fn.client, nil
+
+	if fn.config == nil {
+		cfg, err := awsconfig.LoadDefaultConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
+		}
+		fn.config = &cfg
+	}
+
+	var client *lambda.Client
+	if organization == "" {
+		client = lambda.NewFromConfig(*fn.config)
+	} else {
+		client = lambda.NewFromConfig(*fn.config, countEgress(organization))
+	}
+	if fn.clients == nil {
+		fn.clients = map[string]*lambda.Client{}
+	}
+	fn.clients[organization] = client
+
+	return client, nil
+}
+
+// countEgress returns the option that makes a Lambda client count the bytes it
+// sends as the egress traffic of the organization with the given ID.
+//
+// It only wraps the dial function of the HTTP client the AWS SDK has resolved,
+// which is a buildable one, leaving everything else, like its timeouts and its
+// connection pool sizes, as the SDK has configured it. WithTransportOptions
+// returns a copy of the client, so the clients of the other organizations are
+// not affected.
+func countEgress(organization string) func(*lambda.Options) {
+	dialWith := netdial.DialWith(organization)
+	return func(o *lambda.Options) {
+		// The AWS SDK resolves the HTTP client, from the configuration, before
+		// applying this option, so it is a buildable client unless a client that
+		// is not buildable has been explicitly configured, which Krenalis does
+		// not do.
+		client, ok := o.HTTPClient.(*awshttp.BuildableClient)
+		if !ok {
+			client = awshttp.NewBuildableClient()
+		}
+		o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
+			t.DialContext = dialWith(t.DialContext)
+		})
+	}
 }
 
 // pythonEscaper is used by escapePythonSourceCode.
@@ -460,7 +543,7 @@ func escapeJavaScriptSourceCode(src string) string {
 // The boolean return value reports whether a status code exists.
 func httpStatusCode(err error) (int, bool) {
 	if err, ok := err.(*smithy.OperationError); ok {
-		if err, ok := err.Err.(*http.ResponseError); ok {
+		if err, ok := err.Err.(*awshttp.ResponseError); ok {
 			return err.Response.StatusCode, true
 		}
 	}

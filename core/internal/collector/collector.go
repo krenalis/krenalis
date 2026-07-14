@@ -488,7 +488,7 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		if w, ok := c.identityWriters.Load(p.ID); ok {
 			var transformer *transformers.Transformer
 			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
-				transformer, _ = transformers.New(p, c.functionProvider, nil)
+				transformer, _ = transformers.New(p.Organization().ID, p, c.functionProvider, nil)
 			}
 			w.(*identityWriter).SetTransformer(transformer)
 		}

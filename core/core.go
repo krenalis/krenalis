@@ -1145,7 +1145,10 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(pipeline, provider, nil)
+	//
+	// The transformation is not made on behalf of an organization, as it is only
+	// used by the admin console, so its network traffic is not attributed.
+	transformer, err := transformers.New("", pipeline, provider, nil)
 	if err != nil {
 		return nil, err
 	}
