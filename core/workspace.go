@@ -68,6 +68,7 @@ const (
 	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
 	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
 	FilterStep           = PipelineStep(metrics.FilterStep)
+	ConsentStep          = PipelineStep(metrics.ConsentStep)
 	TransformationStep   = PipelineStep(metrics.TransformationStep)
 	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
 	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
@@ -81,6 +82,8 @@ func (step PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
+	case ConsentStep:
+		return "Consent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
@@ -101,6 +104,8 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return InputValidationStep, nil
 	case "Filter":
 		return FilterStep, nil
+	case "Consent":
+		return ConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
@@ -214,8 +219,8 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 type PipelineMetrics struct {
 	Start  time.Time `json:"start"`
 	End    time.Time `json:"end"`
-	Passed [][6]int  `json:"passed"`
-	Failed [][6]int  `json:"failed"`
+	Passed [][7]int  `json:"passed"`
+	Failed [][7]int  `json:"failed"`
 }
 
 // MetricUnit represents the unit of time used for aggregating metrics.
@@ -325,8 +330,8 @@ func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end ti
 		return PipelineMetrics{
 			Start:  start,
 			End:    end,
-			Passed: make([][6]int, number),
-			Failed: make([][6]int, number),
+			Passed: make([][7]int, number),
+			Failed: make([][7]int, number),
 		}, nil
 	}
 
@@ -381,8 +386,8 @@ func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number in
 	pipelines = filterWorkspacePipelines(this.workspace, pipelines)
 	if len(pipelines) == 0 {
 		return PipelineMetrics{
-			Passed: make([][6]int, number),
-			Failed: make([][6]int, number),
+			Passed: make([][7]int, number),
+			Failed: make([][7]int, number),
 		}, nil
 	}
 
@@ -1206,15 +1211,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
+			" r.failed_5, r.failed_6, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-		&run.Failed[5], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+		&run.Failed[5], &run.Failed[6], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1222,8 +1227,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [6]int{}
-		run.Failed = [6]int{}
+		run.Passed = [7]int{}
+		run.Failed = [7]int{}
 	}
 	return &run, nil
 }
@@ -1236,7 +1241,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1246,8 +1251,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-					&run.Failed[5], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+					&run.Failed[5], &run.Failed[6], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1260,8 +1265,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [6]int{}
-			run.Failed = [6]int{}
+			run.Passed = [7]int{}
+			run.Failed = [7]int{}
 		}
 	}
 

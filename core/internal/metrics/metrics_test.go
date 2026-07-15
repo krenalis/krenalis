@@ -58,6 +58,7 @@ func Test_StepString(t *testing.T) {
 		ReceiveStep:          "Receive",
 		InputValidationStep:  "InputValidation",
 		FilterStep:           "Filter",
+		ConsentStep:          "Consent",
 		TransformationStep:   "Transformation",
 		OutputValidationStep: "OutputValidation",
 		FinalizeStep:         "Finalize",

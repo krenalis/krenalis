@@ -16,7 +16,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestUpgradeOrganizationResourceLimits(t *testing.T) {
+func TestUpgrade(t *testing.T) {
 	const (
 		databaseName = "krenalis"
 		user         = "krenalis"
@@ -84,10 +84,23 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			format varchar
 		);
+		CREATE TABLE pipelines_runs (
+			id varchar(12) PRIMARY KEY,
+			pipeline varchar(12) NOT NULL REFERENCES pipelines (id),
+			passed_5 integer NOT NULL DEFAULT 0
+		);
+		CREATE TABLE pipelines_metrics (
+			pipeline varchar(12) NOT NULL REFERENCES pipelines (id),
+			timeslot integer NOT NULL,
+			passed_5 integer NOT NULL,
+			PRIMARY KEY (pipeline, timeslot)
+		);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
 		INSERT INTO connections (id, workspace, connector) VALUES ('333333333333', '222222222222', 'dummy');
-		INSERT INTO pipelines (id, connection, format) VALUES ('444444444444', '333333333333', 'csv')`)
+		INSERT INTO pipelines (id, connection, format) VALUES ('444444444444', '333333333333', 'csv');
+		INSERT INTO pipelines_runs (id, pipeline) VALUES ('555555555555', '444444444444');
+		INSERT INTO pipelines_metrics (pipeline, timeslot, passed_5) VALUES ('444444444444', 1, 6)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,6 +113,7 @@ func TestUpgradeOrganizationResourceLimits(t *testing.T) {
 	assertIndexExists(t, database, workspacesOrganizationIndex)
 	assertIndexExists(t, database, connectionsWorkspaceIndex)
 	assertOrganizationConnectorReferences(t, database)
+	assertConsentStepColumns(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("second upgrade failed: %s", err)
@@ -143,21 +157,40 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 		"connections_limit",
 		"pipelines_limit",
 	} {
-		hasDefault, err := database.QueryExists(t.Context(), `
-			SELECT FROM pg_attrdef d
-			JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
-			JOIN pg_class c ON c.oid = d.adrelid
-			JOIN pg_namespace n ON n.oid = c.relnamespace
-			WHERE n.nspname = current_schema()
-				AND c.relname = 'organizations'
-				AND a.attname = $1`, column)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if hasDefault {
+		if hasDefault(t, database, "organizations", column) {
 			t.Fatalf("column organizations.%s has a default", column)
 		}
 	}
+}
+
+func assertConsentStepColumns(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []string{"passed_6", "failed_6"} {
+		if !hasDefault(t, database, "pipelines_runs", column) {
+			t.Fatalf("column pipelines_runs.%s has no default", column)
+		}
+		if hasDefault(t, database, "pipelines_metrics", column) {
+			t.Fatalf("column pipelines_metrics.%s has a default", column)
+		}
+	}
+}
+
+func hasDefault(t *testing.T, database *db.DB, table, column string) bool {
+	t.Helper()
+
+	found, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_attrdef d
+		JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+		JOIN pg_class c ON c.oid = d.adrelid
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = current_schema()
+			AND c.relname = $1
+			AND a.attname = $2`, table, column)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return found
 }
 
 func assertIndexExists(t *testing.T, database *db.DB, name string) {

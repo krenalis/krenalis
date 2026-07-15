@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	numSteps         = 6
+	numSteps         = 7
 	timeslotDuration = time.Minute
 	flushInterval    = time.Second
 	maxTimeslot      = int32(math.MaxInt64 / timeslotDuration) // 153722867
@@ -39,6 +39,7 @@ const (
 	ReceiveStep Step = iota
 	InputValidationStep
 	FilterStep
+	ConsentStep
 	TransformationStep
 	OutputValidationStep
 	FinalizeStep
@@ -52,6 +53,8 @@ func (s Step) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
+	case ConsentStep:
+		return "Consent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
@@ -134,6 +137,18 @@ func (c *Collector) Failed(step Step, pipeline string, count int, message string
 		m.errors = append(m.errors, pipelineError{step: step, count: count, message: message})
 	}
 	c.mu.Unlock()
+}
+
+// ConsentFailed increases the failed count for the Consent step and pipeline by
+// the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) ConsentFailed(pipeline string, count int) {
+	c.Failed(ConsentStep, pipeline, count, "")
+}
+
+// ConsentPassed increases the passed count for the Consent step and pipeline by
+// the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) ConsentPassed(pipeline string, count int) {
+	c.Passed(ConsentStep, pipeline, count)
 }
 
 // FilterFailed increases the failed count for the Filter step and pipeline by
@@ -280,20 +295,22 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 		SUM(passed_3) AS passed_3,
 		SUM(passed_4) AS passed_4,
 		SUM(passed_5) AS passed_5,
+		SUM(passed_6) AS passed_6,
 		SUM(failed_0) AS failed_0,
 		SUM(failed_1) AS failed_1,
 		SUM(failed_2) AS failed_2,
 		SUM(failed_3) AS failed_3,
 		SUM(failed_4) AS failed_4,
 		SUM(failed_5) AS failed_5,
+		SUM(failed_6) AS failed_6,
 		ARRAY_AGG(ctid) AS row_ctids
 	FROM pipelines_metrics
 	WHERE timeslot < $2 AND timeslot % $1 <> 0
 	GROUP BY pipeline, slot
 ),
 inserted AS (
-	INSERT INTO pipelines_metrics (pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)
-	SELECT pipeline, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+	INSERT INTO pipelines_metrics (pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)
+	SELECT pipeline, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6
 	FROM aggregated
 	ON CONFLICT (pipeline, timeslot)
 	DO UPDATE SET
@@ -303,12 +320,14 @@ inserted AS (
 		passed_3 = pipelines_metrics.passed_3 + EXCLUDED.passed_3,
 		passed_4 = pipelines_metrics.passed_4 + EXCLUDED.passed_4,
 		passed_5 = pipelines_metrics.passed_5 + EXCLUDED.passed_5,
+		passed_6 = pipelines_metrics.passed_6 + EXCLUDED.passed_6,
 		failed_0 = pipelines_metrics.failed_0 + EXCLUDED.failed_0,
 		failed_1 = pipelines_metrics.failed_1 + EXCLUDED.failed_1,
 		failed_2 = pipelines_metrics.failed_2 + EXCLUDED.failed_2,
 		failed_3 = pipelines_metrics.failed_3 + EXCLUDED.failed_3,
 		failed_4 = pipelines_metrics.failed_4 + EXCLUDED.failed_4,
-		failed_5 = pipelines_metrics.failed_5 + EXCLUDED.failed_5
+		failed_5 = pipelines_metrics.failed_5 + EXCLUDED.failed_5,
+		failed_6 = pipelines_metrics.failed_6 + EXCLUDED.failed_6
 )
 DELETE FROM pipelines_metrics
 WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
@@ -404,7 +423,7 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 	var hasErrors bool
 
 	c.buf.Reset()
-	c.buf.WriteString("WITH t(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5) AS (\n\tVALUES ")
+	c.buf.WriteString("WITH t(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6) AS (\n\tVALUES ")
 	i := 0
 	for pipeline, m := range metrics {
 		hasErrors = hasErrors || len(m.errors) > 0
@@ -422,13 +441,13 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 		c.buf.WriteByte(',')
 		c.buf.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		c.buf.WriteByte(',')
-		for j := range 6 {
+		for j := range 7 {
 			c.buf.WriteString(strconv.Itoa(m.passed[j]))
 			c.buf.WriteByte(',')
 		}
-		for j := range 6 {
+		for j := range 7 {
 			c.buf.WriteString(strconv.Itoa(m.failed[j]))
-			if j != 5 {
+			if j != 6 {
 				c.buf.WriteByte(',')
 			}
 		}
@@ -439,7 +458,7 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 	if i > 0 {
 
 		c.buf.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
-			`(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
+			`(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)` +
 			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM pipelines p WHERE p.id = t.pipeline)` +
 			` ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
@@ -448,12 +467,14 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 			`passed_3 = m.passed_3 + EXCLUDED.passed_3, ` +
 			`passed_4 = m.passed_4 + EXCLUDED.passed_4, ` +
 			`passed_5 = m.passed_5 + EXCLUDED.passed_5, ` +
+			`passed_6 = m.passed_6 + EXCLUDED.passed_6, ` +
 			`failed_0 = m.failed_0 + EXCLUDED.failed_0, ` +
 			`failed_1 = m.failed_1 + EXCLUDED.failed_1, ` +
 			`failed_2 = m.failed_2 + EXCLUDED.failed_2, ` +
 			`failed_3 = m.failed_3 + EXCLUDED.failed_3, ` +
 			`failed_4 = m.failed_4 + EXCLUDED.failed_4, ` +
-			`failed_5 = m.failed_5 + EXCLUDED.failed_5`)
+			`failed_5 = m.failed_5 + EXCLUDED.failed_5, ` +
+			`failed_6 = m.failed_6 + EXCLUDED.failed_6`)
 
 		query := c.buf.String()
 

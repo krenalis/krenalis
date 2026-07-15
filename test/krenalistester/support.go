@@ -957,7 +957,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 				if run.Error != "" {
 					k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
-				if !allowFailed && run.Failed != [6]int{} {
+				if !allowFailed && run.Failed != [7]int{} {
 					k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
@@ -978,7 +978,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			if run.Error != "" {
 				k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
-			if !allowFailed && run.Failed != [6]int{} {
+			if !allowFailed && run.Failed != [7]int{} {
 				k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}

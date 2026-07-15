@@ -4,7 +4,14 @@ import Type, { ObjectType } from './types';
 
 type PipelineTarget = 'Event' | 'User' | 'Group';
 
-type PipelineStep = 'Receive' | 'InputValidation' | 'Filter' | 'Transformation' | 'OutputValidation' | 'Finalize';
+type PipelineStep =
+	| 'Receive'
+	| 'InputValidation'
+	| 'Filter'
+	| 'Consent'
+	| 'Transformation'
+	| 'OutputValidation'
+	| 'Finalize';
 
 type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' | '8h' | '12h' | '24h';
 
@@ -158,8 +165,8 @@ interface PipelineError {
 interface PipelineMetrics {
 	start: Date;
 	end: Date;
-	passed: [number, number, number, number, number, number][];
-	failed: [number, number, number, number, number, number][];
+	passed: [number, number, number, number, number, number, number][];
+	failed: [number, number, number, number, number, number, number][];
 }
 
 export type {

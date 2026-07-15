@@ -1234,12 +1234,49 @@ const hasFilters = (connection: TransformedConnection, target: PipelineTarget) =
 	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'User');
 };
 
-const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
-	// Required consents are allowed on any pipeline that handles events.
+const isEventDriven = (connection: TransformedConnection, target: PipelineTarget) => {
 	if (connection.role === 'Destination') {
+		// The events are dispatched to an application.
 		return connection.connector.type === 'Application' && target === 'Event';
 	}
+	// The events are imported into the warehouse, either as events or as user
+	// identities extracted from them.
 	return connection.isEventBased && (target === 'Event' || target === 'User');
+};
+
+// hasInputValidationStep reports whether the pipelines of a given connection,
+// and with the given target, validate the records they read.
+const hasInputValidationStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return !isEventDriven(connection, target);
+};
+
+// hasFilterStep reports whether the pipelines of a given connection, and with
+// the given target, count the records their filter discards. Exports and
+// database imports filter the records while reading them, so they have no step
+// to report.
+const hasFilterStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return (
+		isEventDriven(connection, target) || (connection.role === 'Source' && connection.connector.type !== 'Database')
+	);
+};
+
+const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
+	// Required consents are allowed on any pipeline that handles events.
+	return isEventDriven(connection, target);
+};
+
+const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {
+	const type = connection.connector.type;
+	if (type === 'Application' || type === 'Database') {
+		return true;
+	}
+	if (type === 'FileStorage') {
+		return connection.role === 'Source';
+	}
+	if (type === 'SDK' || type === 'Webhook') {
+		return connection.role === 'Source' && (target === 'User' || target === 'Group');
+	}
+	return false;
 };
 
 const computePipelineTypeFields = (connection: TransformedConnection, pipelineType: PipelineType) => {
@@ -1255,16 +1292,8 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 
 	const type = connection.connector.type;
 
-	if (type === 'Application') {
+	if (hasTransformations(connection, pipelineType.target)) {
 		fields.push('Transformation');
-	} else if (type === 'Database') {
-		fields.push('Transformation');
-	} else if (type === 'FileStorage' && connection.role === 'Source') {
-		fields.push('Transformation');
-	} else if (type === 'SDK' || type == 'Webhook') {
-		if (connection.role === 'Source' && (pipelineType.target === 'User' || pipelineType.target === 'Group')) {
-			fields.push('Transformation');
-		}
 	}
 
 	if (
@@ -2082,6 +2111,10 @@ export {
 	isRecursiveType,
 	computeDefaultPipeline,
 	hasFilters,
+	hasInputValidationStep,
+	hasFilterStep,
+	hasRequiredConsents,
+	hasTransformations,
 	computePipelineTypeFields,
 	transformPipelineType,
 	transformPipeline,

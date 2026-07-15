@@ -798,11 +798,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.ReceivePassed(p.ID, 1)
-			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
+			if !filters.Applies(p.Filter, event) {
 				c.metrics.FilterFailed(p.ID, 1)
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
+			if !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
+				c.metrics.ConsentFailed(p.ID, 1)
+				continue
+			}
+			c.metrics.ConsentPassed(p.ID, 1)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -814,11 +819,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.ReceivePassed(p.ID, 1)
-			if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
+			if !filters.Applies(p.Filter, event) {
 				c.metrics.FilterFailed(p.ID, 1)
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
+			if !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
+				c.metrics.ConsentFailed(p.ID, 1)
+				continue
+			}
+			c.metrics.ConsentPassed(p.ID, 1)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -835,11 +845,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.ReceivePassed(p.ID, 1)
-				if !filters.Applies(p.Filter, event) || !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
+				if !filters.Applies(p.Filter, event) {
 					c.metrics.FilterFailed(p.ID, 1)
 					continue
 				}
 				c.metrics.FilterPassed(p.ID, 1)
+				if !consents.SatisfiesByIDs(ws, p.RequiredConsents, p.RequiredConsentsLogical != state.ConsentsOr, event) {
+					c.metrics.ConsentFailed(p.ID, 1)
+					continue
+				}
+				c.metrics.ConsentPassed(p.ID, 1)
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {

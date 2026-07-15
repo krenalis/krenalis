@@ -88,6 +88,12 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_logical varchar(3) NOT NULL DEFAULT '' CHECK (required_consents_logical IN ('', 'and', 'or'))`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

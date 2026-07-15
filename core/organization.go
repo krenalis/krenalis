@@ -930,12 +930,14 @@ s AS (
 		COALESCE(SUM(m.passed_3), 0) AS passed_3,
 		COALESCE(SUM(m.passed_4), 0) AS passed_4,
 		COALESCE(SUM(m.passed_5), 0) AS passed_5,
+		COALESCE(SUM(m.passed_6), 0) AS passed_6,
 		COALESCE(SUM(m.failed_0), 0) AS failed_0,
 		COALESCE(SUM(m.failed_1), 0) AS failed_1,
 		COALESCE(SUM(m.failed_2), 0) AS failed_2,
 		COALESCE(SUM(m.failed_3), 0) AS failed_3,
 		COALESCE(SUM(m.failed_4), 0) AS failed_4,
-		COALESCE(SUM(m.failed_5), 0) AS failed_5
+		COALESCE(SUM(m.failed_5), 0) AS failed_5,
+		COALESCE(SUM(m.failed_6), 0) AS failed_6
 	FROM live_runs AS r
 	LEFT JOIN pipelines_metrics AS m ON m.pipeline = r.pipeline
 	GROUP BY r.id
@@ -950,12 +952,14 @@ ended_runs AS (
 		passed_3 = r.passed_3 + s.passed_3,
 		passed_4 = r.passed_4 + s.passed_4,
 		passed_5 = r.passed_5 + s.passed_5,
+		passed_6 = r.passed_6 + s.passed_6,
 		failed_0 = r.failed_0 + s.failed_0,
 		failed_1 = r.failed_1 + s.failed_1,
 		failed_2 = r.failed_2 + s.failed_2,
 		failed_3 = r.failed_3 + s.failed_3,
 		failed_4 = r.failed_4 + s.failed_4,
 		failed_5 = r.failed_5 + s.failed_5,
+		failed_6 = r.failed_6 + s.failed_6,
 		error = $3
 	FROM s
 	WHERE r.id = s.id AND r.end_time IS NULL

@@ -896,8 +896,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [6]int     `json:"passed"`
-	Failed    [6]int     `json:"failed"`
+	Passed    [7]int     `json:"passed"`
+	Failed    [7]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 

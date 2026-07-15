@@ -1311,18 +1311,18 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 			res, err := tx.Exec(ctx,
 				"WITH s AS (\n"+
 					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
-					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5, COALESCE(SUM(passed_6), 0) as passed_6,"+
 					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
-					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5, COALESCE(SUM(failed_6), 0) as failed_6\n"+
 					" FROM pipelines_metrics\n"+
 					"\tWHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs AS e\n"+
 					"SET function = '', end_time = $3,"+
 					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
-					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
+					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5, passed_6 = e.passed_6 + s.passed_6,"+
 					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
-					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
+					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5, failed_6 = e.failed_6 + s.failed_6,"+
 					" error = $4\n"+
 					"FROM s\n"+
 					"WHERE id = $1 AND pipeline = $2 AND end_time IS NULL", run.ID, pipeline, endTime, errorMessage)
@@ -1476,17 +1476,17 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 				"WITH s AS (\n"+
 					"	SELECT -COALESCE(SUM(passed_0), 0) as passed_0, -COALESCE(SUM(passed_1), 0) as passed_1,"+
 					" -COALESCE(SUM(passed_2), 0) as passed_2, -COALESCE(SUM(passed_3), 0) as passed_3,"+
-					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5, -COALESCE(SUM(passed_6), 0) as passed_6,"+
 					" -COALESCE(SUM(failed_0), 0) as failed_0, -COALESCE(SUM(failed_1), 0) as failed_1,"+
 					" -COALESCE(SUM(failed_2), 0) as failed_2, -COALESCE(SUM(failed_3), 0) as failed_3,"+
-					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5, -COALESCE(SUM(failed_6), 0) as failed_6\n"+
 					"	FROM pipelines_metrics\n"+
 					"	WHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
-					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
-					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
+					" passed_4 = s.passed_4, passed_5 = s.passed_5, passed_6 = s.passed_6, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
+					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5, failed_6 = s.failed_6\n"+
 					"FROM s\n"+
 					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
