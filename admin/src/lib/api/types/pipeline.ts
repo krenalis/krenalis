@@ -149,7 +149,7 @@ interface PipelineError {
 	lastOccurred: Date;
 }
 
-interface PipelineMetricSeries {
+interface PipelineMetricsSeries {
 	workspace?: string;
 	connection?: string;
 	pipeline?: string;
@@ -160,7 +160,7 @@ interface PipelineMetricSeries {
 interface PipelineMetrics {
 	start: Date;
 	end: Date;
-	metrics: PipelineMetricSeries[];
+	metrics: PipelineMetricsSeries[];
 }
 
 export type {
@@ -182,6 +182,6 @@ export type {
 	TransformationPurpose,
 	PipelineStep,
 	PipelineError,
-	PipelineMetricSeries,
+	PipelineMetricsSeries,
 	PipelineMetrics,
 };

@@ -64,7 +64,7 @@ import { AccessKeyType } from './types/organization';
 
 const API_BASE_PATH = '/v1';
 
-type PipelineMetricsFilter = {
+type PipelineMetricsSelection = {
 	workspaces?: string[];
 	connections?: string[];
 	pipelines?: string[];
@@ -834,26 +834,28 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsQuery = (filter?: PipelineMetricsFilter): string => {
-		if (!filter) {
+	pipelineMetricsQuery = (selection?: PipelineMetricsSelection): string => {
+		if (!selection) {
 			return '';
 		}
-		const filterCount = [filter.workspaces, filter.connections, filter.pipelines].filter((v) => v != null).length;
-		if (filterCount > 1) {
-			throw new Error('workspaces, connections and pipelines filters cannot be used together');
+		const selectionCount = [selection.workspaces, selection.connections, selection.pipelines].filter(
+			(v) => v != null,
+		).length;
+		if (selectionCount > 1) {
+			throw new Error('workspaces, connections and pipelines cannot be used together');
 		}
 		let params = [];
-		if (filter.workspaces != null) {
-			params.push(`workspaces=${filter.workspaces.map(encodeURIComponent).join(',')}`);
+		if (selection.workspaces != null) {
+			params.push(`workspaces=${selection.workspaces.map(encodeURIComponent).join(',')}`);
 		}
-		if (filter.connections != null) {
-			params.push(`connections=${filter.connections.map(encodeURIComponent).join(',')}`);
+		if (selection.connections != null) {
+			params.push(`connections=${selection.connections.map(encodeURIComponent).join(',')}`);
 		}
-		if (filter.pipelines != null) {
-			params.push(`pipelines=${filter.pipelines.map(encodeURIComponent).join(',')}`);
+		if (selection.pipelines != null) {
+			params.push(`pipelines=${selection.pipelines.map(encodeURIComponent).join(',')}`);
 		}
-		if (filter.target != null) {
-			params.push(`target=${encodeURIComponent(filter.target)}`);
+		if (selection.target != null) {
+			params.push(`target=${encodeURIComponent(selection.target)}`);
 		}
 		return params.length > 0 ? `?${params.join('&')}` : '';
 	};
@@ -862,11 +864,11 @@ class Workspaces {
 		start: Date,
 		end: Date,
 		pipelines?: string[],
-		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
 	): Promise<PipelineMetrics> => {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
-		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
+		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/dates/` + `${encodeURIComponent(sd)}/` + `${encodeURIComponent(ed)}` + q,
 			http.GET,
@@ -880,9 +882,9 @@ class Workspaces {
 	pipelineMetricsPerDay = async (
 		days: number,
 		pipelines?: string[],
-		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
 	): Promise<PipelineMetrics> => {
-		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
+		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/days/` + `${encodeURIComponent(days)}` + q,
 			http.GET,
@@ -896,9 +898,9 @@ class Workspaces {
 	pipelineMetricsPerHour = async (
 		hours: number,
 		pipelines?: string[],
-		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
 	): Promise<PipelineMetrics> => {
-		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
+		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/hours/` + `${encodeURIComponent(hours)}` + q,
 			http.GET,
@@ -912,9 +914,9 @@ class Workspaces {
 	pipelineMetricsPerMinute = async (
 		minutes: number,
 		pipelines?: string[],
-		filter?: Omit<PipelineMetricsFilter, 'pipelines'>,
+		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
 	): Promise<PipelineMetrics> => {
-		const q = this.pipelineMetricsQuery(filter ?? (pipelines != null ? { pipelines } : undefined));
+		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/minutes/` + `${encodeURIComponent(minutes)}` + q,
 			http.GET,
