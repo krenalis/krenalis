@@ -22,6 +22,7 @@ const NonceSize = 12
 const (
 	keySize        = 32
 	versionSize    = 8
+	maxTokenSize   = 50
 	associatedData = "Sync-Token"
 )
 
@@ -85,6 +86,9 @@ func (c *Codec) Encode(version int, nonce []byte) (string, error) {
 // It returns errInvalidSyncToken if value is malformed, has an unexpected
 // size, was generated with another key, or fails authentication.
 func (c *Codec) Decode(value string) (int, error) {
+	if len(value) > maxTokenSize {
+		return 0, errInvalidSyncToken
+	}
 	token, err := base58.DecodeString(value)
 	if err != nil {
 		return 0, errInvalidSyncToken

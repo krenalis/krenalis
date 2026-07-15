@@ -56,6 +56,9 @@ func TestCodecEncode(t *testing.T) {
 	if token != want {
 		t.Fatalf("expected Sync-Token %q, got %q", want, token)
 	}
+	if len(token) > maxTokenSize {
+		t.Fatalf("expected Sync-Token length at most %d, got %d", maxTokenSize, len(token))
+	}
 	assertSyncTokenEncoding(t, token)
 	assertSyncTokenNoncePrefix(t, token, nonce)
 }
@@ -140,8 +143,9 @@ func TestCodecDecodeErrors(t *testing.T) {
 		tests := []string{
 			"",
 			"abc",
-			strings.Repeat("1", syncTokenSize()-1),
-			strings.Repeat("1", syncTokenSize()+1),
+			strings.Repeat("1", tokenBinarySize()-1),
+			strings.Repeat("1", tokenBinarySize()+1),
+			strings.Repeat("1", maxTokenSize+1),
 		}
 
 		for _, value := range tests {
@@ -162,7 +166,7 @@ func TestCodecDecodeErrors(t *testing.T) {
 	})
 
 	t.Run("invalid binary length", func(t *testing.T) {
-		_, err := codec.Decode(base58.EncodeToString(bytes.Repeat([]byte{0x00}, syncTokenSize()-1)))
+		_, err := codec.Decode(base58.EncodeToString(bytes.Repeat([]byte{0x00}, tokenBinarySize()-1)))
 		if !stderrors.Is(err, errInvalidSyncToken) {
 			t.Fatalf("expected invalid Sync-Token error, got %v", err)
 		}
@@ -262,8 +266,8 @@ func mustEncode(t *testing.T, codec *Codec, version int, nonce [NonceSize]byte) 
 	return token
 }
 
-// syncTokenSize returns the binary size of a Sync-Token.
-func syncTokenSize() int {
+// tokenBinarySize returns the binary size of a Sync-Token.
+func tokenBinarySize() int {
 	codec, err := NewCodec(bytes.Repeat([]byte{0x42}, keySize))
 	if err != nil {
 		panic(err)
@@ -280,8 +284,8 @@ func assertSyncTokenEncoding(t *testing.T, token string) {
 	if err != nil {
 		t.Fatalf("expected decoded Sync-Token, got %v", err)
 	}
-	if len(payload) != syncTokenSize() {
-		t.Fatalf("expected Sync-Token binary length %d, got %d", syncTokenSize(), len(payload))
+	if len(payload) != tokenBinarySize() {
+		t.Fatalf("expected Sync-Token binary length %d, got %d", tokenBinarySize(), len(payload))
 	}
 }
 
@@ -294,8 +298,8 @@ func assertSyncTokenNoncePrefix(t *testing.T, token string, nonce [NonceSize]byt
 	if err != nil {
 		t.Fatalf("expected decoded Sync-Token, got %v", err)
 	}
-	if len(payload) != syncTokenSize() {
-		t.Fatalf("expected Sync-Token binary length %d, got %d", syncTokenSize(), len(payload))
+	if len(payload) != tokenBinarySize() {
+		t.Fatalf("expected Sync-Token binary length %d, got %d", tokenBinarySize(), len(payload))
 	}
 	if !bytes.Equal(payload[:NonceSize], nonce[:]) {
 		t.Fatalf("expected nonce prefix %v, got %v", nonce, payload[:NonceSize])
@@ -311,8 +315,8 @@ func tamperByte(t *testing.T, token string, index int) string {
 	if err != nil {
 		t.Fatalf("expected decoded Sync-Token, got %v", err)
 	}
-	if len(payload) != syncTokenSize() {
-		t.Fatalf("expected Sync-Token binary length %d, got %d", syncTokenSize(), len(payload))
+	if len(payload) != tokenBinarySize() {
+		t.Fatalf("expected Sync-Token binary length %d, got %d", tokenBinarySize(), len(payload))
 	}
 
 	payload[index] ^= 0xff

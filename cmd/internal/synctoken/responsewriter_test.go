@@ -120,8 +120,8 @@ func assertSyncTokenHeader(t *testing.T, recorder *httptest.ResponseRecorder, co
 	if err != nil {
 		t.Fatalf("expected decoded Sync-Token payload, got %v", err)
 	}
-	if len(payload) != syncTokenSize() {
-		t.Fatalf("expected Sync-Token binary length %d, got %d", syncTokenSize(), len(payload))
+	if len(payload) != tokenBinarySize() {
+		t.Fatalf("expected Sync-Token binary length %d, got %d", tokenBinarySize(), len(payload))
 	}
 	if !bytes.Equal(payload[:NonceSize], wantNonce[:]) {
 		t.Fatalf("expected nonce prefix %v, got %v", wantNonce, payload[:NonceSize])
