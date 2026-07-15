@@ -102,7 +102,7 @@ const Privacy = () => {
 			return [];
 		}
 		return purposes.map((p) => {
-			const codeCell = <span className="privacy__grid-code">{p.code}</span>
+			const codeCell = <span className='privacy__grid-code'>{p.code}</span>;
 			const pipelinesCell =
 				p.pipelines.length === 0 ? (
 					<span className='privacy__grid-pipelines-empty'>-</span>
@@ -113,9 +113,7 @@ const Privacy = () => {
 								<button
 									type='button'
 									className='privacy__grid-pipeline-logo'
-									onClick={() =>
-										redirect(`connections/${pl.connection}/pipelines/edit/${pl.id}`)
-									}
+									onClick={() => redirect(`connections/${pl.connection}/pipelines/edit/${pl.id}`)}
 								>
 									<LittleLogo code={pl.connector} path={CONNECTORS_ASSETS_PATH} />
 								</button>
@@ -150,7 +148,8 @@ const Privacy = () => {
 					</SlButton>
 				</div>
 				<div className='privacy__description'>
-					Pipelines can require a purpose, so they only deliver an event when user consent has been given for it.
+					Pipelines can require a purpose, so they only deliver an event when user consent has been given for
+					it.
 				</div>
 				<Grid
 					className='privacy__grid'
@@ -311,7 +310,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 					label='Code'
 					value={code}
 					onSlInput={onInputCode}
-					helpText="The code of the purpose. It must match the code you use to track consents within your CMP"
+					helpText='The code of the purpose. It must match the code you use to track consents within your CMP'
 				/>
 				{codeError && (
 					<div className='privacy__dialog-error'>

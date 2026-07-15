@@ -3,9 +3,9 @@
 }
 
 .privacy {
-    max-width: 900px;
-    margin: auto;
-    padding: 30px;
+	max-width: 900px;
+	margin: auto;
+	padding: 30px;
 }
 
 .privacy__title {
@@ -34,11 +34,11 @@
 }
 
 .privacy__grid-code {
-    font-family: var(--monospace-fonts);
-    background-color: var(--sl-color-neutral-100);
-    font-size: 13px;
-    padding: 2px 8px;
-    border-radius: 5px;
+	font-family: var(--monospace-fonts);
+	background-color: var(--sl-color-neutral-100);
+	font-size: 13px;
+	padding: 2px 8px;
+	border-radius: 5px;
 }
 
 .privacy__grid-pipelines {
