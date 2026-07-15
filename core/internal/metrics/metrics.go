@@ -283,10 +283,10 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 
 	query := `WITH aggregated AS (
 	SELECT
-		pipeline,
 		organization,
 		workspace,
 		connection,
+		pipeline,
 		target,
 		timeslot - (timeslot % $1) AS slot,
 		SUM(passed_0) AS passed_0,
@@ -304,7 +304,7 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 		ARRAY_AGG(ctid) AS row_ctids
 	FROM pipelines_metrics
 	WHERE timeslot < $2 AND timeslot % $1 <> 0
-	GROUP BY pipeline, organization, workspace, connection, target, slot
+	GROUP BY organization, workspace, connection, pipeline, target, slot
 ),
 inserted AS (
 	INSERT INTO pipelines_metrics (organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)

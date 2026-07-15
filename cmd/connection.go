@@ -540,5 +540,5 @@ func (connection connection) target(r *http.Request) (target core.Target, eventT
 	case "":
 		return core.TargetEvent, r.URL.Query().Get("type"), nil
 	}
-	return core.TargetNone, "", errors.NotFound("")
+	return 0, "", errors.NotFound("")
 }

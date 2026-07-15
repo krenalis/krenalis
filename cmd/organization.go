@@ -268,99 +268,131 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 // PipelineMetricsPerDate returns metrics by day for a time interval between
 // specified start and end dates.
 func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
+
 	// Parse start.
 	s := r.PathValue("start")
 	start, err := time.Parse(time.DateOnly, s)
 	if err != nil {
 		return nil, errors.NotFound("start is not valid")
 	}
+
 	// Parse end.
 	e := r.PathValue("end")
 	end, err := time.Parse(time.DateOnly, e)
 	if err != nil {
 		return nil, errors.NotFound("end is not valid")
 	}
+
+	// Set workspace.
 	var workspace string
 	if ws != nil {
 		workspace = ws.ID
 	}
+
+	// Parse selection.
 	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
+
 	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
 }
 
 // PipelineMetricsPerDay returns the pipeline metrics for a specified number of
 // days.
 func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse days.
 	n := r.PathValue("days")
 	days, err := strconv.Atoi(n)
 	if err != nil {
 		return nil, errors.NotFound("days is not valid")
 	}
+
+	// Set workspace.
 	var workspace string
 	if ws != nil {
 		workspace = ws.ID
 	}
+
+	// Parse selection.
 	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
+
 	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
 }
 
 // PipelineMetricsPerHour returns the pipeline metrics for a specified number of
 // hours.
 func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse hours.
 	n := r.PathValue("hours")
 	hours, err := strconv.Atoi(n)
 	if err != nil {
 		return nil, errors.NotFound("hours is not valid")
 	}
+
+	// Set workspace.
 	var workspace string
 	if ws != nil {
 		workspace = ws.ID
 	}
+
+	// Parse selection.
 	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
+
 	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
 }
 
 // PipelineMetricsPerMinute returns the pipeline metrics for a specified number
 // of minutes.
 func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	org, ws, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse minutes.
 	n := r.PathValue("minutes")
 	minutes, err := strconv.Atoi(n)
 	if err != nil {
 		return nil, errors.NotFound("minutes is not valid")
 	}
+
+	// Set workspace.
 	var workspace string
 	if ws != nil {
 		workspace = ws.ID
 	}
+
+	// Parse selection.
 	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
+
 	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
 }
 

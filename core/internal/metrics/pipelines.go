@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -136,13 +137,19 @@ func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines 
 }
 
 // MetricsPerDate returns metrics aggregated by day for the time interval
-// between the specified start and end dates.
+// between the specified start and end dates. Both dates must be within the
+// range [MinTime,MaxTime], and the day of the start date must be at least one
+// day before the day of the end date. selection specifies which metric series
+// are returned.
 func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, selection Selection) (Metrics, error) {
 	return c.queryMetrics(ctx, start, end, Day, selection)
 }
 
 // MetricsPerTimeUnit returns metrics for the specified number of minutes,
-// hours, or days based on the unit up to the current time.
+// hours, or days based on the unit, which can be Minute, Hour, or Day, up to
+// the current time. number must be in the following ranges: [1,60] for minutes,
+// [1,48] for hours, and [1,30] for days. selection specifies which metric
+// series are returned.
 func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, selection Selection) (Metrics, error) {
 	now := time.Now().UTC()
 	end := now.Truncate(unit).Add(unit)
@@ -152,105 +159,98 @@ func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit tim
 
 func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, resolution time.Duration, selection Selection) (Metrics, error) {
 
-	if !end.After(start) {
-		return Metrics{}, fmt.Errorf("metrics end must be after start")
+	var query strings.Builder
+	query.WriteString("SELECT ")
+	switch {
+	case selection.Workspaces != nil:
+		query.WriteString("workspace, ")
+	case selection.Connections != nil:
+		query.WriteString("connection, ")
+	case selection.Pipelines != nil:
+		query.WriteString("pipeline, ")
 	}
-	if resolution < time.Minute || resolution%time.Minute != 0 {
-		return Metrics{}, fmt.Errorf("metrics resolution must be a positive multiple of one minute")
+	query.WriteString("timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
+		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
+		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3")
+	switch {
+	case selection.Workspaces != nil:
+		query.WriteString(" AND workspace IN (")
+		writeQuotedValues(&query, selection.Workspaces)
+		query.WriteByte(')')
+	case selection.Connections != nil:
+		query.WriteString(" AND connection IN (")
+		writeQuotedValues(&query, selection.Connections)
+		query.WriteByte(')')
+	case selection.Pipelines != nil:
+		query.WriteString(" AND pipeline IN (")
+		writeQuotedValues(&query, selection.Pipelines)
+		query.WriteByte(')')
 	}
-	if end.Sub(start)%resolution != 0 {
-		return Metrics{}, fmt.Errorf("metrics interval must be a multiple of the resolution")
+	if selection.Target != TargetNone {
+		query.WriteString(" AND target = ")
+		query.WriteString(db.Quote(selection.Target.String()))
 	}
-	group, ids, err := selection.group()
-	if err != nil {
-		return Metrics{}, err
-	}
-
-	number := int(end.Sub(start) / resolution)
-
-	metrics := Metrics{
-		Start: start,
-		End:   end,
-	}
-	if len(ids) == 0 {
-		return metrics, nil
+	query.WriteString("\nGROUP BY ")
+	switch {
+	case selection.Workspaces != nil:
+		query.WriteString("workspace, slot\nORDER BY workspace, slot")
+	case selection.Connections != nil:
+		query.WriteString("connection, slot\nORDER BY connection, slot")
+	case selection.Pipelines != nil:
+		query.WriteString("pipeline, slot\nORDER BY pipeline, slot")
 	}
 
 	divisor := int32(resolution / time.Minute)
-	tsStart := TimeSlotFromTime(metrics.Start)
-	tsEnd := TimeSlotFromTime(metrics.End) - 1
+	tsStart := TimeSlotFromTime(start)
+	tsEnd := TimeSlotFromTime(end) - 1
 
-	sql := bytes.NewBufferString("SELECT ")
-	switch group {
-	case groupWorkspace:
-		sql.WriteString("workspace, ")
-	case groupConnection:
-		sql.WriteString("connection, ")
-	case groupPipeline:
-		sql.WriteString("pipeline, ")
-	}
-	sql.WriteString("timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
-		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
-		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3")
-	switch group {
-	case groupWorkspace:
-		sql.WriteString(" AND workspace IN (")
-		writeQuotedList(sql, ids)
-		sql.WriteByte(')')
-	case groupConnection:
-		sql.WriteString(" AND connection IN (")
-		writeQuotedList(sql, ids)
-		sql.WriteByte(')')
-	case groupPipeline:
-		sql.WriteString(" AND pipeline IN (")
-		writeQuotedList(sql, ids)
-		sql.WriteByte(')')
-	}
-	if selection.Target != TargetNone {
-		sql.WriteString(" AND target = ")
-		sql.WriteString(db.Quote(selection.Target.String()))
-	}
-	sql.WriteString("\nGROUP BY ")
-	switch group {
-	case groupWorkspace:
-		sql.WriteString("workspace, slot\nORDER BY workspace, slot")
-	case groupConnection:
-		sql.WriteString("connection, slot\nORDER BY connection, slot")
-	case groupPipeline:
-		sql.WriteString("pipeline, slot\nORDER BY pipeline, slot")
-	}
-
-	rows, err := c.db.Query(ctx, sql.String(), divisor, tsStart, tsEnd)
+	rows, err := c.db.Query(ctx, query.String(), divisor, tsStart, tsEnd)
 	if err != nil {
 		return Metrics{}, err
 	}
 	defer rows.Close()
 
-	seriesByID := map[string]int{}
-	for _, id := range ids {
-		seriesByID[id] = len(metrics.Series)
-		metrics.Series = append(metrics.Series, newMetricSeries(group, id, number))
+	metrics := Metrics{
+		Start: start,
+		End:   end,
 	}
-	var slot int32
-	var id string
-	var passed, failed [6]int
+
+	number := int(end.Sub(start) / resolution)
+
+	var currentID string
+	var series *Series
+
 	for rows.Next() {
-		if err = rows.Scan(&id, &slot, &passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
-			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5]); err != nil {
+		var slot int32
+		var id string
+		var passed, failed [6]int
+		err = rows.Scan(&id, &slot,
+			&passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
+			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5])
+		if err != nil {
 			return Metrics{}, err
 		}
 		i := int(slot - tsStart/divisor)
 		if i < 0 || i >= number {
-			return Metrics{}, fmt.Errorf("pipelines_metrics table contains a timeslot that is out of range")
+			return Metrics{}, fmt.Errorf("pipelines_metrics table contains timeslot %d that is out of range", slot)
 		}
-		seriesIndex, ok := seriesByID[id]
-		if !ok {
-			seriesIndex = len(metrics.Series)
-			seriesByID[id] = seriesIndex
-			metrics.Series = append(metrics.Series, newMetricSeries(group, id, number))
+		if id != currentID {
+			currentID = id
+			metrics.Series = append(metrics.Series, Series{})
+			series = &metrics.Series[len(metrics.Series)-1]
+			series.Passed = make([][6]int, number)
+			series.Failed = make([][6]int, number)
+			switch {
+			case selection.Workspaces != nil:
+				series.Workspace = id
+			case selection.Connections != nil:
+				series.Connection = id
+			case selection.Pipelines != nil:
+				series.Pipeline = id
+			}
 		}
-		metrics.Series[seriesIndex].Passed[i] = passed
-		metrics.Series[seriesIndex].Failed[i] = failed
+		series.Passed[i] = passed
+		series.Failed[i] = failed
 	}
 	if err := rows.Err(); err != nil {
 		return Metrics{}, err
@@ -259,60 +259,11 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 	return metrics, nil
 }
 
-type metricGroup string
-
-const (
-	groupWorkspace  metricGroup = "workspace"
-	groupConnection metricGroup = "connection"
-	groupPipeline   metricGroup = "pipeline"
-)
-
-func (selection Selection) group() (metricGroup, []string, error) {
-	groups := 0
-	var group metricGroup
-	var ids []string
-	if selection.Workspaces != nil {
-		groups++
-		group = groupWorkspace
-		ids = selection.Workspaces
-	}
-	if selection.Connections != nil {
-		groups++
-		group = groupConnection
-		ids = selection.Connections
-	}
-	if selection.Pipelines != nil {
-		groups++
-		group = groupPipeline
-		ids = selection.Pipelines
-	}
-	if groups != 1 {
-		return "", nil, fmt.Errorf("metrics selection must contain exactly one group")
-	}
-	return group, ids, nil
-}
-
-func newMetricSeries(group metricGroup, id string, number int) Series {
-	series := Series{
-		Passed: make([][6]int, number),
-		Failed: make([][6]int, number),
-	}
-	switch group {
-	case groupWorkspace:
-		series.Workspace = id
-	case groupConnection:
-		series.Connection = id
-	case groupPipeline:
-		series.Pipeline = id
-	}
-	return series
-}
-
-func writeQuotedList(buf *bytes.Buffer, values []string) {
+func writeQuotedValues(b *strings.Builder, values []string) {
 	for i, value := range values {
 		if i > 0 {
-			buf.WriteByte(',')
+			b.WriteByte(',')
 		}
-		buf.WriteString(db.Quote(value))
+		b.WriteString(db.Quote(value))
 	}
 }

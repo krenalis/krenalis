@@ -837,15 +837,16 @@ type Metrics struct {
 // MetricSeries contains metrics for a single workspace, connection, or
 // pipeline.
 type MetricSeries struct {
-	Workspace  string   `json:"workspace,omitempty"`
-	Connection string   `json:"connection,omitempty"`
-	Pipeline   string   `json:"pipeline,omitempty"`
+	Workspace  string   `json:"workspace,omitzero"`
+	Connection string   `json:"connection,omitzero"`
+	Pipeline   string   `json:"pipeline,omitzero"`
 	Passed     [][6]int `json:"passed"`
 	Failed     [][6]int `json:"failed"`
 }
 
 // MetricSelection defines the selected pipeline metric series.
-// Exactly one of Workspaces, Connections, or Pipelines must be non-empty.
+// Exactly one of Workspaces, Connections, or Pipelines must be non-nil and
+// non-empty.
 //
 // Workspaces restricts metrics to the specified workspaces and groups the
 // results by workspace. Connections restricts metrics to the specified
@@ -884,6 +885,7 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	start = start.UTC().Truncate(24 * time.Hour)
 	end = end.UTC().Truncate(24 * time.Hour)
 
+	// Validate start and end.
 	if start.Before(metrics.MinTime) {
 		return Metrics{}, errors.NotFound("start date is too far in the past")
 	}
@@ -893,16 +895,25 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	if !end.After(start) {
 		return Metrics{}, errors.NotFound("day of the end date must be after the day of the start date")
 	}
-	if err := validateMetricsSelection(selection); err != nil {
+
+	// Validate selection.
+	err := validateMetricsSelection(selection)
+	if err != nil {
 		return Metrics{}, err
 	}
+
+	// Validate workspace.
 	if workspace != "" && !IsValidID(workspace) {
 		return Metrics{}, errors.BadRequest("workspace %s is not valid", workspace)
 	}
+
+	// Remove identifiers outside the organization or workspace scope
+	// and return early if none remain.
 	if !this.filterMetricsSelection(workspace, &selection) {
 		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
 	}
 
+	// Retrieve metrics for the filtered selection.
 	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, metrics.Selection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
@@ -934,6 +945,7 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 
 	this.core.mustBeOpen()
 
+	// Validate number and unit.
 	switch unit {
 	case Minute:
 		if number < 1 || number > 60 {
@@ -953,19 +965,24 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	if workspace != "" && !IsValidID(workspace) {
 		return Metrics{}, errors.BadRequest("workspace %q is not valid", workspace)
 	}
-	err := validateMetricsSelection(selection)
-	if err != nil {
-		return Metrics{}, err
-	}
 
 	resolution := time.Duration(unit)
 	end := time.Now().UTC().Truncate(resolution).Add(resolution)
 	start := end.Add(-time.Duration(number) * resolution)
 
+	// Validate selection.
+	err := validateMetricsSelection(selection)
+	if err != nil {
+		return Metrics{}, err
+	}
+
+	// Remove identifiers outside the organization or workspace scope
+	// and return early if none remain.
 	if !this.filterMetricsSelection(workspace, &selection) {
 		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
 	}
 
+	// Retrieve metrics for the filtered selection.
 	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, metrics.Selection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
@@ -1568,41 +1585,41 @@ func validateMemberEmail(email string) error {
 
 // validateMetricsSelection validates a pipeline metrics selection.
 func validateMetricsSelection(selection MetricSelection) error {
+	var groups int
 	// Workspaces.
-	if selection.Workspaces != nil && len(selection.Workspaces) == 0 {
-		return errors.BadRequest("workspaces must not be empty when provided")
-	}
-	for _, workspace := range selection.Workspaces {
-		if !IsValidID(workspace) {
-			return errors.BadRequest("workspace %q is not valid", workspace)
+	if selection.Workspaces != nil {
+		if len(selection.Workspaces) == 0 {
+			return errors.BadRequest("workspaces must not be empty when provided")
 		}
+		for _, workspace := range selection.Workspaces {
+			if !IsValidID(workspace) {
+				return errors.BadRequest("workspace %q is not valid", workspace)
+			}
+		}
+		groups++
 	}
 	// Connections.
-	if selection.Connections != nil && len(selection.Connections) == 0 {
-		return errors.BadRequest("connections must not be empty when provided")
-	}
-	for _, connection := range selection.Connections {
-		if !IsValidID(connection) {
-			return errors.BadRequest("connection %q is not valid", connection)
+	if selection.Connections != nil {
+		if len(selection.Connections) == 0 {
+			return errors.BadRequest("connections must not be empty when provided")
 		}
+		for _, connection := range selection.Connections {
+			if !IsValidID(connection) {
+				return errors.BadRequest("connection %q is not valid", connection)
+			}
+		}
+		groups++
 	}
 	// Pipelines.
-	if selection.Pipelines != nil && len(selection.Pipelines) == 0 {
-		return errors.BadRequest("pipelines must not be empty when provided")
-	}
-	for _, pipeline := range selection.Pipelines {
-		if !IsValidID(pipeline) {
-			return errors.BadRequest("pipeline %q is not valid", pipeline)
-		}
-	}
-	groups := 0
-	if selection.Workspaces != nil {
-		groups++
-	}
-	if selection.Connections != nil {
-		groups++
-	}
 	if selection.Pipelines != nil {
+		if len(selection.Pipelines) == 0 {
+			return errors.BadRequest("pipelines must not be empty when provided")
+		}
+		for _, pipeline := range selection.Pipelines {
+			if !IsValidID(pipeline) {
+				return errors.BadRequest("pipeline %q is not valid", pipeline)
+			}
+		}
 		groups++
 	}
 	if groups == 0 {
