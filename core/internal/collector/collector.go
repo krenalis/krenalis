@@ -183,8 +183,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			reader, err := gzip.NewReader(r.Body)
 			if err != nil {
-				slog.Error("core/events/collector: an error occurred creating gzip reader", "error", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 				return
 			}
 			defer reader.Close()
