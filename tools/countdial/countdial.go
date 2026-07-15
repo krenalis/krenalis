@@ -118,9 +118,6 @@ func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 // A clone does not share the connection pool of base, so the caller should
 // create one transport per organization and reuse it for all its requests,
 // instead of creating one per request.
-//
-// TODO(Gianluca): consider requesting a non-empty organization, and then handle
-// in the call site the case where there is no org.
 func Transport(base *http.Transport, organizationID string) http.RoundTripper {
 	if !enabled.Load() || organizationID == "" {
 		return base
