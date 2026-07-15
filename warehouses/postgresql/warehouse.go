@@ -47,14 +47,22 @@ func init() {
 }
 
 // New returns a new PostgreSQL data warehouse instance.
-func New(env *warehouses.Env) *PostgreSQL {
-	return &PostgreSQL{env: env}
+func New(settings warehouses.SettingsLoader) *PostgreSQL {
+	return &PostgreSQL{settings: settings}
 }
 
 type PostgreSQL struct {
-	mu   sync.Mutex // for the pool field
-	pool *pgxpool.Pool
-	env  *warehouses.Env
+	mu       sync.Mutex // for the pool field
+	pool     *pgxpool.Pool
+	settings warehouses.SettingsLoader
+	dialWith func(warehouses.DialFunc) warehouses.DialFunc
+}
+
+// SetDialWith sets the function used to establish the outbound network
+// connections, so that the driver's own dialer is preserved. If it is not
+// called, the warehouse dials with the driver's default dialer.
+func (warehouse *PostgreSQL) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
+	warehouse.dialWith = dialWith
 }
 
 type pgSettings struct {
@@ -344,7 +352,7 @@ func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, pipeline 
 // ValidateSettings validates the settings.
 func (warehouse *PostgreSQL) ValidateSettings(ctx context.Context) (json.Value, error) {
 	var s pgSettings
-	err := warehouse.env.Settings.Load(ctx, &s)
+	err := warehouse.settings.Load(ctx, &s)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +374,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 
 	var s pgSettings
 	if warehouse.pool == nil || returnSchema {
-		err := warehouse.env.Settings.Load(ctx, &s)
+		err := warehouse.settings.Load(ctx, &s)
 		if err != nil {
 			return nil, "", err
 		}
@@ -393,7 +401,9 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	if err != nil {
 		return nil, "", err
 	}
-	config.ConnConfig.DialFunc = warehouse.env.DialWith(config.ConnConfig.DialFunc)
+	if warehouse.dialWith != nil {
+		config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, "", err

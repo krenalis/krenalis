@@ -559,7 +559,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Open the warehouse.
-			dw := platform.New(WarehouseEnv("", newTestSettingsLoader(settings)))
+			dw := platform.New(newTestSettingsLoader(settings))
 
 			ctx := context.Background()
 

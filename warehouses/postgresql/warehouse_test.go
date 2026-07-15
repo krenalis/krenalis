@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/test/testimages"
-	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -43,16 +42,6 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
-}
-
-// newTestEnv returns the environment for a test data warehouse, with the given
-// settings.
-func newTestEnv(settings json.Value) *warehouses.Env {
-	return &warehouses.Env{
-		Settings: newTestSettingsLoader(settings),
-		Dial:     countdial.Dial(""),
-		DialWith: countdial.DialWith(""),
-	}
 }
 
 func Test_Merge(t *testing.T) {
@@ -164,7 +153,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	dw := warehouses.Registered("PostgreSQL").New(newTestEnv(settings))
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
 	defer dw.Close()
 
 	pool, _, err := dw.(*PostgreSQL).connectionPool(context.Background(), false)
@@ -596,7 +585,7 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 
-	dw := warehouses.Registered("PostgreSQL").New(newTestEnv(settings))
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
 	t.Cleanup(func() {
 		if err := dw.Close(); err != nil {
 			t.Error(err)

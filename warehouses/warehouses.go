@@ -38,36 +38,14 @@ func (platform Platform) ReflectType() reflect.Type {
 }
 
 // New returns a new data warehouse instance.
-func (platform Platform) New(env *Env) Warehouse {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+func (platform Platform) New(settings SettingsLoader) Warehouse {
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
 }
 
 // A DialFunc establishes an outbound network connection to the given address.
-// It is the type of the dial functions Krenalis provides to the warehouses, so
-// that it can count the bytes they send.
 type DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
-
-// Env is the environment Krenalis provides to a data warehouse.
-type Env struct {
-
-	// Settings loads the settings.
-	Settings SettingsLoader
-
-	// Dial is the function the warehouse must use to establish its outbound
-	// network connections, in place of its own default dialer.
-	Dial DialFunc
-
-	// DialWith is the function a warehouse that has its own dialer must use, in
-	// place of Dial, to establish its outbound network connections. It returns a
-	// dial function that dials with the given one, so that the warehouse keeps
-	// its own dial options, like its timeouts and its keep-alive.
-	//
-	// If the given dial function is nil, the returned one dials with a plain
-	// dialer, as Dial does.
-	DialWith func(dial DialFunc) DialFunc
-}
 
 type SettingsLoader interface {
 
@@ -76,7 +54,7 @@ type SettingsLoader interface {
 }
 
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(*Env) T
+type NewFunc[T Warehouse] func(SettingsLoader) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.
@@ -320,6 +298,21 @@ type Warehouse interface {
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
+
+	// SetDialWith sets the function the warehouse uses to establish its outbound
+	// network connections, so that Krenalis can count the bytes it sends.
+	//
+	// The warehouse calls the given function passing its own dialer, and uses the
+	// returned dial function in place of it, so that it keeps its own dial
+	// options, like its timeouts and its keep-alive. If the warehouse has no
+	// dialer of its own, it calls the function with a nil argument, and the
+	// returned dial function dials with a plain dialer.
+	//
+	// Calling SetDialWith is not mandatory: a warehouse works even if it is never
+	// called, in which case it dials with its own default dialer. The only
+	// constraint is that, if called, it must be called right after New, and never
+	// after any other method.
+	SetDialWith(dialWith func(dial DialFunc) DialFunc)
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error

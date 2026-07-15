@@ -48,14 +48,22 @@ func init() {
 }
 
 // New returns a new Snowflake data warehouse instance.
-func New(env *warehouses.Env) *Snowflake {
-	return &Snowflake{env: env}
+func New(settings warehouses.SettingsLoader) *Snowflake {
+	return &Snowflake{settings: settings}
 }
 
 type Snowflake struct {
-	mu  sync.Mutex // for the db field
-	db  *sql.DB
-	env *warehouses.Env
+	mu       sync.Mutex // for the db field
+	db       *sql.DB
+	settings warehouses.SettingsLoader
+	dialWith func(warehouses.DialFunc) warehouses.DialFunc
+}
+
+// SetDialWith sets the function used to establish the outbound network
+// connections, so that the driver's own dialer is preserved. If it is not
+// called, the warehouse dials with the driver's default dialer.
+func (warehouse *Snowflake) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
+	warehouse.dialWith = dialWith
 }
 
 type sfSettings struct {
@@ -407,7 +415,7 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, pipeline s
 // ValidateSettings validates the settings.
 func (warehouse *Snowflake) ValidateSettings(ctx context.Context) (json.Value, error) {
 	var s sfSettings
-	err := warehouse.env.Settings.Load(ctx, &s)
+	err := warehouse.settings.Load(ctx, &s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
@@ -451,7 +459,7 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 		return warehouse.db, nil
 	}
 	var s sfSettings
-	err := warehouse.env.Settings.Load(ctx, &s)
+	err := warehouse.settings.Load(ctx, &s)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +467,7 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector(&s, warehouse.env.DialWith))
+	db := sql.OpenDB(connector(&s, warehouse.dialWith))
 	warehouse.db = db
 	return db, nil
 }
