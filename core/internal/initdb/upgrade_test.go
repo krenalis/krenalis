@@ -145,6 +145,10 @@ func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
 	assertColumnDoesNotExist(t, database, "metadata", "kms_encrypted_cookie_key")
 	assertColumnExists(t, database, "notifications", "version")
 	assertColumnDoesNotExist(t, database, "notifications", "id")
+	assertConstraintExists(t, database, "metadata", "metadata_kms_encrypted_http_secret_key_not_null")
+	assertConstraintDoesNotExist(t, database, "metadata", "metadata_kms_encrypted_cookie_key_not_null")
+	assertConstraintExists(t, database, "notifications", "notifications_version_not_null")
+	assertConstraintDoesNotExist(t, database, "notifications", "notifications_id_not_null")
 
 	var httpSecretKey []byte
 	err := database.QueryRow(t.Context(), "SELECT kms_encrypted_http_secret_key FROM metadata WHERE singleton").Scan(&httpSecretKey)
@@ -315,6 +319,42 @@ func columnExists(t *testing.T, database *db.DB, table, column string) (bool, er
 		WHERE table_schema = current_schema()
 			AND table_name = $1
 			AND column_name = $2`, table, column)
+}
+
+func assertConstraintExists(t *testing.T, database *db.DB, table, constraint string) {
+	t.Helper()
+
+	exists, err := constraintExists(t, database, table, constraint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatalf("expected constraint %s.%s to exist, got missing constraint", table, constraint)
+	}
+}
+
+func assertConstraintDoesNotExist(t *testing.T, database *db.DB, table, constraint string) {
+	t.Helper()
+
+	exists, err := constraintExists(t, database, table, constraint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatalf("expected constraint %s.%s to be missing, got existing constraint", table, constraint)
+	}
+}
+
+func constraintExists(t *testing.T, database *db.DB, table, constraint string) (bool, error) {
+	t.Helper()
+
+	return database.QueryExists(t.Context(), `
+		SELECT FROM pg_constraint c
+		JOIN pg_class t ON t.oid = c.conrelid
+		JOIN pg_namespace n ON n.oid = t.relnamespace
+		WHERE n.nspname = current_schema()
+			AND t.relname = $1
+			AND c.conname = $2`, table, constraint)
 }
 
 func assertOrganizationConnectorReferences(t *testing.T, database *db.DB) {
