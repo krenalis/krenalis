@@ -73,7 +73,6 @@ type Transformer struct {
 func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	var organization string
-	// TODO(Gianluca): questo 'if' si può rimuovere?
 	if o := pipeline.Organization(); o != nil {
 		organization = o.ID
 	}
