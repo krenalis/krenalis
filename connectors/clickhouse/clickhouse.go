@@ -248,7 +248,7 @@ type innerSettings struct {
 
 // options returns the connection options, from s. The connections are
 // established using dial, in place of the driver's default dialer.
-func options(s *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) *clickhouse.Options {
+func options(s *innerSettings, dial connectors.DialFunc) *clickhouse.Options {
 	o := &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
@@ -282,7 +282,7 @@ func propertyType(t driver.ColumnType) (types.Type, bool, string) {
 // testConnection tests a connection with the given settings, established
 // using dial.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
+func testConnection(ctx context.Context, settings *innerSettings, dial connectors.DialFunc) error {
 	conn, err := clickhouse.Open(options(settings, dial))
 	if err != nil {
 		return err

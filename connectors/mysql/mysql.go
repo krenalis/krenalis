@@ -15,7 +15,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -264,7 +263,7 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-func config(s *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) *mysql.Config {
+func config(s *innerSettings, dial connectors.DialFunc) *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
@@ -279,7 +278,7 @@ func config(s *innerSettings, dial func(ctx context.Context, network, address st
 // testConnection tests a connection with the given settings, established
 // using dial.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings, dial func(ctx context.Context, network, address string) (net.Conn, error)) error {
+func testConnection(ctx context.Context, settings *innerSettings, dial connectors.DialFunc) error {
 	mysqlConnector, err := mysql.NewConnector(config(settings, dial))
 	if err != nil {
 		return err
