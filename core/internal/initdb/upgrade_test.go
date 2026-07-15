@@ -255,6 +255,54 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 	if !hasOrganizationFK {
 		t.Fatal("expected pipelines_metrics.organization to have a foreign key, got none")
 	}
+
+	expectedConstraints := []string{"pipelines_metrics_pkey", "pipelines_metrics_organization_fkey"}
+	for _, column := range []string{
+		"organization",
+		"workspace",
+		"connection",
+		"pipeline",
+		"target",
+		"timeslot",
+		"passed_0",
+		"passed_1",
+		"passed_2",
+		"passed_3",
+		"passed_4",
+		"passed_5",
+		"failed_0",
+		"failed_1",
+		"failed_2",
+		"failed_3",
+		"failed_4",
+		"failed_5",
+	} {
+		expectedConstraints = append(expectedConstraints, "pipelines_metrics_"+column+"_not_null")
+	}
+
+	for _, constraint := range expectedConstraints {
+		exists, err := database.QueryExists(t.Context(), `
+			SELECT FROM pg_constraint
+			WHERE conrelid = 'pipelines_metrics'::regclass
+				AND conname = $1`, constraint)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("expected constraint %s to exist, got missing constraint", constraint)
+		}
+	}
+
+	hasReorderedConstraint, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_constraint
+		WHERE conrelid = 'pipelines_metrics'::regclass
+			AND conname LIKE 'pipelines_metrics_reordered_%'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasReorderedConstraint {
+		t.Fatal("expected no pipelines_metrics_reordered_* constraint names, got at least one")
+	}
 }
 
 // assertPipelineMetricsColumnOrder verifies that the upgraded metrics table

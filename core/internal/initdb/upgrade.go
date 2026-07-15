@@ -191,8 +191,30 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 
 						DROP TABLE pipelines_metrics;
 						ALTER TABLE pipelines_metrics_reordered RENAME TO pipelines_metrics;
-						ALTER TABLE pipelines_metrics RENAME CONSTRAINT pipelines_metrics_reordered_pkey TO pipelines_metrics_pkey;
 					END IF;
+				END $$`,
+			`DO $$
+				DECLARE
+					c record;
+				BEGIN
+					FOR c IN
+						SELECT
+							conname AS old_name,
+							'pipelines_metrics_' ||
+								substr(conname, length('pipelines_metrics_reordered_') + 1) AS new_name
+						FROM pg_constraint
+						WHERE conrelid = 'pipelines_metrics'::regclass
+							AND left(conname, length('pipelines_metrics_reordered_')) =
+								'pipelines_metrics_reordered_'
+					LOOP
+						IF NOT EXISTS (
+							SELECT FROM pg_constraint
+							WHERE conrelid = 'pipelines_metrics'::regclass
+								AND conname = c.new_name
+						) THEN
+							EXECUTE format('ALTER TABLE pipelines_metrics RENAME CONSTRAINT %I TO %I', c.old_name, c.new_name);
+						END IF;
+					END LOOP;
 				END $$`,
 			`ALTER TABLE pipelines_metrics ALTER COLUMN organization SET NOT NULL`,
 			`ALTER TABLE pipelines_metrics ALTER COLUMN workspace SET NOT NULL`,
