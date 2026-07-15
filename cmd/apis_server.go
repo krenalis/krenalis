@@ -176,7 +176,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = rand.Read(rawRequestID[:])
 
 	// Encode the request ID as Base58 for use in the Request-Id header and
-	// puts it in the request's context.
+	// put it in the request's context.
 	requestID := base58.EncodeToString(rawRequestID[:])
 	w.Header().Set("Request-Id", requestID)
 	r = putRequestID(r, requestID)
