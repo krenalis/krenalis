@@ -54,19 +54,20 @@ func Test_CollectorPassedFailed(t *testing.T) {
 	}
 }
 
-// TestQueryGroupIDs verifies that Query.groupIDs returns the IDs for the
+// TestSelectionGroup verifies that Selection.group returns the IDs for the
 // selected grouping dimension.
-func TestQueryGroupIDs(t *testing.T) {
-	query := Query{
-		GroupBy: GroupByConnection,
-		Filter: Filter{
-			Workspaces:  []string{"workspace"},
-			Connections: []string{"connection-1", "connection-2"},
-			Pipelines:   []string{"pipeline"},
-		},
+func TestSelectionGroup(t *testing.T) {
+	selection := Selection{
+		Connections: []string{"connection-1", "connection-2"},
 	}
 
-	got := query.groupIDs()
+	group, got, err := selection.group()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if group != metricGroupConnection {
+		t.Fatalf("expected connection group, got %q", group)
+	}
 	if len(got) != 2 || got[0] != "connection-1" || got[1] != "connection-2" {
 		t.Fatalf("expected connection IDs %v, got %v", []string{"connection-1", "connection-2"}, got)
 	}
@@ -75,7 +76,7 @@ func TestQueryGroupIDs(t *testing.T) {
 // TestNewMetricSeries verifies that newMetricSeries creates zero-filled
 // buckets for the requested group.
 func TestNewMetricSeries(t *testing.T) {
-	series := newMetricSeries(GroupByPipeline, testPipelineID, 3)
+	series := newMetricSeries(metricGroupPipeline, testPipelineID, 3)
 
 	if series.Pipeline != testPipelineID {
 		t.Fatalf("expected pipeline %q, got %q", testPipelineID, series.Pipeline)

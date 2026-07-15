@@ -144,7 +144,8 @@ const (
 type Target int
 
 const (
-	TargetEvent Target = iota + 1
+	TargetNone = iota
+	TargetEvent
 	TargetUser
 	TargetGroup
 )

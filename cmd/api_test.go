@@ -83,41 +83,40 @@ func TestSplitQueryParameters(t *testing.T) {
 	}
 }
 
-// TestParsePipelineMetricsScopeConnectionTarget verifies connection and target
+// TestParsePipelineMetricsSelectionConnectionTarget verifies connection and target
 // query parameters for pipeline metrics requests.
-func TestParsePipelineMetricsScopeConnectionTarget(t *testing.T) {
+func TestParsePipelineMetricsSelectionConnectionTarget(t *testing.T) {
 	const validConnection = "7QaT3mN7KxP5"
-	const validPipeline = "8QaT3mN7KxP5"
-	const validWorkspace = "9RbU4nP8LyQ6"
 
 	tests := []struct {
 		name            string
 		query           string
 		wantConnections []string
-		wantTarget      *core.Target
+		wantTarget      core.Target
 		wantErr         bool
 	}{
 		{
 			name:            "connections and user target",
 			query:           "?connections=" + validConnection + "&target=User",
 			wantConnections: []string{validConnection},
-			wantTarget:      new(core.TargetUser),
+			wantTarget:      core.TargetUser,
 		},
 		{
 			name:            "connections and event target",
 			query:           "?connections=" + validConnection + "&target=Event",
 			wantConnections: []string{validConnection},
-			wantTarget:      new(core.TargetEvent),
+			wantTarget:      core.TargetEvent,
 		},
 		{
-			name:    "target without grouping",
-			query:   "?target=Event",
-			wantErr: true,
+			name:            "connections without target",
+			query:           "?connections=" + validConnection,
+			wantConnections: []string{validConnection},
+			wantTarget:      core.TargetNone,
 		},
 		{
-			name:    "missing grouping",
-			query:   "",
-			wantErr: true,
+			name:       "target without grouping",
+			query:      "?target=Event",
+			wantTarget: core.TargetEvent,
 		},
 		{
 			name:    "invalid target",
@@ -129,21 +128,11 @@ func TestParsePipelineMetricsScopeConnectionTarget(t *testing.T) {
 			query:   "?target=",
 			wantErr: true,
 		},
-		{
-			name:    "connections with pipelines",
-			query:   "?connections=" + validConnection + "&pipelines=" + validPipeline,
-			wantErr: true,
-		},
-		{
-			name:    "connections with workspaces",
-			query:   "?connections=" + validConnection + "&workspaces=" + validWorkspace,
-			wantErr: true,
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/pipelines/metrics/minutes/15"+test.query, nil)
-			scope, err := parsePipelineMetricsScope(req)
+			selection, err := parseMetricsSelection(req)
 			if test.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -153,33 +142,27 @@ func TestParsePipelineMetricsScopeConnectionTarget(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !slices.Equal(scope.Connections, test.wantConnections) {
-				t.Fatalf("expected connections %v, got %v", test.wantConnections, scope.Connections)
+			if !slices.Equal(selection.Connections, test.wantConnections) {
+				t.Fatalf("expected connections %v, got %v", test.wantConnections, selection.Connections)
 			}
-			if test.wantTarget == nil {
-				if scope.Target != nil {
-					t.Fatalf("expected nil target, got %s", scope.Target.String())
-				}
-				return
-			}
-			if scope.Target == nil || *scope.Target != *test.wantTarget {
-				t.Fatalf("expected target %s, got %v", test.wantTarget.String(), scope.Target)
+			if selection.Target != test.wantTarget {
+				t.Fatalf("expected target %q, got %q", test.wantTarget, selection.Target)
 			}
 		})
 	}
 }
 
-// TestParsePipelineMetricsScopeWorkspaces verifies that workspace grouping is
+// TestParsePipelineMetricsSelectionWorkspaces verifies that workspace grouping is
 // parsed from the query parameters without an implicit workspace scope.
-func TestParsePipelineMetricsScopeWorkspaces(t *testing.T) {
+func TestParsePipelineMetricsSelectionWorkspaces(t *testing.T) {
 	const validWorkspace = "9RbU4nP8LyQ6"
 
 	req := httptest.NewRequest("GET", "/pipelines/metrics/minutes/15?workspaces="+validWorkspace, nil)
-	scope, err := parsePipelineMetricsScope(req)
+	selection, err := parseMetricsSelection(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(scope.Workspaces, []string{validWorkspace}) {
-		t.Fatalf("expected workspaces %v, got %v", []string{validWorkspace}, scope.Workspaces)
+	if !slices.Equal(selection.Workspaces, []string{validWorkspace}) {
+		t.Fatalf("expected workspaces %v, got %v", []string{validWorkspace}, selection.Workspaces)
 	}
 }

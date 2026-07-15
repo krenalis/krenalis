@@ -826,16 +826,16 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
-// PipelineMetrics contains pipeline metrics over a time range.
-type PipelineMetrics struct {
-	Start   time.Time              `json:"start"`
-	End     time.Time              `json:"end"`
-	Metrics []PipelineMetricSeries `json:"metrics"`
+// Metrics contains pipeline metrics over a time range.
+type Metrics struct {
+	Start   time.Time      `json:"start"`
+	End     time.Time      `json:"end"`
+	Metrics []MetricSeries `json:"metrics"`
 }
 
-// PipelineMetricSeries contains metrics for a single workspace, connection,
-// or pipeline.
-type PipelineMetricSeries struct {
+// MetricSeries contains metrics for a single workspace, connection, or
+// pipeline.
+type MetricSeries struct {
 	Workspace  string   `json:"workspace,omitempty"`
 	Connection string   `json:"connection,omitempty"`
 	Pipeline   string   `json:"pipeline,omitempty"`
@@ -843,18 +843,18 @@ type PipelineMetricSeries struct {
 	Failed     [][6]int `json:"failed"`
 }
 
-// PipelineMetricsScope defines the scope and grouping of pipeline metrics.
+// MetricSelection defines the selected pipeline metric series.
 // Exactly one of Workspaces, Connections, or Pipelines must be non-empty.
 //
 // Workspaces restricts metrics to the specified workspaces and groups the
 // results by workspace. Connections restricts metrics to the specified
 // connections and groups the results by connection. Pipelines restricts
 // metrics to the specified pipelines and groups the results by pipeline.
-type PipelineMetricsScope struct {
+type MetricSelection struct {
 	Workspaces  []string
 	Connections []string
 	Pipelines   []string
-	Target      *Target
+	Target      Target
 }
 
 // MetricUnit represents the unit of time used for aggregating metrics.
@@ -876,7 +876,7 @@ const (
 // to UTC days, must be no earlier than 1970-01-01 and no later than
 // 2262-04-10, and the day of the start date must be before the day of the end
 // date.
-func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, scope PipelineMetricsScope) (PipelineMetrics, error) {
+func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -884,38 +884,45 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	end = end.UTC().Truncate(24 * time.Hour)
 
 	if start.Before(metrics.MinTime) {
-		return PipelineMetrics{}, errors.NotFound("start date is too far in the past")
+		return Metrics{}, errors.NotFound("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return PipelineMetrics{}, errors.NotFound("end date is too far in the future")
+		return Metrics{}, errors.NotFound("end date is too far in the future")
 	}
 	if !end.After(start) {
-		return PipelineMetrics{}, errors.NotFound("day of the end date must be after the day of the start date")
+		return Metrics{}, errors.NotFound("day of the end date must be after the day of the start date")
 	}
-	if err := validatePipelineMetricsScope(scope); err != nil {
-		return PipelineMetrics{}, err
+	if err := validateMetricsSelection(selection); err != nil {
+		return Metrics{}, err
 	}
 	if workspace != "" && !IsValidID(workspace) {
-		return PipelineMetrics{}, errors.BadRequest("workspace %s is not valid", workspace)
+		return Metrics{}, errors.BadRequest("workspace %s is not valid", workspace)
 	}
-	group := pipelineMetricsGroup(scope)
-	scope = this.filterPipelineMetricsScope(workspace, scope)
-	if pipelineMetricsGroupHasNoSeries(group, scope) {
-		return emptyPipelineMetrics(start, end), nil
+	selection = this.filterMetricsSelection(workspace, selection)
+	if len(selection.Pipelines) == 0 && len(selection.Workspaces) == 0 && len(selection.Connections) == 0 {
+		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
 	}
 
-	m, err := this.core.metrics.Metrics(ctx, metrics.Query{
-		Start:        start,
-		End:          end,
-		Resolution:   24 * time.Hour,
-		Organization: this.ID,
-		Filter:       pipelineMetricsFilter(workspace, scope),
-		GroupBy:      group,
+	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, this.organization.ID, workspace, metrics.Selection{
+		Workspaces:  selection.Workspaces,
+		Connections: selection.Connections,
+		Pipelines:   selection.Pipelines,
+		Target:      metrics.Target(selection.Target),
 	})
 	if err != nil {
-		return PipelineMetrics{}, err
+		return Metrics{}, err
 	}
-	return pipelineMetricsFromInternal(m), nil
+
+	metrics := Metrics{
+		Start:   m.Start,
+		End:     m.End,
+		Metrics: make([]MetricSeries, len(m.Series)),
+	}
+	for i, series := range m.Series {
+		metrics.Metrics[i] = MetricSeries(series)
+	}
+
+	return metrics, nil
 }
 
 // PipelineMetricsPerTimeUnit returns metrics for the specified number of
@@ -923,122 +930,124 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 // workspace is not empty, the request is restricted to that workspace. number
 // must be in the following ranges: [1,60] for minutes, [1,48] for hours, and
 // [1,30] for days.
-func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, scope PipelineMetricsScope) (PipelineMetrics, error) {
+func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
 
 	switch unit {
 	case Minute:
 		if number < 1 || number > 60 {
-			return PipelineMetrics{}, errors.NotFound("minutes must be in range [1,60]")
+			return Metrics{}, errors.NotFound("minutes must be in range [1,60]")
 		}
 	case Hour:
 		if number < 1 || number > 48 {
-			return PipelineMetrics{}, errors.NotFound("hours must be in range [1,48]")
+			return Metrics{}, errors.NotFound("hours must be in range [1,48]")
 		}
 	case Day:
 		if number < 1 || number > 30 {
-			return PipelineMetrics{}, errors.NotFound("days must be in range [1,30]")
+			return Metrics{}, errors.NotFound("days must be in range [1,30]")
 		}
 	default:
-		return PipelineMetrics{}, errors.BadRequest("metric unit is not valid")
-	}
-	if err := validatePipelineMetricsScope(scope); err != nil {
-		return PipelineMetrics{}, err
+		return Metrics{}, errors.BadRequest("metric unit is not valid")
 	}
 	if workspace != "" && !IsValidID(workspace) {
-		return PipelineMetrics{}, errors.BadRequest("workspace %s is not valid", workspace)
+		return Metrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+	}
+	err := validateMetricsSelection(selection)
+	if err != nil {
+		return Metrics{}, err
 	}
 
 	resolution := time.Duration(unit)
 	end := time.Now().UTC().Truncate(resolution).Add(resolution)
 	start := end.Add(-time.Duration(number) * resolution)
-	group := pipelineMetricsGroup(scope)
-	scope = this.filterPipelineMetricsScope(workspace, scope)
-	if pipelineMetricsGroupHasNoSeries(group, scope) {
-		return emptyPipelineMetrics(start, end), nil
+	selection = this.filterMetricsSelection(workspace, selection)
+	if len(selection.Pipelines) == 0 && len(selection.Workspaces) == 0 && len(selection.Connections) == 0 {
+		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
 	}
 
-	m, err := this.core.metrics.Metrics(ctx, metrics.Query{
-		Start:        start,
-		End:          end,
-		Resolution:   resolution,
-		Organization: this.ID,
-		Filter:       pipelineMetricsFilter(workspace, scope),
-		GroupBy:      group,
+	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, this.ID, workspace, metrics.Selection{
+		Workspaces:  selection.Workspaces,
+		Connections: selection.Connections,
+		Pipelines:   selection.Pipelines,
+		Target:      metrics.Target(selection.Target),
 	})
 	if err != nil {
-		return PipelineMetrics{}, err
+		return Metrics{}, err
 	}
-	return pipelineMetricsFromInternal(m), nil
+
+	metrics := Metrics{
+		Start:   m.Start,
+		End:     m.End,
+		Metrics: make([]MetricSeries, len(m.Series)),
+	}
+	for i, series := range m.Series {
+		metrics.Metrics[i] = MetricSeries(series)
+	}
+
+	return metrics, nil
 }
 
-// validatePipelineMetricsScope validates the pipeline metrics scope before
-// converting it to an internal metrics query.
-func validatePipelineMetricsScope(scope PipelineMetricsScope) error {
-	groups := 0
-	if len(scope.Workspaces) > 0 {
-		groups++
-	}
-	if len(scope.Connections) > 0 {
-		groups++
-	}
-	if len(scope.Pipelines) > 0 {
-		groups++
-	}
-	if groups == 0 {
-		return errors.BadRequest("one of workspaces, connections or pipelines must be provided")
-	}
-	if groups > 1 {
-		return errors.BadRequest("workspaces, connections and pipelines cannot be used together")
-	}
-	if scope.Target != nil && *scope.Target != TargetUser && *scope.Target != TargetEvent {
-		return errors.BadRequest("target is not valid")
-	}
-	for _, workspace := range scope.Workspaces {
+// validateMetricsSelection validates a pipeline metrics selection.
+func validateMetricsSelection(selection MetricSelection) error {
+	for _, workspace := range selection.Workspaces {
 		if !IsValidID(workspace) {
-			return errors.BadRequest("workspace %s is not valid", workspace)
+			return errors.BadRequest("workspace %q is not valid", workspace)
 		}
 	}
-	for _, pipeline := range scope.Pipelines {
-		if !IsValidID(pipeline) {
-			return errors.BadRequest("pipeline %q is not valid", pipeline)
-		}
-	}
-	for _, connection := range scope.Connections {
+	for _, connection := range selection.Connections {
 		if !IsValidID(connection) {
 			return errors.BadRequest("connection %q is not valid", connection)
 		}
 	}
+	for _, pipeline := range selection.Pipelines {
+		if !IsValidID(pipeline) {
+			return errors.BadRequest("pipeline %q is not valid", pipeline)
+		}
+	}
+	hasWorkspaces := len(selection.Workspaces) > 0
+	hasConnections := len(selection.Connections) > 0
+	hasPipelines := len(selection.Pipelines) > 0
+	if hasWorkspaces && hasConnections || hasWorkspaces && hasPipelines || hasConnections && hasPipelines {
+		return errors.BadRequest("workspaces, connections and pipelines cannot be used together")
+	}
+	if !hasWorkspaces && !hasConnections && !hasPipelines {
+		return errors.BadRequest("one of workspaces, connections or pipelines must be provided")
+	}
+	switch selection.Target {
+	case TargetNone, TargetUser, TargetEvent:
+	default:
+		return errors.BadRequest("target is not valid")
+	}
 	return nil
 }
 
-// filterPipelineMetricsScope removes identifiers that do not exist, do not
-// belong to the organization, or are outside the restricted workspace.
-func (this *Organization) filterPipelineMetricsScope(workspace string, scope PipelineMetricsScope) PipelineMetricsScope {
-	if len(scope.Pipelines) > 0 {
-		pipelines := make([]string, 0, len(scope.Pipelines))
-		for _, id := range scope.Pipelines {
+// filterMetricsSelection removes identifiers that do not exist, do not belong
+// to the organization, or are outside the restricted workspace.
+func (this *Organization) filterMetricsSelection(workspace string, selection MetricSelection) MetricSelection {
+	if len(selection.Pipelines) > 0 {
+		pipelines := make([]string, 0, len(selection.Pipelines))
+		for _, id := range selection.Pipelines {
 			pipeline, ok := this.core.state.Pipeline(id)
 			if ok && pipeline.Organization().ID == this.ID &&
 				(workspace == "" || pipeline.Connection().Workspace().ID == workspace) {
 				pipelines = append(pipelines, id)
 			}
 		}
-		scope.Pipelines = pipelines
+		selection.Pipelines = pipelines
 	}
-	if len(scope.Workspaces) > 0 {
-		workspaces := make([]string, 0, len(scope.Workspaces))
-		for _, id := range scope.Workspaces {
+	if len(selection.Workspaces) > 0 {
+		workspaces := make([]string, 0, len(selection.Workspaces))
+		for _, id := range selection.Workspaces {
 			if _, ok := this.organization.Workspace(id); ok && (workspace == "" || id == workspace) {
 				workspaces = append(workspaces, id)
 			}
 		}
-		scope.Workspaces = workspaces
+		selection.Workspaces = workspaces
 	}
-	if len(scope.Connections) > 0 {
-		connections := make([]string, 0, len(scope.Connections))
-		for _, id := range scope.Connections {
+	if len(selection.Connections) > 0 {
+		connections := make([]string, 0, len(selection.Connections))
+		for _, id := range selection.Connections {
 			connection, ok := this.core.state.Connection(id)
 			if ok && connection.Organization().ID == this.ID {
 				if workspace == "" || connection.Workspace().ID == workspace {
@@ -1046,79 +1055,9 @@ func (this *Organization) filterPipelineMetricsScope(workspace string, scope Pip
 				}
 			}
 		}
-		scope.Connections = connections
+		selection.Connections = connections
 	}
-	return scope
-}
-
-// pipelineMetricsFilter converts a core metrics scope to an internal metrics
-// filter.
-func pipelineMetricsFilter(workspace string, scope PipelineMetricsScope) metrics.Filter {
-	workspaces := scope.Workspaces
-	if workspace != "" {
-		workspaces = []string{workspace}
-	}
-	return metrics.Filter{
-		Workspaces:  workspaces,
-		Connections: scope.Connections,
-		Pipelines:   scope.Pipelines,
-		Target:      pipelineMetricsTargetFilter(scope),
-	}
-}
-
-func pipelineMetricsTargetFilter(scope PipelineMetricsScope) string {
-	if scope.Target == nil {
-		return ""
-	}
-	return scope.Target.String()
-}
-
-func pipelineMetricsGroupHasNoSeries(group metrics.Group, scope PipelineMetricsScope) bool {
-	return group == metrics.GroupByPipeline && len(scope.Pipelines) == 0 ||
-		group == metrics.GroupByWorkspace && len(scope.Workspaces) == 0 ||
-		group == metrics.GroupByConnection && len(scope.Connections) == 0
-}
-
-func emptyPipelineMetrics(start, end time.Time) PipelineMetrics {
-	return PipelineMetrics{
-		Start:   start,
-		End:     end,
-		Metrics: []PipelineMetricSeries{},
-	}
-}
-
-// pipelineMetricsGroup returns the internal metrics group implied by scope.
-func pipelineMetricsGroup(scope PipelineMetricsScope) metrics.Group {
-	if len(scope.Pipelines) > 0 {
-		return metrics.GroupByPipeline
-	}
-	if len(scope.Workspaces) > 0 {
-		return metrics.GroupByWorkspace
-	}
-	if len(scope.Connections) > 0 {
-		return metrics.GroupByConnection
-	}
-	return metrics.GroupByOrganization
-}
-
-// pipelineMetricsFromInternal converts internal metrics to the public core
-// representation.
-func pipelineMetricsFromInternal(m metrics.Metrics) PipelineMetrics {
-	res := PipelineMetrics{
-		Start:   m.Start,
-		End:     m.End,
-		Metrics: make([]PipelineMetricSeries, len(m.Series)),
-	}
-	for i, series := range m.Series {
-		res.Metrics[i] = PipelineMetricSeries{
-			Workspace:  series.Workspace,
-			Connection: series.Connection,
-			Pipeline:   series.Pipeline,
-			Passed:     series.Passed,
-			Failed:     series.Failed,
-		}
-	}
-	return res
+	return selection
 }
 
 // SendMemberPasswordReset sends a reset password email to the given email

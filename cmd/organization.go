@@ -288,11 +288,11 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 	if ws != nil {
 		workspace = ws.ID
 	}
-	scope, err := parsePipelineMetricsScope(r)
+	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, scope)
+	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
 }
 
 // PipelineMetricsPerDay returns the pipeline metrics for a specified number of
@@ -311,11 +311,11 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 	if ws != nil {
 		workspace = ws.ID
 	}
-	scope, err := parsePipelineMetricsScope(r)
+	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, scope)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
 }
 
 // PipelineMetricsPerHour returns the pipeline metrics for a specified number of
@@ -334,11 +334,11 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 	if ws != nil {
 		workspace = ws.ID
 	}
-	scope, err := parsePipelineMetricsScope(r)
+	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, scope)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
 }
 
 // PipelineMetricsPerMinute returns the pipeline metrics for a specified number
@@ -357,11 +357,11 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 	if ws != nil {
 		workspace = ws.ID
 	}
-	scope, err := parsePipelineMetricsScope(r)
+	selection, err := parseMetricsSelection(r)
 	if err != nil {
 		return nil, err
 	}
-	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, scope)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
 }
 
 // SetStatus sets the status of an organization.
@@ -566,89 +566,34 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 	return map[string]any{"workspaces": org.Workspaces()}, nil
 }
 
-// parsePipelineMetricsScope parses the pipeline metrics query parameters into a
-// PipelineMetricsScope. Exactly one of the pipelines, workspaces, or
-// connections parameters must be specified.
-func parsePipelineMetricsScope(r *http.Request) (core.PipelineMetricsScope, error) {
+// parseMetricsSelection parses the pipeline metrics query parameters.
+func parseMetricsSelection(r *http.Request) (core.MetricSelection, error) {
 
 	q := r.URL.Query()
 
+	var selection core.MetricSelection
+
 	// Parse pipelines, connections, and workspaces parameters.
-	pipelines, hasPipelines, err := parseStrictQueryIDs(q, "pipelines")
-	if err != nil {
-		return core.PipelineMetricsScope{}, err
-	}
-	connections, hasConnections, err := parseStrictQueryIDs(q, "connections")
-	if err != nil {
-		return core.PipelineMetricsScope{}, err
-	}
-	workspaces, hasWorkspaces, err := parseStrictQueryIDs(q, "workspaces")
-	if err != nil {
-		return core.PipelineMetricsScope{}, err
-	}
-	if hasPipelines && hasConnections || hasPipelines && hasWorkspaces || hasConnections && hasWorkspaces {
-		return core.PipelineMetricsScope{}, errors.BadRequest("'pipelines', 'connections' and 'workspaces' parameters cannot be used together")
-	}
-	if !hasPipelines && !hasConnections && !hasWorkspaces {
-		return core.PipelineMetricsScope{}, errors.BadRequest("one of 'pipelines', 'connections' and 'workspaces' parameters is required")
-	}
+	selection.Pipelines = splitQueryParameters(q["pipelines"])
+	selection.Connections = splitQueryParameters(q["connections"])
+	selection.Workspaces = splitQueryParameters(q["workspaces"])
 
 	// Parse the target parameter.
-	var target *core.Target
 	if values, ok := q["target"]; ok {
 		if len(values) != 1 {
-			return core.PipelineMetricsScope{}, errors.BadRequest("'target' parameter cannot be specified multiple times")
+			return core.MetricSelection{}, errors.BadRequest("'target' parameter cannot be specified multiple times")
 		}
-		t := strings.TrimSpace(values[0])
-		if t == "" {
-			return core.PipelineMetricsScope{}, errors.BadRequest("'target' parameter cannot be empty")
-		}
-		switch t {
-		case "User":
-			target = new(core.TargetUser)
+		switch t := strings.TrimSpace(values[0]); t {
 		case "Event":
-			target = new(core.TargetEvent)
+			selection.Target = core.TargetEvent
+		case "User":
+			selection.Target = core.TargetUser
+		case "":
+			return core.MetricSelection{}, errors.BadRequest("'target' parameter cannot be empty")
 		default:
-			return core.PipelineMetricsScope{}, errors.BadRequest("'target' parameter is not valid")
+			return core.MetricSelection{}, errors.BadRequest("'target' parameter is not valid")
 		}
 	}
 
-	scope := core.PipelineMetricsScope{
-		Workspaces:  workspaces,
-		Connections: connections,
-		Pipelines:   pipelines,
-		Target:      target,
-	}
-
-	return scope, nil
-}
-
-// parseStrictQueryIDs parses a query parameter containing a comma-separated
-// list of IDs. It reports whether the parameter was present and rejects empty
-// parameter values, empty list items, and invalid IDs.
-func parseStrictQueryIDs(q map[string][]string, name string) ([]string, bool, error) {
-	values, ok := q[name]
-	if !ok {
-		return nil, false, nil
-	}
-	ids := make([]string, 0, len(values))
-	for _, value := range values {
-		if value == "" {
-			return nil, true, errors.BadRequest("'%s' parameter cannot be empty", name)
-		}
-		for part := range strings.SplitSeq(value, ",") {
-			id := strings.TrimSpace(part)
-			if id == "" {
-				return nil, true, errors.BadRequest("'%s' parameter contains an empty identifier", name)
-			}
-			if !core.IsValidID(id) {
-				return nil, true, errors.BadRequest("'%s' parameter contains an invalid identifier", name)
-			}
-			ids = append(ids, id)
-		}
-	}
-	if len(ids) == 0 {
-		return nil, true, errors.BadRequest("'%s' parameter cannot be empty", name)
-	}
-	return ids, true, nil
+	return selection, nil
 }
