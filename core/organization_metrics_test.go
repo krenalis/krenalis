@@ -20,8 +20,17 @@ func TestValidatePipelineMetricsSelectionRequiresOneGroup(t *testing.T) {
 			selection: MetricSelection{},
 		},
 		{
+			name: "multiple empty groups",
+			selection: MetricSelection{
+				Workspaces:  []string{},
+				Connections: []string{},
+				Pipelines:   []string{},
+			},
+		},
+		{
 			name: "multiple groups",
 			selection: MetricSelection{
+				Workspaces:  []string{"9QaT3mN7KxP5"},
 				Connections: []string{"7QaT3mN7KxP5"},
 				Pipelines:   []string{"8QaT3mN7KxP5"},
 			},
@@ -45,5 +54,41 @@ func TestValidatePipelineMetricsSelectionAllowsWorkspaceGroup(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("expected workspace group to be valid, got %v", err)
+	}
+}
+
+// TestValidatePipelineMetricsSelectionRejectsEmptyGroup verifies that the
+// selected grouping dimension must contain at least one identifier.
+func TestValidatePipelineMetricsSelectionRejectsEmptyGroup(t *testing.T) {
+	tests := []struct {
+		name      string
+		selection MetricSelection
+	}{
+		{
+			name: "workspaces",
+			selection: MetricSelection{
+				Workspaces: []string{},
+			},
+		},
+		{
+			name: "connections",
+			selection: MetricSelection{
+				Connections: []string{},
+			},
+		},
+		{
+			name: "pipelines",
+			selection: MetricSelection{
+				Pipelines: []string{},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateMetricsSelection(test.selection)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
 	}
 }

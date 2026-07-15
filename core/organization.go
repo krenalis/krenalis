@@ -18,6 +18,7 @@ import (
 	"net/smtp"
 	"net/textproto"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -898,12 +899,11 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	if workspace != "" && !IsValidID(workspace) {
 		return Metrics{}, errors.BadRequest("workspace %s is not valid", workspace)
 	}
-	selection = this.filterMetricsSelection(workspace, selection)
-	if len(selection.Pipelines) == 0 && len(selection.Workspaces) == 0 && len(selection.Connections) == 0 {
+	if !this.filterMetricsSelection(workspace, &selection) {
 		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
 	}
 
-	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, this.organization.ID, workspace, metrics.Selection{
+	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, metrics.Selection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
 		Pipelines:   selection.Pipelines,
@@ -961,12 +961,12 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	resolution := time.Duration(unit)
 	end := time.Now().UTC().Truncate(resolution).Add(resolution)
 	start := end.Add(-time.Duration(number) * resolution)
-	selection = this.filterMetricsSelection(workspace, selection)
-	if len(selection.Pipelines) == 0 && len(selection.Workspaces) == 0 && len(selection.Connections) == 0 {
+
+	if !this.filterMetricsSelection(workspace, &selection) {
 		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
 	}
 
-	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, this.ID, workspace, metrics.Selection{
+	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, metrics.Selection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
 		Pipelines:   selection.Pipelines,
@@ -986,78 +986,6 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	}
 
 	return metrics, nil
-}
-
-// validateMetricsSelection validates a pipeline metrics selection.
-func validateMetricsSelection(selection MetricSelection) error {
-	for _, workspace := range selection.Workspaces {
-		if !IsValidID(workspace) {
-			return errors.BadRequest("workspace %q is not valid", workspace)
-		}
-	}
-	for _, connection := range selection.Connections {
-		if !IsValidID(connection) {
-			return errors.BadRequest("connection %q is not valid", connection)
-		}
-	}
-	for _, pipeline := range selection.Pipelines {
-		if !IsValidID(pipeline) {
-			return errors.BadRequest("pipeline %q is not valid", pipeline)
-		}
-	}
-	hasWorkspaces := len(selection.Workspaces) > 0
-	hasConnections := len(selection.Connections) > 0
-	hasPipelines := len(selection.Pipelines) > 0
-	if hasWorkspaces && hasConnections || hasWorkspaces && hasPipelines || hasConnections && hasPipelines {
-		return errors.BadRequest("workspaces, connections and pipelines cannot be used together")
-	}
-	if !hasWorkspaces && !hasConnections && !hasPipelines {
-		return errors.BadRequest("one of workspaces, connections or pipelines must be provided")
-	}
-	switch selection.Target {
-	case TargetNone, TargetUser, TargetEvent:
-	default:
-		return errors.BadRequest("target is not valid")
-	}
-	return nil
-}
-
-// filterMetricsSelection removes identifiers that do not exist, do not belong
-// to the organization, or are outside the restricted workspace.
-func (this *Organization) filterMetricsSelection(workspace string, selection MetricSelection) MetricSelection {
-	if len(selection.Pipelines) > 0 {
-		pipelines := make([]string, 0, len(selection.Pipelines))
-		for _, id := range selection.Pipelines {
-			pipeline, ok := this.core.state.Pipeline(id)
-			if ok && pipeline.Organization().ID == this.ID &&
-				(workspace == "" || pipeline.Connection().Workspace().ID == workspace) {
-				pipelines = append(pipelines, id)
-			}
-		}
-		selection.Pipelines = pipelines
-	}
-	if len(selection.Workspaces) > 0 {
-		workspaces := make([]string, 0, len(selection.Workspaces))
-		for _, id := range selection.Workspaces {
-			if _, ok := this.organization.Workspace(id); ok && (workspace == "" || id == workspace) {
-				workspaces = append(workspaces, id)
-			}
-		}
-		selection.Workspaces = workspaces
-	}
-	if len(selection.Connections) > 0 {
-		connections := make([]string, 0, len(selection.Connections))
-		for _, id := range selection.Connections {
-			connection, ok := this.core.state.Connection(id)
-			if ok && connection.Organization().ID == this.ID {
-				if workspace == "" || connection.Workspace().ID == workspace {
-					connections = append(connections, id)
-				}
-			}
-		}
-		selection.Connections = connections
-	}
-	return selection
 }
 
 // SendMemberPasswordReset sends a reset password email to the given email
@@ -1437,6 +1365,35 @@ func (this *Organization) Workspaces() []*Workspace {
 	return infos
 }
 
+// filterMetricsSelection removes identifiers that do not exist, do not belong
+// to the organization, or are outside the restricted workspace.
+// It returns true if the filtered selection contains at least one identifier.
+func (this *Organization) filterMetricsSelection(workspace string, selection *MetricSelection) bool {
+	switch {
+	case selection.Workspaces != nil:
+		selection.Workspaces = slices.DeleteFunc(selection.Workspaces, func(id string) bool {
+			_, ok := this.organization.Workspace(id)
+			return !ok || workspace != "" && id != workspace
+		})
+		return len(selection.Workspaces) > 0
+	case selection.Connections != nil:
+		selection.Connections = slices.DeleteFunc(selection.Connections, func(id string) bool {
+			connection, ok := this.core.state.Connection(id)
+			return !ok || connection.Organization().ID != this.organization.ID ||
+				(workspace != "" && connection.Workspace().ID != workspace)
+		})
+		return len(selection.Connections) > 0
+	case selection.Pipelines != nil:
+		selection.Pipelines = slices.DeleteFunc(selection.Pipelines, func(id string) bool {
+			pipeline, ok := this.core.state.Pipeline(id)
+			return !ok || pipeline.Organization().ID != this.organization.ID ||
+				(workspace != "" && pipeline.Connection().Workspace().ID != workspace)
+		})
+		return len(selection.Pipelines) > 0
+	}
+	panic("unreachable")
+}
+
 // validateWorkspaceCreation validates the arguments for a workspace creation.
 // It tests that a warehouse with the provided platform and settings can be
 // initialized, and returns an error if the arguments are not valid.
@@ -1605,6 +1562,59 @@ func validateMemberEmail(email string) error {
 	}
 	if !emailRegExp.MatchString(email) {
 		return errors.New("email is not a valid email address")
+	}
+	return nil
+}
+
+// validateMetricsSelection validates a pipeline metrics selection.
+func validateMetricsSelection(selection MetricSelection) error {
+	// Workspaces.
+	if selection.Workspaces != nil && len(selection.Workspaces) == 0 {
+		return errors.BadRequest("workspaces must not be empty when provided")
+	}
+	for _, workspace := range selection.Workspaces {
+		if !IsValidID(workspace) {
+			return errors.BadRequest("workspace %q is not valid", workspace)
+		}
+	}
+	// Connections.
+	if selection.Connections != nil && len(selection.Connections) == 0 {
+		return errors.BadRequest("connections must not be empty when provided")
+	}
+	for _, connection := range selection.Connections {
+		if !IsValidID(connection) {
+			return errors.BadRequest("connection %q is not valid", connection)
+		}
+	}
+	// Pipelines.
+	if selection.Pipelines != nil && len(selection.Pipelines) == 0 {
+		return errors.BadRequest("pipelines must not be empty when provided")
+	}
+	for _, pipeline := range selection.Pipelines {
+		if !IsValidID(pipeline) {
+			return errors.BadRequest("pipeline %q is not valid", pipeline)
+		}
+	}
+	groups := 0
+	if selection.Workspaces != nil {
+		groups++
+	}
+	if selection.Connections != nil {
+		groups++
+	}
+	if selection.Pipelines != nil {
+		groups++
+	}
+	if groups == 0 {
+		return errors.BadRequest("one of workspaces, connections or pipelines must be provided")
+	}
+	if groups > 1 {
+		return errors.BadRequest("workspaces, connections and pipelines cannot be used together")
+	}
+	switch selection.Target {
+	case TargetNone, TargetUser, TargetEvent:
+	default:
+		return errors.BadRequest("target is not valid")
 	}
 	return nil
 }

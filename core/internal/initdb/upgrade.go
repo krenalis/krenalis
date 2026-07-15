@@ -18,7 +18,10 @@ const (
 	pipelinesMetricsPipelineIndex                                      = "pipelines_metrics_pipeline_idx"
 	pipelinesMetricsOrganizationWorkspaceTimeslotIndex                 = "pipelines_metrics_organization_workspace_timeslot_idx"
 	pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex = "pipelines_metrics_org_ws_conn_target_timeslot_idx"
+	pipelinesMetricsOrganizationConnectionTimeslotIndex                = "pipelines_metrics_organization_connection_timeslot_idx"
 	pipelinesMetricsOrganizationTimeslotIndex                          = "pipelines_metrics_organization_timeslot_idx"
+	pipelinesMetricsWorkspaceTimeslotIndex                             = "pipelines_metrics_workspace_timeslot_idx"
+	pipelinesMetricsConnectionTimeslotIndex                            = "pipelines_metrics_connection_timeslot_idx"
 	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
@@ -197,9 +200,12 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN target SET NOT NULL`,
 			`ALTER TABLE pipelines_metrics DROP CONSTRAINT IF EXISTS pipelines_metrics_pipeline_fkey`,
 			`DROP INDEX IF EXISTS ` + pipelinesMetricsPipelineIndex,
-			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsOrganizationWorkspaceTimeslotIndex + ` ON pipelines_metrics (organization, workspace, timeslot)`,
-			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex + ` ON pipelines_metrics (organization, workspace, connection, target, timeslot)`,
-			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsOrganizationTimeslotIndex + ` ON pipelines_metrics (organization, timeslot)`,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationWorkspaceTimeslotIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationConnectionTimeslotIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationTimeslotIndex,
+			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
+			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,

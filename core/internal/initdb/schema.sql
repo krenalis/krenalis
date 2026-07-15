@@ -261,9 +261,8 @@ CREATE TABLE pipelines_metrics (
     PRIMARY KEY (pipeline, timeslot)
 );
 
-CREATE INDEX pipelines_metrics_organization_workspace_timeslot_idx ON pipelines_metrics (organization, workspace, timeslot);
-CREATE INDEX pipelines_metrics_org_ws_conn_target_timeslot_idx ON pipelines_metrics (organization, workspace, connection, target, timeslot);
-CREATE INDEX pipelines_metrics_organization_timeslot_idx ON pipelines_metrics (organization, timeslot);
+CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
+CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
 CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
 
 CREATE TABLE discontinued_functions (

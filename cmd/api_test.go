@@ -89,34 +89,45 @@ func TestParsePipelineMetricsSelectionConnectionTarget(t *testing.T) {
 	const validConnection = "7QaT3mN7KxP5"
 
 	tests := []struct {
-		name            string
-		query           string
-		wantConnections []string
-		wantTarget      core.Target
-		wantErr         bool
+		name                   string
+		query                  string
+		wantConnections        []string
+		wantConnectionsPresent bool
+		wantTarget             core.Target
+		wantErr                bool
 	}{
 		{
-			name:            "connections and user target",
-			query:           "?connections=" + validConnection + "&target=User",
-			wantConnections: []string{validConnection},
-			wantTarget:      core.TargetUser,
+			name:                   "connections and user target",
+			query:                  "?connections=" + validConnection + "&target=User",
+			wantConnections:        []string{validConnection},
+			wantConnectionsPresent: true,
+			wantTarget:             core.TargetUser,
 		},
 		{
-			name:            "connections and event target",
-			query:           "?connections=" + validConnection + "&target=Event",
-			wantConnections: []string{validConnection},
-			wantTarget:      core.TargetEvent,
+			name:                   "connections and event target",
+			query:                  "?connections=" + validConnection + "&target=Event",
+			wantConnections:        []string{validConnection},
+			wantConnectionsPresent: true,
+			wantTarget:             core.TargetEvent,
 		},
 		{
-			name:            "connections without target",
-			query:           "?connections=" + validConnection,
-			wantConnections: []string{validConnection},
-			wantTarget:      core.TargetNone,
+			name:                   "connections without target",
+			query:                  "?connections=" + validConnection,
+			wantConnections:        []string{validConnection},
+			wantConnectionsPresent: true,
+			wantTarget:             core.TargetNone,
 		},
 		{
 			name:       "target without grouping",
 			query:      "?target=Event",
 			wantTarget: core.TargetEvent,
+		},
+		{
+			name:                   "empty connections parameter",
+			query:                  "?connections=",
+			wantConnections:        []string{},
+			wantConnectionsPresent: true,
+			wantTarget:             core.TargetNone,
 		},
 		{
 			name:    "invalid target",
@@ -141,6 +152,9 @@ func TestParsePipelineMetricsSelectionConnectionTarget(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatal(err)
+			}
+			if test.wantConnectionsPresent && selection.Connections == nil {
+				t.Fatal("expected non-nil connections, got nil")
 			}
 			if !slices.Equal(selection.Connections, test.wantConnections) {
 				t.Fatalf("expected connections %v, got %v", test.wantConnections, selection.Connections)

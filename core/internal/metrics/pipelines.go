@@ -137,20 +137,20 @@ func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines 
 
 // MetricsPerDate returns metrics aggregated by day for the time interval
 // between the specified start and end dates.
-func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, organization, workspace string, selection Selection) (Metrics, error) {
-	return c.queryMetrics(ctx, start, end, Day, organization, workspace, selection)
+func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, selection Selection) (Metrics, error) {
+	return c.queryMetrics(ctx, start, end, Day, selection)
 }
 
 // MetricsPerTimeUnit returns metrics for the specified number of minutes,
 // hours, or days based on the unit up to the current time.
-func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, organization, workspace string, selection Selection) (Metrics, error) {
+func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, selection Selection) (Metrics, error) {
 	now := time.Now().UTC()
 	end := now.Truncate(unit).Add(unit)
 	start := end.Add(-time.Duration(number) * unit)
-	return c.queryMetrics(ctx, start, end, unit, organization, workspace, selection)
+	return c.queryMetrics(ctx, start, end, unit, selection)
 }
 
-func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, resolution time.Duration, organization, workspace string, selection Selection) (Metrics, error) {
+func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, resolution time.Duration, selection Selection) (Metrics, error) {
 
 	if !end.After(start) {
 		return Metrics{}, fmt.Errorf("metrics end must be after start")
@@ -172,6 +172,9 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 		Start: start,
 		End:   end,
 	}
+	if len(ids) == 0 {
+		return metrics, nil
+	}
 
 	divisor := int32(resolution / time.Minute)
 	tsStart := TimeSlotFromTime(metrics.Start)
@@ -179,32 +182,26 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 
 	sql := bytes.NewBufferString("SELECT ")
 	switch group {
-	case metricGroupWorkspace:
+	case groupWorkspace:
 		sql.WriteString("workspace, ")
-	case metricGroupConnection:
+	case groupConnection:
 		sql.WriteString("connection, ")
-	case metricGroupPipeline:
+	case groupPipeline:
 		sql.WriteString("pipeline, ")
 	}
 	sql.WriteString("timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
 		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
-		"FROM pipelines_metrics\nWHERE organization = ")
-	sql.WriteString(db.Quote(organization))
-	sql.WriteString(" AND timeslot BETWEEN $2 AND $3")
-	if workspace != "" {
-		sql.WriteString(" AND workspace = ")
-		sql.WriteString(db.Quote(workspace))
-	}
+		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3")
 	switch group {
-	case metricGroupWorkspace:
+	case groupWorkspace:
 		sql.WriteString(" AND workspace IN (")
 		writeQuotedList(sql, ids)
 		sql.WriteByte(')')
-	case metricGroupConnection:
+	case groupConnection:
 		sql.WriteString(" AND connection IN (")
 		writeQuotedList(sql, ids)
 		sql.WriteByte(')')
-	case metricGroupPipeline:
+	case groupPipeline:
 		sql.WriteString(" AND pipeline IN (")
 		writeQuotedList(sql, ids)
 		sql.WriteByte(')')
@@ -215,11 +212,11 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 	}
 	sql.WriteString("\nGROUP BY ")
 	switch group {
-	case metricGroupWorkspace:
+	case groupWorkspace:
 		sql.WriteString("workspace, slot\nORDER BY workspace, slot")
-	case metricGroupConnection:
+	case groupConnection:
 		sql.WriteString("connection, slot\nORDER BY connection, slot")
-	case metricGroupPipeline:
+	case groupPipeline:
 		sql.WriteString("pipeline, slot\nORDER BY pipeline, slot")
 	}
 
@@ -265,28 +262,28 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 type metricGroup string
 
 const (
-	metricGroupWorkspace  metricGroup = "workspace"
-	metricGroupConnection metricGroup = "connection"
-	metricGroupPipeline   metricGroup = "pipeline"
+	groupWorkspace  metricGroup = "workspace"
+	groupConnection metricGroup = "connection"
+	groupPipeline   metricGroup = "pipeline"
 )
 
 func (selection Selection) group() (metricGroup, []string, error) {
 	groups := 0
 	var group metricGroup
 	var ids []string
-	if len(selection.Workspaces) > 0 {
+	if selection.Workspaces != nil {
 		groups++
-		group = metricGroupWorkspace
+		group = groupWorkspace
 		ids = selection.Workspaces
 	}
-	if len(selection.Connections) > 0 {
+	if selection.Connections != nil {
 		groups++
-		group = metricGroupConnection
+		group = groupConnection
 		ids = selection.Connections
 	}
-	if len(selection.Pipelines) > 0 {
+	if selection.Pipelines != nil {
 		groups++
-		group = metricGroupPipeline
+		group = groupPipeline
 		ids = selection.Pipelines
 	}
 	if groups != 1 {
@@ -301,11 +298,11 @@ func newMetricSeries(group metricGroup, id string, number int) Series {
 		Failed: make([][6]int, number),
 	}
 	switch group {
-	case metricGroupWorkspace:
+	case groupWorkspace:
 		series.Workspace = id
-	case metricGroupConnection:
+	case groupConnection:
 		series.Connection = id
-	case metricGroupPipeline:
+	case groupPipeline:
 		series.Pipeline = id
 	}
 	return series

@@ -573,10 +573,25 @@ func parseMetricsSelection(r *http.Request) (core.MetricSelection, error) {
 
 	var selection core.MetricSelection
 
-	// Parse pipelines, connections, and workspaces parameters.
-	selection.Pipelines = splitQueryParameters(q["pipelines"])
-	selection.Connections = splitQueryParameters(q["connections"])
-	selection.Workspaces = splitQueryParameters(q["workspaces"])
+	// Parse workspaces, connections, and pipelines parameters.
+	if values, ok := q["workspaces"]; ok {
+		selection.Workspaces = splitQueryParameters(values)
+		if selection.Workspaces == nil {
+			selection.Workspaces = []string{}
+		}
+	}
+	if values, ok := q["connections"]; ok {
+		selection.Connections = splitQueryParameters(values)
+		if selection.Connections == nil {
+			selection.Connections = []string{}
+		}
+	}
+	if values, ok := q["pipelines"]; ok {
+		selection.Pipelines = splitQueryParameters(values)
+		if selection.Pipelines == nil {
+			selection.Pipelines = []string{}
+		}
+	}
 
 	// Parse the target parameter.
 	if values, ok := q["target"]; ok {

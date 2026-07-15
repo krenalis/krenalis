@@ -65,9 +65,9 @@ import { AccessKeyType } from './types/organization';
 const API_BASE_PATH = '/v1';
 
 type PipelineMetricsFilter = {
-	pipelines?: string[];
 	workspaces?: string[];
 	connections?: string[];
+	pipelines?: string[];
 	target?: PipelineTarget;
 };
 
@@ -838,19 +838,19 @@ class Workspaces {
 		if (!filter) {
 			return '';
 		}
-		const filterCount = [filter.pipelines, filter.workspaces, filter.connections].filter((v) => v != null).length;
+		const filterCount = [filter.workspaces, filter.connections, filter.pipelines].filter((v) => v != null).length;
 		if (filterCount > 1) {
-			throw new Error('pipelines, workspaces and connections filters cannot be used together');
+			throw new Error('workspaces, connections and pipelines filters cannot be used together');
 		}
 		let params = [];
-		if (filter.pipelines != null) {
-			params.push(`pipelines=${filter.pipelines.map(encodeURIComponent).join(',')}`);
-		}
 		if (filter.workspaces != null) {
 			params.push(`workspaces=${filter.workspaces.map(encodeURIComponent).join(',')}`);
 		}
 		if (filter.connections != null) {
 			params.push(`connections=${filter.connections.map(encodeURIComponent).join(',')}`);
+		}
+		if (filter.pipelines != null) {
+			params.push(`pipelines=${filter.pipelines.map(encodeURIComponent).join(',')}`);
 		}
 		if (filter.target != null) {
 			params.push(`target=${encodeURIComponent(filter.target)}`);
