@@ -646,7 +646,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return err
 	}
 
-	// Verify that the MKS key validation completed successfully.
+	// Verify that the KMS key validation completed successfully.
 	if err = <-validNotificationKeyCh; err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
