@@ -214,17 +214,17 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		_ = tx.Rollback(ctx)
 	}()
 
-	// Read the installation ID, the KMS-encrypted cookie, OAuth, and
+	// Read the installation ID, the KMS-encrypted HTTP secret, OAuth, and
 	// notification keys, and the API key pepper.
 	//
 	// This is the first query run against the database, so the undefined-table
 	// check below detects (with a good probability) an uninitialized database.
 	// Move it if a query is added before this one.
-	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
-	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key,"+
-		" kms_encrypted_notification_key, kms_encrypted_api_key_pepper FROM metadata").Scan(
-		&state.metadata.installationID, &kmsEncryptedCookieKey, &kmsEncryptedOAuthKey,
-		&kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
+	var kmsEncryptedHTTPSecretKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
+	err = tx.QueryRow(ctx, "SELECT installation_id, kms_encrypted_http_secret_key,"+
+		" kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper FROM metadata").Scan(
+		&state.metadata.installationID, &kmsEncryptedHTTPSecretKey,
+		&kmsEncryptedOAuthKey, &kmsEncryptedNotificationKey, &kmsEncryptedAPIKeyPepper)
 	if err != nil {
 		if db.IsUndefinedTable(err) {
 			return &DBNotInitializedError{msg: err.Error()}
@@ -240,11 +240,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	if state.metadata.installationID == "" {
 		return errors.New("cannot load state: missing installation ID in metadata table")
 	}
-	// Cookie key.
-	if len(kmsEncryptedCookieKey) == 0 {
-		return errors.New("cannot load state: missing KMS encrypted cookie key in metadata table")
+	// HTTP secret key.
+	if len(kmsEncryptedHTTPSecretKey) == 0 {
+		return errors.New("cannot load state: missing KMS encrypted HTTP secret key in metadata table")
 	}
-	state.metadata.kmsEncryptedCookieKey = kmsEncryptedCookieKey
+	state.metadata.kmsEncryptedHTTPSecretKey = kmsEncryptedHTTPSecretKey
 	// OAuth key.
 	state.metadata.oAuthKey = state.cipher.Key(kmsEncryptedOAuthKey)
 	clear(kmsEncryptedOAuthKey)
@@ -631,15 +631,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load primary sources: %s", err)
 	}
 
-	// Read the last notification ID.
-	var latest int64
-	err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
+	// Read the last notification version.
+	var version int
+	err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(version),0) FROM notifications").Scan(&version)
 	if err != nil {
-		return fmt.Errorf("cannot load the notification ID: %s", err)
+		return fmt.Errorf("cannot load the notification version: %s", err)
 	}
-	if latest == math.MaxInt64 {
-		return errors.New("cannot load the notification ID: maximum limit has been reached")
+	if version == math.MaxInt64 {
+		return errors.New("cannot load the notification version: maximum limit has been reached")
 	}
+	state.version.current = version
 
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -655,7 +656,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	state.notifications.key = notificationKey
-	state.notifications.next = latest + 1
+	state.notifications.nextVersion = version + 1
 	state.notifications.loaded <- struct{}{}
 
 	return nil
