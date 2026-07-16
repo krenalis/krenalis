@@ -130,6 +130,7 @@ func (c *Collector) Failed(step Step, pipeline string, count int, message string
 		var err error
 		m, err = c.newMetrics(pipeline)
 		if err != nil {
+			// The pipeline no longer exists.
 			c.mu.Unlock()
 			return
 		}
@@ -212,6 +213,7 @@ func (c *Collector) Passed(step Step, pipeline string, count int) {
 		var err error
 		m, err = c.newMetrics(pipeline)
 		if err != nil {
+			// The pipeline no longer exists.
 			c.mu.Unlock()
 			return
 		}
@@ -576,6 +578,8 @@ type metrics struct {
 	errors       []pipelineError
 }
 
+// newMetrics creates metrics for the pipeline identified by the provided ID.
+// It returns an error only if the pipeline no longer exists.
 func (c *Collector) newMetrics(pipeline string) (*metrics, error) {
 	p, ok := c.state.Pipeline(pipeline)
 	if !ok {
