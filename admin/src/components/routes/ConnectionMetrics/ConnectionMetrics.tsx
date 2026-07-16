@@ -71,7 +71,7 @@ const ConnectionMetrics = () => {
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [selectedTarget, setSelectedTarget] = useState<PipelineTarget>(
-		new URLSearchParams(window.location.search).get('target') === 'event'
+		new URLSearchParams(window.location.search).get('target') === 'event' && c.supportsEventTarget
 			? 'Event'
 			: new URLSearchParams(window.location.search).get('target') === 'user'
 				? 'User'
@@ -95,11 +95,6 @@ const ConnectionMetrics = () => {
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
 	const previouslySelectedPipeline = useRef<string | null>(null);
-	const addSupportedTarget = (target: PipelineTarget) => {
-		if (!supportedTargets.current.includes(target)) {
-			supportedTargets.current.push(target);
-		}
-	};
 
 	const isUsersSelected = selectedTarget === 'User';
 
@@ -268,11 +263,25 @@ const ConnectionMetrics = () => {
 				setIsLoading(false);
 			}, 300);
 		};
+
+		const addSupportedTarget = (target: PipelineTarget) => {
+			if (!supportedTargets.current.includes(target)) {
+				supportedTargets.current.push(target);
+			}
+		};
+
 		const fetchData = async () => {
 			let userPipelinesIds: string[] = [];
 			let eventPipelinesIds: string[] = [];
-			const allPipelinesSelected = selectedPipeline == null;
-			if (selectedPipeline == null) {
+			const hasSelectedPipeline = selectedPipeline != null;
+			if (hasSelectedPipeline) {
+				const p = c.pipelines.find((pipeline) => pipeline.id === selectedPipeline);
+				if (p.target === 'User') {
+					userPipelinesIds.push(p.id);
+				} else if (p.target === 'Event') {
+					eventPipelinesIds.push(p.id);
+				}
+			} else {
 				for (const pipeline of c.pipelines) {
 					if (pipeline.target === 'User') {
 						userPipelinesIds.push(pipeline.id);
@@ -280,28 +289,18 @@ const ConnectionMetrics = () => {
 						eventPipelinesIds.push(pipeline.id);
 					}
 				}
-			} else {
-				const p = c.pipelines.find((pipeline) => pipeline.id === selectedPipeline);
-				if (p.target === 'User') {
-					userPipelinesIds.push(p.id);
-				} else if (p.target === 'Event') {
-					eventPipelinesIds.push(p.id);
-				}
 			}
 
-			if (!allPipelinesSelected && userPipelinesIds.length === 0 && eventPipelinesIds.length === 0) {
-				stopLoading();
-				return;
-			}
-
-			if (allPipelinesSelected) {
-				addSupportedTarget('User');
-				addSupportedTarget('Event');
-			} else {
+			if (hasSelectedPipeline) {
 				if (userPipelinesIds.length > 0) {
 					addSupportedTarget('User');
 				}
 				if (eventPipelinesIds.length > 0) {
+					addSupportedTarget('Event');
+				}
+			} else {
+				addSupportedTarget('User');
+				if (c.supportsEventTarget) {
 					addSupportedTarget('Event');
 				}
 			}
@@ -309,30 +308,22 @@ const ConnectionMetrics = () => {
 			let fetchMetrics: (pipelineIds: string[], target: PipelineTarget) => Promise<PipelineMetrics> = null;
 			if (selectedMetricsRange === 'last15Minutes') {
 				fetchMetrics = async (pipelineIds, target) =>
-					allPipelinesSelected
-						? await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, undefined, {
-								connections: [c.id],
-								target,
-							})
-						: await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, pipelineIds);
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, { pipelines: pipelineIds })
+						: await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, { connections: [c.id], target });
 			} else if (selectedMetricsRange === 'last24Hours') {
 				fetchMetrics = async (pipelineIds, target) =>
-					allPipelinesSelected
-						? await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, undefined, {
-								connections: [c.id],
-								target,
-							})
-						: await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, pipelineIds);
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, { pipelines: pipelineIds })
+						: await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, { connections: [c.id], target });
 			} else if (selectedMetricsRange === 'last7Days') {
 				fetchMetrics = async (pipelineIds, target) =>
-					allPipelinesSelected
-						? await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, undefined, {
-								connections: [c.id],
-								target,
-							})
-						: await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, pipelineIds);
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, { pipelines: pipelineIds })
+						: await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, { connections: [c.id], target });
 			} else {
-				// end date must be shifted by one day to retrieve the
+				// Custom range.
+				// End date must be shifted by one day to retrieve the
 				// metrics including the last selected day.
 				const endDate = new Date(customMetricsRange[0].endDate);
 				endDate.setDate(endDate.getDate() + 1);
@@ -345,21 +336,14 @@ const ConnectionMetrics = () => {
 					return;
 				}
 				fetchMetrics = async (pipelineIds, target) =>
-					allPipelinesSelected
-						? await api.workspaces.pipelineMetricsPerDate(
-								customMetricsRange[0].startDate,
-								endDate,
-								undefined,
-								{
-									connections: [c.id],
-									target,
-								},
-							)
-						: await api.workspaces.pipelineMetricsPerDate(
-								customMetricsRange[0].startDate,
-								endDate,
-								pipelineIds,
-							);
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerDate(customMetricsRange[0].startDate, endDate, {
+								pipelines: pipelineIds,
+							})
+						: await api.workspaces.pipelineMetricsPerDate(customMetricsRange[0].startDate, endDate, {
+								connections: [c.id],
+								target,
+							});
 			}
 
 			let target = selectedTarget;
@@ -761,9 +745,15 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	}
 	const totals = aggregatePipelineMetrics(pipelineMetrics);
 	let points: PipelineMetricsPoint[] = [];
-	const timeLength = totals.passed.length || computeMetricsBucketCount(pipelineMetrics, range);
-	let counter = timeLength;
-	for (let timeUnit = 0; timeUnit < timeLength; timeUnit++) {
+
+	// Use the number of time units actually returned by the server. If the
+	// response has no series (metrics: []), fall back to the expected time
+	// units for the selected range so the chart still renders a full axis of
+	// empty bars.
+	const timeUnits = totals.passed.length > 0 ? totals.passed.length : computeMetricsTimeUnits(pipelineMetrics, range);
+
+	let counter = timeUnits;
+	for (let timeUnit = 0; timeUnit < timeUnits; timeUnit++) {
 		let failedTotal = 0;
 		for (let i = 0; i < 6; i++) {
 			if (i === 2) {
@@ -798,7 +788,7 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	return points;
 };
 
-const computeMetricsBucketCount = (pipelineMetrics: PipelineMetrics, range: metricsRange): number => {
+const computeMetricsTimeUnits = (pipelineMetrics: PipelineMetrics, range: metricsRange): number => {
 	if (range === 'last15Minutes') {
 		return MINUTES_COUNT;
 	}

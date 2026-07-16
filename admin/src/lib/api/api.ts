@@ -863,12 +863,11 @@ class Workspaces {
 	pipelineMetricsPerDate = async (
 		start: Date,
 		end: Date,
-		pipelines?: string[],
-		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
+		selection?: PipelineMetricsSelection,
 	): Promise<PipelineMetrics> => {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
-		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/dates/` + `${encodeURIComponent(sd)}/` + `${encodeURIComponent(ed)}` + q,
 			http.GET,
@@ -879,12 +878,8 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDay = async (
-		days: number,
-		pipelines?: string[],
-		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
-	): Promise<PipelineMetrics> => {
-		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
+	pipelineMetricsPerDay = async (days: number, selection?: PipelineMetricsSelection): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/days/` + `${encodeURIComponent(days)}` + q,
 			http.GET,
@@ -895,12 +890,8 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerHour = async (
-		hours: number,
-		pipelines?: string[],
-		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
-	): Promise<PipelineMetrics> => {
-		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
+	pipelineMetricsPerHour = async (hours: number, selection?: PipelineMetricsSelection): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/hours/` + `${encodeURIComponent(hours)}` + q,
 			http.GET,
@@ -913,10 +904,9 @@ class Workspaces {
 
 	pipelineMetricsPerMinute = async (
 		minutes: number,
-		pipelines?: string[],
-		selection?: Omit<PipelineMetricsSelection, 'pipelines'>,
+		selection?: PipelineMetricsSelection,
 	): Promise<PipelineMetrics> => {
-		const q = this.pipelineMetricsQuery(selection ?? (pipelines != null ? { pipelines } : undefined));
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
 			`${this.apiURL}/pipelines/metrics/minutes/` + `${encodeURIComponent(minutes)}` + q,
 			http.GET,
