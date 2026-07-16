@@ -909,7 +909,7 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 
 	// Validate workspace.
 	if workspace != "" && !IsValidID(workspace) {
-		return Metrics{}, errors.BadRequest("workspace %s is not valid", workspace)
+		return Metrics{}, errors.BadRequest("workspace %q is not valid", workspace)
 	}
 
 	// Remove identifiers outside the organization or workspace scope
