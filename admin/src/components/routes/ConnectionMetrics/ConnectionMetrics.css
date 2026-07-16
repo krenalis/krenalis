@@ -144,6 +144,12 @@
 	text-decoration: underline;
 }
 
+.connection-metrics__errors-note {
+	margin: 14px 5px 0 5px;
+	color: var(--sl-color-gray-700);
+	font-size: 13px;
+}
+
 .connection-metrics__funnel {
 	margin: 20px auto 0 auto;
 	background-color: var(--bg-primary);

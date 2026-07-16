@@ -504,6 +504,12 @@ const ConnectionMetrics = () => {
 		}
 	}
 
+	const funnelData = isUsersSelected ? userFunnelData : eventFunnelData;
+	const errors = isUsersSelected ? userPipelinesErrors : eventPipelinesErrors;
+	const totalFailed = computeTotalFailed(funnelData);
+	const totalErrorsCount = errors.reduce((sum, e) => sum + e.count, 0);
+	const hasHiddenFailures = totalFailed > totalErrorsCount;
+
 	return (
 		<div className='connection-metrics'>
 			<div className='connection-metrics__title'>Metrics & Log</div>
@@ -696,6 +702,12 @@ const ConnectionMetrics = () => {
 							rows={isUsersSelected ? userPipelineErrorRows : eventPipelineErrorRows}
 							noRowsMessage={'No errors have occurred'}
 						/>
+						{hasHiddenFailures && (
+							<div className='connection-metrics__errors-note'>
+								Some of the failures counted above are not listed here because they occurred in
+								pipelines that have since been deleted.
+							</div>
+						)}
 					</div>
 				</>
 			) : (
@@ -830,6 +842,20 @@ const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
 		});
 	}
 	return data as FunnelData;
+};
+
+// computeTotalFailed sums the failures across every step. The filter step is
+// excluded because filtered records are discarded, not failed, and never appear
+// as errors.
+const computeTotalFailed = (funnelData: FunnelData): number => {
+	let total = 0;
+	for (let i = 0; i < funnelData.length; i++) {
+		if (i === 2) {
+			continue;
+		}
+		total += funnelData[i].failed;
+	}
+	return total;
 };
 
 const aggregatePipelineMetrics = (
