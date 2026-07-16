@@ -873,11 +873,16 @@ const (
 )
 
 // PipelineMetricsPerDate returns metrics aggregated by day for the time
-// interval between the specified start and end dates. If workspace is not
-// empty, the request is restricted to that workspace. The dates are truncated
-// to UTC days, must be no earlier than 1970-01-01 and no later than
-// 2262-04-10, and the day of the start date must be before the day of the end
-// date.
+// interval between the specified start and end dates.
+//
+// If workspace is not empty, the request is restricted to that workspace.
+//
+// The dates are truncated to UTC days, must be no earlier than 1970-01-01 and
+// no later than 2262-04-10, and the day of the start date must be before the
+// day of the end date.
+//
+// Exactly one of workspaces, connections, and pipelines in selection must be
+// non-nil, with between 1 and 100 items.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -937,10 +942,15 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 }
 
 // PipelineMetricsPerTimeUnit returns metrics for the specified number of
-// minutes, hours, or days based on the unit, up to the current time. If
-// workspace is not empty, the request is restricted to that workspace. number
-// must be in the following ranges: [1,60] for minutes, [1,48] for hours, and
-// [1,30] for days.
+// minutes, hours, or days based on the unit, up to the current time.
+//
+// If workspace is not empty, the request is restricted to that workspace.
+//
+// number must be in the following ranges: [1,60] for minutes, [1,48] for hours,
+// and [1,30] for days.
+//
+// Exactly one of workspaces, connections, and pipelines in selection must be
+// non-nil, with between 1 and 100 items.
 func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -1591,6 +1601,9 @@ func validateMetricsSelection(selection MetricSelection) error {
 		if len(selection.Workspaces) == 0 {
 			return errors.BadRequest("workspaces must not be empty when provided")
 		}
+		if len(selection.Workspaces) > 100 {
+			return errors.BadRequest("workspaces must contain at most 100 entries")
+		}
 		for _, workspace := range selection.Workspaces {
 			if !IsValidID(workspace) {
 				return errors.BadRequest("workspace %q is not valid", workspace)
@@ -1603,6 +1616,9 @@ func validateMetricsSelection(selection MetricSelection) error {
 		if len(selection.Connections) == 0 {
 			return errors.BadRequest("connections must not be empty when provided")
 		}
+		if len(selection.Connections) > 100 {
+			return errors.BadRequest("connections must contain at most 100 entries")
+		}
 		for _, connection := range selection.Connections {
 			if !IsValidID(connection) {
 				return errors.BadRequest("connection %q is not valid", connection)
@@ -1614,6 +1630,9 @@ func validateMetricsSelection(selection MetricSelection) error {
 	if selection.Pipelines != nil {
 		if len(selection.Pipelines) == 0 {
 			return errors.BadRequest("pipelines must not be empty when provided")
+		}
+		if len(selection.Pipelines) > 100 {
+			return errors.BadRequest("pipelines must contain at most 100 entries")
 		}
 		for _, pipeline := range selection.Pipelines {
 			if !IsValidID(pipeline) {

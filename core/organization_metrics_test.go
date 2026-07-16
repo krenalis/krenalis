@@ -5,6 +5,7 @@
 package core
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -57,6 +58,81 @@ func TestValidatePipelineMetricsSelectionAllowsWorkspaceGroup(t *testing.T) {
 	}
 }
 
+// TestValidatePipelineMetricsSelectionAllowsMaximumGroupSize verifies that the
+// selected grouping dimension may contain up to 100 identifiers.
+func TestValidatePipelineMetricsSelectionAllowsMaximumGroupSize(t *testing.T) {
+	tests := []struct {
+		name      string
+		selection MetricSelection
+	}{
+		{
+			name: "workspaces",
+			selection: MetricSelection{
+				Workspaces: validMetricIDs(100),
+			},
+		},
+		{
+			name: "connections",
+			selection: MetricSelection{
+				Connections: validMetricIDs(100),
+			},
+		},
+		{
+			name: "pipelines",
+			selection: MetricSelection{
+				Pipelines: validMetricIDs(100),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateMetricsSelection(test.selection)
+			if err != nil {
+				t.Fatalf("expected selection to be valid, got %v", err)
+			}
+		})
+	}
+}
+
+// TestValidatePipelineMetricsSelectionRejectsOversizedGroup verifies that the
+// selected grouping dimension cannot contain more than 100 identifiers.
+func TestValidatePipelineMetricsSelectionRejectsOversizedGroup(t *testing.T) {
+	tests := []struct {
+		name      string
+		selection MetricSelection
+	}{
+		{
+			name: "workspaces",
+			selection: MetricSelection{
+				Workspaces: validMetricIDs(101),
+			},
+		},
+		{
+			name: "connections",
+			selection: MetricSelection{
+				Connections: validMetricIDs(101),
+			},
+		},
+		{
+			name: "pipelines",
+			selection: MetricSelection{
+				Pipelines: validMetricIDs(101),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateMetricsSelection(test.selection)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), "must contain at most 100 entries") {
+				t.Fatalf("expected maximum group size error, got %v", err)
+			}
+		})
+	}
+}
+
 // TestValidatePipelineMetricsSelectionRejectsEmptyGroup verifies that the
 // selected grouping dimension must contain at least one identifier.
 func TestValidatePipelineMetricsSelectionRejectsEmptyGroup(t *testing.T) {
@@ -91,4 +167,13 @@ func TestValidatePipelineMetricsSelectionRejectsEmptyGroup(t *testing.T) {
 			}
 		})
 	}
+}
+
+func validMetricIDs(count int) []string {
+	const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+	ids := make([]string, count)
+	for i := range ids {
+		ids[i] = "9RbU4nP8Ly" + string(alphabet[i/len(alphabet)]) + string(alphabet[i%len(alphabet)])
+	}
+	return ids
 }
