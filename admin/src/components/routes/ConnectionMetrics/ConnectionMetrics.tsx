@@ -583,7 +583,7 @@ const ConnectionMetrics = () => {
 								Profiles
 							</SlButton>
 						</SlButtonGroup>
-						{c.pipelines?.length > 1 &&
+						{c.pipelines?.some((p) => p.target === selectedTarget) &&
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
 								<SlSelect
 									size='small'
