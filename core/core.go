@@ -58,8 +58,8 @@ import (
 // implement the application's behavior.
 //
 // Request contexts may carry a request ID, which is included in log messages
-// produced while handling the request. Use WithRequestID to add a request ID
-// to a context and RequestID to retrieve it.
+// produced while handling the request. Use [WithRequestID] to add a request ID
+// to a context and [RequestID] to retrieve it.
 type Core struct {
 	db                *dbpkg.DB
 	stream            streams.Stream
@@ -2080,14 +2080,14 @@ func IsValidID(id string) bool {
 // RequestID returns the request ID associated with ctx.
 // It returns an empty string if the context does not contain one.
 //
-// See also WithRequestID.
+// See also [WithRequestID].
 func RequestID(ctx context.Context) string {
 	return requestid.RequestID(ctx)
 }
 
 // WithRequestID stores requestID in ctx and returns the updated context.
 //
-// See also RequestID.
+// See also [RequestID].
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	return requestid.WithRequestID(ctx, requestID)
 }
