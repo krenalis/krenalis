@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/events"
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/requestid"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
@@ -219,10 +220,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// The request context is done; no response should be written.
 				return
 			}
+			requestID := requestid.RequestID(r.Context())
 			if serveSettings {
-				slog.Error("core/events/collector: an error occurred serving the settings", "error", err)
+				slog.Error("core/events/collector: an error occurred serving the settings", "error", err, "request_id", requestID)
 			} else {
-				slog.Error("core/events/collector: an error occurred collecting an event", "error", err)
+				slog.Error("core/events/collector: an error occurred collecting an event", "error", err, "request_id", requestID)
 			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
