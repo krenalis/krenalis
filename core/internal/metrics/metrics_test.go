@@ -82,6 +82,32 @@ func Test_StepString_invalid(t *testing.T) {
 	_ = Step(99).String()
 }
 
+// Test_TargetString verifies that String returns the expected label for each
+// Target.
+func Test_TargetString(t *testing.T) {
+	tests := map[Target]string{
+		TargetNone:  "None",
+		TargetEvent: "Event",
+		TargetUser:  "User",
+		TargetGroup: "Group",
+	}
+	for target, want := range tests {
+		if got := target.String(); got != want {
+			t.Fatalf("%v: expected %q, got %q", target, want, got)
+		}
+	}
+}
+
+// Test_TargetString_invalid checks that String panics for an undefined Target.
+func Test_TargetString_invalid(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic for invalid target, got no panic")
+		}
+	}()
+	_ = Target(99).String()
+}
+
 // Test_TimeSlot checks round-trip conversion between time slots and times.
 func Test_TimeSlot(t *testing.T) {
 

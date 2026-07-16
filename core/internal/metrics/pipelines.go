@@ -59,7 +59,7 @@ type Selection struct {
 type Target int
 
 const (
-	TargetNone = iota
+	TargetNone Target = iota
 	TargetEvent
 	TargetUser
 	TargetGroup
@@ -67,6 +67,8 @@ const (
 
 func (t Target) String() string {
 	switch t {
+	case TargetNone:
+		return "None"
 	case TargetEvent:
 		return "Event"
 	case TargetUser:
