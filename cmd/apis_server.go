@@ -8,6 +8,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"io"
 	"log/slog"
 	"mime"
@@ -16,8 +19,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/krenalis/krenalis/cmd/internal/synctoken"
 	"github.com/krenalis/krenalis/cmd/internal/workos"
 	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
@@ -51,9 +56,8 @@ type sessionCookie struct {
 	Member       string
 }
 
-// cookieKeysFunc loads the hash key and block key used to sign and encrypt
-// session cookies.
-type cookieKeysFunc func(context.Context) ([]byte, []byte, error)
+// httpSecretKeyFunc loads the HTTP secret key material.
+type httpSecretKeyFunc func(context.Context) ([]byte, error)
 
 const (
 	sessionCookieName = "krenalis_session"
@@ -66,7 +70,12 @@ type apisServer struct {
 		sync.Mutex
 		*securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
 	}
-	cookieKeys             cookieKeysFunc
+	syncTokens struct {
+		sync.Mutex
+		// codec creates and parses API Sync-Token values.
+		codec *synctoken.Codec
+	}
+	httpSecretKey          httpSecretKeyFunc
 	mux                    *http.ServeMux
 	runsOnHTTPS            bool
 	javaScriptSDKURL       string
@@ -94,7 +103,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 
 	s := &apisServer{
 		core:                   core,
-		cookieKeys:             core.CookieKeys,
+		httpSecretKey:          core.HTTPSecretKey,
 		runsOnHTTPS:            runsOnHTTPS,
 		javaScriptSDKURL:       javaScriptSDKURL,
 		externalURL:            externalURL,
@@ -115,9 +124,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	s.mux = http.NewServeMux()
 	for pattern, handler := range endpoints(s) {
 		s.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", "no-store, max-age=0")
-			w.Header().Set("Pragma", "no-cache")
-			w.Header().Set("Expires", "0")
+			// Serve the request.
 			response, err := handler(w, r)
 			if err != nil {
 				if r.Context().Err() != nil {
@@ -130,7 +137,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 					_ = err.WriteTo(w)
 					return
 				}
-				slog.Error("cmd: error occurred serving Core", "error", err)
+				slog.Error("cmd: error occurred serving Core", "request_id", requestID(r), "error", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -155,13 +162,29 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 	return s
 }
 
-// ServeHTTP servers the API methods from HTTP.
+// ServeHTTP serves the API methods over HTTP.
 func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !strings.HasPrefix(r.URL.Path, "/v1/") {
 		http.NotFound(w, r)
 		return
 	}
+
+	// Generate a random request ID to use as both the Request-Id value
+	// and the nonce for the Sync-Token.
+	var rawRequestID [synctoken.NonceSize]byte
+	_, _ = rand.Read(rawRequestID[:])
+
+	// Encode the request ID as Base58 for use in the Request-Id header and
+	// put it in the request's context.
+	requestID := base58.EncodeToString(rawRequestID[:])
+	w.Header().Set("Request-Id", requestID)
+	r = r.WithContext(core.WithRequestID(r.Context(), requestID))
+
+	// Prevent clients and intermediaries from caching API responses.
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 
 	switch r.Method {
 	case "GET", "DELETE":
@@ -171,7 +194,7 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = err.WriteTo(w)
 				return
 			}
-			slog.Error("cmd: error occurred serving Core", "error", err)
+			slog.Error("cmd: error occurred serving Core", "request_id", requestID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -189,12 +212,42 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = maxBytesNormalizedReader(w, r.Body, maxRequestSize)
 	}
 
+	// Get the Sync-Token codec to use while handling this request.
+	codec, err := s.syncTokenCodec(r.Context())
+	if err != nil {
+		slog.Error("cmd: cannot create the Sync-Token codec", "request_id", requestID, "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// If present, wait until the state reaches the version specified by the Sync-Token request header.
+	if token, ok := r.Header["Sync-Token"]; ok {
+		if len(token) > 1 {
+			http.Error(w, "Request contains multiple Sync-Token headers", http.StatusBadRequest)
+			return
+		}
+		version, err := codec.Decode(token[0])
+		if err != nil {
+			http.Error(w, "Request contains an invalid Sync-Token header", http.StatusBadRequest)
+			return
+		}
+		err = s.core.WaitStateVersion(r.Context(), version)
+		if err != nil {
+			return
+		}
+	}
+
 	r.URL.Path = r.URL.Path[len("/v1"):]
 	if r.URL.RawPath != "" {
 		r.URL.RawPath = r.URL.RawPath[len("/v1"):]
 	}
 
-	s.mux.ServeHTTP(w, r)
+	// Set the Sync-Token response header as late as possible
+	// so that it reflects the latest state version.
+	sw := synctoken.NewResponseWriter(w, codec, rawRequestID, s.core.StateVersion)
+	defer sw.Finish()
+
+	s.mux.ServeHTTP(sw, r)
 }
 
 // authenticateAdminRequest authenticates an Admin console request r and
@@ -472,6 +525,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		if err != nil {
 			if _, ok := err.(*errors.NotFoundError); ok {
 				slog.Error("WorkOS login rejected: organization does not exist",
+					"request_id", requestID(r),
 					"workos_user", workosUser.ID,
 					"organization", workosUser.OrganizationExternalID,
 				)
@@ -600,7 +654,7 @@ func (s *apisServer) handleWorkOSAction(w http.ResponseWriter, r *http.Request) 
 
 	responseJSON, err := s.workos.BuildActionResponse(verdict, message)
 	if err != nil {
-		slog.Error("WorkOS action error: failed to build response", "id", action.ID, "error", err)
+		slog.Error("WorkOS action error: failed to build response", "request_id", requestID(r), "id", action.ID, "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -676,10 +730,10 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			if e, ok := err.(*errors.UnprocessableError); ok && e.Code == core.MemberEmailExists {
 				// Email already in use, skip the update without returning
 				// errors to prevent webhook retries.
-				slog.Error("WorkOS webhook error: cannot update member's email because the new email already exists", "id", event.ID, "workos_user", event.Data.ID)
+				slog.Error("WorkOS webhook error: cannot update member's email because the new email already exists", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.ID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to update member", "id", event.ID, "workos_user", event.Data.ID, "error", err)
+			slog.Error("WorkOS webhook error: failed to update member", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.ID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -690,7 +744,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if err := s.core.DeleteMembersByWorkOSID(r.Context(), event.Data.ID); err != nil {
-			slog.Error("WorkOS webhook error: failed to delete member", "id", event.ID, "workos_user", event.Data.ID, "error", err)
+			slog.Error("WorkOS webhook error: failed to delete member", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.ID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -715,12 +769,12 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization.updated: organization not found", "id", event.ID, "organization", orgID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get organization", "id", event.ID, "organization", orgID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get organization", "request_id", requestID(r), "id", event.ID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		if err := org.Update(r.Context(), orgName, nil); err != nil {
-			slog.Error("WorkOS webhook error: failed to update organization", "id", event.ID, "organization", orgID, "error", err)
+			slog.Error("WorkOS webhook error: failed to update organization", "request_id", requestID(r), "id", event.ID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -736,7 +790,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.created: WorkOS user not found", "id", event.ID, "workos_user", event.Data.UserID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get WorkOS user", "id", event.ID, "workos_user", event.Data.UserID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get WorkOS user", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.UserID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -750,7 +804,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.created: WorkOS organization not found", "id", event.ID, "workos_organization", event.Data.OrganizationID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get WorkOS organization external ID", "id", event.ID, "workos_organization", event.Data.OrganizationID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get WorkOS organization external ID", "request_id", requestID(r), "id", event.ID, "workos_organization", event.Data.OrganizationID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -760,7 +814,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.created: organization not found", "id", event.ID, "organization", orgID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get organization", "id", event.ID, "organization", orgID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get organization", "request_id", requestID(r), "id", event.ID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -780,7 +834,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.created: member WorkOS user ID already exists", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to provision member", "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID, "error", err)
+			slog.Error("WorkOS webhook error: failed to provision member", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.UserID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -800,7 +854,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.deleted: WorkOS organization not found", "id", event.ID, "workos_organization", event.Data.OrganizationID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get WorkOS organization external ID", "id", event.ID, "workos_organization", event.Data.OrganizationID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get WorkOS organization external ID", "request_id", requestID(r), "id", event.ID, "workos_organization", event.Data.OrganizationID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -810,7 +864,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.deleted: organization not found", "id", event.ID, "organization", orgID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get organization", "id", event.ID, "organization", orgID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get organization", "request_id", requestID(r), "id", event.ID, "organization", orgID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -820,7 +874,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.deleted: member not found", "id", event.ID, "workos_user", event.Data.UserID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to get member by WorkOS ID", "id", event.ID, "workos_user", event.Data.UserID, "error", err)
+			slog.Error("WorkOS webhook error: failed to get member by WorkOS ID", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.UserID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -829,7 +883,7 @@ func (s *apisServer) handleWorkOSWebhook(w http.ResponseWriter, r *http.Request)
 				slog.Info("WorkOS webhook: skipping organization_membership.deleted: member not found", "id", event.ID, "workos_user", event.Data.UserID)
 				return
 			}
-			slog.Error("WorkOS webhook error: failed to delete member", "id", event.ID, "workos_user", event.Data.UserID, "error", err)
+			slog.Error("WorkOS webhook error: failed to delete member", "request_id", requestID(r), "id", event.ID, "workos_user", event.Data.UserID, "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -844,10 +898,13 @@ func (s *apisServer) secureCookie(ctx context.Context) (*securecookie.SecureCook
 	if s.cookies.SecureCookie != nil {
 		return s.cookies.SecureCookie, nil
 	}
-	hashKey, blockKey, err := s.cookieKeys(ctx)
+	key, err := s.httpSecretKey(ctx)
 	if err != nil {
 		return nil, err
 	}
+	hashKey := bytes.Clone(key[:32])
+	blockKey := bytes.Clone(key[32:])
+	clear(key)
 	s.cookies.SecureCookie = securecookie.New(hashKey, blockKey)
 	s.cookies.SecureCookie.MaxAge(sessionMaxAge)
 	return s.cookies.SecureCookie, nil
@@ -864,6 +921,43 @@ func maxBytesNormalizedReader(w http.ResponseWriter, r io.ReadCloser, n int64) i
 		Reader: norm.NFC.Reader(b),
 		Closer: b,
 	}
+}
+
+// requestID returns the request ID associated with r's context.
+// It returns an empty string if the context does not contain one.
+func requestID(r *http.Request) string {
+	return core.RequestID(r.Context())
+}
+
+// syncTokenCodec returns the codec used to create and parse API Sync-Token
+// values.
+func (s *apisServer) syncTokenCodec(ctx context.Context) (*synctoken.Codec, error) {
+	s.syncTokens.Lock()
+	defer s.syncTokens.Unlock()
+	if s.syncTokens.codec != nil {
+		return s.syncTokens.codec, nil
+	}
+	// The codec is cached only after the key is loaded successfully, so a
+	// transient failure can be retried by the next request.
+	key, err := s.httpSecretKey(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer clear(key)
+
+	// Derive a dedicated Sync-Token encryption key from the HTTP secret
+	// using a fixed label for domain separation.
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte("krenalis sync-token key v1"))
+	syncTokenKey := mac.Sum(nil)
+	defer clear(syncTokenKey)
+
+	codec, err := synctoken.NewCodec(syncTokenKey)
+	if err != nil {
+		return nil, err
+	}
+	s.syncTokens.codec = codec
+	return s.syncTokens.codec, nil
 }
 
 // validateForbiddenBody rejects requests that contain a request body.

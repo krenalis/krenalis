@@ -55,7 +55,7 @@ func (state *State) keep() {
 		case n = <-notifications:
 		}
 		if logNotifications {
-			slog.Info("core/state: received notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
+			slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
 		}
 		var org string
 		state.changing.Lock()
@@ -152,12 +152,19 @@ func (state *State) keep() {
 		case "UpdateWorkspace":
 			org = state.updateWorkspace(n)
 		default:
-			slog.Warn("core/internal/state: unknown notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
+			slog.Warn("core/internal/state: unknown notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
+		}
+		// Notify any goroutines waiting for a new version.
+		if n.Version > 0 {
+			state.version.Lock()
+			state.version.current = n.Version
+			state.version.next.Broadcast()
+			state.version.Unlock()
 		}
 		state.changing.Unlock()
-		if n.ID > 0 {
+		if n.Version > 0 {
 			// Acknowledge that the notification has been received.
-			if ack, ok := state.notifications.acks.LoadAndDelete(n.ID); ok {
+			if ack, ok := state.notifications.acks.LoadAndDelete(n.Version); ok {
 				ack.(chan struct{}) <- struct{}{}
 			}
 		}
@@ -172,7 +179,7 @@ func (state *State) keep() {
 func decodeNotification(n notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
-		slog.Error("core/state: cannot unmarshal notification", "id", n.ID, "name", n.Name, "error", err)
+		slog.Error("core/state: cannot unmarshal notification", "version", n.Version, "name", n.Name, "error", err)
 		return false
 	}
 	return true
