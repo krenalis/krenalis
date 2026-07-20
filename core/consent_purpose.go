@@ -6,6 +6,7 @@ package core
 
 import (
 	"context"
+	"sort"
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -36,17 +37,20 @@ func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string)
 	if err := util.ValidateStringField("code", code, 100); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	ws := this.workspace
-	var id string
+	n := state.AddConsentPurpose{
+		Workspace: this.workspace.ID,
+		Name:      name,
+		Code:      code,
+	}
 	for {
-		id = generateID[any](nil)
+		n.ID = generateID[any](nil)
 		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (id, workspace, name, code) VALUES ($1, $2, $3, $4)",
-				id, ws.ID, name, code)
+				n.ID, n.Workspace, n.Name, n.Code)
 			if err != nil {
 				return nil, err
 			}
-			return state.AddConsentPurpose{ID: id, Workspace: ws.ID, Name: name, Code: code}, nil
+			return n, nil
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) {
@@ -54,14 +58,14 @@ func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string)
 				case "consent_purposes_pkey":
 					continue
 				case "consent_purposes_workspace_code_key":
-					return "", errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", code)
+					return "", errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", n.Code)
 				}
 			}
 			return "", err
 		}
 		break
 	}
-	return id, nil
+	return n.ID, nil
 }
 
 // ConsentPurposes returns the consent purposes of the workspace, ordered by
@@ -100,21 +104,26 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id, name, code 
 	if err := util.ValidateStringField("code", code, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	ws := this.workspace
+	n := state.UpdateConsentPurpose{
+		ID:        id,
+		Workspace: this.workspace.ID,
+		Name:      name,
+		Code:      code,
+	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET name = $1, code = $2 WHERE id = $3 AND workspace = $4",
-			name, code, id, ws.ID)
+			n.Name, n.Code, n.ID, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("consent purpose %s does not exist", id)
+			return nil, errors.NotFound("consent purpose %s does not exist", n.ID)
 		}
-		return state.UpdateConsentPurpose{ID: id, Workspace: ws.ID, Name: name, Code: code}, nil
+		return n, nil
 	})
 	if err != nil {
 		if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "consent_purposes_workspace_code_key" {
-			return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", code)
+			return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", n.Code)
 		}
 		return err
 	}
@@ -134,25 +143,28 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 	if !IsValidID(id) {
 		return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 	}
-	ws := this.workspace
+	n := state.DeleteConsentPurpose{
+		ID:        id,
+		Workspace: this.workspace.ID,
+	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var inUse bool
 		err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
-			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", ws.ID, id).Scan(&inUse)
+			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", n.Workspace, n.ID).Scan(&inUse)
 		if err != nil {
 			return nil, err
 		}
 		if inUse {
-			return nil, errors.Unprocessable(ConsentPurposeInUse, "consent purpose %s is required by one or more pipelines", id)
+			return nil, errors.Unprocessable(ConsentPurposeInUse, "consent purpose %s is required by one or more pipelines", n.ID)
 		}
-		result, err := tx.Exec(ctx, "DELETE FROM consent_purposes WHERE id = $1 AND workspace = $2", id, ws.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM consent_purposes WHERE id = $1 AND workspace = $2", n.ID, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("consent purpose %s does not exist", id)
+			return nil, errors.NotFound("consent purpose %s does not exist", n.ID)
 		}
-		return state.DeleteConsentPurpose{ID: id, Workspace: ws.ID}, nil
+		return n, nil
 	})
 }
 
