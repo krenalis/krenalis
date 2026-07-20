@@ -15,18 +15,9 @@ import (
 
 // ConsentPurpose represents a purpose.
 type ConsentPurpose struct {
-	ID        string                   `json:"id"`
-	Name      string                   `json:"name"`
-	Code      string                   `json:"code"`
-	Pipelines []ConsentPurposePipeline `json:"pipelines"`
-}
-
-// ConsentPurposePipeline represents a pipeline that requires a purpose.
-type ConsentPurposePipeline struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Connection string `json:"connection"`
-	Connector  string `json:"connector"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
 }
 
 // AddConsentPurpose adds a consent purpose with the given name and code, and
@@ -78,42 +69,16 @@ func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string)
 func (this *Workspace) ConsentPurposes(ctx context.Context) ([]*ConsentPurpose, error) {
 	this.core.mustBeOpen()
 	purposes := make([]*ConsentPurpose, 0)
-	byID := make(map[string]*ConsentPurpose)
 	err := this.core.db.QueryScan(ctx,
 		"SELECT id, name, code FROM consent_purposes WHERE workspace = $1 ORDER BY name",
 		this.workspace.ID,
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				cp := &ConsentPurpose{Pipelines: make([]ConsentPurposePipeline, 0)}
+				cp := &ConsentPurpose{}
 				if err := rows.Scan(&cp.ID, &cp.Name, &cp.Code); err != nil {
 					return err
 				}
 				purposes = append(purposes, cp)
-				byID[cp.ID] = cp
-			}
-			return nil
-		})
-	if err != nil {
-		return nil, err
-	}
-	if len(purposes) == 0 {
-		return purposes, nil
-	}
-	err = this.core.db.QueryScan(ctx,
-		"SELECT p.id, p.name, p.connection, c.connector, req.id FROM pipelines p "+
-			"JOIN connections c ON c.id = p.connection "+
-			"CROSS JOIN LATERAL unnest(p.required_consents) AS req(id) "+
-			"WHERE c.workspace = $1 ORDER BY p.name",
-		this.workspace.ID, func(rows *db.Rows) error {
-			for rows.Next() {
-				var p ConsentPurposePipeline
-				var id string
-				if err := rows.Scan(&p.ID, &p.Name, &p.Connection, &p.Connector, &id); err != nil {
-					return err
-				}
-				if purpose, ok := byID[id]; ok {
-					purpose.Pipelines = append(purpose.Pipelines, p)
-				}
 			}
 			return nil
 		})

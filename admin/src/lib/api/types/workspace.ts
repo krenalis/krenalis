@@ -39,18 +39,10 @@ interface LatestAlterProfileSchema {
 	error: string | null;
 }
 
-interface ConsentPurposePipeline {
-	id: string;
-	name: string;
-	connection: string;
-	connector: string;
-}
-
 interface ConsentPurpose {
 	id: string;
 	name: string;
 	code: string;
-	pipelines: ConsentPurposePipeline[];
 }
 
 export default Workspace;
@@ -62,5 +54,4 @@ export type {
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
 	ConsentPurpose,
-	ConsentPurposePipeline,
 };

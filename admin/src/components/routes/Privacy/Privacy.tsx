@@ -17,6 +17,13 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Code' }, { name: 'Pipelines' }, { name: '' }];
 
+interface PurposePipeline {
+	id: string;
+	name: string;
+	connection: string;
+	connector: string;
+}
+
 const validatePurposeField = (name: string, value: string) => {
 	if (value === '') {
 		throw new Error(`${name} is required`);
@@ -34,7 +41,31 @@ const Privacy = () => {
 	const [purposeToDelete, setPurposeToDelete] = useState<ConsentPurpose | null>();
 	const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
-	const { api, handleError, setTitle, redirect } = useContext(AppContext);
+	const { api, connections, handleError, setTitle, redirect } = useContext(AppContext);
+
+	const pipelinesByPurpose = useMemo(() => {
+		const result = new Map<string, PurposePipeline[]>();
+		for (const connection of connections) {
+			for (const pipeline of connection.pipelines) {
+				for (const purpose of pipeline.requiredConsents?.purposes ?? []) {
+					const pipelines = result.get(purpose) ?? [];
+					pipelines.push({
+						id: pipeline.id,
+						name: pipeline.name,
+						connection: connection.id,
+						connector: connection.connector.code,
+					});
+					result.set(purpose, pipelines);
+				}
+			}
+		}
+		for (const pipelines of result.values()) {
+			pipelines.sort((a, b) => a.name.localeCompare(b.name));
+		}
+		return result;
+	}, [connections]);
+
+	const purposeToDeletePipelines = purposeToDelete == null ? [] : (pipelinesByPurpose.get(purposeToDelete.id) ?? []);
 
 	useLayoutEffect(() => {
 		setTitle('Settings / Privacy');
@@ -102,13 +133,14 @@ const Privacy = () => {
 			return [];
 		}
 		return purposes.map((p) => {
+			const pipelines = pipelinesByPurpose.get(p.id) ?? [];
 			const codeCell = <span className='privacy__grid-code'>{p.code}</span>;
 			const pipelinesCell =
-				p.pipelines.length === 0 ? (
+				pipelines.length === 0 ? (
 					<span className='privacy__grid-pipelines-empty'>-</span>
 				) : (
 					<div className='privacy__grid-pipelines'>
-						{p.pipelines.map((pl) => (
+						{pipelines.map((pl) => (
 							<SlTooltip key={pl.id} content={pl.name}>
 								<button
 									type='button'
@@ -136,7 +168,7 @@ const Privacy = () => {
 				key: p.id,
 			};
 		});
-	}, [purposes]);
+	}, [pipelinesByPurpose, purposes, redirect]);
 
 	return (
 		<div className='privacy'>
@@ -163,14 +195,14 @@ const Privacy = () => {
 					isOpen={purposeToDelete != null}
 					onClose={onCloseDeleteDialog}
 					title={
-						purposeToDelete && purposeToDelete.pipelines.length > 0 ? (
+						purposeToDeletePipelines.length > 0 ? (
 							<span>Unlink the purpose before deleting it</span>
 						) : (
 							<span>Delete the purpose?</span>
 						)
 					}
 					actions={
-						purposeToDelete && purposeToDelete.pipelines.length > 0 ? (
+						purposeToDeletePipelines.length > 0 ? (
 							<SlButton onClick={onCloseDeleteDialog}>Close</SlButton>
 						) : (
 							<>
@@ -182,7 +214,7 @@ const Privacy = () => {
 						)
 					}
 				>
-					{purposeToDelete && purposeToDelete.pipelines.length > 0
+					{purposeToDelete && purposeToDeletePipelines.length > 0
 						? `The "${purposeToDelete.name}" purpose is required by one or more pipelines. Remove it from those pipelines before you can delete it.`
 						: `Once deleted, no pipeline will be able to require consent for "${purposeToDelete?.name}".`}
 				</AlertDialog>
