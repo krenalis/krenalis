@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/events"
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/requestid"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
@@ -183,8 +184,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			reader, err := gzip.NewReader(r.Body)
 			if err != nil {
-				slog.Error("core/events/collector: an error occurred creating gzip reader", "error", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 				return
 			}
 			defer reader.Close()
@@ -219,10 +219,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// The request context is done; no response should be written.
 				return
 			}
+			requestID := requestid.RequestID(r.Context())
 			if serveSettings {
-				slog.Error("core/events/collector: an error occurred serving the settings", "error", err)
+				slog.Error("core/events/collector: an error occurred serving the settings", "error", err, "request_id", requestID)
 			} else {
-				slog.Error("core/events/collector: an error occurred collecting an event", "error", err)
+				slog.Error("core/events/collector: an error occurred collecting an event", "error", err, "request_id", requestID)
 			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
