@@ -5,6 +5,7 @@
 package connections
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -358,10 +359,11 @@ func Test_ReceivedEvent(t *testing.T) {
 		t.Fatalf("unexpected session context")
 	}
 
-	consent, ok := ctx.Consent()
+	consentSeq, ok := ctx.Consent()
 	if !ok {
 		t.Fatalf("unexpected consent context")
 	}
+	consent := maps.Collect(consentSeq)
 	if len(consent) != 3 || consent["analytics"] || !consent["essential_services"] || consent["targeted_advertising"] {
 		t.Fatalf("unexpected consent %v", consent)
 	}

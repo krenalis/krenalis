@@ -5,6 +5,7 @@
 package connections
 
 import (
+	"iter"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -119,15 +120,17 @@ func (c receivedEventContext) Campaign() (connectors.ReceivedEventContextCampaig
 	return nil, false
 }
 
-func (c receivedEventContext) Consent() (map[string]bool, bool) {
+func (c receivedEventContext) Consent() (iter.Seq2[string, bool], bool) {
 	if consent, ok := c.context["consent"].(map[string]any); ok {
-		m := make(map[string]bool, len(consent))
-		for purpose, consented := range consent {
-			if v, ok := consented.(bool); ok {
-				m[purpose] = v
+		return func(yield func(string, bool) bool) {
+			for purpose, consented := range consent {
+				if v, ok := consented.(bool); ok {
+					if !yield(purpose, v) {
+						return
+					}
+				}
 			}
-		}
-		return m, true
+		}, true
 	}
 	return nil, false
 }
