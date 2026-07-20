@@ -73,23 +73,34 @@ func collected(t *testing.T, organizationID string) (uint64, bool) {
 // the test, as Listen does with the ones of a state.
 func listen(t *testing.T, organizationIDs ...string) {
 	t.Helper()
+	forget(t, organizationIDs...)
 	organizationsMu.Lock()
 	for _, id := range organizationIDs {
 		if _, ok := organizations[id]; !ok {
-			organizations[id] = nil
+			organizations[id] = &organization{}
 		}
 	}
 	listening = true
 	organizationsMu.Unlock()
 	t.Cleanup(func() {
 		organizationsMu.Lock()
+		listening = false
+		organizationsMu.Unlock()
+	})
+}
+
+// forget removes the organizations with the given IDs, and unregisters their
+// counters, when the test ends, so that they do not leak into the other tests.
+func forget(t *testing.T, organizationIDs ...string) {
+	t.Helper()
+	t.Cleanup(func() {
+		organizationsMu.Lock()
 		for _, id := range organizationIDs {
-			if c, ok := organizations[id]; ok && c != nil {
-				c.Unregister()
+			if org, ok := organizations[id]; ok && org.egress != nil {
+				org.egress.Unregister()
 			}
 			delete(organizations, id)
 		}
-		listening = false
 		organizationsMu.Unlock()
 	})
 }
@@ -384,14 +395,29 @@ func TestDialUnknownOrganization(t *testing.T) {
 	// does not exist and the dial fails.
 	enable(t)
 	listen(t, "org-known")
+	forget(t, "org-unknown")
 	addr := echoServer(t)
-	_, err := Dial("org-unknown")(t.Context(), "tcp", addr)
+	dial := Dial("org-unknown")
+	_, err := dial(t.Context(), "tcp", addr)
 	if !errors.Is(err, ErrNoOrganization) {
 		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
 	}
 	// No counter is registered for an organization that does not exist.
 	if _, ok := collected(t, "org-unknown"); ok {
 		t.Fatal("a counter is collected for an organization that does not exist")
+	}
+
+	// The organization is resolved when the dial function is created, so the
+	// dial function keeps failing even if an organization with the same ID is
+	// created later. A dial function created after it, instead, dials.
+	onCreateOrganization(state.CreateOrganization{ID: "org-unknown"})
+	if _, err := dial(t.Context(), "tcp", addr); !errors.Is(err, ErrNoOrganization) {
+		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	}
+	egress := egress(t, "org-unknown")
+	write(t, Dial("org-unknown"), addr, "hello")
+	if n := egress(); n != 5 {
+		t.Fatalf("counted %d bytes, expecting 5", n)
 	}
 }
 
