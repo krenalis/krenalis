@@ -505,8 +505,7 @@ func (state *State) createConnection(n notification) string {
 	return ws.organization.ID
 }
 
-// AddConsentPurpose is the event sent when a new consent purpose is
-// created.
+// AddConsentPurpose is the event sent when a new consent purpose is added.
 type AddConsentPurpose struct {
 	ID        string
 	Workspace string
@@ -514,7 +513,7 @@ type AddConsentPurpose struct {
 	Code      string
 }
 
-// addConsentPurpose creates a new consent purpose.
+// addConsentPurpose adds a new consent purpose.
 func (state *State) addConsentPurpose(n notification) string {
 	e := AddConsentPurpose{}
 	if !decodeNotification(n, &e) {
