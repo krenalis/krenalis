@@ -10,8 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/prometheus/client_golang/prometheus"

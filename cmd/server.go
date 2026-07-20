@@ -27,7 +27,6 @@ import (
 
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
 	corePkg "github.com/krenalis/krenalis/core"
-	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
@@ -45,8 +44,6 @@ const telemetryLevelAll = corePkg.TelemetryLevelAll
 // initDBIfEmpty, a member specific for Docker scenarios is initialized.
 func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
-	countdial.Enabled(config.PrometheusMetricsEnabled)
-
 	conf := corePkg.Config{
 		KMS:                           config.KMS,
 		OrganizationsAPIKey:           config.OrganizationsAPIKey,
@@ -58,6 +55,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		OAuthCredentials:              maps.Clone(config.OAuthCredentials),
 		SentryTelemetryLevel:          config.SentryTelemetryLevel,
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
+		NetworkUsageMetricsEnabled:    config.PrometheusMetricsEnabled,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

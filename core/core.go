@@ -24,6 +24,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/collector"
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
@@ -41,7 +42,6 @@ import (
 	"github.com/krenalis/krenalis/core/natsopts"
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/base58"
-	"github.com/krenalis/krenalis/tools/countdial"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
@@ -99,6 +99,7 @@ type Config struct {
 	OAuthCredentials              map[string]*OAuthCredentials
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
+	NetworkUsageMetricsEnabled    bool
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -195,6 +196,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			coreActive.Store(false)
 		}
 	}()
+
+	countdial.Enabled(conf.NetworkUsageMetricsEnabled)
 
 	// Open connection to PostgreSQL.
 	ps := conf.DB

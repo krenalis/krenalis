@@ -8,8 +8,8 @@ import (
 	"context"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/tools/countdial"
 )
 
 // messageBrokerConnection is the interface implemented by message broker
