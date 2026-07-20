@@ -146,8 +146,7 @@ func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 }
 
 // TestCallWithMetricsDisabled tests that, when the metrics are disabled, the
-// bytes sent invoking a function are not counted and the function is invoked
-// with a single, shared, client.
+// bytes sent invoking a function are not counted.
 func TestCallWithMetricsDisabled(t *testing.T) {
 
 	countdial.Enabled(false)
@@ -157,7 +156,7 @@ func TestCallWithMetricsDisabled(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	fn := newFunction(t, srv.URL).(*function)
+	fn := newFunction(t, srv.URL)
 
 	const organization = "test-call-disabled"
 
@@ -173,10 +172,51 @@ func TestCallWithMetricsDisabled(t *testing.T) {
 	if sent := egressBytes(t, organization); sent != 0 {
 		t.Fatalf("%d bytes have been counted with the metrics disabled, expecting 0", sent)
 	}
-	if _, ok := fn.clients[organization]; ok {
-		t.Fatal("a client has been created for the organization, expecting the shared one")
+}
+
+// TestCallUsesASingleClient tests that the same client is used for every
+// organization, so that no client has to be kept, and disposed of, per
+// organization, and that its connections are not pooled between them, so that
+// the bytes of each call are attributed to the organization that made it.
+func TestCallUsesASingleClient(t *testing.T) {
+
+	countdial.Enabled(true)
+	t.Cleanup(func() { countdial.Enabled(false) })
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(callResponse))
+	}))
+	t.Cleanup(srv.Close)
+
+	fn := newFunction(t, srv.URL).(*function)
+
+	var client any
+	for _, organization := range []string{"test-single-client-one", "test-single-client-another"} {
+		records := []transformers.Record{
+			{Attributes: map[string]any{"name": "Krenalis"}},
+		}
+		err := fn.Call(context.Background(), organization, "arn:aws:lambda:eu-south-1:1:function:f.js", "1",
+			callSchema, callSchema, false, records)
+		if err != nil {
+			t.Fatalf("cannot call the function: %s", err)
+		}
+		if client == nil {
+			client = fn.client
+		} else if any(fn.client) != client {
+			t.Fatalf("a new client has been created for the organization %s, expecting the shared one", organization)
+		}
+		// The call must be counted for the organization that made it, and not
+		// for the one that dialed the connection the client would otherwise
+		// have reused.
+		if sent := egressBytes(t, organization); sent == 0 {
+			t.Fatalf("no bytes have been attributed to the organization %s", organization)
+		}
 	}
-	if len(fn.clients) != 1 {
-		t.Fatalf("%d clients have been created, expecting 1", len(fn.clients))
+
+	if err := fn.Close(context.Background()); err != nil {
+		t.Fatalf("cannot close the function: %s", err)
+	}
+	if fn.client != nil {
+		t.Fatal("the client has not been released closing the function")
 	}
 }

@@ -10,9 +10,9 @@
 // by organization. Only the bytes sent are counted, the bytes received are not.
 //
 // Counting is disabled by default and is enabled with [Enabled]. When it is
-// disabled, the dial functions returned by [Dial] and [DialWith], and the
-// transport returned by [Transport], establish the connections as they would
-// without this package, with no overhead.
+// disabled, the dial functions returned by [Dial], [DialWith] and
+// [DialWithContext], and the transport returned by [Transport], establish the
+// connections as they would without this package, with no overhead.
 package countdial
 
 import (
@@ -52,10 +52,6 @@ func Enabled(v bool) {
 }
 
 // IsEnabled reports whether counting is enabled (see [Enabled]).
-//
-// Since the dial functions are per organization, a caller that would otherwise
-// keep one client per organization can use it to keep a single shared client
-// when counting is disabled.
 func IsEnabled() bool {
 	return enabled.Load()
 }
@@ -105,6 +101,55 @@ func Dial(organizationID string) DialFunc {
 func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 	return func(dial DialFunc) DialFunc {
 		return dialWith(organizationID, dial)
+	}
+}
+
+type organizationKey struct{}
+
+// WithOrganization returns a copy of ctx carrying the ID of the organization the
+// bytes sent by the connections dialed with it are attributed to.
+//
+// Use it, together with [DialWithContext], when a client is shared by every
+// organization and the organization is only known when the client is used, so
+// that the dial function does not have to be fixed when the client is created.
+//
+// If organizationID is empty, or counting is disabled (see [Enabled]), ctx is
+// returned unchanged.
+func WithOrganization(ctx context.Context, organizationID string) context.Context {
+	if !enabled.Load() || organizationID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, organizationKey{}, organizationID)
+}
+
+// DialWithContext wraps a dial function, counting the bytes the connections it
+// establishes send and attributing them to the organization carried by the
+// context of each dial, set with [WithOrganization].
+//
+// Unlike [DialWith], the organization is not fixed when the dial function is
+// created, so a single client can serve every organization.
+//
+// If the wrapped dial function is nil, a plain net.Dialer is used, as in
+// [Dial]. If counting is disabled (see [Enabled]), the dial function is
+// returned unwrapped and no bytes are counted.
+func DialWithContext(dial DialFunc) DialFunc {
+	if dial == nil {
+		var d net.Dialer
+		dial = d.DialContext
+	}
+	if !enabled.Load() {
+		return dial
+	}
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := dial(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+		organizationID, _ := ctx.Value(organizationKey{}).(string)
+		if organizationID == "" {
+			return conn, nil
+		}
+		return &instrumentedConn{Conn: conn, egress: counterFor(organizationID)}, nil
 	}
 }
 

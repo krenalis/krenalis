@@ -203,6 +203,91 @@ func TestDialWithNilDialFunc(t *testing.T) {
 	}
 }
 
+func TestDialWithContext(t *testing.T) {
+	// A single dial function attributes the bytes to the organization carried
+	// by the context of each dial.
+	enable(t)
+	addr := echoServer(t)
+	egressA := egress(t, "org-ctx-a")
+	egressB := egress(t, "org-ctx-b")
+	var dialed bool
+	dial := DialWithContext(func(ctx context.Context, network, address string) (net.Conn, error) {
+		dialed = true
+		var d net.Dialer
+		return d.DialContext(ctx, network, address)
+	})
+	conn, err := dial(WithOrganization(t.Context(), "org-ctx-a"), "tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dialed {
+		t.Fatal("the connection has not been established by the given dial function")
+	}
+	if _, ok := conn.(*instrumentedConn); !ok {
+		t.Fatalf("the connection is a %T, expecting an instrumented connection", conn)
+	}
+	if _, err = conn.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	conn.Close()
+	if n := egressA(); n != 5 {
+		t.Fatalf("counted %d bytes for org-ctx-a, expecting 5", n)
+	}
+	// The same dial function attributes the bytes of another context to another
+	// organization.
+	conn, err = dial(WithOrganization(t.Context(), "org-ctx-b"), "tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = conn.Write([]byte("hi")); err != nil {
+		t.Fatal(err)
+	}
+	conn.Close()
+	if n := egressA(); n != 5 {
+		t.Fatalf("counted %d bytes for org-ctx-a, expecting 5", n)
+	}
+	if n := egressB(); n != 2 {
+		t.Fatalf("counted %d bytes for org-ctx-b, expecting 2", n)
+	}
+}
+
+func TestDialWithContextWithoutOrganization(t *testing.T) {
+	// The context carries no organization, so the bytes are not counted even if
+	// the metrics are enabled.
+	enable(t)
+	addr := echoServer(t)
+	egress := egress(t, "")
+	conn := write(t, DialWithContext(nil), addr, "hello")
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
+	}
+	if n := egress(); n != 0 {
+		t.Fatalf("counted %d bytes, expecting 0", n)
+	}
+}
+
+func TestDialWithContextDisabled(t *testing.T) {
+	// The metrics are disabled, so the organization is not put into the context
+	// and the dialer is transparent.
+	addr := echoServer(t)
+	egress := egress(t, "org-ctx-disabled")
+	ctx := WithOrganization(t.Context(), "org-ctx-disabled")
+	conn, err := DialWithContext(nil)(ctx, "tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
+	}
+	if _, err = conn.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	if n := egress(); n != 0 {
+		t.Fatalf("counted %d bytes, expecting 0", n)
+	}
+}
+
 func TestTransport(t *testing.T) {
 	base := http.DefaultTransport.(*http.Transport)
 

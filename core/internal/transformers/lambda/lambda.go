@@ -36,11 +36,7 @@ import (
 type function struct {
 	settings Settings
 	mu       sync.Mutex
-	config   *aws.Config
-	// clients holds a Lambda client for each organization, so that the bytes
-	// the client sends are attributed to it. The client with the empty key is
-	// the one used when the bytes are not counted (see [countdial.IsEnabled]).
-	clients map[string]*lambda.Client // by organization ID
+	client   *lambda.Client
 }
 
 type Settings struct {
@@ -83,10 +79,11 @@ func (fn *function) Call(ctx context.Context, organization, id, version string, 
 		return err
 	}
 
-	client, err := fn.lambdaClient(ctx, organization)
+	client, err := fn.lambdaClient(ctx)
 	if err != nil {
 		return err
 	}
+	ctx = countdial.WithOrganization(ctx, organization)
 
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
@@ -189,7 +186,7 @@ func (fn *function) Call(ctx context.Context, organization, id, version string, 
 // Close closes the function.
 func (fn *function) Close(ctx context.Context) error {
 	fn.mu.Lock()
-	fn.clients = nil
+	fn.client = nil
 	fn.mu.Unlock()
 	return nil
 }
@@ -210,10 +207,11 @@ func (fn *function) Create(ctx context.Context, organization, name string, langu
 	if err != nil {
 		return "", "", err
 	}
-	client, err := fn.lambdaClient(ctx, organization)
+	client, err := fn.lambdaClient(ctx)
 	if err != nil {
 		return "", "", err
 	}
+	ctx = countdial.WithOrganization(ctx, organization)
 	var runtime string
 	var layers []string
 	switch language {
@@ -271,7 +269,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	client, err := fn.lambdaClient(ctx, "")
+	client, err := fn.lambdaClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -311,10 +309,11 @@ func (fn *function) Update(ctx context.Context, organization, id, source string)
 	if err != nil {
 		return "", err
 	}
-	client, err := fn.lambdaClient(ctx, organization)
+	client, err := fn.lambdaClient(ctx)
 	if err != nil {
 		return "", err
 	}
+	ctx = countdial.WithOrganization(ctx, organization)
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
 		FunctionName: &arn,
 		Publish:      true,
@@ -436,74 +435,52 @@ def _handler(event, context):
 	return b.Bytes(), nil
 }
 
-// lambdaClient returns the Lambda client of the organization with the given ID,
-// which counts the bytes it sends as the egress traffic of the organization. It
-// loads the AWS configuration from the environment (IAM role, etc.) on first
-// call.
+// lambdaClient returns the Lambda client, loading the AWS configuration from
+// the environment (IAM role, etc.) on first call.
 //
-// The client is created once per organization and is then reused, so that all
-// the requests of an organization share the same connection pool. If the bytes
-// sent for the organization are not counted, a single client, shared by every
-// organization, is returned, as the Lambda traffic does not need to be kept
-// apart.
-func (fn *function) lambdaClient(ctx context.Context, organization string) (*lambda.Client, error) {
-
-	if !countdial.IsEnabled() {
-		organization = ""
-	}
-
+// A single client, shared by every organization, is used: it counts the bytes
+// it sends as the egress traffic of the organization carried by the context of
+// each request, set with [countdial.WithOrganization].
+func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	fn.mu.Lock()
 	defer fn.mu.Unlock()
-
-	if client, ok := fn.clients[organization]; ok {
-		return client, nil
-	}
-
-	if fn.config == nil {
+	if fn.client == nil {
 		cfg, err := awsconfig.LoadDefaultConfig(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
 		}
-		fn.config = &cfg
+		fn.client = lambda.NewFromConfig(cfg, countEgress)
 	}
-
-	var client *lambda.Client
-	if organization == "" {
-		client = lambda.NewFromConfig(*fn.config)
-	} else {
-		client = lambda.NewFromConfig(*fn.config, countEgress(organization))
-	}
-	if fn.clients == nil {
-		fn.clients = map[string]*lambda.Client{}
-	}
-	fn.clients[organization] = client
-
-	return client, nil
+	return fn.client, nil
 }
 
-// countEgress returns the option that makes a Lambda client count the bytes it
-// sends as the egress traffic of the organization with the given ID.
+// countEgress is the option that makes the Lambda client count the bytes it
+// sends as the egress traffic of the organization carried by the context of
+// each request.
 //
 // It only wraps the dial function of the HTTP client the AWS SDK has resolved,
 // which is a buildable one, leaving everything else, like its timeouts and its
-// connection pool sizes, as the SDK has configured it. WithTransportOptions
-// returns a copy of the client, so the clients of the other organizations are
-// not affected.
-func countEgress(organization string) func(*lambda.Options) {
-	dialWith := countdial.DialWith(organization)
-	return func(o *lambda.Options) {
-		// The AWS SDK resolves the HTTP client, from the configuration, before
-		// applying this option, so it is a buildable client unless a client that
-		// is not buildable has been explicitly configured, which Krenalis does
-		// not do.
-		client, ok := o.HTTPClient.(*awshttp.BuildableClient)
-		if !ok {
-			client = awshttp.NewBuildableClient()
-		}
-		o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
-			t.DialContext = dialWith(t.DialContext)
-		})
+// connection pool sizes, as the SDK has configured it.
+func countEgress(o *lambda.Options) {
+	// The AWS SDK resolves the HTTP client, from the configuration, before
+	// applying this option, so it is a buildable client unless a client that is
+	// not buildable has been explicitly configured, which Krenalis does not do.
+	client, ok := o.HTTPClient.(*awshttp.BuildableClient)
+	if !ok {
+		client = awshttp.NewBuildableClient()
 	}
+	// WithTransportOptions returns a copy of the client, leaving the one the
+	// SDK has resolved untouched.
+	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
+		t.DialContext = countdial.DialWithContext(t.DialContext)
+		// The organization is resolved when a connection is dialed, so a pooled
+		// connection would attribute the bytes of every request it later serves
+		// to the organization that dialed it. Keep-alives are disabled, at the
+		// cost of a handshake per request, so that each request is counted for
+		// its own organization. Only when counting is enabled, as otherwise the
+		// pool can be shared with no loss.
+		t.DisableKeepAlives = countdial.IsEnabled()
+	})
 }
 
 // pythonEscaper is used by escapePythonSourceCode.
