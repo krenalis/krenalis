@@ -795,28 +795,6 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 	return a, a != nil
 }
 
-// ConsentPurpose returns the consent purpose of the workspace with identifier
-// id. The boolean return value reports whether the consent purpose exists.
-func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
-	workspace.mu.Lock()
-	cp, ok := workspace.consentPurposes[id]
-	workspace.mu.Unlock()
-	return cp, ok
-}
-
-// ConsentPurposes returns all the consent purposes of the workspace.
-func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
-	workspace.mu.Lock()
-	purposes := make([]*ConsentPurpose, len(workspace.consentPurposes))
-	i := 0
-	for _, cp := range workspace.consentPurposes {
-		purposes[i] = cp
-		i++
-	}
-	workspace.mu.Unlock()
-	return purposes
-}
-
 // Connection returns the connection of the workspace with identifier id.
 // The boolean return value reports whether the connection exists.
 func (workspace *Workspace) Connection(id string) (*Connection, bool) {
@@ -837,6 +815,28 @@ func (workspace *Workspace) Connections() []*Connection {
 	}
 	workspace.mu.Unlock()
 	return connections
+}
+
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
+	workspace.mu.Lock()
+	cp, ok := workspace.consentPurposes[id]
+	workspace.mu.Unlock()
+	return cp, ok
+}
+
+// ConsentPurposes returns all the consent purposes of the workspace.
+func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
+	workspace.mu.Lock()
+	purposes := make([]*ConsentPurpose, len(workspace.consentPurposes))
+	i := 0
+	for _, cp := range workspace.consentPurposes {
+		purposes[i] = cp
+		i++
+	}
+	workspace.mu.Unlock()
+	return purposes
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
