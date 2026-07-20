@@ -104,6 +104,9 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id, name, code 
 	if err := util.ValidateStringField("code", code, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
+	if _, ok := this.workspace.ConsentPurpose(id); !ok {
+		return errors.NotFound("consent purpose %s does not exist", id)
+	}
 	n := state.UpdateConsentPurpose{
 		ID:        id,
 		Workspace: this.workspace.ID,
@@ -142,6 +145,9 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
 		return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
+	}
+	if _, ok := this.workspace.ConsentPurpose(id); !ok {
+		return errors.NotFound("consent purpose %s does not exist", id)
 	}
 	n := state.DeleteConsentPurpose{
 		ID:        id,
