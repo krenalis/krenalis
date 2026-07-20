@@ -22,6 +22,30 @@ type workspace struct {
 	*apisServer
 }
 
+// AddConsentPurpose adds a consent purpose for the current workspace.
+func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Name string `json:"name"`
+		Code string `json:"code"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	id, err := ws.AddConsentPurpose(r.Context(), body.Name, body.Code)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id}, nil
+}
+
 // AlterProfileSchema alters the profile schema of a workspace.
 func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(r, false); err != nil {
@@ -119,30 +143,6 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 		body.Settings = nil
 	}
 	id, err := ws.CreateConnection(r.Context(), body.ConnectionToAdd, body.AuthToken)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]string{"id": id}, nil
-}
-
-// AddConsentPurpose adds a consent purpose for the current workspace.
-func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateRequiredBody(r, false); err != nil {
-		return nil, err
-	}
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Name string `json:"name"`
-		Code string `json:"code"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	id, err := ws.AddConsentPurpose(r.Context(), body.Name, body.Code)
 	if err != nil {
 		return nil, err
 	}

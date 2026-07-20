@@ -66,14 +66,14 @@ func (state *State) keep() {
 		switch n.Name {
 		case "AcceptInvitation":
 			org = state.acceptInvitation(n)
+		case "AddConsentPurpose":
+			org = state.addConsentPurpose(n)
 		case "AddMember":
 			org = state.addMember(n)
 		case "CreateAccessKey":
 			org = state.createAccessKey(n)
 		case "CreateConnection":
 			org = state.createConnection(n)
-		case "AddConsentPurpose":
-			org = state.addConsentPurpose(n)
 		case "CreateOrganization":
 			org = state.createOrganization(n)
 		case "CreatePipeline":
@@ -352,6 +352,35 @@ func (state *State) acceptInvitation(n notification) string {
 	return org.ID
 }
 
+// AddConsentPurpose is the event sent when a new consent purpose is added.
+type AddConsentPurpose struct {
+	ID        string
+	Workspace string
+	Name      string
+	Code      string
+}
+
+// addConsentPurpose adds a new consent purpose.
+func (state *State) addConsentPurpose(n notification) string {
+	e := AddConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	cp := &ConsentPurpose{
+		mu:        new(sync.Mutex),
+		ID:        e.ID,
+		workspace: ws,
+		Name:      e.Name,
+		Code:      e.Code,
+	}
+	ws.mu.Lock()
+	ws.consentPurposes[cp.ID] = cp
+	ws.mu.Unlock()
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
 // AddMember is the event sent when a member is added.
 type AddMember struct {
 	ID           string
@@ -501,35 +530,6 @@ func (state *State) createConnection(n notification) string {
 			lc.LinkedConnections = addLinkedConnection(lc.LinkedConnections, c.ID)
 		})
 	}
-	dispatchNotification(state, e)
-	return ws.organization.ID
-}
-
-// AddConsentPurpose is the event sent when a new consent purpose is added.
-type AddConsentPurpose struct {
-	ID        string
-	Workspace string
-	Name      string
-	Code      string
-}
-
-// addConsentPurpose adds a new consent purpose.
-func (state *State) addConsentPurpose(n notification) string {
-	e := AddConsentPurpose{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
-	ws := state.workspaces[e.Workspace]
-	cp := &ConsentPurpose{
-		mu:        new(sync.Mutex),
-		ID:        e.ID,
-		workspace: ws,
-		Name:      e.Name,
-		Code:      e.Code,
-	}
-	ws.mu.Lock()
-	ws.consentPurposes[cp.ID] = cp
-	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
 }

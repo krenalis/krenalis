@@ -29,6 +29,50 @@ type ConsentPurposePipeline struct {
 	Connector  string `json:"connector"`
 }
 
+// AddConsentPurpose adds a consent purpose with the given name and code, and
+// returns its identifier.
+//
+// name and code must be between 1 and 100 runes long.
+//
+// It returns an errors.UnprocessableError error with code
+// ConsentPurposeCodeExists if a consent purpose with the same code already
+// exists in the workspace.
+func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string) (string, error) {
+	this.core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 100); err != nil {
+		return "", errors.BadRequest("%s", err)
+	}
+	if err := util.ValidateStringField("code", code, 100); err != nil {
+		return "", errors.BadRequest("%s", err)
+	}
+	ws := this.workspace
+	var id string
+	for {
+		id = generateID[any](nil)
+		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (id, workspace, name, code) VALUES ($1, $2, $3, $4)",
+				id, ws.ID, name, code)
+			if err != nil {
+				return nil, err
+			}
+			return state.AddConsentPurpose{ID: id, Workspace: ws.ID, Name: name, Code: code}, nil
+		})
+		if err != nil {
+			if db.IsUniqueViolation(err) {
+				switch db.ErrConstraintName(err) {
+				case "consent_purposes_pkey":
+					continue
+				case "consent_purposes_workspace_code_key":
+					return "", errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", code)
+				}
+			}
+			return "", err
+		}
+		break
+	}
+	return id, nil
+}
+
 // ConsentPurposes returns the consent purposes of the workspace, ordered by
 // name.
 func (this *Workspace) ConsentPurposes(ctx context.Context) ([]*ConsentPurpose, error) {
@@ -77,50 +121,6 @@ func (this *Workspace) ConsentPurposes(ctx context.Context) ([]*ConsentPurpose, 
 		return nil, err
 	}
 	return purposes, nil
-}
-
-// AddConsentPurpose adds a consent purpose with the given name and code, and
-// returns its identifier.
-//
-// name and code must be between 1 and 100 runes long.
-//
-// It returns an errors.UnprocessableError error with code
-// ConsentPurposeCodeExists if a consent purpose with the same code already
-// exists in the workspace.
-func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string) (string, error) {
-	this.core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 100); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
-	if err := util.ValidateStringField("code", code, 100); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
-	ws := this.workspace
-	var id string
-	for {
-		id = generateID[any](nil)
-		err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (id, workspace, name, code) VALUES ($1, $2, $3, $4)",
-				id, ws.ID, name, code)
-			if err != nil {
-				return nil, err
-			}
-			return state.AddConsentPurpose{ID: id, Workspace: ws.ID, Name: name, Code: code}, nil
-		})
-		if err != nil {
-			if db.IsUniqueViolation(err) {
-				switch db.ErrConstraintName(err) {
-				case "consent_purposes_pkey":
-					continue
-				case "consent_purposes_workspace_code_key":
-					return "", errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", code)
-				}
-			}
-			return "", err
-		}
-		break
-	}
-	return id, nil
 }
 
 // UpdateConsentPurpose updates the name and code of the consent purpose with

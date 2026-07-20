@@ -318,10 +318,10 @@ CREATE INDEX ON accounts (connector);
 
 CREATE TYPE notification_name AS ENUM (
     'AcceptInvitation',
+    'AddConsentPurpose',
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',
-    'AddConsentPurpose',
     'CreateEventWriteKey',
     'CreateOrganization',
     'CreatePipeline',
