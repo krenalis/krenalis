@@ -517,6 +517,7 @@ func (state *State) createOrganization(n notification) string {
 	state.mu.Lock()
 	state.organizations[e.ID] = org
 	state.mu.Unlock()
+	dispatchNotification(state, e)
 	return e.ID
 }
 

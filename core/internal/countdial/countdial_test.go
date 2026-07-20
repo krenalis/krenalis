@@ -6,6 +6,7 @@ package countdial
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/krenalis/krenalis/core/internal/state"
 
 	"github.com/prometheus/client_golang/prometheus"
 	client "github.com/prometheus/client_model/go"
@@ -30,25 +33,65 @@ func egress(t *testing.T, organizationID string) func() uint64 {
 	}
 }
 
-// counted returns the value of the egress counter of the organization with the
-// given ID. It returns 0 if the organization has no counter.
+// counted returns the value of the egress counter collected for the
+// organization with the given ID. It returns 0 if no counter is collected for
+// it.
 func counted(t *testing.T, organizationID string) uint64 {
 	t.Helper()
-	countersMu.Lock()
-	c, ok := counters[organizationID]
-	countersMu.Unlock()
-	if !ok {
-		return 0
+	n, _ := collected(t, organizationID)
+	return n
+}
+
+// collected returns the value of the egress counter collected for the
+// organization with the given ID, and reports whether a counter is collected
+// for it at all.
+func collected(t *testing.T, organizationID string) (uint64, bool) {
+	t.Helper()
+	ch := make(chan prometheus.Metric)
+	go func() {
+		egressBytes.Collect(ch)
+		close(ch)
+	}()
+	var value uint64
+	var found bool
+	for metric := range ch {
+		m := &client.Metric{}
+		if err := metric.Write(m); err != nil {
+			t.Errorf("cannot read the egress counter: %s", err)
+			continue
+		}
+		for _, label := range m.GetLabel() {
+			if label.GetName() == "organization" && label.GetValue() == organizationID {
+				value, found = uint64(m.GetCounter().GetValue()), true
+			}
+		}
 	}
-	ch := make(chan prometheus.Metric, 1)
-	c.Collect(ch)
-	close(ch)
-	m := &client.Metric{}
-	err := (<-ch).Write(m)
-	if err != nil {
-		t.Fatalf("cannot read the counter of organization %q: %s", organizationID, err)
+	return value, found
+}
+
+// listen makes the given organizations the existing ones for the duration of
+// the test, as Listen does with the ones of a state.
+func listen(t *testing.T, organizationIDs ...string) {
+	t.Helper()
+	organizationsMu.Lock()
+	for _, id := range organizationIDs {
+		if _, ok := organizations[id]; !ok {
+			organizations[id] = nil
+		}
 	}
-	return uint64(m.GetCounter().GetValue())
+	listening = true
+	organizationsMu.Unlock()
+	t.Cleanup(func() {
+		organizationsMu.Lock()
+		for _, id := range organizationIDs {
+			if c, ok := organizations[id]; ok && c != nil {
+				c.Unregister()
+			}
+			delete(organizations, id)
+		}
+		listening = false
+		organizationsMu.Unlock()
+	})
 }
 
 // echoServer starts a server that echoes back what it is written, and returns
@@ -333,6 +376,128 @@ func TestTransport(t *testing.T) {
 	}
 	if n >= 1024 {
 		t.Fatalf("counted %d bytes, expecting the bytes received not to be counted", n)
+	}
+}
+
+func TestDialUnknownOrganization(t *testing.T) {
+	// The organizations are known and the one dialing is not among them, so it
+	// does not exist and the dial fails.
+	enable(t)
+	listen(t, "org-known")
+	addr := echoServer(t)
+	_, err := Dial("org-unknown")(t.Context(), "tcp", addr)
+	if !errors.Is(err, ErrNoOrganization) {
+		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	}
+	// No counter is registered for an organization that does not exist.
+	if _, ok := collected(t, "org-unknown"); ok {
+		t.Fatal("a counter is collected for an organization that does not exist")
+	}
+}
+
+func TestDialCreatedOrganization(t *testing.T) {
+	// An organization created after Listen exists, so it can dial and its bytes
+	// are counted.
+	enable(t)
+	listen(t, "org-created")
+	addr := echoServer(t)
+	onCreateOrganization(state.CreateOrganization{ID: "org-created"})
+	egress := egress(t, "org-created")
+	write(t, Dial("org-created"), addr, "hello")
+	if n := egress(); n != 5 {
+		t.Fatalf("counted %d bytes, expecting 5", n)
+	}
+}
+
+func TestDeletedOrganization(t *testing.T) {
+	// The counter of a deleted organization is discarded, so that the counters
+	// do not accumulate for the whole life of the process, and the organization
+	// can no longer dial.
+	enable(t)
+	listen(t, "org-deleted")
+	addr := echoServer(t)
+	dial := Dial("org-deleted")
+	conn, err := dial(t.Context(), "tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, err := conn.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := collected(t, "org-deleted"); !ok {
+		t.Fatal("no counter is collected for the organization, expecting one")
+	}
+
+	onDeleteOrganization(state.DeleteOrganization{ID: "org-deleted"})
+
+	// The organization is gone, and so is its counter.
+	organizationsMu.Lock()
+	_, kept := organizations["org-deleted"]
+	organizationsMu.Unlock()
+	if kept {
+		t.Fatal("the deleted organization is still kept")
+	}
+	if _, ok := collected(t, "org-deleted"); ok {
+		t.Fatal("a counter is still collected for the deleted organization")
+	}
+
+	// A connection dialed before the deletion may still be written to. Its
+	// bytes are added to the counter it holds, which is no longer collected.
+	if _, err := conn.Write([]byte("world!")); err != nil {
+		t.Fatalf("cannot write to a connection of a deleted organization: %s", err)
+	}
+	if _, ok := collected(t, "org-deleted"); ok {
+		t.Fatal("a counter is collected again for the deleted organization")
+	}
+
+	// A dial function created before the deletion no longer dials, because the
+	// organization is looked up at every dial.
+	if _, err := dial(t.Context(), "tcp", addr); !errors.Is(err, ErrNoOrganization) {
+		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	}
+}
+
+func TestDialWithContextUnknownOrganization(t *testing.T) {
+	// The organization carried by the context does not exist, so the dial
+	// fails.
+	enable(t)
+	listen(t, "org-ctx-known")
+	addr := echoServer(t)
+	ctx := WithOrganization(t.Context(), "org-ctx-unknown")
+	_, err := DialWithContext(nil)(ctx, "tcp", addr)
+	if !errors.Is(err, ErrNoOrganization) {
+		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	}
+}
+
+func TestTransportUnknownOrganization(t *testing.T) {
+	// The organization does not exist, so the requests made with its transport
+	// fail.
+	enable(t)
+	listen(t, "org-transport-known")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer server.Close()
+	transport := Transport(http.DefaultTransport.(*http.Transport), "org-transport-unknown")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = transport.RoundTrip(req)
+	if !errors.Is(err, ErrNoOrganization) {
+		t.Fatalf("the request returned the error %v, expecting ErrNoOrganization", err)
+	}
+}
+
+func TestDialWithoutListening(t *testing.T) {
+	// Listen has not been called, so the organizations are not known and every
+	// one of them is considered to exist.
+	enable(t)
+	addr := echoServer(t)
+	egress := egress(t, "org-not-listening")
+	write(t, Dial("org-not-listening"), addr, "hello")
+	if n := egress(); n != 5 {
+		t.Fatalf("counted %d bytes, expecting 5", n)
 	}
 }
 

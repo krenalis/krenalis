@@ -306,6 +306,10 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
+	// Follow the organizations, so that the network usage counters of the
+	// deleted ones are discarded.
+	countdial.Listen(core.state)
+
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
