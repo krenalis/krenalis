@@ -703,11 +703,6 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 
 	this.core.mustBeOpen()
 
-	// Normalize the required consents.
-	if pipeline.RequiredConsents.Purposes == nil {
-		pipeline.RequiredConsents.Purposes = []string{}
-	}
-
 	// Retrieve the file format, if specified in the pipeline.
 	var format *state.Connector
 	if pipeline.Format != "" {
@@ -752,6 +747,11 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		if err != nil {
 			return errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
 		}
+	}
+
+	// Normalize the required consents.
+	if pipeline.RequiredConsents.Purposes == nil {
+		pipeline.RequiredConsents.Purposes = []string{}
 	}
 
 	// Determine the input schema.
