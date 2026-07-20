@@ -66,26 +66,18 @@ func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string)
 
 // ConsentPurposes returns the consent purposes of the workspace, ordered by
 // name.
-func (this *Workspace) ConsentPurposes(ctx context.Context) ([]*ConsentPurpose, error) {
+func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 	this.core.mustBeOpen()
-	purposes := make([]*ConsentPurpose, 0)
-	err := this.core.db.QueryScan(ctx,
-		"SELECT id, name, code FROM consent_purposes WHERE workspace = $1 ORDER BY name",
-		this.workspace.ID,
-		func(rows *db.Rows) error {
-			for rows.Next() {
-				cp := &ConsentPurpose{}
-				if err := rows.Scan(&cp.ID, &cp.Name, &cp.Code); err != nil {
-					return err
-				}
-				purposes = append(purposes, cp)
-			}
-			return nil
-		})
-	if err != nil {
-		return nil, err
+	consentPurposes := this.workspace.ConsentPurposes()
+	purposes := make([]*ConsentPurpose, len(consentPurposes))
+	for i, cp := range consentPurposes {
+		purposes[i] = &ConsentPurpose{ID: cp.ID, Name: cp.Name, Code: cp.Code}
 	}
-	return purposes, nil
+	sort.Slice(purposes, func(i, j int) bool {
+		a, b := purposes[i], purposes[j]
+		return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
+	})
+	return purposes
 }
 
 // UpdateConsentPurpose updates the name and code of the consent purpose with

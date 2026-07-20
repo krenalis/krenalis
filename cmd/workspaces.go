@@ -115,11 +115,7 @@ func (workspace workspace) ConsentPurposes(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	purposes, err := ws.ConsentPurposes(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return map[string][]*core.ConsentPurpose{"purposes": purposes}, nil
+	return map[string][]*core.ConsentPurpose{"purposes": ws.ConsentPurposes()}, nil
 }
 
 // CreateConnection creates a connection for a workspace.
