@@ -95,7 +95,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /connections/{id}/query":                      connection.ExecQuery,
 		"POST   /connections/{id}/ui-event":                   connection.ServeUI, /* Admin console only */
 		"POST   /connections/{src}/links/{dst}":               connection.LinkConnection,
-		"POST   /consent-purposes":                            workspace.CreateConsentPurpose,
+		"POST   /consent-purposes":                            workspace.AddConsentPurpose,
 		"POST   /events":                                      workspace.IngestEvents,
 		"POST   /events/listeners":                            workspace.CreateEventListener,
 		"POST   /events/{type}":                               workspace.IngestEvents,

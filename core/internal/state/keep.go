@@ -72,8 +72,8 @@ func (state *State) keep() {
 			org = state.createAccessKey(n)
 		case "CreateConnection":
 			org = state.createConnection(n)
-		case "CreateConsentPurpose":
-			org = state.createConsentPurpose(n)
+		case "AddConsentPurpose":
+			org = state.addConsentPurpose(n)
 		case "CreateOrganization":
 			org = state.createOrganization(n)
 		case "CreatePipeline":
@@ -505,18 +505,18 @@ func (state *State) createConnection(n notification) string {
 	return ws.organization.ID
 }
 
-// CreateConsentPurpose is the event sent when a new consent purpose is
+// AddConsentPurpose is the event sent when a new consent purpose is
 // created.
-type CreateConsentPurpose struct {
+type AddConsentPurpose struct {
 	ID        string
 	Workspace string
 	Name      string
 	Code      string
 }
 
-// createConsentPurpose creates a new consent purpose.
-func (state *State) createConsentPurpose(n notification) string {
-	e := CreateConsentPurpose{}
+// addConsentPurpose creates a new consent purpose.
+func (state *State) addConsentPurpose(n notification) string {
+	e := AddConsentPurpose{}
 	if !decodeNotification(n, &e) {
 		return ""
 	}

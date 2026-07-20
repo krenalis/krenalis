@@ -79,15 +79,15 @@ func (this *Workspace) ConsentPurposes(ctx context.Context) ([]*ConsentPurpose, 
 	return purposes, nil
 }
 
-// CreateConsentPurpose creates a consent purpose with the given name and code,
-// and returns its identifier.
+// AddConsentPurpose adds a consent purpose with the given name and code, and
+// returns its identifier.
 //
 // name and code must be between 1 and 100 runes long.
 //
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if a consent purpose with the same code already
 // exists in the workspace.
-func (this *Workspace) CreateConsentPurpose(ctx context.Context, name, code string) (string, error) {
+func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string) (string, error) {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return "", errors.BadRequest("%s", err)
@@ -105,7 +105,7 @@ func (this *Workspace) CreateConsentPurpose(ctx context.Context, name, code stri
 			if err != nil {
 				return nil, err
 			}
-			return state.CreateConsentPurpose{ID: id, Workspace: ws.ID, Name: name, Code: code}, nil
+			return state.AddConsentPurpose{ID: id, Workspace: ws.ID, Name: name, Code: code}, nil
 		})
 		if err != nil {
 			if db.IsUniqueViolation(err) {

@@ -261,7 +261,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			if (isEditing) {
 				await api.workspaces.updateConsentPurpose(purposeToEdit.id, name, code);
 			} else {
-				await api.workspaces.createConsentPurpose(name, code);
+				await api.workspaces.addConsentPurpose(name, code);
 			}
 		} catch (err) {
 			setIsSaving(false);

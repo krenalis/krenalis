@@ -61,7 +61,7 @@ import {
 	profileAttributesResponse,
 	PublicMetadata,
 	ConsentPurposesResponse,
-	CreateConsentPurposeResponse,
+	AddConsentPurposeResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
@@ -901,7 +901,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	createConsentPurpose = async (name: string, code: string): Promise<CreateConsentPurposeResponse> => {
+	addConsentPurpose = async (name: string, code: string): Promise<AddConsentPurposeResponse> => {
 		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { name, code });
 	};
 

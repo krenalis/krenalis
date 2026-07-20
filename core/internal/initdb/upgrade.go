@@ -83,7 +83,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			organizationConnectorReferencesView,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
 			consentPurposesTable,
-			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,

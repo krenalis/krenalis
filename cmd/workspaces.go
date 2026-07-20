@@ -125,8 +125,8 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	return map[string]string{"id": id}, nil
 }
 
-// CreateConsentPurpose creates a consent purpose for the current workspace.
-func (workspace workspace) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
+// AddConsentPurpose adds a consent purpose for the current workspace.
+func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (workspace workspace) CreateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := ws.CreateConsentPurpose(r.Context(), body.Name, body.Code)
+	id, err := ws.AddConsentPurpose(r.Context(), body.Name, body.Code)
 	if err != nil {
 		return nil, err
 	}

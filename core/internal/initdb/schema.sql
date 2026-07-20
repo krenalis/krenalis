@@ -321,7 +321,7 @@ CREATE TYPE notification_name AS ENUM (
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',
-    'CreateConsentPurpose',
+    'AddConsentPurpose',
     'CreateEventWriteKey',
     'CreateOrganization',
     'CreatePipeline',

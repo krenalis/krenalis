@@ -179,7 +179,7 @@ interface ConsentPurposesResponse {
 	purposes: ConsentPurpose[];
 }
 
-interface CreateConsentPurposeResponse {
+interface AddConsentPurposeResponse {
 	id: string;
 }
 
@@ -236,7 +236,7 @@ export type {
 	AccessKeyResponse,
 	CreateAccessKeyResponse,
 	ConsentPurposesResponse,
-	CreateConsentPurposeResponse,
+	AddConsentPurposeResponse,
 	PreviewSendEventResponse,
 	PreviewAlterProfileSchemaResponse,
 	RePaths,
