@@ -1122,7 +1122,7 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	}
 	this.RequiredConsents = RequiredConsents{
 		Operator: ConsentPurposesOperator(pipeline.RequiredConsents.Operator),
-		Purposes: pipeline.RequiredConsents.Purposes,
+		Purposes: slices.Clone(pipeline.RequiredConsents.Purposes),
 	}
 	if pipeline.Transformation.Mapping != nil {
 		this.Transformation = &Transformation{
