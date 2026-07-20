@@ -590,7 +590,7 @@ type ReceivedEventContext interface {
 	App() (ReceivedEventContextApp, bool)
 	Browser() (ReceivedEventContextBrowser, bool)
 	Campaign() (ReceivedEventContextCampaign, bool)
-	Consent() (iter.Seq2[string, bool], bool)
+	Consents() (iter.Seq2[string, bool], bool)
 	Device() (ReceivedEventContextDevice, bool)
 	IP() (string, bool)
 	Library() (ReceivedEventContextLibrary, bool)

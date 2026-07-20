@@ -120,7 +120,7 @@ func (c receivedEventContext) Campaign() (connectors.ReceivedEventContextCampaig
 	return nil, false
 }
 
-func (c receivedEventContext) Consent() (iter.Seq2[string, bool], bool) {
+func (c receivedEventContext) Consents() (iter.Seq2[string, bool], bool) {
 	if consent, ok := c.context["consent"].(map[string]any); ok {
 		return func(yield func(string, bool) bool) {
 			for purpose, consented := range consent {
