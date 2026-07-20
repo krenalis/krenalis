@@ -71,7 +71,7 @@ import Workspace from '../../../lib/api/types/workspace';
 import {
 	PipelineToSet,
 	Filter,
-	RequiredConsentsLogical,
+	RequiredConsents,
 	TransformationFunction,
 	TransformationPurpose,
 } from '../../../lib/api/types/pipeline';
@@ -1322,16 +1322,14 @@ const FullscreenTransformation = ({
 	}, [pipeline.filter]);
 
 	const normalizedConsents = useMemo(() => {
-		// Discard the required consents (and their logical operator) when no
-		// purpose has been selected.
-		let consents: string[] | null = null;
-		let logical: RequiredConsentsLogical | null = null;
-		if (pipeline.requiredConsents != null && pipeline.requiredConsents.length > 0) {
+		// Discard the required consents (and their operator) when no purpose
+		// has been selected.
+		let consents: RequiredConsents | null = null;
+		if (pipeline.requiredConsents != null && pipeline.requiredConsents.purposes.length > 0) {
 			consents = pipeline.requiredConsents;
-			logical = pipeline.requiredConsentsLogical;
 		}
-		return { consents, logical };
-	}, [pipeline.requiredConsents, pipeline.requiredConsentsLogical]);
+		return consents;
+	}, [pipeline.requiredConsents]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -1340,8 +1338,7 @@ const FullscreenTransformation = ({
 		null,
 		connection.id,
 		normalizedFilter,
-		normalizedConsents.consents,
-		normalizedConsents.logical,
+		normalizedConsents,
 	);
 
 	useEffect(() => {
@@ -1364,7 +1361,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter, pipeline.requiredConsents, pipeline.requiredConsentsLogical]);
+	}, [pipeline.filter, pipeline.requiredConsents]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);

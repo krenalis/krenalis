@@ -3,7 +3,7 @@ import Section from '../../base/Section/Section';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
-import { RequiredConsentsLogical } from '../../../lib/api/types/pipeline';
+import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -26,29 +26,27 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		fetchPurposes();
 	}, []);
 
-	const isEnabled = !!pipeline.requiredConsentsLogical;
+	const isEnabled = !!pipeline.requiredConsents?.operator;
 
 	const onToggle = (e: any) => {
 		const p = structuredClone(pipeline);
 		if (e.target.checked) {
-			p.requiredConsents = [];
-			p.requiredConsentsLogical = 'and';
+			p.requiredConsents = { operator: 'and', purposes: [] };
 		} else {
 			p.requiredConsents = null;
-			p.requiredConsentsLogical = null;
 		}
 		setPipeline(p);
 	};
 
 	const onChangePurposes = (e: any) => {
 		const p = structuredClone(pipeline);
-		p.requiredConsents = e.target.value;
+		p.requiredConsents = { ...p.requiredConsents, purposes: e.target.value };
 		setPipeline(p);
 	};
 
-	const onChangeLogical = (e: any) => {
+	const onChangeOperator = (e: any) => {
 		const p = structuredClone(pipeline);
-		p.requiredConsentsLogical = e.target.value as RequiredConsentsLogical;
+		p.requiredConsents = { ...p.requiredConsents, operator: e.target.value as ConsentPurposesOperator };
 		setPipeline(p);
 	};
 
@@ -71,7 +69,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 						multiple
 						clearable
 						placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
-						value={pipeline.requiredConsents ?? []}
+						value={pipeline.requiredConsents?.purposes ?? []}
 						onSlChange={onChangePurposes}
 						disabled={purposes.length === 0}
 					>
@@ -86,8 +84,8 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 						<SlSelect
 							className='pipeline__consents-logical-select'
 							size='small'
-							value={pipeline.requiredConsentsLogical ?? 'and'}
-							onSlChange={onChangeLogical}
+							value={pipeline.requiredConsents?.operator || 'and'}
+							onSlChange={onChangeOperator}
 						>
 							<SlOption value='and'>all</SlOption>
 							<SlOption value='or'>any</SlOption>

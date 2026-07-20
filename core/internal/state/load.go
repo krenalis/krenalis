@@ -524,7 +524,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all pipelines.
 	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_logical,\n"+
+		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_operator,\n"+
 		"transformation_mapping, transformation_id, transformation_version, transformation_language,\n"+
 		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
 		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
@@ -540,7 +540,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline := Pipeline{}
 				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &pipeline.RequiredConsents, &pipeline.RequiredConsentsLogical, &mapping, &function.ID, &function.Version,
+					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID, &function.Version,
 					&function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
 					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
 					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,

@@ -17,7 +17,12 @@ type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' |
 
 type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
 
-type RequiredConsentsLogical = 'and' | 'or';
+type ConsentPurposesOperator = '' | 'and' | 'or';
+
+interface RequiredConsents {
+	operator: ConsentPurposesOperator;
+	purposes: string[];
+}
 
 type Mapping = Record<string, string>;
 
@@ -100,8 +105,7 @@ interface Pipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
-	requiredConsents: string[] | null;
-	requiredConsentsLogical: RequiredConsentsLogical | null;
+	requiredConsents: RequiredConsents | null;
 	transformation: Transformation | null;
 	query: string | null;
 	path: string | null;
@@ -131,8 +135,7 @@ interface PipelineToSet {
 	name: string;
 	enabled?: boolean;
 	filter?: Filter | null;
-	requiredConsents?: string[] | null;
-	requiredConsentsLogical?: RequiredConsentsLogical | null;
+	requiredConsents?: RequiredConsents | null;
 	inSchema?: ObjectType;
 	outSchema?: ObjectType;
 	transformation?: Transformation;
@@ -179,7 +182,8 @@ export type {
 	Filter,
 	FilterOperator,
 	FilterLogical,
-	RequiredConsentsLogical,
+	ConsentPurposesOperator,
+	RequiredConsents,
 	FilterCondition,
 	Pipeline,
 	PipelineType,

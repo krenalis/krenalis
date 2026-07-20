@@ -63,7 +63,7 @@ type validationState struct {
 
 	// knownConsentPurposeIDs is the set of identifiers of the consent purposes
 	// defined in the pipeline's workspace. It is only populated by the caller
-	// when the pipeline to validate has a non-empty RequiredConsents.
+	// when the pipeline to validate has non-empty required consent purposes.
 	knownConsentPurposeIDs map[string]bool
 }
 
@@ -172,12 +172,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	}
 	// Validate the required consents.
 	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
-	if len(pipeline.RequiredConsents) > 0 {
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
 		if !requiredConsentsAllowed {
 			return errors.BadRequest("required consents are not allowed")
 		}
-		seen := make(map[string]bool, len(pipeline.RequiredConsents))
-		for _, id := range pipeline.RequiredConsents {
+		seen := make(map[string]bool, len(pipeline.RequiredConsents.Purposes))
+		for _, id := range pipeline.RequiredConsents.Purposes {
 			if !IsValidID(id) {
 				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
@@ -189,11 +189,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
 			}
 		}
-		if op := pipeline.RequiredConsentsLogical; op != ConsentsAnd && op != ConsentsOr {
-			return errors.BadRequest(`required consents logical must be "and" or "or"`)
+		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
+			return errors.BadRequest(`required consents operator must be "and" or "or"`)
 		}
-	} else if pipeline.RequiredConsentsLogical != ConsentsNone {
-		return errors.BadRequest("required consents logical cannot be specified without required consents")
+	} else if pipeline.RequiredConsents.Operator != PurposesNone {
+		return errors.BadRequest("required consents operator cannot be specified without required consent purposes")
 	}
 	// Validate the transformation.
 	var usedOutPaths []string

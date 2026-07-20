@@ -7,7 +7,7 @@ import {
 	ExpressionToBeExtracted,
 	Filter,
 	FilterCondition,
-	RequiredConsentsLogical,
+	RequiredConsents,
 	FilterOperator,
 	Mapping,
 	Matching,
@@ -254,8 +254,7 @@ interface TransformedPipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
-	requiredConsents: string[] | null;
-	requiredConsentsLogical: RequiredConsentsLogical | null;
+	requiredConsents: RequiredConsents | null;
 	transformation: TransformedTransformation | null;
 	query?: string | null;
 	path?: string | null;
@@ -634,7 +633,6 @@ const transformPipeline = (
 		outSchema: pipeline.outSchema,
 		filter: pipeline.filter,
 		requiredConsents: pipeline.requiredConsents,
-		requiredConsentsLogical: pipeline.requiredConsentsLogical,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
 			function: pipeline.transformation?.function,
@@ -982,13 +980,11 @@ const transformInPipelineToSet = async (
 		}
 	}
 
-	let requiredConsents: string[] = null;
-	let requiredConsentsLogical: RequiredConsentsLogical = null;
+	let requiredConsents: RequiredConsents = null;
 	if (pipeline.requiredConsents != null) {
-		const codes = Array.from(new Set(pipeline.requiredConsents));
-		if (codes.length > 0) {
-			requiredConsents = codes;
-			requiredConsentsLogical = pipeline.requiredConsentsLogical;
+		const purposes = Array.from(new Set(pipeline.requiredConsents.purposes));
+		if (purposes.length > 0) {
+			requiredConsents = { operator: pipeline.requiredConsents.operator, purposes: purposes };
 		}
 	}
 
@@ -1108,7 +1104,6 @@ const transformInPipelineToSet = async (
 		enabled: pipeline.enabled,
 		filter: filter,
 		requiredConsents: requiredConsents,
-		requiredConsentsLogical: requiredConsentsLogical,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: mapping == null && func == null ? null : { mapping: mapping, function: func },
@@ -1169,7 +1164,6 @@ const computeDefaultPipeline = (
 			(connection.isApplication || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		requiredConsents: null,
-		requiredConsentsLogical: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
 			function: null,

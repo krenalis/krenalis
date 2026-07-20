@@ -330,8 +330,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	this.core.mustBeOpen()
 
 	// Normalize the required consents.
-	if pipeline.RequiredConsents == nil {
-		pipeline.RequiredConsents = []string{}
+	if pipeline.RequiredConsents.Purposes == nil {
+		pipeline.RequiredConsents.Purposes = []string{}
 	}
 
 	// Retrieve the format, if specified in the pipeline.
@@ -391,7 +391,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
-	if len(pipeline.RequiredConsents) > 0 {
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
 		v.knownConsentPurposeIDs = knownConsentPurposeIDs(c.Workspace())
 	}
 	err := validatePipelineToSet(pipeline, v)
@@ -423,31 +423,30 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	n := state.CreatePipeline{
-		Connection:              c.ID,
-		Target:                  state.Target(target),
-		Name:                    pipeline.Name,
-		Enabled:                 pipeline.Enabled,
-		EventType:               eventType,
-		InSchema:                inSchema,
-		OutSchema:               pipeline.OutSchema,
-		RequiredConsents:        pipeline.RequiredConsents,
-		RequiredConsentsLogical: state.RequiredConsentsLogical(pipeline.RequiredConsentsLogical),
-		Transformation:          toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
-		Query:                   pipeline.Query,
-		Format:                  pipeline.Format,
-		Path:                    pipeline.Path,
-		Sheet:                   pipeline.Sheet,
-		Compression:             state.Compression(pipeline.Compression),
-		OrderBy:                 pipeline.OrderBy,
-		ExportMode:              state.ExportMode(pipeline.ExportMode),
-		Matching:                state.Matching(pipeline.Matching),
-		UpdateOnDuplicates:      pipeline.UpdateOnDuplicates,
-		TableName:               pipeline.TableName,
-		TableKey:                pipeline.TableKey,
-		UserIDColumn:            pipeline.UserIDColumn,
-		UpdatedAtColumn:         pipeline.UpdatedAtColumn,
-		UpdatedAtFormat:         pipeline.UpdatedAtFormat,
-		Incremental:             pipeline.Incremental,
+		Connection:         c.ID,
+		Target:             state.Target(target),
+		Name:               pipeline.Name,
+		Enabled:            pipeline.Enabled,
+		EventType:          eventType,
+		InSchema:           inSchema,
+		OutSchema:          pipeline.OutSchema,
+		RequiredConsents:   toStateRequiredConsents(pipeline.RequiredConsents),
+		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
+		Query:              pipeline.Query,
+		Format:             pipeline.Format,
+		Path:               pipeline.Path,
+		Sheet:              pipeline.Sheet,
+		Compression:        state.Compression(pipeline.Compression),
+		OrderBy:            pipeline.OrderBy,
+		ExportMode:         state.ExportMode(pipeline.ExportMode),
+		Matching:           state.Matching(pipeline.Matching),
+		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
+		TableName:          pipeline.TableName,
+		TableKey:           pipeline.TableKey,
+		UserIDColumn:       pipeline.UserIDColumn,
+		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
+		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
+		Incremental:        pipeline.Incremental,
 	}
 
 	// Set the scheduler.
@@ -555,7 +554,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			}
 			query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
 				"schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n" +
-				"required_consents_logical, transformation_mapping, transformation_id, transformation_version,\n" +
+				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
 				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +
 				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, \n" +
@@ -564,7 +563,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)"
 			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-				n.Filter, n.RequiredConsents, n.RequiredConsentsLogical, mapping, function.ID, function.Version,
+				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
 				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
 				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat,

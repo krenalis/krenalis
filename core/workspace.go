@@ -852,24 +852,24 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
-// If requiredConsents is non-empty, only events whose consent satisfies
-// requiredConsents, according to requiredConsentsLogical, will be observed.
+// If the purposes of requiredConsents are non-empty, only events whose consent
+// satisfies those purposes, according to its operator, will be observed.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents []string, requiredConsentsLogical RequiredConsentsLogical) (string, error) {
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents RequiredConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
 	}
-	if len(requiredConsents) > 0 {
-		if requiredConsentsLogical != ConsentsAnd && requiredConsentsLogical != ConsentsOr {
-			return "", errors.BadRequest(`required consents logical must be "and" or "or"`)
+	if len(requiredConsents.Purposes) > 0 {
+		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
+			return "", errors.BadRequest(`required consents operator must be "and" or "or"`)
 		}
-	} else if requiredConsentsLogical != ConsentsNone {
-		return "", errors.BadRequest("required consents logical cannot be specified without required consents")
+	} else if requiredConsents.Operator != PurposesNone {
+		return "", errors.BadRequest("required consents operator cannot be specified without required consent purposes")
 	}
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -898,10 +898,10 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
-	var consents []string
-	if len(requiredConsents) > 0 {
-		consents = make([]string, len(requiredConsents))
-		for i, id := range requiredConsents {
+	consents := state.RequiredConsents{Operator: state.ConsentPurposesOperator(requiredConsents.Operator)}
+	if len(requiredConsents.Purposes) > 0 {
+		consents.Purposes = make([]string, len(requiredConsents.Purposes))
+		for i, id := range requiredConsents.Purposes {
 			if !IsValidID(id) {
 				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
@@ -909,14 +909,14 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			if !ok {
 				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
 			}
-			consents[i] = cp.Code
+			consents.Purposes[i] = cp.Code
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
 	if !ok {
 		return "", errors.New("observer either has not been created yet or has already been removed")
 	}
-	id, err := observer.CreateListener(connections, size, where, consents, state.RequiredConsentsLogical(requiredConsentsLogical))
+	id, err := observer.CreateListener(connections, size, where, consents)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)
