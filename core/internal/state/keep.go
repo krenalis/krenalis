@@ -368,11 +368,10 @@ func (state *State) addConsentPurpose(n notification) string {
 	}
 	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
-		mu:        new(sync.Mutex),
-		ID:        e.ID,
-		workspace: ws,
-		Name:      e.Name,
-		Code:      e.Code,
+		mu:   new(sync.Mutex),
+		ID:   e.ID,
+		Name: e.Name,
+		Code: e.Code,
 	}
 	ws.mu.Lock()
 	ws.consentPurposes[cp.ID] = cp

@@ -434,8 +434,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					return fmt.Errorf("loading consent purpose %s: %s", cp.ID, err)
 				}
 				cp.mu = new(sync.Mutex)
-				cp.workspace = state.workspaces[workspaceID]
-				cp.workspace.consentPurposes[cp.ID] = &cp
 			}
 			return nil
 		})

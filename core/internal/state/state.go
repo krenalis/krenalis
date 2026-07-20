@@ -1194,19 +1194,10 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
-	mu        *sync.Mutex
-	ID        string
-	workspace *Workspace
-	Name      string
-	Code      string
-}
-
-// Workspace returns the workspace of the consent purpose.
-func (cp *ConsentPurpose) Workspace() *Workspace {
-	cp.mu.Lock()
-	w := cp.workspace
-	cp.mu.Unlock()
-	return w
+	mu   *sync.Mutex
+	ID   string
+	Name string
+	Code string
 }
 
 // Strategy represents a strategy.
