@@ -1748,10 +1748,48 @@ type RequiredConsents struct {
 
 // ConsentPurposesOperator represents the logical operator applied to the
 // consent purposes required by a pipeline.
-type ConsentPurposesOperator string
+type ConsentPurposesOperator int
 
 const (
-	PurposesNone ConsentPurposesOperator = ""
-	PurposesAnd  ConsentPurposesOperator = "and"
-	PurposesOr   ConsentPurposesOperator = "or"
+	PurposesAnd ConsentPurposesOperator = iota // and
+	PurposesOr                                 // or
 )
+
+// Scan implements the sql.Scanner interface.
+func (op *ConsentPurposesOperator) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an state.ConsentPurposesOperator value", src)
+	}
+	switch s {
+	case "and":
+		*op = PurposesAnd
+	case "or":
+		*op = PurposesOr
+	default:
+		return fmt.Errorf("invalid state.ConsentPurposesOperator: %s", s)
+	}
+	return nil
+}
+
+// String returns the string representation of op.
+// It panics if op is not a valid ConsentPurposesOperator value.
+func (op ConsentPurposesOperator) String() string {
+	v, err := op.Value()
+	if err != nil {
+		panic(err)
+	}
+	return v.(string)
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if op is not a valid ConsentPurposesOperator.
+func (op ConsentPurposesOperator) Value() (driver.Value, error) {
+	switch op {
+	case PurposesAnd:
+		return "and", nil
+	case PurposesOr:
+		return "or", nil
+	}
+	return nil, fmt.Errorf("not a valid ConsentPurposesOperator: %d", op)
+}

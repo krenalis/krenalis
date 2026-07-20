@@ -776,7 +776,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "required consents are not allowed",
 		},
 		{
-			name: "BAD: Destination/Application/Event - missing required consents operator",
+			name: "GOOD: Destination/Application/Event - missing required consents operator defaults to and",
 			pipeline: PipelineToSet{
 				Name:     "Dispatch events to application",
 				InSchema: types.Type{},
@@ -794,10 +794,9 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
-			err:                     `required consents operator must be "and" or "or"`,
 		},
 		{
-			name: "BAD: Destination/Application/Event - required consents operator without required consent purposes",
+			name: "GOOD: Destination/Application/Event - required consents operator without required consent purposes",
 			pipeline: PipelineToSet{
 				Name:     "Dispatch events to application",
 				InSchema: types.Type{},
@@ -814,7 +813,6 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
-			err:                     "required consents operator cannot be specified without required consent purposes",
 		},
 		{
 			name: "GOOD: Destination/Application/Event - with a constant mapping",

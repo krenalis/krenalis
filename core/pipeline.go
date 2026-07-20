@@ -150,7 +150,7 @@ const (
 	TargetGroup
 )
 
-// RequiredConsents represents the consent purposes required by a pipeline
+// RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator `json:"operator"`
 	Purposes []string                `json:"purposes"`
@@ -158,13 +158,51 @@ type RequiredConsents struct {
 
 // ConsentPurposesOperator represents the logical operator applied to the
 // consent purposes required by a pipeline.
-type ConsentPurposesOperator string
+type ConsentPurposesOperator int
 
 const (
-	PurposesNone ConsentPurposesOperator = ""
-	PurposesAnd  ConsentPurposesOperator = "and"
-	PurposesOr   ConsentPurposesOperator = "or"
+	PurposesAnd ConsentPurposesOperator = iota // and
+	PurposesOr                                 // or
 )
+
+// MarshalJSON implements the json.Marshaler interface.
+func (op ConsentPurposesOperator) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + op.String() + `"`), nil
+}
+
+func (op ConsentPurposesOperator) String() string {
+	switch op {
+	case PurposesAnd:
+		return "and"
+	case PurposesOr:
+		return "or"
+	default:
+		panic("invalid consent purposes operator")
+	}
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// A null operator is unmarshaled as PurposesAnd, as is a missing one.
+func (op *ConsentPurposesOperator) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		*op = PurposesAnd
+		return nil
+	}
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return errors.BadRequest(`consent purposes operator must be "and" or "or"`)
+	}
+	switch s {
+	case "and":
+		*op = PurposesAnd
+	case "or":
+		*op = PurposesOr
+	default:
+		return errors.BadRequest(`consent purposes operator must be "and" or "or"`)
+	}
+	return nil
+}
 
 // MarshalJSON implements the json.Marshaler interface.
 func (at Target) MarshalJSON() ([]byte, error) {

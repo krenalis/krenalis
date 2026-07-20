@@ -9,10 +9,16 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
+	const { pipeline, setPipeline } = useContext(PipelineContext);
+
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
+	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
 
 	const { api, handleError } = useContext(AppContext);
-	const { pipeline, setPipeline } = useContext(PipelineContext);
+
+	useEffect(() => {
+		setIsEnabled((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
+	}, [pipeline.id]);
 
 	useEffect(() => {
 		const fetchPurposes = async () => {
@@ -26,10 +32,9 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		fetchPurposes();
 	}, []);
 
-	const isEnabled = !!pipeline.requiredConsents?.operator;
-
 	const onToggle = (e: any) => {
 		const p = structuredClone(pipeline);
+		setIsEnabled(e.target.checked);
 		if (e.target.checked) {
 			p.requiredConsents = { operator: 'and', purposes: [] };
 		} else {

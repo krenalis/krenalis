@@ -192,8 +192,6 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
 			return errors.BadRequest(`required consents operator must be "and" or "or"`)
 		}
-	} else if pipeline.RequiredConsents.Operator != PurposesNone {
-		return errors.BadRequest("required consents operator cannot be specified without required consent purposes")
 	}
 	// Validate the transformation.
 	var usedOutPaths []string

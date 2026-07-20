@@ -17,7 +17,7 @@ type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' |
 
 type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
 
-type ConsentPurposesOperator = '' | 'and' | 'or';
+type ConsentPurposesOperator = 'and' | 'or';
 
 interface RequiredConsents {
 	operator: ConsentPurposesOperator;
