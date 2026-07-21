@@ -100,8 +100,7 @@ var (
 // of an organization is discarded when the organization is deleted, and dialing
 // on behalf of an organization that does not exist fails.
 //
-// It must be called once, at startup. Until it is called, every organization is
-// considered to exist.
+// It must be called once, at startup.
 func Listen(st *state.State) {
 	st.Freeze()
 	st.AddListener(onCreateOrganization)
