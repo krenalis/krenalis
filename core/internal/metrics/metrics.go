@@ -255,16 +255,16 @@ func (c *Collector) WaitStore() {
 // 48 hours, or 30 days, respectively. timeslot represents the current timeslot.
 func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 
-	var interval int32
-	var threshold int32
+	var interval int32  // Bucket width in minutes.
+	var threshold int32 // Rows before this timeslot are aggregated.
 
 	switch unit {
 	case Hour:
 		interval = 60
 		threshold = timeslot + 1 - interval
 	case Day:
-		interval = 48 * 60
-		threshold = timeslot + (60 - (timeslot % 60)) - interval
+		interval = 24 * 60
+		threshold = timeslot + (60 - (timeslot % 60)) - 48*60
 	case Month:
 		interval = 30 * 24 * 60
 		threshold = timeslot + (24*60 - (timeslot % (24 * 60))) - interval
