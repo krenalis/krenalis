@@ -707,7 +707,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			if ws == nil {
 				connection, ok = c.state.Connection(id)
-				if ok && connection.Organization() != org {
+				if ok && connection.Organization().ID != org.ID {
 					connection = nil
 				}
 			} else {
