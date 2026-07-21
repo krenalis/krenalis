@@ -74,21 +74,21 @@ func TestWriteSessionCookie(t *testing.T) {
 
 }
 
-func TestNewAPIsServerInitializesCookieKeys(t *testing.T) {
-	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil, "", nil)
-	if s.cookieKeys == nil {
-		t.Fatal("expected newAPIsServer to initialize cookieKeys")
+func TestNewAPIsServerInitializesHTTPSecretKey(t *testing.T) {
+			s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil, "", nil)
+	if s.httpSecretKey == nil {
+		t.Fatal("expected newAPIsServer to initialize httpSecretKey")
 	}
 }
 
 func TestSecureCookieCachesResult(t *testing.T) {
 	kms := &cookieTestKMS{
-		load: func(context.Context) ([]byte, []byte, error) {
-			return make([]byte, 32), make([]byte, 32), nil
+		load: func(context.Context) ([]byte, error) {
+			return make([]byte, 64), nil
 		},
 	}
 
-	s := &apisServer{cookieKeys: kms.Load}
+	s := &apisServer{httpSecretKey: kms.Load}
 
 	first, err := s.secureCookie(context.Background())
 	if err != nil {
@@ -102,7 +102,7 @@ func TestSecureCookieCachesResult(t *testing.T) {
 		t.Fatal("expected secureCookie to cache and reuse the same SecureCookie instance")
 	}
 	if kms.calls != 1 {
-		t.Fatalf("expected CookieKeys loading to be performed once, got %d", kms.calls)
+		t.Fatalf("expected HTTP secret key loading to be performed once, got %d", kms.calls)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 	release := make(chan struct{})
 
 	kms := &cookieTestKMS{
-		load: func(ctx context.Context) ([]byte, []byte, error) {
+		load: func(ctx context.Context) ([]byte, error) {
 			select {
 			case <-started:
 			default:
@@ -119,13 +119,13 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 			}
 			select {
 			case <-release:
-				return make([]byte, 32), make([]byte, 32), nil
+				return make([]byte, 64), nil
 			case <-ctx.Done():
-				return nil, nil, ctx.Err()
+				return nil, ctx.Err()
 			}
 		},
 	}
-	s := &apisServer{cookieKeys: kms.Load}
+	s := &apisServer{httpSecretKey: kms.Load}
 
 	firstCtx, cancelFirst := context.WithCancel(context.Background())
 	firstDone := make(chan error, 1)
@@ -152,7 +152,7 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 		t.Fatal("expected secureCookie retry to return a SecureCookie instance, got nil")
 	}
 	if kms.calls != 2 {
-		t.Fatalf("expected CookieKeys loading to be retried once, got %d calls", kms.calls)
+		t.Fatalf("expected HTTP secret key loading to be retried once, got %d calls", kms.calls)
 	}
 }
 
@@ -223,12 +223,14 @@ func TestValidateForbiddenBody(t *testing.T) {
 	})
 }
 
+// cookieTestKMS records cookie key load calls in tests.
 type cookieTestKMS struct {
 	calls int
-	load  func(context.Context) ([]byte, []byte, error)
+	load  func(context.Context) ([]byte, error)
 }
 
-func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, []byte, error) {
+// Load returns cookie test keys.
+func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, error) {
 	k.calls++
 	return k.load(ctx)
 }

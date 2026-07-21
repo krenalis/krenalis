@@ -18,8 +18,6 @@ import (
 	"github.com/krenalis/krenalis/tools/kms"
 )
 
-const kmsEncryptedKeys = 4
-
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
 // If dockerMember is true, the initial member name and email are set to
 // "User" and "docker@krenalis.com" instead of "ACME inc" and
@@ -36,31 +34,14 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 	}
 	slog.Info("the PostgreSQL database is empty, so the database will be initialized...")
 
-	// Generate the kms-encrypted data keys.
-	var kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper []byte
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	done := make(chan error, kmsEncryptedKeys)
-	go func() {
-		var err error
-		kmsEncryptedCookieKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 64)
-		done <- err
-	}()
-	go func() {
-		var err error
-		kmsEncryptedOAuthKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
-		done <- err
-	}()
-	go func() {
-		var err error
-		kmsEncryptedNotificationKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
-		done <- err
-	}()
-	go func() {
-		var err error
-		kmsEncryptedAPIKeyPepper, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
-		done <- err
-	}()
+	kmsEncryptedHTTPSecretKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper, err := generateKmsEncryptedKeys(ctx, kms)
+	if err != nil {
+		return err
+	}
+	defer clear(kmsEncryptedHTTPSecretKey)
+	defer clear(kmsEncryptedOAuthKey)
+	defer clear(kmsEncryptedNotificationKey)
+	defer clear(kmsEncryptedAPIKeyPepper)
 
 	// Initialize the PostgreSQL database in a transaction, so if it is
 	// fails, there is no need to manually empty the database.
@@ -70,12 +51,7 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 			return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 		}
 		slog.Info("PostgreSQL database initialized correctly")
-		for range kmsEncryptedKeys {
-			if err = <-done; err != nil {
-				return fmt.Errorf("failed to generate key using KMS: %s", err)
-			}
-		}
-		err = initializeKmsEncryptedKeys(ctx, tx, kmsEncryptedCookieKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper)
+		err = initializeKmsEncryptedKeys(ctx, tx, kmsEncryptedHTTPSecretKey, kmsEncryptedOAuthKey, kmsEncryptedNotificationKey, kmsEncryptedAPIKeyPepper)
 		if err != nil {
 			return err
 		}
@@ -84,6 +60,41 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 	})
 
 	return err
+}
+
+// generateKmsEncryptedKeys generates the KMS-encrypted data keys used during
+// database initialization.
+func generateKmsEncryptedKeys(ctx context.Context, kms kms.Kms) (httpSecretKey, oauthKey, notificationKey, apiKeyPepper []byte, err error) {
+	defer func() {
+		if err != nil {
+			clear(httpSecretKey)
+			clear(oauthKey)
+			clear(notificationKey)
+			clear(apiKeyPepper)
+		}
+	}()
+
+	httpSecretKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 64)
+	if err != nil {
+		err = fmt.Errorf("failed to generate HTTP secret key using KMS: %s", err)
+		return
+	}
+	oauthKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
+	if err != nil {
+		err = fmt.Errorf("failed to generate OAuth key using KMS: %s", err)
+		return
+	}
+	notificationKey, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
+	if err != nil {
+		err = fmt.Errorf("failed to generate notification key using KMS: %s", err)
+		return
+	}
+	apiKeyPepper, err = kms.GenerateDataKeyWithoutPlaintext(ctx, 32)
+	if err != nil {
+		err = fmt.Errorf("failed to generate API key pepper using KMS: %s", err)
+		return
+	}
+	return
 }
 
 // databaseIsEmpty reports whether the given PostgreSQL database is empty, that
@@ -153,12 +164,12 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	return err
 }
 
-// initializeKmsEncryptedKeys initializes the KMS-encrypted data keys
-// used for cookies, OAuth, notifications, and API keys.
-func initializeKmsEncryptedKeys(ctx context.Context, tx *db.Tx, cookieKey, oauthKey, notificationKey, apiKeyPepper []byte) error {
-	const query = `UPDATE metadata SET kms_encrypted_cookie_key = $1, kms_encrypted_oauth_key = $2,
+// initializeKmsEncryptedKeys initializes the KMS-encrypted data keys used by
+// metadata-scoped secrets.
+func initializeKmsEncryptedKeys(ctx context.Context, tx *db.Tx, httpSecretKey, oauthKey, notificationKey, apiKeyPepper []byte) error {
+	const query = `UPDATE metadata SET kms_encrypted_http_secret_key = $1, kms_encrypted_oauth_key = $2,
 		kms_encrypted_notification_key = $3, kms_encrypted_api_key_pepper = $4 WHERE singleton`
-	result, err := tx.Exec(ctx, query, cookieKey, oauthKey, notificationKey, apiKeyPepper)
+	result, err := tx.Exec(ctx, query, httpSecretKey, oauthKey, notificationKey, apiKeyPepper)
 	if err != nil {
 		return err
 	}

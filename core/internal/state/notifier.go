@@ -28,19 +28,19 @@ import (
 const maxIDLen = len("@9223372036854775807")
 
 type notification struct {
-	ID      int64
+	Version int
 	Name    string
 	Payload string
 }
 
 // notifier sends and receives state notifications.
 type notifier struct {
-	db     *db.DB
-	ch     chan<- notification
-	key    *cipher.Key
-	next   int64
-	loaded chan struct{}
-	closed struct {
+	db          *db.DB
+	ch          chan<- notification
+	key         *cipher.Key
+	nextVersion int
+	loaded      chan struct{}
+	closed      struct {
 		cancel context.CancelFunc
 		atomic.Bool
 	}
@@ -69,17 +69,17 @@ func (notifier *notifier) Close() {
 }
 
 // Notify sends the notification n within the transaction tx and returns its
-// identifier. For ElectLeader and SeeLeader notifications, the identifier is
-// always 0.
+// version. For ElectLeader and SeeLeader notifications, the version is always
+// 0.
 //
 // It can only be called after a successful call to Commit.
-func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, error) {
+func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, error) {
 	t := reflect.TypeOf(n)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	name := t.Name()
-	var id int64
+	var version int
 	switch name {
 	case "ElectLeader", "SeeLeader":
 	default:
@@ -91,10 +91,10 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 		if err != nil {
 			return 0, err
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO notifications (id, name, payload)\n"+
-			"SELECT COALESCE(MAX(id), 0) + 1, $1, $2\n"+
+		err = tx.QueryRow(ctx, "INSERT INTO notifications (version, name, payload)\n"+
+			"SELECT COALESCE(MAX(version), 0) + 1, $1, $2\n"+
 			"FROM notifications\n"+
-			"RETURNING id", name, payload).Scan(&id)
+			"RETURNING version", name, payload).Scan(&version)
 		if err != nil {
 			return 0, err
 		}
@@ -116,16 +116,16 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 		copy(b[len(start):], b[n:])
 		b = b[:len(b)-(n-len(start))]
 	}
-	if id > 0 {
+	if version > 0 {
 		b = append(b, '@')
-		b = strconv.AppendInt(b, int64(id), 10)
+		b = strconv.AppendInt(b, int64(version), 10)
 	}
 	b = append(b, '\'')
 	_, err = tx.Exec(ctx, string(b))
 	if err != nil {
 		return 0, err
 	}
-	return id, nil
+	return version, nil
 }
 
 // init initializes the notifier to listen for notifications.
@@ -172,21 +172,21 @@ func (notifier *notifier) init(ctx context.Context) {
 			}
 		} else {
 			// Reads any missed notifications.
-			const query = "SELECT id, name, payload FROM notifications WHERE id >= $1 ORDER BY id"
-			err = conn.QueryScan(ctx, query, notifier.next, func(rows *db.Rows) error {
+			const query = "SELECT version, name, payload FROM notifications WHERE version >= $1 ORDER BY version"
+			err = conn.QueryScan(ctx, query, notifier.nextVersion, func(rows *db.Rows) error {
 				for rows.Next() {
-					var id int64
+					var version int
 					var name string
 					var payload string
-					err = rows.Scan(&id, &name, &payload)
+					err = rows.Scan(&version, &name, &payload)
 					if err != nil {
 						return err
 					}
-					if id != notifier.next {
-						panic(fmt.Sprintf("core/state: expected notification %d, got notification %d", notifier.next, id))
+					if version != notifier.nextVersion {
+						panic(fmt.Sprintf("core/state: expected notification version %d, got %d", notifier.nextVersion, version))
 					}
-					notifier.next++
-					notifier.ch <- notification{id, name, payload}
+					notifier.nextVersion++
+					notifier.ch <- notification{version, name, payload}
 				}
 				return nil
 			})
@@ -258,20 +258,20 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 		if identifier != "" {
 			payload += "@" + identifier
 		}
-		id, name, payload, err := parsePayload(payload)
+		version, name, payload, err := parsePayload(payload)
 		if err != nil {
 			continue
 		}
-		if id > 0 {
-			if id < notifier.next {
+		if version > 0 {
+			if version < notifier.nextVersion {
 				continue
 			}
-			if id > notifier.next {
+			if version > notifier.nextVersion {
 				return nil
 			}
-			notifier.next++
+			notifier.nextVersion++
 		}
-		notifier.ch <- notification{id, name, payload}
+		notifier.ch <- notification{version, name, payload}
 	}
 }
 
@@ -308,10 +308,10 @@ func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEn
 	return base64.RawStdEncoding.AppendEncode(b, encryptedData), nil
 }
 
-// parsePayload parses a notification payload and returns the identifier, name,
+// parsePayload parses a notification payload and returns the version, name,
 // and effective payload of the notification. If there is no identifier, it
-// returns 0 as identifier.
-func parsePayload(s string) (id int64, name, payload string, err error) {
+// returns 0 as version.
+func parsePayload(s string) (version int, name, payload string, err error) {
 	i := strings.IndexByte(s, '{')
 	if i == -1 {
 		return 0, "", "", errors.New("missing payload")
@@ -329,11 +329,11 @@ func parsePayload(s string) (id int64, name, payload string, err error) {
 		return
 	}
 	if s[0] != '@' {
-		return 0, "", "", errors.New("invalid identifier")
+		return 0, "", "", errors.New("invalid version")
 	}
-	id, err = strconv.ParseInt(s[1:], 10, 64)
-	if err != nil || id < 1 {
-		return 0, "", "", errors.New("invalid identifier")
+	v, err := strconv.ParseInt(s[1:], 10, 64)
+	if err != nil || v < 1 {
+		return 0, "", "", errors.New("invalid version")
 	}
-	return
+	return int(v), name, payload, nil
 }

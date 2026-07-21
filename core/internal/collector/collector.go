@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/events"
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/requestid"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
@@ -183,8 +184,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			reader, err := gzip.NewReader(r.Body)
 			if err != nil {
-				slog.Error("core/events/collector: an error occurred creating gzip reader", "error", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 				return
 			}
 			defer reader.Close()
@@ -219,10 +219,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// The request context is done; no response should be written.
 				return
 			}
+			requestID := requestid.RequestID(r.Context())
 			if serveSettings {
-				slog.Error("core/events/collector: an error occurred serving the settings", "error", err)
+				slog.Error("core/events/collector: an error occurred serving the settings", "error", err, "request_id", requestID)
 			} else {
-				slog.Error("core/events/collector: an error occurred collecting an event", "error", err)
+				slog.Error("core/events/collector: an error occurred collecting an event", "error", err, "request_id", requestID)
 			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
@@ -664,6 +665,14 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if key.Type != state.AccessKeyTypeAPI {
 				return errors.Unauthorized("API key in the Authorization header is invalid")
 			}
+			org, ok := c.state.Organization(key.Organization)
+			if !ok {
+				return errors.Unauthorized("API key in the Authorization header is invalid")
+			}
+			if !org.Enabled {
+				return errors.Unprocessable("OrganizationDisabled", "organization %s is disabled", org.ID)
+			}
+			var ws *state.Workspace
 			if header, ok := r.Header["Krenalis-Workspace"]; ok {
 				if len(header) > 1 {
 					return errors.BadRequest(`request contains multiple "Krenalis-Workspace" headers`)
@@ -675,10 +684,13 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				if !isValidWorkspaceID(id) {
 					return errors.BadRequest(`"Krenalis-Workspace" header is invalid; use "Krenalis-Workspace: <WORKSPACE_ID>"`)
 				}
-				if _, ok = c.state.Workspace(id); !ok {
+				if ws, ok = org.Workspace(id); !ok {
 					return errors.NotFound("workspace %s does not exist", id)
 				}
-				key.Workspace = id
+			} else if key.Workspace != "" {
+				if ws, ok = org.Workspace(key.Workspace); !ok {
+					return errors.Unauthorized("API key in the Authorization header is invalid")
+				}
 			}
 			// Decode the request.
 			dec, err = newDecoder(r)
@@ -693,20 +705,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !ok {
 				return errors.BadRequest("parameter 'connectionId' is required when using API key authentication")
 			}
-			if key.Workspace == "" {
-				connection, _ = c.state.Connection(id)
-			} else {
-				workspace, ok := c.state.Workspace(key.Workspace)
-				if !ok {
-					return errors.Unauthorized("API key in the Authorization header is invalid")
+			if ws == nil {
+				connection, ok = c.state.Connection(id)
+				if ok && connection.Organization().ID != org.ID {
+					connection = nil
 				}
-				connection, _ = workspace.Connection(id)
+			} else {
+				connection, _ = ws.Connection(id)
 			}
 			if connection == nil {
 				return errors.Unprocessable("ConnectionNotExist", "connection %s does not exist", id)
-			}
-			if org := connection.Organization(); !org.Enabled {
-				return errors.Unprocessable("OrganizationDisabled", "organization %s is disabled", org.ID)
 			}
 		} else {
 			// Authenticate with the event write key in the header.
