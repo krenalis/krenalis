@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	MaxFilePathSize        = 1024   // maximum allowed length for a file path.
-	MaxFunctionSourceSize  = 50_000 // maximum allowed size for a transformation function source.
-	MaxUpdatedAtFormatSize = 64     // maximum allowed size for an update time format.
-	MaxQuerySize           = 1_000  // maximum allowed size for a database query.
-	MaxTableNameSize       = 1024   // maximum allowed length for a database table name.
+	MaxFilePathSize            = 1024   // maximum allowed length for a file path.
+	MaxFunctionSourceSize      = 50_000 // maximum allowed size for a transformation function source.
+	MaxUpdatedAtFormatSize     = 64     // maximum allowed size for an update time format.
+	MaxQuerySize               = 1_000  // maximum allowed size for a database query.
+	MaxTableNameSize           = 1024   // maximum allowed length for a database table name.
+	MaxRequiredConsentPurposes = 100    // maximum allowed number of required consent purposes.
 )
 
 // validationState is a state for the validation of a pipeline.
@@ -175,6 +176,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
 		if !requiredConsentsAllowed {
 			return errors.BadRequest("required consents are not allowed")
+		}
+		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
+			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
 		for i, id := range pipeline.RequiredConsents.Purposes {
 			if !IsValidID(id) {
