@@ -75,7 +75,7 @@ func TestWriteSessionCookie(t *testing.T) {
 }
 
 func TestNewAPIsServerInitializesHTTPSecretKey(t *testing.T) {
-			s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil, "", nil)
+	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil, "", nil)
 	if s.httpSecretKey == nil {
 		t.Fatal("expected newAPIsServer to initialize httpSecretKey")
 	}

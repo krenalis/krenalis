@@ -447,8 +447,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	var err error
-	var org *core.Organization
-	var member string
+	var sc sessionCookie
 
 	if s.workOS == nil {
 
@@ -470,8 +469,9 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		if len(organizations) > 1 {
 			return nil, errors.New("there is more than one organization")
 		}
-		org = organizations[0]
-		member, err = org.AuthenticateMember(r.Context(), body.Email, body.Password)
+		org := organizations[0]
+		sc.Organization = org.ID
+		sc.Member, err = org.AuthenticateMember(r.Context(), body.Email, body.Password)
 		if err != nil {
 			if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
 				return []any{"", "AuthenticationFailed"}, nil
@@ -494,19 +494,18 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 
 	} else {
 
-		member, err = s.workOS.ServeLogin(r)
+		sc.Organization, sc.Member, err = s.workOS.ServeLogin(r)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Store the session.
-	sc := &sessionCookie{Organization: org.ID, Member: member}
 	se, err := s.secureCookie(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	value, err := se.Encode(sessionCookieName, sc)
+	value, err := se.Encode(sessionCookieName, &sc)
 	if err != nil {
 		return nil, err
 	}
@@ -521,7 +520,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 	writeSessionCookie(w, c)
 
-	return []any{member, nil}, nil
+	return []any{sc.Member, nil}, nil
 }
 
 // logout logs the user out.

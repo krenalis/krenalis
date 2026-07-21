@@ -35,23 +35,24 @@ func (wo *WorkOS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeLogin authenticates a member through WorkOS. It verifies the WorkOS
 // access token, looks up the member by WorkOS user ID, provisions the member
-// if they are not already registered in Krenalis, and returns the member ID.
-func (wo *WorkOS) ServeLogin(r *http.Request) (string, error) {
+// if they are not already registered in Krenalis, and returns the organization
+// ID and the member ID.
+func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 
 	var body struct {
 		AccessToken string `json:"accessToken"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil || body.AccessToken == "" {
-		return "", errors.BadRequest("")
+		return "", "", errors.BadRequest("")
 	}
 
 	workosUser, err := wo.authenticate(r.Context(), body.AccessToken)
 	if err != nil {
 		if errors.Is(err, errAuthenticationFailed) {
-			return "", errors.Unauthorized("invalid WorkOS token")
+			return "", "", errors.Unauthorized("invalid WorkOS token")
 		}
-		return "", err
+		return "", "", err
 	}
 
 	email := strings.TrimSpace(norm.NFC.String(workosUser.Email))
@@ -65,18 +66,18 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, error) {
 				"workos_user", workosUser.ID,
 				"organization", workosUser.OrganizationExternalID,
 			)
-			return "", errors.Unauthorized("invalid organization ID in WorkOS token")
+			return "", "", errors.Unauthorized("invalid organization ID in WorkOS token")
 		}
-		return "", err
+		return "", "", err
 	}
 	if !org.Enabled {
-		return "", errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+		return "", "", errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
 
 	member, err := org.MemberByWorkOSID(r.Context(), workosUser.ID)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); !ok {
-			return "", err
+			return "", "", err
 		}
 		name := firstName + " " + lastName
 		member, err = org.AddMember(r.Context(), core.MemberToSet{Name: name, Email: email, WorkOSUserID: workosUser.ID})
@@ -84,11 +85,11 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, error) {
 			member, err = org.MemberByWorkOSID(r.Context(), workosUser.ID)
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 
-	return member, nil
+	return org.ID, member, nil
 }
 
 // serveAction handles the user registration action. It verifies the request
