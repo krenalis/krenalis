@@ -306,8 +306,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	// Follow the organizations, so that the network usage counters of the
-	// deleted ones are discarded.
+	// Make the countdial package listen to state changes.
 	countdial.Listen(core.state)
 
 	// Add the Krenalis installation ID tag to Sentry.
