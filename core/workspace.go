@@ -905,7 +905,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			}
 			cp, ok := this.workspace.ConsentPurpose(id)
 			if !ok {
-				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
+				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
 			}
 			consents.Purposes[i] = cp.Code
 		}

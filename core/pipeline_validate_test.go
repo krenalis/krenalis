@@ -452,7 +452,7 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
 			knownConsentPurposeIDs:  map[string]bool{},
-			err:                     `consent purpose "111111111111" does not exist`,
+			err:                     `consent purpose 111111111111 does not exist`,
 		},
 		{
 			name: "GOOD: Source/SDK/User - with required consents",
@@ -496,7 +496,7 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
 			knownConsentPurposeIDs:  map[string]bool{},
-			err:                     `consent purpose "111111111111" does not exist`,
+			err:                     `consent purpose 111111111111 does not exist`,
 		},
 		{
 			name: "GOOD: Source/Webhook/Event - with required consents",
@@ -729,7 +729,7 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			knownConsentPurposeIDs:  map[string]bool{},
-			err:                     `consent purpose "111111111111" does not exist`,
+			err:                     `consent purpose 111111111111 does not exist`,
 		},
 		{
 			name: "BAD: Destination/Application/Event - duplicated required consent purpose",
@@ -750,7 +750,7 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
-			err:                     `required consent purpose "111111111111" is duplicated`,
+			err:                     `required consent purpose 111111111111 is duplicated`,
 		},
 		{
 			name: "BAD: Source/Application/User - required consents are not allowed",

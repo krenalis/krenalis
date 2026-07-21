@@ -185,10 +185,10 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
 			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
-				return errors.BadRequest("required consent purpose %q is duplicated", id)
+				return errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
 			if !v.knownConsentPurposeIDs[id] {
-				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", id)
+				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
