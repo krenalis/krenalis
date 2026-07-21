@@ -374,36 +374,44 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		}
 		org, err := s.core.Organization(organizationID)
 		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
+			}
 			return nil, nil, err
 		}
 		if !org.Enabled {
 			return nil, nil, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 		}
-		// If the key is restricted to a workspace, return the workspace as well.
-		if workspaceID != "" {
-			ws, err := org.Workspace(workspaceID)
+		// If the Krenalis-Workspace header is present, return the workspace as well.
+		if header, ok := r.Header["Krenalis-Workspace"]; ok {
+			if len(header) > 1 {
+				return nil, nil, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
+			}
+			if workspaceID != "" {
+				return nil, nil, errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
+			}
+			id := header[0]
+			if !core.IsValidID(id) {
+				return nil, nil, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
+			}
+			ws, err := org.Workspace(id)
 			if err != nil {
 				return nil, nil, err
 			}
 			return org, ws, nil
 		}
-		header, ok := r.Header["Krenalis-Workspace"]
-		// If the Krenalis-Workspace header is present, return the workspace as well.
-		if !ok {
-			return org, nil, nil
+		// If the key is restricted to a workspace, return the workspace as well.
+		if workspaceID != "" {
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				if _, ok := err.(*errors.NotFoundError); ok {
+					err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
+				}
+				return nil, nil, err
+			}
+			return org, ws, nil
 		}
-		if len(header) > 1 {
-			return nil, nil, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
-		}
-		id := header[0]
-		if !core.IsValidID(id) {
-			return nil, nil, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
-		}
-		ws, err := org.Workspace(id)
-		if err != nil {
-			return nil, nil, err
-		}
-		return org, ws, nil
+		return org, nil, nil
 	}
 
 	org, ws, _, err := s.authenticateAdminRequest(r)
