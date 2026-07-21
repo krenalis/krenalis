@@ -64,41 +64,40 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			ref={ref}
 			annotated={true}
 		>
-			<SlCheckbox checked={isEnabled} onSlChange={onToggle}>
-				Require user consent
-			</SlCheckbox>
-			{isEnabled && (
-				<div className='pipeline__consents-details'>
+			<div className='pipeline__consents-toggle'>
+				<SlCheckbox checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
+				<div className='pipeline__consents-logical-sentence'>
+					An event must have consent for
 					<SlSelect
-						className='pipeline__consents-select'
-						multiple
-						clearable
-						placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
-						value={pipeline.requiredConsents?.purposes ?? []}
-						onSlChange={onChangePurposes}
-						disabled={purposes.length === 0}
+						className='pipeline__consents-logical-select'
+						size='small'
+						value={pipeline.requiredConsents?.operator || 'and'}
+						onSlChange={onChangeOperator}
+						disabled={!isEnabled}
 					>
-						{purposes.map((p) => (
-							<SlOption key={p.id} value={p.id}>
-								{p.name}
-							</SlOption>
-						))}
+						<SlOption value='and'>all</SlOption>
+						<SlOption value='or'>any</SlOption>
 					</SlSelect>
-					<div className='pipeline__consents-logical-sentence'>
-						An event must have consent for
-						<SlSelect
-							className='pipeline__consents-logical-select'
-							size='small'
-							value={pipeline.requiredConsents?.operator || 'and'}
-							onSlChange={onChangeOperator}
-						>
-							<SlOption value='and'>all</SlOption>
-							<SlOption value='or'>any</SlOption>
-						</SlSelect>
-						of the selected purposes to be processed by this pipeline.
-					</div>
+					of the selected purposes to be processed by this pipeline.
 				</div>
-			)}
+			</div>
+			<div className='pipeline__consents-details'>
+				<SlSelect
+					className='pipeline__consents-select'
+					multiple
+					clearable
+					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
+					value={pipeline.requiredConsents?.purposes ?? []}
+					onSlChange={onChangePurposes}
+					disabled={!isEnabled || purposes.length === 0}
+				>
+					{purposes.map((p) => (
+						<SlOption key={p.id} value={p.id}>
+							{p.name}
+						</SlOption>
+					))}
+				</SlSelect>
+			</div>
 		</Section>
 	);
 });

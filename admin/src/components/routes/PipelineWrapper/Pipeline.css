@@ -1971,8 +1971,15 @@ inherit the disabled style */
 	margin-bottom: -4px;
 }
 
+.pipeline__consents-toggle {
+	display: flex;
+	flex-flow: row;
+	align-items: flex-start;
+	gap: 2px;
+}
+
 .pipeline__consents-details {
-	margin-top: 30px;
+	margin-top: 20px;
 	display: flex;
 	flex-flow: column;
 	gap: 20px;
