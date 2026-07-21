@@ -93,7 +93,7 @@ func Test_ReceivedEvent(t *testing.T) {
 				"id":    1751031467043,
 				"start": true,
 			},
-			"consent": map[string]any{
+			"consents": map[string]any{
 				"analytics":            false,
 				"essential_services":   true,
 				"targeted_advertising": false,

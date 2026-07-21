@@ -17,12 +17,12 @@ func Satisfies(requiredConsents []string, matchAll bool, attributes map[string]a
 	if !ok {
 		return false
 	}
-	consent, ok := context["consent"].(map[string]any)
+	consents, ok := context["consents"].(map[string]any)
 	if !ok {
 		return false
 	}
 	for _, code := range requiredConsents {
-		granted, _ := consent[code].(bool)
+		granted, _ := consents[code].(bool)
 		if granted {
 			if !matchAll {
 				return true

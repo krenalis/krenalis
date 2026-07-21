@@ -27,7 +27,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: true,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": true,
 						"analytics": true,
 						"other":     false,
@@ -42,7 +42,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: true,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": true,
 						"analytics": false,
 					},
@@ -56,7 +56,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: true,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": true,
 					},
 				},
@@ -69,7 +69,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: true,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": "true",
 					},
 				},
@@ -98,7 +98,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: false,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": true,
 						"analytics": true,
 					},
@@ -112,7 +112,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: false,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": false,
 						"analytics": true,
 					},
@@ -126,7 +126,7 @@ func TestSatisfies(t *testing.T) {
 			matchAll: false,
 			attributes: map[string]any{
 				"context": map[string]any{
-					"consent": map[string]any{
+					"consents": map[string]any{
 						"marketing": false,
 						"analytics": false,
 					},

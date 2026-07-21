@@ -52,10 +52,10 @@ var Event = types.Object([]types.Property{
 				Description:  "Campaign",
 			},
 			{
-				Name:         "consent",
+				Name:         "consents",
 				Type:         types.Map(types.Boolean()),
 				ReadOptional: true,
-				Description:  "Consent",
+				Description:  "Consents",
 			},
 			{
 				Name: "device",

@@ -87,8 +87,8 @@ func (w *EventWriter) Write(ctx context.Context, event streams.Event, pipeline s
 			row[15] = campaign["content"]
 		}
 
-		// consent
-		row[16] = eventContext["consent"]
+		// consents
+		row[16] = eventContext["consents"]
 
 		// device
 		if device, ok := eventContext["device"].(map[string]any); ok {

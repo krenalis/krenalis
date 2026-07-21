@@ -296,14 +296,14 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// krenalis.track('click', {}, {context: {consent: {...}}})
+		// krenalis.track('click', {}, {context: {consents: {...}}})
 		{
 			typ:  "track",
-			body: `{"context":{"consent":{"analytics":false,"essential_services":true,"my_test_purpose":false,"targeted_advertising":false}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			body: `{"context":{"consents":{"analytics":false,"essential_services":true,"my_test_purpose":false,"targeted_advertising":false}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"context": map[string]any{
-						"consent": map[string]any{
+						"consents": map[string]any{
 							"analytics":            false,
 							"essential_services":   true,
 							"my_test_purpose":      false,
@@ -318,14 +318,14 @@ func Test_Decoder(t *testing.T) {
 				}},
 			},
 		},
-		// Batch-level default context.consent is merged into the event, without
+		// Batch-level default context.consents is merged into the event, without
 		// overriding consent purposes already specified at the event level.
 		{
-			body: `{"batch":[{"type":"track","event":"click","anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","context":{"consent":{"analytics":true}}}],"context":{"consent":{"analytics":false,"essential_services":true}}}`,
+			body: `{"batch":[{"type":"track","event":"click","anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","context":{"consents":{"analytics":true}}}],"context":{"consents":{"analytics":false,"essential_services":true}}}`,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"context": map[string]any{
-						"consent": map[string]any{
+						"consents": map[string]any{
 							"analytics":          true,
 							"essential_services": true,
 						},
@@ -338,20 +338,20 @@ func Test_Decoder(t *testing.T) {
 				}},
 			},
 		},
-		// context.consent with a non-boolean value.
+		// context.consents with a non-boolean value.
 		{
 			typ:  "track",
-			body: `{"context":{"consent":{"analytics":"no"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			body: `{"context":{"consents":{"analytics":"no"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
 			expected: []expectedEvent{{
-				err: errors.BadRequest("property 'context.consent.analytics' is not a valid boolean"),
+				err: errors.BadRequest("property 'context.consents.analytics' is not a valid boolean"),
 			}},
 		},
-		// context.consent with a non-object value.
+		// context.consents with a non-object value.
 		{
 			typ:  "track",
-			body: `{"context":{"consent":"no"},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			body: `{"context":{"consents":"no"},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
 			expected: []expectedEvent{{
-				err: errors.BadRequest("property 'context.consent' is not a valid object"),
+				err: errors.BadRequest("property 'context.consents' is not a valid object"),
 			}},
 		},
 
