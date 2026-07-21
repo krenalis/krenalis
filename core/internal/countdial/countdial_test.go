@@ -70,7 +70,7 @@ func collected(t *testing.T, organizationID string) (uint64, bool) {
 }
 
 // listen makes the given organizations the existing ones for the duration of
-// the test, as Listen does with the ones of a state.
+// the test, as EnableAndListen does with the ones of a state.
 func listen(t *testing.T, organizationIDs ...string) {
 	t.Helper()
 	forget(t, organizationIDs...)
@@ -138,8 +138,7 @@ func echoServer(t *testing.T) string {
 // enable enables the metrics for the duration of the test.
 func enable(t *testing.T) {
 	t.Helper()
-	Enabled(true)
-	t.Cleanup(func() { Enabled(false) })
+	t.Cleanup(EnableForTesting())
 }
 
 // write writes b to the connection established by dial to addr, reads the echo
@@ -516,8 +515,8 @@ func TestTransportUnknownOrganization(t *testing.T) {
 }
 
 func TestDialWithoutListening(t *testing.T) {
-	// Listen has not been called, so the organizations are not known and every
-	// one of them is considered to exist.
+	// EnableAndListen has not been called, so the organizations are not known
+	// and every one of them is considered to exist.
 	enable(t)
 	addr := echoServer(t)
 	egress := egress(t, "org-not-listening")

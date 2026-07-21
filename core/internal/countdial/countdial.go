@@ -9,15 +9,17 @@
 // krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
 // by organization. Only the bytes sent are counted, the bytes received are not.
 //
-// Counting is disabled by default and is enabled with [Enabled]. When it is
+// Counting is disabled by default and is enabled with [EnableAndListen], which
+// is not called at all when the network usage metrics are disabled. While it is
 // disabled, the dial functions returned by [Dial], [DialWith] and
 // [DialWithContext], and the transport returned by [Transport], establish the
 // connections as they would without this package, with no overhead.
 //
 // This package keeps a counter per organization, so it must know which
 // organizations exist in order not to keep the counters of the deleted ones
-// forever. It knows them by listening to the state, see [Listen]: dialing on
-// behalf of an organization that does not exist fails with [ErrNoOrganization].
+// forever. It knows them by listening to the state, see [EnableAndListen]:
+// dialing on behalf of an organization that does not exist fails with
+// [ErrNoOrganization].
 package countdial
 
 import (
@@ -45,23 +47,26 @@ var egressBytes = prometheus.RegisterCounterVec(
 	[]string{"organization"},
 )
 
-// enabled reports whether the bytes sent must be counted. It is false by
-// default, so that the dial functions are plain and unwrapped unless counting
-// is explicitly enabled.
+// enabled reports whether the bytes sent must be counted. It is false until
+// EnableAndListen is called, so that the dial functions are plain and unwrapped
+// unless counting is explicitly enabled.
 var enabled atomic.Bool
 
-// Enabled enables or disables counting. It should be called once, at startup,
-// before any connection is dialed: the dial functions and the transports
-// already returned keep the setting they were created with.
-//
-// When counting is disabled, no bytes are counted and no connection is wrapped.
-func Enabled(v bool) {
-	enabled.Store(v)
-}
-
-// IsEnabled reports whether counting is enabled (see [Enabled]).
+// IsEnabled reports whether counting is enabled, that is whether
+// [EnableAndListen] has been called.
 func IsEnabled() bool {
 	return enabled.Load()
+}
+
+// EnableForTesting enables counting, as [EnableAndListen] does, but without
+// following the organizations of a state, so that every organization is
+// considered to exist. It returns a function that disables it again.
+//
+// Unlike [EnableAndListen], it can be called more than once. It is meant to be
+// used only in the tests of the packages that count the bytes they send.
+func EnableForTesting() (disable func()) {
+	enabled.Store(true)
+	return func() { enabled.Store(false) }
 }
 
 // ErrNoOrganization is the error the dial functions fail with when the
@@ -91,17 +96,28 @@ var (
 	// the whole life of the process.
 	organizations = map[string]*organization{}
 	// listening reports whether the organizations are known, that is whether
-	// Listen has been called. Until it is, every organization is considered to
-	// exist, because this package has no way to tell which ones do.
+	// EnableAndListen has been called. Until it is, every organization is
+	// considered to exist, because this package has no way to tell which ones do.
 	listening bool
 )
 
-// Listen makes this package follow the organizations of st, so that the counter
-// of an organization is discarded when the organization is deleted, and dialing
-// on behalf of an organization that does not exist fails.
+// EnableAndListen enables counting and makes this package follow the
+// organizations of st, so that the counter of an organization is discarded when
+// the organization is deleted, and dialing on behalf of an organization that
+// does not exist fails.
 //
-// It must be called once, at startup.
-func Listen(st *state.State) {
+// It is not called at all when the network usage metrics are disabled, leaving
+// counting disabled: the other functions of this package can still be called,
+// they just return plain, unwrapped dialers and transports and count nothing.
+//
+// When it is called, instead, it must be called at startup, before any other
+// function of this package, because the dial functions and the transports
+// already returned keep the setting they were created with, and it panics if it
+// is called more than once.
+func EnableAndListen(st *state.State) {
+	if enabled.Swap(true) {
+		panic("countdial: EnableAndListen called more than once")
+	}
 	st.Freeze()
 	st.AddListener(onCreateOrganization)
 	st.AddListener(onDeleteOrganization)
@@ -152,7 +168,7 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 // registering the counter the first time the organization is resolved.
 //
 // It fails with [ErrNoOrganization] if the organization does not exist, unless
-// the organizations are not known yet, see [Listen].
+// the organizations are not known yet, see [EnableAndListen].
 //
 // The dial functions resolve the organization once, when they are created, and
 // keep the returned values, so that they do not have to take organizationsMu to
@@ -178,10 +194,10 @@ func resolve(organizationID string) (*organization, *prometheus.Counter, error) 
 // bytes the connections it establishes send and attributing them to the
 // organization with the given ID.
 //
-// If organizationID is empty, or counting is disabled (see [Enabled]), the
-// returned function is a plain, unwrapped dialer and no bytes are counted.
-// Otherwise, the returned function fails with [ErrNoOrganization] if the
-// organization does not exist when it is called.
+// If organizationID is empty, or counting is disabled (see
+// [EnableAndListen]), the returned function is a plain, unwrapped dialer and no
+// bytes are counted. Otherwise, the returned function fails with
+// [ErrNoOrganization] if the organization does not exist when it is called.
 //
 // Use [DialWith] instead to keep the dial options of an already configured
 // dialer.
@@ -198,10 +214,10 @@ func Dial(organizationID string) DialFunc {
 // keep-alive. If the wrapped dial function is nil, a plain net.Dialer is used,
 // as in [Dial].
 //
-// If organizationID is empty, or counting is disabled (see [Enabled]), the dial
-// function is returned unwrapped and no bytes are counted. Otherwise, the
-// returned function fails with [ErrNoOrganization] if the organization does not
-// exist when it is called.
+// If organizationID is empty, or counting is disabled (see
+// [EnableAndListen]), the dial function is returned unwrapped and no bytes are
+// counted. Otherwise, the returned function fails with [ErrNoOrganization] if
+// the organization does not exist when it is called.
 func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 	return func(dial DialFunc) DialFunc {
 		return dialWith(organizationID, dial)
@@ -217,8 +233,8 @@ type organizationKey struct{}
 // organization and the organization is only known when the client is used, so
 // that the dial function does not have to be fixed when the client is created.
 //
-// If organizationID is empty, or counting is disabled (see [Enabled]), ctx is
-// returned unchanged.
+// If organizationID is empty, or counting is disabled (see
+// [EnableAndListen]), ctx is returned unchanged.
 func WithOrganization(ctx context.Context, organizationID string) context.Context {
 	if !enabled.Load() || organizationID == "" {
 		return ctx
@@ -234,7 +250,7 @@ func WithOrganization(ctx context.Context, organizationID string) context.Contex
 // created, so a single client can serve every organization.
 //
 // If the wrapped dial function is nil, a plain net.Dialer is used, as in
-// [Dial]. If counting is disabled (see [Enabled]), the dial function is
+// [Dial]. If counting is disabled (see [EnableAndListen]), the dial function is
 // returned unwrapped and no bytes are counted. Otherwise, a dial whose context
 // carries an organization that does not exist fails with [ErrNoOrganization].
 func DialWithContext(dial DialFunc) DialFunc {
@@ -268,11 +284,11 @@ func DialWithContext(dial DialFunc) DialFunc {
 // Transport returns an HTTP transport that counts the bytes the requests made
 // with it send, attributing them to the organization with the given ID.
 //
-// If organizationID is empty, or counting is disabled (see [Enabled]), base is
-// returned unwrapped; otherwise the returned transport is a clone of base
-// dialing with [Dial], so that base's timeouts and options are preserved, and
-// its requests fail with [ErrNoOrganization] if the organization does not exist
-// when they are made.
+// If organizationID is empty, or counting is disabled (see
+// [EnableAndListen]), base is returned unwrapped; otherwise the returned
+// transport is a clone of base dialing with [Dial], so that base's timeouts and
+// options are preserved, and its requests fail with [ErrNoOrganization] if the
+// organization does not exist when they are made.
 //
 // A clone does not share the connection pool of base, so the caller should
 // create one transport per organization and reuse it for all its requests,

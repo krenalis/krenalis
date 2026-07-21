@@ -70,8 +70,7 @@ var (
 // counted as the egress traffic of the organization the function belongs to.
 func TestCallCountsEgress(t *testing.T) {
 
-	countdial.Enabled(true)
-	t.Cleanup(func() { countdial.Enabled(false) })
+	t.Cleanup(countdial.EnableForTesting())
 
 	var invocations int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -114,8 +113,7 @@ func TestCallCountsEgress(t *testing.T) {
 // invoking a function are only attributed to the organization it belongs to.
 func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 
-	countdial.Enabled(true)
-	t.Cleanup(func() { countdial.Enabled(false) })
+	t.Cleanup(countdial.EnableForTesting())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))
@@ -149,7 +147,8 @@ func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 // bytes sent invoking a function are not counted.
 func TestCallWithMetricsDisabled(t *testing.T) {
 
-	countdial.Enabled(false)
+	// The metrics are disabled, because countdial.EnableForTesting is not
+	// called and counting is disabled by default.
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))
@@ -180,8 +179,7 @@ func TestCallWithMetricsDisabled(t *testing.T) {
 // the bytes of each call are attributed to the organization that made it.
 func TestCallUsesASingleClient(t *testing.T) {
 
-	countdial.Enabled(true)
-	t.Cleanup(func() { countdial.Enabled(false) })
+	t.Cleanup(countdial.EnableForTesting())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))

@@ -205,8 +205,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	countdial.Enabled(conf.NetworkUsageMetricsEnabled)
-
 	// Open connection to PostgreSQL.
 	ps := conf.DB
 	db, err := dbpkg.Open(&dbpkg.Options{
@@ -306,8 +304,11 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	// Make the countdial package listen to state changes.
-	countdial.Listen(core.state)
+	// Make the countdial package count the network usage of the organizations,
+	// listening to state changes.
+	if conf.NetworkUsageMetricsEnabled {
+		countdial.EnableAndListen(core.state)
+	}
 
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
