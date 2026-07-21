@@ -174,7 +174,7 @@ const Privacy = () => {
 		<div className='privacy'>
 			<div className='privacy__content'>
 				<div className='privacy__title'>
-					<p className='privacy__title-text'>Purposes</p>
+					<p className='privacy__title-text'>Consent purposes</p>
 					<SlButton size='small' variant='primary' onClick={() => setIsCreating(true)}>
 						Add a new purpose
 					</SlButton>
@@ -318,7 +318,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 	return (
 		<SlDialog
 			className='privacy__dialog'
-			label={isEditing ? 'Edit the purpose' : 'Create a new purpose'}
+			label={isEditing ? 'Edit the purpose' : 'Add a new purpose'}
 			open={isOpen}
 			onSlAfterHide={onClose}
 		>
@@ -351,7 +351,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 					</div>
 				)}
 				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
-					Save
+					{isEditing ? 'Save' : 'Add'}
 				</SlButton>
 			</div>
 		</SlDialog>
