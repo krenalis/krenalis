@@ -71,10 +71,7 @@ func New(env *connectors.FileStorageEnv) (*S3, error) {
 }
 
 type S3 struct {
-	env *connectors.FileStorageEnv
-
-	// httpClient returns the HTTP client used by the S3 clients of this
-	// connector instance, so that they all share the same connection pool.
+	env        *connectors.FileStorageEnv
 	httpClient func() aws.HTTPClient
 }
 
@@ -222,12 +219,6 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	return err
 }
 
-// newHTTPClient returns a function that returns, creating it on the first call,
-// the HTTP client to use for the requests of the connector instance with the
-// given environment.
-//
-// The transport dials with env.DialWith, which counts the bytes the requests
-// send, keeping the dial options of the transport's own dialer.
 func newHTTPClient(env *connectors.FileStorageEnv) func() aws.HTTPClient {
 	return sync.OnceValue(func() aws.HTTPClient {
 		return awsHTTP.NewBuildableClient().
