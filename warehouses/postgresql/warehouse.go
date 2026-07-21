@@ -58,13 +58,6 @@ type PostgreSQL struct {
 	dialWith func(warehouses.DialFunc) warehouses.DialFunc
 }
 
-// SetDialWith sets the function used to establish the outbound network
-// connections, so that the driver's own dialer is preserved. If it is not
-// called, the warehouse dials with the driver's default dialer.
-func (warehouse *PostgreSQL) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
-	warehouse.dialWith = dialWith
-}
-
 type pgSettings struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
@@ -315,6 +308,13 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	}
 
 	return nil
+}
+
+// SetDialWith sets the function used to establish the outbound network
+// connections, so that the driver's own dialer is preserved. If it is not
+// called, the warehouse dials with the driver's default dialer.
+func (warehouse *PostgreSQL) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
+	warehouse.dialWith = dialWith
 }
 
 // Truncate truncates the specified table.

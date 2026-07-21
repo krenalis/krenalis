@@ -59,13 +59,6 @@ type Snowflake struct {
 	dialWith func(warehouses.DialFunc) warehouses.DialFunc
 }
 
-// SetDialWith sets the function used to establish the outbound network
-// connections, so that the driver's own dialer is preserved. If it is not
-// called, the warehouse dials with the driver's default dialer.
-func (warehouse *Snowflake) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
-	warehouse.dialWith = dialWith
-}
-
 type sfSettings struct {
 	Username  string `json:"username"`
 	Password  string `json:"password"`
@@ -372,6 +365,13 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	}
 
 	return nil
+}
+
+// SetDialWith sets the function used to establish the outbound network
+// connections, so that the driver's own dialer is preserved. If it is not
+// called, the warehouse dials with the driver's default dialer.
+func (warehouse *Snowflake) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
+	warehouse.dialWith = dialWith
 }
 
 // Truncate truncates the specified table.
