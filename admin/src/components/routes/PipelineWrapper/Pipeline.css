@@ -1978,6 +1978,13 @@ inherit the disabled style */
 	gap: 20px;
 }
 
+.pipeline__consents-select::part(tag__base) {
+    background-color: var(--sl-color-success-100);
+    border: 0;
+    color: var(--sl-color-success-900);
+    font-weight: 500;
+}
+
 .pipeline__consents-logical-sentence {
 	display: flex;
 	flex-flow: row wrap;
