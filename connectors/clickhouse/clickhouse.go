@@ -249,22 +249,17 @@ type innerSettings struct {
 // options returns the connection options, from s. The connections are
 // established using dial, in place of the driver's default dialer.
 func options(s *innerSettings, dial connectors.DialFunc) *clickhouse.Options {
-	o := &clickhouse.Options{
+	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
 			Database: s.Database,
 			Username: s.Username,
 			Password: s.Password,
 		},
-	}
-	if dial != nil {
-		// The driver dials with the "tcp" network, and applies its dial timeout
-		// to the context it passes to DialContext.
-		o.DialContext = func(ctx context.Context, address string) (net.Conn, error) {
+		DialContext: func(ctx context.Context, address string) (net.Conn, error) {
 			return dial(ctx, "tcp", address)
-		}
+		},
 	}
-	return o
 }
 
 // propertyType returns the property type of the column type and a boolean
