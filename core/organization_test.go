@@ -5,9 +5,40 @@
 package core
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 )
+
+// TestPipelineMetricsPerDateRejectsTooManyDataPoints verifies that requests
+// exceeding the maximum number of data points are rejected.
+func TestPipelineMetricsPerDateRejectsTooManyDataPoints(t *testing.T) {
+	organization := Organization{core: &Core{}}
+	start := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name    string
+		days    int
+		entries int
+	}{
+		{name: "61 days and 1,000 entries", days: 61, entries: 1000},
+		{name: "121 days and 500 entries", days: 121, entries: 500},
+		{name: "20,001 days and 3 entries", days: 20001, entries: 3},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := organization.PipelineMetricsPerDate(context.Background(), start, start.AddDate(0, 0, test.days), "", MetricSelection{
+				Workspaces: validMetricIDs(test.entries),
+			})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), "requested metrics exceed the maximum of 60,000 data points") {
+				t.Fatalf("expected data point limit error, got %v", err)
+			}
+		})
+	}
+}
 
 // TestValidatePipelineMetricsSelectionRequiresOneGroup verifies that metrics
 // requests must specify exactly one grouping dimension.
@@ -39,7 +70,7 @@ func TestValidatePipelineMetricsSelectionRequiresOneGroup(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateMetricsSelection(test.selection)
+			_, err := validateMetricsSelection(test.selection)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -50,16 +81,19 @@ func TestValidatePipelineMetricsSelectionRequiresOneGroup(t *testing.T) {
 // TestValidatePipelineMetricsSelectionAllowsWorkspaceGroup verifies that workspace
 // grouping is valid when workspaces are provided as the grouping parameter.
 func TestValidatePipelineMetricsSelectionAllowsWorkspaceGroup(t *testing.T) {
-	err := validateMetricsSelection(MetricSelection{
+	entries, err := validateMetricsSelection(MetricSelection{
 		Workspaces: []string{"9RbU4nP8LyQ6"},
 	})
 	if err != nil {
 		t.Fatalf("expected workspace group to be valid, got %v", err)
 	}
+	if entries != 1 {
+		t.Fatalf("expected 1 selection entry, got %d", entries)
+	}
 }
 
 // TestValidatePipelineMetricsSelectionAllowsMaximumGroupSize verifies that the
-// selected grouping dimension may contain up to 100 identifiers.
+// selected grouping dimension may contain up to 1,000 identifiers.
 func TestValidatePipelineMetricsSelectionAllowsMaximumGroupSize(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -68,34 +102,37 @@ func TestValidatePipelineMetricsSelectionAllowsMaximumGroupSize(t *testing.T) {
 		{
 			name: "workspaces",
 			selection: MetricSelection{
-				Workspaces: validMetricIDs(100),
+				Workspaces: validMetricIDs(1000),
 			},
 		},
 		{
 			name: "connections",
 			selection: MetricSelection{
-				Connections: validMetricIDs(100),
+				Connections: validMetricIDs(1000),
 			},
 		},
 		{
 			name: "pipelines",
 			selection: MetricSelection{
-				Pipelines: validMetricIDs(100),
+				Pipelines: validMetricIDs(1000),
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateMetricsSelection(test.selection)
+			entries, err := validateMetricsSelection(test.selection)
 			if err != nil {
 				t.Fatalf("expected selection to be valid, got %v", err)
+			}
+			if entries != 1000 {
+				t.Fatalf("expected 1,000 selection entries, got %d", entries)
 			}
 		})
 	}
 }
 
 // TestValidatePipelineMetricsSelectionRejectsOversizedGroup verifies that the
-// selected grouping dimension cannot contain more than 100 identifiers.
+// selected grouping dimension cannot contain more than 1,000 identifiers.
 func TestValidatePipelineMetricsSelectionRejectsOversizedGroup(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -104,29 +141,29 @@ func TestValidatePipelineMetricsSelectionRejectsOversizedGroup(t *testing.T) {
 		{
 			name: "workspaces",
 			selection: MetricSelection{
-				Workspaces: validMetricIDs(101),
+				Workspaces: validMetricIDs(1001),
 			},
 		},
 		{
 			name: "connections",
 			selection: MetricSelection{
-				Connections: validMetricIDs(101),
+				Connections: validMetricIDs(1001),
 			},
 		},
 		{
 			name: "pipelines",
 			selection: MetricSelection{
-				Pipelines: validMetricIDs(101),
+				Pipelines: validMetricIDs(1001),
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateMetricsSelection(test.selection)
+			_, err := validateMetricsSelection(test.selection)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
-			if !strings.Contains(err.Error(), "must contain at most 100 entries") {
+			if !strings.Contains(err.Error(), "must contain at most 1,000 entries") {
 				t.Fatalf("expected maximum group size error, got %v", err)
 			}
 		})
@@ -161,7 +198,7 @@ func TestValidatePipelineMetricsSelectionRejectsEmptyGroup(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateMetricsSelection(test.selection)
+			_, err := validateMetricsSelection(test.selection)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}

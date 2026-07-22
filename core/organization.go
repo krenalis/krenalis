@@ -872,6 +872,8 @@ const (
 	Day    = MetricUnit(metrics.Day)
 )
 
+const maxMetricDataPoints = 60_000 // maximum number of data points in a metrics response
+
 // PipelineMetricsPerDate returns metrics aggregated by day for the time
 // interval between the specified start and end dates.
 //
@@ -882,7 +884,11 @@ const (
 // day of the end date.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
-// non-nil, with between 1 and 1000 items.
+// non-nil, with between 1 and 1,000 items.
+//
+// The requested metrics cannot exceed the maximum of 60,000 data points,
+// computed as the number of days in the date range multiplied by the number
+// of entries in the selection.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -902,9 +908,13 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	}
 
 	// Validate selection.
-	err := validateMetricsSelection(selection)
+	days := int(end.Sub(start) / (24 * time.Hour))
+	entries, err := validateMetricsSelection(selection)
 	if err != nil {
 		return Metrics{}, err
+	}
+	if days*entries > maxMetricDataPoints {
+		return Metrics{}, errors.BadRequest("requested metrics exceed the maximum of 60,000 data points (%d days × %d selection entries)", days, entries)
 	}
 
 	// Validate workspace.
@@ -981,7 +991,7 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	start := end.Add(-time.Duration(number) * resolution)
 
 	// Validate selection.
-	err := validateMetricsSelection(selection)
+	_, err := validateMetricsSelection(selection)
 	if err != nil {
 		return Metrics{}, err
 	}
@@ -1636,20 +1646,22 @@ func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bo
 	return nil
 }
 
-// validateMetricsSelection validates a pipeline metrics selection.
-func validateMetricsSelection(selection MetricSelection) error {
+// validateMetricsSelection validates a pipeline metrics selection and returns
+// the number of selection entries.
+func validateMetricsSelection(selection MetricSelection) (int, error) {
+	var entries int
 	var groups int
 	// Workspaces.
 	if selection.Workspaces != nil {
 		if len(selection.Workspaces) == 0 {
-			return errors.BadRequest("workspaces must not be empty when provided")
+			return 0, errors.BadRequest("workspaces must not be empty when provided")
 		}
-		if len(selection.Workspaces) > 1000 {
-			return errors.BadRequest("workspaces must contain at most 1,000 entries")
+		if entries = len(selection.Workspaces); entries > 1000 {
+			return 0, errors.BadRequest("workspaces must contain at most 1,000 entries")
 		}
 		for _, workspace := range selection.Workspaces {
 			if !IsValidID(workspace) {
-				return errors.BadRequest("workspace %q is not valid", workspace)
+				return 0, errors.BadRequest("workspace %q is not valid", workspace)
 			}
 		}
 		groups++
@@ -1657,14 +1669,14 @@ func validateMetricsSelection(selection MetricSelection) error {
 	// Connections.
 	if selection.Connections != nil {
 		if len(selection.Connections) == 0 {
-			return errors.BadRequest("connections must not be empty when provided")
+			return 0, errors.BadRequest("connections must not be empty when provided")
 		}
-		if len(selection.Connections) > 1000 {
-			return errors.BadRequest("connections must contain at most 1,000 entries")
+		if entries = len(selection.Connections); entries > 1000 {
+			return 0, errors.BadRequest("connections must contain at most 1,000 entries")
 		}
 		for _, connection := range selection.Connections {
 			if !IsValidID(connection) {
-				return errors.BadRequest("connection %q is not valid", connection)
+				return 0, errors.BadRequest("connection %q is not valid", connection)
 			}
 		}
 		groups++
@@ -1672,28 +1684,28 @@ func validateMetricsSelection(selection MetricSelection) error {
 	// Pipelines.
 	if selection.Pipelines != nil {
 		if len(selection.Pipelines) == 0 {
-			return errors.BadRequest("pipelines must not be empty when provided")
+			return 0, errors.BadRequest("pipelines must not be empty when provided")
 		}
-		if len(selection.Pipelines) > 1000 {
-			return errors.BadRequest("pipelines must contain at most 1,000 entries")
+		if entries = len(selection.Pipelines); entries > 1000 {
+			return 0, errors.BadRequest("pipelines must contain at most 1,000 entries")
 		}
 		for _, pipeline := range selection.Pipelines {
 			if !IsValidID(pipeline) {
-				return errors.BadRequest("pipeline %q is not valid", pipeline)
+				return 0, errors.BadRequest("pipeline %q is not valid", pipeline)
 			}
 		}
 		groups++
 	}
 	if groups == 0 {
-		return errors.BadRequest("one of workspaces, connections or pipelines must be provided")
+		return 0, errors.BadRequest("one of workspaces, connections or pipelines must be provided")
 	}
 	if groups > 1 {
-		return errors.BadRequest("workspaces, connections and pipelines cannot be used together")
+		return 0, errors.BadRequest("workspaces, connections and pipelines cannot be used together")
 	}
 	switch selection.Target {
 	case TargetNone, TargetUser, TargetEvent:
 	default:
-		return errors.BadRequest("target is not valid")
+		return 0, errors.BadRequest("target is not valid")
 	}
-	return nil
+	return entries, nil
 }
