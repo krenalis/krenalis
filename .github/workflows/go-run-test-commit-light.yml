@@ -1,0 +1,49 @@
+name: Run go run ./test/commit -no-connector-tests -no-snowflake-tests
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  tests:
+    # Note that 'ubuntu-latest' includes the Docker server, which is required to
+    # run './test/commit'.
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 40
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v6
+        with:
+          # Keep in sync with the version within ".github/workflows/*.yml".
+          # Keep in sync with the version within "Dockerfile".
+          # Keep in sync with the version within "go.mod".
+          go-version: "1.26"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install Python dependencies
+        run: |
+          pip install pandas
+          pip install pyarrow
+
+      - name: go run ./test/commit -no-connector-tests -no-snowflake-tests
+        run: go run ./test/commit -no-connector-tests -no-snowflake-tests
+
+      - name: Check that the repository is clean
+        run: ./test/commit/repo_is_clean.bash
