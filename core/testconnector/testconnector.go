@@ -100,8 +100,8 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 		Settings: newSettingsStore(s),
 		// A connector under test is not used on behalf of an organization, so
 		// the bytes it sends are not counted and it dials with a plain dialer.
-		Dial:     countdial.Dial(""),
-		DialWith: countdial.DialWith(""),
+		Dial:     countdial.PlainDial(),
+		DialWith: countdial.PlainDialWith(),
 	})
 	return app.(T), err
 }
@@ -122,8 +122,8 @@ func NewStorage[T any](code string, settings any) (T, error) {
 		Settings: newSettingsStore(s),
 		// A connector under test is not used on behalf of an organization, so
 		// the bytes it sends are not counted and it dials with a plain dialer.
-		Dial:     countdial.Dial(""),
-		DialWith: countdial.DialWith(""),
+		Dial:     countdial.PlainDial(),
+		DialWith: countdial.PlainDialWith(),
 	})
 	return app.(T), err
 }

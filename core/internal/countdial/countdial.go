@@ -199,7 +199,8 @@ func resolve(organizationID string) (*organization, *prometheus.Counter, error) 
 // [ErrNoOrganization] if the organization does not exist when it is called.
 //
 // Use [DialWith] instead to keep the dial options of an already configured
-// dialer.
+// dialer, and [PlainDial] when there is no organization to attribute the bytes
+// to.
 func Dial(organizationID string) DialFunc {
 	return dialWith(organizationID, nil)
 }
@@ -217,9 +218,37 @@ func Dial(organizationID string) DialFunc {
 // [EnableAndListen]), the dial function is returned unwrapped and no bytes are
 // counted. Otherwise, the returned function fails with [ErrNoOrganization] if
 // the organization does not exist when it is called.
+//
+// Use [PlainDialWith] when there is no organization to attribute the bytes to.
 func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 	return func(dial DialFunc) DialFunc {
 		return dialWith(organizationID, dial)
+	}
+}
+
+// PlainDial returns a plain net.Dialer dial function, that counts no bytes.
+//
+// Use it, in place of [Dial], when the connections it establishes are not made
+// on behalf of an organization, and there is therefore no organization to
+// attribute the bytes they send to, as for a connector under test.
+func PlainDial() DialFunc {
+	var d net.Dialer
+	return d.DialContext
+}
+
+// PlainDialWith returns a function that returns the dial function it is given
+// unwrapped, so that it establishes the connections with its own dial options
+// and no bytes are counted. If the given dial function is nil, a plain
+// net.Dialer is returned, as in [PlainDial].
+//
+// Use it, in place of [DialWith], when the connections are not established on
+// behalf of an organization, as for [PlainDial].
+func PlainDialWith() func(dial DialFunc) DialFunc {
+	return func(dial DialFunc) DialFunc {
+		if dial == nil {
+			return PlainDial()
+		}
+		return dial
 	}
 }
 
