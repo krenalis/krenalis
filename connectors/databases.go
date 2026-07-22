@@ -54,7 +54,7 @@ type DatabaseEnv struct {
 	//
 	// If the given dial function is nil, the returned one dials with a plain
 	// dialer, as Dial does.
-	DialWith func(dial DialFunc) DialFunc
+	DialWith DialWith
 }
 
 // DatabaseNewFunc represents functions that create new database connector

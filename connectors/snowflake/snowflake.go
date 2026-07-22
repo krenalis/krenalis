@@ -169,7 +169,7 @@ var falseStrPtr = new("false")
 // connector returns a driver.Connector from the settings, whose connections are
 // established dialing with dialWith, so that the dial options of the driver's
 // own dialer are preserved.
-func connector(s *innerSettings, dialWith func(connectors.DialFunc) connectors.DialFunc) driver.Connector {
+func connector(s *innerSettings, dialWith connectors.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -319,7 +319,7 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 // testConnection tests a connection with the given settings, established
 // dialing with dialWith, so that the driver's own dialer is preserved.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings, dialWith func(connectors.DialFunc) connectors.DialFunc) error {
+func testConnection(ctx context.Context, settings *innerSettings, dialWith connectors.DialWith) error {
 	db := sql.OpenDB(connector(settings, dialWith))
 	defer db.Close()
 	db.SetMaxIdleConns(0)

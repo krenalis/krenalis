@@ -80,7 +80,7 @@ type FileStorageEnv struct {
 	//
 	// If the given dial function is nil, the returned one dials with a plain
 	// dialer, as Dial does.
-	DialWith func(dial DialFunc) DialFunc
+	DialWith DialWith
 }
 
 // FileStorageNewFunc represents functions that create new file storage
