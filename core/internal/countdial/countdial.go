@@ -47,15 +47,13 @@ var egressBytes = prometheus.RegisterCounterVec(
 	[]string{"organization"},
 )
 
-// enabled reports whether the bytes sent must be counted. It is false until
-// EnableAndListen is called, so that the dial functions are plain and unwrapped
-// unless counting is explicitly enabled.
-var enabled atomic.Bool
+// enabled reports whether the bytes sent must be counted.
+var enabled bool
 
 // IsEnabled reports whether counting is enabled, that is whether
 // [EnableAndListen] has been called.
 func IsEnabled() bool {
-	return enabled.Load()
+	return enabled
 }
 
 // EnableForTesting enables counting, as [EnableAndListen] does, but without
@@ -65,8 +63,8 @@ func IsEnabled() bool {
 // Unlike [EnableAndListen], it can be called more than once. It is meant to be
 // used only in the tests of the packages that count the bytes they send.
 func EnableForTesting() (disable func()) {
-	enabled.Store(true)
-	return func() { enabled.Store(false) }
+	enabled = true
+	return func() { enabled = false }
 }
 
 // ErrNoOrganization is the error the dial functions fail with when the
@@ -115,9 +113,10 @@ var (
 // already returned keep the setting they were created with, and it panics if it
 // is called more than once.
 func EnableAndListen(st *state.State) {
-	if enabled.Swap(true) {
+	if enabled {
 		panic("countdial: EnableAndListen called more than once")
 	}
+	enabled = true
 	st.Freeze()
 	st.AddListener(onCreateOrganization)
 	st.AddListener(onDeleteOrganization)
@@ -236,7 +235,7 @@ type organizationKey struct{}
 // If organizationID is empty, or counting is disabled (see
 // [EnableAndListen]), ctx is returned unchanged.
 func WithOrganization(ctx context.Context, organizationID string) context.Context {
-	if !enabled.Load() || organizationID == "" {
+	if !enabled || organizationID == "" {
 		return ctx
 	}
 	return context.WithValue(ctx, organizationKey{}, organizationID)
@@ -258,7 +257,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 		var d net.Dialer
 		dial = d.DialContext
 	}
-	if !enabled.Load() {
+	if !enabled {
 		return dial
 	}
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -294,7 +293,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 // create one transport per organization and reuse it for all its requests,
 // instead of creating one per request.
 func Transport(base *http.Transport, organizationID string) http.RoundTripper {
-	if !enabled.Load() || organizationID == "" {
+	if !enabled || organizationID == "" {
 		return base
 	}
 	t := base.Clone()
@@ -312,7 +311,7 @@ func dialWith(organizationID string, dial DialFunc) DialFunc {
 		var d net.Dialer
 		dial = d.DialContext
 	}
-	if !enabled.Load() || organizationID == "" {
+	if !enabled || organizationID == "" {
 		return dial
 	}
 	// The organization is resolved once, here, and not at every dial, so that
