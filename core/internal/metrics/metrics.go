@@ -466,7 +466,7 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 
 		c.buf.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
 			`(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
-			` SELECT t.* FROM t` +
+			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM organizations o WHERE o.id = t.organization)` +
 			` ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
 			`passed_1 = m.passed_1 + EXCLUDED.passed_1, ` +
