@@ -55,7 +55,7 @@ type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
 	settings warehouses.SettingsLoader
-	dialWith func(warehouses.DialFunc) warehouses.DialFunc
+	dialWith warehouses.DialWith
 }
 
 type pgSettings struct {
@@ -313,7 +313,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 // SetDialWith sets the function used to establish the outbound network
 // connections, so that the driver's own dialer is preserved. If it is not
 // called, the warehouse dials with the driver's default dialer.
-func (warehouse *PostgreSQL) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
+func (warehouse *PostgreSQL) SetDialWith(dialWith warehouses.DialWith) {
 	warehouse.dialWith = dialWith
 }
 

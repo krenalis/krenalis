@@ -56,7 +56,7 @@ type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
 	settings warehouses.SettingsLoader
-	dialWith func(warehouses.DialFunc) warehouses.DialFunc
+	dialWith warehouses.DialWith
 }
 
 type sfSettings struct {
@@ -370,7 +370,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 // SetDialWith sets the function used to establish the outbound network
 // connections, so that the driver's own dialer is preserved. If it is not
 // called, the warehouse dials with the driver's default dialer.
-func (warehouse *Snowflake) SetDialWith(dialWith func(warehouses.DialFunc) warehouses.DialFunc) {
+func (warehouse *Snowflake) SetDialWith(dialWith warehouses.DialWith) {
 	warehouse.dialWith = dialWith
 }
 
@@ -546,7 +546,7 @@ var falseStrPtr = new("false")
 // connector returns a driver.Connector from the settings, whose connections are
 // established dialing with dialWith, so that the dial options of the driver's
 // own dialer are preserved.
-func connector(s *sfSettings, dialWith func(warehouses.DialFunc) warehouses.DialFunc) driver.Connector {
+func connector(s *sfSettings, dialWith warehouses.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]

@@ -44,8 +44,14 @@ func (platform Platform) New(settings SettingsLoader) Warehouse {
 	return d
 }
 
-// A DialFunc establishes an outbound network connection to the given address.
-type DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+type (
+	// A DialFunc establishes an outbound network connection to the given address.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a warehouse, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
 
 type SettingsLoader interface {
 
@@ -312,7 +318,7 @@ type Warehouse interface {
 	// called, in which case it dials with its own default dialer. The only
 	// constraint is that, if called, it must be called right after New, and never
 	// after any other method.
-	SetDialWith(dialWith func(dial DialFunc) DialFunc)
+	SetDialWith(dialWith DialWith)
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error
