@@ -882,7 +882,7 @@ const (
 // day of the end date.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
-// non-nil, with between 1 and 100 items.
+// non-nil, with between 1 and 1000 items.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -950,7 +950,7 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 // and [1,30] for days.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
-// non-nil, with between 1 and 100 items.
+// non-nil, with between 1 and 1000 items.
 func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -1644,8 +1644,8 @@ func validateMetricsSelection(selection MetricSelection) error {
 		if len(selection.Workspaces) == 0 {
 			return errors.BadRequest("workspaces must not be empty when provided")
 		}
-		if len(selection.Workspaces) > 100 {
-			return errors.BadRequest("workspaces must contain at most 100 entries")
+		if len(selection.Workspaces) > 1000 {
+			return errors.BadRequest("workspaces must contain at most 1,000 entries")
 		}
 		for _, workspace := range selection.Workspaces {
 			if !IsValidID(workspace) {
@@ -1659,8 +1659,8 @@ func validateMetricsSelection(selection MetricSelection) error {
 		if len(selection.Connections) == 0 {
 			return errors.BadRequest("connections must not be empty when provided")
 		}
-		if len(selection.Connections) > 100 {
-			return errors.BadRequest("connections must contain at most 100 entries")
+		if len(selection.Connections) > 1000 {
+			return errors.BadRequest("connections must contain at most 1,000 entries")
 		}
 		for _, connection := range selection.Connections {
 			if !IsValidID(connection) {
@@ -1674,8 +1674,8 @@ func validateMetricsSelection(selection MetricSelection) error {
 		if len(selection.Pipelines) == 0 {
 			return errors.BadRequest("pipelines must not be empty when provided")
 		}
-		if len(selection.Pipelines) > 100 {
-			return errors.BadRequest("pipelines must contain at most 100 entries")
+		if len(selection.Pipelines) > 1000 {
+			return errors.BadRequest("pipelines must contain at most 1,000 entries")
 		}
 		for _, pipeline := range selection.Pipelines {
 			if !IsValidID(pipeline) {
