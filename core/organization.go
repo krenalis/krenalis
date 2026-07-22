@@ -1593,6 +1593,49 @@ func validateMemberEmail(email string) error {
 	return nil
 }
 
+// validateMemberToSet validates a member to add or set and returns an error
+// if the member is not valid.
+func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bool, validatePassword bool) error {
+	// Validate name.
+	if validateName && member.Name != "" {
+		if err := util.ValidateStringField("name", member.Name, 255); err != nil {
+			return err
+		}
+	}
+	// Validate avatar.
+	if member.Avatar != nil {
+		if member.Avatar.MimeType != "image/jpeg" && member.Avatar.MimeType != "image/png" {
+			return errors.New("image must be in jpeg or png format")
+		}
+		if len(member.Avatar.Image) > 200*1024 {
+			return errors.New("image is bigger than 200kb")
+		}
+	}
+	// Validate email.
+	if validateEmail {
+		err := validateMemberEmail(member.Email)
+		if err != nil {
+			return err
+		}
+	}
+	// Validate password.
+	if validatePassword && member.Password == "" {
+		return errors.New("password is empty")
+	}
+	if member.Password != "" {
+		if !utf8.ValidString(member.Password) {
+			return errors.New("password is not UTF-8 encoded")
+		}
+		if n := utf8.RuneCountInString(member.Password); n < 8 {
+			return errors.New("password must be at least 8 characters long")
+		}
+		if n := utf8.RuneCountInString(member.Password); n > 72 {
+			return errors.New("password is longer than 72 runes")
+		}
+	}
+	return nil
+}
+
 // validateMetricsSelection validates a pipeline metrics selection.
 func validateMetricsSelection(selection MetricSelection) error {
 	var groups int
@@ -1651,49 +1694,6 @@ func validateMetricsSelection(selection MetricSelection) error {
 	case TargetNone, TargetUser, TargetEvent:
 	default:
 		return errors.BadRequest("target is not valid")
-	}
-	return nil
-}
-
-// validateMemberToSet validates a member to add or set and returns an error
-// if the member is not valid.
-func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bool, validatePassword bool) error {
-	// Validate name.
-	if validateName && member.Name != "" {
-		if err := util.ValidateStringField("name", member.Name, 255); err != nil {
-			return err
-		}
-	}
-	// Validate avatar.
-	if member.Avatar != nil {
-		if member.Avatar.MimeType != "image/jpeg" && member.Avatar.MimeType != "image/png" {
-			return errors.New("image must be in jpeg or png format")
-		}
-		if len(member.Avatar.Image) > 200*1024 {
-			return errors.New("image is bigger than 200kb")
-		}
-	}
-	// Validate email.
-	if validateEmail {
-		err := validateMemberEmail(member.Email)
-		if err != nil {
-			return err
-		}
-	}
-	// Validate password.
-	if validatePassword && member.Password == "" {
-		return errors.New("password is empty")
-	}
-	if member.Password != "" {
-		if !utf8.ValidString(member.Password) {
-			return errors.New("password is not UTF-8 encoded")
-		}
-		if n := utf8.RuneCountInString(member.Password); n < 8 {
-			return errors.New("password must be at least 8 characters long")
-		}
-		if n := utf8.RuneCountInString(member.Password); n > 72 {
-			return errors.New("password is longer than 72 runes")
-		}
 	}
 	return nil
 }
