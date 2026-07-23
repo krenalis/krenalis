@@ -446,7 +446,8 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
+	org, _, _, err := api.authenticateAdminRequest(r)
+	if err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -456,11 +457,11 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		Transformation core.DataTransformation `json:"transformation"`
 		Purpose        core.Purpose            `json:"purpose"`
 	}
-	err := json.Decode(r.Body, &body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	data, err := api.core.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
+	data, err := api.core.TransformData(r.Context(), org.ID, body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
 	if err != nil {
 		return nil, err
 	}

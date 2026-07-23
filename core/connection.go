@@ -2420,7 +2420,7 @@ type tempFunctionProvider struct {
 	language     state.Language                // language.
 	source       string                        // source code.
 	provider     transformers.FunctionProvider // underlying function provider.
-	organization string                        // ID of the organization the network traffic is attributed to; empty if it is not attributed.
+	organization string                        // ID of the organization performing the transformation.
 }
 
 func newTempTransformerProvider(organization, name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {

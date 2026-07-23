@@ -59,23 +59,12 @@ type Transformer struct {
 // functions and should be nil for mappings. layouts, if not nil, represents the
 // layouts used to format datetime, date, and time values as strings.
 //
-// The network traffic of the transformation functions is attributed to the
-// organization of the pipeline. A pipeline that is not a stored one, as the one
-// of a preview, has no organization, in which case the traffic is not
-// attributed and the provider, if it needs to attribute it, must know the
-// organization on its own.
-//
-// It only accesses the ID, Organization, InSchema, OutSchema, and
+// It only accesses the Organization method and the ID, InSchema, OutSchema, and
 // Transformation fields of pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
 func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
-
-	var organization string
-	if o := pipeline.Organization(); o != nil {
-		organization = o.ID
-	}
 
 	if m := pipeline.Transformation.Mapping; m != nil {
 		inPlace := pipeline.Target != state.TargetEvent
@@ -98,7 +87,7 @@ func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.Tim
 
 	if f := pipeline.Transformation.Function; f != nil {
 		t := Transformer{
-			organization: organization,
+			organization: pipeline.Organization().ID,
 			pipeline:     pipeline.ID,
 			provider:     provider,
 			outSchema:    schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
