@@ -14,6 +14,12 @@ CREATE TABLE organizations (
     connectors_limit integer NOT NULL CHECK (connectors_limit BETWEEN 0 AND 1000),
     connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
     pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
+    api_workspace_quota_per_hour integer NOT NULL CHECK (api_workspace_quota_per_hour BETWEEN 1 AND 1000000),
+    api_workspace_burst_capacity integer NOT NULL CHECK (api_workspace_burst_capacity BETWEEN 1 AND 100000),
+    api_ingestion_quota_per_hour integer NOT NULL CHECK (api_ingestion_quota_per_hour BETWEEN 1 AND 1000000),
+    api_ingestion_burst_capacity integer NOT NULL CHECK (api_ingestion_burst_capacity BETWEEN 1 AND 100000),
+    api_nonspecific_quota_per_hour integer NOT NULL CHECK (api_nonspecific_quota_per_hour BETWEEN 1 AND 1000000),
+    api_nonspecific_burst_capacity integer NOT NULL CHECK (api_nonspecific_burst_capacity BETWEEN 1 AND 100000),
     PRIMARY KEY (id)
 );
 
@@ -78,6 +84,41 @@ CREATE TABLE workspaces (
 );
 
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
+
+-- api_rate_limit_buckets contains the authoritative token bucket for every
+-- workspace, ingestion, and nonspecific rate-limit subject.
+-- The two nullable foreign keys make bucket deletion follow its subject while
+-- the CHECK keeps their polymorphic key unambiguous.
+CREATE TABLE api_rate_limit_buckets (
+    subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'nonspecific')),
+    subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+    organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
+    workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
+    available_units integer NOT NULL,
+    capacity_units integer NOT NULL,
+    quota_per_hour integer NOT NULL,
+    last_refill_at timestamptz NOT NULL,
+    refill_remainder bigint NOT NULL,
+    PRIMARY KEY (subject_kind, subject_id),
+    CHECK (available_units >= 0),
+    CHECK (capacity_units BETWEEN 1 AND 100000),
+    CHECK (available_units <= capacity_units),
+    CHECK (quota_per_hour BETWEEN 1 AND 1000000),
+    CHECK (refill_remainder >= 0 AND refill_remainder < 3600000000),
+    CHECK (
+        (
+            subject_kind IN ('workspace', 'ingestion')
+            AND subject_id = workspace
+            AND organization IS NULL
+        )
+        OR
+        (
+            subject_kind = 'nonspecific'
+            AND subject_id = organization
+            AND workspace IS NULL
+        )
+    )
+);
 
 CREATE TYPE access_key_type AS ENUM ('API', 'MCP');
 

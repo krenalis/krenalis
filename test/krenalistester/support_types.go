@@ -360,12 +360,27 @@ type OrganizationCounts struct {
 
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
-	Members     int `json:"members"`
-	AccessKeys  int `json:"accessKeys"`
-	Workspaces  int `json:"workspaces"`
-	Connectors  int `json:"connectors"`
-	Connections int `json:"connections"`
-	Pipelines   int `json:"pipelines"`
+	Members     int       `json:"members"`
+	AccessKeys  int       `json:"accessKeys"`
+	Workspaces  int       `json:"workspaces"`
+	Connectors  int       `json:"connectors"`
+	Connections int       `json:"connections"`
+	Pipelines   int       `json:"pipelines"`
+	API         APILimits `json:"api"`
+}
+
+// APILimits stores the request and ingestion limits for each workspace, and
+// the request limits for nonspecific operations.
+type APILimits struct {
+	Workspace   APILimit `json:"workspace"`
+	Ingestion   APILimit `json:"ingestion"`
+	Nonspecific APILimit `json:"nonspecific"`
+}
+
+// APILimit defines the hourly API quota and the maximum allowed burst capacity.
+type APILimit struct {
+	QuotaPerHour  int `json:"quotaPerHour"`
+	BurstCapacity int `json:"burstCapacity"`
 }
 
 // Organization represents an organization returned by the APIs.

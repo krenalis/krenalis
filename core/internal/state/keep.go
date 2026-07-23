@@ -506,13 +506,15 @@ func (state *State) createOrganization(n notification) string {
 		return ""
 	}
 	org := &Organization{
-		mu:         &sync.Mutex{},
-		workspaces: map[string]*Workspace{},
-		members:    map[string]bool{},
-		usage:      newOrganizationUsage(e.Limits),
-		ID:         e.ID,
-		Name:       e.Name,
-		Enabled:    e.Enabled,
+		mu:          &sync.Mutex{},
+		rateLimiter: state.rateLimiter,
+		bucket:      newNonspecificBucket(e.ID),
+		workspaces:  map[string]*Workspace{},
+		members:     map[string]bool{},
+		usage:       newOrganizationUsage(e.Limits),
+		ID:          e.ID,
+		Name:        e.Name,
+		Enabled:     e.Enabled,
 	}
 	state.mu.Lock()
 	state.organizations[e.ID] = org
@@ -648,6 +650,8 @@ func (state *State) createWorkspace(n notification) string {
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
+		apiBucket:                      newWorkspaceBucket(e.ID),
+		ingestionBucket:                newIngestionBucket(e.ID),
 		connections:                    map[string]*Connection{},
 		ID:                             e.ID,
 		organization:                   organization,
@@ -929,9 +933,12 @@ func (state *State) deleteOrganization(n notification) string {
 	}
 	state.mu.Lock()
 	e.organization = state.organizations[e.ID]
+	e.organization.bucket.disable()
 	delete(state.organizations, e.ID)
 	// Delete all workspaces belonging to the organization.
 	for id, ws := range e.organization.workspaces {
+		ws.apiBucket.disable()
+		ws.ingestionBucket.disable()
 		for _, c := range ws.connections {
 			for _, key := range c.Keys {
 				delete(state.connectionsByKey, key)
@@ -1017,6 +1024,8 @@ func (state *State) deleteWorkspace(n notification) string {
 		return ""
 	}
 	e.workspace = state.workspaces[e.ID]
+	e.workspace.apiBucket.disable()
+	e.workspace.ingestionBucket.disable()
 	org := e.workspace.organization
 	// Update the organization.
 	org.mu.Lock()

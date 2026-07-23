@@ -138,6 +138,27 @@ func (e *NotFoundError) WriteTo(w http.ResponseWriter) error {
 	return writeTo(w, http.StatusNotFound, "NotFound", e.Message, "")
 }
 
+// TooManyRequestsError represents an exceeded request rate limit.
+type TooManyRequestsError struct {
+	Message string
+}
+
+// TooManyRequests returns an error that formats as the given text, and its
+// WriteTo method replies with an HTTP 429 too many requests error.
+func TooManyRequests(format string, a ...any) *TooManyRequestsError {
+	return &TooManyRequestsError{fmt.Sprintf(format, a...)}
+}
+
+// Error implements the error interface.
+func (e *TooManyRequestsError) Error() string {
+	return e.Message
+}
+
+// WriteTo implements the ResponseWriterTo interface.
+func (e *TooManyRequestsError) WriteTo(w http.ResponseWriter) error {
+	return writeTo(w, http.StatusTooManyRequests, "TooManyRequests", e.Message, "")
+}
+
 // Unavailable returns an error with the given code that formats as the given
 // text, and its WriteTo method replies to the request with an HTTP 503
 // service unavailable error.

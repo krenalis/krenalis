@@ -138,12 +138,15 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	if ws != nil {
+	if authenticated.workspace != nil {
 		return nil, errors.Unauthorized("workspaces cannot be created with a workspace restricted API key")
+	}
+	if err := authenticated.applyRateLimit(authenticated.organization, x1); err != nil {
+		return nil, err
 	}
 	var body struct {
 		Name          string             `json:"name"`
@@ -155,7 +158,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
+	id, err := authenticated.organization.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -260,7 +263,7 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 // specified start and end dates.
 func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -281,8 +284,8 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 
 	// Set workspace.
 	var workspace string
-	if ws != nil {
-		workspace = ws.ID
+	if authenticated.workspace != nil {
+		workspace = authenticated.workspace.ID
 	}
 
 	// Parse selection.
@@ -291,14 +294,14 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 		return nil, err
 	}
 
-	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
+	return authenticated.organization.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
 }
 
 // PipelineMetricsPerDay returns the pipeline metrics for a specified number of
 // days.
 func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -312,8 +315,8 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 
 	// Set workspace.
 	var workspace string
-	if ws != nil {
-		workspace = ws.ID
+	if authenticated.workspace != nil {
+		workspace = authenticated.workspace.ID
 	}
 
 	// Parse selection.
@@ -322,14 +325,14 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 		return nil, err
 	}
 
-	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
+	return authenticated.organization.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
 }
 
 // PipelineMetricsPerHour returns the pipeline metrics for a specified number of
 // hours.
 func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -343,8 +346,8 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 
 	// Set workspace.
 	var workspace string
-	if ws != nil {
-		workspace = ws.ID
+	if authenticated.workspace != nil {
+		workspace = authenticated.workspace.ID
 	}
 
 	// Parse selection.
@@ -353,14 +356,14 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 		return nil, err
 	}
 
-	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
+	return authenticated.organization.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
 }
 
 // PipelineMetricsPerMinute returns the pipeline metrics for a specified number
 // of minutes.
 func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -374,8 +377,8 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 
 	// Set workspace.
 	var workspace string
-	if ws != nil {
-		workspace = ws.ID
+	if authenticated.workspace != nil {
+		workspace = authenticated.workspace.ID
 	}
 
 	// Parse selection.
@@ -384,7 +387,7 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 		return nil, err
 	}
 
-	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
+	return authenticated.organization.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
 }
 
 // SetStatus sets the status of an organization.
@@ -417,12 +420,15 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	if ws != nil {
+	if authenticated.workspace != nil {
 		return nil, errors.Unauthorized("workspace creation cannot be tested with a workspace restricted API key")
+	}
+	if err := authenticated.applyRateLimit(authenticated.organization, x1); err != nil {
+		return nil, err
 	}
 	var body struct {
 		Name          string             `json:"name"`
@@ -434,7 +440,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
+	err = authenticated.organization.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	return nil, err
 }
 
@@ -517,76 +523,44 @@ func (organization organization) Update(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 	var body struct {
-		Name   string `json:"name"`
-		Limits struct {
-			Members     *int `json:"members"`
-			AccessKeys  *int `json:"accessKeys"`
-			Workspaces  *int `json:"workspaces"`
-			Connectors  *int `json:"connectors"`
-			Connections *int `json:"connections"`
-			Pipelines   *int `json:"pipelines"`
-		} `json:"limits"`
+		Name   string              `json:"name"`
+		Limits *organizationLimits `json:"limits"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if body.Limits.Members == nil {
-		return nil, errors.BadRequest("organization limit for members is required")
-	}
-	if body.Limits.AccessKeys == nil {
-		return nil, errors.BadRequest("organization limit for access keys is required")
-	}
-	if body.Limits.Workspaces == nil {
-		return nil, errors.BadRequest("organization limit for workspaces is required")
-	}
-	if body.Limits.Connectors == nil {
-		return nil, errors.BadRequest("organization limit for connectors is required")
-	}
-	if body.Limits.Connections == nil {
-		return nil, errors.BadRequest("organization limit for connections is required")
-	}
-	if body.Limits.Pipelines == nil {
-		return nil, errors.BadRequest("organization limit for pipelines is required")
-	}
-	limits := &core.OrganizationLimits{
-		Members:     *body.Limits.Members,
-		AccessKeys:  *body.Limits.AccessKeys,
-		Workspaces:  *body.Limits.Workspaces,
-		Connectors:  *body.Limits.Connectors,
-		Connections: *body.Limits.Connections,
-		Pipelines:   *body.Limits.Pipelines,
+	limits, err := parseOrganizationLimits(body.Limits)
+	if err != nil {
+		return nil, err
 	}
 	org, err := organization.core.Organization(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
-	err = org.Update(r.Context(), body.Name, limits)
+	err = org.Update(r.Context(), body.Name, &limits)
 	return nil, err
 }
 
 // Workspace returns the current workspace.
 func (organization organization) Workspace(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, ws, err := organization.authenticateRequest(r)
-	if err != nil {
-		return nil, err
-	}
-	if ws == nil {
-		return nil, errMissingWorkspace
-	}
-	return ws, nil
+	return organization.admitWorkspaceRequest(r, x1)
 }
 
 // Workspaces returns the workspaces of an organization.
 func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, ws, err := organization.authenticateRequest(r)
+	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	if ws != nil {
+	if authenticated.workspace != nil {
 		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
 	}
-	return map[string]any{"workspaces": org.Workspaces()}, nil
+	if err := authenticated.applyRateLimit(authenticated.organization, x1); err != nil {
+		return nil, err
+	}
+	workspaces := authenticated.organization.Workspaces()
+	return map[string]any{"workspaces": workspaces}, nil
 }
 
 // parseMetricsSelection parses the pipeline metrics query parameters.

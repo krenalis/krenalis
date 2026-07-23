@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"reflect"
@@ -25,6 +26,48 @@ import (
 )
 
 const decoderTestConnectionID = "7B3mN9qK2xA4"
+
+// TestDecoderEventCount verifies that counting a request does not consume its
+// event decoder.
+func TestDecoderEventCount(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		body  string
+		count int
+		err   error
+	}{
+		{name: "single", body: `{"type":"page","userId":"x"}`, count: 1},
+		{name: "batch", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2},
+		{name: "maximum batch", body: "[" + strings.Repeat("0,", maxBatchEventCount-1) + "0]", count: maxBatchEventCount},
+		{name: "excessive batch", body: "[" + strings.Repeat("0,", maxBatchEventCount) + "0]", err: errors.BadRequest("batch contains too many events")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(test.body))
+			r.Header.Set("Content-Type", "application/json")
+			dec, err := newDecoder(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			count, err := dec.EventCount()
+			if !reflect.DeepEqual(test.err, err) {
+				t.Fatalf("expected error %#v, got error %#v", test.err, err)
+			}
+			if err != nil {
+				return
+			}
+			if count != test.count {
+				t.Fatalf("event count = %d, want %d", count, test.count)
+			}
+			decoded := 0
+			for range dec.Events(decoderTestConnectionID, false) {
+				decoded++
+			}
+			if decoded != test.count {
+				t.Fatalf("decoded events = %d, want %d", decoded, test.count)
+			}
+		})
+	}
+}
 
 func Test_Decoder(t *testing.T) {
 

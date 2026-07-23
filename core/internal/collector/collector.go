@@ -765,6 +765,19 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	ws := connection.Workspace()
+	eventCount, err := dec.EventCount()
+	if err != nil {
+		return err
+	}
+	if eventCount > 0 {
+		err = ws.ConsumeIngestionRateLimitCapacity(eventCount)
+	}
+	if err != nil {
+		if err == state.ErrAPICapacityExceeded {
+			return errors.TooManyRequests("ingestion rate limit exceeded")
+		}
+		return err
+	}
 	connector := connection.Connector()
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)

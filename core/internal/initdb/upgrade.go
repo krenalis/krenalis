@@ -132,12 +132,54 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connectors_limit integer NOT NULL DEFAULT 1000 CHECK (connectors_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connections_limit integer NOT NULL DEFAULT 10000 CHECK (connections_limit BETWEEN 0 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS pipelines_limit integer NOT NULL DEFAULT 10000 CHECK (pipelines_limit BETWEEN 0 AND 10000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_workspace_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_workspace_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_workspace_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_workspace_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_ingestion_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_ingestion_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_ingestion_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_ingestion_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_nonspecific_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_nonspecific_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_nonspecific_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_nonspecific_burst_capacity BETWEEN 1 AND 100000)`,
 			`ALTER TABLE organizations ALTER COLUMN members_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN access_keys_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspaces_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connectors_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connections_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN pipelines_limit DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_workspace_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_workspace_burst_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_ingestion_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_ingestion_burst_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_nonspecific_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_nonspecific_burst_capacity DROP DEFAULT`,
+			`CREATE TABLE IF NOT EXISTS api_rate_limit_buckets (
+				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'nonspecific')),
+				subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+				organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
+				workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
+				available_units integer NOT NULL,
+				capacity_units integer NOT NULL,
+				quota_per_hour integer NOT NULL,
+				last_refill_at timestamptz NOT NULL,
+				refill_remainder bigint NOT NULL,
+				PRIMARY KEY (subject_kind, subject_id),
+				CHECK (available_units >= 0),
+				CHECK (capacity_units BETWEEN 1 AND 100000),
+				CHECK (available_units <= capacity_units),
+				CHECK (quota_per_hour BETWEEN 1 AND 1000000),
+				CHECK (refill_remainder >= 0 AND refill_remainder < 3600000000),
+				CHECK (
+					(
+						subject_kind IN ('workspace', 'ingestion')
+						AND subject_id = workspace
+						AND organization IS NULL
+					)
+					OR
+					(
+						subject_kind = 'nonspecific'
+						AND subject_id = organization
+						AND workspace IS NULL
+					)
+				)
+			)`,
 			`CREATE INDEX IF NOT EXISTS ` + workspacesOrganizationIndex + ` ON workspaces (organization)`,
 			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceIndex + ` ON connections (workspace)`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS organization varchar(12) REFERENCES organizations ON DELETE CASCADE`,
@@ -253,6 +295,9 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			if _, err := tx.Exec(ctx, query); err != nil {
 				return fmt.Errorf("cannot execute upgrade query %q: %s", query, err)
 			}
+		}
+		if _, err := tx.Exec(ctx, createAPIRateLimiterLeasesFunction); err != nil {
+			return fmt.Errorf("cannot create API rate-limit lease function: %s", err)
 		}
 		return nil
 	})

@@ -46,6 +46,16 @@ const invitationTokenMaxAge = 3 * 24 * 60 * 60
 // resetPasswordTokenMaxAge represents the max age of a password token (1 hour).
 const resetPasswordTokenMaxAge = 1 * 60 * 60
 
+var (
+	// ErrInvalidAPICost is returned when an API operation has an unsupported
+	// configured cost.
+	ErrInvalidAPICost = state.ErrInvalidAPICost
+
+	// ErrAPICapacityExceeded is returned when a subject does not currently have
+	// enough capacity in its API rate-limit bucket.
+	ErrAPICapacityExceeded = state.ErrAPICapacityExceeded
+)
+
 // Organization represents an organization.
 type Organization struct {
 	core         *Core
@@ -78,12 +88,27 @@ type OrganizationCounts struct {
 
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
-	Members     int `json:"members"`
-	AccessKeys  int `json:"accessKeys"`
-	Workspaces  int `json:"workspaces"`
-	Connectors  int `json:"connectors"`
-	Connections int `json:"connections"`
-	Pipelines   int `json:"pipelines"`
+	Members     int       `json:"members"`
+	AccessKeys  int       `json:"accessKeys"`
+	Workspaces  int       `json:"workspaces"`
+	Connectors  int       `json:"connectors"`
+	Connections int       `json:"connections"`
+	Pipelines   int       `json:"pipelines"`
+	API         APILimits `json:"api"`
+}
+
+// APILimits stores the request and ingestion limits for each workspace, and
+// the request limits for nonspecific operations.
+type APILimits struct {
+	Workspace   APILimit `json:"workspace"`
+	Ingestion   APILimit `json:"ingestion"`
+	Nonspecific APILimit `json:"nonspecific"`
+}
+
+// APILimit defines the hourly API quota and the maximum allowed burst capacity.
+type APILimit struct {
+	QuotaPerHour  int `json:"quotaPerHour"`
+	BurstCapacity int `json:"burstCapacity"`
 }
 
 // Member represents a member of an organization.
@@ -369,6 +394,18 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 		return false, errors.NotFound("member %s does not exist", id)
 	}
 	return canLogin, nil
+}
+
+// ConsumeRateLimitCapacity consumes the specified amount of capacity from the
+// API rate-limit budget assigned to the organization.
+//
+// It returns ErrInvalidAPICost if cost is outside the supported range, or
+// ErrAPICapacityExceeded if the organization does not currently have enough
+// capacity. Capacity is leased asynchronously, so the first call for an
+// organization on a node can be rejected while a refill is in progress.
+func (this *Organization) ConsumeRateLimitCapacity(cost int) error {
+	this.core.mustBeOpen()
+	return this.organization.ConsumeRateLimitCapacity(cost)
 }
 
 // CreateAccessKey creates a new access key for the organization with the
@@ -1290,23 +1327,8 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 		return errors.BadRequest("%s", err)
 	}
 	if limits != nil {
-		if limits.Members < 1 || limits.Members > MembersLimit {
-			return errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
-		}
-		if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
-			return errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
-		}
-		if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
-			return errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
-		}
-		if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
-			return errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
-		}
-		if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
-			return errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
-		}
-		if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
-			return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+		if err := validateOrganizationLimits(limits); err != nil {
+			return err
 		}
 	}
 	n := state.UpdateOrganization{
@@ -1322,6 +1344,9 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 			Connections: limits.Connections,
 			Pipelines:   limits.Pipelines,
 		}
+		n.Limits.API.Workspace = state.APILimit(limits.API.Workspace)
+		n.Limits.API.Ingestion = state.APILimit(limits.API.Ingestion)
+		n.Limits.API.Nonspecific = state.APILimit(limits.API.Nonspecific)
 	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var result *db.Result
@@ -1330,10 +1355,14 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 			result, err = tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
 		} else {
 			result, err = tx.Exec(ctx, "UPDATE organizations"+
-				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4,"+
-				" connectors_limit = $5, connections_limit = $6, pipelines_limit = $7 WHERE id = $8",
-				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors,
-				n.Limits.Connections, n.Limits.Pipelines, this.organization.ID)
+				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4, connectors_limit = $5,"+
+				" connections_limit = $6, pipelines_limit = $7, api_workspace_quota_per_hour = $8, api_workspace_burst_capacity = $9,"+
+				" api_ingestion_quota_per_hour = $10, api_ingestion_burst_capacity = $11,"+
+				" api_nonspecific_quota_per_hour = $12, api_nonspecific_burst_capacity = $13 WHERE id = $14",
+				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections,
+				n.Limits.Pipelines, n.Limits.API.Workspace.QuotaPerHour, n.Limits.API.Workspace.BurstCapacity,
+				n.Limits.API.Ingestion.QuotaPerHour, n.Limits.API.Ingestion.BurstCapacity,
+				n.Limits.API.Nonspecific.QuotaPerHour, n.Limits.API.Nonspecific.BurstCapacity, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err

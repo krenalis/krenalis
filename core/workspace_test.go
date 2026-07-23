@@ -8,8 +8,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+func TestRateLimitErrorsAreStateErrors(t *testing.T) {
+	if ErrInvalidAPICost != state.ErrInvalidAPICost {
+		t.Fatal("ErrInvalidAPICost is not the state error")
+	}
+	if ErrAPICapacityExceeded != state.ErrAPICapacityExceeded {
+		t.Fatal("ErrAPICapacityExceeded is not the state error")
+	}
+}
 
 func Test_suitableAsIdentifier(t *testing.T) {
 	tests := []struct {

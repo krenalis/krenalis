@@ -119,6 +119,12 @@ func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 //go:embed "schema.sql"
 var schema string
 
+// The PL/pgSQL function is kept outside schema.sql because schema.sql is split
+// on SQL statement terminators during initialization.
+//
+//go:embed api_rate_limiter_leases.sql
+var createAPIRateLimiterLeasesFunction string
+
 // initialize initializes the provided PostgreSQL database by executing the
 // required queries within the given transaction. It creates all database
 // objects (tables, types, etc.) needed to run Krenalis, as well as an
@@ -141,11 +147,16 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 			return err
 		}
 	}
+	if _, err := tx.Exec(ctx, createAPIRateLimiterLeasesFunction); err != nil {
+		return err
+	}
 	// Insert the organization.
 	organizationID := base58.Generate(12)
 	_, err := tx.Exec(ctx, `INSERT INTO organizations`+
-		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit)`+
-		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000)`,
+		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,`+
+		` api_workspace_quota_per_hour, api_workspace_burst_capacity, api_ingestion_quota_per_hour, api_ingestion_burst_capacity,`+
+		` api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity)`+
+		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000, 25000, 1000, 25000, 1000, 25000, 1000)`,
 		organizationID)
 	if err != nil {
 		return err

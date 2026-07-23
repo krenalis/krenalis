@@ -18,7 +18,7 @@ type connector struct {
 // AuthURL returns a URL that directs to the consent page of an OAuth 2.0
 // provider.
 func (connector connector) AuthURL(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := connector.authenticateRequest(r); err != nil {
+	if _, err := connector.admitNonspecificRequest(r, x1); err != nil {
 		return nil, err
 	}
 	q := r.URL.Query()
