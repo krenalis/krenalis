@@ -127,6 +127,15 @@
 .connection-metrics__errors-heading {
 	margin: 40px 0 24px 5px;
 	font-size: 16px;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.connection-metrics__error-count-notice {
+	display: flex;
+	position: relative;
+	top: 1px;
 }
 
 .connection-metrics__chart-heading span,
@@ -142,12 +151,6 @@
 .connection-metrics__errors .grid a {
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
-}
-
-.connection-metrics__errors-note {
-	margin: 14px 5px 0 5px;
-	color: var(--sl-color-gray-700);
-	font-size: 13px;
 }
 
 .connection-metrics__funnel {
