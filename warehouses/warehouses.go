@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"net/netip"
 	"reflect"
 	"slices"
@@ -42,6 +43,15 @@ func (platform Platform) New(settings SettingsLoader) Warehouse {
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
 }
+
+type (
+	// A DialFunc establishes an outbound network connection to the given address.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a warehouse, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
 
 type SettingsLoader interface {
 
@@ -294,6 +304,21 @@ type Warehouse interface {
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
+
+	// SetDialWith sets the function the warehouse uses to establish its outbound
+	// network connections, so that Krenalis can count the bytes it sends.
+	//
+	// The warehouse calls the given function passing its own dialer, and uses the
+	// returned dial function in place of it, so that it keeps its own dial
+	// options, like its timeouts and its keep-alive. If the warehouse has no
+	// dialer of its own, it calls the function with a nil argument, and the
+	// returned dial function dials with a plain dialer.
+	//
+	// Calling SetDialWith is not mandatory: a warehouse works even if it is never
+	// called, in which case it dials with its own default dialer. The only
+	// constraint is that, if called, it must be called right after New, and never
+	// after any other method.
+	SetDialWith(dialWith DialWith)
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error

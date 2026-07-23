@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/state"
 )
 
@@ -34,8 +35,16 @@ type HTTP struct {
 	// behavior may be unexpected or cause a panic.
 	state *state.State
 
-	transport http.RoundTripper
-	trace     io.Writer
+	// transport is the transport used for the requests that are not attributed
+	// to an organization.
+	transport *http.Transport
+
+	trace io.Writer
+
+	// transports maps each organization ID to the transport attributing the
+	// network traffic of its requests to it.
+	transportsMu sync.Mutex                   // protects transports
+	transports   map[string]http.RoundTripper // by organization ID; protected by transportsMu
 
 	// muxes maps each connector code to the corresponding ServeMux handling its rate limits.
 	mu    sync.Mutex                // protect muxes
@@ -48,13 +57,30 @@ type HTTP struct {
 // It is possible to provide a nil state; in that case the returned HTTP client
 // will be restricted and will not allow invocation of OAuth-related methods, as
 // their behavior may be unexpected or may cause a panic.
-func New(state *state.State, transport http.RoundTripper) *HTTP {
+func New(state *state.State, transport *http.Transport) *HTTP {
 	h := &HTTP{
-		state:     state,
-		transport: transport,
+		state:      state,
+		transport:  transport,
+		transports: map[string]http.RoundTripper{},
 	}
 	h.muxes = map[string]*http.ServeMux{}
 	return h
+}
+
+// transportFor returns the transport to use for the requests of the
+// organization with the given ID, attributing to it the bytes they send.
+//
+// The transport is created once per organization, so that all the connections
+// of an organization share the same connection pool.
+func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
+	h.transportsMu.Lock()
+	defer h.transportsMu.Unlock()
+	transport, ok := h.transports[organizationID]
+	if !ok {
+		transport = countdial.Transport(h.transport, organizationID)
+		h.transports[organizationID] = transport
+	}
+	return transport
 }
 
 // ConnectionClient returns an HTTP client for the provided connection.
@@ -72,6 +98,7 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 		http:       h,
 		connector:  connector.Code,
 		connection: connection.ID,
+		transport:  h.transportFor(connection.Organization().ID),
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
@@ -86,7 +113,13 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // OAuth, clientSecret and accessToken must be left empty; in this case,
 // OAuth-related Client methods cannot be invoked, as their behavior may be
 // undefined or cause a panic.
-func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessToken string) *Client {
+//
+// A connector, unlike a connection, does not belong to an organization, but the
+// requests it sends are made on behalf of one, like when it serves the UI of a
+// connection that is being created. organizationID is the ID of that
+// organization, and the bytes the returned client sends are attributed to it.
+// If it is empty, the bytes are not counted.
+func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
 	}
@@ -95,6 +128,7 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 		connector:    connector.Code,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
+		transport:    h.transportFor(organizationID),
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
@@ -103,9 +137,10 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 
 // GrantAuthorization grants an OAuth authorization code and returns the access
 // token, the refresh token and the expiration time. redirectionURI is the
-// redirection URI.
-func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (string, string, time.Time, error) {
-	client := h.ConnectorClient(connector, "", "")
+// redirection URI, and organizationID is the ID of the organization on behalf
+// of which the authorization is granted.
+func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, organizationID, code, redirectionURI string) (string, string, time.Time, error) {
+	client := h.ConnectorClient(connector, organizationID, "", "")
 	return client.retrieveOAuthToken(ctx, connector.OAuth, code, redirectionURI, "")
 }
 

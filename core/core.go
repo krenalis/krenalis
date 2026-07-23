@@ -24,6 +24,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/collector"
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
@@ -106,6 +107,7 @@ type Config struct {
 	OAuthCredentials              map[string]*OAuthCredentials
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
+	NetworkUsageMetricsEnabled    bool
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -302,6 +304,12 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
+	// Make the countdial package count the network usage of the organizations,
+	// listening to state changes.
+	if conf.NetworkUsageMetricsEnabled {
+		countdial.EnableAndListen(core.state)
+	}
+
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
@@ -378,6 +386,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
 			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+			dw.SetDialWith(countdial.DialWith(ws.Organization().ID))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -1074,11 +1083,13 @@ const (
 // transformation must be non-nil. purpose indicates the intent of the
 // transformation and can be "Import", "Create", or "Update".
 //
+// organization is the ID of the organization performing the transformation.
+//
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
+func (core *Core) TransformData(ctx context.Context, organization string, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
 
 	core.mustBeOpen()
 
@@ -1152,7 +1163,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		// no need to list sub-property paths (as the behavior is the same).
 		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
+		provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
@@ -1802,6 +1813,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
 		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		dw.SetDialWith(countdial.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1896,6 +1908,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
 		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		newWarehouse.SetDialWith(countdial.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]

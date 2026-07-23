@@ -7,6 +7,7 @@ package connectors
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -59,6 +60,17 @@ func (c Categories) String() string {
 		return fmt.Sprintf("<unexpected category %d>", c)
 	}
 }
+
+type (
+	// A DialFunc establishes an outbound network connection to the given address.
+	// It is the type of the dial functions Krenalis provides to the connectors, so
+	// that it can count the bytes they send.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a connector, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
 
 type Documentation struct {
 	Source      RoleDocumentation

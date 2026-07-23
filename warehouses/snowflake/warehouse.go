@@ -56,6 +56,7 @@ type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type sfSettings struct {
@@ -366,6 +367,13 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	return nil
 }
 
+// SetDialWith sets the function used to establish the outbound network
+// connections, so that the driver's own dialer is preserved. If it is not
+// called, the warehouse dials with the driver's default dialer.
+func (warehouse *Snowflake) SetDialWith(dialWith warehouses.DialWith) {
+	warehouse.dialWith = dialWith
+}
+
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	db, err := warehouse.openDB(ctx)
@@ -459,7 +467,7 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector(&s))
+	db := sql.OpenDB(connector(&s, warehouse.dialWith))
 	warehouse.db = db
 	return db, nil
 }
@@ -535,8 +543,10 @@ func validateSettings(s *sfSettings) error {
 
 var falseStrPtr = new("false")
 
-// connector returns a driver.Connector from the settings.
-func connector(s *sfSettings) driver.Connector {
+// connector returns a driver.Connector from the settings, whose connections are
+// established dialing with dialWith, so that the dial options of the driver's
+// own dialer are preserved.
+func connector(s *sfSettings, dialWith warehouses.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -551,6 +561,7 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
+		WrapDialContext: dialWith,
 	}
 	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation

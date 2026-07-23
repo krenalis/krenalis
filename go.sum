@@ -212,6 +212,8 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/krenalis/analytics-go v0.0.8 h1:PK7FMXhXUpxgQ+iR3ryiDXct4SJzuVYlZuOvQkIpr+8=
 github.com/krenalis/analytics-go v0.0.8/go.mod h1:R9nptnujHAwboVpixWsGKgidesmYqNMzMb71Olnv24s=
+github.com/krenalis/gosnowflake/v2 v2.1.0-patched h1:+RiHvyC0+w4fgLT2txBKQw+LHEU/9Jx6m3dwlOKPw6g=
+github.com/krenalis/gosnowflake/v2 v2.1.0-patched/go.mod h1:c0hIqJ/dxgaMl7g1o8n4Ca3Mf5YCiiVx9igio/PNqC8=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
@@ -314,8 +316,6 @@ github.com/shopspring/decimal v1.4.0 h1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp
 github.com/shopspring/decimal v1.4.0/go.mod h1:gawqmDU56v4yIKSwfBSFip1HdCCXN8/+DMd9qYNcwME=
 github.com/sirupsen/logrus v1.9.4 h1:TsZE7l11zFCLZnZ+teH4Umoq5BhEIfIzfRDZ1Uzql2w=
 github.com/sirupsen/logrus v1.9.4/go.mod h1:ftWc9WdOfJ0a92nsE2jF5u5ZwH8Bv2zdeOC42RjbV2g=
-github.com/snowflakedb/gosnowflake/v2 v2.1.0 h1:rfjs6NAMnbLKCBYlOarqQX/UKgQVrXi43TZNHCP5/jw=
-github.com/snowflakedb/gosnowflake/v2 v2.1.0/go.mod h1:c0hIqJ/dxgaMl7g1o8n4Ca3Mf5YCiiVx9igio/PNqC8=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/cast v1.3.0/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.7.1 h1:cuNEagBQEHWN1FnbGEjCXL2szYEXqfJPbP2HNUaca9Y=

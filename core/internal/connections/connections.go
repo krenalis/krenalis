@@ -152,7 +152,7 @@ type Connections struct {
 
 // New returns a new *Connections value.
 func New(state *state.State) *Connections {
-	h := httpclient.New(state, http.DefaultTransport)
+	h := httpclient.New(state, http.DefaultTransport.(*http.Transport))
 	return &Connections{state: state, http: h}
 }
 
@@ -200,15 +200,17 @@ func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role sta
 
 // GrantAuthorization grants an OAuth authorization for an application
 // connector, using the provided authorization code and redirection URI.
+// organizationID is the ID of the organization on behalf of which the
+// authorization is granted, and to which the bytes sent are attributed.
 //
 // This method can only be called on a connector that implements OAuth.
-func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
-	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, code, redirectionURI)
+func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, organizationID, code, redirectionURI string) (*Authorization, error) {
+	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, organizationID, code, redirectionURI)
 	if err != nil {
 		return nil, &UnavailableError{Err: fmt.Errorf("cannot get authorization token from %s: %s", connector.Label, err)}
 	}
 	app, err := connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
-		HTTPClient: c.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
+		HTTPClient: c.http.ConnectorClient(connector, organizationID, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, connectorError(err)

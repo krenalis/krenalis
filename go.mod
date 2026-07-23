@@ -4,6 +4,9 @@ module github.com/krenalis/krenalis
 // Keep in sync with the version within "Dockerfile".
 go 1.26
 
+// Use our Snowflake driver fork. See https://github.com/krenalis/krenalis/issues/2368.
+replace github.com/snowflakedb/gosnowflake/v2 v2.1.0 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
+
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.47.0
 	github.com/LumenResearch/uasurfer v0.0.0-20260126094926-dace53404a8d
@@ -37,6 +40,7 @@ require (
 	github.com/oschwald/maxminddb-golang/v2 v2.4.1
 	github.com/pkg/sftp v1.13.10
 	github.com/prometheus/client_golang v1.23.2
+	github.com/prometheus/client_model v0.6.2
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/relvacode/iso8601 v1.7.0
 	github.com/snowflakedb/gosnowflake/v2 v2.1.0
@@ -133,7 +137,6 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect

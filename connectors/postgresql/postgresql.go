@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 //go:embed documentation/source/overview.md
@@ -231,6 +232,7 @@ func (pg *PostgreSQL) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	config.ConnConfig.DialFunc = pg.env.DialWith(config.ConnConfig.DialFunc)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return err
@@ -271,17 +273,25 @@ func (pg *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	if n := len(s.Schema); n < 1 || n > 63 {
 		return connectors.NewInvalidSettingsError("schema length in bytes must be in range [1,63]")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, pg.env.DialWith)
 	if err != nil || test {
 		return err
 	}
 	return pg.env.Settings.Store(ctx, s)
 }
 
-// testConnection tests a connection with the given settings.
+// testConnection tests a connection with the given settings, established
+// dialing with dialWith, so that the driver's own dialer is preserved.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings) error {
-	db, err := sql.Open("pgx", dsn(settings))
+func testConnection(ctx context.Context, settings *innerSettings, dialWith connectors.DialWith) error {
+	connConfig, err := pgx.ParseConfig(dsn(settings))
+	if err != nil {
+		return err
+	}
+	connConfig.DialFunc = dialWith(connConfig.DialFunc)
+	driverName := stdlib.RegisterConnConfig(connConfig)
+	defer stdlib.UnregisterConnConfig(driverName)
+	db, err := sql.Open("pgx", driverName)
 	if err != nil {
 		return err
 	}

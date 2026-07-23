@@ -222,7 +222,7 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 	if !validTopicName(s.Topic) {
 		return connectors.NewInvalidSettingsError("topic name can contain only [A-Za-z0-9_.-]")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, kafka.env.Dial)
 	if err != nil || test {
 		return err
 	}
@@ -248,8 +248,11 @@ type innerSettings struct {
 	Topic     string             `json:"topic"`
 }
 
-// opts returns s as options to configure a client.
-func opts(s *innerSettings) []kgo.Opt {
+const dialTimeout = 5 * time.Second
+
+// opts returns s as options to configure a client. The connections are
+// established using dial, in place of the client's default dialer.
+func opts(s *innerSettings, dial connectors.DialFunc) []kgo.Opt {
 	var user, pass, broker string
 	switch {
 	case s.Kafka != nil:
@@ -262,14 +265,39 @@ func opts(s *innerSettings) []kgo.Opt {
 		pass = s.Confluent.Secret
 	}
 	auth := plain.Auth{User: user, Pass: pass}
-	tlsDialer := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 5 * time.Second}}
 	opts := []kgo.Opt{
 		kgo.SASL(auth.AsMechanism()),
 		kgo.SeedBrokers(broker),
 		kgo.ConsumeTopics(s.Topic),
-		kgo.Dialer(tlsDialer.DialContext),
+		kgo.Dialer(dialTLS(dial)),
 	}
 	return opts
+}
+
+// dialTLS returns a dial function that establishes the connection with dial and
+// then negotiates TLS on it. TLS is negotiated on the connection returned by
+// dial, and not on the one dial establishes, so that dial sees the bytes as
+// they are transferred on the network.
+func dialTLS(dial connectors.DialFunc) connectors.DialFunc {
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		ctx, cancel := context.WithTimeout(ctx, dialTimeout)
+		defer cancel()
+		conn, err := dial(ctx, network, address)
+		if err != nil {
+			return nil, err
+		}
+		tlsConn := tls.Client(conn, &tls.Config{ServerName: host})
+		err = tlsConn.HandshakeContext(ctx)
+		if err != nil {
+			_ = conn.Close()
+			return nil, err
+		}
+		return tlsConn, nil
+	}
 }
 
 // connect establishes a connection to Kafka.
@@ -277,7 +305,7 @@ func (kafka *Kafka) connect(s *innerSettings) error {
 	if kafka.client != nil {
 		return nil
 	}
-	cl, err := kgo.NewClient(opts(s)...)
+	cl, err := kgo.NewClient(opts(s, kafka.env.Dial)...)
 	if err != nil {
 		return err
 	}
@@ -285,10 +313,11 @@ func (kafka *Kafka) connect(s *innerSettings) error {
 	return nil
 }
 
-// testConnection tests a connection with the given settings.
+// testConnection tests a connection with the given settings, established
+// using dial.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, s *innerSettings) error {
-	cl, err := kgo.NewClient(opts(s)...)
+func testConnection(ctx context.Context, s *innerSettings, dial connectors.DialFunc) error {
+	cl, err := kgo.NewClient(opts(s, dial)...)
 	if err != nil {
 		return err
 	}

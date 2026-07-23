@@ -38,6 +38,12 @@ func (err FunctionExecError) Error() string {
 //   - subsequently contain only [A-Za-z0-9_-]
 //   - terminate with ".js", for JavaScript functions, or with ".py" for Python
 //     functions
+//
+// The organization parameter of the Call, Create, and Update methods is the ID
+// of the organization the function belongs to. A provider that executes the
+// functions remotely, like the Lambda one, attributes the network traffic it
+// sends to that organization. It is empty when the function does not belong to
+// an organization, in which case the traffic is not attributed.
 type FunctionProvider interface {
 
 	// Call calls the function with the given identifier and version for each record
@@ -52,17 +58,22 @@ type FunctionProvider interface {
 	// error), it returns a FunctionExecError.
 	// Even if the call succeeds, individual records may still encounter errors,
 	// which are stored in the Err field of each record.
-	Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
+	Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
 
 	// Close closes the function.
 	Close(ctx context.Context) error
 
 	// Create creates a new function with the given name, language, and source and
 	// returns its identifier and version.
-	Create(ctx context.Context, name string, language state.Language, source string) (string, string, error)
+	Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error)
 
 	// Delete deletes the function with the given identifier.
 	// If a function with the given identifier does not exist, it does nothing.
+	//
+	// Unlike the other methods, it does not take an organization: functions are
+	// also deleted, by the pipeline cleaner, after the pipelines using them have
+	// been deleted, when their organization is no longer known. The traffic it
+	// sends is negligible, as it only sends the identifier of the function.
 	Delete(ctx context.Context, id string) error
 
 	// SupportLanguage reports whether language is supported as a language.
@@ -72,7 +83,7 @@ type FunctionProvider interface {
 	// Update updates the source of the function with the given identifier and
 	// returns a new version, which has a length in the range [1, 128].
 	// If the function does not exist, it returns the ErrFunctionNotExist error.
-	Update(ctx context.Context, id, source string) (string, error)
+	Update(ctx context.Context, organization, id, source string) (string, error)
 }
 
 // ValidFunctionName reports whether name is a valid function name.

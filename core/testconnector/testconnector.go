@@ -16,6 +16,7 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
@@ -75,7 +76,7 @@ func NewApplication[T any](code string, settings any) (T, error) {
 		Code:           code,
 		EndpointGroups: registeredApplications.EndpointGroups,
 	}
-	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
+	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).ConnectorClient(connector, "", "", "")
 	app, err := registeredApplications.New(&connectors.ApplicationEnv{
 		Settings:   newSettingsStore(s),
 		HTTPClient: httpClient,
@@ -97,6 +98,10 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredDatabases.New(&connectors.DatabaseEnv{
 		Settings: newSettingsStore(s),
+		// A connector under test is not used on behalf of an organization, so
+		// the bytes it sends are not counted and it dials with a plain dialer.
+		Dial:     countdial.PlainDial(),
+		DialWith: countdial.PlainDialWith(),
 	})
 	return app.(T), err
 }
@@ -115,6 +120,10 @@ func NewStorage[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredStorage.New(&connectors.FileStorageEnv{
 		Settings: newSettingsStore(s),
+		// A connector under test is not used on behalf of an organization, so
+		// the bytes it sends are not counted and it dials with a plain dialer.
+		Dial:     countdial.PlainDial(),
+		DialWith: countdial.PlainDialWith(),
 	})
 	return app.(T), err
 }

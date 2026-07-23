@@ -3516,11 +3516,11 @@ type testProvider struct{}
 
 var _ transformers.FunctionProvider = testProvider{}
 
-func (testProvider) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (testProvider) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	panic("not implemented")
 }
 func (testProvider) Close(ctx context.Context) error { panic("not implemented") }
-func (testProvider) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+func (testProvider) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	panic("not implemented")
 }
 func (testProvider) Delete(ctx context.Context, id string) error {
@@ -3529,7 +3529,7 @@ func (testProvider) Delete(ctx context.Context, id string) error {
 func (testProvider) SupportLanguage(language state.Language) bool {
 	return language == state.JavaScript || language == state.Python
 }
-func (testProvider) Update(ctx context.Context, id, source string) (string, error) {
+func (testProvider) Update(ctx context.Context, organization, id, source string) (string, error) {
 	panic("not implemented")
 }
 

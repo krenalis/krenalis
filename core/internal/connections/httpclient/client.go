@@ -73,10 +73,11 @@ type endpointGroup struct {
 // Client implements the connector.HTTPClient interface.
 type Client struct {
 	http           *HTTP
-	connector      string // connector code
-	connection     string // connection identifier; it is empty if the client is not relative to a connection
-	clientSecret   string // client secret; only if connection is empty
-	accessToken    string // access token; only if connection is empty
+	connector      string            // connector code
+	connection     string            // connection identifier; it is empty if the client is not relative to a connection
+	clientSecret   string            // client secret; only if connection is empty
+	accessToken    string            // access token; only if connection is empty
+	transport      http.RoundTripper // transport of the client's organization, if any
 	endpointGroups struct {
 		mux       *http.ServeMux
 		byPattern map[string]endpointGroup // endpoint group by pattern
@@ -272,7 +273,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 
 		// Send the request.
 		start := time.Now()
-		res, err := c.http.transport.RoundTrip(req)
+		res, err := c.transport.RoundTrip(req)
 		duration := time.Since(start)
 		if err != nil {
 			limiter.OnFailure(duration, connectors.NetFailure, 0)

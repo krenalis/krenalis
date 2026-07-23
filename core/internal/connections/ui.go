@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -86,16 +87,22 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 		var database any
 		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 			Settings: settingsStore,
+			Dial:     countdial.Dial(connection.Organization().ID),
+			DialWith: countdial.DialWith(connection.Organization().ID),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 			Settings: settingsStore,
+			Dial:     countdial.Dial(connection.Organization().ID),
+			DialWith: countdial.DialWith(connection.Organization().ID),
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
 			Settings: settingsStore,
+			Dial:     countdial.Dial(connection.Organization().ID),
+			DialWith: countdial.DialWith(connection.Organization().ID),
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(connector.Code).New(&connectors.SDKEnv{
@@ -117,7 +124,15 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 }
 
 type ConnectorConfig struct {
-	Role  state.Role
+	Role state.Role
+
+	// Organization is the ID of the organization on behalf of which the
+	// connector is used. A connector, unlike a connection, does not belong to an
+	// organization, but it is always used on behalf of one, like when it serves
+	// the UI of a connection that is being created. The bytes it sends are
+	// attributed to that organization.
+	Organization string
+
 	OAuth struct {
 		Account      string
 		ClientSecret string
@@ -144,19 +159,31 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			Settings:     settingStore,
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			HTTPClient:   c.http.ConnectorClient(connector, conf.Organization, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{
+			Settings: settingStore,
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
+		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
+			Settings: settingStore,
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
+		})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
+			Settings: settingStore,
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
+		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:
@@ -191,20 +218,32 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			HTTPClient:   c.http.ConnectorClient(connector, conf.Organization, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			Settings:     settingStore,
 		})
 	case state.Database:
 		var database any
-		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{Settings: settingStore})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{
+			Settings: settingStore,
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
+		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
+			Settings: settingStore,
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
+		})
 	case state.MessageBroker:
-		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{Settings: settingStore})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
+			Settings: settingStore,
+			Dial:     countdial.Dial(conf.Organization),
+			DialWith: countdial.DialWith(conf.Organization),
+		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{Settings: settingStore})
 	case state.Webhook:

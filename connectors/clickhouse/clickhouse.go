@@ -164,7 +164,7 @@ func (ch *ClickHouse) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	db, err := clickhouse.Open(options(&settings))
+	db, err := clickhouse.Open(options(&settings, ch.env.Dial))
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 	if n := len(s.Database); n > 64 {
 		return connectors.NewInvalidSettingsError("database length in bytes must be in range [0,64]")
 	}
-	err = testConnection(ctx, &s)
+	err = testConnection(ctx, &s, ch.env.Dial)
 	if err != nil || test {
 		return err
 	}
@@ -246,14 +246,18 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-// options returns the connection options, from s.
-func options(s *innerSettings) *clickhouse.Options {
+// options returns the connection options, from s. The connections are
+// established using dial, in place of the driver's default dialer.
+func options(s *innerSettings, dial connectors.DialFunc) *clickhouse.Options {
 	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
 			Database: s.Database,
 			Username: s.Username,
 			Password: s.Password,
+		},
+		DialContext: func(ctx context.Context, address string) (net.Conn, error) {
+			return dial(ctx, "tcp", address)
 		},
 	}
 }
@@ -270,10 +274,11 @@ func propertyType(t driver.ColumnType) (types.Type, bool, string) {
 	return typ, nullable, ""
 }
 
-// testConnection tests a connection with the given settings.
+// testConnection tests a connection with the given settings, established
+// using dial.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *innerSettings) error {
-	conn, err := clickhouse.Open(options(settings))
+func testConnection(ctx context.Context, settings *innerSettings, dial connectors.DialFunc) error {
+	conn, err := clickhouse.Open(options(settings, dial))
 	if err != nil {
 		return err
 	}
