@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
-// TestPipelineMetricsPerDateRejectsTooManyDataPoints verifies that requests
-// exceeding the maximum number of data points are rejected.
-func TestPipelineMetricsPerDateRejectsTooManyDataPoints(t *testing.T) {
+// TestPipelineMetricsPerDateRejectsTooManyEntryDays verifies that requests
+// exceeding the maximum product between the number of entries in the selection
+// and the number of days in the date range are rejected.
+func TestPipelineMetricsPerDateRejectsTooManyEntryDays(t *testing.T) {
 	organization := Organization{core: &Core{}}
 	start := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	tests := []struct {
@@ -33,8 +34,8 @@ func TestPipelineMetricsPerDateRejectsTooManyDataPoints(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
-			if !strings.Contains(err.Error(), "requested metrics exceed the maximum of 60,000 data points") {
-				t.Fatalf("expected data point limit error, got %v", err)
+			if !strings.Contains(err.Error(), "requested metrics exceed the maximum") {
+				t.Fatalf("expected entry-day limit error, got %v", err)
 			}
 		})
 	}

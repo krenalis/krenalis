@@ -872,7 +872,7 @@ const (
 	Day    = MetricUnit(metrics.Day)
 )
 
-const maxMetricDataPoints = 60_000 // maximum number of data points in a metrics response
+const maxEntryDays = 60_000 // maximum product between the number of entries in the selection and the number of days in the requested date range
 
 // PipelineMetricsPerDate returns metrics aggregated by day for the time
 // interval between the specified start and end dates.
@@ -884,11 +884,10 @@ const maxMetricDataPoints = 60_000 // maximum number of data points in a metrics
 // day of the end date.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
-// non-nil, with between 1 and 1,000 items.
+// non-nil, with between 1 and 1,000 entries.
 //
-// The requested metrics cannot exceed the maximum of 60,000 data points,
-// computed as the number of days in the date range multiplied by the number
-// of entries in the selection.
+// The number of entries in the selection multiplied by the number of days in
+// the date range cannot exceed 60,000.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -913,8 +912,8 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	if err != nil {
 		return Metrics{}, err
 	}
-	if days*entries > maxMetricDataPoints {
-		return Metrics{}, errors.BadRequest("requested metrics exceed the maximum of 60,000 data points (%d days × %d selection entries)", days, entries)
+	if days*entries > maxEntryDays {
+		return Metrics{}, errors.BadRequest("requested metrics exceed the maximum: %d selection entries × %d days is more than 60,000", entries, days)
 	}
 
 	// Validate workspace.
@@ -960,7 +959,7 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 // and [1,30] for days.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
-// non-nil, with between 1 and 1000 items.
+// non-nil, with between 1 and 1,000 entries.
 func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
