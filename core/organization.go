@@ -886,6 +886,9 @@ const maxEntryDays = 60_000 // maximum product between the number of entries in 
 // Exactly one of workspaces, connections, and pipelines in selection must be
 // non-nil, with between 1 and 1,000 entries.
 //
+// Target is required when selecting workspaces or connections and optional
+// when selecting pipelines.
+//
 // The number of entries in the selection multiplied by the number of days in
 // the date range cannot exceed 60,000.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
@@ -960,6 +963,9 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
 // non-nil, with between 1 and 1,000 entries.
+//
+// Target is required when selecting workspaces or connections and optional
+// when selecting pipelines.
 func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -1702,7 +1708,11 @@ func validateMetricsSelection(selection MetricSelection) (int, error) {
 		return 0, errors.BadRequest("workspaces, connections and pipelines cannot be used together")
 	}
 	switch selection.Target {
-	case TargetNone, TargetUser, TargetEvent:
+	case TargetNone:
+		if selection.Pipelines == nil {
+			return 0, errors.BadRequest("target is required when selecting workspaces or connections")
+		}
+	case TargetUser, TargetEvent:
 	default:
 		return 0, errors.BadRequest("target is not valid")
 	}

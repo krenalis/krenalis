@@ -30,6 +30,7 @@ func TestPipelineMetricsPerDateRejectsTooManyEntryDays(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := organization.PipelineMetricsPerDate(context.Background(), start, start.AddDate(0, 0, test.days), "", MetricSelection{
 				Workspaces: validMetricIDs(test.entries),
+				Target:     TargetEvent,
 			})
 			if err == nil {
 				t.Fatal("expected error, got nil")
@@ -80,16 +81,69 @@ func TestValidatePipelineMetricsSelectionRequiresOneGroup(t *testing.T) {
 }
 
 // TestValidatePipelineMetricsSelectionAllowsWorkspaceGroup verifies that workspace
-// grouping is valid when workspaces are provided as the grouping parameter.
+// grouping is valid when a target is provided.
 func TestValidatePipelineMetricsSelectionAllowsWorkspaceGroup(t *testing.T) {
 	entries, err := validateMetricsSelection(MetricSelection{
 		Workspaces: []string{"9RbU4nP8LyQ6"},
+		Target:     TargetEvent,
 	})
 	if err != nil {
 		t.Fatalf("expected workspace group to be valid, got %v", err)
 	}
 	if entries != 1 {
 		t.Fatalf("expected 1 selection entry, got %d", entries)
+	}
+}
+
+// TestValidatePipelineMetricsSelectionTargetRequirements verifies that target is
+// optional for pipeline selections and required for workspace and connection
+// selections.
+func TestValidatePipelineMetricsSelectionTargetRequirements(t *testing.T) {
+	tests := []struct {
+		name      string
+		selection MetricSelection
+		wantErr   bool
+	}{
+		{
+			name: "pipelines without target",
+			selection: MetricSelection{
+				Pipelines: []string{"9RbU4nP8LyQ6"},
+			},
+		},
+		{
+			name: "workspaces without target",
+			selection: MetricSelection{
+				Workspaces: []string{"9RbU4nP8LyQ6"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "connections without target",
+			selection: MetricSelection{
+				Connections: []string{"9RbU4nP8LyQ6"},
+			},
+			wantErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entries, err := validateMetricsSelection(test.selection)
+			if test.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), "target is required") {
+					t.Fatalf("expected missing target error, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("expected selection to be valid, got %v", err)
+			}
+			if entries != 1 {
+				t.Fatalf("expected 1 selection entry, got %d", entries)
+			}
+		})
 	}
 }
 
@@ -104,12 +158,14 @@ func TestValidatePipelineMetricsSelectionAllowsMaximumGroupSize(t *testing.T) {
 			name: "workspaces",
 			selection: MetricSelection{
 				Workspaces: validMetricIDs(1000),
+				Target:     TargetEvent,
 			},
 		},
 		{
 			name: "connections",
 			selection: MetricSelection{
 				Connections: validMetricIDs(1000),
+				Target:      TargetEvent,
 			},
 		},
 		{
