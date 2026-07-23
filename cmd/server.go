@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
+	"github.com/krenalis/krenalis/cmd/internal/workos"
 	corePkg "github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/prometheus"
 
@@ -81,15 +82,20 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		conf.NATS.NKey[i] = 0
 	}
 
+	var workOS *workos.WorkOS
+	if config.WorkOS.ClientID != "" {
+		workOS = workos.New(core, config.WorkOS.ClientID, config.WorkOS.APIKey,
+			config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode)
+	}
+
 	sentryErrorTunnel := newSentryErrorTunnel()
 	defer sentryErrorTunnel.Close()
 
 	runsOnHTTPS := config.HTTP.TLS.Enabled || strings.HasPrefix(config.HTTP.ExternalURL, "https://")
 	apisServer := newAPIsServer(core, runsOnHTTPS, config.JavaScriptSDKURL,
 		config.HTTP.ExternalURL, config.HTTP.ExternalEventURL, config.ExternalAssetsURLs,
-		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.OrganizationsAPIKey,
-		config.SentryTelemetryLevel, sentryErrorTunnel, config.WorkOS.ClientID, config.WorkOS.APIKey,
-		config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode)
+		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.OrganizationsAPIKey, workOS,
+		config.SentryTelemetryLevel, sentryErrorTunnel)
 
 	admin, err := newAdmin(assetsFS)
 	if err != nil {
@@ -157,6 +163,12 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
 			return
+		case strings.HasPrefix(r.URL.Path, "/workos/"):
+			if workOS != nil {
+				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/workos")
+				workOS.ServeHTTP(w, r)
+				return
+			}
 		case r.URL.Path == "/metrics":
 			if config.PrometheusMetricsEnabled {
 				prometheusMetricsHandler.ServeHTTP(w, r)
@@ -174,8 +186,8 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	c := http.NewCrossOriginProtection()
 	c.AddInsecureBypassPattern("POST /v1/events")
-	c.AddInsecureBypassPattern("POST /v1/workos/webhook")
-	c.AddInsecureBypassPattern("POST /v1/workos/actions/user-registration")
+	c.AddInsecureBypassPattern("POST /workos/webhook")
+	c.AddInsecureBypassPattern("POST /workos/actions/user-registration")
 	origin := strings.TrimSuffix(config.HTTP.ExternalURL, "/")
 	err = c.AddTrustedOrigin(origin)
 	if err != nil {

@@ -28,7 +28,7 @@ type organization struct {
 // been enabled, it returns an errors.UnprocessableError error with code
 // EmailInvitationRequired.
 func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if organization.workos != nil {
+	if organization.workOS != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be added because WorkOS authentication is enabled")
 	}
 	if err := validateRequiredBody(r, false); err != nil {
@@ -193,7 +193,7 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if organization.workos != nil {
+	if organization.workOS != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be deleted because WorkOS authentication is enabled")
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
@@ -209,7 +209,7 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
 func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if organization.workos != nil {
+	if organization.workOS != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be invited because WorkOS authentication is enabled")
 	}
 	if err := validateRequiredBody(r, false); err != nil {
@@ -330,7 +330,7 @@ func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.
 // It returns an errors.UnprocessableError with code WorkOSEnabled when WorkOS
 // authentication is configured.
 func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if organization.workos != nil {
+	if organization.workOS != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be updated because WorkOS authentication is enabled")
 	}
 	if err := validateRequiredBody(r, false); err != nil {
