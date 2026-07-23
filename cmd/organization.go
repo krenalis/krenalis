@@ -7,7 +7,9 @@ package cmd
 import (
 	"html"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -254,6 +256,137 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 	return org.Members(r.Context())
 }
 
+// PipelineMetricsPerDate returns metrics by day for a time interval between
+// specified start and end dates.
+func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse start.
+	s := r.PathValue("start")
+	start, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+
+	// Parse end.
+	e := r.PathValue("end")
+	end, err := time.Parse(time.DateOnly, e)
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+
+	// Set workspace.
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+
+	// Parse selection.
+	selection, err := parseMetricsSelection(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
+}
+
+// PipelineMetricsPerDay returns the pipeline metrics for a specified number of
+// days.
+func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse days.
+	n := r.PathValue("days")
+	days, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, errors.NotFound("days is not valid")
+	}
+
+	// Set workspace.
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+
+	// Parse selection.
+	selection, err := parseMetricsSelection(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
+}
+
+// PipelineMetricsPerHour returns the pipeline metrics for a specified number of
+// hours.
+func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse hours.
+	n := r.PathValue("hours")
+	hours, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, errors.NotFound("hours is not valid")
+	}
+
+	// Set workspace.
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+
+	// Parse selection.
+	selection, err := parseMetricsSelection(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
+}
+
+// PipelineMetricsPerMinute returns the pipeline metrics for a specified number
+// of minutes.
+func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	org, ws, err := organization.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse minutes.
+	n := r.PathValue("minutes")
+	minutes, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, errors.NotFound("minutes is not valid")
+	}
+
+	// Set workspace.
+	var workspace string
+	if ws != nil {
+		workspace = ws.ID
+	}
+
+	// Parse selection.
+	selection, err := parseMetricsSelection(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
+}
+
 // SetStatus sets the status of an organization.
 //
 // Authentication is performed using the organizations API key.
@@ -454,4 +587,51 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
 	}
 	return map[string]any{"workspaces": org.Workspaces()}, nil
+}
+
+// parseMetricsSelection parses the pipeline metrics query parameters.
+func parseMetricsSelection(r *http.Request) (core.MetricSelection, error) {
+
+	q := r.URL.Query()
+
+	var selection core.MetricSelection
+
+	// Parse workspaces, connections, and pipelines parameters.
+	if values, ok := q["workspaces"]; ok {
+		selection.Workspaces = splitQueryParameters(values)
+		if selection.Workspaces == nil {
+			selection.Workspaces = []string{}
+		}
+	}
+	if values, ok := q["connections"]; ok {
+		selection.Connections = splitQueryParameters(values)
+		if selection.Connections == nil {
+			selection.Connections = []string{}
+		}
+	}
+	if values, ok := q["pipelines"]; ok {
+		selection.Pipelines = splitQueryParameters(values)
+		if selection.Pipelines == nil {
+			selection.Pipelines = []string{}
+		}
+	}
+
+	// Parse the target parameter.
+	if values, ok := q["target"]; ok {
+		if len(values) != 1 {
+			return core.MetricSelection{}, errors.BadRequest("'target' parameter cannot be specified multiple times")
+		}
+		switch t := strings.TrimSpace(values[0]); t {
+		case "Event":
+			selection.Target = core.TargetEvent
+		case "User":
+			selection.Target = core.TargetUser
+		case "":
+			return core.MetricSelection{}, errors.BadRequest("'target' parameter cannot be empty")
+		default:
+			return core.MetricSelection{}, errors.BadRequest("'target' parameter is not valid")
+		}
+	}
+
+	return selection, nil
 }

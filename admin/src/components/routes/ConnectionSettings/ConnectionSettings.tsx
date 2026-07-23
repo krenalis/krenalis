@@ -11,7 +11,6 @@ import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
 import { debounce } from '../../../utils/debounce';
-import { isSourceEventConnection } from '../../../lib/core/connection';
 import { Snippet } from '../../base/Snippet/Snippet';
 
 type TabName = 'general' | 'snippet' | 'connection' | 'keys';
@@ -93,7 +92,7 @@ const ConnectionSettings = () => {
 			tabs.push('connection');
 		}
 
-		if (isSourceEventConnection(c.role, c.connector.type)) {
+		if (c.isSource && c.supportsEventTarget) {
 			tabs.push('keys');
 		}
 

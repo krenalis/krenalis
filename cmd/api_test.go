@@ -9,6 +9,7 @@ import (
 	"testing"
 )
 
+// TestSplitQueryParameters verifies comma-separated query parameter splitting.
 func TestSplitQueryParameters(t *testing.T) {
 	tests := []struct {
 		name      string

@@ -18,6 +18,7 @@ import (
 	"net/smtp"
 	"net/textproto"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -826,6 +827,209 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
+// Metrics contains pipeline metrics over a time range.
+type Metrics struct {
+	Start   time.Time      `json:"start"`
+	End     time.Time      `json:"end"`
+	Metrics []MetricSeries `json:"metrics"`
+}
+
+// MetricSeries contains metrics for a single workspace, connection, or
+// pipeline.
+type MetricSeries struct {
+	Workspace  string   `json:"workspace,omitzero"`
+	Connection string   `json:"connection,omitzero"`
+	Pipeline   string   `json:"pipeline,omitzero"`
+	Passed     [][6]int `json:"passed"`
+	Failed     [][6]int `json:"failed"`
+}
+
+// MetricSelection defines the selected pipeline metric series.
+// Exactly one of Workspaces, Connections, or Pipelines must be non-nil and
+// non-empty.
+//
+// Workspaces restricts metrics to the specified workspaces and groups the
+// results by workspace. Connections restricts metrics to the specified
+// connections and groups the results by connection. Pipelines restricts
+// metrics to the specified pipelines and groups the results by pipeline.
+type MetricSelection struct {
+	Workspaces  []string
+	Connections []string
+	Pipelines   []string
+	Target      Target
+}
+
+// MetricUnit represents the unit of time used for aggregating metrics.
+// It can be:
+// - Minute: aggregates metrics by minute
+// - Hour: aggregates metrics by hour
+// - Day: aggregates metrics by day
+type MetricUnit int
+
+const (
+	Minute = MetricUnit(metrics.Minute)
+	Hour   = MetricUnit(metrics.Hour)
+	Day    = MetricUnit(metrics.Day)
+)
+
+const maxEntryDays = 60_000 // maximum product between the number of entries in the selection and the number of days in the requested date range
+
+// PipelineMetricsPerDate returns metrics aggregated by day for the time
+// interval between the specified start and end dates.
+//
+// If workspace is not empty, the request is restricted to that workspace.
+//
+// The dates are truncated to UTC days, must be no earlier than 1970-01-01 and
+// no later than 2262-04-10, and the day of the start date must be before the
+// day of the end date.
+//
+// Exactly one of workspaces, connections, and pipelines in selection must be
+// non-nil, with between 1 and 1,000 entries.
+//
+// Target is required when selecting workspaces or connections and optional
+// when selecting pipelines.
+//
+// The number of entries in the selection multiplied by the number of days in
+// the date range cannot exceed 60,000.
+func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
+
+	this.core.mustBeOpen()
+
+	start = start.UTC().Truncate(24 * time.Hour)
+	end = end.UTC().Truncate(24 * time.Hour)
+
+	// Validate start and end.
+	if start.Before(metrics.MinTime) {
+		return Metrics{}, errors.NotFound("start date is too far in the past")
+	}
+	if end.After(metrics.MaxTime) {
+		return Metrics{}, errors.NotFound("end date is too far in the future")
+	}
+	if !end.After(start) {
+		return Metrics{}, errors.NotFound("day of the end date must be after the day of the start date")
+	}
+
+	// Validate selection.
+	days := int(end.Sub(start) / (24 * time.Hour))
+	entries, err := validateMetricsSelection(selection)
+	if err != nil {
+		return Metrics{}, err
+	}
+	if days*entries > maxEntryDays {
+		return Metrics{}, errors.BadRequest("requested metrics exceed the maximum: %d selection entries × %d days is more than 60,000", entries, days)
+	}
+
+	// Validate workspace.
+	if workspace != "" && !IsValidID(workspace) {
+		return Metrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+	}
+
+	// Remove identifiers outside the organization or workspace scope
+	// and return early if none remain.
+	if !this.filterMetricsSelection(workspace, &selection) {
+		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
+	}
+
+	// Retrieve metrics for the filtered selection.
+	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, metrics.Selection{
+		Workspaces:  selection.Workspaces,
+		Connections: selection.Connections,
+		Pipelines:   selection.Pipelines,
+		Target:      metrics.Target(selection.Target),
+	})
+	if err != nil {
+		return Metrics{}, err
+	}
+
+	metrics := Metrics{
+		Start:   m.Start,
+		End:     m.End,
+		Metrics: make([]MetricSeries, len(m.Series)),
+	}
+	for i, series := range m.Series {
+		metrics.Metrics[i] = MetricSeries(series)
+	}
+
+	return metrics, nil
+}
+
+// PipelineMetricsPerTimeUnit returns metrics for the specified number of
+// minutes, hours, or days based on the unit, up to the current time.
+//
+// If workspace is not empty, the request is restricted to that workspace.
+//
+// number must be in the following ranges: [1,60] for minutes, [1,48] for hours,
+// and [1,30] for days.
+//
+// Exactly one of workspaces, connections, and pipelines in selection must be
+// non-nil, with between 1 and 1,000 entries.
+//
+// Target is required when selecting workspaces or connections and optional
+// when selecting pipelines.
+func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
+
+	this.core.mustBeOpen()
+
+	// Validate number and unit.
+	switch unit {
+	case Minute:
+		if number < 1 || number > 60 {
+			return Metrics{}, errors.NotFound("minutes must be in range [1,60]")
+		}
+	case Hour:
+		if number < 1 || number > 48 {
+			return Metrics{}, errors.NotFound("hours must be in range [1,48]")
+		}
+	case Day:
+		if number < 1 || number > 30 {
+			return Metrics{}, errors.NotFound("days must be in range [1,30]")
+		}
+	default:
+		return Metrics{}, errors.BadRequest("metric unit is not valid")
+	}
+	if workspace != "" && !IsValidID(workspace) {
+		return Metrics{}, errors.BadRequest("workspace %q is not valid", workspace)
+	}
+
+	resolution := time.Duration(unit)
+	end := time.Now().UTC().Truncate(resolution).Add(resolution)
+	start := end.Add(-time.Duration(number) * resolution)
+
+	// Validate selection.
+	_, err := validateMetricsSelection(selection)
+	if err != nil {
+		return Metrics{}, err
+	}
+
+	// Remove identifiers outside the organization or workspace scope
+	// and return early if none remain.
+	if !this.filterMetricsSelection(workspace, &selection) {
+		return Metrics{Start: start, End: end, Metrics: []MetricSeries{}}, nil
+	}
+
+	// Retrieve metrics for the filtered selection.
+	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, metrics.Selection{
+		Workspaces:  selection.Workspaces,
+		Connections: selection.Connections,
+		Pipelines:   selection.Pipelines,
+		Target:      metrics.Target(selection.Target),
+	})
+	if err != nil {
+		return Metrics{}, err
+	}
+
+	metrics := Metrics{
+		Start:   m.Start,
+		End:     m.End,
+		Metrics: make([]MetricSeries, len(m.Series)),
+	}
+	for i, series := range m.Series {
+		metrics.Metrics[i] = MetricSeries(series)
+	}
+
+	return metrics, nil
+}
+
 // SendMemberPasswordReset sends a reset password email to the given email
 // address using the given template.
 //
@@ -1203,6 +1407,35 @@ func (this *Organization) Workspaces() []*Workspace {
 	return infos
 }
 
+// filterMetricsSelection removes identifiers that do not exist, do not belong
+// to the organization, or are outside the restricted workspace.
+// It returns true if the filtered selection contains at least one identifier.
+func (this *Organization) filterMetricsSelection(workspace string, selection *MetricSelection) bool {
+	switch {
+	case selection.Workspaces != nil:
+		selection.Workspaces = slices.DeleteFunc(selection.Workspaces, func(id string) bool {
+			_, ok := this.organization.Workspace(id)
+			return !ok || workspace != "" && id != workspace
+		})
+		return len(selection.Workspaces) > 0
+	case selection.Connections != nil:
+		selection.Connections = slices.DeleteFunc(selection.Connections, func(id string) bool {
+			connection, ok := this.core.state.Connection(id)
+			return !ok || connection.Organization().ID != this.organization.ID ||
+				(workspace != "" && connection.Workspace().ID != workspace)
+		})
+		return len(selection.Connections) > 0
+	case selection.Pipelines != nil:
+		selection.Pipelines = slices.DeleteFunc(selection.Pipelines, func(id string) bool {
+			pipeline, ok := this.core.state.Pipeline(id)
+			return !ok || pipeline.Organization().ID != this.organization.ID ||
+				(workspace != "" && pipeline.Connection().Workspace().ID != workspace)
+		})
+		return len(selection.Pipelines) > 0
+	}
+	panic("unreachable")
+}
+
 // validateWorkspaceCreation validates the arguments for a workspace creation.
 // It tests that a warehouse with the provided platform and settings can be
 // initialized, and returns an error if the arguments are not valid.
@@ -1416,4 +1649,72 @@ func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bo
 		}
 	}
 	return nil
+}
+
+// validateMetricsSelection validates a pipeline metrics selection and returns
+// the number of selection entries.
+func validateMetricsSelection(selection MetricSelection) (int, error) {
+	var entries int
+	var groups int
+	// Workspaces.
+	if selection.Workspaces != nil {
+		if len(selection.Workspaces) == 0 {
+			return 0, errors.BadRequest("workspaces must not be empty when provided")
+		}
+		if entries = len(selection.Workspaces); entries > 1000 {
+			return 0, errors.BadRequest("workspaces must contain at most 1,000 entries")
+		}
+		for _, workspace := range selection.Workspaces {
+			if !IsValidID(workspace) {
+				return 0, errors.BadRequest("workspace %q is not valid", workspace)
+			}
+		}
+		groups++
+	}
+	// Connections.
+	if selection.Connections != nil {
+		if len(selection.Connections) == 0 {
+			return 0, errors.BadRequest("connections must not be empty when provided")
+		}
+		if entries = len(selection.Connections); entries > 1000 {
+			return 0, errors.BadRequest("connections must contain at most 1,000 entries")
+		}
+		for _, connection := range selection.Connections {
+			if !IsValidID(connection) {
+				return 0, errors.BadRequest("connection %q is not valid", connection)
+			}
+		}
+		groups++
+	}
+	// Pipelines.
+	if selection.Pipelines != nil {
+		if len(selection.Pipelines) == 0 {
+			return 0, errors.BadRequest("pipelines must not be empty when provided")
+		}
+		if entries = len(selection.Pipelines); entries > 1000 {
+			return 0, errors.BadRequest("pipelines must contain at most 1,000 entries")
+		}
+		for _, pipeline := range selection.Pipelines {
+			if !IsValidID(pipeline) {
+				return 0, errors.BadRequest("pipeline %q is not valid", pipeline)
+			}
+		}
+		groups++
+	}
+	if groups == 0 {
+		return 0, errors.BadRequest("one of workspaces, connections or pipelines must be provided")
+	}
+	if groups > 1 {
+		return 0, errors.BadRequest("workspaces, connections and pipelines cannot be used together")
+	}
+	switch selection.Target {
+	case TargetNone:
+		if selection.Pipelines == nil {
+			return 0, errors.BadRequest("target is required when selecting workspaces or connections")
+		}
+	case TargetUser, TargetEvent:
+	default:
+		return 0, errors.BadRequest("target is not valid")
+	}
+	return entries, nil
 }

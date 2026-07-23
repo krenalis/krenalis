@@ -12,7 +12,6 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { Pipeline, PipelineType } from '../../../lib/api/types/pipeline';
 import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
-import { isEventConnection } from '../../../lib/core/connection';
 import Section from '../../base/Section/Section';
 import { Snippet } from '../../base/Snippet/Snippet';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -220,13 +219,7 @@ const ConnectionPipelines = () => {
 			)}
 			{/* Linked connections are shown: before the pipelines, in the case of destination pipelines; after the pipelines,
 			in the case of source pipelines. This is to better suggest the usability flow. */}
-			{connection.isDestination &&
-				isEventConnection(
-					'Destination',
-					connection.connector.type,
-					connection.connector.asDestination.targets,
-				) &&
-				linkedConnections}
+			{connection.isDestination && connection.supportsEventTarget && linkedConnections}
 			<Section
 				className='connection-pipelines__list'
 				title='Pipelines'
@@ -291,9 +284,7 @@ const ConnectionPipelines = () => {
 			</Section>
 			{/* Linked connections are shown: before the pipelines, in the case of destination pipelines; after the pipelines,
 			in the case of source pipelines. This is to better suggest the usability flow. */}
-			{connection.isSource &&
-				isEventConnection('Source', connection.connector.type, connection.connector.asSource.targets) &&
-				linkedConnections}
+			{connection.isSource && connection.supportsEventTarget && linkedConnections}
 			<PipelineTypesDialog
 				isOpen={isPipelineTypesDialogOpen}
 				setIsOpen={setIsPipelineTypesDialogOpen}
