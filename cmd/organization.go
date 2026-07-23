@@ -170,9 +170,6 @@ func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) 
 	if err := organization.authenticateOrganizationsRequest(r); err != nil {
 		return nil, err
 	}
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	org, err := organization.core.Organization(r.PathValue("id"))
 	if err != nil {
 		return nil, err
@@ -183,9 +180,6 @@ func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) 
 
 // DeleteAccessKey deletes an access key of an organization.
 func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
@@ -201,9 +195,6 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if organization.workos != nil {
 		return nil, errors.Unprocessable(core.BuiltInAuthenticationDisabled, "members cannot be deleted because WorkOS authentication is enabled")
-	}
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
 	}
 	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {

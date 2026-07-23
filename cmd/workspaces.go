@@ -148,9 +148,6 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 
 // Delete deletes the current workspace with all its connections.
 func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -161,9 +158,6 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 
 // DeleteEventListener deletes an event listener of a workspace.
 func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err

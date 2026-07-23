@@ -122,9 +122,6 @@ func (connection connection) CreateEventWriteKey(_ http.ResponseWriter, r *http.
 
 // Delete deletes a connection.
 func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -135,9 +132,6 @@ func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any
 
 // DeleteEventWriteKey deletes an event write key of a connection.
 func (connection connection) DeleteEventWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -427,9 +421,6 @@ func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request)
 
 // UnlinkConnection unlink a connection from another connection and vice versa.
 func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	src, err := connection.src(r)
 	if err != nil {
 		return nil, err
