@@ -706,8 +706,8 @@ func (organization *Organization) Limits() OrganizationLimits {
 // ConsumeRateLimitCapacity consumes capacity from the organization's bucket.
 // The bucket belongs to this canonical State instance, so every Core wrapper
 // that references the organization shares the same local lease.
-func (organization *Organization) ConsumeRateLimitCapacity(cost int) error {
-	return organization.rateLimiter.consume(organization.bucket, cost)
+func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	return organization.rateLimiter.consume(ctx, organization.bucket, cost)
 }
 
 // Workspace returns the workspace of the organization with identifier id.
@@ -834,14 +834,14 @@ type Workspace struct {
 // ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
 // The limiter is shared with its organization; only the local lease is per
 // workspace.
-func (workspace *Workspace) ConsumeRateLimitCapacity(cost int) error {
-	return workspace.organization.rateLimiter.consume(workspace.apiBucket, cost)
+func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	return workspace.organization.rateLimiter.consume(ctx, workspace.apiBucket, cost)
 }
 
 // ConsumeIngestionRateLimitCapacity consumes capacity for eventCount events
 // from the workspace's ingestion bucket.
-func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(eventCount int) error {
-	return workspace.organization.rateLimiter.consume(workspace.ingestionBucket, eventCount)
+func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(ctx context.Context, eventCount int) error {
+	return workspace.organization.rateLimiter.consume(ctx, workspace.ingestionBucket, eventCount)
 }
 
 // Account returns the account with identifier id. The boolean return value

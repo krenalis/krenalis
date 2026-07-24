@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -27,11 +28,11 @@ type authenticatedRequest struct {
 }
 
 // applyRateLimit consumes capacity from subject unless the request is exempt.
-func (authenticated authenticatedRequest) applyRateLimit(subject rateLimitCapacityConsumer, cost int) error {
+func (authenticated authenticatedRequest) applyRateLimit(ctx context.Context, subject rateLimitCapacityConsumer, cost int) error {
 	if authenticated.rateLimitExempt {
 		return nil
 	}
-	err := subject.ConsumeRateLimitCapacity(cost)
+	err := subject.ConsumeRateLimitCapacity(ctx, cost)
 	if errors.Is(err, core.ErrAPICapacityExceeded) {
 		return errors.TooManyRequests("API rate limit exceeded")
 	}
@@ -40,7 +41,7 @@ func (authenticated authenticatedRequest) applyRateLimit(subject rateLimitCapaci
 
 // rateLimitCapacityConsumer is a subject with an API rate-limit bucket.
 type rateLimitCapacityConsumer interface {
-	ConsumeRateLimitCapacity(cost int) error
+	ConsumeRateLimitCapacity(context.Context, int) error
 }
 
 // admitNonspecificRequest authenticates a request that is not in a specific
@@ -50,7 +51,7 @@ func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int)
 	if err != nil {
 		return authenticatedRequest{}, err
 	}
-	if err := authenticated.applyRateLimit(authenticated.organization, rateLimitCost); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, rateLimitCost); err != nil {
 		return authenticatedRequest{}, err
 	}
 	return authenticated, nil
@@ -65,7 +66,7 @@ func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (
 	if authenticated.workspace == nil {
 		return nil, errMissingWorkspace
 	}
-	if err := authenticated.applyRateLimit(authenticated.workspace, rateLimitCost); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.workspace, rateLimitCost); err != nil {
 		return nil, err
 	}
 	return authenticated.workspace, nil

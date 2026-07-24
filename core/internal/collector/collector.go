@@ -770,7 +770,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if eventCount > 0 {
-		err = ws.ConsumeIngestionRateLimitCapacity(eventCount)
+		err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), eventCount)
 	}
 	if err != nil {
 		if err == state.ErrAPICapacityExceeded {

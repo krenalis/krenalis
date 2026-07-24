@@ -401,11 +401,13 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 //
 // It returns ErrInvalidAPICost if cost is outside the supported range, or
 // ErrAPICapacityExceeded if the organization does not currently have enough
-// capacity. Capacity is leased asynchronously, so the first call for an
-// organization on a node can be rejected while a refill is in progress.
-func (this *Organization) ConsumeRateLimitCapacity(cost int) error {
+// capacity after an admitted refill completes. The call respects ctx and may
+// wait for at most one refill when local capacity is insufficient. Waiting is
+// also limited to one second; that internal timeout returns
+// ErrAPICapacityExceeded, while caller cancellation preserves the context error.
+func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	this.core.mustBeOpen()
-	return this.organization.ConsumeRateLimitCapacity(cost)
+	return this.organization.ConsumeRateLimitCapacity(ctx, cost)
 }
 
 // CreateAccessKey creates a new access key for the organization with the

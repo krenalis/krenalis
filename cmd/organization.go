@@ -145,7 +145,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if authenticated.workspace != nil {
 		return nil, errors.Unauthorized("workspaces cannot be created with a workspace restricted API key")
 	}
-	if err := authenticated.applyRateLimit(authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -427,7 +427,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if authenticated.workspace != nil {
 		return nil, errors.Unauthorized("workspace creation cannot be tested with a workspace restricted API key")
 	}
-	if err := authenticated.applyRateLimit(authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -556,7 +556,7 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 	if authenticated.workspace != nil {
 		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
 	}
-	if err := authenticated.applyRateLimit(authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
 		return nil, err
 	}
 	workspaces := authenticated.organization.Workspaces()

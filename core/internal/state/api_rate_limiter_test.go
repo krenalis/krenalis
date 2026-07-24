@@ -19,9 +19,11 @@ const testRateLimitID = "111111111111"
 func newTestRateLimiter(t *testing.T, acquire apiRateLimitLeaseAcquirer) *rateLimiter {
 	t.Helper()
 	l := &rateLimiter{
-		acquireLeases: acquire,
-		now:           time.Now,
-		refillQueue:   make(chan *rateLimitBucket, apiRateLimitQueueSize),
+		acquireLeases:  acquire,
+		now:            time.Now,
+		maxWait:        apiRateLimitMaxWaitDuration,
+		acquireTimeout: apiRateLimitAcquireTimeout,
+		refillQueue:    make(chan *rateLimitRefill, apiRateLimitQueueSize),
 	}
 	l.close.ctx, l.close.cancel = context.WithCancel(context.Background())
 	l.close.Add(1)
@@ -33,7 +35,15 @@ func newTestRateLimiter(t *testing.T, acquire apiRateLimitLeaseAcquirer) *rateLi
 func bucketSnapshot(bucket *rateLimitBucket) (available, target, threshold int, refillQueued, disabled bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	return bucket.available, bucket.target, bucket.threshold, bucket.refillQueued, bucket.disabled
+	return bucket.available, bucket.target, bucket.threshold, bucket.refill != nil, bucket.disabled
+}
+
+func applyTestLease(bucket *rateLimitBucket, grantedUnits, capacityUnits int) {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+	if !bucket.disabled {
+		bucket.applyLeaseLocked(grantedUnits, capacityUnits)
+	}
 }
 
 func rateLimiterRetryAfter(l *rateLimiter) time.Time {
@@ -76,6 +86,15 @@ func waitForRateLimit(t *testing.T, condition func() bool) {
 		case <-ticker.C:
 		}
 	}
+}
+
+func refillPendingCost(bucket *rateLimitBucket) int {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+	if bucket.refill == nil {
+		return 0
+	}
+	return bucket.refill.pendingCost
 }
 
 func TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced(t *testing.T) {
@@ -125,17 +144,14 @@ func TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced(t *testing.T) {
 
 func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 	bucket := newWorkspaceBucket("222222222222")
-	bucket.applyLease(10, 10)
+	applyTestLease(bucket, 10, 10)
 	bucket.disable()
 
-	exceeded, queueRefill := bucket.consume(1, true)
-	if !exceeded || queueRefill {
-		t.Fatalf("disabled bucket consume = exceeded:%t queue:%t, want true:false", exceeded, queueRefill)
+	satisfied, refill, waiter := bucket.consume(1, true)
+	if satisfied || refill != nil || waiter != nil {
+		t.Fatalf("disabled bucket consumed or requested capacity: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
-	if _, ok := bucket.refillRequest(); ok {
-		t.Fatal("disabled bucket requested a refill")
-	}
-	bucket.applyLease(10, 10)
+	applyTestLease(bucket, 10, 10)
 	available, _, _, _, disabled := bucketSnapshot(bucket)
 	if available != 0 || !disabled {
 		t.Fatalf("disabled bucket state = available:%d disabled:%t, want 0:true", available, disabled)
@@ -147,26 +163,29 @@ func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 func TestIngestionRateLimitBucketAllowsInitialOverdraft(t *testing.T) {
 	bucket := newIngestionBucket("222222222222")
 
-	exceeded, queueRefill := bucket.consume(1, true)
-	if exceeded || !queueRefill {
-		t.Fatalf("initial ingestion bucket consume = exceeded:%t queue:%t, want false:true", exceeded, queueRefill)
+	satisfied, refill, waiter := bucket.consume(1, true)
+	if !satisfied || refill == nil || waiter != nil {
+		t.Fatalf("initial ingestion consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
-	bucket.finishRefill()
-	exceeded, queueRefill = bucket.consume(1, true)
-	if !exceeded || !queueRefill {
-		t.Fatalf("second ingestion bucket consume without a refill = exceeded:%t queue:%t, want true:true", exceeded, queueRefill)
+	bucket.rejectRefill(refill)
+	satisfied, refill, waiter = bucket.consume(1, true)
+	if satisfied || refill == nil || waiter != nil {
+		t.Fatalf("second ingestion consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
 }
 
 func TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
-	exceeded, queueRefill := bucket.consume(1, true)
-	if !exceeded || !queueRefill {
-		t.Fatalf("cold bucket consume = exceeded:%t queue:%t, want true:true", exceeded, queueRefill)
+	satisfied, refill, waiter := bucket.consume(1, true)
+	if satisfied || refill == nil || waiter != nil {
+		t.Fatalf("cold bucket consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
-	exceeded, queueRefill = bucket.consume(1, true)
-	if exceeded || queueRefill {
-		t.Fatalf("pending refill overdraft = exceeded:%t queue:%t, want false:false", exceeded, queueRefill)
+	if waiter := bucket.activateRefill(refill, 0, false, true); waiter != nil {
+		t.Fatal("unexpected waiter")
+	}
+	satisfied, queued, waiter := bucket.consume(1, true)
+	if !satisfied || queued != nil || waiter != nil {
+		t.Fatalf("pending refill overdraft: satisfied=%t refill=%p waiter=%p", satisfied, queued, waiter)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
 	if available != -1 {
@@ -176,28 +195,27 @@ func TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill(t *testing.T) {
 
 func TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
-	bucket.mu.Lock()
-	bucket.refillQueued = true
-	bucket.mu.Unlock()
+	_, refill, _ := bucket.consume(2, true)
+	bucket.activateRefill(refill, 0, false, true)
 
-	exceeded, queueRefill := bucket.consume(2, true)
-	if !exceeded || queueRefill {
-		t.Fatalf("cost-2 overdraft = exceeded:%t queue:%t, want true:false", exceeded, queueRefill)
+	satisfied, queued, waiter := bucket.consume(2, true)
+	if satisfied || queued != nil || waiter == nil {
+		t.Fatalf("cost-2 request was not admitted as waiter")
 	}
-	exceeded, queueRefill = bucket.consume(1, false)
-	if !exceeded || queueRefill {
-		t.Fatalf("closed limiter overdraft = exceeded:%t queue:%t, want true:false", exceeded, queueRefill)
+	satisfied, queued, waiter = bucket.consume(1, false)
+	if satisfied || queued != nil || waiter != nil {
+		t.Fatal("closed limiter allowed overdraft or waiting")
 	}
 }
 
 func TestRateLimitBucketLeaseRepaysOverdraft(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
-	bucket.applyLease(0, 100)
+	applyTestLease(bucket, 0, 100)
 
 	bucket.mu.Lock()
 	bucket.available = -5
 	bucket.mu.Unlock()
-	bucket.applyLease(10, 100)
+	applyTestLease(bucket, 10, 100)
 	available, _, _, _, _ := bucketSnapshot(bucket)
 	if available != 5 {
 		t.Fatalf("full debt repayment = %d, want 5", available)
@@ -206,12 +224,12 @@ func TestRateLimitBucketLeaseRepaysOverdraft(t *testing.T) {
 	bucket.mu.Lock()
 	bucket.available = -5
 	bucket.mu.Unlock()
-	bucket.applyLease(2, 100)
+	applyTestLease(bucket, 2, 100)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != -3 {
 		t.Fatalf("partial debt repayment = %d, want -3", available)
 	}
-	bucket.applyLease(0, 100)
+	applyTestLease(bucket, 0, 100)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != -3 {
 		t.Fatalf("zero lease changed debt to %d, want -3", available)
@@ -223,10 +241,11 @@ func TestRateLimitBucketCapsRefillRequestWithOverdraft(t *testing.T) {
 	bucket.mu.Lock()
 	bucket.target = apiRateLimitLeaseSize
 	bucket.available = -apiRateLimitOverdraftLimit
-	bucket.refillQueued = true
+	refill := bucket.newRefillLocked()
 	bucket.mu.Unlock()
+	bucket.activateRefill(refill, 0, false, true)
 
-	request, ok := bucket.refillRequest()
+	request, ok := bucket.refillRequest(refill)
 	if !ok || request.RequestedUnits != apiRateLimitLeaseSize {
 		t.Fatalf("requested refill = %d, %t, want %d, true", request.RequestedUnits, ok, apiRateLimitLeaseSize)
 	}
@@ -244,7 +263,7 @@ func TestRateLimitBucketThresholdScalesWithTarget(t *testing.T) {
 	} {
 		t.Run(strconv.Itoa(test.target), func(t *testing.T) {
 			bucket := newNonspecificBucket("111111111111")
-			bucket.applyLease(0, test.target)
+			applyTestLease(bucket, 0, test.target)
 			if bucket.threshold != test.threshold {
 				t.Fatalf("threshold = %d, want %d", bucket.threshold, test.threshold)
 			}
@@ -256,17 +275,17 @@ func TestRateLimitBucketThresholdScalesWithTarget(t *testing.T) {
 // variable-cost operation queues a refill while one similar operation remains.
 func TestRateLimitBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
 	bucket := newIngestionBucket("222222222222")
-	bucket.applyLease(1_000, 1_000)
+	applyTestLease(bucket, 1_000, 1_000)
 
 	for range 2 {
-		exceeded, queueRefill := bucket.consume(250, true)
-		if exceeded || queueRefill {
-			t.Fatalf("early consume = exceeded:%t queue:%t, want false:false", exceeded, queueRefill)
+		satisfied, refill, waiter := bucket.consume(250, true)
+		if !satisfied || refill != nil || waiter != nil {
+			t.Fatalf("early consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 		}
 	}
-	exceeded, queueRefill := bucket.consume(250, true)
-	if exceeded || !queueRefill {
-		t.Fatalf("low-capacity consume = exceeded:%t queue:%t, want false:true", exceeded, queueRefill)
+	satisfied, refill, waiter := bucket.consume(250, true)
+	if !satisfied || refill == nil || waiter != nil {
+		t.Fatalf("low-capacity consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
 	if available != 250 {
@@ -287,20 +306,20 @@ func TestCanonicalEntitiesConsumeTheirOwnBuckets(t *testing.T) {
 		ingestionBucket: newIngestionBucket("222222222222"),
 		organization:    organization,
 	}
-	organization.bucket.applyLease(2, 2)
-	workspace.apiBucket.applyLease(2, 2)
-	workspace.ingestionBucket.applyLease(2, 2)
+	applyTestLease(organization.bucket, 2, 2)
+	applyTestLease(workspace.apiBucket, 2, 2)
+	applyTestLease(workspace.ingestionBucket, 2, 2)
 
-	if err := organization.ConsumeRateLimitCapacity(2); err != nil {
+	if err := organization.ConsumeRateLimitCapacity(context.Background(), 2); err != nil {
 		t.Fatalf("organization consume: %v", err)
 	}
-	if err := organization.ConsumeRateLimitCapacity(2); !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := organization.ConsumeRateLimitCapacity(context.Background(), 2); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("organization second consume: got %v, want ErrAPICapacityExceeded", err)
 	}
-	if err := workspace.ConsumeRateLimitCapacity(2); err != nil {
+	if err := workspace.ConsumeRateLimitCapacity(context.Background(), 2); err != nil {
 		t.Fatalf("workspace consume: %v", err)
 	}
-	if err := workspace.ConsumeIngestionRateLimitCapacity(2); err != nil {
+	if err := workspace.ConsumeIngestionRateLimitCapacity(context.Background(), 2); err != nil {
 		t.Fatalf("workspace ingestion consume: %v", err)
 	}
 }
@@ -309,7 +328,7 @@ func TestAPIRateLimiterValidatesCost(t *testing.T) {
 	l := newTestRateLimiter(t, nil)
 	bucket := newNonspecificBucket(testRateLimitID)
 	for _, cost := range []int{-1, 0, 101} {
-		if err := l.consume(bucket, cost); !errors.Is(err, ErrInvalidAPICost) {
+		if err := l.consume(context.Background(), bucket, cost); !errors.Is(err, ErrInvalidAPICost) {
 			t.Fatalf("cost %d: got %v, want ErrInvalidAPICost", cost, err)
 		}
 	}
@@ -320,12 +339,12 @@ func TestIngestionRateLimiterValidatesEventCount(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
 	bucket := newIngestionBucket(testRateLimitID)
 	for _, count := range []int{-1, 0, ingestionRateLimitMaxCost + 1} {
-		if err := limiter.consume(bucket, count); !errors.Is(err, ErrInvalidAPICost) {
+		if err := limiter.consume(context.Background(), bucket, count); !errors.Is(err, ErrInvalidAPICost) {
 			t.Fatalf("event count %d: got %v, want ErrInvalidAPICost", count, err)
 		}
 	}
-	bucket.applyLease(ingestionRateLimitMaxCost, ingestionRateLimitMaxCost)
-	if err := limiter.consume(bucket, ingestionRateLimitMaxCost); err != nil {
+	applyTestLease(bucket, ingestionRateLimitMaxCost, ingestionRateLimitMaxCost)
+	if err := limiter.consume(context.Background(), bucket, ingestionRateLimitMaxCost); err != nil {
 		t.Fatalf("maximum event count: %v", err)
 	}
 }
@@ -335,89 +354,431 @@ func TestAPIRateLimiterConsumesLocalCapacity(t *testing.T) {
 		return []apiRateLimitLeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
 	})
 	bucket := newNonspecificBucket(testRateLimitID)
-	bucket.applyLease(10, 10)
+	applyTestLease(bucket, 10, 10)
 
-	if err := l.consume(bucket, 6); err != nil {
+	if err := l.consume(context.Background(), bucket, 6); err != nil {
 		t.Fatalf("consume: %v", err)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
 	if available != 4 {
 		t.Fatalf("available capacity = %d, want 4", available)
 	}
-	if err := l.consume(bucket, 5); !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := l.consume(context.Background(), bucket, 5); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("consume exhausted capacity: got %v, want ErrAPICapacityExceeded", err)
+	}
+}
+
+func TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	bucket := newNonspecificBucket(testRateLimitID)
+	applyTestLease(bucket, 10, 10)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := limiter.consume(ctx, bucket, 1); !errors.Is(err, context.Canceled) {
+		t.Fatalf("consume with canceled context: %v", err)
+	}
+	available, _, _, _, _ := bucketSnapshot(bucket)
+	if available != 10 {
+		t.Fatalf("available capacity = %d, want 10", available)
+	}
+}
+
+func TestAPIRateLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
+	limiter := &rateLimiter{maxWait: 0}
+	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
+	limiter.close.cancel()
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	for range 100 {
+		bucket := newNonspecificBucket(testRateLimitID)
+		_, refill, _ := bucket.consume(1, true)
+		waiter := bucket.activateRefill(refill, 1, true, true)
+		if err := limiter.waitForRefill(ctx, waiter); !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("wait returned %v, want context deadline exceeded", err)
+		}
+		bucket.rejectRefill(refill)
+	}
+}
+
+func TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
+	bucket := newNonspecificBucket(testRateLimitID)
+	applyTestLease(bucket, 90, 100)
+
+	satisfied, refill, waiter := bucket.consume(100, true)
+	if satisfied || refill == nil || waiter != nil {
+		t.Fatalf("insufficient consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
+	}
+	if refill.request.RequestedUnits != 10 {
+		t.Fatalf("requested units = %d, want 10", refill.request.RequestedUnits)
+	}
+	if waiter := bucket.activateRefill(refill, 100, true, true); waiter != nil {
+		t.Fatal("operation larger than the refill request was admitted")
+	}
+
+	satisfied, _, _ = bucket.consume(90, true)
+	if !satisfied {
+		t.Fatal("positive local capacity was not left available for immediate consumption")
+	}
+	_, _, waiter = bucket.consume(10, true)
+	if waiter == nil {
+		t.Fatal("operation matching the refill request was not admitted")
+	}
+	_, _, waiter = bucket.consume(1, true)
+	if waiter != nil {
+		t.Fatal("waiter cost exceeded the requested-units admission budget")
+	}
+	bucket.rejectRefill(refill)
+}
+
+func TestAPIRateLimiterSubtractsOverdraftFromAdmissionBudget(t *testing.T) {
+	bucket := newNonspecificBucket(testRateLimitID)
+	applyTestLease(bucket, 0, 100)
+	_, refill, _ := bucket.consume(2, true)
+	bucket.activateRefill(refill, 0, false, true)
+
+	for range apiRateLimitOverdraftLimit {
+		satisfied, _, waiter := bucket.consume(1, true)
+		if !satisfied || waiter != nil {
+			t.Fatal("cost-1 operation did not use the available overdraft")
+		}
+	}
+	_, _, waiter := bucket.consume(95, true)
+	if waiter == nil {
+		t.Fatal("waiter matching the debt-adjusted budget was not admitted")
+	}
+	satisfied, _, waiter := bucket.consume(1, true)
+	if satisfied || waiter != nil {
+		t.Fatal("new overdraft or excess waiting was allowed with a waiter present")
+	}
+	bucket.rejectRefill(refill)
+}
+
+func TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
+	requests := make(chan []apiRateLimitLeaseRequest, 1)
+	release := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+		requests <- request
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return []apiRateLimitLeaseResult{{
+			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
+			GrantedUnits: 60, CapacityUnits: 100,
+		}}, nil
+	})
+	bucket := newNonspecificBucket(testRateLimitID)
+
+	resultA := make(chan error, 1)
+	resultB := make(chan error, 1)
+	resultC := make(chan error, 1)
+	go func() { resultA <- limiter.consume(context.Background(), bucket, 40) }()
+	<-requests
+	go func() { resultB <- limiter.consume(context.Background(), bucket, 30) }()
+	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 70 })
+	go func() { resultC <- limiter.consume(context.Background(), bucket, 20) }()
+	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 90 })
+	close(release)
+
+	if err := <-resultA; err != nil {
+		t.Fatalf("first waiter: %v", err)
+	}
+	if err := <-resultB; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("second waiter: %v", err)
+	}
+	if err := <-resultC; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("third waiter bypassed the FIFO head: %v", err)
+	}
+	available, _, _, _, _ := bucketSnapshot(bucket)
+	if available != 20 {
+		t.Fatalf("remaining capacity = %d, want 20", available)
+	}
+}
+
+func TestAPIRateLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
+	requests := make(chan []apiRateLimitLeaseRequest, 1)
+	release := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+		requests <- request
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return []apiRateLimitLeaseResult{{
+			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
+			GrantedUnits: 100, CapacityUnits: 100,
+		}}, nil
+	})
+	bucket := newNonspecificBucket(testRateLimitID)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	first := make(chan error, 1)
+	second := make(chan error, 1)
+	third := make(chan error, 1)
+	go func() { first <- limiter.consume(ctx, bucket, 60) }()
+	<-requests
+	go func() { second <- limiter.consume(context.Background(), bucket, 40) }()
+	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 100 })
+	cancel()
+	if err := <-first; !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled waiter: %v", err)
+	}
+	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 40 })
+	go func() { third <- limiter.consume(context.Background(), bucket, 60) }()
+	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 100 })
+	close(release)
+
+	if err := <-second; err != nil {
+		t.Fatalf("second waiter: %v", err)
+	}
+	if err := <-third; err != nil {
+		t.Fatalf("replacement waiter: %v", err)
+	}
+}
+
+func TestAPIRateLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+		close(started)
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return []apiRateLimitLeaseResult{{
+			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
+			CapacityUnits: 100,
+		}}, nil
+	})
+	limiter.maxWait = 10 * time.Millisecond
+	bucket := newNonspecificBucket(testRateLimitID)
+	result := make(chan error, 1)
+	go func() { result <- limiter.consume(context.Background(), bucket, 1) }()
+	<-started
+	if err := <-result; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("internal timeout: %v", err)
+	}
+	if pending := refillPendingCost(bucket); pending != 0 {
+		t.Fatalf("pending cost after timeout = %d, want 0", pending)
+	}
+	close(release)
+}
+
+func TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
+	started := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+		close(started)
+		<-ctx.Done()
+		return []apiRateLimitLeaseResult{{
+			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
+			GrantedUnits: 1, CapacityUnits: 100,
+		}}, nil
+	})
+	limiter.acquireTimeout = 10 * time.Millisecond
+	bucket := newNonspecificBucket(testRateLimitID)
+	result := make(chan error, 1)
+	go func() { result <- limiter.consume(context.Background(), bucket, 1) }()
+	<-started
+
+	select {
+	case err := <-result:
+		if !errors.Is(err, ErrAPICapacityExceeded) {
+			t.Fatalf("acquisition timeout: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("lease acquisition did not time out")
+	}
+	available, _, _, refillPending, _ := bucketSnapshot(bucket)
+	if refillPending || available != 0 {
+		t.Fatalf("state after acquisition timeout: pending=%t available=%d", refillPending, available)
+	}
+}
+
+func TestAPIRateLimiterCancellationAndGrantResolveOnce(t *testing.T) {
+	for range 100 {
+		bucket := newNonspecificBucket(testRateLimitID)
+		applyTestLease(bucket, 0, 100)
+		_, refill, _ := bucket.consume(2, true)
+		waiter := bucket.activateRefill(refill, 1, true, true)
+		if waiter == nil {
+			t.Fatal("waiter was not admitted")
+		}
+
+		start := make(chan struct{})
+		cancelResult := make(chan error, 1)
+		completed := make(chan struct{})
+		go func() {
+			<-start
+			cancelResult <- bucket.cancelWaiter(waiter, context.Canceled)
+		}()
+		go func() {
+			<-start
+			bucket.completeRefill(refill, 1, 100)
+			close(completed)
+		}()
+		close(start)
+		err := <-cancelResult
+		<-completed
+		available, _, _, queued, _ := bucketSnapshot(bucket)
+		if queued {
+			t.Fatal("completed generation remained attached")
+		}
+		switch {
+		case errors.Is(err, context.Canceled):
+			if available != 1 {
+				t.Fatalf("cancellation won but available capacity = %d, want 1", available)
+			}
+		case err == nil:
+			if available != 0 {
+				t.Fatalf("grant won but available capacity = %d, want 0", available)
+			}
+		default:
+			t.Fatalf("race result: %v", err)
+		}
+	}
+}
+
+func TestAPIRateLimiterIgnoresStaleGenerationResult(t *testing.T) {
+	bucket := newNonspecificBucket(testRateLimitID)
+	applyTestLease(bucket, 0, 100)
+	_, first, _ := bucket.consume(2, true)
+	bucket.activateRefill(first, 0, false, true)
+	bucket.rejectRefill(first)
+
+	_, second, _ := bucket.consume(2, true)
+	waiter := bucket.activateRefill(second, 1, true, true)
+	if waiter == nil {
+		t.Fatal("second-generation waiter was not admitted")
+	}
+	bucket.completeRefill(first, 100, 100)
+	bucket.mu.Lock()
+	current := bucket.refill
+	available := bucket.available
+	pending := waiter.element != nil
+	bucket.mu.Unlock()
+	if current != second || available != 0 || !pending {
+		t.Fatalf("stale result changed current generation: current=%p available=%d pending=%t", current, available, pending)
+	}
+
+	bucket.completeRefill(second, 1, 100)
+	<-waiter.refill.done
+	if waiter.err != nil {
+		t.Fatalf("second-generation waiter: %v", waiter.err)
 	}
 }
 
 func TestAPIRateLimiterQueuesOneRefill(t *testing.T) {
 	requests := make(chan []apiRateLimitLeaseRequest, 1)
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
 		requests <- request
-		<-release
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 		return []apiRateLimitLeaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 10, CapacityUnits: 100,
 		}}, nil
 	})
 	bucket := newNonspecificBucket(testRateLimitID)
-	if err := l.consume(bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("first cold bucket consume: got %v, want ErrAPICapacityExceeded", err)
-	}
-	for range 2 {
-		if err := l.consume(bucket, 1); err != nil {
-			t.Fatalf("overdraft consume: %v", err)
-		}
-	}
+	results := make(chan error, 3)
+	go func() { results <- l.consume(context.Background(), bucket, 1) }()
 	if request := <-requests; len(request) != 1 {
 		t.Fatalf("batch contains %d requests, want 1", len(request))
 	}
+	for range 2 {
+		go func() { results <- l.consume(context.Background(), bucket, 1) }()
+	}
+	waitForRateLimit(t, func() bool {
+		bucket.mu.Lock()
+		defer bucket.mu.Unlock()
+		return bucket.refill != nil && bucket.refill.pendingCost == 3
+	})
 	close(release)
+	for range 3 {
+		if err := <-results; err != nil {
+			t.Fatalf("consume after refill: %v", err)
+		}
+	}
 	waitForRateLimit(t, func() bool {
 		available, _, _, queued, _ := bucketSnapshot(bucket)
-		return !queued && available == 8
+		return !queued && available == 7
 	})
 }
 
 func TestAPIRateLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	requests := make(chan []apiRateLimitLeaseRequest, 1)
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
-		requests <- request
-		results := make([]apiRateLimitLeaseResult, len(request))
-		for i, r := range request {
-			results[i] = apiRateLimitLeaseResult{SubjectKind: r.SubjectKind, SubjectID: r.SubjectID, CapacityUnits: 100}
+	limiter := &rateLimiter{
+		now:         time.Now,
+		maxWait:     apiRateLimitMaxWaitDuration,
+		refillQueue: make(chan *rateLimitRefill, apiRateLimitQueueSize),
+		acquireLeases: func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+			requests <- request
+			results := make([]apiRateLimitLeaseResult, len(request))
+			for i, r := range request {
+				results[i] = apiRateLimitLeaseResult{SubjectKind: r.SubjectKind, SubjectID: r.SubjectID, CapacityUnits: 100}
+			}
+			return results, nil
+		},
+	}
+	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
+	limiter.close.Add(1)
+	t.Cleanup(limiter.Close)
+
+	refills := make([]*rateLimitRefill, 0, 2)
+	waiters := make([]*rateLimitWaiter, 0, 2)
+	for _, bucket := range []*rateLimitBucket{newNonspecificBucket("111111111111"), newWorkspaceBucket("222222222222")} {
+		_, refill, _ := bucket.consume(1, true)
+		waiter := bucket.activateRefill(refill, 1, true, true)
+		if waiter == nil {
+			t.Fatal("waiter was not admitted")
 		}
-		return results, nil
-	})
-	if err := l.consume(newNonspecificBucket("111111111111"), 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatal(err)
+		refills = append(refills, refill)
+		waiters = append(waiters, waiter)
+		limiter.refillQueue <- refill
 	}
-	if err := l.consume(newWorkspaceBucket("222222222222"), 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatal(err)
-	}
+	go limiter.runBatcher()
+
 	if request := <-requests; len(request) != 2 {
 		t.Fatalf("batch contains %d requests, want 2", len(request))
+	}
+	for i, refill := range refills {
+		<-refill.done
+		if !errors.Is(waiters[i].err, ErrAPICapacityExceeded) {
+			t.Fatalf("waiter with zero grant: %v", waiters[i].err)
+		}
 	}
 }
 
 func TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
 		close(started)
-		<-release
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 		return []apiRateLimitLeaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 20, CapacityUnits: 100,
 		}}, nil
 	})
 	bucket := newNonspecificBucket(testRateLimitID)
-	bucket.applyLease(10, 100)
-	if err := l.consume(bucket, 1); err != nil {
+	applyTestLease(bucket, 10, 100)
+	if err := l.consume(context.Background(), bucket, 1); err != nil {
 		t.Fatal(err)
 	}
 	<-started
-	if err := l.consume(bucket, 5); err != nil {
+	if err := l.consume(context.Background(), bucket, 5); err != nil {
 		t.Fatal(err)
 	}
 	close(release)
@@ -446,8 +807,8 @@ func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 	})
 	l.now = clock.Now
 	bucket := newNonspecificBucket(testRateLimitID)
-	bucket.applyLease(2, 100)
-	if err := l.consume(bucket, 1); err != nil {
+	applyTestLease(bucket, 2, 100)
+	if err := l.consume(context.Background(), bucket, 1); err != nil {
 		t.Fatalf("initial consume: %v", err)
 	}
 	waitForRateLimit(t, func() bool {
@@ -462,25 +823,24 @@ func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 		t.Fatal("failed refill remained queued")
 	}
 
-	if err := l.consume(bucket, 1); err != nil {
+	if err := l.consume(context.Background(), bucket, 1); err != nil {
 		t.Fatalf("consume local capacity during backoff: %v", err)
 	}
-	if err := l.consume(bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("consume overdraft during backoff: got %v, want ErrAPICapacityExceeded", err)
 	}
 	if calls.Load() != 1 {
 		t.Fatalf("refill attempts during backoff = %d, want 1", calls.Load())
 	}
 	overdraftBucket := newWorkspaceBucket("222222222222")
-	overdraftBucket.mu.Lock()
-	overdraftBucket.refillQueued = true
-	overdraftBucket.mu.Unlock()
-	if err := l.consume(overdraftBucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
+	_, refill, _ := overdraftBucket.consume(2, true)
+	overdraftBucket.activateRefill(refill, 0, false, true)
+	if err := l.consume(context.Background(), overdraftBucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("overdraft during global backoff: got %v, want ErrAPICapacityExceeded", err)
 	}
 
 	clock.Set(retryAt)
-	if err := l.consume(bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("consume after backoff: got %v, want ErrAPICapacityExceeded", err)
 	}
 	waitForRateLimit(t, func() bool {
@@ -535,7 +895,7 @@ func TestAPIRateLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 			})
 			l.now = clock.Now
 			bucket := newNonspecificBucket(testRateLimitID)
-			_ = l.consume(bucket, 1)
+			_ = l.consume(context.Background(), bucket, 1)
 			waitForRateLimit(t, func() bool {
 				return !rateLimiterRetryAfter(l).IsZero()
 			})
@@ -554,10 +914,9 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 	l.refillRetryAfter.Store(clock.Now().Add(apiRateLimitRefillBackoffDuration).UnixNano())
 
 	queued := newNonspecificBucket(testRateLimitID)
-	queued.mu.Lock()
-	queued.refillQueued = true
-	queued.mu.Unlock()
-	l.refillQueue <- queued
+	_, queuedRefill, _ := queued.consume(2, true)
+	queued.activateRefill(queuedRefill, 0, false, true)
+	l.refillQueue <- queuedRefill
 	waitForRateLimit(t, func() bool {
 		_, _, _, refillQueued, _ := bucketSnapshot(queued)
 		return !refillQueued
@@ -570,7 +929,7 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 	var wg sync.WaitGroup
 	for range 100 {
 		wg.Go(func() {
-			if err := l.consume(bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
+			if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
 				t.Errorf("consume during global backoff: got %v, want ErrAPICapacityExceeded", err)
 			}
 		})
@@ -584,16 +943,15 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 
 func TestAPIRateLimiterLimitsConcurrentOverdraft(t *testing.T) {
 	bucket := newNonspecificBucket(testRateLimitID)
-	bucket.mu.Lock()
-	bucket.refillQueued = true
-	bucket.mu.Unlock()
+	_, refill, _ := bucket.consume(2, true)
+	bucket.activateRefill(refill, 0, false, true)
 
 	var successful atomic.Int32
 	var wg sync.WaitGroup
 	for range 100 {
 		wg.Go(func() {
-			exceeded, _ := bucket.consume(1, true)
-			if !exceeded {
+			satisfied, _, _ := bucket.consume(1, true)
+			if satisfied {
 				successful.Add(1)
 			}
 		})
@@ -608,9 +966,13 @@ func TestAPIRateLimiterLimitsConcurrentOverdraft(t *testing.T) {
 func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
 		close(started)
-		<-release
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 		return []apiRateLimitLeaseResult{{
 			SubjectKind:   request[0].SubjectKind,
 			SubjectID:     request[0].SubjectID,
@@ -619,9 +981,13 @@ func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 		}}, nil
 	})
 	bucket := newNonspecificBucket(testRateLimitID)
-	_ = l.consume(bucket, 1)
+	result := make(chan error, 1)
+	go func() { result <- l.consume(context.Background(), bucket, 1) }()
 	<-started
 	bucket.disable()
+	if err := <-result; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("disabled waiter: %v", err)
+	}
 	close(release)
 	waitForRateLimit(t, func() bool {
 		available, _, _, queued, disabled := bucketSnapshot(bucket)
@@ -632,15 +998,15 @@ func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 func TestAPIRateLimiterQueueFullDoesNotEnableOverdraft(t *testing.T) {
 	l := &rateLimiter{
 		now:         time.Now,
-		refillQueue: make(chan *rateLimitBucket, 1),
+		refillQueue: make(chan *rateLimitRefill, 1),
 	}
-	l.refillQueue <- newNonspecificBucket("222222222222")
+	l.refillQueue <- &rateLimitRefill{}
 	bucket := newNonspecificBucket(testRateLimitID)
 
-	if err := l.consume(bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("consume with a full queue: got %v, want ErrAPICapacityExceeded", err)
 	}
-	if err := l.consume(bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
 		t.Fatalf("overdraft after a full queue: got %v, want ErrAPICapacityExceeded", err)
 	}
 	if !rateLimiterRetryAfter(l).IsZero() {
@@ -652,24 +1018,56 @@ func TestAPIRateLimiterQueueFullDoesNotEnableOverdraft(t *testing.T) {
 	}
 }
 
-func TestAPIRateLimiterShutdownDoesNotBackOff(t *testing.T) {
+func TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	started := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, _ []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
 		close(started)
 		<-ctx.Done()
-		return nil, ctx.Err()
+		return []apiRateLimitLeaseResult{{
+			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
+			GrantedUnits: 1, CapacityUnits: 100,
+		}}, nil
 	})
 	bucket := newNonspecificBucket(testRateLimitID)
-	_ = l.consume(bucket, 1)
+	result := make(chan error, 1)
+	go func() { result <- l.consume(context.Background(), bucket, 1) }()
 	<-started
 	l.Close()
+	if err := <-result; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("waiter after shutdown: %v", err)
+	}
 
 	if !rateLimiterRetryAfter(l).IsZero() {
 		t.Fatal("shutdown started global backoff")
 	}
-	_, _, _, queued, _ := bucketSnapshot(bucket)
-	if queued {
-		t.Fatal("shutdown left refill queued")
+	available, _, _, queued, _ := bucketSnapshot(bucket)
+	if queued || available != 0 {
+		t.Fatalf("state after shutdown: queued=%t available=%d", queued, available)
+	}
+}
+
+func TestAPIRateLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
+	started := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+		close(started)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+	firstBucket := newNonspecificBucket(testRateLimitID)
+	secondBucket := newWorkspaceBucket("222222222222")
+	first := make(chan error, 1)
+	second := make(chan error, 1)
+	go func() { first <- limiter.consume(context.Background(), firstBucket, 1) }()
+	<-started
+	go func() { second <- limiter.consume(context.Background(), secondBucket, 1) }()
+	waitForRateLimit(t, func() bool { return refillPendingCost(secondBucket) == 1 })
+
+	limiter.Close()
+	if err := <-first; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("in-flight waiter after shutdown: %v", err)
+	}
+	if err := <-second; !errors.Is(err, ErrAPICapacityExceeded) {
+		t.Fatalf("buffered waiter after shutdown: %v", err)
 	}
 }
 
@@ -679,11 +1077,10 @@ func TestAPIRateLimiterShutdownFinishesCollectedRefill(t *testing.T) {
 	l.close.cancel()
 
 	bucket := newNonspecificBucket(testRateLimitID)
-	bucket.mu.Lock()
-	bucket.refillQueued = true
-	bucket.mu.Unlock()
+	_, refill, _ := bucket.consume(2, true)
+	bucket.activateRefill(refill, 0, false, true)
 
-	if l.collectAndRefillBatch(bucket) {
+	if l.collectAndRefillBatch(refill) {
 		t.Fatal("batch collection continued after shutdown")
 	}
 	_, _, _, queued, _ := bucketSnapshot(bucket)

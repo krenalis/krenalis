@@ -423,11 +423,13 @@ func (this *Workspace) Connections() []*Connection {
 //
 // It returns ErrInvalidAPICost if cost is outside the supported range, or
 // ErrAPICapacityExceeded if the workspace does not currently have enough
-// capacity. Capacity is leased asynchronously, so the first call for a
-// workspace on a node can be rejected while a refill is in progress.
-func (this *Workspace) ConsumeRateLimitCapacity(cost int) error {
+// capacity after an admitted refill completes. The call respects ctx and may
+// wait for at most one refill when local capacity is insufficient. Waiting is
+// also limited to one second; that internal timeout returns
+// ErrAPICapacityExceeded, while caller cancellation preserves the context error.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	this.core.mustBeOpen()
-	return this.workspace.ConsumeRateLimitCapacity(cost)
+	return this.workspace.ConsumeRateLimitCapacity(ctx, cost)
 }
 
 // CreateConnection creates a new connection. authToken is an authorization
