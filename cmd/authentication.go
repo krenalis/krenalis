@@ -18,43 +18,6 @@ import (
 // capacity.
 const x1 = 1
 
-// rateLimitCapacityConsumer is a subject that can consume API rate-limit
-// capacity.
-type rateLimitCapacityConsumer interface {
-	ConsumeRateLimitCapacity(context.Context, int) error
-}
-
-// authenticatedRequest contains the organization and optional workspace
-// identified by the request's credentials. Admin requests are exempt from API
-// rate limiting.
-type authenticatedRequest struct {
-	organization    *core.Organization
-	workspace       *core.Workspace
-	rateLimitExempt bool
-}
-
-// applyRateLimitTo consumes capacity from subject unless the request is exempt.
-func (authenticated authenticatedRequest) applyRateLimitTo(ctx context.Context, subject rateLimitCapacityConsumer, cost int) error {
-	if authenticated.rateLimitExempt {
-		return nil
-	}
-	err := subject.ConsumeRateLimitCapacity(ctx, cost)
-	if errors.Is(err, core.ErrAPICapacityExceeded) {
-		return errors.TooManyRequests("API rate limit exceeded")
-	}
-	return err
-}
-
-// scopedRateLimitSubject returns the subject whose budget applies to the
-// request: the workspace for a workspace-scoped request, or the organization
-// otherwise.
-func (authenticated authenticatedRequest) scopedRateLimitSubject() rateLimitCapacityConsumer {
-	if authenticated.workspace != nil {
-		return authenticated.workspace
-	}
-	return authenticated.organization
-}
-
 // admitGlobalRequest authenticates a request for a global resource and applies
 // the nonspecific rate-limit budget of the authenticated organization, unless
 // the request is from the Admin console.
@@ -275,4 +238,41 @@ func (s *apisServer) authenticateRequest(r *http.Request) (authenticatedRequest,
 		return authenticatedRequest{}, err
 	}
 	return authenticatedRequest{organization: org, workspace: ws, rateLimitExempt: true}, nil
+}
+
+// rateLimitCapacityConsumer is a subject that can consume API rate-limit
+// capacity.
+type rateLimitCapacityConsumer interface {
+	ConsumeRateLimitCapacity(context.Context, int) error
+}
+
+// authenticatedRequest contains the organization and optional workspace
+// identified by the request's credentials. Admin requests are exempt from API
+// rate limiting.
+type authenticatedRequest struct {
+	organization    *core.Organization
+	workspace       *core.Workspace
+	rateLimitExempt bool
+}
+
+// applyRateLimitTo consumes capacity from subject unless the request is exempt.
+func (authenticated authenticatedRequest) applyRateLimitTo(ctx context.Context, subject rateLimitCapacityConsumer, cost int) error {
+	if authenticated.rateLimitExempt {
+		return nil
+	}
+	err := subject.ConsumeRateLimitCapacity(ctx, cost)
+	if errors.Is(err, core.ErrAPICapacityExceeded) {
+		return errors.TooManyRequests("API rate limit exceeded")
+	}
+	return err
+}
+
+// scopedRateLimitSubject returns the subject whose budget applies to the
+// request: the workspace for a workspace-scoped request, or the organization
+// otherwise.
+func (authenticated authenticatedRequest) scopedRateLimitSubject() rateLimitCapacityConsumer {
+	if authenticated.workspace != nil {
+		return authenticated.workspace
+	}
+	return authenticated.organization
 }
