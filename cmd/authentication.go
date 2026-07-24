@@ -236,11 +236,9 @@ func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
 // unauthorized errors. Other validation, organization, and workspace errors
 // are returned unchanged.
 func (s *apisServer) authenticateRequest(r *http.Request) (authenticatedRequest, error) {
-
 	if auth, ok := r.Header["Authorization"]; ok {
 		return s.authenticateAPIKeyRequest(r, auth)
 	}
-
 	org, ws, _, err := s.authenticateAdminRequest(r)
 	if err != nil {
 		return authenticatedRequest{}, err
