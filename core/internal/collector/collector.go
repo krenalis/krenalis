@@ -791,6 +791,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	var destinations []string
 
 	var observedEvents []events.Event
+	var pendingReceivePassed []string
+	var pendingFilterPassed []string
+	var pendingFilterFailed []string
 
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
@@ -817,12 +820,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !p.Enabled || p.Target != state.TargetEvent {
 				continue
 			}
-			c.metrics.ReceivePassed(p.ID, 1)
+			pendingReceivePassed = append(pendingReceivePassed, p.ID)
 			if !filters.Applies(p.Filter, event) {
-				c.metrics.FilterFailed(p.ID, 1)
+				pendingFilterFailed = append(pendingFilterFailed, p.ID)
 				continue
 			}
-			c.metrics.FilterPassed(p.ID, 1)
+			pendingFilterPassed = append(pendingFilterPassed, p.ID)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -833,12 +836,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !p.Enabled || p.Target != state.TargetUser {
 				continue
 			}
-			c.metrics.ReceivePassed(p.ID, 1)
+			pendingReceivePassed = append(pendingReceivePassed, p.ID)
 			if !filters.Applies(p.Filter, event) {
-				c.metrics.FilterFailed(p.ID, 1)
+				pendingFilterFailed = append(pendingFilterFailed, p.ID)
 				continue
 			}
-			c.metrics.FilterPassed(p.ID, 1)
+			pendingFilterPassed = append(pendingFilterPassed, p.ID)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -854,12 +857,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				if !p.Enabled || p.Target != state.TargetEvent {
 					continue
 				}
-				c.metrics.ReceivePassed(p.ID, 1)
+				pendingReceivePassed = append(pendingReceivePassed, p.ID)
 				if !filters.Applies(p.Filter, event) {
-					c.metrics.FilterFailed(p.ID, 1)
+					pendingFilterFailed = append(pendingFilterFailed, p.ID)
 					continue
 				}
-				c.metrics.FilterPassed(p.ID, 1)
+				pendingFilterPassed = append(pendingFilterPassed, p.ID)
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {
@@ -884,6 +887,15 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	for _, pipeline := range pendingReceivePassed {
+		c.metrics.ReceivePassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingFilterPassed {
+		c.metrics.FilterPassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingFilterFailed {
+		c.metrics.FilterFailed(pipeline, 1)
+	}
 	for _, event := range observedEvents {
 		observer.addEvent(event)
 	}
