@@ -17,61 +17,59 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// cookieTestKMS records cookie key load calls in tests.
-type cookieTestKMS struct {
-	calls int
-	load  func(context.Context) ([]byte, error)
-}
+// TestWriteSessionCookie verifies session cookie creation and replacement.
+func TestWriteSessionCookie(t *testing.T) {
 
-// Load returns cookie test keys.
-func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, error) {
-	k.calls++
-	return k.load(ctx)
-}
-
-// errReader always returns its configured error.
-type errReader struct {
-	err error
-}
-
-// Read returns the configured error without producing bytes.
-func (r errReader) Read(p []byte) (int, error) {
-	return 0, r.err
-}
-
-// TestMaxBytesNormalizedReader verifies request body normalization and limits.
-func TestMaxBytesNormalizedReader(t *testing.T) {
-
-	t.Run("normalizes body", func(t *testing.T) {
-		const payload = "{\"text\":\"Cafe\u0301\"}"
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
-		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-		w := httptest.NewRecorder()
-		req.Body = maxBytesNormalizedReader(w, req.Body, maxRequestSize)
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			t.Fatalf("expected to read body, got %v", err)
-		}
-		if string(body) != "{\"text\":\"Café\"}" {
-			t.Fatalf("expected normalized body {\"text\":\"Café\"}, got %q", string(body))
+	t.Run("ignores empty cookie string", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		writeSessionCookie(recorder, &http.Cookie{})
+		if got := recorder.Header()["Set-Cookie"]; len(got) != 0 {
+			t.Fatalf("expected no Set-Cookie header, got %v", got)
 		}
 	})
 
-	t.Run("fails when payload exceeds limit", func(t *testing.T) {
-		oversized := bytes.Repeat([]byte{'a'}, maxRequestSize+1)
-		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(oversized))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		req.Body = maxBytesNormalizedReader(w, req.Body, maxRequestSize)
-		body, err := io.ReadAll(req.Body)
-		if err == nil {
-			t.Fatalf("expected error, got nil")
+	t.Run("adds new session cookie", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		recorder.Header().Add("Set-Cookie", "other=1")
+
+		writeSessionCookie(recorder, &http.Cookie{
+			Name:  sessionCookieName,
+			Value: "abc",
+		})
+
+		got := recorder.Header()["Set-Cookie"]
+		want := []string{"other=1", sessionCookieName + "=abc; Priority=High"}
+		if len(got) != len(want) {
+			t.Fatalf("expected %d set-cookie values, got %d: %v", len(want), len(got), got)
 		}
-		if _, ok := err.(*http.MaxBytesError); !ok {
-			t.Fatalf("expected http.MaxBytesError error, got %T", err)
+		for i := range want {
+			if got[i] != want[i] {
+				t.Fatalf("expected Set-Cookie[%d] to be %q, got %q", i, want[i], got[i])
+			}
 		}
-		if len(body) > maxRequestSize {
-			t.Fatalf("expected at most %d bytes, got %d", maxRequestSize, len(body))
+	})
+
+	t.Run("overwrites existing session cookie", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		recorder.Header()["Set-Cookie"] = []string{
+			"other=1",
+			sessionCookieName + "=old",
+		}
+
+		writeSessionCookie(recorder, &http.Cookie{
+			Name:  sessionCookieName,
+			Value: "new",
+		})
+
+		got := recorder.Header()["Set-Cookie"]
+		want := []string{"other=1", sessionCookieName + "=new; Priority=High"}
+		if len(got) != len(want) {
+			t.Fatalf("expected %d set-cookie values, got %d: %v", len(want), len(got), got)
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Fatalf("expected Set-Cookie[%d] to be %q, got %q", i, want[i], got[i])
+			}
 		}
 	})
 
@@ -231,6 +229,18 @@ func TestValidateForbiddenBody(t *testing.T) {
 	})
 }
 
+// cookieTestKMS records cookie key load calls in tests.
+type cookieTestKMS struct {
+	calls int
+	load  func(context.Context) ([]byte, error)
+}
+
+// Load returns cookie test keys.
+func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, error) {
+	k.calls++
+	return k.load(ctx)
+}
+
 // TestValidateRequiredBody tests the validateRequiredBody function.
 func TestValidateRequiredBody(t *testing.T) {
 
@@ -329,60 +339,50 @@ func TestValidateRequiredBody(t *testing.T) {
 
 }
 
-// TestWriteSessionCookie verifies session cookie creation and replacement.
-func TestWriteSessionCookie(t *testing.T) {
+// TestMaxBytesNormalizedReader verifies request body normalization and limits.
+func TestMaxBytesNormalizedReader(t *testing.T) {
 
-	t.Run("ignores empty cookie string", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		writeSessionCookie(recorder, &http.Cookie{})
-		if got := recorder.Header()["Set-Cookie"]; len(got) != 0 {
-			t.Fatalf("expected no Set-Cookie header, got %v", got)
+	t.Run("normalizes body", func(t *testing.T) {
+		const payload = "{\"text\":\"Cafe\u0301\"}"
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		w := httptest.NewRecorder()
+		req.Body = maxBytesNormalizedReader(w, req.Body, maxRequestSize)
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("expected to read body, got %v", err)
+		}
+		if string(body) != "{\"text\":\"Café\"}" {
+			t.Fatalf("expected normalized body {\"text\":\"Café\"}, got %q", string(body))
 		}
 	})
 
-	t.Run("adds new session cookie", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		recorder.Header().Add("Set-Cookie", "other=1")
-
-		writeSessionCookie(recorder, &http.Cookie{
-			Name:  sessionCookieName,
-			Value: "abc",
-		})
-
-		got := recorder.Header()["Set-Cookie"]
-		want := []string{"other=1", sessionCookieName + "=abc; Priority=High"}
-		if len(got) != len(want) {
-			t.Fatalf("expected %d set-cookie values, got %d: %v", len(want), len(got), got)
+	t.Run("fails when payload exceeds limit", func(t *testing.T) {
+		oversized := bytes.Repeat([]byte{'a'}, maxRequestSize+1)
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(oversized))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		req.Body = maxBytesNormalizedReader(w, req.Body, maxRequestSize)
+		body, err := io.ReadAll(req.Body)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
 		}
-		for i := range want {
-			if got[i] != want[i] {
-				t.Fatalf("expected Set-Cookie[%d] to be %q, got %q", i, want[i], got[i])
-			}
+		if _, ok := err.(*http.MaxBytesError); !ok {
+			t.Fatalf("expected http.MaxBytesError error, got %T", err)
+		}
+		if len(body) > maxRequestSize {
+			t.Fatalf("expected at most %d bytes, got %d", maxRequestSize, len(body))
 		}
 	})
 
-	t.Run("overwrites existing session cookie", func(t *testing.T) {
-		recorder := httptest.NewRecorder()
-		recorder.Header()["Set-Cookie"] = []string{
-			"other=1",
-			sessionCookieName + "=old",
-		}
+}
 
-		writeSessionCookie(recorder, &http.Cookie{
-			Name:  sessionCookieName,
-			Value: "new",
-		})
+// errReader always returns its configured error.
+type errReader struct {
+	err error
+}
 
-		got := recorder.Header()["Set-Cookie"]
-		want := []string{"other=1", sessionCookieName + "=new; Priority=High"}
-		if len(got) != len(want) {
-			t.Fatalf("expected %d set-cookie values, got %d: %v", len(want), len(got), got)
-		}
-		for i := range want {
-			if got[i] != want[i] {
-				t.Fatalf("expected Set-Cookie[%d] to be %q, got %q", i, want[i], got[i])
-			}
-		}
-	})
-
+// Read returns the configured error without producing bytes.
+func (r errReader) Read(p []byte) (int, error) {
+	return 0, r.err
 }
