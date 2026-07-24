@@ -267,6 +267,9 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, err
 	}
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+		return nil, err
+	}
 
 	// Parse start.
 	s := r.PathValue("start")
@@ -305,6 +308,9 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, err
 	}
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+		return nil, err
+	}
 
 	// Parse days.
 	n := r.PathValue("days")
@@ -336,6 +342,9 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, err
 	}
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+		return nil, err
+	}
 
 	// Parse hours.
 	n := r.PathValue("hours")
@@ -365,6 +374,9 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 
 	authenticated, err := organization.authenticateRequest(r)
 	if err != nil {
+		return nil, err
+	}
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
 		return nil, err
 	}
 
