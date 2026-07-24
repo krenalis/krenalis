@@ -267,7 +267,7 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, err
 	}
-	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 
@@ -308,7 +308,7 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, err
 	}
-	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 
@@ -342,7 +342,7 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, err
 	}
-	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 
@@ -376,7 +376,7 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 	if err != nil {
 		return nil, err
 	}
-	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, x1); err != nil {
+	if err := authenticated.applyRateLimit(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 

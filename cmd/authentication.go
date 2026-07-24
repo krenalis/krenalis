@@ -44,6 +44,15 @@ type rateLimitCapacityConsumer interface {
 	ConsumeRateLimitCapacity(context.Context, int) error
 }
 
+// scopedRateLimitSubject returns the workspace budget for an operation scoped
+// to a workspace, or the organization's nonspecific budget otherwise.
+func (authenticated authenticatedRequest) scopedRateLimitSubject() rateLimitCapacityConsumer {
+	if authenticated.workspace != nil {
+		return authenticated.workspace
+	}
+	return authenticated.organization
+}
+
 // admitNonspecificRequest authenticates a request that is not in a specific
 // API category and applies the organization's rate-limit policy.
 func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int) (authenticatedRequest, error) {

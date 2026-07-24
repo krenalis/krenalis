@@ -17,12 +17,13 @@ package state
 //   - workspace operations, which act on one specific workspace;
 //   - ingestion operations, which write events to one specific workspace;
 //   - nonspecific operations, which do not belong to a workspace-specific API
-//     category.
+//     category and are not scoped to a workspace.
 //
 // Exactly one budget applies to each request. A workspace request does not also
 // consume the organization's nonspecific budget. An ingestion request does not
-// consume either normal API budget. A nonspecific request does not consume
-// capacity assigned to any workspace.
+// consume either normal API budget. An unscoped nonspecific request does not
+// consume capacity assigned to any workspace. A rate-limited pipeline metrics
+// request uses the workspace budget when authentication scopes it to one.
 //
 // Budgets belong to organizations and workspaces, not to individual API keys.
 //

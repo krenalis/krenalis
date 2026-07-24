@@ -107,3 +107,16 @@ func TestApplyRateLimit(t *testing.T) {
 		}
 	})
 }
+
+// TestScopedRateLimitSubject verifies budget selection for scope-aware requests.
+func TestScopedRateLimitSubject(t *testing.T) {
+	organization := &core.Organization{}
+	workspace := &core.Workspace{}
+
+	if got := (authenticatedRequest{organization: organization}).scopedRateLimitSubject(); got != organization {
+		t.Fatalf("unscoped rate-limit subject = %T, want organization", got)
+	}
+	if got := (authenticatedRequest{organization: organization, workspace: workspace}).scopedRateLimitSubject(); got != workspace {
+		t.Fatalf("scoped rate-limit subject = %T, want workspace", got)
+	}
+}
