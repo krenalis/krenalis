@@ -33,8 +33,8 @@ type authenticatedRequest struct {
 	rateLimitExempt bool
 }
 
-// applyRateLimit consumes capacity from subject unless the request is exempt.
-func (authenticated authenticatedRequest) applyRateLimit(ctx context.Context, subject rateLimitCapacityConsumer, cost int) error {
+// applyRateLimitTo consumes capacity from subject unless the request is exempt.
+func (authenticated authenticatedRequest) applyRateLimitTo(ctx context.Context, subject rateLimitCapacityConsumer, cost int) error {
 	if authenticated.rateLimitExempt {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int)
 	if err != nil {
 		return authenticatedRequest{}, err
 	}
-	if err := authenticated.applyRateLimit(r.Context(), authenticated.organization, rateLimitCost); err != nil {
+	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.organization, rateLimitCost); err != nil {
 		return authenticatedRequest{}, err
 	}
 	return authenticated, nil
@@ -78,7 +78,7 @@ func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (
 	if authenticated.workspace == nil {
 		return nil, errMissingWorkspace
 	}
-	if err := authenticated.applyRateLimit(r.Context(), authenticated.workspace, rateLimitCost); err != nil {
+	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.workspace, rateLimitCost); err != nil {
 		return nil, err
 	}
 	return authenticated.workspace, nil

@@ -29,14 +29,14 @@ func (subject *rateLimitSubjectStub) ConsumeRateLimitCapacity(_ context.Context,
 	return subject.err
 }
 
-// TestApplyRateLimit verifies rate-limit exemptions, consumption, and errors.
-func TestApplyRateLimit(t *testing.T) {
+// TestApplyRateLimitTo verifies rate-limit exemptions, consumption, and errors.
+func TestApplyRateLimitTo(t *testing.T) {
 
 	t.Run("skips Admin authentication", func(t *testing.T) {
 		subject := &rateLimitSubjectStub{}
 		authenticated := authenticatedRequest{rateLimitExempt: true}
 
-		err := authenticated.applyRateLimit(context.Background(), subject, 3)
+		err := authenticated.applyRateLimitTo(context.Background(), subject, 3)
 		if err != nil {
 			t.Fatalf("apply rate limit: %v", err)
 		}
@@ -49,7 +49,7 @@ func TestApplyRateLimit(t *testing.T) {
 		organization := &rateLimitSubjectStub{}
 		authenticated := authenticatedRequest{}
 
-		err := authenticated.applyRateLimit(context.Background(), organization, 3)
+		err := authenticated.applyRateLimitTo(context.Background(), organization, 3)
 		if err != nil {
 			t.Fatalf("apply rate limit: %v", err)
 		}
@@ -62,7 +62,7 @@ func TestApplyRateLimit(t *testing.T) {
 		workspace := &rateLimitSubjectStub{}
 		authenticated := authenticatedRequest{}
 
-		err := authenticated.applyRateLimit(context.Background(), workspace, 3)
+		err := authenticated.applyRateLimitTo(context.Background(), workspace, 3)
 		if err != nil {
 			t.Fatalf("apply rate limit: %v", err)
 		}
@@ -74,7 +74,7 @@ func TestApplyRateLimit(t *testing.T) {
 	t.Run("maps exhausted capacity to Too Many Requests", func(t *testing.T) {
 		subject := &rateLimitSubjectStub{err: core.ErrAPICapacityExceeded}
 
-		err := (authenticatedRequest{}).applyRateLimit(context.Background(), subject, 3)
+		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
 		rateLimitError, ok := err.(*errors.TooManyRequestsError)
 		if !ok {
 			t.Fatalf("expected TooManyRequestsError, got %T", err)
@@ -91,7 +91,7 @@ func TestApplyRateLimit(t *testing.T) {
 	t.Run("propagates invalid API costs", func(t *testing.T) {
 		subject := &rateLimitSubjectStub{err: core.ErrInvalidAPICost}
 
-		err := (authenticatedRequest{}).applyRateLimit(context.Background(), subject, 3)
+		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
 		if !stderrors.Is(err, core.ErrInvalidAPICost) {
 			t.Fatalf("expected invalid API cost, got %v", err)
 		}
@@ -101,7 +101,7 @@ func TestApplyRateLimit(t *testing.T) {
 		operationalError := stderrors.New("rate limiter unavailable")
 		subject := &rateLimitSubjectStub{err: operationalError}
 
-		err := (authenticatedRequest{}).applyRateLimit(context.Background(), subject, 3)
+		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
 		if !stderrors.Is(err, operationalError) {
 			t.Fatalf("expected operational error, got %v", err)
 		}
