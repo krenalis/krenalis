@@ -257,7 +257,7 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 // specified start and end dates.
 func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
+	org, ws, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -278,8 +278,8 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 
 	// Set workspace.
 	var workspace string
-	if authenticated.workspace != nil {
-		workspace = authenticated.workspace.ID
+	if ws != nil {
+		workspace = ws.ID
 	}
 
 	// Parse selection.
@@ -288,14 +288,14 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 		return nil, err
 	}
 
-	return authenticated.organization.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
+	return org.PipelineMetricsPerDate(r.Context(), start, end, workspace, selection)
 }
 
 // PipelineMetricsPerDay returns the pipeline metrics for a specified number of
 // days.
 func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
+	org, ws, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -309,8 +309,8 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 
 	// Set workspace.
 	var workspace string
-	if authenticated.workspace != nil {
-		workspace = authenticated.workspace.ID
+	if ws != nil {
+		workspace = ws.ID
 	}
 
 	// Parse selection.
@@ -319,14 +319,14 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 		return nil, err
 	}
 
-	return authenticated.organization.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), days, core.Day, workspace, selection)
 }
 
 // PipelineMetricsPerHour returns the pipeline metrics for a specified number of
 // hours.
 func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
+	org, ws, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -340,8 +340,8 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 
 	// Set workspace.
 	var workspace string
-	if authenticated.workspace != nil {
-		workspace = authenticated.workspace.ID
+	if ws != nil {
+		workspace = ws.ID
 	}
 
 	// Parse selection.
@@ -350,14 +350,14 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 		return nil, err
 	}
 
-	return authenticated.organization.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), hours, core.Hour, workspace, selection)
 }
 
 // PipelineMetricsPerMinute returns the pipeline metrics for a specified number
 // of minutes.
 func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
+	org, ws, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -371,8 +371,8 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 
 	// Set workspace.
 	var workspace string
-	if authenticated.workspace != nil {
-		workspace = authenticated.workspace.ID
+	if ws != nil {
+		workspace = ws.ID
 	}
 
 	// Parse selection.
@@ -381,7 +381,7 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 		return nil, err
 	}
 
-	return authenticated.organization.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
+	return org.PipelineMetricsPerTimeUnit(r.Context(), minutes, core.Minute, workspace, selection)
 }
 
 // SetStatus sets the status of an organization.

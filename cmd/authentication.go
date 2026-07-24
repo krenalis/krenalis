@@ -40,18 +40,19 @@ func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int
 // admitWorkspaceOptionalRequest authenticates a request for which selecting a
 // workspace is optional. Unless the request comes from the Admin console, it
 // applies the selected workspace's rate-limit budget or, if no workspace is
-// selected, the authenticated organization's nonspecific budget.
+// selected, the authenticated organization's nonspecific budget. It returns
+// the authenticated organization and optional workspace.
 //
 // See also [admitOrganizationRequest] and [admitWorkspaceRequest].
-func (s *apisServer) admitWorkspaceOptionalRequest(r *http.Request, rateLimitCost int) (authenticatedRequest, error) {
+func (s *apisServer) admitWorkspaceOptionalRequest(r *http.Request, rateLimitCost int) (*core.Organization, *core.Workspace, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
-		return authenticatedRequest{}, err
+		return nil, nil, err
 	}
 	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), rateLimitCost); err != nil {
-		return authenticatedRequest{}, err
+		return nil, nil, err
 	}
-	return authenticated, nil
+	return authenticated.organization, authenticated.workspace, nil
 }
 
 // admitWorkspaceRequest authenticates a workspace-scoped request, applies the
