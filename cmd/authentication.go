@@ -19,14 +19,14 @@ import (
 const x1 = 1
 
 // admitGlobalRequest authenticates a request for a global resource and applies
-// the nonspecific rate-limit budget of the authenticated organization, unless
-// the request is from the Admin console.
+// the selected workspace's rate-limit budget or, when no workspace is selected,
+// the authenticated organization's nonspecific budget. Admin requests are exempt.
 func (s *apisServer) admitGlobalRequest(r *http.Request, rateLimitCost int) error {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
 		return err
 	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.organization, rateLimitCost); err != nil {
+	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), rateLimitCost); err != nil {
 		return err
 	}
 	return nil

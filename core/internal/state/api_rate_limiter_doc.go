@@ -8,22 +8,26 @@ package state
 //
 // Purpose and quota model
 //
-// The rate limiter gives each workspace independent budgets for API operations
-// and ingestion, and gives each organization a separate budget for nonspecific
-// API operations.
+// The rate limiter gives each workspace independent budgets for normal API
+// operations and ingestion, and gives each organization a separate nonspecific
+// budget for normal API operations.
 //
-// API operations fall into three categories:
+// Every rate-limited request consumes exactly one budget:
 //
-//   - workspace operations, which act on one specific workspace;
-//   - ingestion operations, which write events to one specific workspace;
-//   - nonspecific operations, which do not belong to a workspace-specific API
-//     category and are not scoped to a workspace.
+//   - an ingestion operation consumes its workspace's ingestion budget;
+//   - a normal API operation associated with a workspace consumes that
+//     workspace's API budget;
+//   - a normal API operation not associated with a workspace consumes the
+//     authenticated organization's nonspecific budget.
 //
-// Exactly one budget applies to each request. A workspace request does not also
-// consume the organization's nonspecific budget. An ingestion request does not
-// consume either normal API budget. An unscoped nonspecific request does not
-// consume capacity assigned to any workspace. A rate-limited pipeline metrics
-// request uses the workspace budget when authentication scopes it to one.
+// A request may be associated with a workspace because the endpoint is
+// workspace-scoped, the API key is bound to a workspace, or the
+// "Krenalis-Workspace" header selects one. This rule also applies to global
+// endpoints: if a workspace is selected directly or indirectly, the request
+// consumes that workspace's API budget.
+//
+// Organization-only endpoints reject requests associated with a workspace
+// rather than charging the organization's nonspecific budget.
 //
 // Budgets belong to organizations and workspaces, not to individual API keys.
 //
