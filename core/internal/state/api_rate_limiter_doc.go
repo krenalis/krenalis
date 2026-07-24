@@ -143,9 +143,9 @@ package state
 // A partial or zero grant may still cause some or all admitted waiters to be
 // rejected.
 //
-// An operation that cannot be served completely from local capacity consumes
-// none of that capacity before waiting. Positive residual capacity remains
-// available to smaller operations that can complete immediately.
+// A request that cannot be served completely from local capacity consumes none
+// of that capacity before waiting. Positive residual capacity remains available
+// to smaller operations that can complete immediately.
 //
 // Canceling a waiter removes it from the FIFO list and subtracts its cost from
 // the pending total. The released admission capacity may then be used by a

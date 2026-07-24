@@ -19,7 +19,7 @@ import (
 const x1 = 1
 
 // authenticatedRequest contains the organization and optional workspace
-// resolved from a request's credentials. Admin requests are exempt from API
+// identified by the request's credentials. Admin requests are exempt from API
 // rate limiting.
 type authenticatedRequest struct {
 	organization    *core.Organization
@@ -39,13 +39,15 @@ func (authenticated authenticatedRequest) applyRateLimit(ctx context.Context, su
 	return err
 }
 
-// rateLimitCapacityConsumer is a subject with an API rate-limit bucket.
+// rateLimitCapacityConsumer is a subject that can consume API rate-limit
+// capacity.
 type rateLimitCapacityConsumer interface {
 	ConsumeRateLimitCapacity(context.Context, int) error
 }
 
-// scopedRateLimitSubject returns the workspace budget for an operation scoped
-// to a workspace, or the organization's nonspecific budget otherwise.
+// scopedRateLimitSubject returns the subject whose budget applies to the
+// request: the workspace for a workspace-scoped request, or the organization
+// otherwise.
 func (authenticated authenticatedRequest) scopedRateLimitSubject() rateLimitCapacityConsumer {
 	if authenticated.workspace != nil {
 		return authenticated.workspace
@@ -53,8 +55,8 @@ func (authenticated authenticatedRequest) scopedRateLimitSubject() rateLimitCapa
 	return authenticated.organization
 }
 
-// admitNonspecificRequest authenticates a request that is not in a specific
-// API category and applies the organization's rate-limit policy.
+// admitNonspecificRequest authenticates a nonspecific API request and applies
+// the organization's nonspecific rate-limit budget.
 func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int) (authenticatedRequest, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
@@ -66,7 +68,8 @@ func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int)
 	return authenticated, nil
 }
 
-// admitWorkspaceRequest admits a request and returns its required workspace.
+// admitWorkspaceRequest authenticates a workspace-scoped request, applies the
+// workspace rate limit, and returns the required workspace.
 func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (*core.Workspace, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
@@ -81,15 +84,15 @@ func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (
 	return authenticated.workspace, nil
 }
 
-// authenticateAdminRequest authenticates an Admin console request r and
-// returns the associated organization, workspace, and member ID.
+// authenticateAdminRequest authenticates a request from the Admin console and
+// returns its organization, optional workspace, and member ID.
 //
-// Authorization is provided via a session cookie.
+// Authorization is provided through a session cookie.
 //
 // The workspace is nil when the "Krenalis-Workspace" header is absent.
 //
-// It returns errors.UnauthorizedError if authorization fails, or
-// errInvalidSessionCookie if the session cookie is invalid.
+// An invalid or no longer usable session returns errInvalidSessionCookie.
+// Other request, organization, and workspace errors are returned unchanged.
 func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organization, ws *core.Workspace, userID string, err error) {
 
 	// Get the session.
@@ -143,9 +146,10 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	return org, ws, session.Member, nil
 }
 
-// authenticateAPIKeyRequest authenticates an API key request and resolves its
-// organization and optional workspace. The Authorization header is supplied by
-// authenticateRequest so this function cannot fall back to Admin credentials.
+// authenticateAPIKeyRequest authenticates a request using an API key and
+// resolves its organization and optional workspace. The caller has already
+// confirmed that the Authorization header is present, so this function does
+// not fall back to Admin console authentication.
 func (s *apisServer) authenticateAPIKeyRequest(r *http.Request, auth []string) (authenticatedRequest, error) {
 	if len(auth) > 1 {
 		return authenticatedRequest{}, errors.BadRequest("request contains multiple Authorization headers")
@@ -202,7 +206,7 @@ func (s *apisServer) authenticateAPIKeyRequest(r *http.Request, auth []string) (
 }
 
 // authenticateOrganizationsRequest authenticates a request to the organizations
-// API. Authorization is provided via the "Authorization: Bearer <key>" header.
+// API using an organizations API key from the Authorization header.
 func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
 	auth, ok := r.Header["Authorization"]
 	if !ok {
@@ -224,19 +228,23 @@ func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
 	return nil
 }
 
-// authenticateRequest authenticates the request r and returns the associated
-// organization and optional workspace. It does not consume rate-limit
-// capacity.
+// authenticateRequest authenticates a request and returns its organization and
+// optional workspace. It does not consume rate-limit capacity.
 //
-// Authorization sources:
-//   - API key in the "Authorization" header
-//   - Session cookie from the Admin console
+// Authentication uses either:
 //
-// The workspace is nil when the "Krenalis-Workspace" header is absent and either:
-//   - the API key is not bound to a workspace, or
-//   - the session cookie is from the Admin console.
+// - an API key from the "Authorization" header;
+// - a session cookie from the Admin console.
 //
-// If authorization fails, an errors.UnauthorizedError is returned.
+// When the Authorization header is present, API key authentication is used and
+// Admin console authentication is not attempted.
+//
+// The workspace is nil when no workspace is selected by either the API key or
+// the "Krenalis-Workspace" header.
+//
+// API key lookup errors for malformed or unknown keys are returned as
+// unauthorized errors. Other validation, organization, and workspace errors
+// are returned unchanged.
 func (s *apisServer) authenticateRequest(r *http.Request) (authenticatedRequest, error) {
 
 	if auth, ok := r.Header["Authorization"]; ok {

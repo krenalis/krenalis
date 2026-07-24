@@ -601,15 +601,15 @@ type OrganizationLimits struct {
 	API         APILimits
 }
 
-// APILimits stores the request and ingestion limits for each workspace, and
-// the request limits for nonspecific operations.
+// APILimits stores the API and ingestion limits for each workspace, together
+// with the API limit for nonspecific organization requests.
 type APILimits struct {
 	Workspace   APILimit
 	Ingestion   APILimit
 	Nonspecific APILimit
 }
 
-// APILimit defines the hourly API quota and the maximum allowed burst capacity.
+// APILimit defines an hourly quota and the maximum burst capacity.
 type APILimit struct {
 	QuotaPerHour  int
 	BurstCapacity int
@@ -703,9 +703,10 @@ func (organization *Organization) Limits() OrganizationLimits {
 	return limits
 }
 
-// ConsumeRateLimitCapacity consumes capacity from the organization's bucket.
-// The bucket belongs to this canonical State instance, so every Core wrapper
-// that references the organization shares the same local lease.
+// ConsumeRateLimitCapacity consumes capacity from the organization's
+// nonspecific API bucket. The bucket belongs to the canonical Organization
+// instance stored in State, so all Core wrappers for that organization share
+// the same process-local lease.
 func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	return organization.rateLimiter.consume(ctx, organization.bucket, cost)
 }
@@ -832,8 +833,8 @@ type Workspace struct {
 }
 
 // ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
-// The limiter is shared with its organization; only the local lease is per
-// workspace.
+// The rate limiter is shared with the organization, while the process-local
+// lease belongs to this workspace.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	return workspace.organization.rateLimiter.consume(ctx, workspace.apiBucket, cost)
 }

@@ -396,15 +396,15 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 	return canLogin, nil
 }
 
-// ConsumeRateLimitCapacity consumes the specified amount of capacity from the
-// API rate-limit budget assigned to the organization.
+// ConsumeRateLimitCapacity consumes the specified capacity from the
+// organization's nonspecific API rate-limit budget.
 //
-// It returns ErrInvalidAPICost if cost is outside the supported range, or
-// ErrAPICapacityExceeded if the organization does not currently have enough
-// capacity after an admitted refill completes. The call respects ctx and may
-// wait for at most one refill when local capacity is insufficient. Waiting is
-// also limited to one second; that internal timeout returns
-// ErrAPICapacityExceeded, while caller cancellation preserves the context error.
+// It returns ErrInvalidAPICost when cost is outside the supported range.
+// When local capacity is insufficient, the call may wait for one admitted
+// refill to complete. It returns ErrAPICapacityExceeded if the request cannot
+// be admitted, the refill does not provide enough capacity, or the limiter's
+// one-second maximum wait expires. Caller cancellation and deadlines preserve
+// the corresponding context error.
 func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	this.core.mustBeOpen()
 	return this.organization.ConsumeRateLimitCapacity(ctx, cost)

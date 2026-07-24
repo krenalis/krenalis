@@ -14,8 +14,10 @@ import (
 	"time"
 )
 
+// testRateLimitID is a valid subject identifier shared by bucket tests.
 const testRateLimitID = "111111111111"
 
+// newTestRateLimiter starts a limiter and registers its shutdown with the test.
 func newTestRateLimiter(t *testing.T, acquire apiRateLimitLeaseAcquirer) *rateLimiter {
 	t.Helper()
 	l := &rateLimiter{
@@ -32,12 +34,14 @@ func newTestRateLimiter(t *testing.T, acquire apiRateLimitLeaseAcquirer) *rateLi
 	return l
 }
 
+// bucketSnapshot reads bucket state while holding its mutex.
 func bucketSnapshot(bucket *rateLimitBucket) (available, target, threshold int, refillQueued, disabled bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	return bucket.available, bucket.target, bucket.threshold, bucket.refill != nil, bucket.disabled
 }
 
+// applyTestLease applies a test lease unless the bucket is disabled.
 func applyTestLease(bucket *rateLimitBucket, grantedUnits, capacityUnits int) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
@@ -46,6 +50,7 @@ func applyTestLease(bucket *rateLimitBucket, grantedUnits, capacityUnits int) {
 	}
 }
 
+// rateLimiterRetryAfter returns the current global backoff deadline.
 func rateLimiterRetryAfter(l *rateLimiter) time.Time {
 	unixNano := l.refillRetryAfter.Load()
 	if unixNano == 0 {
@@ -54,22 +59,27 @@ func rateLimiterRetryAfter(l *rateLimiter) time.Time {
 	return time.Unix(0, unixNano)
 }
 
+// testRateLimitClock is an atomically readable clock controlled by a test.
 type testRateLimitClock struct{ unixNano atomic.Int64 }
 
+// newTestRateLimitClock returns a clock with a stable initial value.
 func newTestRateLimitClock() *testRateLimitClock {
 	clock := &testRateLimitClock{}
 	clock.Set(time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC))
 	return clock
 }
 
+// Now returns the clock's current value.
 func (clock *testRateLimitClock) Now() time.Time {
 	return time.Unix(0, clock.unixNano.Load())
 }
 
+// Set updates the clock's current value.
 func (clock *testRateLimitClock) Set(now time.Time) {
 	clock.unixNano.Store(now.UnixNano())
 }
 
+// waitForRateLimit waits until condition succeeds or fails the test after one second.
 func waitForRateLimit(t *testing.T, condition func() bool) {
 	t.Helper()
 	deadline := time.NewTimer(time.Second)
@@ -88,6 +98,7 @@ func waitForRateLimit(t *testing.T, condition func() bool) {
 	}
 }
 
+// refillPendingCost returns the total cost of waiters attached to the refill.
 func refillPendingCost(bucket *rateLimitBucket) int {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
@@ -97,6 +108,8 @@ func refillPendingCost(bucket *rateLimitBucket) int {
 	return bucket.refill.pendingCost
 }
 
+// TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced verifies that entity
+// updates retain their local rate-limit buckets.
 func TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced(t *testing.T) {
 	organizationBucket := newNonspecificBucket("111111111111")
 	workspaceBucket := newWorkspaceBucket("222222222222")
@@ -142,6 +155,8 @@ func TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced(t *testing.T) {
 	}
 }
 
+// TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity verifies that a
+// removed subject cannot consume, refill, or receive capacity.
 func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 	bucket := newWorkspaceBucket("222222222222")
 	applyTestLease(bucket, 10, 10)
@@ -174,6 +189,8 @@ func TestIngestionRateLimitBucketAllowsInitialOverdraft(t *testing.T) {
 	}
 }
 
+// TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill verifies that
+// cost-one overdraft requires an active refill.
 func TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
 	satisfied, refill, waiter := bucket.consume(1, true)
@@ -193,6 +210,8 @@ func TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill(t *testing.T) {
 	}
 }
 
+// TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter verifies that
+// overdraft is limited to cost-one operations while refills are allowed.
 func TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
 	_, refill, _ := bucket.consume(2, true)
@@ -208,6 +227,8 @@ func TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter(t *testing.T)
 	}
 }
 
+// TestRateLimitBucketLeaseRepaysOverdraft verifies that grants are added to
+// the current balance and repay local debt first.
 func TestRateLimitBucketLeaseRepaysOverdraft(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
 	applyTestLease(bucket, 0, 100)
@@ -236,6 +257,8 @@ func TestRateLimitBucketLeaseRepaysOverdraft(t *testing.T) {
 	}
 }
 
+// TestRateLimitBucketCapsRefillRequestWithOverdraft verifies that local debt
+// cannot make a refill request exceed the lease size.
 func TestRateLimitBucketCapsRefillRequestWithOverdraft(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
 	bucket.mu.Lock()
@@ -251,6 +274,8 @@ func TestRateLimitBucketCapsRefillRequestWithOverdraft(t *testing.T) {
 	}
 }
 
+// TestRateLimitBucketThresholdScalesWithTarget verifies that small leases use
+// proportionally smaller refill thresholds.
 func TestRateLimitBucketThresholdScalesWithTarget(t *testing.T) {
 	for _, test := range []struct {
 		target    int
@@ -293,6 +318,8 @@ func TestRateLimitBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
 	}
 }
 
+// TestCanonicalEntitiesConsumeTheirOwnBuckets verifies that organization,
+// workspace, and ingestion consumption use separate local buckets.
 func TestCanonicalEntitiesConsumeTheirOwnBuckets(t *testing.T) {
 	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
 		return []apiRateLimitLeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 2}}, nil
@@ -324,6 +351,8 @@ func TestCanonicalEntitiesConsumeTheirOwnBuckets(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterValidatesCost verifies that normal API costs stay within
+// the supported range.
 func TestAPIRateLimiterValidatesCost(t *testing.T) {
 	l := newTestRateLimiter(t, nil)
 	bucket := newNonspecificBucket(testRateLimitID)
@@ -349,6 +378,8 @@ func TestIngestionRateLimiterValidatesEventCount(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterConsumesLocalCapacity verifies immediate local consumption
+// and rejection when the remaining capacity is insufficient.
 func TestAPIRateLimiterConsumesLocalCapacity(t *testing.T) {
 	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
 		return []apiRateLimitLeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
@@ -368,6 +399,8 @@ func TestAPIRateLimiterConsumesLocalCapacity(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity verifies that
+// an already canceled request leaves local capacity unchanged.
 func TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
 	bucket := newNonspecificBucket(testRateLimitID)
@@ -384,6 +417,8 @@ func TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) 
 	}
 }
 
+// TestAPIRateLimiterCallerDeadlineTakesPrecedence verifies that a caller
+// deadline wins over shutdown and internal timeout.
 func TestAPIRateLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 	limiter := &rateLimiter{maxWait: 0}
 	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
@@ -402,6 +437,8 @@ func TestAPIRateLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget verifies that waiter
+// admission uses the frozen refill request rather than the lease size.
 func TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
 	bucket := newNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 90, 100)
@@ -432,6 +469,8 @@ func TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
 	bucket.rejectRefill(refill)
 }
 
+// TestAPIRateLimiterSubtractsOverdraftFromAdmissionBudget verifies that local
+// debt reduces waiter admission and disables further overdraft.
 func TestAPIRateLimiterSubtractsOverdraftFromAdmissionBudget(t *testing.T) {
 	bucket := newNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 0, 100)
@@ -455,6 +494,8 @@ func TestAPIRateLimiterSubtractsOverdraftFromAdmissionBudget(t *testing.T) {
 	bucket.rejectRefill(refill)
 }
 
+// TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix verifies FIFO head-of-line
+// blocking after a partial grant.
 func TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	requests := make(chan []apiRateLimitLeaseRequest, 1)
 	release := make(chan struct{})
@@ -498,6 +539,8 @@ func TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterCancellationReturnsAdmissionBudget verifies that a
+// canceled waiter makes its admission budget available to a later request.
 func TestAPIRateLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 	requests := make(chan []apiRateLimitLeaseRequest, 1)
 	release := make(chan struct{})
@@ -540,6 +583,8 @@ func TestAPIRateLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterWaitHasFiniteInternalTimeout verifies that waiters do not
+// block indefinitely without a caller deadline.
 func TestAPIRateLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -569,6 +614,8 @@ func TestAPIRateLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	close(release)
 }
 
+// TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout verifies that a late
+// acquisition result is discarded after the batch deadline.
 func TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	started := make(chan struct{})
 	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
@@ -599,6 +646,9 @@ func TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterCancellationAndGrantResolveOnce verifies that cancellation
+// and completion resolve a waiter once and leave capacity consistent with the
+// winner.
 func TestAPIRateLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 	for range 100 {
 		bucket := newNonspecificBucket(testRateLimitID)
@@ -643,6 +693,8 @@ func TestAPIRateLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterIgnoresStaleGenerationResult verifies that an old refill
+// cannot change a newer generation or its waiter.
 func TestAPIRateLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	bucket := newNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 0, 100)
@@ -672,6 +724,8 @@ func TestAPIRateLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterQueuesOneRefill verifies that concurrent requests share
+// one active refill generation.
 func TestAPIRateLimiterQueuesOneRefill(t *testing.T) {
 	requests := make(chan []apiRateLimitLeaseRequest, 1)
 	release := make(chan struct{})
@@ -713,6 +767,8 @@ func TestAPIRateLimiterQueuesOneRefill(t *testing.T) {
 	})
 }
 
+// TestAPIRateLimiterBatchesOrganizationsAndWorkspaces verifies that distinct
+// subject kinds are acquired in the same batch.
 func TestAPIRateLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	requests := make(chan []apiRateLimitLeaseRequest, 1)
 	limiter := &rateLimiter{
@@ -757,6 +813,8 @@ func TestAPIRateLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption verifies that a grant
+// is added to capacity consumed while its refill was in flight.
 func TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -792,6 +850,8 @@ func TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterStartsGlobalBackoffAfterRefillError verifies that a failed
+// acquisition suppresses refills and overdraft until the retry deadline.
 func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 	clock := newTestRateLimitClock()
 	var calls atomic.Int32
@@ -848,6 +908,8 @@ func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 	})
 }
 
+// TestAPIRateLimiterBacksOffAfterInvalidLeaseResults verifies that malformed
+// batch responses fail without applying capacity.
 func TestAPIRateLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 	for _, test := range []struct {
 		name    string
@@ -903,6 +965,8 @@ func TestAPIRateLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills verifies
+// that backoff rejects queued and concurrent refill attempts.
 func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 	clock := newTestRateLimitClock()
 	var calls atomic.Int32
@@ -941,6 +1005,8 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 	}
 }
 
+// TestAPIRateLimiterLimitsConcurrentOverdraft verifies that concurrent
+// cost-one operations cannot exceed the local overdraft limit.
 func TestAPIRateLimiterLimitsConcurrentOverdraft(t *testing.T) {
 	bucket := newNonspecificBucket(testRateLimitID)
 	_, refill, _ := bucket.consume(2, true)
@@ -963,6 +1029,8 @@ func TestAPIRateLimiterLimitsConcurrentOverdraft(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterDisabledBucketCompletesInFlightRefill verifies that
+// disabling a bucket rejects waiters and discards its late grant.
 func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -995,6 +1063,8 @@ func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	})
 }
 
+// TestAPIRateLimiterQueueFullDoesNotEnableOverdraft verifies that a rejected
+// queue publication cannot authorize waiting or overdraft.
 func TestAPIRateLimiterQueueFullDoesNotEnableOverdraft(t *testing.T) {
 	l := &rateLimiter{
 		now:         time.Now,
@@ -1018,6 +1088,8 @@ func TestAPIRateLimiterQueueFullDoesNotEnableOverdraft(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff verifies that
+// shutdown rejects a late result without starting global backoff.
 func TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	started := make(chan struct{})
 	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
@@ -1046,6 +1118,8 @@ func TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterShutdownUnblocksBufferedWaiter verifies that shutdown
+// resolves waiters even when their refill remains buffered in the queue.
 func TestAPIRateLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 	started := make(chan struct{})
 	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
@@ -1071,6 +1145,8 @@ func TestAPIRateLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 	}
 }
 
+// TestAPIRateLimiterShutdownFinishesCollectedRefill verifies that shutdown
+// rejects a refill already collected by the batcher.
 func TestAPIRateLimiterShutdownFinishesCollectedRefill(t *testing.T) {
 	l := &rateLimiter{}
 	l.close.ctx, l.close.cancel = context.WithCancel(context.Background())
