@@ -31,13 +31,16 @@ const decoderTestConnectionID = "7B3mN9qK2xA4"
 // event decoder.
 func TestDecoderEventCount(t *testing.T) {
 	for _, test := range []struct {
-		name  string
-		body  string
-		count int
-		err   error
+		name        string
+		body        string
+		count       int
+		validEvents bool
+		err         error
 	}{
-		{name: "single", body: `{"type":"page","userId":"x"}`, count: 1},
-		{name: "batch", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2},
+		{name: "single", body: `{"type":"page","userId":"x"}`, count: 1, validEvents: true},
+		{name: "batch", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2, validEvents: true},
+		{name: "batch envelope", body: `{"batch":[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]}`, count: 2, validEvents: true},
+		{name: "malformed batch", body: `[{"type":"page"}`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
 		{name: "maximum batch", body: "[" + strings.Repeat("0,", maxBatchEventCount-1) + "0]", count: maxBatchEventCount},
 		{name: "excessive batch", body: "[" + strings.Repeat("0,", maxBatchEventCount) + "0]", err: errors.BadRequest("batch contains too many events")},
 	} {
@@ -59,7 +62,15 @@ func TestDecoderEventCount(t *testing.T) {
 				t.Fatalf("event count = %d, want %d", count, test.count)
 			}
 			decoded := 0
-			for range dec.Events(decoderTestConnectionID, false) {
+			for event, err := range dec.Events(decoderTestConnectionID, false) {
+				if test.validEvents {
+					if err != nil {
+						t.Fatalf("unexpected event error: %v", err)
+					}
+					if event == nil {
+						t.Fatal("decoded event is nil")
+					}
+				}
 				decoded++
 			}
 			if decoded != test.count {
