@@ -507,10 +507,10 @@ func (api api) code(r *http.Request) string {
 // parseOrganizationLimits parses the organization limits.
 func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimits, error) {
 	if limits == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("API limit required")
+		return core.OrganizationLimits{}, errors.BadRequest("API limit is required")
 	}
 	if limits.Members == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("member limit required")
+		return core.OrganizationLimits{}, errors.BadRequest("member limit is required")
 	}
 	if limits.AccessKeys == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("access key limit is required")
