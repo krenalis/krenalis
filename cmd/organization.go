@@ -257,11 +257,8 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 // specified start and end dates.
 func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.authenticateRequest(r)
+	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
-		return nil, err
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 
@@ -298,11 +295,8 @@ func (organization organization) PipelineMetricsPerDate(_ http.ResponseWriter, r
 // days.
 func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.authenticateRequest(r)
+	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
-		return nil, err
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 
@@ -332,11 +326,8 @@ func (organization organization) PipelineMetricsPerDay(_ http.ResponseWriter, r 
 // hours.
 func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.authenticateRequest(r)
+	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
-		return nil, err
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 
@@ -366,11 +357,8 @@ func (organization organization) PipelineMetricsPerHour(_ http.ResponseWriter, r
 // of minutes.
 func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	authenticated, err := organization.authenticateRequest(r)
+	authenticated, err := organization.admitWorkspaceOptionalRequest(r, x1)
 	if err != nil {
-		return nil, err
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), x1); err != nil {
 		return nil, err
 	}
 

@@ -18,23 +18,11 @@ import (
 // capacity.
 const x1 = 1
 
-// admitGlobalRequest authenticates a request for a global resource and applies
-// the selected workspace's rate-limit budget or, when no workspace is selected,
-// the authenticated organization's nonspecific budget. Admin requests are exempt.
-func (s *apisServer) admitGlobalRequest(r *http.Request, rateLimitCost int) error {
-	authenticated, err := s.authenticateRequest(r)
-	if err != nil {
-		return err
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), rateLimitCost); err != nil {
-		return err
-	}
-	return nil
-}
-
-// admitOrganizationRequest authenticates an organization-scoped request,
+// admitOrganizationRequest authenticates an organization-only request,
 // applies the organization's nonspecific rate-limit budget unless the request
 // is from the Admin console, and returns the organization.
+//
+// See also [admitWorkspaceOptionalRequest] and [admitWorkspaceRequest].
 func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int) (*core.Organization, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
@@ -49,9 +37,28 @@ func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int
 	return authenticated.organization, nil
 }
 
+// admitWorkspaceOptionalRequest authenticates a request for which selecting a
+// workspace is optional. Unless the request comes from the Admin console, it
+// applies the selected workspace's rate-limit budget or, if no workspace is
+// selected, the authenticated organization's nonspecific budget.
+//
+// See also [admitOrganizationRequest] and [admitWorkspaceRequest].
+func (s *apisServer) admitWorkspaceOptionalRequest(r *http.Request, rateLimitCost int) (authenticatedRequest, error) {
+	authenticated, err := s.authenticateRequest(r)
+	if err != nil {
+		return authenticatedRequest{}, err
+	}
+	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.scopedRateLimitSubject(), rateLimitCost); err != nil {
+		return authenticatedRequest{}, err
+	}
+	return authenticated, nil
+}
+
 // admitWorkspaceRequest authenticates a workspace-scoped request, applies the
 // workspace rate limit unless the request is from the Admin console, and
 // returns the required workspace.
+//
+// See also [admitWorkspaceOptionalRequest] and [admitOrganizationRequest].
 func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (*core.Workspace, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {

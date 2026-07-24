@@ -102,7 +102,7 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.admitGlobalRequest(r, x1); err != nil {
+	if _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return api.core.Connector(api.code(r))
@@ -110,7 +110,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 // ConnectorDocumentation returns the documentation of a connector.
 func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.admitGlobalRequest(r, x1); err != nil {
+	if _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return api.core.ConnectorDocumentation(api.code(r))
@@ -118,7 +118,7 @@ func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (a
 
 // Connectors returns the connectors.
 func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.admitGlobalRequest(r, x1); err != nil {
+	if _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return map[string]any{"connectors": api.core.Connectors()}, nil
@@ -181,7 +181,7 @@ func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, 
 
 // EventSchema returns the event schema.
 func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.admitGlobalRequest(r, x1); err != nil {
+	if _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return core.EventSchema(), nil
@@ -465,7 +465,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 
 // TransformationLanguages returns the supported transformation languages.
 func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.admitGlobalRequest(r, x1); err != nil {
+	if _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	languages := api.core.TransformationLanguages()
@@ -494,7 +494,7 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 
 // WarehousePlatforms returns the supported data warehouse platforms.
 func (api api) WarehousePlatforms(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.admitGlobalRequest(r, x1); err != nil {
+	if _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return map[string]any{"platforms": api.core.WarehousePlatforms()}, nil
