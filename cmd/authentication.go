@@ -59,7 +59,7 @@ func (s *apisServer) admitWorkspaceOptionalRequest(r *http.Request, rateLimitCos
 // workspace rate limit unless the request is from the Admin console, and
 // returns the required workspace.
 //
-// See also [admitWorkspaceOptionalRequest] and [admitOrganizationRequest].
+// See also [admitOrganizationRequest] and [admitWorkspaceOptionalRequest].
 func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (*core.Workspace, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
