@@ -138,14 +138,8 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	authenticated, err := organization.authenticateRequest(r)
+	org, err := organization.admitOrganizationRequest(r, x1)
 	if err != nil {
-		return nil, err
-	}
-	if authenticated.workspace != nil {
-		return nil, errors.Unauthorized("workspaces cannot be created with a workspace restricted API key")
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.organization, x1); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -158,7 +152,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := authenticated.organization.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -432,14 +426,8 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	authenticated, err := organization.authenticateRequest(r)
+	org, err := organization.admitOrganizationRequest(r, x1)
 	if err != nil {
-		return nil, err
-	}
-	if authenticated.workspace != nil {
-		return nil, errors.Unauthorized("workspace creation cannot be tested with a workspace restricted API key")
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.organization, x1); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -452,7 +440,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = authenticated.organization.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
 	return nil, err
 }
 
@@ -561,17 +549,11 @@ func (organization organization) Workspace(_ http.ResponseWriter, r *http.Reques
 
 // Workspaces returns the workspaces of an organization.
 func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Request) (any, error) {
-	authenticated, err := organization.authenticateRequest(r)
+	org, err := organization.admitOrganizationRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
-	if authenticated.workspace != nil {
-		return nil, errors.Unauthorized("workspaces cannot be listed with a workspace restricted API key")
-	}
-	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.organization, x1); err != nil {
-		return nil, err
-	}
-	workspaces := authenticated.organization.Workspaces()
+	workspaces := org.Workspaces()
 	return map[string]any{"workspaces": workspaces}, nil
 }
 

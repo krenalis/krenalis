@@ -55,10 +55,10 @@ func (authenticated authenticatedRequest) scopedRateLimitSubject() rateLimitCapa
 	return authenticated.organization
 }
 
-// admitNonspecificRequest authenticates a nonspecific API request and applies
-// the organization's nonspecific rate-limit budget, unless the request is from
-// the Admin console.
-func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int) error {
+// admitGlobalRequest authenticates a request for a global resource and applies
+// the nonspecific rate-limit budget of the authenticated organization, unless
+// the request is from the Admin console.
+func (s *apisServer) admitGlobalRequest(r *http.Request, rateLimitCost int) error {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
 		return err
@@ -67,6 +67,23 @@ func (s *apisServer) admitNonspecificRequest(r *http.Request, rateLimitCost int)
 		return err
 	}
 	return nil
+}
+
+// admitOrganizationRequest authenticates an organization-scoped request,
+// applies the organization's nonspecific rate-limit budget unless the request
+// is from the Admin console, and returns the organization.
+func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int) (*core.Organization, error) {
+	authenticated, err := s.authenticateRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if authenticated.workspace != nil {
+		return nil, errors.Unauthorized("organization request cannot specify a workspace")
+	}
+	if err := authenticated.applyRateLimitTo(r.Context(), authenticated.organization, rateLimitCost); err != nil {
+		return nil, err
+	}
+	return authenticated.organization, nil
 }
 
 // admitWorkspaceRequest authenticates a workspace-scoped request, applies the
