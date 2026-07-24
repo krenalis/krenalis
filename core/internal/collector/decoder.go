@@ -37,8 +37,6 @@ import (
 var errPayloadTooLarge = errors.New("body too large")
 var errReadBody = errors.New("failed to read body")
 
-const maxBatchEventCount = 20_000
-
 var (
 	ip0  = netip.AddrFrom4([4]byte{})                   // 0.0.0.0
 	ip16 = netip.AddrFrom4([4]byte{255, 255})           // 255.255.0.0
@@ -92,6 +90,9 @@ func (d *decoder) ConnectionId() (string, bool) {
 	}
 	return d.connectionId, true
 }
+
+// maxBatchEventCount bounds preliminary counting of batch values before validation.
+const maxBatchEventCount = 20_000
 
 // EventCount returns the number of events in the request.
 func (d *decoder) EventCount() (int, error) {

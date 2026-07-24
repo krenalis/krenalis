@@ -119,8 +119,8 @@ func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 //go:embed "schema.sql"
 var schema string
 
-// The PL/pgSQL function is kept outside schema.sql because schema.sql is split
-// on SQL statement terminators during initialization.
+// The PL/pgSQL function is stored separately from schema.sql because the
+// initialization process splits schema.sql at SQL statement terminators.
 //
 //go:embed api_rate_limiter_leases.sql
 var createAPIRateLimiterLeasesFunction string

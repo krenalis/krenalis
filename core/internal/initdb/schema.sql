@@ -85,10 +85,6 @@ CREATE TABLE workspaces (
 
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
 
--- api_rate_limit_buckets contains the authoritative token bucket for every
--- workspace, ingestion, and nonspecific rate-limit subject.
--- The two nullable foreign keys make bucket deletion follow its subject while
--- the CHECK keeps their polymorphic key unambiguous.
 CREATE TABLE api_rate_limit_buckets (
     subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'nonspecific')),
     subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),

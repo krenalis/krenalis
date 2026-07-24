@@ -624,6 +624,14 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 	return canLogin, ok
 }
 
+// ConsumeRateLimitCapacity consumes capacity from the organization's
+// nonspecific API bucket. The bucket belongs to the canonical Organization
+// instance stored in State, so all Core wrappers for that organization share
+// the same process-local lease.
+func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	return organization.rateLimiter.consume(ctx, organization.bucket, cost)
+}
+
 // Counts returns the organization's counts.
 func (organization *Organization) Counts() OrganizationCounts {
 	organization.mu.Lock()
@@ -701,14 +709,6 @@ func (organization *Organization) Limits() OrganizationLimits {
 	limits := organization.usage.currentLimits()
 	organization.mu.Unlock()
 	return limits
-}
-
-// ConsumeRateLimitCapacity consumes capacity from the organization's
-// nonspecific API bucket. The bucket belongs to the canonical Organization
-// instance stored in State, so all Core wrappers for that organization share
-// the same process-local lease.
-func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return organization.rateLimiter.consume(ctx, organization.bucket, cost)
 }
 
 // Workspace returns the workspace of the organization with identifier id.
@@ -832,19 +832,6 @@ type Workspace struct {
 	pipelinesToPurge []string // never nil
 }
 
-// ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
-// The rate limiter is shared with the organization, while the process-local
-// lease belongs to this workspace.
-func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return workspace.organization.rateLimiter.consume(ctx, workspace.apiBucket, cost)
-}
-
-// ConsumeIngestionRateLimitCapacity consumes capacity for eventCount events
-// from the workspace's ingestion bucket.
-func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(ctx context.Context, eventCount int) error {
-	return workspace.organization.rateLimiter.consume(ctx, workspace.ingestionBucket, eventCount)
-}
-
 // Account returns the account with identifier id. The boolean return value
 // reports whether the account exists.
 func (workspace *Workspace) Account(id int) (*Account, bool) {
@@ -889,6 +876,19 @@ func (workspace *Workspace) Connections() []*Connection {
 	}
 	workspace.mu.Unlock()
 	return connections
+}
+
+// ConsumeIngestionRateLimitCapacity consumes capacity for eventCount events
+// from the workspace's ingestion bucket.
+func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(ctx context.Context, eventCount int) error {
+	return workspace.organization.rateLimiter.consume(ctx, workspace.ingestionBucket, eventCount)
+}
+
+// ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
+// The rate limiter is shared with the organization, while the process-local
+// lease belongs to this workspace.
+func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	return workspace.organization.rateLimiter.consume(ctx, workspace.apiBucket, cost)
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.

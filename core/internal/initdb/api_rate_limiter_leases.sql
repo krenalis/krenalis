@@ -1,3 +1,6 @@
+-- acquire_api_rate_limit_leases refills authoritative buckets and leases
+-- capacity for a batch of subjects. It removes granted capacity before
+-- returning, so concurrent application nodes cannot lease it twice.
 CREATE OR REPLACE FUNCTION acquire_api_rate_limit_leases(p_requests jsonb)
     RETURNS TABLE (
         subject_kind varchar,
@@ -187,6 +190,9 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+COMMENT ON FUNCTION acquire_api_rate_limit_leases(jsonb) IS
+    'Refills authoritative API rate-limit buckets and leases capacity to application nodes.';
 
 -- SQL formatting guidelines for this file:
 -- - Use uppercase SQL and PL/pgSQL keywords, including SELECT, FROM, IF, LOOP,

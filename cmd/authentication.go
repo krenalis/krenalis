@@ -18,6 +18,12 @@ import (
 // capacity.
 const x1 = 1
 
+// rateLimitCapacityConsumer is a subject that can consume API rate-limit
+// capacity.
+type rateLimitCapacityConsumer interface {
+	ConsumeRateLimitCapacity(context.Context, int) error
+}
+
 // authenticatedRequest contains the organization and optional workspace
 // identified by the request's credentials. Admin requests are exempt from API
 // rate limiting.
@@ -37,12 +43,6 @@ func (authenticated authenticatedRequest) applyRateLimit(ctx context.Context, su
 		return errors.TooManyRequests("API rate limit exceeded")
 	}
 	return err
-}
-
-// rateLimitCapacityConsumer is a subject that can consume API rate-limit
-// capacity.
-type rateLimitCapacityConsumer interface {
-	ConsumeRateLimitCapacity(context.Context, int) error
 }
 
 // scopedRateLimitSubject returns the subject whose budget applies to the
@@ -82,6 +82,65 @@ func (s *apisServer) admitWorkspaceRequest(r *http.Request, rateLimitCost int) (
 		return nil, err
 	}
 	return authenticated.workspace, nil
+}
+
+// authenticateAPIKeyRequest authenticates a request using an API key and
+// resolves its organization and optional workspace. The caller has already
+// confirmed that the Authorization header is present, so this function does
+// not fall back to Admin console authentication.
+func (s *apisServer) authenticateAPIKeyRequest(r *http.Request, auth []string) (authenticatedRequest, error) {
+	if len(auth) > 1 {
+		return authenticatedRequest{}, errors.BadRequest("request contains multiple Authorization headers")
+	}
+	token, found := validation.ParseBearer(auth[0])
+	if !found {
+		return authenticatedRequest{}, errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
+	}
+	token, found = strings.CutPrefix(token, "api_")
+	if !found {
+		return authenticatedRequest{}, errors.BadRequest("API key is not valid; API keys start with the api_ prefix")
+	}
+	organizationID, workspaceID, err := s.core.AccessKey(r.Context(), token, core.AccessKeyTypeAPI)
+	if err != nil {
+		switch err.(type) {
+		case *errors.BadRequestError:
+			err = errors.Unauthorized("API key in the Authorization header of the request is malformed")
+		case *errors.NotFoundError:
+			err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
+		}
+		return authenticatedRequest{}, err
+	}
+	org, err := s.core.Organization(organizationID)
+	if err != nil {
+		return authenticatedRequest{}, err
+	}
+	if !org.Enabled {
+		return authenticatedRequest{}, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
+	}
+	if workspaceID != "" {
+		ws, err := org.Workspace(workspaceID)
+		if err != nil {
+			return authenticatedRequest{}, err
+		}
+		return authenticatedRequest{organization: org, workspace: ws}, nil
+	}
+
+	header, ok := r.Header["Krenalis-Workspace"]
+	if !ok {
+		return authenticatedRequest{organization: org}, nil
+	}
+	if len(header) > 1 {
+		return authenticatedRequest{}, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
+	}
+	id := header[0]
+	if !core.IsValidID(id) {
+		return authenticatedRequest{}, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
+	}
+	ws, err := org.Workspace(id)
+	if err != nil {
+		return authenticatedRequest{}, err
+	}
+	return authenticatedRequest{organization: org, workspace: ws}, nil
 }
 
 // authenticateAdminRequest authenticates a request from the Admin console and
@@ -144,65 +203,6 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	}
 
 	return org, ws, session.Member, nil
-}
-
-// authenticateAPIKeyRequest authenticates a request using an API key and
-// resolves its organization and optional workspace. The caller has already
-// confirmed that the Authorization header is present, so this function does
-// not fall back to Admin console authentication.
-func (s *apisServer) authenticateAPIKeyRequest(r *http.Request, auth []string) (authenticatedRequest, error) {
-	if len(auth) > 1 {
-		return authenticatedRequest{}, errors.BadRequest("request contains multiple Authorization headers")
-	}
-	token, found := validation.ParseBearer(auth[0])
-	if !found {
-		return authenticatedRequest{}, errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
-	}
-	token, found = strings.CutPrefix(token, "api_")
-	if !found {
-		return authenticatedRequest{}, errors.BadRequest("API key is not valid; API keys start with the api_ prefix")
-	}
-	organizationID, workspaceID, err := s.core.AccessKey(r.Context(), token, core.AccessKeyTypeAPI)
-	if err != nil {
-		switch err.(type) {
-		case *errors.BadRequestError:
-			err = errors.Unauthorized("API key in the Authorization header of the request is malformed")
-		case *errors.NotFoundError:
-			err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
-		}
-		return authenticatedRequest{}, err
-	}
-	org, err := s.core.Organization(organizationID)
-	if err != nil {
-		return authenticatedRequest{}, err
-	}
-	if !org.Enabled {
-		return authenticatedRequest{}, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
-	}
-	if workspaceID != "" {
-		ws, err := org.Workspace(workspaceID)
-		if err != nil {
-			return authenticatedRequest{}, err
-		}
-		return authenticatedRequest{organization: org, workspace: ws}, nil
-	}
-
-	header, ok := r.Header["Krenalis-Workspace"]
-	if !ok {
-		return authenticatedRequest{organization: org}, nil
-	}
-	if len(header) > 1 {
-		return authenticatedRequest{}, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
-	}
-	id := header[0]
-	if !core.IsValidID(id) {
-		return authenticatedRequest{}, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
-	}
-	ws, err := org.Workspace(id)
-	if err != nil {
-		return authenticatedRequest{}, err
-	}
-	return authenticatedRequest{organization: org, workspace: ws}, nil
 }
 
 // authenticateOrganizationsRequest authenticates a request to the organizations
