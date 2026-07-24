@@ -532,7 +532,8 @@ func (organization organization) Update(_ http.ResponseWriter, r *http.Request) 
 
 // Workspace returns the current workspace.
 func (organization organization) Workspace(_ http.ResponseWriter, r *http.Request) (any, error) {
-	return organization.admitWorkspaceRequest(r, x1)
+	workspace, err := organization.admitWorkspaceRequest(r, x1)
+	return workspace, err
 }
 
 // Workspaces returns the workspaces of an organization.
