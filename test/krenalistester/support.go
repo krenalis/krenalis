@@ -269,6 +269,20 @@ var DefaultOrganizationLimits = OrganizationLimits{
 	Connectors:  20,
 	Connections: 100,
 	Pipelines:   100,
+	API: APILimits{
+		Workspace: APILimit{
+			QuotaPerHour:  25000,
+			BurstCapacity: 1000,
+		},
+		Ingestion: APILimit{
+			QuotaPerHour:  25000,
+			BurstCapacity: 1000,
+		},
+		Nonspecific: APILimit{
+			QuotaPerHour:  25000,
+			BurstCapacity: 1000,
+		},
+	},
 }
 
 // CreatePipeline creates a pipeline for the connection and target, returning
@@ -688,8 +702,9 @@ func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 	client, err := analytics.NewWithConfig(
 		writeKey,
 		analytics.Config{
-			Endpoint: endpoint,
-			Callback: cb,
+			Endpoint:  endpoint,
+			BatchSize: 1,
+			Callback:  cb,
 		},
 	)
 	if err != nil {
@@ -699,13 +714,13 @@ func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 	if err != nil {
 		k.t.Fatalf("cannot enqueue event: %s", err)
 	}
-	err = client.Close()
+	err = <-cb.ch
 	if err != nil {
 		k.t.Fatalf("cannot send event: %s", err)
 	}
-	err = <-cb.ch
+	err = client.Close()
 	if err != nil {
-		k.t.Fatalf("cannot close client when sending events: %s", err)
+		k.t.Fatalf("cannot close client after sending event: %s", err)
 	}
 }
 

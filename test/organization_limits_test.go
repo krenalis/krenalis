@@ -35,6 +35,20 @@ func TestOrganizationResourceLimits(t *testing.T) {
 			Connectors:  6,
 			Connections: 7,
 			Pipelines:   8,
+			API: krenalistester.APILimits{
+				Workspace: krenalistester.APILimit{
+					QuotaPerHour:  202,
+					BurstCapacity: 22,
+				},
+				Ingestion: krenalistester.APILimit{
+					QuotaPerHour:  303,
+					BurstCapacity: 33,
+				},
+				Nonspecific: krenalistester.APILimit{
+					QuotaPerHour:  101,
+					BurstCapacity: 11,
+				},
+			},
 		}
 		id := k.CreateOrganization("Limited organization", true, limits)
 		org := k.Organization(id)
@@ -86,6 +100,23 @@ func TestOrganizationResourceLimits(t *testing.T) {
 
 		_, err = k.TryCreatePipeline(dummy, "User", organizationLimitsUserPipeline())
 		expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.PipelinesLimitReached))
+	})
+
+	t.Run("API limits are updated", func(t *testing.T) {
+		org := k.Organization(activeOrg.ID)
+		limits := org.Limits
+		limits.API.Workspace.QuotaPerHour = 402
+		limits.API.Workspace.BurstCapacity = 42
+		limits.API.Ingestion.QuotaPerHour = 503
+		limits.API.Ingestion.BurstCapacity = 53
+		limits.API.Nonspecific.QuotaPerHour = 301
+		limits.API.Nonspecific.BurstCapacity = 31
+		k.UpdateOrganization(org.ID, org.Name, limits)
+
+		org = k.Organization(activeOrg.ID)
+		if org.Limits.API != limits.API {
+			t.Fatalf("expected API limits %#v, got %#v", limits.API, org.Limits.API)
+		}
 	})
 }
 

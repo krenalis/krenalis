@@ -45,6 +45,7 @@ var (
 )
 
 type decoder struct {
+	events  []byte
 	payload *bytes.Buffer
 	dec     json.Decoder
 	batch   json.Value
@@ -88,6 +89,32 @@ func (d *decoder) ConnectionId() (string, bool) {
 		return "", false
 	}
 	return d.connectionId, true
+}
+
+// maxBatchEventCount bounds preliminary counting of batch values before validation.
+const maxBatchEventCount = 20_000
+
+// EventCount returns the number of events in the request.
+func (d *decoder) EventCount() (int, error) {
+	if d.typ != "batch" {
+		return 1, nil
+	}
+	var dec json.Decoder
+	dec.Reset(bytes.NewReader(d.events))
+	if err := dec.SkipToken(); err != nil {
+		return 0, errRead(err)
+	}
+	count := 0
+	for dec.PeekKind() != ']' {
+		if err := dec.SkipValue(); err != nil {
+			return 0, errRead(err)
+		}
+		count++
+		if count > maxBatchEventCount {
+			return 0, errors.BadRequest("batch contains too many events")
+		}
+	}
+	return count, nil
 }
 
 // Events returns an iterator to iterate over events. connectionId represents
@@ -167,6 +194,7 @@ func (d *decoder) Reset(r *http.Request) error {
 	}
 
 	d.batch = nil
+	d.events = nil
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr.ip = netip.Addr{}
 
@@ -231,6 +259,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		return errors.BadRequest("request's body is empty")
 	}
 	d.payload = bytes.NewBuffer(body)
+	d.events = body
 	d.dec.Reset(d.payload)
 
 	if d.typ != "" {
@@ -322,12 +351,13 @@ func (d *decoder) Reset(r *http.Request) error {
 	}
 	if d.batch == nil {
 		// It is a single-event request. Reparse the entire request body.
-		d.payload = bytes.NewBuffer(body)
+		d.events = body
 	} else {
 		// It is a batch-event request. Parse only the slice of events.
 		d.typ = "batch"
-		d.payload = bytes.NewBuffer(d.batch)
+		d.events = d.batch
 	}
+	d.payload = bytes.NewBuffer(d.events)
 	d.dec.Reset(d.payload)
 
 	if d.sentAt.IsZero() {

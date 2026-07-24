@@ -51,8 +51,9 @@ type metadata struct {
 
 // State represents the application state.
 type State struct {
-	id string
-	db *db.DB
+	id          string
+	db          *db.DB
+	rateLimiter *rateLimiter
 
 	changing           *sync.RWMutex
 	cipher             *cipher.Cipher
@@ -107,6 +108,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state := &State{
 		id:               base58.Generate(22),
 		db:               db,
+		rateLimiter:      newRateLimiter(db),
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
 		cipher:           cipher.New(kms),
@@ -131,6 +133,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	// Load the state.
 	err := state.load(ctx, credentials)
 	if err != nil {
+		state.rateLimiter.Close()
 		state.notifications.Close()
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
@@ -182,6 +185,7 @@ func (state *State) Account(id int) (*Account, bool) {
 // Close closes the state. When it is called, no calls to the State methods
 // should be in progress, and no further calls should be made.
 func (state *State) Close() {
+	state.rateLimiter.Close()
 	state.close.cancel()
 	state.close.Wait()
 	state.notifications.Close()
@@ -565,13 +569,15 @@ type AccessKey struct {
 
 // Organization represents an organization.
 type Organization struct {
-	mu         *sync.Mutex
-	workspaces map[string]*Workspace
-	members    map[string]bool // true when the member can log in.
-	usage      organizationUsage
-	ID         string
-	Name       string
-	Enabled    bool
+	mu          *sync.Mutex
+	rateLimiter *rateLimiter
+	bucket      *rateLimitBucket
+	workspaces  map[string]*Workspace
+	members     map[string]bool // true when the member can log in.
+	usage       organizationUsage
+	ID          string
+	Name        string
+	Enabled     bool
 }
 
 // OrganizationCounts stores the resource counts for an organization.
@@ -592,6 +598,21 @@ type OrganizationLimits struct {
 	Connectors  int
 	Connections int
 	Pipelines   int
+	API         APILimits
+}
+
+// APILimits stores the API and ingestion limits for each workspace, together
+// with the API limit for nonspecific organization requests.
+type APILimits struct {
+	Workspace   APILimit
+	Ingestion   APILimit
+	Nonspecific APILimit
+}
+
+// APILimit defines an hourly quota and the maximum burst capacity.
+type APILimit struct {
+	QuotaPerHour  int
+	BurstCapacity int
 }
 
 // CanMemberLogin reports whether the member with the given ID can log in and
@@ -601,6 +622,14 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 	canLogin, ok := organization.members[id]
 	organization.mu.Unlock()
 	return canLogin, ok
+}
+
+// ConsumeRateLimitCapacity consumes capacity from the organization's
+// nonspecific API bucket. The bucket belongs to the canonical Organization
+// instance stored in State, so all Core wrappers for that organization share
+// the same process-local lease.
+func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	return organization.rateLimiter.consume(ctx, organization.bucket, cost)
 }
 
 // Counts returns the organization's counts.
@@ -765,8 +794,10 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu        *sync.Mutex
-	Warehouse struct {
+	mu              *sync.Mutex
+	apiBucket       *rateLimitBucket
+	ingestionBucket *rateLimitBucket
+	Warehouse       struct {
 		Platform       string
 		Mode           WarehouseMode
 		settings       []byte
@@ -845,6 +876,19 @@ func (workspace *Workspace) Connections() []*Connection {
 	}
 	workspace.mu.Unlock()
 	return connections
+}
+
+// ConsumeIngestionRateLimitCapacity consumes capacity for eventCount events
+// from the workspace's ingestion bucket.
+func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(ctx context.Context, eventCount int) error {
+	return workspace.organization.rateLimiter.consume(ctx, workspace.ingestionBucket, eventCount)
+}
+
+// ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
+// The rate limiter is shared with the organization, while the process-local
+// lease belongs to this workspace.
+func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	return workspace.organization.rateLimiter.consume(ctx, workspace.apiBucket, cost)
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.

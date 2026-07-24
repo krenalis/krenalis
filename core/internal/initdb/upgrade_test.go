@@ -175,9 +175,90 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsColumnOrder(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
+	assertAPIRateLimitLeaseFunction(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
+	}
+}
+
+func assertAPIRateLimitLeaseFunction(t *testing.T, database *db.DB) {
+	t.Helper()
+	if _, err := database.Exec(t.Context(), `
+		SELECT granted_units
+		FROM acquire_api_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"nonspecific","subject_id":"111111111111","requested_units":101}
+		]`); err == nil {
+		t.Fatal("lease request above 100 units succeeded")
+	}
+	if _, err := database.Exec(t.Context(), `
+		SELECT granted_units
+		FROM acquire_api_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"ingestion","subject_id":"222222222222","requested_units":20001}
+		]`); err == nil {
+		t.Fatal("ingestion lease request above 20,000 events succeeded")
+	}
+
+	_, err := database.Exec(t.Context(), `
+		UPDATE organizations
+		SET api_workspace_quota_per_hour = 1,
+			api_workspace_burst_capacity = 100,
+			api_ingestion_quota_per_hour = 1,
+			api_ingestion_burst_capacity = 20000,
+			api_nonspecific_quota_per_hour = 1,
+			api_nonspecific_burst_capacity = 100
+		WHERE id = '111111111111'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := database.Query(t.Context(), `
+		SELECT subject_kind, subject_id, granted_units, capacity_units
+		FROM acquire_api_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"workspace","subject_id":"222222222222","requested_units":100},
+			{"subject_kind":"ingestion","subject_id":"222222222222","requested_units":20000},
+			{"subject_kind":"nonspecific","subject_id":"111111111111","requested_units":100}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	grants := map[string]int{}
+	for rows.Next() {
+		var kind, id string
+		var granted, capacity int
+		if err := rows.Scan(&kind, &id, &granted, &capacity); err != nil {
+			t.Fatal(err)
+		}
+		wantCapacity := 100
+		if kind == "ingestion" {
+			wantCapacity = 20000
+		}
+		if capacity != wantCapacity {
+			t.Fatalf("capacity for %s %s = %d, want %d", kind, id, capacity, wantCapacity)
+		}
+		grants[kind+":"+id] = granted
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if grants["workspace:222222222222"] != 100 || grants["ingestion:222222222222"] != 20000 || grants["nonspecific:111111111111"] != 100 {
+		t.Fatalf("mixed batch grants = %#v, want 100 for workspace, 20,000 for ingestion, and 100 for nonspecific", grants)
+	}
+
+	// A second limiter process would execute the same database function. Its
+	// request cannot obtain the tokens already leased by the first process.
+	var granted int
+	err = database.QueryRow(t.Context(), `
+		SELECT granted_units
+		FROM acquire_api_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"nonspecific","subject_id":"111111111111","requested_units":100}
+		]`).Scan(&granted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 0 {
+		t.Fatalf("second organization lease granted %d units, want 0", granted)
 	}
 }
 
@@ -408,25 +489,39 @@ func assertOrganizationLimits(t *testing.T, database *db.DB) {
 	t.Helper()
 
 	var (
-		members     int
-		accessKeys  int
-		workspaces  int
-		connectors  int
-		connections int
-		pipelines   int
+		members                     int
+		accessKeys                  int
+		workspaces                  int
+		connectors                  int
+		connections                 int
+		pipelines                   int
+		apiWorkspaceQuotaPerHour    int
+		apiWorkspaceBurstCapacity   int
+		apiIngestionQuotaPerHour    int
+		apiIngestionBurstCapacity   int
+		apiNonspecificQuotaPerHour  int
+		apiNonspecificBurstCapacity int
 	)
 	err := database.QueryRow(t.Context(), `
-		SELECT members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit
-		FROM organizations
-		WHERE id = '111111111111'`).Scan(&members, &accessKeys, &workspaces, &connectors, &connections, &pipelines)
+			SELECT members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,
+				api_workspace_quota_per_hour, api_workspace_burst_capacity,
+				api_ingestion_quota_per_hour, api_ingestion_burst_capacity,
+				api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity
+			FROM organizations
+			WHERE id = '111111111111'`).Scan(&members, &accessKeys, &workspaces, &connectors, &connections, &pipelines,
+		&apiWorkspaceQuotaPerHour, &apiWorkspaceBurstCapacity, &apiIngestionQuotaPerHour, &apiIngestionBurstCapacity,
+		&apiNonspecificQuotaPerHour, &apiNonspecificBurstCapacity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if members != 10000 || accessKeys != 1000 || workspaces != 1000 || connectors != 1000 ||
-		connections != 10000 || pipelines != 10000 {
-		t.Fatalf("expected limits members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d",
-			10000, 1000, 1000, 1000, 10000, 10000, members, accessKeys, workspaces, connectors, connections, pipelines)
+		connections != 10000 || pipelines != 10000 || apiWorkspaceQuotaPerHour != 25000 || apiWorkspaceBurstCapacity != 1000 ||
+		apiIngestionQuotaPerHour != 25000 || apiIngestionBurstCapacity != 1000 ||
+		apiNonspecificQuotaPerHour != 25000 || apiNonspecificBurstCapacity != 1000 {
+		t.Fatalf("unexpected limits: members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d api_workspace_quota_per_hour=%d api_workspace_burst_capacity=%d api_ingestion_quota_per_hour=%d api_ingestion_burst_capacity=%d api_nonspecific_quota_per_hour=%d api_nonspecific_burst_capacity=%d",
+			members, accessKeys, workspaces, connectors, connections, pipelines, apiWorkspaceQuotaPerHour, apiWorkspaceBurstCapacity,
+			apiIngestionQuotaPerHour, apiIngestionBurstCapacity, apiNonspecificQuotaPerHour, apiNonspecificBurstCapacity)
 	}
 }
 
@@ -442,6 +537,12 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 		"connectors_limit",
 		"connections_limit",
 		"pipelines_limit",
+		"api_workspace_quota_per_hour",
+		"api_workspace_burst_capacity",
+		"api_ingestion_quota_per_hour",
+		"api_ingestion_burst_capacity",
+		"api_nonspecific_quota_per_hour",
+		"api_nonspecific_burst_capacity",
 	} {
 		hasDefault, err := database.QueryExists(t.Context(), `
 			SELECT FROM pg_attrdef d

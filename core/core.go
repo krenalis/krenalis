@@ -756,23 +756,8 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	if limits.Members < 1 || limits.Members > MembersLimit {
-		return "", errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
-	}
-	if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
-		return "", errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
-	}
-	if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
-		return "", errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
-	}
-	if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
-		return "", errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
-	}
-	if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
-		return "", errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
-	}
-	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
-		return "", errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+	if err := validateOrganizationLimits(&limits); err != nil {
+		return "", err
 	}
 	n := state.CreateOrganization{
 		Name:    name,
@@ -786,13 +771,21 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 			Pipelines:   limits.Pipelines,
 		},
 	}
+	n.Limits.API.Workspace = state.APILimit(limits.API.Workspace)
+	n.Limits.API.Ingestion = state.APILimit(limits.API.Ingestion)
+	n.Limits.API.Nonspecific = state.APILimit(limits.API.Nonspecific)
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
-				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit)"+
-				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", n.ID, n.Name, n.Enabled, n.Limits.Members,
-				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines)
+				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit,"+
+				" api_workspace_quota_per_hour, api_workspace_burst_capacity, api_ingestion_quota_per_hour, api_ingestion_burst_capacity,"+
+				" api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity)"+
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
+				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
+				n.Limits.API.Workspace.QuotaPerHour, n.Limits.API.Workspace.BurstCapacity,
+				n.Limits.API.Ingestion.QuotaPerHour, n.Limits.API.Ingestion.BurstCapacity,
+				n.Limits.API.Nonspecific.QuotaPerHour, n.Limits.API.Nonspecific.BurstCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -925,9 +918,20 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		ID:           org.ID,
 		Name:         org.Name,
 		Enabled:      org.Enabled,
-		Limits:       OrganizationLimits(org.Limits()),
-		Counts:       OrganizationCounts(org.Counts()),
 	}
+	limits := org.Limits()
+	organization.Limits = OrganizationLimits{
+		Members:     limits.Members,
+		AccessKeys:  limits.AccessKeys,
+		Workspaces:  limits.Workspaces,
+		Connectors:  limits.Connectors,
+		Connections: limits.Connections,
+		Pipelines:   limits.Pipelines,
+	}
+	organization.Limits.API.Workspace = APILimit(limits.API.Workspace)
+	organization.Limits.API.Ingestion = APILimit(limits.API.Ingestion)
+	organization.Limits.API.Nonspecific = APILimit(limits.API.Nonspecific)
+	organization.Counts = OrganizationCounts(org.Counts())
 	return &organization, nil
 }
 
@@ -970,9 +974,20 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			ID:           organization.ID,
 			Name:         organization.Name,
 			Enabled:      organization.Enabled,
-			Limits:       OrganizationLimits(organization.Limits()),
-			Counts:       OrganizationCounts(organization.Counts()),
 		}
+		limits := organization.Limits()
+		orgs[i].Limits = OrganizationLimits{
+			Members:     limits.Members,
+			AccessKeys:  limits.AccessKeys,
+			Workspaces:  limits.Workspaces,
+			Connectors:  limits.Connectors,
+			Connections: limits.Connections,
+			Pipelines:   limits.Pipelines,
+		}
+		orgs[i].Limits.API.Workspace = APILimit(limits.API.Workspace)
+		orgs[i].Limits.API.Ingestion = APILimit(limits.API.Ingestion)
+		orgs[i].Limits.API.Nonspecific = APILimit(limits.API.Nonspecific)
+		orgs[i].Counts = OrganizationCounts(organization.Counts())
 	}
 	return orgs, nil
 }
@@ -2141,6 +2156,47 @@ func stateToCoreTargets(targets state.ConnectorTargets) []Target {
 		ts = append(ts, TargetEvent)
 	}
 	return ts
+}
+
+// validateOrganizationLimits validates the organization limits.
+func validateOrganizationLimits(limits *OrganizationLimits) error {
+	if limits.Members < 1 || limits.Members > MembersLimit {
+		return errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
+	}
+	if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
+		return errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
+	}
+	if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
+		return errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
+	}
+	if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
+		return errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
+	}
+	if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
+		return errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
+	}
+	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
+		return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+	}
+	if q := limits.API.Workspace.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("hourly API quota per workspace must be between 1 and 1,000,000")
+	}
+	if q := limits.API.Workspace.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("API burst capacity per workspace must be between 1 and 100,000")
+	}
+	if q := limits.API.Ingestion.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("hourly ingestion quota must be between 1 and 1,000,000")
+	}
+	if q := limits.API.Ingestion.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("ingestion burst capacity must be between 1 and 100,000")
+	}
+	if q := limits.API.Nonspecific.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("nonspecific hourly API quota must be between 1 and 1,000,000")
+	}
+	if q := limits.API.Nonspecific.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("nonspecific API burst capacity must be between 1 and 100,000")
+	}
+	return nil
 }
 
 type OrganizationSort int

@@ -418,6 +418,20 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
+// ConsumeRateLimitCapacity consumes the specified capacity from the workspace's
+// API rate-limit budget.
+//
+// It returns ErrInvalidAPICost when cost is outside the supported range.
+// When local capacity is insufficient, the call may wait for one admitted
+// refill to complete. It returns ErrAPICapacityExceeded if the request cannot
+// be admitted, the refill does not provide enough capacity, or the limiter's
+// one-second maximum wait expires. Caller cancellation and deadlines preserve
+// the corresponding context error.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+	this.core.mustBeOpen()
+	return this.workspace.ConsumeRateLimitCapacity(ctx, cost)
+}
+
 // CreateConnection creates a new connection. authToken is an authorization
 // token returned by the AuthToken method and must be empty if the connector
 // does not support authorization.

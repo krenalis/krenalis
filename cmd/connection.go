@@ -73,7 +73,7 @@ func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Reque
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace{connection.apisServer}.workspace(r)
+	ws, err := connection.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -493,7 +493,7 @@ func (connection connection) EventWriteKeys(_ http.ResponseWriter, r *http.Reque
 // id authenticates the request and returns the connection identified by the
 // 'id' path parameter.
 func (connection connection) id(r *http.Request) (*core.Connection, error) {
-	ws, err := workspace{connection.apisServer}.workspace(r)
+	ws, err := connection.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +506,7 @@ func (connection connection) id(r *http.Request) (*core.Connection, error) {
 // src authenticates the request and returns the connection identified by the
 // 'src' path parameter.
 func (connection connection) src(r *http.Request) (*core.Connection, error) {
-	ws, err := workspace{connection.apisServer}.workspace(r)
+	ws, err := connection.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}

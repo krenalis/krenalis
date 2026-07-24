@@ -97,6 +97,17 @@ func Test_StdWrappers(t *testing.T) {
 	}
 }
 
+// Test_TooManyRequestsError verifies TooManyRequests formatting and
+// serialization.
+func Test_TooManyRequestsError(t *testing.T) {
+	err := TooManyRequests("slow down")
+	if err.Error() != "slow down" {
+		t.Fatalf("unexpected error string: %q", err.Error())
+	}
+	expected := "{\"error\":{\"code\":\"TooManyRequests\",\"message\":\"slow down\"}}\n"
+	checkResponse(t, err, http.StatusTooManyRequests, "TooManyRequests", expected)
+}
+
 // Test_UnauthorizedError verifies Unauthorized formatting and serialization.
 func Test_UnauthorizedError(t *testing.T) {
 	err := Unauthorized("no auth")
@@ -136,6 +147,7 @@ func Test_UnprocessableError(t *testing.T) {
 	checkResponse(t, err, http.StatusUnprocessableEntity, "SomeCode", expected)
 }
 
+// checkResponse verifies an HTTP error response.
 func checkResponse(t *testing.T, err ResponseWriterTo, status int, code Code, body string) {
 	t.Helper()
 	rr := httptest.NewRecorder()
