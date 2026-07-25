@@ -110,7 +110,7 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 		return err
 	}
 	now := time.Now()
-	refillAllowed := limiter.shutdown.ctx.Err() == nil && !limiter.refillBackoffActive(now)
+	refillAllowed := limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(now)
 	satisfied, refill, waiter := bucket.consume(cost, refillAllowed)
 	if refill != nil {
 		queued, queueFull := limiter.queueRefill(refill)
@@ -127,7 +127,7 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 		}
 		if queued {
 			limiter.queueSaturated.Store(false)
-			refillAllowed = limiter.shutdown.ctx.Err() == nil && !limiter.refillBackoffActive(time.Now())
+			refillAllowed = limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(time.Now())
 			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
 		}
 	}
@@ -152,6 +152,12 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 func (limiter *Limiter) Close() {
 	limiter.shutdown.cancel()
 	limiter.shutdown.Wait()
+}
+
+// backoffActive reports whether new refill attempts are temporarily
+// suppressed after an acquisition error or an invalid batch response.
+func (limiter *Limiter) backoffActive(now time.Time) bool {
+	return now.UnixNano() < limiter.retryAfter.Load()
 }
 
 // collectAndRefillBatch collects refill generations for a short window, then
@@ -208,18 +214,12 @@ func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
 	}
 }
 
-// refillBackoffActive reports whether new refill attempts are temporarily
-// suppressed after an acquisition error or an invalid batch response.
-func (limiter *Limiter) refillBackoffActive(now time.Time) bool {
-	return now.UnixNano() < limiter.retryAfter.Load()
-}
-
 // refillBatch builds, acquires, validates, and applies leases for one collected
 // batch. An acquisition error or invalid response fails the whole batch before
 // any local capacity is changed.
 func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 
-	if limiter.refillBackoffActive(time.Now()) {
+	if limiter.backoffActive(time.Now()) {
 		// Generations queued before a failed batch may still be in the channel.
 		// They are not sent to PostgreSQL during global backoff. Rejecting them also
 		// prevents waiters from relying on a refill that will not run.
