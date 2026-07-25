@@ -171,6 +171,44 @@ func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 	if available != 0 || !disabled {
 		t.Fatalf("disabled bucket state = available:%d disabled:%t, want 0:true", available, disabled)
 	}
+	bucket.restore(1)
+	available, _, _, _, _ = bucketSnapshot(bucket)
+	if available != 0 {
+		t.Fatalf("restored capacity on a disabled bucket = %d, want 0", available)
+	}
+}
+
+// TestRateLimitBucketRestoresLocalCapacity verifies that returned capacity is
+// available immediately and remains capped at the local target.
+func TestRateLimitBucketRestoresLocalCapacity(t *testing.T) {
+	bucket := newWorkspaceBucket("222222222222")
+	applyTestLease(bucket, 10, 10)
+
+	satisfied, _, _ := bucket.consume(4, true)
+	if !satisfied {
+		t.Fatal("initial consumption was not satisfied")
+	}
+	bucket.restore(3)
+	available, _, _, _, _ := bucketSnapshot(bucket)
+	if available != 9 {
+		t.Fatalf("restored capacity = %d, want 9", available)
+	}
+
+	bucket.restore(3)
+	available, _, _, _, _ = bucketSnapshot(bucket)
+	if available != 10 {
+		t.Fatalf("capacity above the target = %d, want 10", available)
+	}
+	bucket.restore(0)
+	available, _, _, _, _ = bucketSnapshot(bucket)
+	if available != 10 {
+		t.Fatalf("zero restoration changed capacity to %d, want 10", available)
+	}
+	bucket.restore(bucket.maxCost + 1)
+	available, _, _, _, _ = bucketSnapshot(bucket)
+	if available != 10 {
+		t.Fatalf("invalid restoration changed capacity to %d, want 10", available)
+	}
 }
 
 // TestIngestionRateLimitBucketWaitsForInitialRefill verifies that a first
@@ -306,6 +344,10 @@ func TestCanonicalEntitiesConsumeTheirOwnBuckets(t *testing.T) {
 	}
 	if err := workspace.ConsumeIngestionRateLimitCapacity(context.Background(), 2); err != nil {
 		t.Fatalf("workspace ingestion consume: %v", err)
+	}
+	workspace.RestoreIngestionRateLimitCapacity(2)
+	if err := workspace.ConsumeIngestionRateLimitCapacity(context.Background(), 2); err != nil {
+		t.Fatalf("workspace ingestion consume after restoration: %v", err)
 	}
 }
 

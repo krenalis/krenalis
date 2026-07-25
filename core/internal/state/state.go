@@ -967,6 +967,13 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 	return slices.Clone(pipelines)
 }
 
+// RestoreIngestionRateLimitCapacity returns previously consumed ingestion
+// capacity to the workspace bucket on the current node. The caller must invoke
+// this method at most once for each successful local consumption.
+func (workspace *Workspace) RestoreIngestionRateLimitCapacity(eventCount int) {
+	workspace.ingestionBucket.restore(eventCount)
+}
+
 // WarehouseSettings returns the warehouse settings.
 func (workspace *Workspace) WarehouseSettings(ctx context.Context) (json.Value, error) {
 	workspace.mu.Lock()

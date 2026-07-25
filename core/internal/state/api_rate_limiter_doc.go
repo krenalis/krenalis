@@ -93,6 +93,11 @@ package state
 // Failure to publish that proactive refill does not change the successful
 // consumption decision.
 //
+// A caller may restore capacity that it consumed but ultimately did not use.
+// Restoration affects only the bucket on the current node, cannot raise its
+// available capacity above the local target, and does not cancel refills or
+// wake admitted waiters.
+//
 // If local capacity is insufficient:
 //
 //   - an existing active refill may admit the request as a waiter;

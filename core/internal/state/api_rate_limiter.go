@@ -471,6 +471,20 @@ func (bucket *rateLimitBucket) consume(operationCost int, refillAllowed bool) (s
 	return satisfied, refill, nil
 }
 
+// restore returns previously consumed capacity to this bucket on the current
+// node. It does not affect PostgreSQL, pending refills, or admitted waiters.
+func (bucket *rateLimitBucket) restore(operationCost int) {
+	if operationCost < 1 || operationCost > bucket.maxCost {
+		return
+	}
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+	if bucket.disabled {
+		return
+	}
+	bucket.available = min(bucket.target, bucket.available+operationCost)
+}
+
 func (bucket *rateLimitBucket) newRefillLocked() *rateLimitRefill {
 	requestedUnits := min(bucket.leaseSize, bucket.target-bucket.available)
 	if bucket.target == 0 {
