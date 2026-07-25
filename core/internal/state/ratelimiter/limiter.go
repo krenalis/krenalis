@@ -39,26 +39,26 @@ var ErrInvalidCost = errors.New("invalid API cost")
 
 // Limiter coordinates refills for local buckets owned by organizations and
 // workspaces. It owns the refill queue, batching, PostgreSQL lease acquisition,
-// metrics, and close lifecycle. Public consumption never accesses PostgreSQL
+// metrics, and shutdown lifecycle. Public consumption never accesses PostgreSQL
 // directly.
 type Limiter struct {
 	acquireLeases  leaseAcquirer
 	maxWait        time.Duration
 	acquireTimeout time.Duration
 
-	refillQueue chan *refill // bounded so queue publication never blocks.
-	closed      atomic.Bool  // prevents enqueue after close starts.
+	queue          chan *refill // bounded so queue publication never blocks.
+	queueSaturated atomic.Bool  // suppresses repeated warnings while the queue is full.
 
-	// refillRetryAfter is the Unix-nanosecond deadline for the shared refill
+	// retryAfter is the Unix-nanosecond deadline for the shared refill
 	// backoff. It is atomic because every consumption checks it, while only the
 	// single batcher updates it. A shared deadline prevents a database outage
 	// from causing rapid retry batches for different buckets.
-	refillRetryAfter atomic.Int64
+	retryAfter atomic.Int64
 
-	refillErrors         prometheus.Counter
-	refillQueueFull      prometheus.Counter
-	refillQueueSaturated atomic.Bool // suppresses repeated warnings while the queue is full.
-	close                struct {
+	acquisitionErrors prometheus.Counter
+	queueFullCounter  prometheus.Counter
+
+	shutdown struct {
 		ctx    context.Context
 		cancel context.CancelFunc
 		sync.WaitGroup
@@ -90,10 +90,10 @@ func New(database *db.DB) *Limiter {
 		acquireLeases:  newLeaseAcquirer(database),
 		maxWait:        maxWaitDuration,
 		acquireTimeout: defaultAcquireTimeout,
-		refillQueue:    make(chan *refill, queueSize),
+		queue:          make(chan *refill, queueSize),
 	}
-	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
-	limiter.close.Add(1)
+	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
+	limiter.shutdown.Add(1)
 	go limiter.runBatcher()
 	limiter.registerMetrics()
 	return limiter
@@ -110,7 +110,7 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 		return err
 	}
 	now := time.Now()
-	refillAllowed := !limiter.closed.Load() && !limiter.refillBackoffActive(now)
+	refillAllowed := limiter.shutdown.ctx.Err() == nil && !limiter.refillBackoffActive(now)
 	satisfied, refill, waiter := bucket.consume(cost, refillAllowed)
 	if refill != nil {
 		queued, queueFull := limiter.queueRefill(refill)
@@ -118,16 +118,16 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 			bucket.rejectRefill(refill)
 		}
 		if queueFull {
-			if limiter.refillQueueFull != nil {
-				limiter.refillQueueFull.Inc()
+			if limiter.queueFullCounter != nil {
+				limiter.queueFullCounter.Inc()
 			}
-			if limiter.refillQueueSaturated.CompareAndSwap(false, true) {
+			if limiter.queueSaturated.CompareAndSwap(false, true) {
 				slog.Warn("core/state: API rate-limit refill queue is full")
 			}
 		}
 		if queued {
-			limiter.refillQueueSaturated.Store(false)
-			refillAllowed = !limiter.closed.Load() && !limiter.refillBackoffActive(time.Now())
+			limiter.queueSaturated.Store(false)
+			refillAllowed = limiter.shutdown.ctx.Err() == nil && !limiter.refillBackoffActive(time.Now())
 			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
 		}
 	}
@@ -143,22 +143,19 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 // Close prevents new refills, cancels PostgreSQL work, and waits for the
 // batcher to stop. The batch currently being handled is finished without
 // applying unconfirmed capacity, but entries still buffered in the queue are
-// not drained. Their waiters observe the close context and cannot remain
+// not drained. Their waiters observe the shutdown context and cannot remain
 // blocked.
 //
 // Any remaining local leases are discarded. They are not returned because
 // PostgreSQL has already subtracted them, and a best-effort return could credit
 // the same capacity twice.
 func (limiter *Limiter) Close() {
-	if !limiter.closed.CompareAndSwap(false, true) {
-		return
-	}
-	limiter.close.cancel()
-	limiter.close.Wait()
+	limiter.shutdown.cancel()
+	limiter.shutdown.Wait()
 }
 
 // collectAndRefillBatch collects refill generations for a short window, then
-// requests their leases in one PostgreSQL call. It returns false when close
+// requests their leases in one PostgreSQL call. It returns false when shutdown
 // interrupts collection and the batcher should stop.
 func (limiter *Limiter) collectAndRefillBatch(firstRefill *refill) bool {
 	pendingRefills := map[*refill]leaseRequest{firstRefill: {}}
@@ -166,10 +163,10 @@ func (limiter *Limiter) collectAndRefillBatch(firstRefill *refill) bool {
 	defer timer.Stop()
 	for len(pendingRefills) < batchSize {
 		select {
-		case <-limiter.close.ctx.Done():
+		case <-limiter.shutdown.ctx.Done():
 			failCollectedRefills(pendingRefills)
 			return false
-		case refill := <-limiter.refillQueue:
+		case refill := <-limiter.queue:
 			if _, exists := pendingRefills[refill]; !exists {
 				pendingRefills[refill] = leaseRequest{}
 			}
@@ -188,23 +185,23 @@ func (limiter *Limiter) collectAndRefillBatch(firstRefill *refill) bool {
 // batch, so a PostgreSQL outage cannot trigger rapid retries across the queue.
 // Shutdown only finishes pending refills; it does not start a backoff.
 func (limiter *Limiter) failRefillBatch(pendingRefills map[*refill]leaseRequest) {
-	if limiter.close.ctx.Err() != nil {
+	if limiter.shutdown.ctx.Err() != nil {
 		failCollectedRefills(pendingRefills)
 		return
 	}
 	now := time.Now()
-	limiter.refillRetryAfter.Store(now.Add(refillBackoffDuration).UnixNano())
+	limiter.retryAfter.Store(now.Add(refillBackoffDuration).UnixNano())
 	failCollectedRefills(pendingRefills)
 }
 
 // queueRefill adds a generation to the refill queue without blocking the
 // request path.
 func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
-	if limiter.closed.Load() {
+	if limiter.shutdown.ctx.Err() != nil {
 		return false, false
 	}
 	select {
-	case limiter.refillQueue <- refill:
+	case limiter.queue <- refill:
 		return true, false
 	default:
 		return false, true
@@ -214,7 +211,7 @@ func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
 // refillBackoffActive reports whether new refill attempts are temporarily
 // suppressed after an acquisition error or an invalid batch response.
 func (limiter *Limiter) refillBackoffActive(now time.Time) bool {
-	return now.UnixNano() < limiter.refillRetryAfter.Load()
+	return now.UnixNano() < limiter.retryAfter.Load()
 }
 
 // refillBatch builds, acquires, validates, and applies leases for one collected
@@ -234,7 +231,7 @@ func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 	for refill := range pendingRefills {
 		select {
 		case <-refill.published:
-		case <-limiter.close.ctx.Done():
+		case <-limiter.shutdown.ctx.Done():
 			failCollectedRefills(pendingRefills)
 			return
 		}
@@ -254,17 +251,17 @@ func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 	if acquireTimeout <= 0 {
 		acquireTimeout = defaultAcquireTimeout
 	}
-	acquireCtx, cancelAcquire := context.WithTimeout(limiter.close.ctx, acquireTimeout)
+	acquireCtx, cancelAcquire := context.WithTimeout(limiter.shutdown.ctx, acquireTimeout)
 	leaseResults, err := limiter.acquireLeases(acquireCtx, leaseRequests)
 	if err == nil {
 		err = acquireCtx.Err()
 	}
 	cancelAcquire()
 	if err != nil {
-		if limiter.close.ctx.Err() == nil {
+		if limiter.shutdown.ctx.Err() == nil {
 			slog.Error("core/state: cannot refill API rate-limit leases", "error", err)
-			if limiter.refillErrors != nil {
-				limiter.refillErrors.Inc()
+			if limiter.acquisitionErrors != nil {
+				limiter.acquisitionErrors.Inc()
 			}
 		}
 		limiter.failRefillBatch(pendingRefills)
@@ -309,17 +306,17 @@ func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 		result := resultsBySubject[key]
 		refill.bucket.completeRefill(refill, result.GrantedUnits, result.CapacityUnits)
 	}
-	limiter.refillRetryAfter.Store(0)
+	limiter.retryAfter.Store(0)
 
 }
 
 // registerMetrics initializes the process-wide rate-limiter counters.
 func (limiter *Limiter) registerMetrics() {
-	limiter.refillErrors = registerCounter(prometheus.CounterOpts{
+	limiter.acquisitionErrors = registerCounter(prometheus.CounterOpts{
 		Name: "krenalis_api_rate_limit_refill_errors_total",
 		Help: "Total number of API rate-limit lease refill errors",
 	})
-	limiter.refillQueueFull = registerCounter(prometheus.CounterOpts{
+	limiter.queueFullCounter = registerCounter(prometheus.CounterOpts{
 		Name: "krenalis_api_rate_limit_refill_queue_full_total",
 		Help: "Total number of API rate-limit refill attempts rejected because the queue was full",
 	})
@@ -328,12 +325,12 @@ func (limiter *Limiter) registerMetrics() {
 // runBatcher processes one collected refill batch at a time until Close
 // cancels the limiter context.
 func (limiter *Limiter) runBatcher() {
-	defer limiter.close.Done()
+	defer limiter.shutdown.Done()
 	for {
 		select {
-		case <-limiter.close.ctx.Done():
+		case <-limiter.shutdown.ctx.Done():
 			return
-		case firstRefill := <-limiter.refillQueue:
+		case firstRefill := <-limiter.queue:
 			if !limiter.collectAndRefillBatch(firstRefill) {
 				return
 			}
@@ -355,7 +352,7 @@ func (limiter *Limiter) waitForRefill(ctx context.Context, waiter *waiter) error
 		return waiter.err
 	case <-ctx.Done():
 		cancellation = ctx.Err()
-	case <-limiter.close.ctx.Done():
+	case <-limiter.shutdown.ctx.Done():
 		cancellation = ErrCapacityExceeded
 	case <-timer.C:
 		cancellation = ErrCapacityExceeded

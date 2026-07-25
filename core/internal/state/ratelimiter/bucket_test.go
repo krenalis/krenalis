@@ -108,7 +108,7 @@ func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
 }
 
 // TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an active
-// refill admits requests and a closed limiter does not.
+// refill admits requests only while refills are allowed.
 func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
 	bucket := NewOrganizationBucket("111111111111")
 	_, refill, _ := bucket.consume(2, true)
@@ -120,7 +120,7 @@ func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
 	}
 	satisfied, queued, waiter = bucket.consume(1, false)
 	if satisfied || queued != nil || waiter != nil {
-		t.Fatal("closed limiter allowed waiting")
+		t.Fatal("disabled refills allowed waiting")
 	}
 }
 

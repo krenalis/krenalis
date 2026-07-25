@@ -24,10 +24,10 @@ func newTestRateLimiter(t *testing.T, acquire leaseAcquirer) *Limiter {
 		acquireLeases:  acquire,
 		maxWait:        maxWaitDuration,
 		acquireTimeout: defaultAcquireTimeout,
-		refillQueue:    make(chan *refill, queueSize),
+		queue:          make(chan *refill, queueSize),
 	}
-	l.close.ctx, l.close.cancel = context.WithCancel(context.Background())
-	l.close.Add(1)
+	l.shutdown.ctx, l.shutdown.cancel = context.WithCancel(context.Background())
+	l.shutdown.Add(1)
 	go l.runBatcher()
 	t.Cleanup(l.Close)
 	return l
@@ -51,7 +51,7 @@ func applyTestLease(bucket *Bucket, grantedUnits, capacityUnits int) {
 
 // limiterRetryAfter returns the current global backoff deadline.
 func limiterRetryAfter(l *Limiter) time.Time {
-	unixNano := l.refillRetryAfter.Load()
+	unixNano := l.retryAfter.Load()
 	if unixNano == 0 {
 		return time.Time{}
 	}
@@ -188,8 +188,8 @@ func TestLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
 // deadline wins over shutdown and internal timeout.
 func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 	limiter := &Limiter{maxWait: 0}
-	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
-	limiter.close.cancel()
+	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
+	limiter.shutdown.cancel()
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer cancel()
 
@@ -514,8 +514,8 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 func TestLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	requests := make(chan []leaseRequest, 1)
 	limiter := &Limiter{
-		maxWait:     maxWaitDuration,
-		refillQueue: make(chan *refill, queueSize),
+		maxWait: maxWaitDuration,
+		queue:   make(chan *refill, queueSize),
 		acquireLeases: func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
 			requests <- request
 			results := make([]leaseResult, len(request))
@@ -525,8 +525,8 @@ func TestLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 			return results, nil
 		},
 	}
-	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
-	limiter.close.Add(1)
+	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
+	limiter.shutdown.Add(1)
 	t.Cleanup(limiter.Close)
 
 	refills := make([]*refill, 0, 2)
@@ -539,7 +539,7 @@ func TestLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 		}
 		refills = append(refills, refill)
 		waiters = append(waiters, waiter)
-		limiter.refillQueue <- refill
+		limiter.queue <- refill
 	}
 	go limiter.runBatcher()
 
@@ -713,12 +713,12 @@ func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 			calls.Add(1)
 			return nil, nil
 		})
-		l.refillRetryAfter.Store(time.Now().Add(refillBackoffDuration).UnixNano())
+		l.retryAfter.Store(time.Now().Add(refillBackoffDuration).UnixNano())
 
 		queued := NewOrganizationBucket(testRateLimitID)
 		_, queuedRefill, _ := queued.consume(2, true)
 		queued.activateRefill(queuedRefill, 0, false, true)
-		l.refillQueue <- queuedRefill
+		l.queue <- queuedRefill
 		time.Sleep(batchDelay)
 		synctest.Wait()
 		_, _, _, refillQueued, _ := bucketSnapshot(queued)
@@ -784,9 +784,10 @@ func TestLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 // a rejected queue publication cannot authorize waiting.
 func TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
 	l := &Limiter{
-		refillQueue: make(chan *refill, 1),
+		queue: make(chan *refill, 1),
 	}
-	l.refillQueue <- &refill{}
+	l.shutdown.ctx = context.Background()
+	l.queue <- &refill{}
 	bucket := NewOrganizationBucket(testRateLimitID)
 
 	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
@@ -865,8 +866,8 @@ func TestLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 // rejects a refill already collected by the batcher.
 func TestLimiterShutdownFinishesCollectedRefill(t *testing.T) {
 	l := &Limiter{}
-	l.close.ctx, l.close.cancel = context.WithCancel(context.Background())
-	l.close.cancel()
+	l.shutdown.ctx, l.shutdown.cancel = context.WithCancel(context.Background())
+	l.shutdown.cancel()
 
 	bucket := NewOrganizationBucket(testRateLimitID)
 	_, refill, _ := bucket.consume(2, true)
