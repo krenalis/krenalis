@@ -9,8 +9,8 @@ package ratelimiter
 // Purpose and quota model
 //
 // The rate limiter gives each workspace independent budgets for normal API
-// operations and ingestion, and gives each organization a separate organization-level
-// budget for normal API operations.
+// operations and ingestion, and gives each organization a separat
+// organization-level budget for normal API operations.
 //
 // Every rate-limited request consumes exactly one budget:
 //
@@ -55,8 +55,8 @@ package ratelimiter
 // admitted as waiters return ErrCapacityExceeded. Caller cancellation and
 // caller deadlines preserve the corresponding context error.
 //
-// Each Organization instance owns one organization-level bucket. Each Workspace owns
-// separate API and ingestion buckets. The shared Limiter owns the refill
+// Each Organization instance owns one organization-level bucket. Each Workspace
+// owns separate API and ingestion buckets. The shared Limiter owns the refill
 // queue, batcher, PostgreSQL lease acquisition, global backoff, metrics, and
 // shutdown lifecycle.
 //
@@ -230,8 +230,8 @@ package ratelimiter
 //
 // Targets and refill thresholds
 //
-// Each local target is capped by both the standard lease size and the configured
-// burst capacity.
+// Each local target is capped by both the standard lease size and the
+// configured burst capacity.
 //
 // A refill is normally prepared before the bucket becomes empty when:
 //
@@ -289,8 +289,8 @@ package ratelimiter
 // redefine the limiter's guarantees:
 //
 //   1. Public consumption never accesses PostgreSQL directly.
-//   2. Exactly one workspace, ingestion, or organization-level budget applies to each
-//      request.
+//   2. Exactly one workspace, ingestion, or organization-level budget applies
+//      to each request.
 //   3. Each subject has one local bucket per process.
 //   4. The bucket mutex protects all mutations to bucket, refill-generation,
 //      and waiter state. Final waiter results are safely published to readers
