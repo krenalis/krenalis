@@ -65,6 +65,10 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
+			if err != nil {
+				return nil, err
+			}
 			platform, _, _, err := ws.Warehouse(ctx)
 			if err != nil {
 				return nil, err
@@ -86,6 +90,10 @@ var tools = []server.ServerTool{
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			ws, err := workspaceFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
 			if err != nil {
 				return nil, err
 			}
@@ -118,6 +126,10 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
+			if err != nil {
+				return nil, err
+			}
 			schemaInfo := profileSchemaInfoForMCPClient(ws.ProfileSchema, ws.ColumnTypeDescription)
 			encoded, err := json.Marshal(schemaInfo)
 			if err != nil {
@@ -142,6 +154,14 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(true),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			ws, err := workspaceFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
+			if err != nil {
+				return nil, err
+			}
 			encoded, err := json.Marshal(eventSchemaInfoForMCPClient)
 			if err != nil {
 				return nil, err
@@ -162,6 +182,14 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(true),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			ws, err := workspaceFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
+			if err != nil {
+				return nil, err
+			}
 			return mcp.NewToolResultText(strings.Join([]string{
 				"The 'krenalis_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'profiles' view.",
 				"The 'krenalis_identities._connection' column references the ID (integer) of the connection from which the identity was imported.",
@@ -184,6 +212,10 @@ var tools = []server.ServerTool{
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			ws, err := workspaceFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
 			if err != nil {
 				return nil, err
 			}
@@ -229,6 +261,10 @@ var tools = []server.ServerTool{
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			ws, err := workspaceFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			err = ws.ConsumeRateLimitCapacity(ctx, 1)
 			if err != nil {
 				return nil, err
 			}
