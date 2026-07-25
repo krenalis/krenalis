@@ -72,3 +72,52 @@ func TestIngestionRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
 		t.Fatalf("expected no events stored after the rejected batch, got %d", count)
 	}
 }
+
+// TestIngestionRateLimiterRestoresUnusedBatchCapacity verifies that invalid
+// events return their capacity while duplicate events consume it.
+func TestIngestionRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
+
+	organizations := k.Organizations(0, 1)
+	if len(organizations) != 1 {
+		t.Fatalf("expected one organization, got %d", len(organizations))
+	}
+	organization := organizations[0]
+	limits := organization.Limits
+	limits.API.Ingestion.QuotaPerHour = 1
+	limits.API.Ingestion.BurstCapacity = 3
+	k.UpdateOrganization(organization.ID, organization.Name, limits)
+
+	connectionID := k.CreateJavaScriptSource("Restored rate-limit capacity source", nil)
+	writeKeys := k.EventWriteKeys(connectionID)
+	if len(writeKeys) != 1 {
+		t.Fatalf("expected one event write key, got %d", len(writeKeys))
+	}
+	headers := http.Header{"Authorization": []string{"Bearer " + writeKeys[0]}}
+	messageID := "293ad636-c849-47a9-8d09-0e3707c6d8c8"
+
+	k.Call(http.MethodPost, "/v1/events", headers, []map[string]any{
+		{"type": "track", "userId": "user-1", "event": "first", "messageId": messageID},
+		{},
+		{"type": "track", "userId": "user-1", "event": "duplicate", "messageId": messageID},
+	}, nil)
+	k.Call(http.MethodPost, "/v1/events", headers, map[string]any{
+		"type": "track", "userId": "user-1", "event": "second",
+	}, nil)
+
+	err := k.TryCall(http.MethodPost, "/v1/events", headers, map[string]any{
+		"type": "track", "userId": "user-1", "event": "third",
+	}, nil)
+	statusErr, ok := err.(*krenalistester.StatusCodeError)
+	if !ok {
+		t.Fatalf("expected *StatusCodeError, got %T", err)
+	}
+	if statusErr.Response.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected HTTP status %d, got %d", http.StatusTooManyRequests, statusErr.Response.Code)
+	}
+}

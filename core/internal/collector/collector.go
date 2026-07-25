@@ -765,13 +765,20 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	ws := connection.Workspace()
-	err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), dec.EventCount())
+	eventCount := dec.EventCount()
+	err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), eventCount)
 	if err != nil {
 		if err == state.ErrAPICapacityExceeded {
 			return errors.TooManyRequests("ingestion rate limit exceeded")
 		}
 		return err
 	}
+	consumedEventCount := 0
+	defer func() {
+		if unusedEventCount := eventCount - consumedEventCount; unusedEventCount > 0 {
+			ws.RestoreIngestionRateLimitCapacity(unusedEventCount)
+		}
+	}()
 	connector := connection.Connector()
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
@@ -796,6 +803,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			continue
 		}
+		consumedEventCount++
 
 		_, duplicated := c.duplicated.LoadOrStore(event["messageId"].(string), nil)
 		if duplicated {
