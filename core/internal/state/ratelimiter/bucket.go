@@ -7,11 +7,19 @@ package ratelimiter
 import "sync"
 
 const (
-	apiMaxCost         = 100
-	apiLeaseSize       = apiMaxCost
-	ingestionMaxCost   = 20_000
-	ingestionLeaseSize = ingestionMaxCost
+	requestLeaseSize   = 100
+	requestMaxCost     = requestLeaseSize
+	eventLeaseSize     = 20_000
+	eventBatchMaxCost  = eventLeaseSize
 	maxRefillThreshold = 25
+)
+
+type subjectKind string
+
+const (
+	organizationSubjectKind subjectKind = "organization"
+	workspaceSubjectKind    subjectKind = "workspace"
+	ingestionSubjectKind    subjectKind = "ingestion"
 )
 
 // Bucket stores process-local capacity for one organization, workspace,
@@ -23,7 +31,7 @@ const (
 // maps or unrelated organization data.
 type Bucket struct {
 	mu          sync.Mutex
-	subjectKind string
+	subjectKind subjectKind
 	subjectID   string
 	available   int
 	target      int
@@ -34,38 +42,43 @@ type Bucket struct {
 	maxCost     int
 }
 
-// newBucket creates an empty local bucket for the specified subject.
-func newBucket(subjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
-	return &Bucket{
-		subjectKind: subjectKind,
-		subjectID:   subjectID,
-		leaseSize:   leaseSize,
-		maxCost:     maxCost,
-	}
-}
-
 // NewIngestionBucket creates the empty local ingestion bucket owned by a
 // Workspace instance.
 func NewIngestionBucket(workspaceID string) *Bucket {
-	return newBucket("ingestion", workspaceID, ingestionLeaseSize, ingestionMaxCost)
+	return &Bucket{
+		subjectKind: ingestionSubjectKind,
+		subjectID:   workspaceID,
+		leaseSize:   eventLeaseSize,
+		maxCost:     eventBatchMaxCost,
+	}
 }
 
 // NewOrganizationBucket creates an organization's empty local bucket for
 // organization-level requests.
 func NewOrganizationBucket(organizationID string) *Bucket {
-	return newBucket("organization", organizationID, apiLeaseSize, apiMaxCost)
+	return &Bucket{
+		subjectKind: organizationSubjectKind,
+		subjectID:   organizationID,
+		leaseSize:   requestLeaseSize,
+		maxCost:     requestMaxCost,
+	}
 }
 
 // NewWorkspaceBucket creates the empty local bucket owned by a Workspace
 // instance.
 func NewWorkspaceBucket(workspaceID string) *Bucket {
-	return newBucket("workspace", workspaceID, apiLeaseSize, apiMaxCost)
+	return &Bucket{
+		subjectKind: workspaceSubjectKind,
+		subjectID:   workspaceID,
+		leaseSize:   requestLeaseSize,
+		maxCost:     requestMaxCost,
+	}
 }
 
-// Disable prevents further consumption and refills after the subject is
-// removed from State, clears local capacity, and rejects pending waiters. A
-// queued pointer remains safe because Go keeps the bucket alive; refillRequest
-// and completeRefill discard later work for disabled buckets.
+// Disable prevents further consumption and refills after the subject is removed
+// from State, clears local capacity, and rejects pending waiters. A queued
+// pointer remains safe because Go keeps the bucket alive; refillRequest and
+// completeRefill discard later work for disabled buckets.
 func (bucket *Bucket) Disable() {
 	bucket.mu.Lock()
 	bucket.disabled = true
@@ -119,6 +132,9 @@ func (bucket *Bucket) activateRefill(refill *refill, cost int, admit bool, refil
 	return waiter
 }
 
+// admitWaiterLocked adds a waiter to the refill's FIFO queue. The caller must
+// hold bucket.mu. It returns nil if the waiter's cost would exceed the refill's
+// requested units.
 func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
 	if refill.pendingCost+cost > refill.request.RequestedUnits {
 		return nil

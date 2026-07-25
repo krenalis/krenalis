@@ -20,10 +20,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// leaseAcquirer acquires leases for a batch of organization,
-// workspace, and ingestion subjects.
-type leaseAcquirer func(context.Context, []leaseRequest) ([]leaseResult, error)
-
 const (
 	batchSize  = 64
 	batchDelay = 2 * time.Millisecond
@@ -47,7 +43,6 @@ var ErrInvalidCost = errors.New("invalid API cost")
 // directly.
 type Limiter struct {
 	acquireLeases  leaseAcquirer
-	now            func() time.Time
 	maxWait        time.Duration
 	acquireTimeout time.Duration
 
@@ -70,6 +65,10 @@ type Limiter struct {
 	}
 }
 
+// leaseAcquirer acquires leases for a batch of organization,
+// workspace, and ingestion subjects.
+type leaseAcquirer func(context.Context, []leaseRequest) ([]leaseResult, error)
+
 // refill represents one refill generation, including its immutable
 // lease request and the waiters admitted to it. Mutations are protected by
 // bucket.mu. Closing done publishes final waiter results to readers. The
@@ -85,20 +84,10 @@ type refill struct {
 	pendingCost int
 }
 
-// waiter represents one request admitted to a refill. element is
-// non-nil only while the waiter belongs to the refill's FIFO queue.
-type waiter struct {
-	refill  *refill
-	cost    int
-	element *list.Element
-	err     error
-}
-
 // New starts a limiter and its single refill batcher.
 func New(database *db.DB) *Limiter {
 	limiter := &Limiter{
 		acquireLeases:  newLeaseAcquirer(database),
-		now:            time.Now,
 		maxWait:        maxWaitDuration,
 		acquireTimeout: defaultAcquireTimeout,
 		refillQueue:    make(chan *refill, queueSize),
@@ -120,7 +109,7 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	now := limiter.now()
+	now := time.Now()
 	refillAllowed := !limiter.closed.Load() && !limiter.refillBackoffActive(now)
 	satisfied, refill, waiter := bucket.consume(cost, refillAllowed)
 	if refill != nil {
@@ -138,7 +127,7 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 		}
 		if queued {
 			limiter.refillQueueSaturated.Store(false)
-			refillAllowed = !limiter.closed.Load() && !limiter.refillBackoffActive(limiter.now())
+			refillAllowed = !limiter.closed.Load() && !limiter.refillBackoffActive(time.Now())
 			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
 		}
 	}
@@ -203,7 +192,7 @@ func (limiter *Limiter) failRefillBatch(pendingRefills map[*refill]leaseRequest)
 		failCollectedRefills(pendingRefills)
 		return
 	}
-	now := limiter.now()
+	now := time.Now()
 	limiter.refillRetryAfter.Store(now.Add(refillBackoffDuration).UnixNano())
 	failCollectedRefills(pendingRefills)
 }
@@ -233,7 +222,7 @@ func (limiter *Limiter) refillBackoffActive(now time.Time) bool {
 // any local capacity is changed.
 func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 
-	if limiter.refillBackoffActive(limiter.now()) {
+	if limiter.refillBackoffActive(time.Now()) {
 		// Generations queued before a failed batch may still be in the channel.
 		// They are not sent to PostgreSQL during global backoff. Rejecting them also
 		// prevents waiters from relying on a refill that will not run.
@@ -423,9 +412,10 @@ func newLeaseAcquirer(database *db.DB) leaseAcquirer {
 	}
 }
 
-// Metrics are process-wide. Reuse an existing collector if another State has
-// already registered it, and never unregister it while another State may still
-// be running.
+// registerCounter registers a counter in the default Prometheus registry. If a
+// counter with the same name is already registered, it returns the existing
+// counter. It returns nil when registration fails or the existing collector is
+// not a counter.
 func registerCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
 	counter := prometheus.NewCounter(counterOptions)
 	if err := prometheus.Register(counter); err != nil {
@@ -440,25 +430,34 @@ func registerCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
 	return counter
 }
 
-// subjectKey identifies one rate-limit subject in a batch response.
-type subjectKey struct {
-	kind string
-	id   string
-}
-
 // leaseRequest is one input entry for the PostgreSQL lease
 // acquisition function.
 type leaseRequest struct {
-	SubjectKind    string `json:"subject_kind"`
-	SubjectID      string `json:"subject_id"`
-	RequestedUnits int    `json:"requested_units"`
+	SubjectKind    subjectKind `json:"subject_kind"`
+	SubjectID      string      `json:"subject_id"`
+	RequestedUnits int         `json:"requested_units"`
 }
 
 // leaseResult is one result returned by the PostgreSQL lease
 // acquisition function.
 type leaseResult struct {
-	SubjectKind   string
+	SubjectKind   subjectKind
 	SubjectID     string
 	GrantedUnits  int
 	CapacityUnits int
+}
+
+// subjectKey identifies one rate-limit subject in a batch response.
+type subjectKey struct {
+	kind subjectKind
+	id   string
+}
+
+// waiter represents one request admitted to a refill. element is
+// non-nil only while the waiter belongs to the refill's FIFO queue.
+type waiter struct {
+	refill  *refill
+	cost    int
+	element *list.Element
+	err     error
 }

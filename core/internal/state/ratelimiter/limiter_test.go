@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -21,7 +22,6 @@ func newTestRateLimiter(t *testing.T, acquire leaseAcquirer) *Limiter {
 	t.Helper()
 	l := &Limiter{
 		acquireLeases:  acquire,
-		now:            time.Now,
 		maxWait:        maxWaitDuration,
 		acquireTimeout: defaultAcquireTimeout,
 		refillQueue:    make(chan *refill, queueSize),
@@ -56,26 +56,6 @@ func limiterRetryAfter(l *Limiter) time.Time {
 		return time.Time{}
 	}
 	return time.Unix(0, unixNano)
-}
-
-// testRateLimitClock is an atomically readable clock controlled by a test.
-type testRateLimitClock struct{ unixNano atomic.Int64 }
-
-// newTestRateLimitClock returns a clock with a stable initial value.
-func newTestRateLimitClock() *testRateLimitClock {
-	clock := &testRateLimitClock{}
-	clock.Set(time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC))
-	return clock
-}
-
-// Now returns the clock's current value.
-func (clock *testRateLimitClock) Now() time.Time {
-	return time.Unix(0, clock.unixNano.Load())
-}
-
-// Set updates the clock's current value.
-func (clock *testRateLimitClock) Set(now time.Time) {
-	clock.unixNano.Store(now.UnixNano())
 }
 
 // waitForRateLimit waits until condition succeeds or fails the test after one second.
@@ -154,13 +134,13 @@ func TestLimiterValidatesCost(t *testing.T) {
 func TestIngestionValidatesEventCount(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
 	bucket := NewIngestionBucket(testRateLimitID)
-	for _, count := range []int{-1, 0, ingestionMaxCost + 1} {
+	for _, count := range []int{-1, 0, eventBatchMaxCost + 1} {
 		if err := limiter.Consume(context.Background(), bucket, count); !errors.Is(err, ErrInvalidCost) {
 			t.Fatalf("event count %d: got %v, want ErrInvalidCost", count, err)
 		}
 	}
-	applyTestLease(bucket, ingestionMaxCost, ingestionMaxCost)
-	if err := limiter.Consume(context.Background(), bucket, ingestionMaxCost); err != nil {
+	applyTestLease(bucket, eventBatchMaxCost, eventBatchMaxCost)
+	if err := limiter.Consume(context.Background(), bucket, eventBatchMaxCost); err != nil {
 		t.Fatalf("maximum event count: %v", err)
 	}
 }
@@ -534,7 +514,6 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 func TestLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	requests := make(chan []leaseRequest, 1)
 	limiter := &Limiter{
-		now:         time.Now,
 		maxWait:     maxWaitDuration,
 		refillQueue: make(chan *refill, queueSize),
 		acquireLeases: func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
@@ -615,52 +594,55 @@ func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 // TestLimiterStartsGlobalBackoffAfterRefillError verifies that a failed
 // acquisition suppresses refills and waiter admission until the retry deadline.
 func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
-	clock := newTestRateLimitClock()
-	var calls atomic.Int32
-	l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
-		if calls.Add(1) == 1 {
-			return nil, errors.New("PostgreSQL is unavailable")
+	synctest.Test(t, func(t *testing.T) {
+		var calls atomic.Int32
+		l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+			if calls.Add(1) == 1 {
+				return nil, errors.New("PostgreSQL is unavailable")
+			}
+			return []leaseResult{{
+				SubjectKind:   request[0].SubjectKind,
+				SubjectID:     request[0].SubjectID,
+				CapacityUnits: 100,
+			}}, nil
+		})
+		bucket := NewOrganizationBucket(testRateLimitID)
+		applyTestLease(bucket, 2, 100)
+		if err := l.Consume(context.Background(), bucket, 1); err != nil {
+			t.Fatalf("initial consume: %v", err)
 		}
-		return []leaseResult{{
-			SubjectKind:   request[0].SubjectKind,
-			SubjectID:     request[0].SubjectID,
-			CapacityUnits: 100,
-		}}, nil
-	})
-	l.now = clock.Now
-	bucket := NewOrganizationBucket(testRateLimitID)
-	applyTestLease(bucket, 2, 100)
-	if err := l.Consume(context.Background(), bucket, 1); err != nil {
-		t.Fatalf("initial consume: %v", err)
-	}
-	waitForRateLimit(t, func() bool {
-		return !limiterRetryAfter(l).IsZero() && calls.Load() == 1
-	})
-	retryAt := limiterRetryAfter(l)
-	if want := clock.Now().Add(refillBackoffDuration); !retryAt.Equal(want) {
-		t.Fatalf("retry after = %s, want %s", retryAt, want)
-	}
-	_, _, _, queued, _ := bucketSnapshot(bucket)
-	if queued {
-		t.Fatal("failed refill remained queued")
-	}
+		time.Sleep(batchDelay)
+		synctest.Wait()
+		retryAt := limiterRetryAfter(l)
+		if want := time.Now().Add(refillBackoffDuration); !retryAt.Equal(want) {
+			t.Fatalf("retry after = %s, want %s", retryAt, want)
+		}
+		_, _, _, queued, _ := bucketSnapshot(bucket)
+		if queued {
+			t.Fatal("failed refill remained queued")
+		}
 
-	if err := l.Consume(context.Background(), bucket, 1); err != nil {
-		t.Fatalf("consume local capacity during backoff: %v", err)
-	}
-	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
-		t.Fatalf("consume without local capacity during backoff: got %v, want ErrCapacityExceeded", err)
-	}
-	if calls.Load() != 1 {
-		t.Fatalf("refill attempts during backoff = %d, want 1", calls.Load())
-	}
+		if err := l.Consume(context.Background(), bucket, 1); err != nil {
+			t.Fatalf("consume local capacity during backoff: %v", err)
+		}
+		if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+			t.Fatalf("consume without local capacity during backoff: got %v, want ErrCapacityExceeded", err)
+		}
+		if calls.Load() != 1 {
+			t.Fatalf("refill attempts during backoff = %d, want 1", calls.Load())
+		}
 
-	clock.Set(retryAt)
-	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
-		t.Fatalf("consume after backoff: got %v, want ErrCapacityExceeded", err)
-	}
-	waitForRateLimit(t, func() bool {
-		return calls.Load() == 2 && limiterRetryAfter(l).IsZero()
+		time.Sleep(refillBackoffDuration)
+		if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+			t.Fatalf("consume after backoff: got %v, want ErrCapacityExceeded", err)
+		}
+		synctest.Wait()
+		if calls.Load() != 2 {
+			t.Fatalf("refill attempts after backoff = %d, want 2", calls.Load())
+		}
+		if retryAt := limiterRetryAfter(l); !retryAt.IsZero() {
+			t.Fatalf("retry after successful acquisition = %s, want zero", retryAt)
+		}
 	})
 }
 
@@ -707,15 +689,16 @@ func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			clock := newTestRateLimitClock()
-			l := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
-				return test.results(requests[0]), nil
-			})
-			l.now = clock.Now
-			bucket := NewOrganizationBucket(testRateLimitID)
-			_ = l.Consume(context.Background(), bucket, 1)
-			waitForRateLimit(t, func() bool {
-				return !limiterRetryAfter(l).IsZero()
+			synctest.Test(t, func(t *testing.T) {
+				l := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
+					return test.results(requests[0]), nil
+				})
+				bucket := NewOrganizationBucket(testRateLimitID)
+				_ = l.Consume(context.Background(), bucket, 1)
+				synctest.Wait()
+				if limiterRetryAfter(l).IsZero() {
+					t.Fatal("invalid lease result did not start global backoff")
+				}
 			})
 		})
 	}
@@ -724,41 +707,43 @@ func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 // TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills verifies
 // that backoff rejects queued and concurrent refill attempts.
 func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
-	clock := newTestRateLimitClock()
-	var calls atomic.Int32
-	l := newTestRateLimiter(t, func(_ context.Context, _ []leaseRequest) ([]leaseResult, error) {
-		calls.Add(1)
-		return nil, nil
-	})
-	l.now = clock.Now
-	l.refillRetryAfter.Store(clock.Now().Add(refillBackoffDuration).UnixNano())
-
-	queued := NewOrganizationBucket(testRateLimitID)
-	_, queuedRefill, _ := queued.consume(2, true)
-	queued.activateRefill(queuedRefill, 0, false, true)
-	l.refillQueue <- queuedRefill
-	waitForRateLimit(t, func() bool {
-		_, _, _, refillQueued, _ := bucketSnapshot(queued)
-		return !refillQueued
-	})
-	if calls.Load() != 0 {
-		t.Fatalf("refill attempts during global backoff = %d, want 0", calls.Load())
-	}
-
-	bucket := NewWorkspaceBucket("222222222222")
-	var wg sync.WaitGroup
-	for range 100 {
-		wg.Go(func() {
-			if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
-				t.Errorf("consume during global backoff: got %v, want ErrCapacityExceeded", err)
-			}
+	synctest.Test(t, func(t *testing.T) {
+		var calls atomic.Int32
+		l := newTestRateLimiter(t, func(_ context.Context, _ []leaseRequest) ([]leaseResult, error) {
+			calls.Add(1)
+			return nil, nil
 		})
-	}
-	wg.Wait()
-	_, _, _, refillQueued, _ := bucketSnapshot(bucket)
-	if refillQueued {
-		t.Fatal("global backoff queued a refill")
-	}
+		l.refillRetryAfter.Store(time.Now().Add(refillBackoffDuration).UnixNano())
+
+		queued := NewOrganizationBucket(testRateLimitID)
+		_, queuedRefill, _ := queued.consume(2, true)
+		queued.activateRefill(queuedRefill, 0, false, true)
+		l.refillQueue <- queuedRefill
+		time.Sleep(batchDelay)
+		synctest.Wait()
+		_, _, _, refillQueued, _ := bucketSnapshot(queued)
+		if refillQueued {
+			t.Fatal("queued refill remained active during global backoff")
+		}
+		if calls.Load() != 0 {
+			t.Fatalf("refill attempts during global backoff = %d, want 0", calls.Load())
+		}
+
+		bucket := NewWorkspaceBucket("222222222222")
+		var wg sync.WaitGroup
+		for range 100 {
+			wg.Go(func() {
+				if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+					t.Errorf("consume during global backoff: got %v, want ErrCapacityExceeded", err)
+				}
+			})
+		}
+		wg.Wait()
+		_, _, _, refillQueued, _ = bucketSnapshot(bucket)
+		if refillQueued {
+			t.Fatal("global backoff queued a refill")
+		}
+	})
 }
 
 // TestLimiterDisabledBucketCompletesInFlightRefill verifies that
@@ -799,7 +784,6 @@ func TestLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 // a rejected queue publication cannot authorize waiting.
 func TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
 	l := &Limiter{
-		now:         time.Now,
 		refillQueue: make(chan *refill, 1),
 	}
 	l.refillQueue <- &refill{}
