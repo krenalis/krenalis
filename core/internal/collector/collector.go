@@ -765,10 +765,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	ws := connection.Workspace()
-	eventCount := dec.EventCount()
-	if eventCount > 0 {
-		err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), eventCount)
-	}
+	err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), dec.EventCount())
 	if err != nil {
 		if err == state.ErrAPICapacityExceeded {
 			return errors.TooManyRequests("ingestion rate limit exceeded")

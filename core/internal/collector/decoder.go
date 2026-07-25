@@ -94,6 +94,7 @@ func (d *decoder) ConnectionId() (string, bool) {
 const maxBatchEventCount = 20_000
 
 // EventCount returns the number of events in the request.
+// The returned count is always >= 1 after a successful Reset.
 func (d *decoder) EventCount() int {
 	return d.eventCount
 }
@@ -254,6 +255,9 @@ func (d *decoder) Reset(r *http.Request) error {
 		if err != nil {
 			return err
 		}
+		if eventCount == 0 {
+			return errors.BadRequest("batch must contain at least one event")
+		}
 		d.eventCount = eventCount
 		d.payload = bytes.NewBuffer(events)
 		d.dec.Reset(d.payload)
@@ -336,6 +340,9 @@ func (d *decoder) Reset(r *http.Request) error {
 			}
 			d.connectionId = connectionId
 		}
+	}
+	if d.typ == "batch" && d.eventCount == 0 {
+		return errors.BadRequest("batch must contain at least one event")
 	}
 	d.payload = bytes.NewBuffer(events)
 	d.dec.Reset(d.payload)
