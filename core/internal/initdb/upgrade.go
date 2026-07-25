@@ -136,8 +136,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_workspace_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_workspace_burst_capacity BETWEEN 1 AND 100000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_ingestion_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_ingestion_quota_per_hour BETWEEN 1 AND 1000000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_ingestion_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_ingestion_burst_capacity BETWEEN 1 AND 100000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_nonspecific_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_nonspecific_quota_per_hour BETWEEN 1 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_nonspecific_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_nonspecific_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_organization_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_organization_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_organization_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_organization_burst_capacity BETWEEN 1 AND 100000)`,
 			`ALTER TABLE organizations ALTER COLUMN members_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN access_keys_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspaces_limit DROP DEFAULT`,
@@ -148,10 +148,10 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ALTER COLUMN api_workspace_burst_capacity DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN api_ingestion_quota_per_hour DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN api_ingestion_burst_capacity DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_nonspecific_quota_per_hour DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_nonspecific_burst_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_organization_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN api_organization_burst_capacity DROP DEFAULT`,
 			`CREATE TABLE IF NOT EXISTS api_rate_limit_buckets (
-				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'nonspecific')),
+				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'organization')),
 				subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
 				organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
 				workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
@@ -174,7 +174,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 					)
 					OR
 					(
-						subject_kind = 'nonspecific'
+						subject_kind = 'organization'
 						AND subject_id = organization
 						AND workspace IS NULL
 					)

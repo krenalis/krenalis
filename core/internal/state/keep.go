@@ -509,7 +509,7 @@ func (state *State) createOrganization(n notification) string {
 	org := &Organization{
 		mu:          &sync.Mutex{},
 		rateLimiter: state.rateLimiter,
-		bucket:      ratelimiter.NewNonspecificBucket(e.ID),
+		bucket:      ratelimiter.NewOrganizationBucket(e.ID),
 		workspaces:  map[string]*Workspace{},
 		members:     map[string]bool{},
 		usage:       newOrganizationUsage(e.Limits),

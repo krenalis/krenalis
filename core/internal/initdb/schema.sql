@@ -18,8 +18,8 @@ CREATE TABLE organizations (
     api_workspace_burst_capacity integer NOT NULL CHECK (api_workspace_burst_capacity BETWEEN 1 AND 100000),
     api_ingestion_quota_per_hour integer NOT NULL CHECK (api_ingestion_quota_per_hour BETWEEN 1 AND 1000000),
     api_ingestion_burst_capacity integer NOT NULL CHECK (api_ingestion_burst_capacity BETWEEN 1 AND 100000),
-    api_nonspecific_quota_per_hour integer NOT NULL CHECK (api_nonspecific_quota_per_hour BETWEEN 1 AND 1000000),
-    api_nonspecific_burst_capacity integer NOT NULL CHECK (api_nonspecific_burst_capacity BETWEEN 1 AND 100000),
+    api_organization_quota_per_hour integer NOT NULL CHECK (api_organization_quota_per_hour BETWEEN 1 AND 1000000),
+    api_organization_burst_capacity integer NOT NULL CHECK (api_organization_burst_capacity BETWEEN 1 AND 100000),
     PRIMARY KEY (id)
 );
 
@@ -86,7 +86,7 @@ CREATE TABLE workspaces (
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
 
 CREATE TABLE api_rate_limit_buckets (
-    subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'nonspecific')),
+    subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'organization')),
     subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
     workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
@@ -109,7 +109,7 @@ CREATE TABLE api_rate_limit_buckets (
         )
         OR
         (
-            subject_kind = 'nonspecific'
+            subject_kind = 'organization'
             AND subject_id = organization
             AND workspace IS NULL
         )

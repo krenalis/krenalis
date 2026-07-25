@@ -773,19 +773,19 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 	}
 	n.Limits.API.Workspace = state.APILimit(limits.API.Workspace)
 	n.Limits.API.Ingestion = state.APILimit(limits.API.Ingestion)
-	n.Limits.API.Nonspecific = state.APILimit(limits.API.Nonspecific)
+	n.Limits.API.Organization = state.APILimit(limits.API.Organization)
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
 				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit,"+
 				" api_workspace_quota_per_hour, api_workspace_burst_capacity, api_ingestion_quota_per_hour, api_ingestion_burst_capacity,"+
-				" api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity)"+
+				" api_organization_quota_per_hour, api_organization_burst_capacity)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
 				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
 				n.Limits.API.Workspace.QuotaPerHour, n.Limits.API.Workspace.BurstCapacity,
 				n.Limits.API.Ingestion.QuotaPerHour, n.Limits.API.Ingestion.BurstCapacity,
-				n.Limits.API.Nonspecific.QuotaPerHour, n.Limits.API.Nonspecific.BurstCapacity)
+				n.Limits.API.Organization.QuotaPerHour, n.Limits.API.Organization.BurstCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -930,7 +930,7 @@ func (core *Core) Organization(id string) (*Organization, error) {
 	}
 	organization.Limits.API.Workspace = APILimit(limits.API.Workspace)
 	organization.Limits.API.Ingestion = APILimit(limits.API.Ingestion)
-	organization.Limits.API.Nonspecific = APILimit(limits.API.Nonspecific)
+	organization.Limits.API.Organization = APILimit(limits.API.Organization)
 	organization.Counts = OrganizationCounts(org.Counts())
 	return &organization, nil
 }
@@ -986,7 +986,7 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 		}
 		orgs[i].Limits.API.Workspace = APILimit(limits.API.Workspace)
 		orgs[i].Limits.API.Ingestion = APILimit(limits.API.Ingestion)
-		orgs[i].Limits.API.Nonspecific = APILimit(limits.API.Nonspecific)
+		orgs[i].Limits.API.Organization = APILimit(limits.API.Organization)
 		orgs[i].Counts = OrganizationCounts(organization.Counts())
 	}
 	return orgs, nil
@@ -2190,11 +2190,11 @@ func validateOrganizationLimits(limits *OrganizationLimits) error {
 	if q := limits.API.Ingestion.BurstCapacity; q < 1 || q > 100_000 {
 		return errors.BadRequest("ingestion burst capacity must be between 1 and 100,000")
 	}
-	if q := limits.API.Nonspecific.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("nonspecific hourly API quota must be between 1 and 1,000,000")
+	if q := limits.API.Organization.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("organization hourly API quota must be between 1 and 1,000,000")
 	}
-	if q := limits.API.Nonspecific.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("nonspecific API burst capacity must be between 1 and 100,000")
+	if q := limits.API.Organization.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("organization API burst capacity must be between 1 and 100,000")
 	}
 	return nil
 }

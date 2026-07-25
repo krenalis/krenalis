@@ -9,7 +9,7 @@ package ratelimiter
 // Purpose and quota model
 //
 // The rate limiter gives each workspace independent budgets for normal API
-// operations and ingestion, and gives each organization a separate nonspecific
+// operations and ingestion, and gives each organization a separate organization-level
 // budget for normal API operations.
 //
 // Every rate-limited request consumes exactly one budget:
@@ -18,7 +18,7 @@ package ratelimiter
 //   - a normal API operation associated with a workspace consumes that
 //     workspace's API budget;
 //   - a normal API operation not associated with a workspace consumes the
-//     authenticated organization's nonspecific budget.
+//     authenticated organization's organization-level budget.
 //
 // A request may be associated with a workspace because the endpoint is
 // workspace-scoped, the API key is bound to a workspace, or the
@@ -27,7 +27,7 @@ package ratelimiter
 // consumes that workspace's API budget.
 //
 // Organization-only endpoints reject requests associated with a workspace
-// rather than charging the organization's nonspecific budget.
+// rather than charging the organization's organization-level budget.
 //
 // Budgets belong to organizations and workspaces, not to individual API keys.
 //
@@ -55,7 +55,7 @@ package ratelimiter
 // admitted as waiters return ErrCapacityExceeded. Caller cancellation and
 // caller deadlines preserve the corresponding context error.
 //
-// Each Organization instance owns one nonspecific bucket. Each Workspace owns
+// Each Organization instance owns one organization-level bucket. Each Workspace owns
 // separate API and ingestion buckets. The shared Limiter owns the refill
 // queue, batcher, PostgreSQL lease acquisition, global backoff, metrics, and
 // shutdown lifecycle.
@@ -289,7 +289,7 @@ package ratelimiter
 // redefine the limiter's guarantees:
 //
 //   1. Public consumption never accesses PostgreSQL directly.
-//   2. Exactly one workspace, ingestion, or nonspecific budget applies to each
+//   2. Exactly one workspace, ingestion, or organization-level budget applies to each
 //      request.
 //   3. Each subject has one local bucket per process.
 //   4. The bucket mutex protects all mutations to bucket, refill-generation,

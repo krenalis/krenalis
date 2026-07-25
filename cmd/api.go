@@ -142,10 +142,10 @@ type organizationLimits struct {
 			QuotaPerHour  *int `json:"quotaPerHour"`
 			BurstCapacity *int `json:"burstCapacity"`
 		} `json:"ingestion"`
-		Nonspecific *struct {
+		Organization *struct {
 			QuotaPerHour  *int `json:"quotaPerHour"`
 			BurstCapacity *int `json:"burstCapacity"`
-		} `json:"nonspecific"`
+		} `json:"organization"`
 	} `json:"api"`
 }
 
@@ -548,14 +548,14 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 	if limits.API.Ingestion.BurstCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("ingestion event burst capacity limit is required")
 	}
-	if limits.API.Nonspecific == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("nonspecific API limit is required")
+	if limits.API.Organization == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization API limit is required")
 	}
-	if limits.API.Nonspecific.QuotaPerHour == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("nonspecific API quota per hour limit is required")
+	if limits.API.Organization.QuotaPerHour == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization API quota per hour limit is required")
 	}
-	if limits.API.Nonspecific.BurstCapacity == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("nonspecific API burst capacity limit is required")
+	if limits.API.Organization.BurstCapacity == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization API burst capacity limit is required")
 	}
 	return core.OrganizationLimits{
 		Members:     *limits.Members,
@@ -573,9 +573,9 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 				QuotaPerHour:  *limits.API.Ingestion.QuotaPerHour,
 				BurstCapacity: *limits.API.Ingestion.BurstCapacity,
 			},
-			Nonspecific: core.APILimit{
-				QuotaPerHour:  *limits.API.Nonspecific.QuotaPerHour,
-				BurstCapacity: *limits.API.Nonspecific.BurstCapacity,
+			Organization: core.APILimit{
+				QuotaPerHour:  *limits.API.Organization.QuotaPerHour,
+				BurstCapacity: *limits.API.Organization.BurstCapacity,
 			},
 		},
 	}, nil

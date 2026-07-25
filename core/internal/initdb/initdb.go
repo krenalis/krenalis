@@ -155,7 +155,7 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	_, err := tx.Exec(ctx, `INSERT INTO organizations`+
 		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,`+
 		` api_workspace_quota_per_hour, api_workspace_burst_capacity, api_ingestion_quota_per_hour, api_ingestion_burst_capacity,`+
-		` api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity)`+
+		` api_organization_quota_per_hour, api_organization_burst_capacity)`+
 		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000, 25000, 1000, 25000, 1000, 25000, 1000)`,
 		organizationID)
 	if err != nil {

@@ -109,7 +109,7 @@ func TestValuerStringerInvalidValues(t *testing.T) {
 // TestReplacePreservesRateLimitBuckets verifies that entity updates retain
 // their separate local rate-limit buckets.
 func TestReplacePreservesRateLimitBuckets(t *testing.T) {
-	organizationBucket := ratelimiter.NewNonspecificBucket("111111111111")
+	organizationBucket := ratelimiter.NewOrganizationBucket("111111111111")
 	workspaceBucket := ratelimiter.NewWorkspaceBucket("222222222222")
 	ingestionBucket := ratelimiter.NewIngestionBucket("222222222222")
 	organization := &Organization{

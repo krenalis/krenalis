@@ -278,7 +278,7 @@ var DefaultOrganizationLimits = OrganizationLimits{
 			QuotaPerHour:  25000,
 			BurstCapacity: 1000,
 		},
-		Nonspecific: APILimit{
+		Organization: APILimit{
 			QuotaPerHour:  25000,
 			BurstCapacity: 1000,
 		},

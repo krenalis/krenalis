@@ -50,10 +50,10 @@ func NewIngestionBucket(workspaceID string) *Bucket {
 	return newBucket("ingestion", workspaceID, ingestionLeaseSize, ingestionMaxCost)
 }
 
-// NewNonspecificBucket creates an organization's empty local bucket for
-// nonspecific requests.
-func NewNonspecificBucket(organizationID string) *Bucket {
-	return newBucket("nonspecific", organizationID, apiLeaseSize, apiMaxCost)
+// NewOrganizationBucket creates an organization's empty local bucket for
+// organization-level requests.
+func NewOrganizationBucket(organizationID string) *Bucket {
+	return newBucket("organization", organizationID, apiLeaseSize, apiMaxCost)
 }
 
 // NewWorkspaceBucket creates the empty local bucket owned by a Workspace

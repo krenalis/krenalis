@@ -370,11 +370,11 @@ type OrganizationLimits struct {
 }
 
 // APILimits stores the request and ingestion limits for each workspace, and
-// the request limits for nonspecific operations.
+// the request limits for organization operations.
 type APILimits struct {
-	Workspace   APILimit `json:"workspace"`
-	Ingestion   APILimit `json:"ingestion"`
-	Nonspecific APILimit `json:"nonspecific"`
+	Workspace    APILimit `json:"workspace"`
+	Ingestion    APILimit `json:"ingestion"`
+	Organization APILimit `json:"organization"`
 }
 
 // APILimit defines the hourly API quota and the maximum allowed burst capacity.

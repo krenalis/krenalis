@@ -40,7 +40,7 @@ BEGIN
         SELECT
         FROM jsonb_to_recordset(p_requests) AS r(subject_kind text, subject_id text, requested_units integer)
         WHERE r.subject_kind IS NULL
-           OR r.subject_kind NOT IN ('workspace', 'ingestion', 'nonspecific')
+           OR r.subject_kind NOT IN ('workspace', 'ingestion', 'organization')
            OR r.subject_id IS NULL
            OR r.subject_id !~ '^[1-9A-HJ-NP-Za-km-z]{12}$'
            OR r.requested_units IS NULL
@@ -50,7 +50,7 @@ BEGIN
                 r.subject_kind = 'ingestion'
                 AND r.requested_units > 20000
             )
-           OR (r.subject_kind = 'nonspecific' AND r.requested_units > 100)
+           OR (r.subject_kind = 'organization' AND r.requested_units > 100)
     ) THEN
         RAISE EXCEPTION 'invalid API rate-limit lease request';
     END IF;
@@ -88,7 +88,7 @@ BEGIN
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
         ELSE
-            SELECT api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity
+            SELECT api_organization_quota_per_hour, api_organization_burst_capacity
             INTO v_quota_per_hour, v_burst_capacity
             FROM organizations
             WHERE id = v_request.subject_id;
@@ -111,7 +111,7 @@ BEGIN
         ) VALUES (
             v_request.subject_kind,
             v_request.subject_id,
-            CASE WHEN v_request.subject_kind = 'nonspecific' THEN v_request.subject_id END,
+            CASE WHEN v_request.subject_kind = 'organization' THEN v_request.subject_id END,
             CASE WHEN v_request.subject_kind IN ('workspace', 'ingestion') THEN v_request.subject_id END,
             v_burst_capacity,
             v_burst_capacity,

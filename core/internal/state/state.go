@@ -610,11 +610,11 @@ type OrganizationLimits struct {
 }
 
 // APILimits stores the API and ingestion limits for each workspace, together
-// with the API limit for nonspecific organization requests.
+// with the API limit for organization-level requests.
 type APILimits struct {
-	Workspace   APILimit
-	Ingestion   APILimit
-	Nonspecific APILimit
+	Workspace    APILimit
+	Ingestion    APILimit
+	Organization APILimit
 }
 
 // APILimit defines an hourly quota and the maximum burst capacity.
@@ -633,7 +633,7 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 }
 
 // ConsumeRateLimitCapacity consumes capacity from the organization's
-// nonspecific API bucket. The bucket belongs to the canonical Organization
+// organization-level API bucket. The bucket belongs to the canonical Organization
 // instance stored in State, so all Core wrappers for that organization share
 // the same process-local lease.
 func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {

@@ -277,7 +277,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
 		" connectors_limit, connections_limit, pipelines_limit, api_workspace_quota_per_hour, api_workspace_burst_capacity,"+
-		" api_ingestion_quota_per_hour, api_ingestion_burst_capacity, api_nonspecific_quota_per_hour, api_nonspecific_burst_capacity FROM organizations", func(rows *db.Rows) error {
+		" api_ingestion_quota_per_hour, api_ingestion_burst_capacity, api_organization_quota_per_hour, api_organization_burst_capacity FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			var limits OrganizationLimits
@@ -285,11 +285,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
 				&limits.API.Workspace.QuotaPerHour, &limits.API.Workspace.BurstCapacity,
 				&limits.API.Ingestion.QuotaPerHour, &limits.API.Ingestion.BurstCapacity,
-				&limits.API.Nonspecific.QuotaPerHour, &limits.API.Nonspecific.BurstCapacity); err != nil {
+				&limits.API.Organization.QuotaPerHour, &limits.API.Organization.BurstCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.rateLimiter = state.rateLimiter
-			org.bucket = ratelimiter.NewNonspecificBucket(org.ID)
+			org.bucket = ratelimiter.NewOrganizationBucket(org.ID)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}

@@ -19,7 +19,7 @@ import (
 const x1 = 1
 
 // admitOrganizationRequest authenticates an organization-only request,
-// applies the organization's nonspecific rate-limit budget unless the request
+// applies the organization's organization-level rate-limit budget unless the request
 // is from the Admin console, and returns the organization.
 //
 // See also [admitWorkspaceOptionalRequest] and [admitWorkspaceRequest].
@@ -40,7 +40,7 @@ func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int
 // admitWorkspaceOptionalRequest authenticates a request for which selecting a
 // workspace is optional. Unless the request comes from the Admin console, it
 // applies the selected workspace's rate-limit budget or, if no workspace is
-// selected, the authenticated organization's nonspecific budget. It returns
+// selected, the authenticated organization's organization-level budget. It returns
 // the authenticated organization and optional workspace.
 //
 // See also [admitOrganizationRequest] and [admitWorkspaceRequest].

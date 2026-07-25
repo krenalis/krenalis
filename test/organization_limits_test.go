@@ -44,7 +44,7 @@ func TestOrganizationResourceLimits(t *testing.T) {
 					QuotaPerHour:  303,
 					BurstCapacity: 33,
 				},
-				Nonspecific: krenalistester.APILimit{
+				Organization: krenalistester.APILimit{
 					QuotaPerHour:  101,
 					BurstCapacity: 11,
 				},
@@ -109,8 +109,8 @@ func TestOrganizationResourceLimits(t *testing.T) {
 		limits.API.Workspace.BurstCapacity = 42
 		limits.API.Ingestion.QuotaPerHour = 503
 		limits.API.Ingestion.BurstCapacity = 53
-		limits.API.Nonspecific.QuotaPerHour = 301
-		limits.API.Nonspecific.BurstCapacity = 31
+		limits.API.Organization.QuotaPerHour = 301
+		limits.API.Organization.BurstCapacity = 31
 		k.UpdateOrganization(org.ID, org.Name, limits)
 
 		org = k.Organization(activeOrg.ID)

@@ -88,7 +88,7 @@ func TestIngestionBucketWaitsForInitialRefill(t *testing.T) {
 // TestBucketAdmitsCostOneToPendingRefill verifies that a cost-one request
 // waits for an active refill when local capacity is exhausted.
 func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
-	bucket := NewNonspecificBucket("111111111111")
+	bucket := NewOrganizationBucket("111111111111")
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill == nil || waiter != nil {
 		t.Fatalf("cold bucket consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
@@ -110,7 +110,7 @@ func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
 // TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an active
 // refill admits requests and a closed limiter does not.
 func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
-	bucket := NewNonspecificBucket("111111111111")
+	bucket := NewOrganizationBucket("111111111111")
 	_, refill, _ := bucket.consume(2, true)
 	bucket.activateRefill(refill, 0, false, true)
 
@@ -137,7 +137,7 @@ func TestBucketThresholdScalesWithTarget(t *testing.T) {
 		{target: 1, threshold: 1},
 	} {
 		t.Run(strconv.Itoa(test.target), func(t *testing.T) {
-			bucket := NewNonspecificBucket("111111111111")
+			bucket := NewOrganizationBucket("111111111111")
 			applyTestLease(bucket, 0, test.target)
 			if bucket.threshold != test.threshold {
 				t.Fatalf("threshold = %d, want %d", bucket.threshold, test.threshold)
