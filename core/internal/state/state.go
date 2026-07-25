@@ -19,6 +19,7 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
@@ -30,6 +31,13 @@ var (
 	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
 	ErrAccessKeyNotFound      = errors.New("access key not found")
 )
+
+// ErrAPICapacityExceeded is returned when a request cannot be served from
+// local rate-limit capacity or admitted to the current refill.
+var ErrAPICapacityExceeded = ratelimiter.ErrCapacityExceeded
+
+// ErrInvalidAPICost is returned when an API request has an unsupported cost.
+var ErrInvalidAPICost = ratelimiter.ErrInvalidCost
 
 // election represents a leader election.
 type election struct {
@@ -53,7 +61,7 @@ type metadata struct {
 type State struct {
 	id          string
 	db          *db.DB
-	rateLimiter *rateLimiter
+	rateLimiter *ratelimiter.Limiter
 
 	changing           *sync.RWMutex
 	cipher             *cipher.Cipher
@@ -108,7 +116,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state := &State{
 		id:               base58.Generate(22),
 		db:               db,
-		rateLimiter:      newRateLimiter(db),
+		rateLimiter:      ratelimiter.New(db),
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
 		cipher:           cipher.New(kms),
@@ -570,8 +578,8 @@ type AccessKey struct {
 // Organization represents an organization.
 type Organization struct {
 	mu          *sync.Mutex
-	rateLimiter *rateLimiter
-	bucket      *rateLimitBucket
+	rateLimiter *ratelimiter.Limiter
+	bucket      *ratelimiter.Bucket
 	workspaces  map[string]*Workspace
 	members     map[string]bool // true when the member can log in.
 	usage       organizationUsage
@@ -629,7 +637,7 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 // instance stored in State, so all Core wrappers for that organization share
 // the same process-local lease.
 func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return organization.rateLimiter.consume(ctx, organization.bucket, cost)
+	return organization.rateLimiter.Consume(ctx, organization.bucket, cost)
 }
 
 // Counts returns the organization's counts.
@@ -795,8 +803,8 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 // Workspace represents a workspace.
 type Workspace struct {
 	mu              *sync.Mutex
-	apiBucket       *rateLimitBucket
-	ingestionBucket *rateLimitBucket
+	apiBucket       *ratelimiter.Bucket
+	ingestionBucket *ratelimiter.Bucket
 	Warehouse       struct {
 		Platform       string
 		Mode           WarehouseMode
@@ -881,14 +889,14 @@ func (workspace *Workspace) Connections() []*Connection {
 // ConsumeIngestionRateLimitCapacity consumes capacity for eventCount events
 // from the workspace's ingestion bucket.
 func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(ctx context.Context, eventCount int) error {
-	return workspace.organization.rateLimiter.consume(ctx, workspace.ingestionBucket, eventCount)
+	return workspace.organization.rateLimiter.Consume(ctx, workspace.ingestionBucket, eventCount)
 }
 
 // ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
 // The rate limiter is shared with the organization, while the process-local
 // lease belongs to this workspace.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return workspace.organization.rateLimiter.consume(ctx, workspace.apiBucket, cost)
+	return workspace.organization.rateLimiter.Consume(ctx, workspace.apiBucket, cost)
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -971,7 +979,7 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 // capacity to the workspace bucket on the current node. The caller must invoke
 // this method at most once for each successful local consumption.
 func (workspace *Workspace) RestoreIngestionRateLimitCapacity(eventCount int) {
-	workspace.ingestionBucket.restore(eventCount)
+	workspace.ingestionBucket.Restore(eventCount)
 }
 
 // WarehouseSettings returns the warehouse settings.

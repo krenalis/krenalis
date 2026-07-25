@@ -7,7 +7,10 @@ package state
 import (
 	"database/sql/driver"
 	"fmt"
+	"sync"
 	"testing"
+
+	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 )
 
 type valuerStringer interface {
@@ -100,5 +103,49 @@ func TestValuerStringerInvalidValues(t *testing.T) {
 			}()
 			_ = tt.v.String()
 		})
+	}
+}
+
+// TestReplacePreservesRateLimitBuckets verifies that entity updates retain
+// their separate local rate-limit buckets.
+func TestReplacePreservesRateLimitBuckets(t *testing.T) {
+	organizationBucket := ratelimiter.NewNonspecificBucket("111111111111")
+	workspaceBucket := ratelimiter.NewWorkspaceBucket("222222222222")
+	ingestionBucket := ratelimiter.NewIngestionBucket("222222222222")
+	organization := &Organization{
+		mu:         new(sync.Mutex),
+		workspaces: map[string]*Workspace{},
+		bucket:     organizationBucket,
+		ID:         "111111111111",
+	}
+	workspace := &Workspace{
+		mu:              new(sync.Mutex),
+		organization:    organization,
+		apiBucket:       workspaceBucket,
+		ingestionBucket: ingestionBucket,
+		ID:              "222222222222",
+	}
+	organization.workspaces[workspace.ID] = workspace
+	state := &State{
+		mu:            new(sync.Mutex),
+		organizations: map[string]*Organization{organization.ID: organization},
+		workspaces:    map[string]*Workspace{workspace.ID: workspace},
+	}
+
+	updatedOrganization := state.replaceOrganization(organization.ID, func(organization *Organization) {
+		organization.Name = "updated"
+	})
+	updatedWorkspace := state.replaceWorkspace(workspace.ID, func(workspace *Workspace) {
+		workspace.Name = "updated"
+	})
+
+	if updatedOrganization.bucket != organizationBucket {
+		t.Fatal("organization update replaced its API rate-limit bucket")
+	}
+	if updatedWorkspace.apiBucket != workspaceBucket {
+		t.Fatal("workspace update replaced its API rate-limit bucket")
+	}
+	if updatedWorkspace.ingestionBucket != ingestionBucket {
+		t.Fatal("workspace update replaced its ingestion rate-limit bucket")
 	}
 }

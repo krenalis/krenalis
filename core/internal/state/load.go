@@ -14,6 +14,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -288,7 +289,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.rateLimiter = state.rateLimiter
-			org.bucket = newNonspecificBucket(org.ID)
+			org.bucket = ratelimiter.NewNonspecificBucket(org.ID)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}
@@ -355,8 +356,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
-				ws.apiBucket = newWorkspaceBucket(ws.ID)
-				ws.ingestionBucket = newIngestionBucket(ws.ID)
+				ws.apiBucket = ratelimiter.NewWorkspaceBucket(ws.ID)
+				ws.ingestionBucket = ratelimiter.NewIngestionBucket(ws.ID)
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
 					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)

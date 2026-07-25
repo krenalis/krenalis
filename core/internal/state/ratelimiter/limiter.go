@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package state
+package ratelimiter
 
 import (
 	"container/list"
@@ -20,45 +20,45 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// apiRateLimitLeaseAcquirer acquires leases for a batch of organization,
+// leaseAcquirer acquires leases for a batch of organization,
 // workspace, and ingestion subjects.
-type apiRateLimitLeaseAcquirer func(context.Context, []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error)
+type leaseAcquirer func(context.Context, []leaseRequest) ([]leaseResult, error)
 
 const (
-	apiRateLimitMaxCost            = 100
-	apiRateLimitLeaseSize          = apiRateLimitMaxCost
-	ingestionRateLimitMaxCost      = 20_000
-	ingestionRateLimitLeaseSize    = ingestionRateLimitMaxCost
-	apiRateLimitMaxRefillThreshold = 25
+	apiMaxCost         = 100
+	apiLeaseSize       = apiMaxCost
+	ingestionMaxCost   = 20_000
+	ingestionLeaseSize = ingestionMaxCost
+	maxRefillThreshold = 25
 
-	apiRateLimitBatchSize  = 64
-	apiRateLimitBatchDelay = 2 * time.Millisecond
-	apiRateLimitQueueSize  = apiRateLimitBatchSize * 4
+	batchSize  = 64
+	batchDelay = 2 * time.Millisecond
+	queueSize  = batchSize * 4
 
-	apiRateLimitRefillBackoffDuration = 250 * time.Millisecond
-	apiRateLimitMaxWaitDuration       = time.Second
-	apiRateLimitAcquireTimeout        = 5 * time.Second
+	refillBackoffDuration = 250 * time.Millisecond
+	maxWaitDuration       = time.Second
+	defaultAcquireTimeout = 5 * time.Second
 )
 
-// ErrAPICapacityExceeded is returned when a request cannot be served from local
+// ErrCapacityExceeded is returned when a request cannot be served from local
 // capacity or admitted to the current refill.
-var ErrAPICapacityExceeded = errors.New("API rate-limit capacity exceeded")
+var ErrCapacityExceeded = errors.New("API rate-limit capacity exceeded")
 
-// ErrInvalidAPICost is returned when an API request has an unsupported cost.
-var ErrInvalidAPICost = errors.New("invalid API cost")
+// ErrInvalidCost is returned when an API request has an unsupported cost.
+var ErrInvalidCost = errors.New("invalid API cost")
 
-// rateLimiter coordinates refills for every local bucket owned by a State.
-// Organization and Workspace instances own their buckets, while rateLimiter
-// owns the refill queue, batching, PostgreSQL lease acquisition, metrics, and
-// close lifecycle. Public consumption never accesses PostgreSQL directly.
-type rateLimiter struct {
-	acquireLeases  apiRateLimitLeaseAcquirer
+// Limiter coordinates refills for local buckets owned by organizations and
+// workspaces. It owns the refill queue, batching, PostgreSQL lease acquisition,
+// metrics, and close lifecycle. Public consumption never accesses PostgreSQL
+// directly.
+type Limiter struct {
+	acquireLeases  leaseAcquirer
 	now            func() time.Time
 	maxWait        time.Duration
 	acquireTimeout time.Duration
 
-	refillQueue chan *rateLimitRefill // bounded so queue publication never blocks.
-	closed      atomic.Bool           // prevents enqueue after close starts.
+	refillQueue chan *refill // bounded so queue publication never blocks.
+	closed      atomic.Bool  // prevents enqueue after close starts.
 
 	// refillRetryAfter is the Unix-nanosecond deadline for the shared refill
 	// backoff. It is atomic because every consumption checks it, while only the
@@ -76,14 +76,14 @@ type rateLimiter struct {
 	}
 }
 
-// newRateLimiter starts the single refill batcher used by a State.
-func newRateLimiter(database *db.DB) *rateLimiter {
-	limiter := &rateLimiter{
-		acquireLeases:  newAPIRateLimitLeaseAcquirer(database),
+// New starts a limiter and its single refill batcher.
+func New(database *db.DB) *Limiter {
+	limiter := &Limiter{
+		acquireLeases:  newLeaseAcquirer(database),
 		now:            time.Now,
-		maxWait:        apiRateLimitMaxWaitDuration,
-		acquireTimeout: apiRateLimitAcquireTimeout,
-		refillQueue:    make(chan *rateLimitRefill, apiRateLimitQueueSize),
+		maxWait:        maxWaitDuration,
+		acquireTimeout: defaultAcquireTimeout,
+		refillQueue:    make(chan *refill, queueSize),
 	}
 	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
 	limiter.close.Add(1)
@@ -101,7 +101,7 @@ func newRateLimiter(database *db.DB) *rateLimiter {
 // Any remaining local leases are discarded. They are not returned because
 // PostgreSQL has already subtracted them, and a best-effort return could credit
 // the same capacity twice.
-func (limiter *rateLimiter) Close() {
+func (limiter *Limiter) Close() {
 	if !limiter.closed.CompareAndSwap(false, true) {
 		return
 	}
@@ -112,18 +112,18 @@ func (limiter *rateLimiter) Close() {
 // collectAndRefillBatch collects refill generations for a short window, then
 // requests their leases in one PostgreSQL call. It returns false when close
 // interrupts collection and the batcher should stop.
-func (limiter *rateLimiter) collectAndRefillBatch(firstRefill *rateLimitRefill) bool {
-	pendingRefills := map[*rateLimitRefill]apiRateLimitLeaseRequest{firstRefill: {}}
-	timer := time.NewTimer(apiRateLimitBatchDelay)
+func (limiter *Limiter) collectAndRefillBatch(firstRefill *refill) bool {
+	pendingRefills := map[*refill]leaseRequest{firstRefill: {}}
+	timer := time.NewTimer(batchDelay)
 	defer timer.Stop()
-	for len(pendingRefills) < apiRateLimitBatchSize {
+	for len(pendingRefills) < batchSize {
 		select {
 		case <-limiter.close.ctx.Done():
 			failCollectedRefills(pendingRefills)
 			return false
 		case refill := <-limiter.refillQueue:
 			if _, exists := pendingRefills[refill]; !exists {
-				pendingRefills[refill] = apiRateLimitLeaseRequest{}
+				pendingRefills[refill] = leaseRequest{}
 			}
 		case <-timer.C:
 			limiter.refillBatch(pendingRefills)
@@ -137,16 +137,16 @@ func (limiter *rateLimiter) collectAndRefillBatch(firstRefill *rateLimitRefill) 
 // consume validates a request cost and consumes from the local bucket. If local
 // capacity is insufficient, it may wait for the refill generation to which the
 // request was admitted. It never accesses PostgreSQL directly.
-func (limiter *rateLimiter) consume(ctx context.Context, bucket *rateLimitBucket, operationCost int) error {
-	if operationCost < 1 || operationCost > bucket.maxCost {
-		return ErrInvalidAPICost
+func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) error {
+	if cost < 1 || cost > bucket.maxCost {
+		return ErrInvalidCost
 	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	now := limiter.now()
 	refillAllowed := !limiter.closed.Load() && !limiter.refillBackoffActive(now)
-	satisfied, refill, waiter := bucket.consume(operationCost, refillAllowed)
+	satisfied, refill, waiter := bucket.consume(cost, refillAllowed)
 	if refill != nil {
 		queued, queueFull := limiter.queueRefill(refill)
 		if !queued {
@@ -163,14 +163,14 @@ func (limiter *rateLimiter) consume(ctx context.Context, bucket *rateLimitBucket
 		if queued {
 			limiter.refillQueueSaturated.Store(false)
 			refillAllowed = !limiter.closed.Load() && !limiter.refillBackoffActive(limiter.now())
-			waiter = bucket.activateRefill(refill, operationCost, !satisfied, refillAllowed)
+			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
 		}
 	}
 	if satisfied {
 		return nil
 	}
 	if waiter == nil {
-		return ErrAPICapacityExceeded
+		return ErrCapacityExceeded
 	}
 	return limiter.waitForRefill(ctx, waiter)
 }
@@ -179,7 +179,7 @@ func (limiter *rateLimiter) consume(ctx context.Context, bucket *rateLimitBucket
 // limiter shutdown, or the limiter's finite internal deadline. Cancellation
 // competes with refill completion under the bucket mutex, making the first
 // decision definitive.
-func (limiter *rateLimiter) waitForRefill(ctx context.Context, waiter *rateLimitWaiter) error {
+func (limiter *Limiter) waitForRefill(ctx context.Context, waiter *waiter) error {
 	timer := time.NewTimer(limiter.maxWait)
 	defer timer.Stop()
 
@@ -190,9 +190,9 @@ func (limiter *rateLimiter) waitForRefill(ctx context.Context, waiter *rateLimit
 	case <-ctx.Done():
 		cancellation = ctx.Err()
 	case <-limiter.close.ctx.Done():
-		cancellation = ErrAPICapacityExceeded
+		cancellation = ErrCapacityExceeded
 	case <-timer.C:
-		cancellation = ErrAPICapacityExceeded
+		cancellation = ErrCapacityExceeded
 	}
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		cancellation = ctxErr
@@ -205,19 +205,19 @@ func (limiter *rateLimiter) waitForRefill(ctx context.Context, waiter *rateLimit
 // The shared deadline applies to every bucket, including those outside this
 // batch, so a PostgreSQL outage cannot trigger rapid retries across the queue.
 // Shutdown only finishes pending refills; it does not start a backoff.
-func (limiter *rateLimiter) failRefillBatch(pendingRefills map[*rateLimitRefill]apiRateLimitLeaseRequest) {
+func (limiter *Limiter) failRefillBatch(pendingRefills map[*refill]leaseRequest) {
 	if limiter.close.ctx.Err() != nil {
 		failCollectedRefills(pendingRefills)
 		return
 	}
 	now := limiter.now()
-	limiter.refillRetryAfter.Store(now.Add(apiRateLimitRefillBackoffDuration).UnixNano())
+	limiter.refillRetryAfter.Store(now.Add(refillBackoffDuration).UnixNano())
 	failCollectedRefills(pendingRefills)
 }
 
 // queueRefill adds a generation to the refill queue without blocking the
 // request path.
-func (limiter *rateLimiter) queueRefill(refill *rateLimitRefill) (queued, queueFull bool) {
+func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
 	if limiter.closed.Load() {
 		return false, false
 	}
@@ -231,14 +231,14 @@ func (limiter *rateLimiter) queueRefill(refill *rateLimitRefill) (queued, queueF
 
 // refillBackoffActive reports whether new refill attempts are temporarily
 // suppressed after an acquisition error or an invalid batch response.
-func (limiter *rateLimiter) refillBackoffActive(now time.Time) bool {
+func (limiter *Limiter) refillBackoffActive(now time.Time) bool {
 	return now.UnixNano() < limiter.refillRetryAfter.Load()
 }
 
 // refillBatch builds, acquires, validates, and applies leases for one collected
 // batch. An acquisition error or invalid response fails the whole batch before
 // any local capacity is changed.
-func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiRateLimitLeaseRequest) {
+func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 
 	if limiter.refillBackoffActive(limiter.now()) {
 		// Generations queued before a failed batch may still be in the channel.
@@ -248,7 +248,7 @@ func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiR
 		return
 	}
 
-	leaseRequests := make([]apiRateLimitLeaseRequest, 0, len(pendingRefills))
+	leaseRequests := make([]leaseRequest, 0, len(pendingRefills))
 	for refill := range pendingRefills {
 		select {
 		case <-refill.published:
@@ -270,7 +270,7 @@ func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiR
 
 	acquireTimeout := limiter.acquireTimeout
 	if acquireTimeout <= 0 {
-		acquireTimeout = apiRateLimitAcquireTimeout
+		acquireTimeout = defaultAcquireTimeout
 	}
 	acquireCtx, cancelAcquire := context.WithTimeout(limiter.close.ctx, acquireTimeout)
 	leaseResults, err := limiter.acquireLeases(acquireCtx, leaseRequests)
@@ -289,13 +289,13 @@ func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiR
 		return
 	}
 
-	requestedUnitsBySubject := make(map[apiRateLimitSubjectKey]int, len(pendingRefills))
+	requestedUnitsBySubject := make(map[subjectKey]int, len(pendingRefills))
 	for _, request := range pendingRefills {
-		requestedUnitsBySubject[apiRateLimitSubjectKey{kind: request.SubjectKind, id: request.SubjectID}] = request.RequestedUnits
+		requestedUnitsBySubject[subjectKey{kind: request.SubjectKind, id: request.SubjectID}] = request.RequestedUnits
 	}
-	resultsBySubject := make(map[apiRateLimitSubjectKey]apiRateLimitLeaseResult, len(leaseResults))
+	resultsBySubject := make(map[subjectKey]leaseResult, len(leaseResults))
 	for _, result := range leaseResults {
-		key := apiRateLimitSubjectKey{kind: result.SubjectKind, id: result.SubjectID}
+		key := subjectKey{kind: result.SubjectKind, id: result.SubjectID}
 		requestedUnits, ok := requestedUnitsBySubject[key]
 		if !ok {
 			limiter.failRefillBatch(pendingRefills)
@@ -323,7 +323,7 @@ func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiR
 	}
 
 	for refill, request := range pendingRefills {
-		key := apiRateLimitSubjectKey{kind: request.SubjectKind, id: request.SubjectID}
+		key := subjectKey{kind: request.SubjectKind, id: request.SubjectID}
 		result := resultsBySubject[key]
 		refill.bucket.completeRefill(refill, result.GrantedUnits, result.CapacityUnits)
 	}
@@ -332,12 +332,12 @@ func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiR
 }
 
 // registerMetrics initializes the process-wide rate-limiter counters.
-func (limiter *rateLimiter) registerMetrics() {
-	limiter.refillErrors = registerAPIRateLimiterCounter(prometheus.CounterOpts{
+func (limiter *Limiter) registerMetrics() {
+	limiter.refillErrors = registerCounter(prometheus.CounterOpts{
 		Name: "krenalis_api_rate_limit_refill_errors_total",
 		Help: "Total number of API rate-limit lease refill errors",
 	})
-	limiter.refillQueueFull = registerAPIRateLimiterCounter(prometheus.CounterOpts{
+	limiter.refillQueueFull = registerCounter(prometheus.CounterOpts{
 		Name: "krenalis_api_rate_limit_refill_queue_full_total",
 		Help: "Total number of API rate-limit refill attempts rejected because the queue was full",
 	})
@@ -345,7 +345,7 @@ func (limiter *rateLimiter) registerMetrics() {
 
 // runBatcher processes one collected refill batch at a time until Close
 // cancels the limiter context.
-func (limiter *rateLimiter) runBatcher() {
+func (limiter *Limiter) runBatcher() {
 	defer limiter.close.Done()
 	for {
 		select {
@@ -359,34 +359,34 @@ func (limiter *rateLimiter) runBatcher() {
 	}
 }
 
-// rateLimitBucket stores process-local capacity for one organization, workspace,
+// Bucket stores process-local capacity for one organization, workspace,
 // or workspace ingestion subject. Its constructors set the subject kind, so
 // callers cannot create an inconsistent subject combination.
 //
 // mu protects local capacity and refill state. It is deliberately separate from
 // State and entity locks, so consuming API capacity does not contend on State
 // maps or unrelated organization data.
-type rateLimitBucket struct {
+type Bucket struct {
 	mu          sync.Mutex
 	subjectKind string
 	subjectID   string
 	available   int
 	target      int
 	threshold   int
-	refill      *rateLimitRefill
+	refill      *refill
 	disabled    bool
 	leaseSize   int
 	maxCost     int
 }
 
-// rateLimitRefill represents one refill generation, including its immutable
+// refill represents one refill generation, including its immutable
 // lease request and the waiters admitted to it. Mutations are protected by
 // bucket.mu. Closing done publishes final waiter results to readers. The
 // published channel prevents the batcher from processing the refill before
 // queue publication and activation are complete.
-type rateLimitRefill struct {
-	bucket      *rateLimitBucket
-	request     apiRateLimitLeaseRequest
+type refill struct {
+	bucket      *Bucket
+	request     leaseRequest
 	active      bool
 	published   chan struct{}
 	done        chan struct{}
@@ -394,36 +394,36 @@ type rateLimitRefill struct {
 	pendingCost int
 }
 
-// rateLimitWaiter represents one request admitted to a refill. element is
+// waiter represents one request admitted to a refill. element is
 // non-nil only while the waiter belongs to the refill's FIFO queue.
-type rateLimitWaiter struct {
-	refill  *rateLimitRefill
+type waiter struct {
+	refill  *refill
 	cost    int
 	element *list.Element
 	err     error
 }
 
-// newWorkspaceBucket creates the empty local bucket owned by a Workspace
+// NewWorkspaceBucket creates the empty local bucket owned by a Workspace
 // instance.
-func newWorkspaceBucket(workspaceID string) *rateLimitBucket {
-	return newRateLimitBucket("workspace", workspaceID, apiRateLimitLeaseSize, apiRateLimitMaxCost)
+func NewWorkspaceBucket(workspaceID string) *Bucket {
+	return newBucket("workspace", workspaceID, apiLeaseSize, apiMaxCost)
 }
 
-// newIngestionBucket creates the empty local ingestion bucket owned by a
+// NewIngestionBucket creates the empty local ingestion bucket owned by a
 // Workspace instance.
-func newIngestionBucket(workspaceID string) *rateLimitBucket {
-	return newRateLimitBucket("ingestion", workspaceID, ingestionRateLimitLeaseSize, ingestionRateLimitMaxCost)
+func NewIngestionBucket(workspaceID string) *Bucket {
+	return newBucket("ingestion", workspaceID, ingestionLeaseSize, ingestionMaxCost)
 }
 
-// newNonspecificBucket creates an organization's empty local bucket for
+// NewNonspecificBucket creates an organization's empty local bucket for
 // nonspecific requests.
-func newNonspecificBucket(organizationID string) *rateLimitBucket {
-	return newRateLimitBucket("nonspecific", organizationID, apiRateLimitLeaseSize, apiRateLimitMaxCost)
+func NewNonspecificBucket(organizationID string) *Bucket {
+	return newBucket("nonspecific", organizationID, apiLeaseSize, apiMaxCost)
 }
 
-// newRateLimitBucket creates an empty local bucket for the specified subject.
-func newRateLimitBucket(subjectKind, subjectID string, leaseSize, maxCost int) *rateLimitBucket {
-	return &rateLimitBucket{
+// newBucket creates an empty local bucket for the specified subject.
+func newBucket(subjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
+	return &Bucket{
 		subjectKind: subjectKind,
 		subjectID:   subjectID,
 		leaseSize:   leaseSize,
@@ -433,30 +433,30 @@ func newRateLimitBucket(subjectKind, subjectID string, leaseSize, maxCost int) *
 
 // applyLeaseLocked adds capacity already removed from PostgreSQL, capped at the
 // local target.
-func (bucket *rateLimitBucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
+func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
 	bucket.target = min(bucket.leaseSize, capacityUnits)
 	// A fixed threshold would trigger a refill after almost every request when
 	// the local target is small. Scale it with the target, with one unit as the
 	// minimum.
-	bucket.threshold = max(1, min(apiRateLimitMaxRefillThreshold, bucket.target/4))
+	bucket.threshold = max(1, min(maxRefillThreshold, bucket.target/4))
 	bucket.available = min(bucket.target, bucket.available+grantedUnits)
 }
 
 // consume tries to serve a request from local capacity, admit it to an active
 // refill, or prepare a new refill. A returned refill is still being published
 // and must be placed on the limiter queue before it can admit a waiter.
-func (bucket *rateLimitBucket) consume(operationCost int, refillAllowed bool) (satisfied bool, refill *rateLimitRefill, waiter *rateLimitWaiter) {
+func (bucket *Bucket) consume(cost int, refillAllowed bool) (satisfied bool, refill *refill, waiter *waiter) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if bucket.disabled {
 		return false, nil, nil
 	}
 
-	if bucket.available >= operationCost {
-		bucket.available -= operationCost
+	if bucket.available >= cost {
+		bucket.available -= cost
 		satisfied = true
 	} else if refillAllowed && bucket.refill != nil && bucket.refill.active {
-		return false, nil, bucket.admitWaiterLocked(bucket.refill, operationCost)
+		return false, nil, bucket.admitWaiterLocked(bucket.refill, cost)
 	}
 
 	if !satisfied && bucket.refill != nil {
@@ -464,17 +464,17 @@ func (bucket *rateLimitBucket) consume(operationCost int, refillAllowed bool) (s
 		// admitted. Callers may retry after publication has been confirmed.
 		return false, nil, nil
 	}
-	needsRefill := !satisfied || bucket.available < bucket.threshold || bucket.available <= operationCost
+	needsRefill := !satisfied || bucket.available < bucket.threshold || bucket.available <= cost
 	if needsRefill && bucket.refill == nil && refillAllowed {
 		refill = bucket.newRefillLocked()
 	}
 	return satisfied, refill, nil
 }
 
-// restore returns previously consumed capacity to this bucket on the current
+// Restore returns previously consumed capacity to this bucket on the current
 // node. It does not affect PostgreSQL, pending refills, or admitted waiters.
-func (bucket *rateLimitBucket) restore(operationCost int) {
-	if operationCost < 1 || operationCost > bucket.maxCost {
+func (bucket *Bucket) Restore(cost int) {
+	if cost < 1 || cost > bucket.maxCost {
 		return
 	}
 	bucket.mu.Lock()
@@ -482,17 +482,17 @@ func (bucket *rateLimitBucket) restore(operationCost int) {
 	if bucket.disabled {
 		return
 	}
-	bucket.available = min(bucket.target, bucket.available+operationCost)
+	bucket.available = min(bucket.target, bucket.available+cost)
 }
 
-func (bucket *rateLimitBucket) newRefillLocked() *rateLimitRefill {
+func (bucket *Bucket) newRefillLocked() *refill {
 	requestedUnits := min(bucket.leaseSize, bucket.target-bucket.available)
 	if bucket.target == 0 {
 		requestedUnits = bucket.leaseSize
 	}
-	refill := &rateLimitRefill{
+	refill := &refill{
 		bucket: bucket,
-		request: apiRateLimitLeaseRequest{
+		request: leaseRequest{
 			SubjectKind:    bucket.subjectKind,
 			SubjectID:      bucket.subjectID,
 			RequestedUnits: requestedUnits,
@@ -507,7 +507,7 @@ func (bucket *rateLimitBucket) newRefillLocked() *rateLimitRefill {
 // activateRefill confirms successful queue publication and optionally admits
 // the request that created the refill. Activation and admission are one atomic
 // bucket transition, so the batcher cannot complete the refill between them.
-func (bucket *rateLimitBucket) activateRefill(refill *rateLimitRefill, operationCost int, admit bool, refillAllowed bool) *rateLimitWaiter {
+func (bucket *Bucket) activateRefill(refill *refill, cost int, admit bool, refillAllowed bool) *waiter {
 	bucket.mu.Lock()
 	if bucket.refill != refill || refill.active {
 		bucket.mu.Unlock()
@@ -522,30 +522,30 @@ func (bucket *rateLimitBucket) activateRefill(refill *rateLimitRefill, operation
 		return nil
 	}
 	refill.active = true
-	var waiter *rateLimitWaiter
+	var waiter *waiter
 	if admit {
-		waiter = bucket.admitWaiterLocked(refill, operationCost)
+		waiter = bucket.admitWaiterLocked(refill, cost)
 	}
 	bucket.mu.Unlock()
 	close(refill.published)
 	return waiter
 }
 
-func (bucket *rateLimitBucket) admitWaiterLocked(refill *rateLimitRefill, operationCost int) *rateLimitWaiter {
-	if refill.pendingCost+operationCost > refill.request.RequestedUnits {
+func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
+	if refill.pendingCost+cost > refill.request.RequestedUnits {
 		return nil
 	}
-	waiter := &rateLimitWaiter{refill: refill, cost: operationCost}
+	waiter := &waiter{refill: refill, cost: cost}
 	waiter.element = refill.waiters.PushBack(waiter)
-	refill.pendingCost += operationCost
+	refill.pendingCost += cost
 	return waiter
 }
 
-// disable prevents further consumption and refills after the subject is
+// Disable prevents further consumption and refills after the subject is
 // removed from State, clears local capacity, and rejects pending waiters. A
 // queued pointer remains safe because Go keeps the bucket alive; refillRequest
 // and completeRefill discard later work for disabled buckets.
-func (bucket *rateLimitBucket) disable() {
+func (bucket *Bucket) Disable() {
 	bucket.mu.Lock()
 	bucket.disabled = true
 	bucket.available = 0
@@ -558,7 +558,7 @@ func (bucket *rateLimitBucket) disable() {
 }
 
 // rejectRefill rejects every remaining waiter and detaches the generation.
-func (bucket *rateLimitBucket) rejectRefill(refill *rateLimitRefill) {
+func (bucket *Bucket) rejectRefill(refill *refill) {
 	bucket.mu.Lock()
 	rejected := bucket.rejectRefillLocked(refill)
 	bucket.mu.Unlock()
@@ -567,13 +567,13 @@ func (bucket *rateLimitBucket) rejectRefill(refill *rateLimitRefill) {
 	}
 }
 
-func (bucket *rateLimitBucket) rejectRefillLocked(refill *rateLimitRefill) bool {
+func (bucket *Bucket) rejectRefillLocked(refill *refill) bool {
 	if refill == nil || bucket.refill != refill {
 		return false
 	}
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
-		waiter := element.Value.(*rateLimitWaiter)
-		waiter.err = ErrAPICapacityExceeded
+		waiter := element.Value.(*waiter)
+		waiter.err = ErrCapacityExceeded
 		waiter.element = nil
 	}
 	refill.waiters.Init()
@@ -582,7 +582,7 @@ func (bucket *rateLimitBucket) rejectRefillLocked(refill *rateLimitRefill) bool 
 	return true
 }
 
-func closeRejectedRefill(refill *rateLimitRefill) {
+func closeRejectedRefill(refill *refill) {
 	if !refill.active {
 		close(refill.published)
 	}
@@ -590,11 +590,11 @@ func closeRejectedRefill(refill *rateLimitRefill) {
 }
 
 // refillRequest returns the immutable request frozen before queue publication.
-func (bucket *rateLimitBucket) refillRequest(refill *rateLimitRefill) (apiRateLimitLeaseRequest, bool) {
+func (bucket *Bucket) refillRequest(refill *refill) (leaseRequest, bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if bucket.disabled || bucket.refill != refill || !refill.active {
-		return apiRateLimitLeaseRequest{}, false
+		return leaseRequest{}, false
 	}
 	return refill.request, true
 }
@@ -602,7 +602,7 @@ func (bucket *rateLimitBucket) refillRequest(refill *rateLimitRefill) (apiRateLi
 // completeRefill applies a valid grant and serves the longest satisfiable FIFO
 // prefix while holding the bucket mutex. Capacity is deducted before any waiter
 // is awakened, so later requests cannot consume assigned units.
-func (bucket *rateLimitBucket) completeRefill(refill *rateLimitRefill, grantedUnits, capacityUnits int) {
+func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits int) {
 	bucket.mu.Lock()
 	if bucket.disabled || bucket.refill != refill || !refill.active {
 		bucket.mu.Unlock()
@@ -611,13 +611,13 @@ func (bucket *rateLimitBucket) completeRefill(refill *rateLimitRefill, grantedUn
 	bucket.applyLeaseLocked(grantedUnits, capacityUnits)
 	serve := true
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
-		waiter := element.Value.(*rateLimitWaiter)
+		waiter := element.Value.(*waiter)
 		if serve && bucket.available >= waiter.cost {
 			bucket.available -= waiter.cost
 			waiter.err = nil
 		} else {
 			serve = false
-			waiter.err = ErrAPICapacityExceeded
+			waiter.err = ErrCapacityExceeded
 		}
 		waiter.element = nil
 	}
@@ -630,7 +630,7 @@ func (bucket *rateLimitBucket) completeRefill(refill *rateLimitRefill, grantedUn
 
 // cancelWaiter serializes cancellation with refill completion. If completion
 // acquired the bucket mutex first, its already-final decision is returned.
-func (bucket *rateLimitBucket) cancelWaiter(waiter *rateLimitWaiter, cancellation error) error {
+func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if waiter.element == nil {
@@ -644,23 +644,23 @@ func (bucket *rateLimitBucket) cancelWaiter(waiter *rateLimitWaiter, cancellatio
 	return cancellation
 }
 
-// apiRateLimitSubjectKey identifies one rate-limit subject in a batch response.
-type apiRateLimitSubjectKey struct {
+// subjectKey identifies one rate-limit subject in a batch response.
+type subjectKey struct {
 	kind string
 	id   string
 }
 
-// apiRateLimitLeaseRequest is one input entry for the PostgreSQL lease
+// leaseRequest is one input entry for the PostgreSQL lease
 // acquisition function.
-type apiRateLimitLeaseRequest struct {
+type leaseRequest struct {
 	SubjectKind    string `json:"subject_kind"`
 	SubjectID      string `json:"subject_id"`
 	RequestedUnits int    `json:"requested_units"`
 }
 
-// apiRateLimitLeaseResult is one result returned by the PostgreSQL lease
+// leaseResult is one result returned by the PostgreSQL lease
 // acquisition function.
-type apiRateLimitLeaseResult struct {
+type leaseResult struct {
 	SubjectKind   string
 	SubjectID     string
 	GrantedUnits  int
@@ -669,16 +669,16 @@ type apiRateLimitLeaseResult struct {
 
 // failCollectedRefills rejects every waiter in a collected batch without
 // applying capacity.
-func failCollectedRefills(pendingRefills map[*rateLimitRefill]apiRateLimitLeaseRequest) {
+func failCollectedRefills(pendingRefills map[*refill]leaseRequest) {
 	for refill := range pendingRefills {
 		refill.bucket.rejectRefill(refill)
 	}
 }
 
-// newAPIRateLimitLeaseAcquirer returns an adapter that calls the PostgreSQL
+// newLeaseAcquirer returns an adapter that calls the PostgreSQL
 // function acquire_api_rate_limit_leases.
-func newAPIRateLimitLeaseAcquirer(database *db.DB) apiRateLimitLeaseAcquirer {
-	return func(ctx context.Context, leaseRequests []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+func newLeaseAcquirer(database *db.DB) leaseAcquirer {
+	return func(ctx context.Context, leaseRequests []leaseRequest) ([]leaseResult, error) {
 		payload, err := json.Marshal(leaseRequests)
 		if err != nil {
 			return nil, fmt.Errorf("cannot encode API rate-limit lease requests: %w", err)
@@ -691,9 +691,9 @@ func newAPIRateLimitLeaseAcquirer(database *db.DB) apiRateLimitLeaseAcquirer {
 		}
 		defer rows.Close()
 
-		leaseResults := make([]apiRateLimitLeaseResult, 0, len(leaseRequests))
+		leaseResults := make([]leaseResult, 0, len(leaseRequests))
 		for rows.Next() {
-			var result apiRateLimitLeaseResult
+			var result leaseResult
 			if err := rows.Scan(&result.SubjectKind, &result.SubjectID, &result.GrantedUnits, &result.CapacityUnits); err != nil {
 				return nil, err
 			}
@@ -709,7 +709,7 @@ func newAPIRateLimitLeaseAcquirer(database *db.DB) apiRateLimitLeaseAcquirer {
 // Metrics are process-wide. Reuse an existing collector if another State has
 // already registered it, and never unregister it while another State may still
 // be running.
-func registerAPIRateLimiterCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
+func registerCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
 	counter := prometheus.NewCounter(counterOptions)
 	if err := prometheus.Register(counter); err != nil {
 		if registered, ok := err.(prometheus.AlreadyRegisteredError); ok {

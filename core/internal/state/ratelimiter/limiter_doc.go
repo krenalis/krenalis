@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package state
+package ratelimiter
 
 // API rate limiter design
 //
@@ -51,12 +51,12 @@ package state
 //
 // Normal API operations support costs from 1 through 100. Ingestion operations
 // use their event count as the cost, up to a maximum of 20,000. Invalid costs
-// return ErrInvalidAPICost. Requests that cannot be served immediately or
-// admitted as waiters return ErrAPICapacityExceeded. Caller cancellation and
+// return ErrInvalidCost. Requests that cannot be served immediately or
+// admitted as waiters return ErrCapacityExceeded. Caller cancellation and
 // caller deadlines preserve the corresponding context error.
 //
 // Each Organization instance owns one nonspecific bucket. Each Workspace owns
-// separate API and ingestion buckets. The shared rateLimiter owns the refill
+// separate API and ingestion buckets. The shared Limiter owns the refill
 // queue, batcher, PostgreSQL lease acquisition, global backoff, metrics, and
 // shutdown lifecycle.
 //
@@ -248,7 +248,7 @@ package state
 // backoff. The failed batch receives no capacity, and all of its waiters are
 // rejected.
 //
-// Cancellation caused by rateLimiter.Close does not activate backoff.
+// Cancellation caused by Limiter.Close does not activate backoff.
 //
 // During backoff:
 //

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package state
+package ratelimiter
 
 import (
 	"context"
@@ -18,14 +18,14 @@ import (
 const testRateLimitID = "111111111111"
 
 // newTestRateLimiter starts a limiter and registers its shutdown with the test.
-func newTestRateLimiter(t *testing.T, acquire apiRateLimitLeaseAcquirer) *rateLimiter {
+func newTestRateLimiter(t *testing.T, acquire leaseAcquirer) *Limiter {
 	t.Helper()
-	l := &rateLimiter{
+	l := &Limiter{
 		acquireLeases:  acquire,
 		now:            time.Now,
-		maxWait:        apiRateLimitMaxWaitDuration,
-		acquireTimeout: apiRateLimitAcquireTimeout,
-		refillQueue:    make(chan *rateLimitRefill, apiRateLimitQueueSize),
+		maxWait:        maxWaitDuration,
+		acquireTimeout: defaultAcquireTimeout,
+		refillQueue:    make(chan *refill, queueSize),
 	}
 	l.close.ctx, l.close.cancel = context.WithCancel(context.Background())
 	l.close.Add(1)
@@ -35,14 +35,14 @@ func newTestRateLimiter(t *testing.T, acquire apiRateLimitLeaseAcquirer) *rateLi
 }
 
 // bucketSnapshot reads bucket state while holding its mutex.
-func bucketSnapshot(bucket *rateLimitBucket) (available, target, threshold int, refillQueued, disabled bool) {
+func bucketSnapshot(bucket *Bucket) (available, target, threshold int, refillQueued, disabled bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	return bucket.available, bucket.target, bucket.threshold, bucket.refill != nil, bucket.disabled
 }
 
 // applyTestLease applies a test lease unless the bucket is disabled.
-func applyTestLease(bucket *rateLimitBucket, grantedUnits, capacityUnits int) {
+func applyTestLease(bucket *Bucket, grantedUnits, capacityUnits int) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if !bucket.disabled {
@@ -50,8 +50,8 @@ func applyTestLease(bucket *rateLimitBucket, grantedUnits, capacityUnits int) {
 	}
 }
 
-// rateLimiterRetryAfter returns the current global backoff deadline.
-func rateLimiterRetryAfter(l *rateLimiter) time.Time {
+// limiterRetryAfter returns the current global backoff deadline.
+func limiterRetryAfter(l *Limiter) time.Time {
 	unixNano := l.refillRetryAfter.Load()
 	if unixNano == 0 {
 		return time.Time{}
@@ -99,7 +99,7 @@ func waitForRateLimit(t *testing.T, condition func() bool) {
 }
 
 // refillPendingCost returns the total cost of waiters attached to the refill.
-func refillPendingCost(bucket *rateLimitBucket) int {
+func refillPendingCost(bucket *Bucket) int {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if bucket.refill == nil {
@@ -108,59 +108,12 @@ func refillPendingCost(bucket *rateLimitBucket) int {
 	return bucket.refill.pendingCost
 }
 
-// TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced verifies that entity
-// updates retain their local rate-limit buckets.
-func TestRateLimitBucketIsPreservedWhenEntitiesAreReplaced(t *testing.T) {
-	organizationBucket := newNonspecificBucket("111111111111")
-	workspaceBucket := newWorkspaceBucket("222222222222")
-	ingestionBucket := newIngestionBucket("222222222222")
-	organization := &Organization{
-		mu:         new(sync.Mutex),
-		workspaces: map[string]*Workspace{},
-		bucket:     organizationBucket,
-		ID:         "111111111111",
-	}
-	workspace := &Workspace{
-		mu:              new(sync.Mutex),
-		organization:    organization,
-		apiBucket:       workspaceBucket,
-		ingestionBucket: ingestionBucket,
-		ID:              "222222222222",
-	}
-	organization.workspaces[workspace.ID] = workspace
-	if organization.bucket == workspace.apiBucket {
-		t.Fatal("organization and workspace share an API rate-limit bucket")
-	}
-	state := &State{
-		mu:            new(sync.Mutex),
-		organizations: map[string]*Organization{organization.ID: organization},
-		workspaces:    map[string]*Workspace{workspace.ID: workspace},
-	}
-
-	updatedOrganization := state.replaceOrganization(organization.ID, func(organization *Organization) {
-		organization.Name = "updated"
-	})
-	updatedWorkspace := state.replaceWorkspace(workspace.ID, func(workspace *Workspace) {
-		workspace.Name = "updated"
-	})
-
-	if updatedOrganization.bucket != organizationBucket {
-		t.Fatal("organization update replaced its API rate-limit bucket")
-	}
-	if updatedWorkspace.apiBucket != workspaceBucket {
-		t.Fatal("workspace update replaced its API rate-limit bucket")
-	}
-	if updatedWorkspace.ingestionBucket != ingestionBucket {
-		t.Fatal("workspace update replaced its ingestion rate-limit bucket")
-	}
-}
-
-// TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity verifies that a
+// TestDisabledBucketDoesNotRequestOrApplyCapacity verifies that a
 // removed subject cannot consume, refill, or receive capacity.
-func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
-	bucket := newWorkspaceBucket("222222222222")
+func TestDisabledBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
+	bucket := NewWorkspaceBucket("222222222222")
 	applyTestLease(bucket, 10, 10)
-	bucket.disable()
+	bucket.Disable()
 
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill != nil || waiter != nil {
@@ -171,51 +124,51 @@ func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 	if available != 0 || !disabled {
 		t.Fatalf("disabled bucket state = available:%d disabled:%t, want 0:true", available, disabled)
 	}
-	bucket.restore(1)
+	bucket.Restore(1)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != 0 {
 		t.Fatalf("restored capacity on a disabled bucket = %d, want 0", available)
 	}
 }
 
-// TestRateLimitBucketRestoresLocalCapacity verifies that returned capacity is
+// TestBucketRestoresLocalCapacity verifies that returned capacity is
 // available immediately and remains capped at the local target.
-func TestRateLimitBucketRestoresLocalCapacity(t *testing.T) {
-	bucket := newWorkspaceBucket("222222222222")
+func TestBucketRestoresLocalCapacity(t *testing.T) {
+	bucket := NewWorkspaceBucket("222222222222")
 	applyTestLease(bucket, 10, 10)
 
 	satisfied, _, _ := bucket.consume(4, true)
 	if !satisfied {
 		t.Fatal("initial consumption was not satisfied")
 	}
-	bucket.restore(3)
+	bucket.Restore(3)
 	available, _, _, _, _ := bucketSnapshot(bucket)
 	if available != 9 {
 		t.Fatalf("restored capacity = %d, want 9", available)
 	}
 
-	bucket.restore(3)
+	bucket.Restore(3)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != 10 {
 		t.Fatalf("capacity above the target = %d, want 10", available)
 	}
-	bucket.restore(0)
+	bucket.Restore(0)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != 10 {
 		t.Fatalf("zero restoration changed capacity to %d, want 10", available)
 	}
-	bucket.restore(bucket.maxCost + 1)
+	bucket.Restore(bucket.maxCost + 1)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != 10 {
 		t.Fatalf("invalid restoration changed capacity to %d, want 10", available)
 	}
 }
 
-// TestIngestionRateLimitBucketWaitsForInitialRefill verifies that a first
+// TestIngestionBucketWaitsForInitialRefill verifies that a first
 // single-event request waits for its initial refill instead of using capacity
 // that has not been leased yet.
-func TestIngestionRateLimitBucketWaitsForInitialRefill(t *testing.T) {
-	bucket := newIngestionBucket("222222222222")
+func TestIngestionBucketWaitsForInitialRefill(t *testing.T) {
+	bucket := NewIngestionBucket("222222222222")
 
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill == nil || waiter != nil {
@@ -231,10 +184,10 @@ func TestIngestionRateLimitBucketWaitsForInitialRefill(t *testing.T) {
 	bucket.rejectRefill(refill)
 }
 
-// TestRateLimitBucketAdmitsCostOneToPendingRefill verifies that a cost-one
+// TestBucketAdmitsCostOneToPendingRefill verifies that a cost-one
 // request waits for an active refill when local capacity is exhausted.
-func TestRateLimitBucketAdmitsCostOneToPendingRefill(t *testing.T) {
-	bucket := newNonspecificBucket("111111111111")
+func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
+	bucket := NewNonspecificBucket("111111111111")
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill == nil || waiter != nil {
 		t.Fatalf("cold bucket consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
@@ -253,10 +206,10 @@ func TestRateLimitBucketAdmitsCostOneToPendingRefill(t *testing.T) {
 	bucket.rejectRefill(refill)
 }
 
-// TestRateLimitBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an
+// TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an
 // active refill admits requests and a closed limiter does not.
-func TestRateLimitBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
-	bucket := newNonspecificBucket("111111111111")
+func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
+	bucket := NewNonspecificBucket("111111111111")
 	_, refill, _ := bucket.consume(2, true)
 	bucket.activateRefill(refill, 0, false, true)
 
@@ -270,9 +223,9 @@ func TestRateLimitBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
 	}
 }
 
-// TestRateLimitBucketThresholdScalesWithTarget verifies that small leases use
+// TestBucketThresholdScalesWithTarget verifies that small leases use
 // proportionally smaller refill thresholds.
-func TestRateLimitBucketThresholdScalesWithTarget(t *testing.T) {
+func TestBucketThresholdScalesWithTarget(t *testing.T) {
 	for _, test := range []struct {
 		target    int
 		threshold int
@@ -283,7 +236,7 @@ func TestRateLimitBucketThresholdScalesWithTarget(t *testing.T) {
 		{target: 1, threshold: 1},
 	} {
 		t.Run(strconv.Itoa(test.target), func(t *testing.T) {
-			bucket := newNonspecificBucket("111111111111")
+			bucket := NewNonspecificBucket("111111111111")
 			applyTestLease(bucket, 0, test.target)
 			if bucket.threshold != test.threshold {
 				t.Fatalf("threshold = %d, want %d", bucket.threshold, test.threshold)
@@ -292,10 +245,10 @@ func TestRateLimitBucketThresholdScalesWithTarget(t *testing.T) {
 	}
 }
 
-// TestRateLimitBucketQueuesRefillRelativeToOperationCost verifies that a
+// TestBucketQueuesRefillRelativeToOperationCost verifies that a
 // variable-cost operation queues a refill while one similar operation remains.
-func TestRateLimitBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
-	bucket := newIngestionBucket("222222222222")
+func TestBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
+	bucket := NewIngestionBucket("222222222222")
 	applyTestLease(bucket, 1_000, 1_000)
 
 	for range 2 {
@@ -314,101 +267,95 @@ func TestRateLimitBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
 	}
 }
 
-// TestCanonicalEntitiesConsumeTheirOwnBuckets verifies that organization,
-// workspace, and ingestion consumption use separate local buckets.
-func TestCanonicalEntitiesConsumeTheirOwnBuckets(t *testing.T) {
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
-		return []apiRateLimitLeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 2}}, nil
+// TestBucketsConsumeIndependently verifies that organization, workspace, and
+// ingestion buckets do not share local capacity.
+func TestBucketsConsumeIndependently(t *testing.T) {
+	limiter := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 2}}, nil
 	})
-	organization := &Organization{
-		bucket:      newNonspecificBucket("111111111111"),
-		rateLimiter: l,
-	}
-	workspace := &Workspace{
-		apiBucket:       newWorkspaceBucket("222222222222"),
-		ingestionBucket: newIngestionBucket("222222222222"),
-		organization:    organization,
-	}
-	applyTestLease(organization.bucket, 2, 2)
-	applyTestLease(workspace.apiBucket, 2, 2)
-	applyTestLease(workspace.ingestionBucket, 2, 2)
+	organizationBucket := NewNonspecificBucket("111111111111")
+	workspaceBucket := NewWorkspaceBucket("222222222222")
+	ingestionBucket := NewIngestionBucket("222222222222")
+	applyTestLease(organizationBucket, 2, 2)
+	applyTestLease(workspaceBucket, 2, 2)
+	applyTestLease(ingestionBucket, 2, 2)
 
-	if err := organization.ConsumeRateLimitCapacity(context.Background(), 2); err != nil {
+	if err := limiter.Consume(context.Background(), organizationBucket, 2); err != nil {
 		t.Fatalf("organization consume: %v", err)
 	}
-	if err := organization.ConsumeRateLimitCapacity(context.Background(), 2); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("organization second consume: got %v, want ErrAPICapacityExceeded", err)
+	if err := limiter.Consume(context.Background(), organizationBucket, 2); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("organization second consume: got %v, want ErrCapacityExceeded", err)
 	}
-	if err := workspace.ConsumeRateLimitCapacity(context.Background(), 2); err != nil {
+	if err := limiter.Consume(context.Background(), workspaceBucket, 2); err != nil {
 		t.Fatalf("workspace consume: %v", err)
 	}
-	if err := workspace.ConsumeIngestionRateLimitCapacity(context.Background(), 2); err != nil {
-		t.Fatalf("workspace ingestion consume: %v", err)
+	if err := limiter.Consume(context.Background(), ingestionBucket, 2); err != nil {
+		t.Fatalf("ingestion consume: %v", err)
 	}
-	workspace.RestoreIngestionRateLimitCapacity(2)
-	if err := workspace.ConsumeIngestionRateLimitCapacity(context.Background(), 2); err != nil {
-		t.Fatalf("workspace ingestion consume after restoration: %v", err)
+	ingestionBucket.Restore(2)
+	if err := limiter.Consume(context.Background(), ingestionBucket, 2); err != nil {
+		t.Fatalf("ingestion consume after restoration: %v", err)
 	}
 }
 
-// TestAPIRateLimiterValidatesCost verifies that normal API costs stay within
+// TestLimiterValidatesCost verifies that normal API costs stay within
 // the supported range.
-func TestAPIRateLimiterValidatesCost(t *testing.T) {
+func TestLimiterValidatesCost(t *testing.T) {
 	l := newTestRateLimiter(t, nil)
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	for _, cost := range []int{-1, 0, 101} {
-		if err := l.consume(context.Background(), bucket, cost); !errors.Is(err, ErrInvalidAPICost) {
-			t.Fatalf("cost %d: got %v, want ErrInvalidAPICost", cost, err)
+		if err := l.Consume(context.Background(), bucket, cost); !errors.Is(err, ErrInvalidCost) {
+			t.Fatalf("cost %d: got %v, want ErrInvalidCost", cost, err)
 		}
 	}
 }
 
-// TestIngestionRateLimiterValidatesEventCount verifies the supported batch size.
-func TestIngestionRateLimiterValidatesEventCount(t *testing.T) {
+// TestIngestionValidatesEventCount verifies the supported batch size.
+func TestIngestionValidatesEventCount(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
-	bucket := newIngestionBucket(testRateLimitID)
-	for _, count := range []int{-1, 0, ingestionRateLimitMaxCost + 1} {
-		if err := limiter.consume(context.Background(), bucket, count); !errors.Is(err, ErrInvalidAPICost) {
-			t.Fatalf("event count %d: got %v, want ErrInvalidAPICost", count, err)
+	bucket := NewIngestionBucket(testRateLimitID)
+	for _, count := range []int{-1, 0, ingestionMaxCost + 1} {
+		if err := limiter.Consume(context.Background(), bucket, count); !errors.Is(err, ErrInvalidCost) {
+			t.Fatalf("event count %d: got %v, want ErrInvalidCost", count, err)
 		}
 	}
-	applyTestLease(bucket, ingestionRateLimitMaxCost, ingestionRateLimitMaxCost)
-	if err := limiter.consume(context.Background(), bucket, ingestionRateLimitMaxCost); err != nil {
+	applyTestLease(bucket, ingestionMaxCost, ingestionMaxCost)
+	if err := limiter.Consume(context.Background(), bucket, ingestionMaxCost); err != nil {
 		t.Fatalf("maximum event count: %v", err)
 	}
 }
 
-// TestAPIRateLimiterConsumesLocalCapacity verifies immediate local consumption
+// TestLimiterConsumesLocalCapacity verifies immediate local consumption
 // and rejection when the remaining capacity is insufficient.
-func TestAPIRateLimiterConsumesLocalCapacity(t *testing.T) {
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
-		return []apiRateLimitLeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
+func TestLimiterConsumesLocalCapacity(t *testing.T) {
+	l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 10, 10)
 
-	if err := l.consume(context.Background(), bucket, 6); err != nil {
+	if err := l.Consume(context.Background(), bucket, 6); err != nil {
 		t.Fatalf("consume: %v", err)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
 	if available != 4 {
 		t.Fatalf("available capacity = %d, want 4", available)
 	}
-	if err := l.consume(context.Background(), bucket, 5); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("consume exhausted capacity: got %v, want ErrAPICapacityExceeded", err)
+	if err := l.Consume(context.Background(), bucket, 5); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("consume exhausted capacity: got %v, want ErrCapacityExceeded", err)
 	}
 }
 
-// TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity verifies that
+// TestLimiterCanceledContextDoesNotConsumeLocalCapacity verifies that
 // an already canceled request leaves local capacity unchanged.
-func TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
+func TestLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 10, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if err := limiter.consume(ctx, bucket, 1); !errors.Is(err, context.Canceled) {
+	if err := limiter.Consume(ctx, bucket, 1); !errors.Is(err, context.Canceled) {
 		t.Fatalf("consume with canceled context: %v", err)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
@@ -417,17 +364,17 @@ func TestAPIRateLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) 
 	}
 }
 
-// TestAPIRateLimiterCallerDeadlineTakesPrecedence verifies that a caller
+// TestLimiterCallerDeadlineTakesPrecedence verifies that a caller
 // deadline wins over shutdown and internal timeout.
-func TestAPIRateLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
-	limiter := &rateLimiter{maxWait: 0}
+func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
+	limiter := &Limiter{maxWait: 0}
 	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
 	limiter.close.cancel()
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer cancel()
 
 	for range 100 {
-		bucket := newNonspecificBucket(testRateLimitID)
+		bucket := NewNonspecificBucket(testRateLimitID)
 		_, refill, _ := bucket.consume(1, true)
 		waiter := bucket.activateRefill(refill, 1, true, true)
 		if err := limiter.waitForRefill(ctx, waiter); !errors.Is(err, context.DeadlineExceeded) {
@@ -437,10 +384,10 @@ func TestAPIRateLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget verifies that waiter
+// TestLimiterUsesRequestedUnitsAsAdmissionBudget verifies that waiter
 // admission uses the frozen refill request rather than the lease size.
-func TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
-	bucket := newNonspecificBucket(testRateLimitID)
+func TestLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
+	bucket := NewNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 90, 100)
 
 	satisfied, refill, waiter := bucket.consume(100, true)
@@ -469,43 +416,43 @@ func TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
 	bucket.rejectRefill(refill)
 }
 
-// TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix verifies FIFO head-of-line
+// TestLimiterServesOnlySatisfiableFIFOPrefix verifies FIFO head-of-line
 // blocking after a partial grant.
-func TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
-	requests := make(chan []apiRateLimitLeaseRequest, 1)
+func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
+	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		requests <- request
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 60, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 
 	resultA := make(chan error, 1)
 	resultB := make(chan error, 1)
 	resultC := make(chan error, 1)
-	go func() { resultA <- limiter.consume(context.Background(), bucket, 40) }()
+	go func() { resultA <- limiter.Consume(context.Background(), bucket, 40) }()
 	<-requests
-	go func() { resultB <- limiter.consume(context.Background(), bucket, 30) }()
+	go func() { resultB <- limiter.Consume(context.Background(), bucket, 30) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 70 })
-	go func() { resultC <- limiter.consume(context.Background(), bucket, 20) }()
+	go func() { resultC <- limiter.Consume(context.Background(), bucket, 20) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 90 })
 	close(release)
 
 	if err := <-resultA; err != nil {
 		t.Fatalf("first waiter: %v", err)
 	}
-	if err := <-resultB; !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := <-resultB; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("second waiter: %v", err)
 	}
-	if err := <-resultC; !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := <-resultC; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("third waiter bypassed the FIFO head: %v", err)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
@@ -514,39 +461,39 @@ func TestAPIRateLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterCancellationReturnsAdmissionBudget verifies that a
+// TestLimiterCancellationReturnsAdmissionBudget verifies that a
 // canceled waiter makes its admission budget available to a later request.
-func TestAPIRateLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
-	requests := make(chan []apiRateLimitLeaseRequest, 1)
+func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
+	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		requests <- request
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 100, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	first := make(chan error, 1)
 	second := make(chan error, 1)
 	third := make(chan error, 1)
-	go func() { first <- limiter.consume(ctx, bucket, 60) }()
+	go func() { first <- limiter.Consume(ctx, bucket, 60) }()
 	<-requests
-	go func() { second <- limiter.consume(context.Background(), bucket, 40) }()
+	go func() { second <- limiter.Consume(context.Background(), bucket, 40) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 100 })
 	cancel()
 	if err := <-first; !errors.Is(err, context.Canceled) {
 		t.Fatalf("canceled waiter: %v", err)
 	}
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 40 })
-	go func() { third <- limiter.consume(context.Background(), bucket, 60) }()
+	go func() { third <- limiter.Consume(context.Background(), bucket, 60) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 100 })
 	close(release)
 
@@ -558,29 +505,29 @@ func TestAPIRateLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterWaitHasFiniteInternalTimeout verifies that waiters do not
+// TestLimiterWaitHasFiniteInternalTimeout verifies that waiters do not
 // block indefinitely without a caller deadline.
-func TestAPIRateLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
+func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			CapacityUnits: 100,
 		}}, nil
 	})
 	limiter.maxWait = 10 * time.Millisecond
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	result := make(chan error, 1)
-	go func() { result <- limiter.consume(context.Background(), bucket, 1) }()
+	go func() { result <- limiter.Consume(context.Background(), bucket, 1) }()
 	<-started
-	if err := <-result; !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("internal timeout: %v", err)
 	}
 	if pending := refillPendingCost(bucket); pending != 0 {
@@ -589,27 +536,27 @@ func TestAPIRateLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	close(release)
 }
 
-// TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout verifies that a late
+// TestLimiterLeaseAcquisitionHasFiniteTimeout verifies that a late
 // acquisition result is discarded after the batch deadline.
-func TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
+func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	started := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 1, CapacityUnits: 100,
 		}}, nil
 	})
 	limiter.acquireTimeout = 10 * time.Millisecond
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	result := make(chan error, 1)
-	go func() { result <- limiter.consume(context.Background(), bucket, 1) }()
+	go func() { result <- limiter.Consume(context.Background(), bucket, 1) }()
 	<-started
 
 	select {
 	case err := <-result:
-		if !errors.Is(err, ErrAPICapacityExceeded) {
+		if !errors.Is(err, ErrCapacityExceeded) {
 			t.Fatalf("acquisition timeout: %v", err)
 		}
 	case <-time.After(time.Second):
@@ -621,12 +568,12 @@ func TestAPIRateLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterCancellationAndGrantResolveOnce verifies that cancellation
+// TestLimiterCancellationAndGrantResolveOnce verifies that cancellation
 // and completion resolve a waiter once and leave capacity consistent with the
 // winner.
-func TestAPIRateLimiterCancellationAndGrantResolveOnce(t *testing.T) {
+func TestLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 	for range 100 {
-		bucket := newNonspecificBucket(testRateLimitID)
+		bucket := NewNonspecificBucket(testRateLimitID)
 		applyTestLease(bucket, 0, 100)
 		_, refill, _ := bucket.consume(2, true)
 		waiter := bucket.activateRefill(refill, 1, true, true)
@@ -668,10 +615,10 @@ func TestAPIRateLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterIgnoresStaleGenerationResult verifies that an old refill
+// TestLimiterIgnoresStaleGenerationResult verifies that an old refill
 // cannot change a newer generation or its waiter.
-func TestAPIRateLimiterIgnoresStaleGenerationResult(t *testing.T) {
-	bucket := newNonspecificBucket(testRateLimitID)
+func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
+	bucket := NewNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 0, 100)
 	_, first, _ := bucket.consume(2, true)
 	bucket.activateRefill(first, 0, false, true)
@@ -699,31 +646,31 @@ func TestAPIRateLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterQueuesOneRefill verifies that concurrent requests share
+// TestLimiterQueuesOneRefill verifies that concurrent requests share
 // one active refill generation.
-func TestAPIRateLimiterQueuesOneRefill(t *testing.T) {
-	requests := make(chan []apiRateLimitLeaseRequest, 1)
+func TestLimiterQueuesOneRefill(t *testing.T) {
+	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		requests <- request
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 10, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	results := make(chan error, 3)
-	go func() { results <- l.consume(context.Background(), bucket, 1) }()
+	go func() { results <- l.Consume(context.Background(), bucket, 1) }()
 	if request := <-requests; len(request) != 1 {
 		t.Fatalf("batch contains %d requests, want 1", len(request))
 	}
 	for range 2 {
-		go func() { results <- l.consume(context.Background(), bucket, 1) }()
+		go func() { results <- l.Consume(context.Background(), bucket, 1) }()
 	}
 	waitForRateLimit(t, func() bool {
 		bucket.mu.Lock()
@@ -742,19 +689,19 @@ func TestAPIRateLimiterQueuesOneRefill(t *testing.T) {
 	})
 }
 
-// TestAPIRateLimiterBatchesOrganizationsAndWorkspaces verifies that distinct
+// TestLimiterBatchesOrganizationsAndWorkspaces verifies that distinct
 // subject kinds are acquired in the same batch.
-func TestAPIRateLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
-	requests := make(chan []apiRateLimitLeaseRequest, 1)
-	limiter := &rateLimiter{
+func TestLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
+	requests := make(chan []leaseRequest, 1)
+	limiter := &Limiter{
 		now:         time.Now,
-		maxWait:     apiRateLimitMaxWaitDuration,
-		refillQueue: make(chan *rateLimitRefill, apiRateLimitQueueSize),
-		acquireLeases: func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+		maxWait:     maxWaitDuration,
+		refillQueue: make(chan *refill, queueSize),
+		acquireLeases: func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
 			requests <- request
-			results := make([]apiRateLimitLeaseResult, len(request))
+			results := make([]leaseResult, len(request))
 			for i, r := range request {
-				results[i] = apiRateLimitLeaseResult{SubjectKind: r.SubjectKind, SubjectID: r.SubjectID, CapacityUnits: 100}
+				results[i] = leaseResult{SubjectKind: r.SubjectKind, SubjectID: r.SubjectID, CapacityUnits: 100}
 			}
 			return results, nil
 		},
@@ -763,9 +710,9 @@ func TestAPIRateLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	limiter.close.Add(1)
 	t.Cleanup(limiter.Close)
 
-	refills := make([]*rateLimitRefill, 0, 2)
-	waiters := make([]*rateLimitWaiter, 0, 2)
-	for _, bucket := range []*rateLimitBucket{newNonspecificBucket("111111111111"), newWorkspaceBucket("222222222222")} {
+	refills := make([]*refill, 0, 2)
+	waiters := make([]*waiter, 0, 2)
+	for _, bucket := range []*Bucket{NewNonspecificBucket("111111111111"), NewWorkspaceBucket("222222222222")} {
 		_, refill, _ := bucket.consume(1, true)
 		waiter := bucket.activateRefill(refill, 1, true, true)
 		if waiter == nil {
@@ -782,36 +729,36 @@ func TestAPIRateLimiterBatchesOrganizationsAndWorkspaces(t *testing.T) {
 	}
 	for i, refill := range refills {
 		<-refill.done
-		if !errors.Is(waiters[i].err, ErrAPICapacityExceeded) {
+		if !errors.Is(waiters[i].err, ErrCapacityExceeded) {
 			t.Fatalf("waiter with zero grant: %v", waiters[i].err)
 		}
 	}
 }
 
-// TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption verifies that a grant
+// TestLimiterAddsLeaseAfterConcurrentConsumption verifies that a grant
 // is added to capacity consumed while its refill was in flight.
-func TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
+func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 20, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 10, 100)
-	if err := l.consume(context.Background(), bucket, 1); err != nil {
+	if err := l.Consume(context.Background(), bucket, 1); err != nil {
 		t.Fatal(err)
 	}
 	<-started
-	if err := l.consume(context.Background(), bucket, 5); err != nil {
+	if err := l.Consume(context.Background(), bucket, 5); err != nil {
 		t.Fatal(err)
 	}
 	close(release)
@@ -825,32 +772,32 @@ func TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterStartsGlobalBackoffAfterRefillError verifies that a failed
+// TestLimiterStartsGlobalBackoffAfterRefillError verifies that a failed
 // acquisition suppresses refills and waiter admission until the retry deadline.
-func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
+func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 	clock := newTestRateLimitClock()
 	var calls atomic.Int32
-	l := newTestRateLimiter(t, func(_ context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
 		if calls.Add(1) == 1 {
 			return nil, errors.New("PostgreSQL is unavailable")
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind:   request[0].SubjectKind,
 			SubjectID:     request[0].SubjectID,
 			CapacityUnits: 100,
 		}}, nil
 	})
 	l.now = clock.Now
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	applyTestLease(bucket, 2, 100)
-	if err := l.consume(context.Background(), bucket, 1); err != nil {
+	if err := l.Consume(context.Background(), bucket, 1); err != nil {
 		t.Fatalf("initial consume: %v", err)
 	}
 	waitForRateLimit(t, func() bool {
-		return !rateLimiterRetryAfter(l).IsZero() && calls.Load() == 1
+		return !limiterRetryAfter(l).IsZero() && calls.Load() == 1
 	})
-	retryAt := rateLimiterRetryAfter(l)
-	if want := clock.Now().Add(apiRateLimitRefillBackoffDuration); !retryAt.Equal(want) {
+	retryAt := limiterRetryAfter(l)
+	if want := clock.Now().Add(refillBackoffDuration); !retryAt.Equal(want) {
 		t.Fatalf("retry after = %s, want %s", retryAt, want)
 	}
 	_, _, _, queued, _ := bucketSnapshot(bucket)
@@ -858,49 +805,49 @@ func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 		t.Fatal("failed refill remained queued")
 	}
 
-	if err := l.consume(context.Background(), bucket, 1); err != nil {
+	if err := l.Consume(context.Background(), bucket, 1); err != nil {
 		t.Fatalf("consume local capacity during backoff: %v", err)
 	}
-	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("consume without local capacity during backoff: got %v, want ErrAPICapacityExceeded", err)
+	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("consume without local capacity during backoff: got %v, want ErrCapacityExceeded", err)
 	}
 	if calls.Load() != 1 {
 		t.Fatalf("refill attempts during backoff = %d, want 1", calls.Load())
 	}
 
 	clock.Set(retryAt)
-	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("consume after backoff: got %v, want ErrAPICapacityExceeded", err)
+	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("consume after backoff: got %v, want ErrCapacityExceeded", err)
 	}
 	waitForRateLimit(t, func() bool {
-		return calls.Load() == 2 && rateLimiterRetryAfter(l).IsZero()
+		return calls.Load() == 2 && limiterRetryAfter(l).IsZero()
 	})
 }
 
-// TestAPIRateLimiterBacksOffAfterInvalidLeaseResults verifies that malformed
+// TestLimiterBacksOffAfterInvalidLeaseResults verifies that malformed
 // batch responses fail without applying capacity.
-func TestAPIRateLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
+func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 	for _, test := range []struct {
 		name    string
-		results func(apiRateLimitLeaseRequest) []apiRateLimitLeaseResult
+		results func(leaseRequest) []leaseResult
 	}{
 		{
 			name: "incomplete",
-			results: func(apiRateLimitLeaseRequest) []apiRateLimitLeaseResult {
+			results: func(leaseRequest) []leaseResult {
 				return nil
 			},
 		},
 		{
 			name: "duplicate",
-			results: func(request apiRateLimitLeaseRequest) []apiRateLimitLeaseResult {
-				result := apiRateLimitLeaseResult{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, CapacityUnits: 100}
-				return []apiRateLimitLeaseResult{result, result}
+			results: func(request leaseRequest) []leaseResult {
+				result := leaseResult{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, CapacityUnits: 100}
+				return []leaseResult{result, result}
 			},
 		},
 		{
 			name: "unmatched subject",
-			results: func(request apiRateLimitLeaseRequest) []apiRateLimitLeaseResult {
-				return []apiRateLimitLeaseResult{{
+			results: func(request leaseRequest) []leaseResult {
+				return []leaseResult{{
 					SubjectKind:   request.SubjectKind,
 					SubjectID:     "222222222222",
 					CapacityUnits: 100,
@@ -909,8 +856,8 @@ func TestAPIRateLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 		},
 		{
 			name: "invalid grant",
-			results: func(request apiRateLimitLeaseRequest) []apiRateLimitLeaseResult {
-				return []apiRateLimitLeaseResult{{
+			results: func(request leaseRequest) []leaseResult {
+				return []leaseResult{{
 					SubjectKind:   request.SubjectKind,
 					SubjectID:     request.SubjectID,
 					GrantedUnits:  request.RequestedUnits + 1,
@@ -921,32 +868,32 @@ func TestAPIRateLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			clock := newTestRateLimitClock()
-			l := newTestRateLimiter(t, func(_ context.Context, requests []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+			l := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 				return test.results(requests[0]), nil
 			})
 			l.now = clock.Now
-			bucket := newNonspecificBucket(testRateLimitID)
-			_ = l.consume(context.Background(), bucket, 1)
+			bucket := NewNonspecificBucket(testRateLimitID)
+			_ = l.Consume(context.Background(), bucket, 1)
 			waitForRateLimit(t, func() bool {
-				return !rateLimiterRetryAfter(l).IsZero()
+				return !limiterRetryAfter(l).IsZero()
 			})
 		})
 	}
 }
 
-// TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills verifies
+// TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills verifies
 // that backoff rejects queued and concurrent refill attempts.
-func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
+func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 	clock := newTestRateLimitClock()
 	var calls atomic.Int32
-	l := newTestRateLimiter(t, func(_ context.Context, _ []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(_ context.Context, _ []leaseRequest) ([]leaseResult, error) {
 		calls.Add(1)
 		return nil, nil
 	})
 	l.now = clock.Now
-	l.refillRetryAfter.Store(clock.Now().Add(apiRateLimitRefillBackoffDuration).UnixNano())
+	l.refillRetryAfter.Store(clock.Now().Add(refillBackoffDuration).UnixNano())
 
-	queued := newNonspecificBucket(testRateLimitID)
+	queued := NewNonspecificBucket(testRateLimitID)
 	_, queuedRefill, _ := queued.consume(2, true)
 	queued.activateRefill(queuedRefill, 0, false, true)
 	l.refillQueue <- queuedRefill
@@ -958,12 +905,12 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 		t.Fatalf("refill attempts during global backoff = %d, want 0", calls.Load())
 	}
 
-	bucket := newWorkspaceBucket("222222222222")
+	bucket := NewWorkspaceBucket("222222222222")
 	var wg sync.WaitGroup
 	for range 100 {
 		wg.Go(func() {
-			if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-				t.Errorf("consume during global backoff: got %v, want ErrAPICapacityExceeded", err)
+			if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+				t.Errorf("consume during global backoff: got %v, want ErrCapacityExceeded", err)
 			}
 		})
 	}
@@ -974,31 +921,31 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 	}
 }
 
-// TestAPIRateLimiterDisabledBucketCompletesInFlightRefill verifies that
+// TestLimiterDisabledBucketCompletesInFlightRefill verifies that
 // disabling a bucket rejects waiters and discards its late grant.
-func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
+func TestLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind:   request[0].SubjectKind,
 			SubjectID:     request[0].SubjectID,
 			GrantedUnits:  10,
 			CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	result := make(chan error, 1)
-	go func() { result <- l.consume(context.Background(), bucket, 1) }()
+	go func() { result <- l.Consume(context.Background(), bucket, 1) }()
 	<-started
-	bucket.disable()
-	if err := <-result; !errors.Is(err, ErrAPICapacityExceeded) {
+	bucket.Disable()
+	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("disabled waiter: %v", err)
 	}
 	close(release)
@@ -1008,23 +955,23 @@ func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	})
 }
 
-// TestAPIRateLimiterQueueFullRejectsRequestsWithoutLocalCapacity verifies that
+// TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity verifies that
 // a rejected queue publication cannot authorize waiting.
-func TestAPIRateLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
-	l := &rateLimiter{
+func TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
+	l := &Limiter{
 		now:         time.Now,
-		refillQueue: make(chan *rateLimitRefill, 1),
+		refillQueue: make(chan *refill, 1),
 	}
-	l.refillQueue <- &rateLimitRefill{}
-	bucket := newNonspecificBucket(testRateLimitID)
+	l.refillQueue <- &refill{}
+	bucket := NewNonspecificBucket(testRateLimitID)
 
-	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("consume with a full queue: got %v, want ErrAPICapacityExceeded", err)
+	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("consume with a full queue: got %v, want ErrCapacityExceeded", err)
 	}
-	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("second consume with a full queue: got %v, want ErrAPICapacityExceeded", err)
+	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("second consume with a full queue: got %v, want ErrCapacityExceeded", err)
 	}
-	if !rateLimiterRetryAfter(l).IsZero() {
+	if !limiterRetryAfter(l).IsZero() {
 		t.Fatal("full queue started backoff")
 	}
 	_, _, _, queued, _ := bucketSnapshot(bucket)
@@ -1033,28 +980,28 @@ func TestAPIRateLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T
 	}
 }
 
-// TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff verifies that
+// TestLimiterShutdownDiscardsLateResultWithoutBackoff verifies that
 // shutdown rejects a late result without starting global backoff.
-func TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
+func TestLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	started := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
-		return []apiRateLimitLeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 1, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	result := make(chan error, 1)
-	go func() { result <- l.consume(context.Background(), bucket, 1) }()
+	go func() { result <- l.Consume(context.Background(), bucket, 1) }()
 	<-started
 	l.Close()
-	if err := <-result; !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("waiter after shutdown: %v", err)
 	}
 
-	if !rateLimiterRetryAfter(l).IsZero() {
+	if !limiterRetryAfter(l).IsZero() {
 		t.Fatal("shutdown started global backoff")
 	}
 	available, _, _, queued, _ := bucketSnapshot(bucket)
@@ -1063,41 +1010,41 @@ func TestAPIRateLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	}
 }
 
-// TestAPIRateLimiterShutdownUnblocksBufferedWaiter verifies that shutdown
+// TestLimiterShutdownUnblocksBufferedWaiter verifies that shutdown
 // resolves waiters even when their refill remains buffered in the queue.
-func TestAPIRateLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
+func TestLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 	started := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []apiRateLimitLeaseRequest) ([]apiRateLimitLeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
 		return nil, ctx.Err()
 	})
-	firstBucket := newNonspecificBucket(testRateLimitID)
-	secondBucket := newWorkspaceBucket("222222222222")
+	firstBucket := NewNonspecificBucket(testRateLimitID)
+	secondBucket := NewWorkspaceBucket("222222222222")
 	first := make(chan error, 1)
 	second := make(chan error, 1)
-	go func() { first <- limiter.consume(context.Background(), firstBucket, 1) }()
+	go func() { first <- limiter.Consume(context.Background(), firstBucket, 1) }()
 	<-started
-	go func() { second <- limiter.consume(context.Background(), secondBucket, 1) }()
+	go func() { second <- limiter.Consume(context.Background(), secondBucket, 1) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(secondBucket) == 1 })
 
 	limiter.Close()
-	if err := <-first; !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := <-first; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("in-flight waiter after shutdown: %v", err)
 	}
-	if err := <-second; !errors.Is(err, ErrAPICapacityExceeded) {
+	if err := <-second; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("buffered waiter after shutdown: %v", err)
 	}
 }
 
-// TestAPIRateLimiterShutdownFinishesCollectedRefill verifies that shutdown
+// TestLimiterShutdownFinishesCollectedRefill verifies that shutdown
 // rejects a refill already collected by the batcher.
-func TestAPIRateLimiterShutdownFinishesCollectedRefill(t *testing.T) {
-	l := &rateLimiter{}
+func TestLimiterShutdownFinishesCollectedRefill(t *testing.T) {
+	l := &Limiter{}
 	l.close.ctx, l.close.cancel = context.WithCancel(context.Background())
 	l.close.cancel()
 
-	bucket := newNonspecificBucket(testRateLimitID)
+	bucket := NewNonspecificBucket(testRateLimitID)
 	_, refill, _ := bucket.consume(2, true)
 	bucket.activateRefill(refill, 0, false, true)
 
