@@ -30,16 +30,17 @@ const (
 // State and entity locks, so consuming API capacity does not contend on State
 // maps or unrelated organization data.
 type Bucket struct {
-	mu          sync.Mutex
 	subjectKind subjectKind
 	subjectID   string
-	available   int
-	target      int
-	threshold   int
-	refill      *refill
-	disabled    bool
 	leaseSize   int
 	maxCost     int
+
+	mu              sync.Mutex
+	available       int
+	localTarget     int
+	refillThreshold int
+	refill          *refill
+	disabled        bool
 }
 
 // NewIngestionBucket creates the empty local ingestion bucket owned by a
@@ -102,7 +103,7 @@ func (bucket *Bucket) Restore(cost int) {
 	if bucket.disabled {
 		return
 	}
-	bucket.available = min(bucket.target, bucket.available+cost)
+	bucket.available = min(bucket.localTarget, bucket.available+cost)
 }
 
 // activateRefill confirms successful queue publication and optionally admits
@@ -148,12 +149,12 @@ func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
 // applyLeaseLocked adds capacity already removed from PostgreSQL, capped at the
 // local target.
 func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
-	bucket.target = min(bucket.leaseSize, capacityUnits)
+	bucket.localTarget = min(bucket.leaseSize, capacityUnits)
 	// A fixed threshold would trigger a refill after almost every request when
 	// the local target is small. Scale it with the target, with one unit as the
 	// minimum.
-	bucket.threshold = max(1, min(maxRefillThreshold, bucket.target/4))
-	bucket.available = min(bucket.target, bucket.available+grantedUnits)
+	bucket.refillThreshold = max(1, min(maxRefillThreshold, bucket.localTarget/4))
+	bucket.available = min(bucket.localTarget, bucket.available+grantedUnits)
 }
 
 // cancelWaiter serializes cancellation with refill completion. If completion
@@ -223,7 +224,7 @@ func (bucket *Bucket) consume(cost int, refillAllowed bool) (satisfied bool, ref
 		// admitted. Callers may retry after publication has been confirmed.
 		return false, nil, nil
 	}
-	needsRefill := !satisfied || bucket.available < bucket.threshold || bucket.available <= cost
+	needsRefill := !satisfied || bucket.available < bucket.refillThreshold || bucket.available <= cost
 	if needsRefill && bucket.refill == nil && refillAllowed {
 		refill = bucket.newRefillLocked()
 	}
@@ -231,8 +232,8 @@ func (bucket *Bucket) consume(cost int, refillAllowed bool) (satisfied bool, ref
 }
 
 func (bucket *Bucket) newRefillLocked() *refill {
-	requestedUnits := min(bucket.leaseSize, bucket.target-bucket.available)
-	if bucket.target == 0 {
+	requestedUnits := min(bucket.leaseSize, bucket.localTarget-bucket.available)
+	if bucket.localTarget == 0 {
 		requestedUnits = bucket.leaseSize
 	}
 	refill := &refill{

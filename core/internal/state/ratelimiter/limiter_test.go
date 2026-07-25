@@ -37,7 +37,7 @@ func newTestRateLimiter(t *testing.T, acquire leaseAcquirer) *Limiter {
 func bucketSnapshot(bucket *Bucket) (available, target, threshold int, refillQueued, disabled bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	return bucket.available, bucket.target, bucket.threshold, bucket.refill != nil, bucket.disabled
+	return bucket.available, bucket.localTarget, bucket.refillThreshold, bucket.refill != nil, bucket.disabled
 }
 
 // applyTestLease applies a test lease unless the bucket is disabled.

@@ -51,7 +51,7 @@ func TestBucketRestoresLocalCapacity(t *testing.T) {
 	bucket.Restore(3)
 	available, _, _, _, _ = bucketSnapshot(bucket)
 	if available != 10 {
-		t.Fatalf("capacity above the target = %d, want 10", available)
+		t.Fatalf("capacity above the local target = %d, want 10", available)
 	}
 	bucket.Restore(0)
 	available, _, _, _, _ = bucketSnapshot(bucket)
@@ -139,8 +139,8 @@ func TestBucketThresholdScalesWithTarget(t *testing.T) {
 		t.Run(strconv.Itoa(test.target), func(t *testing.T) {
 			bucket := NewOrganizationBucket("111111111111")
 			applyTestLease(bucket, 0, test.target)
-			if bucket.threshold != test.threshold {
-				t.Fatalf("threshold = %d, want %d", bucket.threshold, test.threshold)
+			if bucket.refillThreshold != test.threshold {
+				t.Fatalf("refill threshold = %d, want %d", bucket.refillThreshold, test.threshold)
 			}
 		})
 	}
