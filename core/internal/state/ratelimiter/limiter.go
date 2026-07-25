@@ -39,8 +39,9 @@ var ErrInvalidCost = errors.New("invalid API cost")
 
 // Limiter coordinates refills for local buckets owned by organizations and
 // workspaces. It owns the refill queue, batching, PostgreSQL lease acquisition,
-// metrics, and shutdown lifecycle. Public consumption never accesses PostgreSQL
-// directly.
+// metrics, and shutdown lifecycle.
+//
+// Public consumption never accesses PostgreSQL directly.
 type Limiter struct {
 	acquireLeases  leaseAcquirer
 	maxWait        time.Duration
@@ -69,10 +70,10 @@ type Limiter struct {
 // workspace, and ingestion subjects.
 type leaseAcquirer func(context.Context, []leaseRequest) ([]leaseResult, error)
 
-// refill represents one refill generation, including its immutable
-// lease request and the waiters admitted to it. Mutations are protected by
-// bucket.mu. Closing done publishes final waiter results to readers. The
-// published channel prevents the batcher from processing the refill before
+// refill represents one refill generation, including its immutable lease
+// request and the waiters admitted to it. Mutations are protected by bucket.mu.
+// Closing done publishes final waiter results to readers.
+// The published channel prevents the batcher from processing the refill before
 // queue publication and activation are complete.
 type refill struct {
 	bucket      *Bucket
@@ -99,9 +100,11 @@ func New(database *db.DB) *Limiter {
 	return limiter
 }
 
-// Consume validates a request cost and consumes from the local bucket. If local
-// capacity is insufficient, it may wait for the refill generation to which the
-// request was admitted. It never accesses PostgreSQL directly.
+// Consume consumes cost from bucket. It returns ErrInvalidCost when cost is
+// outside the bucket's supported range. If local capacity is insufficient, it
+// may wait for the refill generation to which the request was admitted.
+//
+// It never accesses PostgreSQL directly.
 func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) error {
 	if cost < 1 || cost > bucket.maxCost {
 		return ErrInvalidCost
@@ -140,11 +143,11 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 	return limiter.waitForRefill(ctx, waiter)
 }
 
-// Close prevents new refills, cancels PostgreSQL work, and waits for the
-// batcher to stop. The batch currently being handled is finished without
-// applying unconfirmed capacity, but entries still buffered in the queue are
-// not drained. Their waiters observe the shutdown context and cannot remain
-// blocked.
+// Close closes the limiter's refill lifecycle by preventing new refills,
+// cancelling PostgreSQL work, and waiting for the batcher to stop.
+// The batch currently being handled is finished without applying unconfirmed
+// capacity, but entries still buffered in the queue are not drained.
+// Their waiters observe the shutdown context and cannot remain blocked.
 //
 // Any remaining local leases are discarded. They are not returned because
 // PostgreSQL has already subtracted them, and a best-effort return could credit
@@ -154,8 +157,8 @@ func (limiter *Limiter) Close() {
 	limiter.shutdown.Wait()
 }
 
-// backoffActive reports whether new refill attempts are temporarily
-// suppressed after an acquisition error or an invalid batch response.
+// backoffActive reports whether new refill attempts are temporarily suppressed
+// after an acquisition error or an invalid batch response.
 func (limiter *Limiter) backoffActive(now time.Time) bool {
 	return now.UnixNano() < limiter.retryAfter.Load()
 }
@@ -185,10 +188,11 @@ func (limiter *Limiter) collectAndRefillBatch(firstRefill *refill) bool {
 	return true
 }
 
-// failRefillBatch preserves the current local capacity and starts a fixed
-// backoff that temporarily prevents new refill attempts.
+// failRefillBatch fails a refill batch while preserving current local capacity
+// and starts a fixed backoff that temporarily prevents new refill attempts.
 // The shared deadline applies to every bucket, including those outside this
 // batch, so a PostgreSQL outage cannot trigger rapid retries across the queue.
+//
 // Shutdown only finishes pending refills; it does not start a backoff.
 func (limiter *Limiter) failRefillBatch(pendingRefills map[*refill]leaseRequest) {
 	if limiter.shutdown.ctx.Err() != nil {
@@ -200,8 +204,7 @@ func (limiter *Limiter) failRefillBatch(pendingRefills map[*refill]leaseRequest)
 	failCollectedRefills(pendingRefills)
 }
 
-// queueRefill adds a generation to the refill queue without blocking the
-// request path.
+// queueRefill queues a refill generation without blocking the request path.
 func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
 	if limiter.shutdown.ctx.Err() != nil {
 		return false, false
@@ -310,7 +313,7 @@ func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 
 }
 
-// registerMetrics initializes the process-wide rate-limiter counters.
+// registerMetrics registers the process-wide rate-limiter counters.
 func (limiter *Limiter) registerMetrics() {
 	limiter.acquisitionErrors = registerCounter(prometheus.CounterOpts{
 		Name: "krenalis_api_rate_limit_refill_errors_total",
@@ -378,8 +381,8 @@ func failCollectedRefills(pendingRefills map[*refill]leaseRequest) {
 	}
 }
 
-// newLeaseAcquirer returns an adapter that calls the PostgreSQL
-// function acquire_api_rate_limit_leases.
+// newLeaseAcquirer returns an adapter that calls the PostgreSQL function
+// acquire_api_rate_limit_leases.
 func newLeaseAcquirer(database *db.DB) leaseAcquirer {
 	return func(ctx context.Context, leaseRequests []leaseRequest) ([]leaseResult, error) {
 		payload, err := json.Marshal(leaseRequests)
@@ -409,10 +412,10 @@ func newLeaseAcquirer(database *db.DB) leaseAcquirer {
 	}
 }
 
-// registerCounter registers a counter in the default Prometheus registry. If a
-// counter with the same name is already registered, it returns the existing
-// counter. It returns nil when registration fails or the existing collector is
-// not a counter.
+// registerCounter registers a counter in the default Prometheus registry.
+// If a counter with the same name is already registered, it returns the
+// existing counter. It returns nil when registration fails or the existing
+// collector is not a counter.
 func registerCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
 	counter := prometheus.NewCounter(counterOptions)
 	if err := prometheus.Register(counter); err != nil {
@@ -427,16 +430,16 @@ func registerCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
 	return counter
 }
 
-// leaseRequest is one input entry for the PostgreSQL lease
-// acquisition function.
+// leaseRequest is one input entry for the PostgreSQL lease acquisition
+// function.
 type leaseRequest struct {
 	SubjectKind    subjectKind `json:"subject_kind"`
 	SubjectID      string      `json:"subject_id"`
 	RequestedUnits int         `json:"requested_units"`
 }
 
-// leaseResult is one result returned by the PostgreSQL lease
-// acquisition function.
+// leaseResult is one result returned by the PostgreSQL lease acquisition
+// function.
 type leaseResult struct {
 	SubjectKind   subjectKind
 	SubjectID     string
@@ -450,8 +453,8 @@ type subjectKey struct {
 	id   string
 }
 
-// waiter represents one request admitted to a refill. element is
-// non-nil only while the waiter belongs to the refill's FIFO queue.
+// waiter represents one request admitted to a refill. element is non-nil only
+// while the waiter belongs to the refill's FIFO queue.
 type waiter struct {
 	refill  *refill
 	cost    int

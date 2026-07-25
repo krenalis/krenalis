@@ -22,8 +22,8 @@ const (
 	ingestionSubjectKind    subjectKind = "ingestion"
 )
 
-// Bucket stores process-local capacity for one organization, workspace,
-// or workspace ingestion subject. Its constructors set the subject kind, so
+// Bucket stores process-local capacity for one organization, workspace, or
+// workspace ingestion subject. Its constructors set the subject kind, so
 // callers cannot create an inconsistent subject combination.
 //
 // mu protects local capacity and refill state. It is deliberately separate from
@@ -76,9 +76,9 @@ func NewWorkspaceBucket(workspaceID string) *Bucket {
 	}
 }
 
-// Disable prevents further consumption and refills after the subject is removed
-// from State, clears local capacity, and rejects pending waiters. A queued
-// pointer remains safe because Go keeps the bucket alive; refillRequest and
+// Disable disables the bucket, preventing further consumption and refills.
+// It clears local capacity and rejects pending waiters. A queued pointer
+// remains safe because Go keeps the bucket alive; refillRequest and
 // completeRefill discard later work for disabled buckets.
 func (bucket *Bucket) Disable() {
 	bucket.mu.Lock()
@@ -92,7 +92,7 @@ func (bucket *Bucket) Disable() {
 	}
 }
 
-// Restore returns previously consumed capacity to this bucket on the current
+// Restore restores previously consumed capacity to this bucket on the current
 // node. It does not affect PostgreSQL, pending refills, or admitted waiters.
 func (bucket *Bucket) Restore(cost int) {
 	if cost < 1 || cost > bucket.maxCost {
@@ -106,9 +106,9 @@ func (bucket *Bucket) Restore(cost int) {
 	bucket.available = min(bucket.localTarget, bucket.available+cost)
 }
 
-// activateRefill confirms successful queue publication and optionally admits
-// the request that created the refill. Activation and admission are one atomic
-// bucket transition, so the batcher cannot complete the refill between them.
+// activateRefill activates a successfully queued refill and optionally admits
+// the request that created it. Activation and admission are one atomic bucket
+// transition, so the batcher cannot complete the refill between them.
 func (bucket *Bucket) activateRefill(refill *refill, cost int, admit bool, refillAllowed bool) *waiter {
 	bucket.mu.Lock()
 	if bucket.refill != refill || refill.active {
@@ -133,9 +133,10 @@ func (bucket *Bucket) activateRefill(refill *refill, cost int, admit bool, refil
 	return waiter
 }
 
-// admitWaiterLocked adds a waiter to the refill's FIFO queue. The caller must
-// hold bucket.mu. It returns nil if the waiter's cost would exceed the refill's
-// requested units.
+// admitWaiterLocked admits a waiter to the refill's FIFO queue.
+//
+// The caller must hold bucket.mu. It returns nil if the waiter's cost would
+// exceed the refill's requested units.
 func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
 	if refill.pendingCost+cost > refill.request.RequestedUnits {
 		return nil
@@ -146,8 +147,8 @@ func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
 	return waiter
 }
 
-// applyLeaseLocked adds capacity already removed from PostgreSQL, capped at the
-// local target.
+// applyLeaseLocked applies capacity already removed from PostgreSQL, capped at
+// the local target.
 func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
 	bucket.localTarget = min(bucket.leaseSize, capacityUnits)
 	// A fixed threshold would trigger a refill after almost every request when
@@ -157,8 +158,9 @@ func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
 	bucket.available = min(bucket.localTarget, bucket.available+grantedUnits)
 }
 
-// cancelWaiter serializes cancellation with refill completion. If completion
-// acquired the bucket mutex first, its already-final decision is returned.
+// cancelWaiter cancels a waiter while serializing with refill completion.
+// If completion acquired the bucket mutex first, its already-final decision is
+// returned.
 func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
@@ -173,9 +175,11 @@ func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 	return cancellation
 }
 
-// completeRefill applies a valid grant and serves the longest satisfiable FIFO
-// prefix while holding the bucket mutex. Capacity is deducted before any waiter
-// is awakened, so later requests cannot consume assigned units.
+// completeRefill completes a refill by applying a valid grant and serving the
+// longest satisfiable FIFO prefix while holding the bucket mutex.
+//
+// Capacity is deducted before any waiter is awakened, so later requests cannot
+// consume assigned units.
 func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits int) {
 	bucket.mu.Lock()
 	if bucket.disabled || bucket.refill != refill || !refill.active {
@@ -202,9 +206,9 @@ func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits
 	close(refill.done)
 }
 
-// consume tries to serve a request from local capacity, admit it to an active
-// refill, or prepare a new refill. A returned refill is still being published
-// and must be placed on the limiter queue before it can admit a waiter.
+// consume consumes cost from local capacity, admits it to an active refill, or
+// prepares a new refill. A returned refill is still being published and must be
+// placed on the limiter queue before it can admit a waiter.
 func (bucket *Bucket) consume(cost int, refillAllowed bool) (satisfied bool, refill *refill, waiter *waiter) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
@@ -231,6 +235,8 @@ func (bucket *Bucket) consume(cost int, refillAllowed bool) (satisfied bool, ref
 	return satisfied, refill, nil
 }
 
+// newRefillLocked creates a refill generation for the missing local capacity.
+// The caller must hold bucket.mu.
 func (bucket *Bucket) newRefillLocked() *refill {
 	requestedUnits := min(bucket.leaseSize, bucket.localTarget-bucket.available)
 	if bucket.localTarget == 0 {
@@ -260,7 +266,8 @@ func (bucket *Bucket) refillRequest(refill *refill) (leaseRequest, bool) {
 	return refill.request, true
 }
 
-// rejectRefill rejects every remaining waiter and detaches the generation.
+// rejectRefill rejects every remaining waiter and detaches the refill
+// generation.
 func (bucket *Bucket) rejectRefill(refill *refill) {
 	bucket.mu.Lock()
 	rejected := bucket.rejectRefillLocked(refill)
@@ -270,6 +277,8 @@ func (bucket *Bucket) rejectRefill(refill *refill) {
 	}
 }
 
+// rejectRefillLocked rejects every waiter and detaches the refill generation.
+// The caller must hold bucket.mu. It reports whether the refill was attached.
 func (bucket *Bucket) rejectRefillLocked(refill *refill) bool {
 	if refill == nil || bucket.refill != refill {
 		return false
