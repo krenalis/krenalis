@@ -35,11 +35,6 @@ const (
 	apiRateLimitBatchDelay = 2 * time.Millisecond
 	apiRateLimitQueueSize  = apiRateLimitBatchSize * 4
 
-	// apiRateLimitOverdraftLimit bounds the temporary negative balance allowed
-	// for cost-1 operations while a refill is pending. For one subject, each
-	// node can exceed global capacity by at most this many operations.
-	apiRateLimitOverdraftLimit = 5
-
 	apiRateLimitRefillBackoffDuration = 250 * time.Millisecond
 	apiRateLimitMaxWaitDuration       = time.Second
 	apiRateLimitAcquireTimeout        = 5 * time.Second
@@ -205,9 +200,8 @@ func (limiter *rateLimiter) waitForRefill(ctx context.Context, waiter *rateLimit
 	return waiter.refill.bucket.cancelWaiter(waiter, cancellation)
 }
 
-// failRefillBatch preserves the current local capacity, including any
-// overdraft, and starts a fixed backoff that temporarily prevents new refill
-// attempts.
+// failRefillBatch preserves the current local capacity and starts a fixed
+// backoff that temporarily prevents new refill attempts.
 // The shared deadline applies to every bucket, including those outside this
 // batch, so a PostgreSQL outage cannot trigger rapid retries across the queue.
 // Shutdown only finishes pending refills; it does not start a backoff.
@@ -249,7 +243,7 @@ func (limiter *rateLimiter) refillBatch(pendingRefills map[*rateLimitRefill]apiR
 	if limiter.refillBackoffActive(limiter.now()) {
 		// Generations queued before a failed batch may still be in the channel.
 		// They are not sent to PostgreSQL during global backoff. Rejecting them also
-		// prevents further overdraft from relying on a refill that will not run.
+		// prevents waiters from relying on a refill that will not run.
 		failCollectedRefills(pendingRefills)
 		return
 	}
@@ -373,17 +367,16 @@ func (limiter *rateLimiter) runBatcher() {
 // State and entity locks, so consuming API capacity does not contend on State
 // maps or unrelated organization data.
 type rateLimitBucket struct {
-	mu                    sync.Mutex
-	subjectKind           string
-	subjectID             string
-	available             int
-	target                int
-	threshold             int
-	refill                *rateLimitRefill
-	disabled              bool
-	allowInitialOverdraft bool
-	leaseSize             int
-	maxCost               int
+	mu          sync.Mutex
+	subjectKind string
+	subjectID   string
+	available   int
+	target      int
+	threshold   int
+	refill      *rateLimitRefill
+	disabled    bool
+	leaseSize   int
+	maxCost     int
 }
 
 // rateLimitRefill represents one refill generation, including its immutable
@@ -419,9 +412,7 @@ func newWorkspaceBucket(workspaceID string) *rateLimitBucket {
 // newIngestionBucket creates the empty local ingestion bucket owned by a
 // Workspace instance.
 func newIngestionBucket(workspaceID string) *rateLimitBucket {
-	bucket := newRateLimitBucket("ingestion", workspaceID, ingestionRateLimitLeaseSize, ingestionRateLimitMaxCost)
-	bucket.allowInitialOverdraft = true
-	return bucket
+	return newRateLimitBucket("ingestion", workspaceID, ingestionRateLimitLeaseSize, ingestionRateLimitMaxCost)
 }
 
 // newNonspecificBucket creates an organization's empty local bucket for
@@ -441,17 +432,13 @@ func newRateLimitBucket(subjectKind, subjectID string, leaseSize, maxCost int) *
 }
 
 // applyLeaseLocked adds capacity already removed from PostgreSQL, capped at the
-// local target. A partial lease may leave the local balance negative.
+// local target.
 func (bucket *rateLimitBucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
 	bucket.target = min(bucket.leaseSize, capacityUnits)
-	bucket.allowInitialOverdraft = false
 	// A fixed threshold would trigger a refill after almost every request when
 	// the local target is small. Scale it with the target, with one unit as the
 	// minimum.
 	bucket.threshold = max(1, min(apiRateLimitMaxRefillThreshold, bucket.target/4))
-	if bucket.available > bucket.target {
-		bucket.available = bucket.target
-	}
 	bucket.available = min(bucket.target, bucket.available+grantedUnits)
 }
 
@@ -467,16 +454,6 @@ func (bucket *rateLimitBucket) consume(operationCost int, refillAllowed bool) (s
 
 	if bucket.available >= operationCost {
 		bucket.available -= operationCost
-		satisfied = true
-	} else if operationCost == 1 && refillAllowed && bucket.refill == nil && bucket.allowInitialOverdraft {
-		// Ingestion may serve its first single event immediately before publishing the
-		// cold bucket's initial refill.
-		bucket.available--
-		bucket.allowInitialOverdraft = false
-		satisfied = true
-	} else if operationCost == 1 && refillAllowed && bucket.available > -apiRateLimitOverdraftLimit &&
-		bucket.refill != nil && bucket.refill.active && bucket.refill.waiters.Len() == 0 {
-		bucket.available--
 		satisfied = true
 	} else if refillAllowed && bucket.refill != nil && bucket.refill.active {
 		return false, nil, bucket.admitWaiterLocked(bucket.refill, operationCost)
@@ -541,8 +518,7 @@ func (bucket *rateLimitBucket) activateRefill(refill *rateLimitRefill, operation
 }
 
 func (bucket *rateLimitBucket) admitWaiterLocked(refill *rateLimitRefill, operationCost int) *rateLimitWaiter {
-	debt := max(0, -bucket.available)
-	if refill.pendingCost+operationCost > refill.request.RequestedUnits-debt {
+	if refill.pendingCost+operationCost > refill.request.RequestedUnits {
 		return nil
 	}
 	waiter := &rateLimitWaiter{refill: refill, cost: operationCost}

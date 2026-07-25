@@ -173,25 +173,29 @@ func TestDisabledRateLimitBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 	}
 }
 
-// TestIngestionRateLimitBucketAllowsInitialOverdraft verifies that a first
-// single-event request can queue its initial refill without being rejected.
-func TestIngestionRateLimitBucketAllowsInitialOverdraft(t *testing.T) {
+// TestIngestionRateLimitBucketWaitsForInitialRefill verifies that a first
+// single-event request waits for its initial refill instead of using capacity
+// that has not been leased yet.
+func TestIngestionRateLimitBucketWaitsForInitialRefill(t *testing.T) {
 	bucket := newIngestionBucket("222222222222")
 
 	satisfied, refill, waiter := bucket.consume(1, true)
-	if !satisfied || refill == nil || waiter != nil {
+	if satisfied || refill == nil || waiter != nil {
 		t.Fatalf("initial ingestion consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
-	bucket.rejectRefill(refill)
-	satisfied, refill, waiter = bucket.consume(1, true)
-	if satisfied || refill == nil || waiter != nil {
-		t.Fatalf("second ingestion consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
+	if waiter := bucket.activateRefill(refill, 1, true, true); waiter == nil {
+		t.Fatal("initial ingestion request was not admitted as a waiter")
 	}
+	available, _, _, _, _ := bucketSnapshot(bucket)
+	if available != 0 {
+		t.Fatalf("available capacity = %d, want 0", available)
+	}
+	bucket.rejectRefill(refill)
 }
 
-// TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill verifies that
-// cost-one overdraft requires an active refill.
-func TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill(t *testing.T) {
+// TestRateLimitBucketAdmitsCostOneToPendingRefill verifies that a cost-one
+// request waits for an active refill when local capacity is exhausted.
+func TestRateLimitBucketAdmitsCostOneToPendingRefill(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill == nil || waiter != nil {
@@ -201,18 +205,19 @@ func TestRateLimitBucketAllowsOverdraftOnlyWithPendingRefill(t *testing.T) {
 		t.Fatal("unexpected waiter")
 	}
 	satisfied, queued, waiter := bucket.consume(1, true)
-	if !satisfied || queued != nil || waiter != nil {
-		t.Fatalf("pending refill overdraft: satisfied=%t refill=%p waiter=%p", satisfied, queued, waiter)
+	if satisfied || queued != nil || waiter == nil {
+		t.Fatalf("pending refill waiter: satisfied=%t refill=%p waiter=%p", satisfied, queued, waiter)
 	}
 	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != -1 {
-		t.Fatalf("available capacity = %d, want -1", available)
+	if available != 0 {
+		t.Fatalf("available capacity = %d, want 0", available)
 	}
+	bucket.rejectRefill(refill)
 }
 
-// TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter verifies that
-// overdraft is limited to cost-one operations while refills are allowed.
-func TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter(t *testing.T) {
+// TestRateLimitBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an
+// active refill admits requests and a closed limiter does not.
+func TestRateLimitBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
 	bucket := newNonspecificBucket("111111111111")
 	_, refill, _ := bucket.consume(2, true)
 	bucket.activateRefill(refill, 0, false, true)
@@ -223,54 +228,7 @@ func TestRateLimitBucketDoesNotOverdraftHigherCostsOrClosedLimiter(t *testing.T)
 	}
 	satisfied, queued, waiter = bucket.consume(1, false)
 	if satisfied || queued != nil || waiter != nil {
-		t.Fatal("closed limiter allowed overdraft or waiting")
-	}
-}
-
-// TestRateLimitBucketLeaseRepaysOverdraft verifies that grants are added to
-// the current balance and repay local debt first.
-func TestRateLimitBucketLeaseRepaysOverdraft(t *testing.T) {
-	bucket := newNonspecificBucket("111111111111")
-	applyTestLease(bucket, 0, 100)
-
-	bucket.mu.Lock()
-	bucket.available = -5
-	bucket.mu.Unlock()
-	applyTestLease(bucket, 10, 100)
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 5 {
-		t.Fatalf("full debt repayment = %d, want 5", available)
-	}
-
-	bucket.mu.Lock()
-	bucket.available = -5
-	bucket.mu.Unlock()
-	applyTestLease(bucket, 2, 100)
-	available, _, _, _, _ = bucketSnapshot(bucket)
-	if available != -3 {
-		t.Fatalf("partial debt repayment = %d, want -3", available)
-	}
-	applyTestLease(bucket, 0, 100)
-	available, _, _, _, _ = bucketSnapshot(bucket)
-	if available != -3 {
-		t.Fatalf("zero lease changed debt to %d, want -3", available)
-	}
-}
-
-// TestRateLimitBucketCapsRefillRequestWithOverdraft verifies that local debt
-// cannot make a refill request exceed the lease size.
-func TestRateLimitBucketCapsRefillRequestWithOverdraft(t *testing.T) {
-	bucket := newNonspecificBucket("111111111111")
-	bucket.mu.Lock()
-	bucket.target = apiRateLimitLeaseSize
-	bucket.available = -apiRateLimitOverdraftLimit
-	refill := bucket.newRefillLocked()
-	bucket.mu.Unlock()
-	bucket.activateRefill(refill, 0, false, true)
-
-	request, ok := bucket.refillRequest(refill)
-	if !ok || request.RequestedUnits != apiRateLimitLeaseSize {
-		t.Fatalf("requested refill = %d, %t, want %d, true", request.RequestedUnits, ok, apiRateLimitLeaseSize)
+		t.Fatal("closed limiter allowed waiting")
 	}
 }
 
@@ -465,31 +423,6 @@ func TestAPIRateLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
 	_, _, waiter = bucket.consume(1, true)
 	if waiter != nil {
 		t.Fatal("waiter cost exceeded the requested-units admission budget")
-	}
-	bucket.rejectRefill(refill)
-}
-
-// TestAPIRateLimiterSubtractsOverdraftFromAdmissionBudget verifies that local
-// debt reduces waiter admission and disables further overdraft.
-func TestAPIRateLimiterSubtractsOverdraftFromAdmissionBudget(t *testing.T) {
-	bucket := newNonspecificBucket(testRateLimitID)
-	applyTestLease(bucket, 0, 100)
-	_, refill, _ := bucket.consume(2, true)
-	bucket.activateRefill(refill, 0, false, true)
-
-	for range apiRateLimitOverdraftLimit {
-		satisfied, _, waiter := bucket.consume(1, true)
-		if !satisfied || waiter != nil {
-			t.Fatal("cost-1 operation did not use the available overdraft")
-		}
-	}
-	_, _, waiter := bucket.consume(95, true)
-	if waiter == nil {
-		t.Fatal("waiter matching the debt-adjusted budget was not admitted")
-	}
-	satisfied, _, waiter := bucket.consume(1, true)
-	if satisfied || waiter != nil {
-		t.Fatal("new overdraft or excess waiting was allowed with a waiter present")
 	}
 	bucket.rejectRefill(refill)
 }
@@ -851,7 +784,7 @@ func TestAPIRateLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 }
 
 // TestAPIRateLimiterStartsGlobalBackoffAfterRefillError verifies that a failed
-// acquisition suppresses refills and overdraft until the retry deadline.
+// acquisition suppresses refills and waiter admission until the retry deadline.
 func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 	clock := newTestRateLimitClock()
 	var calls atomic.Int32
@@ -887,16 +820,10 @@ func TestAPIRateLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 		t.Fatalf("consume local capacity during backoff: %v", err)
 	}
 	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("consume overdraft during backoff: got %v, want ErrAPICapacityExceeded", err)
+		t.Fatalf("consume without local capacity during backoff: got %v, want ErrAPICapacityExceeded", err)
 	}
 	if calls.Load() != 1 {
 		t.Fatalf("refill attempts during backoff = %d, want 1", calls.Load())
-	}
-	overdraftBucket := newWorkspaceBucket("222222222222")
-	_, refill, _ := overdraftBucket.consume(2, true)
-	overdraftBucket.activateRefill(refill, 0, false, true)
-	if err := l.consume(context.Background(), overdraftBucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("overdraft during global backoff: got %v, want ErrAPICapacityExceeded", err)
 	}
 
 	clock.Set(retryAt)
@@ -1005,30 +932,6 @@ func TestAPIRateLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.
 	}
 }
 
-// TestAPIRateLimiterLimitsConcurrentOverdraft verifies that concurrent
-// cost-one operations cannot exceed the local overdraft limit.
-func TestAPIRateLimiterLimitsConcurrentOverdraft(t *testing.T) {
-	bucket := newNonspecificBucket(testRateLimitID)
-	_, refill, _ := bucket.consume(2, true)
-	bucket.activateRefill(refill, 0, false, true)
-
-	var successful atomic.Int32
-	var wg sync.WaitGroup
-	for range 100 {
-		wg.Go(func() {
-			satisfied, _, _ := bucket.consume(1, true)
-			if satisfied {
-				successful.Add(1)
-			}
-		})
-	}
-	wg.Wait()
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if successful.Load() != apiRateLimitOverdraftLimit || available != -apiRateLimitOverdraftLimit {
-		t.Fatalf("successful=%d available=%d, want %d and %d", successful.Load(), available, apiRateLimitOverdraftLimit, -apiRateLimitOverdraftLimit)
-	}
-}
-
 // TestAPIRateLimiterDisabledBucketCompletesInFlightRefill verifies that
 // disabling a bucket rejects waiters and discards its late grant.
 func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
@@ -1063,9 +966,9 @@ func TestAPIRateLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	})
 }
 
-// TestAPIRateLimiterQueueFullDoesNotEnableOverdraft verifies that a rejected
-// queue publication cannot authorize waiting or overdraft.
-func TestAPIRateLimiterQueueFullDoesNotEnableOverdraft(t *testing.T) {
+// TestAPIRateLimiterQueueFullRejectsRequestsWithoutLocalCapacity verifies that
+// a rejected queue publication cannot authorize waiting.
+func TestAPIRateLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
 	l := &rateLimiter{
 		now:         time.Now,
 		refillQueue: make(chan *rateLimitRefill, 1),
@@ -1077,7 +980,7 @@ func TestAPIRateLimiterQueueFullDoesNotEnableOverdraft(t *testing.T) {
 		t.Fatalf("consume with a full queue: got %v, want ErrAPICapacityExceeded", err)
 	}
 	if err := l.consume(context.Background(), bucket, 1); !errors.Is(err, ErrAPICapacityExceeded) {
-		t.Fatalf("overdraft after a full queue: got %v, want ErrAPICapacityExceeded", err)
+		t.Fatalf("second consume with a full queue: got %v, want ErrAPICapacityExceeded", err)
 	}
 	if !rateLimiterRetryAfter(l).IsZero() {
 		t.Fatal("full queue started backoff")

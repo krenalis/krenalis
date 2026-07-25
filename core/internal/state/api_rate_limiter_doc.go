@@ -124,21 +124,19 @@ package state
 // Admission budget
 //
 // The lease request is calculated and frozen before publication. Each request
-// asks for no more than the bucket's configured lease size. A negative local
-// balance may make the amount missing from the local target larger than one
-// lease, but the request remains capped at one lease.
+// asks for no more than the bucket's configured lease size.
 //
 // Waiter admission is bounded by the actual frozen request, not by the
 // configured lease size in isolation:
 //
-//   reservable = requested units - max(0, -local available)
+//   reservable = requested units
 //
 // The total cost of current waiters plus the candidate waiter must not exceed
 // reservable.
 //
-// This guarantees that a full grant can repay existing overdraft and serve all
-// admitted waiters, even if positive local capacity is consumed while
-// PostgreSQL is processing the request.
+// This guarantees that a full grant can serve all admitted waiters, even if
+// positive local capacity is consumed while PostgreSQL is processing the
+// request.
 //
 // Positive local capacity is deliberately excluded from the calculation because
 // it remains available to unrelated local requests and may be consumed before
@@ -154,9 +152,6 @@ package state
 // Canceling a waiter removes it from the FIFO list and subtracts its cost from
 // the pending total. The released admission capacity may then be used by a
 // later waiter.
-//
-// If all waiters leave while the refill remains active, overdraft may become
-// available again.
 //
 // Applying leases and serving waiters
 //
@@ -242,36 +237,6 @@ package state
 // Targets and thresholds are deliberately simple. They are not adaptive to
 // traffic rate or database latency.
 //
-// Limited overdraft
-//
-// Cost-1 operations may temporarily make an active bucket negative while its
-// refill has no waiters.
-//
-// Overdraft is allowed only when:
-//
-//   - refills are open;
-//   - no global backoff is active;
-//   - the bucket is active;
-//   - the configured per-node negative limit would not be exceeded.
-//
-// Ingestion retains its one-time initial cost-1 overdraft immediately before
-// publishing the cold bucket's first refill. That operation remains authorized
-// even if publication subsequently fails. The one-time allowance is not
-// restored.
-//
-// Once the first waiter is admitted, no new overdraft is permitted until all
-// waiters leave or the refill finishes.
-//
-// Any negative balance that already exists is subtracted from the admission
-// budget. A grant naturally repays that balance before its remaining capacity
-// is assigned to waiters.
-//
-// For one subject, each node may exceed global capacity by at most
-// apiRateLimitOverdraftLimit cost-1 operations. The approximate distributed
-// upper bound remains:
-//
-//   number of nodes * apiRateLimitOverdraftLimit
-//
 // Global refill backoff
 //
 // Lease-acquisition errors and invalid batch responses activate a short global
@@ -284,8 +249,7 @@ package state
 //
 //   - positive local capacity remains usable;
 //   - no new refill is published;
-//   - no waiter is admitted;
-//   - no overdraft is allowed.
+//   - no waiter is admitted.
 //
 // Refill generations already buffered in the queue are discarded without
 // PostgreSQL access when the batcher reaches them. Their waiters are resolved
@@ -307,7 +271,7 @@ package state
 // Closing the limiter:
 //
 //   - prevents new refills;
-//   - prevents new waiters and overdraft;
+//   - prevents new waiters;
 //   - cancels in-progress database work;
 //   - stops the batcher;
 //   - directly unblocks pending waiters, including those belonging to entries
@@ -331,9 +295,8 @@ package state
 //      bucket.
 //   7. A waiter belongs to one active refill generation and never moves to
 //      another.
-//   8. Pending waiter cost never exceeds requested units minus local overdraft
-//      debt.
-//   9. New overdraft is disabled while any waiter exists.
+//   8. Local available capacity never becomes negative.
+//   9. Pending waiter cost never exceeds requested units.
 //  10. PostgreSQL subtracts capacity before returning a lease.
 //  11. Granted capacity is added to the current local value.
 //  12. Capacity assigned to a waiter is deducted atomically before the waiter
