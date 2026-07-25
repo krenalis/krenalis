@@ -39,8 +39,12 @@ func TestDecoderEventCount(t *testing.T) {
 	}{
 		{name: "single", body: `{"type":"page","userId":"x"}`, count: 1, validEvents: true},
 		{name: "batch", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2, validEvents: true},
+		{name: "batch with whitespace", body: " \n [{\"type\":\"page\",\"userId\":\"x\"}]", count: 1, validEvents: true},
 		{name: "batch envelope", body: `{"batch":[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]}`, count: 2, validEvents: true},
+		{name: "batch envelope with whitespace", body: "{\"batch\" : \n [{\"type\":\"page\",\"userId\":\"x\"}]}", count: 1, validEvents: true},
+		{name: "empty batch", body: `{"batch":[]}`, count: 0, validEvents: true},
 		{name: "malformed batch", body: `[{"type":"page"}`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
+		{name: "malformed batch envelope", body: `{"batch":`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
 		{name: "maximum batch", body: "[" + strings.Repeat("0,", maxBatchEventCount-1) + "0]", count: maxBatchEventCount},
 		{name: "excessive batch", body: "[" + strings.Repeat("0,", maxBatchEventCount) + "0]", err: errors.BadRequest("batch contains too many events")},
 	} {
@@ -48,16 +52,13 @@ func TestDecoderEventCount(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(test.body))
 			r.Header.Set("Content-Type", "application/json")
 			dec, err := newDecoder(r)
-			if err != nil {
-				t.Fatal(err)
-			}
-			count, err := dec.EventCount()
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %#v, got error %#v", test.err, err)
 			}
 			if err != nil {
 				return
 			}
+			count := dec.EventCount()
 			if count != test.count {
 				t.Fatalf("event count = %d, want %d", count, test.count)
 			}
@@ -77,6 +78,44 @@ func TestDecoderEventCount(t *testing.T) {
 				t.Fatalf("decoded events = %d, want %d", decoded, test.count)
 			}
 		})
+	}
+}
+
+// TestDecoderResetResetsEventCountAndType verifies that Reset clears batch and
+// endpoint type state when decoding different request forms.
+func TestDecoderResetResetsEventCountAndType(t *testing.T) {
+	dec := &decoder{}
+	for _, test := range []struct {
+		path     string
+		body     string
+		count    int
+		eventErr error
+	}{
+		{path: "/events", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2},
+		{path: "/events", body: `{"batch":[]}`, count: 0},
+		{path: "/events/track", body: `{"userId":"x","event":"click"}`, count: 1},
+		{path: "/events", body: `{"userId":"x","event":"click"}`, count: 1, eventErr: errors.BadRequest("property 'type' is required for a single-event request")},
+	} {
+		r := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(test.body))
+		r.Header.Set("Content-Type", "application/json")
+		if err := dec.Reset(r); err != nil {
+			t.Fatal(err)
+		}
+		if count := dec.EventCount(); count != test.count {
+			t.Fatalf("event count = %d, want %d", count, test.count)
+		}
+		decoded := 0
+		var eventErr error
+		for _, err := range dec.Events(decoderTestConnectionID, false) {
+			eventErr = err
+			decoded++
+		}
+		if !reflect.DeepEqual(test.eventErr, eventErr) {
+			t.Fatalf("event error = %#v, want %#v", eventErr, test.eventErr)
+		}
+		if decoded != test.count {
+			t.Fatalf("decoded events = %d, want %d", decoded, test.count)
+		}
 	}
 }
 

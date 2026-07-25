@@ -47,7 +47,6 @@ var (
 type decoder struct {
 	payload *bytes.Buffer
 	dec     json.Decoder
-	batch   json.Value
 	maxmind *maxminddb.Reader
 
 	receivedAt time.Time
@@ -62,6 +61,7 @@ type decoder struct {
 	connectionId string
 	context      map[string]any
 	typ          string
+	eventCount   int
 }
 
 // newDecoder returns a new decoder.
@@ -90,30 +90,12 @@ func (d *decoder) ConnectionId() (string, bool) {
 	return d.connectionId, true
 }
 
-// maxBatchEventCount bounds preliminary counting of batch values before validation.
+// maxBatchEventCount bounds the number of events in a batch request.
 const maxBatchEventCount = 20_000
 
 // EventCount returns the number of events in the request.
-func (d *decoder) EventCount() (int, error) {
-	if d.typ != "batch" {
-		return 1, nil
-	}
-	var counter json.Decoder
-	counter.Reset(bytes.NewReader(d.batch))
-	if err := counter.SkipToken(); err != nil {
-		return 0, errRead(err)
-	}
-	count := 0
-	for counter.PeekKind() != ']' {
-		if err := counter.SkipValue(); err != nil {
-			return 0, errRead(err)
-		}
-		count++
-		if count > maxBatchEventCount {
-			return 0, errors.BadRequest("batch contains too many events")
-		}
-	}
-	return count, nil
+func (d *decoder) EventCount() int {
+	return d.eventCount
 }
 
 // Events returns an iterator to iterate over events. connectionId represents
@@ -192,7 +174,6 @@ func (d *decoder) Reset(r *http.Request) error {
 		}
 	}
 
-	d.batch = nil
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr.ip = netip.Addr{}
 
@@ -233,6 +214,8 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.writeKey = ""
 	d.connectionId = ""
 	d.context = nil
+	d.typ = ""
+	d.eventCount = 1
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
 	switch path {
@@ -267,8 +250,14 @@ func (d *decoder) Reset(r *http.Request) error {
 	kind := d.dec.PeekKind()
 	if kind == '[' {
 		// It is a batch-event request with a JSON array as body.
+		events, eventCount, err := d.readBatch(body)
+		if err != nil {
+			return err
+		}
+		d.eventCount = eventCount
+		d.payload = bytes.NewBuffer(events)
+		d.dec.Reset(d.payload)
 		d.typ = "batch"
-		d.batch = body
 		d.sentAt = d.receivedAt
 		return nil
 	}
@@ -281,6 +270,7 @@ func (d *decoder) Reset(r *http.Request) error {
 	if err != nil {
 		return errRead(err)
 	}
+	events := body
 	var tok json.Token
 	for {
 		tok, err = d.dec.ReadToken()
@@ -293,14 +283,14 @@ func (d *decoder) Reset(r *http.Request) error {
 		key := tok.String()
 		switch key {
 		case "batch":
-			batch, err := d.dec.ReadValue()
+			// It is a batch-event request. Parse only the slice of events.
+			batch, eventCount, err := d.readBatch(body)
 			if err != nil {
-				return errRead(err)
+				return err
 			}
-			if !batch.IsArray() {
-				return errors.BadRequest("property 'batch' is not a valid array")
-			}
-			d.batch = batch
+			d.typ = "batch"
+			d.eventCount = eventCount
+			events = batch
 		case "context":
 			kind := d.dec.PeekKind()
 			if kind != '{' {
@@ -346,12 +336,6 @@ func (d *decoder) Reset(r *http.Request) error {
 			}
 			d.connectionId = connectionId
 		}
-	}
-	events := body
-	if d.batch != nil {
-		// It is a batch-event request. Parse only the slice of events.
-		d.typ = "batch"
-		events = d.batch
 	}
 	d.payload = bytes.NewBuffer(events)
 	d.dec.Reset(d.payload)
@@ -1159,6 +1143,35 @@ func (d *decoder) parseRemoteAddr(s string) error {
 		d.remoteAddr.stronglyAnonymous = netip.PrefixFrom(addr, 16).Masked().Addr().String()
 	}
 	return nil
+}
+
+// readBatch parses the next JSON array, counts its elements, and returns the
+// exact slice of body that contains it. The decoder is left immediately after
+// the closing bracket.
+func (d *decoder) readBatch(body []byte) ([]byte, int, error) {
+	tok, err := d.dec.ReadToken()
+	if err != nil {
+		return nil, 0, errRead(err)
+	}
+	if tok.Kind() != '[' {
+		return nil, 0, errors.BadRequest("property 'batch' is not a valid array")
+	}
+	start := int(d.dec.ByteOffset()) - 1
+	count := 0
+	for d.dec.PeekKind() != ']' {
+		if err := d.dec.SkipValue(); err != nil {
+			return nil, 0, errRead(err)
+		}
+		count++
+		if count > maxBatchEventCount {
+			return nil, 0, errors.BadRequest("batch contains too many events")
+		}
+	}
+	if err := d.dec.SkipToken(); err != nil { // Skip the ']' token.
+		return nil, 0, errRead(err)
+	}
+	end := int(d.dec.ByteOffset())
+	return body[start:end], count, nil
 }
 
 // errRead checks whether the provided error is a JSON parsing error. If it is,

@@ -765,10 +765,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	ws := connection.Workspace()
-	eventCount, err := dec.EventCount()
-	if err != nil {
-		return err
-	}
+	eventCount := dec.EventCount()
 	if eventCount > 0 {
 		err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), eventCount)
 	}
