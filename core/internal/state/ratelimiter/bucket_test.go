@@ -21,14 +21,14 @@ func TestDisabledBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
 		t.Fatalf("disabled bucket consumed or requested capacity: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
 	applyTestLease(bucket, 10, 10)
-	available, _, _, _, disabled := bucketSnapshot(bucket)
-	if available != 0 || !disabled {
-		t.Fatalf("disabled bucket state = available:%d disabled:%t, want 0:true", available, disabled)
+	state := bucketSnapshot(bucket)
+	if state.available != 0 || !state.disabled {
+		t.Fatalf("disabled bucket state = available:%d disabled:%t, want 0:true", state.available, state.disabled)
 	}
 	bucket.Restore(1)
-	available, _, _, _, _ = bucketSnapshot(bucket)
-	if available != 0 {
-		t.Fatalf("restored capacity on a disabled bucket = %d, want 0", available)
+	state = bucketSnapshot(bucket)
+	if state.available != 0 {
+		t.Fatalf("restored capacity on a disabled bucket = %d, want 0", state.available)
 	}
 }
 
@@ -43,25 +43,25 @@ func TestBucketRestoresLocalCapacity(t *testing.T) {
 		t.Fatal("initial consumption was not satisfied")
 	}
 	bucket.Restore(3)
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 9 {
-		t.Fatalf("restored capacity = %d, want 9", available)
+	state := bucketSnapshot(bucket)
+	if state.available != 9 {
+		t.Fatalf("restored capacity = %d, want 9", state.available)
 	}
 
 	bucket.Restore(3)
-	available, _, _, _, _ = bucketSnapshot(bucket)
-	if available != 10 {
-		t.Fatalf("capacity above the local target = %d, want 10", available)
+	state = bucketSnapshot(bucket)
+	if state.available != 10 {
+		t.Fatalf("capacity above the local target = %d, want 10", state.available)
 	}
 	bucket.Restore(0)
-	available, _, _, _, _ = bucketSnapshot(bucket)
-	if available != 10 {
-		t.Fatalf("zero restoration changed capacity to %d, want 10", available)
+	state = bucketSnapshot(bucket)
+	if state.available != 10 {
+		t.Fatalf("zero restoration changed capacity to %d, want 10", state.available)
 	}
 	bucket.Restore(bucket.maxCost + 1)
-	available, _, _, _, _ = bucketSnapshot(bucket)
-	if available != 10 {
-		t.Fatalf("invalid restoration changed capacity to %d, want 10", available)
+	state = bucketSnapshot(bucket)
+	if state.available != 10 {
+		t.Fatalf("invalid restoration changed capacity to %d, want 10", state.available)
 	}
 }
 
@@ -78,9 +78,8 @@ func TestIngestionBucketWaitsForInitialRefill(t *testing.T) {
 	if waiter := bucket.activateRefill(refill, 1, true, true); waiter == nil {
 		t.Fatal("initial ingestion request was not admitted as a waiter")
 	}
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 0 {
-		t.Fatalf("available capacity = %d, want 0", available)
+	if state := bucketSnapshot(bucket); state.available != 0 {
+		t.Fatalf("available capacity = %d, want 0", state.available)
 	}
 	bucket.rejectRefill(refill)
 }
@@ -100,9 +99,8 @@ func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
 	if satisfied || queued != nil || waiter == nil {
 		t.Fatalf("pending refill waiter: satisfied=%t refill=%p waiter=%p", satisfied, queued, waiter)
 	}
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 0 {
-		t.Fatalf("available capacity = %d, want 0", available)
+	if state := bucketSnapshot(bucket); state.available != 0 {
+		t.Fatalf("available capacity = %d, want 0", state.available)
 	}
 	bucket.rejectRefill(refill)
 }
@@ -162,8 +160,7 @@ func TestBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
 	if !satisfied || refill == nil || waiter != nil {
 		t.Fatalf("low-capacity consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 250 {
-		t.Fatalf("available capacity = %d, want 250", available)
+	if state := bucketSnapshot(bucket); state.available != 250 {
+		t.Fatalf("available capacity = %d, want 250", state.available)
 	}
 }

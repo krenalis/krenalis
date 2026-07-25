@@ -33,11 +33,22 @@ func newTestRateLimiter(t *testing.T, acquire leaseAcquirer) *Limiter {
 	return l
 }
 
+// bucketState is a snapshot of a bucket's state.
+type bucketState struct {
+	available int
+	hasRefill bool
+	disabled  bool
+}
+
 // bucketSnapshot reads bucket state while holding its mutex.
-func bucketSnapshot(bucket *Bucket) (available, target, threshold int, refillQueued, disabled bool) {
+func bucketSnapshot(bucket *Bucket) bucketState {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	return bucket.available, bucket.localTarget, bucket.refillThreshold, bucket.refill != nil, bucket.disabled
+	return bucketState{
+		available: bucket.available,
+		hasRefill: bucket.refill != nil,
+		disabled:  bucket.disabled,
+	}
 }
 
 // applyTestLease applies a test lease unless the bucket is disabled.
@@ -157,9 +168,8 @@ func TestLimiterConsumesLocalCapacity(t *testing.T) {
 	if err := l.Consume(context.Background(), bucket, 6); err != nil {
 		t.Fatalf("consume: %v", err)
 	}
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 4 {
-		t.Fatalf("available capacity = %d, want 4", available)
+	if state := bucketSnapshot(bucket); state.available != 4 {
+		t.Fatalf("available capacity = %d, want 4", state.available)
 	}
 	if err := l.Consume(context.Background(), bucket, 5); !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("consume exhausted capacity: got %v, want ErrCapacityExceeded", err)
@@ -178,9 +188,8 @@ func TestLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
 	if err := limiter.Consume(ctx, bucket, 1); !errors.Is(err, context.Canceled) {
 		t.Fatalf("consume with canceled context: %v", err)
 	}
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 10 {
-		t.Fatalf("available capacity = %d, want 10", available)
+	if state := bucketSnapshot(bucket); state.available != 10 {
+		t.Fatalf("available capacity = %d, want 10", state.available)
 	}
 }
 
@@ -275,9 +284,8 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	if err := <-resultC; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("third waiter bypassed the FIFO head: %v", err)
 	}
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 20 {
-		t.Fatalf("remaining capacity = %d, want 20", available)
+	if state := bucketSnapshot(bucket); state.available != 20 {
+		t.Fatalf("remaining capacity = %d, want 20", state.available)
 	}
 }
 
@@ -382,9 +390,9 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("lease acquisition did not time out")
 	}
-	available, _, _, refillPending, _ := bucketSnapshot(bucket)
-	if refillPending || available != 0 {
-		t.Fatalf("state after acquisition timeout: pending=%t available=%d", refillPending, available)
+	state := bucketSnapshot(bucket)
+	if state.hasRefill || state.available != 0 {
+		t.Fatalf("state after acquisition timeout: pending=%t available=%d", state.hasRefill, state.available)
 	}
 }
 
@@ -416,18 +424,18 @@ func TestLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 		close(start)
 		err := <-cancelResult
 		<-completed
-		available, _, _, queued, _ := bucketSnapshot(bucket)
-		if queued {
+		state := bucketSnapshot(bucket)
+		if state.hasRefill {
 			t.Fatal("completed generation remained attached")
 		}
 		switch {
 		case errors.Is(err, context.Canceled):
-			if available != 1 {
-				t.Fatalf("cancellation won but available capacity = %d, want 1", available)
+			if state.available != 1 {
+				t.Fatalf("cancellation won but available capacity = %d, want 1", state.available)
 			}
 		case err == nil:
-			if available != 0 {
-				t.Fatalf("grant won but available capacity = %d, want 0", available)
+			if state.available != 0 {
+				t.Fatalf("grant won but available capacity = %d, want 0", state.available)
 			}
 		default:
 			t.Fatalf("race result: %v", err)
@@ -504,8 +512,8 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 		}
 	}
 	waitForRateLimit(t, func() bool {
-		available, _, _, queued, _ := bucketSnapshot(bucket)
-		return !queued && available == 7
+		state := bucketSnapshot(bucket)
+		return !state.hasRefill && state.available == 7
 	})
 }
 
@@ -582,12 +590,10 @@ func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	}
 	close(release)
 	waitForRateLimit(t, func() bool {
-		_, _, _, queued, _ := bucketSnapshot(bucket)
-		return !queued
+		return !bucketSnapshot(bucket).hasRefill
 	})
-	available, _, _, _, _ := bucketSnapshot(bucket)
-	if available != 24 {
-		t.Fatalf("available capacity = %d, want 24", available)
+	if state := bucketSnapshot(bucket); state.available != 24 {
+		t.Fatalf("available capacity = %d, want 24", state.available)
 	}
 }
 
@@ -617,8 +623,7 @@ func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 		if want := time.Now().Add(refillBackoffDuration); !retryAt.Equal(want) {
 			t.Fatalf("retry after = %s, want %s", retryAt, want)
 		}
-		_, _, _, queued, _ := bucketSnapshot(bucket)
-		if queued {
+		if bucketSnapshot(bucket).hasRefill {
 			t.Fatal("failed refill remained queued")
 		}
 
@@ -721,8 +726,7 @@ func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 		l.queue <- queuedRefill
 		time.Sleep(batchDelay)
 		synctest.Wait()
-		_, _, _, refillQueued, _ := bucketSnapshot(queued)
-		if refillQueued {
+		if bucketSnapshot(queued).hasRefill {
 			t.Fatal("queued refill remained active during global backoff")
 		}
 		if calls.Load() != 0 {
@@ -739,8 +743,7 @@ func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 			})
 		}
 		wg.Wait()
-		_, _, _, refillQueued, _ = bucketSnapshot(bucket)
-		if refillQueued {
+		if bucketSnapshot(bucket).hasRefill {
 			t.Fatal("global backoff queued a refill")
 		}
 	})
@@ -775,8 +778,8 @@ func TestLimiterDisabledBucketCompletesInFlightRefill(t *testing.T) {
 	}
 	close(release)
 	waitForRateLimit(t, func() bool {
-		available, _, _, queued, disabled := bucketSnapshot(bucket)
-		return disabled && !queued && available == 0
+		state := bucketSnapshot(bucket)
+		return state.disabled && !state.hasRefill && state.available == 0
 	})
 }
 
@@ -799,8 +802,7 @@ func TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
 	if !limiterRetryAfter(l).IsZero() {
 		t.Fatal("full queue started backoff")
 	}
-	_, _, _, queued, _ := bucketSnapshot(bucket)
-	if queued {
+	if bucketSnapshot(bucket).hasRefill {
 		t.Fatal("full queue left refill queued")
 	}
 }
@@ -829,9 +831,9 @@ func TestLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	if !limiterRetryAfter(l).IsZero() {
 		t.Fatal("shutdown started global backoff")
 	}
-	available, _, _, queued, _ := bucketSnapshot(bucket)
-	if queued || available != 0 {
-		t.Fatalf("state after shutdown: queued=%t available=%d", queued, available)
+	state := bucketSnapshot(bucket)
+	if state.hasRefill || state.available != 0 {
+		t.Fatalf("state after shutdown: queued=%t available=%d", state.hasRefill, state.available)
 	}
 }
 
@@ -876,8 +878,7 @@ func TestLimiterShutdownFinishesCollectedRefill(t *testing.T) {
 	if l.collectAndRefillBatch(refill) {
 		t.Fatal("batch collection continued after shutdown")
 	}
-	_, _, _, queued, _ := bucketSnapshot(bucket)
-	if queued {
+	if bucketSnapshot(bucket).hasRefill {
 		t.Fatal("shutdown left collected refill queued")
 	}
 }

@@ -119,16 +119,15 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 		queued, queueFull := limiter.queueRefill(refill)
 		if !queued {
 			bucket.rejectRefill(refill)
-		}
-		if queueFull {
-			if limiter.queueFullCounter != nil {
-				limiter.queueFullCounter.Inc()
+			if queueFull {
+				if limiter.queueFullCounter != nil {
+					limiter.queueFullCounter.Inc()
+				}
+				if limiter.queueSaturated.CompareAndSwap(false, true) {
+					slog.Warn("core/state: API rate-limit refill queue is full")
+				}
 			}
-			if limiter.queueSaturated.CompareAndSwap(false, true) {
-				slog.Warn("core/state: API rate-limit refill queue is full")
-			}
-		}
-		if queued {
+		} else {
 			limiter.queueSaturated.Store(false)
 			refillAllowed = limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(time.Now())
 			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
@@ -221,7 +220,6 @@ func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
 // batch. An acquisition error or invalid response fails the whole batch before
 // any local capacity is changed.
 func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
-
 	if limiter.backoffActive(time.Now()) {
 		// Generations queued before a failed batch may still be in the channel.
 		// They are not sent to PostgreSQL during global backoff. Rejecting them also
@@ -310,7 +308,6 @@ func (limiter *Limiter) refillBatch(pendingRefills map[*refill]leaseRequest) {
 		refill.bucket.completeRefill(refill, result.GrantedUnits, result.CapacityUnits)
 	}
 	limiter.retryAfter.Store(0)
-
 }
 
 // registerMetrics registers the process-wide rate-limiter counters.
@@ -420,8 +417,8 @@ func registerCounter(counterOptions prometheus.CounterOpts) prometheus.Counter {
 	counter := prometheus.NewCounter(counterOptions)
 	if err := prometheus.Register(counter); err != nil {
 		if registered, ok := err.(prometheus.AlreadyRegisteredError); ok {
-			if counter, ok := registered.ExistingCollector.(prometheus.Counter); ok {
-				return counter
+			if existingCounter, ok := registered.ExistingCollector.(prometheus.Counter); ok {
+				return existingCounter
 			}
 		}
 		slog.Error("core/state: cannot register API rate-limit metric", "metric", counterOptions.Name, "error", err)
