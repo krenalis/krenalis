@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -71,7 +70,7 @@ type Limiter struct {
 	shutdown struct {
 		ctx    context.Context
 		cancel context.CancelFunc
-		sync.WaitGroup
+		done   chan struct{}
 	}
 }
 
@@ -91,16 +90,18 @@ type refill struct {
 }
 
 // New starts a limiter backed by the rate-limit lease store in db.
-func New(ctx context.Context, db *db.DB, metrics Metrics) *Limiter {
+func New(db *db.DB, metrics Metrics) *Limiter {
 	limiter := &Limiter{
 		db:      db,
 		queue:   make(chan *refill, queueSize),
 		metrics: metrics,
 	}
 	limiter.acquire = limiter.acquireLeases
-	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(ctx)
+	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
+	limiter.shutdown.done = make(chan struct{})
 	// Process one collected refill batch at a time.
-	limiter.shutdown.Go(func() {
+	go func() {
+		defer close(limiter.shutdown.done)
 		for {
 			select {
 			case <-limiter.shutdown.ctx.Done():
@@ -111,14 +112,17 @@ func New(ctx context.Context, db *db.DB, metrics Metrics) *Limiter {
 				}
 			}
 		}
-	})
+	}()
 	return limiter
 }
 
-// Close closes the limiter.
-func (limiter *Limiter) Close() {
+// Close closes the limiter, waiting for shutdown until ctx is done.
+func (limiter *Limiter) Close(ctx context.Context) {
 	limiter.shutdown.cancel()
-	limiter.shutdown.Wait()
+	select {
+	case <-limiter.shutdown.done:
+	case <-ctx.Done():
+	}
 }
 
 // Consume consumes cost from bucket. It returns ErrInvalidCost when cost is

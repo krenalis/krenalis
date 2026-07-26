@@ -289,6 +289,9 @@
 //   - abandons remaining local capacity without returning it to the
 //     authoritative store.
 //
+// Close waits for the batcher to stop until its context is done. If the
+// context ends first, shutdown continues after Close returns.
+//
 // # Important invariants
 //
 // Future changes should preserve these properties unless they deliberately

@@ -36,28 +36,54 @@ func newTestLargeBucket() *Bucket {
 // newTestRateLimiter starts a limiter and registers its shutdown with the test.
 func newTestRateLimiter(t *testing.T, acquire acquireFunc) *Limiter {
 	t.Helper()
-	limiter := New(context.Background(), nil, Metrics{})
+	limiter := New(nil, Metrics{})
 	limiter.acquire = acquire
-	t.Cleanup(limiter.Close)
+	t.Cleanup(func() { limiter.Close(context.Background()) })
 	return limiter
 }
 
-// TestLimiterStopsWhenParentContextIsCanceled verifies that cancellation of
-// the context passed to New stops the batcher.
-func TestLimiterStopsWhenParentContextIsCanceled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	limiter := New(ctx, nil, Metrics{})
-	t.Cleanup(limiter.Close)
-	done := make(chan struct{})
-	go func() {
-		limiter.shutdown.Wait()
-		close(done)
-	}()
-	cancel()
+// TestLimiterCloseStopsBatcher verifies that Close stops the batcher.
+func TestLimiterCloseStopsBatcher(t *testing.T) {
+	limiter := New(nil, Metrics{})
+	limiter.Close(context.Background())
 	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("batcher did not stop after parent context cancellation")
+	case <-limiter.shutdown.done:
+	default:
+		t.Fatal("Close did not stop the batcher")
+	}
+}
+
+// TestLimiterCloseHonorsContext verifies that Close stops waiting when its
+// context is done, even if the acquirer has not returned.
+func TestLimiterCloseHonorsContext(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(context.Context, []leaseRequest) ([]leaseResult, error) {
+		close(started)
+		<-release
+		return nil, context.Canceled
+	})
+	result := make(chan error, 1)
+	go func() { result <- limiter.Consume(context.Background(), newTestBucket(), 1) }()
+	<-started
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	limiter.Close(ctx)
+	stopped := false
+	select {
+	case <-limiter.shutdown.done:
+		stopped = true
+	default:
+	}
+
+	close(release)
+	limiter.Close(context.Background())
+	if stopped {
+		t.Fatal("batcher stopped before the acquirer returned")
+	}
+	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
+		t.Fatalf("waiter after shutdown: %v", err)
 	}
 }
 
@@ -850,7 +876,7 @@ func TestLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	result := make(chan error, 1)
 	go func() { result <- l.Consume(context.Background(), bucket, 1) }()
 	<-started
-	l.Close()
+	l.Close(context.Background())
 	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("waiter after shutdown: %v", err)
 	}
@@ -882,7 +908,7 @@ func TestLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 	go func() { second <- limiter.Consume(context.Background(), secondBucket, 1) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(secondBucket) == 1 })
 
-	limiter.Close()
+	limiter.Close(context.Background())
 	if err := <-first; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("in-flight waiter after shutdown: %v", err)
 	}

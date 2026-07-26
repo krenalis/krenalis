@@ -298,7 +298,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 	defer func() {
 		if err != nil {
-			core.state.Close()
+			core.state.Close(ctx)
 		}
 	}()
 
@@ -589,7 +589,7 @@ func (core *Core) Close(ctx context.Context) {
 	core.collector.Close(ctx)
 	core.metrics.Close(context.Background())
 	core.datastore.Close()
-	core.state.Close()
+	core.state.Close(ctx)
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
 	// Close NATS connection.

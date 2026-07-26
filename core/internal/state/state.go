@@ -142,7 +142,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
 
 	// Init the rate limiter.
-	state.rateLimiter = ratelimiter.New(state.close.ctx, db, ratelimiter.Metrics{
+	state.rateLimiter = ratelimiter.New(db, ratelimiter.Metrics{
 		AcquisitionErrors: registerRateLimiterCounter(prometheus.CounterOpts{
 			Name: "krenalis_rate_limit_refill_errors_total",
 			Help: "Total number of rate-limit lease refill errors",
@@ -162,7 +162,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	err := state.load(ctx, credentials)
 	if err != nil {
 		state.close.cancel()
-		state.rateLimiter.Close()
+		state.rateLimiter.Close(ctx)
 		state.notifications.Close()
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
@@ -213,9 +213,9 @@ func (state *State) Account(id int) (*Account, bool) {
 
 // Close closes the state. When it is called, no calls to the State methods
 // should be in progress, and no further calls should be made.
-func (state *State) Close() {
+func (state *State) Close(ctx context.Context) {
 	state.close.cancel()
-	state.rateLimiter.Close()
+	state.rateLimiter.Close(ctx)
 	state.close.Wait()
 	state.notifications.Close()
 }
