@@ -6,9 +6,8 @@
 // externally acquired leases.
 //
 // A Bucket holds capacity for one opaque SubjectKind and identifier. A Limiter
-// batches refills and obtains capacity through an AcquireFunc supplied by the
-// caller. The caller defines the supported subject kinds, configures buckets,
-// and reserves granted capacity in its authoritative store.
+// batches refills and obtains capacity from PostgreSQL. The caller defines the
+// supported subject kinds and configures buckets.
 //
 // # Krenalis quota model
 //
@@ -39,8 +38,8 @@
 //
 // PostgreSQL stores authoritative rate-limit capacity and is the only shared
 // coordination mechanism between application nodes. Each node acquires chunks
-// of capacity, called leases, through the State-provided acquirer and consumes
-// them from process memory.
+// of capacity, called leases, through the limiter's PostgreSQL acquirer and
+// consumes them from process memory.
 //
 // Consume never accesses the authoritative store on the caller's goroutine.
 // Requests normally complete using local capacity. When local capacity is
@@ -197,7 +196,7 @@
 // # Capacity and PostgreSQL safety
 //
 // The batcher sends organization, workspace, and event lease requests through
-// the same State acquirer, which calls acquire_rate_limit_leases.
+// the same acquirer, which calls acquire_rate_limit_leases.
 //
 // PostgreSQL reads the current limits from the authoritative domain tables,
 // locks each relevant bucket, calculates the capacity currently available for

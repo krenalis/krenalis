@@ -34,11 +34,31 @@ func newTestLargeBucket() *Bucket {
 }
 
 // newTestRateLimiter starts a limiter and registers its shutdown with the test.
-func newTestRateLimiter(t *testing.T, acquire AcquireFunc) *Limiter {
+func newTestRateLimiter(t *testing.T, acquire func(context.Context, []leaseRequest) ([]leaseResult, error)) *Limiter {
 	t.Helper()
-	limiter := New(acquire, Metrics{})
+	limiter := New(context.Background(), nil, Metrics{})
+	limiter.acquireForTest = acquire
 	t.Cleanup(limiter.Close)
 	return limiter
+}
+
+// TestLimiterStopsWhenParentContextIsCanceled verifies that cancellation of
+// the context passed to New stops the batcher.
+func TestLimiterStopsWhenParentContextIsCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	limiter := New(ctx, nil, Metrics{})
+	t.Cleanup(limiter.Close)
+	done := make(chan struct{})
+	go func() {
+		limiter.shutdown.Wait()
+		close(done)
+	}()
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("batcher did not stop after parent context cancellation")
+	}
 }
 
 // bucketState is a snapshot of a bucket's state.
@@ -109,8 +129,8 @@ func refillPendingCost(bucket *Bucket) int {
 // TestBucketsConsumeIndependently verifies that buckets for distinct subject
 // kinds and identifiers do not share local capacity.
 func TestBucketsConsumeIndependently(t *testing.T) {
-	limiter := newTestRateLimiter(t, func(_ context.Context, request []LeaseRequest) ([]LeaseResult, error) {
-		return []LeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 2}}, nil
+	limiter := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 2}}, nil
 	})
 	firstBucket := newTestBucketFor("first", "111111111111")
 	secondBucket := newTestBucketFor("second", "222222222222")
@@ -168,8 +188,8 @@ func TestLimiterValidatesLargeCost(t *testing.T) {
 // TestLimiterConsumesLocalCapacity verifies immediate local consumption
 // and rejection when the remaining capacity is insufficient.
 func TestLimiterConsumesLocalCapacity(t *testing.T) {
-	l := newTestRateLimiter(t, func(_ context.Context, request []LeaseRequest) ([]LeaseResult, error) {
-		return []LeaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
+	l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
 	})
 	bucket := newTestBucket()
 	applyTestLease(bucket, 10, 10)
@@ -205,7 +225,10 @@ func TestLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
 // TestLimiterCallerDeadlineTakesPrecedence verifies that a caller
 // deadline wins over shutdown and internal timeout.
 func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
-	limiter := &Limiter{maxWait: 0}
+	previousMaxWaitDuration := maxWaitDuration
+	maxWaitDuration = 0
+	t.Cleanup(func() { maxWaitDuration = previousMaxWaitDuration })
+	limiter := &Limiter{}
 	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
 	limiter.shutdown.cancel()
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
@@ -257,16 +280,16 @@ func TestLimiterUsesRequestedUnitsAsAdmissionBudget(t *testing.T) {
 // TestLimiterServesOnlySatisfiableFIFOPrefix verifies FIFO head-of-line
 // blocking after a partial grant.
 func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
-	requests := make(chan []LeaseRequest, 1)
+	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		requests <- request
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 60, CapacityUnits: 100,
 		}}, nil
@@ -301,16 +324,16 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 // TestLimiterCancellationReturnsAdmissionBudget verifies that a
 // canceled waiter makes its admission budget available to a later request.
 func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
-	requests := make(chan []LeaseRequest, 1)
+	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		requests <- request
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 100, CapacityUnits: 100,
 		}}, nil
@@ -347,19 +370,21 @@ func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	previousMaxWaitDuration := maxWaitDuration
+	maxWaitDuration = 10 * time.Millisecond
+	t.Cleanup(func() { maxWaitDuration = previousMaxWaitDuration })
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			CapacityUnits: 100,
 		}}, nil
 	})
-	limiter.maxWait = 10 * time.Millisecond
 	bucket := newTestBucket()
 	result := make(chan error, 1)
 	go func() { result <- limiter.Consume(context.Background(), bucket, 1) }()
@@ -377,15 +402,17 @@ func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 // acquisition result is discarded after the batch deadline.
 func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	started := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	previousAcquireTimeout := defaultAcquireTimeout
+	defaultAcquireTimeout = 10 * time.Millisecond
+	t.Cleanup(func() { defaultAcquireTimeout = previousAcquireTimeout })
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 1, CapacityUnits: 100,
 		}}, nil
 	})
-	limiter.acquireTimeout = 10 * time.Millisecond
 	bucket := newTestBucket()
 	result := make(chan error, 1)
 	go func() { result <- limiter.Consume(context.Background(), bucket, 1) }()
@@ -486,16 +513,16 @@ func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
 // TestLimiterQueuesOneRefill verifies that concurrent requests share
 // one active refill generation.
 func TestLimiterQueuesOneRefill(t *testing.T) {
-	requests := make(chan []LeaseRequest, 1)
+	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		requests <- request
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 10, CapacityUnits: 100,
 		}}, nil
@@ -529,22 +556,15 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 // TestLimiterBatchesSubjectKinds verifies that distinct subject kinds are
 // acquired in the same batch.
 func TestLimiterBatchesSubjectKinds(t *testing.T) {
-	requests := make(chan []LeaseRequest, 1)
-	limiter := &Limiter{
-		maxWait: maxWaitDuration,
-		queue:   make(chan *refill, queueSize),
-		acquireLeases: func(_ context.Context, request []LeaseRequest) ([]LeaseResult, error) {
-			requests <- request
-			results := make([]LeaseResult, len(request))
-			for i, r := range request {
-				results[i] = LeaseResult{SubjectKind: r.SubjectKind, SubjectID: r.SubjectID, CapacityUnits: 100}
-			}
-			return results, nil
-		},
-	}
-	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
-	limiter.shutdown.Add(1)
-	t.Cleanup(limiter.Close)
+	requests := make(chan []leaseRequest, 1)
+	limiter := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+		requests <- request
+		results := make([]leaseResult, len(request))
+		for i, r := range request {
+			results[i] = leaseResult{SubjectKind: r.SubjectKind, SubjectID: r.SubjectID, CapacityUnits: 100}
+		}
+		return results, nil
+	})
 
 	refills := make([]*refill, 0, 2)
 	waiters := make([]*waiter, 0, 2)
@@ -558,8 +578,6 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 		waiters = append(waiters, waiter)
 		limiter.queue <- refill
 	}
-	go limiter.runBatcher()
-
 	if request := <-requests; len(request) != 2 {
 		t.Fatalf("batch contains %d requests, want 2", len(request))
 	}
@@ -576,14 +594,14 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 20, CapacityUnits: 100,
 		}}, nil
@@ -611,11 +629,11 @@ func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var calls atomic.Int32
-		l := newTestRateLimiter(t, func(_ context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+		l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
 			if calls.Add(1) == 1 {
 				return nil, errors.New("lease acquirer is unavailable")
 			}
-			return []LeaseResult{{
+			return []leaseResult{{
 				SubjectKind:   request[0].SubjectKind,
 				SubjectID:     request[0].SubjectID,
 				CapacityUnits: 100,
@@ -665,25 +683,25 @@ func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 	for _, test := range []struct {
 		name    string
-		results func(LeaseRequest) []LeaseResult
+		results func(leaseRequest) []leaseResult
 	}{
 		{
 			name: "incomplete",
-			results: func(LeaseRequest) []LeaseResult {
+			results: func(leaseRequest) []leaseResult {
 				return nil
 			},
 		},
 		{
 			name: "duplicate",
-			results: func(request LeaseRequest) []LeaseResult {
-				result := LeaseResult{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, CapacityUnits: 100}
-				return []LeaseResult{result, result}
+			results: func(request leaseRequest) []leaseResult {
+				result := leaseResult{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, CapacityUnits: 100}
+				return []leaseResult{result, result}
 			},
 		},
 		{
 			name: "unmatched subject",
-			results: func(request LeaseRequest) []LeaseResult {
-				return []LeaseResult{{
+			results: func(request leaseRequest) []leaseResult {
+				return []leaseResult{{
 					SubjectKind:   request.SubjectKind,
 					SubjectID:     "222222222222",
 					CapacityUnits: 100,
@@ -692,8 +710,8 @@ func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 		},
 		{
 			name: "invalid grant",
-			results: func(request LeaseRequest) []LeaseResult {
-				return []LeaseResult{{
+			results: func(request leaseRequest) []leaseResult {
+				return []leaseResult{{
 					SubjectKind:   request.SubjectKind,
 					SubjectID:     request.SubjectID,
 					GrantedUnits:  request.RequestedUnits + 1,
@@ -704,7 +722,7 @@ func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				l := newTestRateLimiter(t, func(_ context.Context, requests []LeaseRequest) ([]LeaseResult, error) {
+				l := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 					return test.results(requests[0]), nil
 				})
 				bucket := newTestBucket()
@@ -723,7 +741,7 @@ func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var calls atomic.Int32
-		l := newTestRateLimiter(t, func(_ context.Context, _ []LeaseRequest) ([]LeaseResult, error) {
+		l := newTestRateLimiter(t, func(_ context.Context, _ []leaseRequest) ([]leaseResult, error) {
 			calls.Add(1)
 			return nil, nil
 		})
@@ -763,14 +781,14 @@ func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 func TestLimiterClosedBucketCompletesInFlightRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		select {
 		case <-release:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind:   request[0].SubjectKind,
 			SubjectID:     request[0].SubjectID,
 			GrantedUnits:  10,
@@ -820,10 +838,10 @@ func TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
 // shutdown rejects a late result without starting global backoff.
 func TestLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 	started := make(chan struct{})
-	l := newTestRateLimiter(t, func(ctx context.Context, request []LeaseRequest) ([]LeaseResult, error) {
+	l := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
-		return []LeaseResult{{
+		return []leaseResult{{
 			SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID,
 			GrantedUnits: 1, CapacityUnits: 100,
 		}}, nil
@@ -850,7 +868,7 @@ func TestLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 // resolves waiters even when their refill remains buffered in the queue.
 func TestLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 	started := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []LeaseRequest) ([]LeaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
 		return nil, ctx.Err()
@@ -884,7 +902,7 @@ func TestLimiterShutdownFinishesCollectedRefill(t *testing.T) {
 	_, refill, _ := bucket.consume(2, true)
 	bucket.activateRefill(refill, 0, false, true)
 
-	if l.collectAndRefillBatch(refill) {
+	if l.collectAndRefill(refill) {
 		t.Fatal("batch collection continued after shutdown")
 	}
 	if bucketSnapshot(bucket).hasRefill {

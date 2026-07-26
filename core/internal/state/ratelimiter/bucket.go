@@ -214,7 +214,7 @@ func (bucket *Bucket) newRefillLocked() *refill {
 	}
 	refill := &refill{
 		bucket: bucket,
-		request: LeaseRequest{
+		request: leaseRequest{
 			SubjectKind:    bucket.subjectKind,
 			SubjectID:      bucket.subjectID,
 			RequestedUnits: requestedUnits,
@@ -227,11 +227,11 @@ func (bucket *Bucket) newRefillLocked() *refill {
 }
 
 // refillRequest returns the immutable request frozen before queue publication.
-func (bucket *Bucket) refillRequest(refill *refill) (LeaseRequest, bool) {
+func (bucket *Bucket) refillRequest(refill *refill) (leaseRequest, bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if bucket.closed || bucket.refill != refill || !refill.active {
-		return LeaseRequest{}, false
+		return leaseRequest{}, false
 	}
 	return refill.request, true
 }

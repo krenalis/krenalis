@@ -115,12 +115,6 @@ type OAuthCredentials struct {
 	ClientSecret string
 }
 
-type rateLimitLeaseRequest struct {
-	SubjectKind    ratelimiter.SubjectKind `json:"subject_kind"`
-	SubjectID      string                  `json:"subject_id"`
-	RequestedUnits int                     `json:"requested_units"`
-}
-
 // New returns a state given the database, the key manager, the 64-byte master
 // key, and the OAuth client credentials for connectors. sendStats indicates
 // whether the state should send statistics or not.
@@ -144,7 +138,11 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		liveRuns:         map[string]*PipelineRun{},
 		sendStats:        sendStats,
 	}
-	state.rateLimiter = ratelimiter.New(state.acquireRateLimitLeases, ratelimiter.Metrics{
+	state.version.next = sync.Cond{L: &state.version.RWMutex}
+	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
+
+	// Init the rate limiter.
+	state.rateLimiter = ratelimiter.New(state.close.ctx, db, ratelimiter.Metrics{
 		AcquisitionErrors: registerRateLimiterCounter(prometheus.CounterOpts{
 			Name: "krenalis_rate_limit_refill_errors_total",
 			Help: "Total number of rate-limit lease refill errors",
@@ -154,18 +152,16 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 			Help: "Total number of rate-limit refill attempts rejected because the queue was full",
 		}),
 	})
-	state.version.next = sync.Cond{L: &state.version.RWMutex}
 
 	// Init the notifier.
 	ch := make(chan notification, 10)
 	state.notifications.notifier = newNotifier(db, ch)
 	state.notifications.ch = ch
 
-	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
-
 	// Load the state.
 	err := state.load(ctx, credentials)
 	if err != nil {
+		state.close.cancel()
 		state.rateLimiter.Close()
 		state.notifications.Close()
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
@@ -218,8 +214,8 @@ func (state *State) Account(id int) (*Account, bool) {
 // Close closes the state. When it is called, no calls to the State methods
 // should be in progress, and no further calls should be made.
 func (state *State) Close() {
-	state.rateLimiter.Close()
 	state.close.cancel()
+	state.rateLimiter.Close()
 	state.close.Wait()
 	state.notifications.Close()
 }
@@ -541,43 +537,6 @@ func (state *State) Workspaces() []*Workspace {
 	}
 	state.mu.Unlock()
 	return workspaces
-}
-
-// acquireRateLimitLeases acquires rate-limit capacity from PostgreSQL.
-func (state *State) acquireRateLimitLeases(ctx context.Context, requests []ratelimiter.LeaseRequest) ([]ratelimiter.LeaseResult, error) {
-	payload := make([]rateLimitLeaseRequest, len(requests))
-	for i, request := range requests {
-		payload[i] = rateLimitLeaseRequest{
-			SubjectKind:    request.SubjectKind,
-			SubjectID:      request.SubjectID,
-			RequestedUnits: request.RequestedUnits,
-		}
-	}
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("cannot encode rate-limit lease requests: %w", err)
-	}
-	rows, err := state.db.Query(ctx, `
-		SELECT subject_kind, subject_id, granted_units, capacity_units
-		FROM acquire_rate_limit_leases($1::jsonb)`, string(encoded))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	results := make([]ratelimiter.LeaseResult, 0, len(requests))
-	for rows.Next() {
-		var result ratelimiter.LeaseResult
-		if err := rows.Scan(&result.SubjectKind, &result.SubjectID, &result.GrantedUnits, &result.CapacityUnits); err != nil {
-			return nil, err
-		}
-		results = append(results, result)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return results, nil
 }
 
 // AccessKeyType represents an access key type.
