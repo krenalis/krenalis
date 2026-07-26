@@ -14,7 +14,7 @@ import (
 	"github.com/krenalis/krenalis/tools/validation"
 )
 
-// x1 is the cost of an API operation that consumes one unit of rate-limit
+// x1 is the cost of a request that consumes one unit of rate-limit
 // capacity.
 const x1 = 1
 
@@ -246,15 +246,14 @@ func (s *apisServer) authenticateRequest(r *http.Request) (authenticatedRequest,
 	return authenticatedRequest{organization: org, workspace: ws, rateLimitExempt: true}, nil
 }
 
-// rateLimitCapacityConsumer is a subject that can consume API rate-limit
-// capacity.
+// rateLimitCapacityConsumer is a subject that can consume rate-limit capacity.
 type rateLimitCapacityConsumer interface {
 	ConsumeRateLimitCapacity(context.Context, int) error
 }
 
 // authenticatedRequest contains the organization and optional workspace
-// identified by the request's credentials. Admin requests are exempt from API
-// rate limiting.
+// identified by the request's credentials. Admin requests are exempt from rate
+// limiting.
 type authenticatedRequest struct {
 	organization    *core.Organization
 	workspace       *core.Workspace
@@ -267,8 +266,8 @@ func (authenticated authenticatedRequest) applyRateLimitTo(ctx context.Context, 
 		return nil
 	}
 	err := subject.ConsumeRateLimitCapacity(ctx, cost)
-	if errors.Is(err, core.ErrAPICapacityExceeded) {
-		return errors.TooManyRequests("API rate limit exceeded")
+	if errors.Is(err, core.ErrRateLimitCapacityExceeded) {
+		return errors.TooManyRequests("rate limit exceeded")
 	}
 	return err
 }

@@ -771,21 +771,21 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 			Pipelines:   limits.Pipelines,
 		},
 	}
-	n.Limits.API.Workspace = state.APILimit(limits.API.Workspace)
-	n.Limits.API.Ingestion = state.APILimit(limits.API.Ingestion)
-	n.Limits.API.Organization = state.APILimit(limits.API.Organization)
+	n.Limits.Rates.Workspace = state.RateLimit(limits.Rates.Workspace)
+	n.Limits.Rates.Events = state.RateLimit(limits.Rates.Events)
+	n.Limits.Rates.Organization = state.RateLimit(limits.Rates.Organization)
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
 				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit,"+
-				" api_workspace_quota_per_hour, api_workspace_burst_capacity, api_ingestion_quota_per_hour, api_ingestion_burst_capacity,"+
-				" api_organization_quota_per_hour, api_organization_burst_capacity)"+
+				" workspace_requests_quota_per_hour, workspace_requests_burst_capacity, workspace_events_quota_per_hour, workspace_events_burst_capacity,"+
+				" organization_requests_quota_per_hour, organization_requests_burst_capacity)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
 				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
-				n.Limits.API.Workspace.QuotaPerHour, n.Limits.API.Workspace.BurstCapacity,
-				n.Limits.API.Ingestion.QuotaPerHour, n.Limits.API.Ingestion.BurstCapacity,
-				n.Limits.API.Organization.QuotaPerHour, n.Limits.API.Organization.BurstCapacity)
+				n.Limits.Rates.Workspace.QuotaPerHour, n.Limits.Rates.Workspace.BurstCapacity,
+				n.Limits.Rates.Events.QuotaPerHour, n.Limits.Rates.Events.BurstCapacity,
+				n.Limits.Rates.Organization.QuotaPerHour, n.Limits.Rates.Organization.BurstCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -928,9 +928,9 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		Connections: limits.Connections,
 		Pipelines:   limits.Pipelines,
 	}
-	organization.Limits.API.Workspace = APILimit(limits.API.Workspace)
-	organization.Limits.API.Ingestion = APILimit(limits.API.Ingestion)
-	organization.Limits.API.Organization = APILimit(limits.API.Organization)
+	organization.Limits.Rates.Workspace = RateLimit(limits.Rates.Workspace)
+	organization.Limits.Rates.Events = RateLimit(limits.Rates.Events)
+	organization.Limits.Rates.Organization = RateLimit(limits.Rates.Organization)
 	organization.Counts = OrganizationCounts(org.Counts())
 	return &organization, nil
 }
@@ -984,9 +984,9 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			Connections: limits.Connections,
 			Pipelines:   limits.Pipelines,
 		}
-		orgs[i].Limits.API.Workspace = APILimit(limits.API.Workspace)
-		orgs[i].Limits.API.Ingestion = APILimit(limits.API.Ingestion)
-		orgs[i].Limits.API.Organization = APILimit(limits.API.Organization)
+		orgs[i].Limits.Rates.Workspace = RateLimit(limits.Rates.Workspace)
+		orgs[i].Limits.Rates.Events = RateLimit(limits.Rates.Events)
+		orgs[i].Limits.Rates.Organization = RateLimit(limits.Rates.Organization)
 		orgs[i].Counts = OrganizationCounts(organization.Counts())
 	}
 	return orgs, nil
@@ -2178,23 +2178,23 @@ func validateOrganizationLimits(limits *OrganizationLimits) error {
 	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
 		return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
 	}
-	if q := limits.API.Workspace.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("hourly API quota per workspace must be between 1 and 1,000,000")
+	if q := limits.Rates.Workspace.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("hourly request quota per workspace must be between 1 and 1,000,000")
 	}
-	if q := limits.API.Workspace.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("API burst capacity per workspace must be between 1 and 100,000")
+	if q := limits.Rates.Workspace.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("request burst capacity per workspace must be between 1 and 100,000")
 	}
-	if q := limits.API.Ingestion.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("hourly ingestion quota must be between 1 and 1,000,000")
+	if q := limits.Rates.Events.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("hourly event quota must be between 1 and 1,000,000")
 	}
-	if q := limits.API.Ingestion.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("ingestion burst capacity must be between 1 and 100,000")
+	if q := limits.Rates.Events.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("event burst capacity must be between 1 and 100,000")
 	}
-	if q := limits.API.Organization.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("organization hourly API quota must be between 1 and 1,000,000")
+	if q := limits.Rates.Organization.QuotaPerHour; q < 1 || q > 1_000_000 {
+		return errors.BadRequest("organization hourly request quota must be between 1 and 1,000,000")
 	}
-	if q := limits.API.Organization.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("organization API burst capacity must be between 1 and 100,000")
+	if q := limits.Rates.Organization.BurstCapacity; q < 1 || q > 100_000 {
+		return errors.BadRequest("organization request burst capacity must be between 1 and 100,000")
 	}
 	return nil
 }

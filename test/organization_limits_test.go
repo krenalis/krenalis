@@ -35,16 +35,16 @@ func TestOrganizationResourceLimits(t *testing.T) {
 			Connectors:  6,
 			Connections: 7,
 			Pipelines:   8,
-			API: krenalistester.APILimits{
-				Workspace: krenalistester.APILimit{
+			Rates: krenalistester.RateLimits{
+				Workspace: krenalistester.RateLimit{
 					QuotaPerHour:  202,
 					BurstCapacity: 22,
 				},
-				Ingestion: krenalistester.APILimit{
+				Events: krenalistester.RateLimit{
 					QuotaPerHour:  303,
 					BurstCapacity: 33,
 				},
-				Organization: krenalistester.APILimit{
+				Organization: krenalistester.RateLimit{
 					QuotaPerHour:  101,
 					BurstCapacity: 11,
 				},
@@ -102,20 +102,20 @@ func TestOrganizationResourceLimits(t *testing.T) {
 		expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.PipelinesLimitReached))
 	})
 
-	t.Run("API limits are updated", func(t *testing.T) {
+	t.Run("rate limits are updated", func(t *testing.T) {
 		org := k.Organization(activeOrg.ID)
 		limits := org.Limits
-		limits.API.Workspace.QuotaPerHour = 402
-		limits.API.Workspace.BurstCapacity = 42
-		limits.API.Ingestion.QuotaPerHour = 503
-		limits.API.Ingestion.BurstCapacity = 53
-		limits.API.Organization.QuotaPerHour = 301
-		limits.API.Organization.BurstCapacity = 31
+		limits.Rates.Workspace.QuotaPerHour = 402
+		limits.Rates.Workspace.BurstCapacity = 42
+		limits.Rates.Events.QuotaPerHour = 503
+		limits.Rates.Events.BurstCapacity = 53
+		limits.Rates.Organization.QuotaPerHour = 301
+		limits.Rates.Organization.BurstCapacity = 31
 		k.UpdateOrganization(org.ID, org.Name, limits)
 
 		org = k.Organization(activeOrg.ID)
-		if org.Limits.API != limits.API {
-			t.Fatalf("expected API limits %#v, got %#v", limits.API, org.Limits.API)
+		if org.Limits.Rates != limits.Rates {
+			t.Fatalf("expected rate limits %#v, got %#v", limits.Rates, org.Limits.Rates)
 		}
 	})
 }

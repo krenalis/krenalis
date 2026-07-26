@@ -15,11 +15,11 @@ import (
 // TestRateLimitErrorsAreStateErrors verifies that the public rate-limit errors
 // are the same values exported by state.
 func TestRateLimitErrorsAreStateErrors(t *testing.T) {
-	if ErrInvalidAPICost != state.ErrInvalidAPICost {
-		t.Fatal("ErrInvalidAPICost is not the state error")
+	if ErrInvalidRateLimitCost != state.ErrInvalidRateLimitCost {
+		t.Fatal("ErrInvalidRateLimitCost is not the state error")
 	}
-	if ErrAPICapacityExceeded != state.ErrAPICapacityExceeded {
-		t.Fatal("ErrAPICapacityExceeded is not the state error")
+	if ErrRateLimitCapacityExceeded != state.ErrRateLimitCapacityExceeded {
+		t.Fatal("ErrRateLimitCapacityExceeded is not the state error")
 	}
 }
 

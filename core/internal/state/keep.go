@@ -509,7 +509,7 @@ func (state *State) createOrganization(n notification) string {
 	org := &Organization{
 		mu:          &sync.Mutex{},
 		rateLimiter: state.rateLimiter,
-		bucket:      ratelimiter.NewOrganizationBucket(e.ID),
+		bucket:      ratelimiter.NewBucket("organization", e.ID, requestLeaseSize, requestMaxCost),
 		workspaces:  map[string]*Workspace{},
 		members:     map[string]bool{},
 		usage:       newOrganizationUsage(e.Limits),
@@ -651,8 +651,8 @@ func (state *State) createWorkspace(n notification) string {
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
-		apiBucket:                      ratelimiter.NewWorkspaceBucket(e.ID),
-		ingestionBucket:                ratelimiter.NewIngestionBucket(e.ID),
+		bucket:                         ratelimiter.NewBucket("workspace", e.ID, requestLeaseSize, requestMaxCost),
+		eventBucket:                    ratelimiter.NewBucket("events", e.ID, eventLeaseSize, eventMaxCost),
 		connections:                    map[string]*Connection{},
 		ID:                             e.ID,
 		organization:                   organization,
@@ -934,12 +934,12 @@ func (state *State) deleteOrganization(n notification) string {
 	}
 	state.mu.Lock()
 	e.organization = state.organizations[e.ID]
-	e.organization.bucket.Disable()
+	e.organization.bucket.Close()
 	delete(state.organizations, e.ID)
 	// Delete all workspaces belonging to the organization.
 	for id, ws := range e.organization.workspaces {
-		ws.apiBucket.Disable()
-		ws.ingestionBucket.Disable()
+		ws.bucket.Close()
+		ws.eventBucket.Close()
 		for _, c := range ws.connections {
 			for _, key := range c.Keys {
 				delete(state.connectionsByKey, key)
@@ -1025,8 +1025,8 @@ func (state *State) deleteWorkspace(n notification) string {
 		return ""
 	}
 	e.workspace = state.workspaces[e.ID]
-	e.workspace.apiBucket.Disable()
-	e.workspace.ingestionBucket.Disable()
+	e.workspace.bucket.Close()
+	e.workspace.eventBucket.Close()
 	org := e.workspace.organization
 	// Update the organization.
 	org.mu.Lock()

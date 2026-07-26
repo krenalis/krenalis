@@ -47,13 +47,13 @@ const invitationTokenMaxAge = 3 * 24 * 60 * 60
 const resetPasswordTokenMaxAge = 1 * 60 * 60
 
 var (
-	// ErrInvalidAPICost is returned when an API operation has an unsupported
+	// ErrInvalidRateLimitCost is returned when an operation has an unsupported
 	// configured cost.
-	ErrInvalidAPICost = state.ErrInvalidAPICost
+	ErrInvalidRateLimitCost = state.ErrInvalidRateLimitCost
 
-	// ErrAPICapacityExceeded is returned when a subject does not currently have
-	// enough capacity in its API rate-limit bucket.
-	ErrAPICapacityExceeded = state.ErrAPICapacityExceeded
+	// ErrRateLimitCapacityExceeded is returned when a subject does not currently
+	// have enough capacity in its rate-limit bucket.
+	ErrRateLimitCapacityExceeded = state.ErrRateLimitCapacityExceeded
 )
 
 // Organization represents an organization.
@@ -88,25 +88,25 @@ type OrganizationCounts struct {
 
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
-	Members     int       `json:"members"`
-	AccessKeys  int       `json:"accessKeys"`
-	Workspaces  int       `json:"workspaces"`
-	Connectors  int       `json:"connectors"`
-	Connections int       `json:"connections"`
-	Pipelines   int       `json:"pipelines"`
-	API         APILimits `json:"api"`
+	Members     int        `json:"members"`
+	AccessKeys  int        `json:"accessKeys"`
+	Workspaces  int        `json:"workspaces"`
+	Connectors  int        `json:"connectors"`
+	Connections int        `json:"connections"`
+	Pipelines   int        `json:"pipelines"`
+	Rates       RateLimits `json:"rates"`
 }
 
-// APILimits stores the request and ingestion limits for each workspace, and
+// RateLimits stores the request and event limits for each workspace, and
 // the request limits for organization-level operations.
-type APILimits struct {
-	Workspace    APILimit `json:"workspace"`
-	Ingestion    APILimit `json:"ingestion"`
-	Organization APILimit `json:"organization"`
+type RateLimits struct {
+	Workspace    RateLimit `json:"workspace"`
+	Events       RateLimit `json:"events"`
+	Organization RateLimit `json:"organization"`
 }
 
-// APILimit defines the hourly API quota and the maximum allowed burst capacity.
-type APILimit struct {
+// RateLimit defines the hourly quota and the maximum allowed burst capacity.
+type RateLimit struct {
 	QuotaPerHour  int `json:"quotaPerHour"`
 	BurstCapacity int `json:"burstCapacity"`
 }
@@ -397,14 +397,14 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 }
 
 // ConsumeRateLimitCapacity consumes the specified capacity from the
-// organization's organization-level API rate-limit budget.
+// organization's organization-level rate-limit budget.
 //
-// It returns ErrInvalidAPICost when cost is outside the supported range.
+// It returns ErrInvalidRateLimitCost when cost is outside the supported range.
 // When local capacity is insufficient, the call may wait for one admitted
-// refill to complete. It returns ErrAPICapacityExceeded if the request cannot
-// be admitted, the refill does not provide enough capacity, or the limiter's
-// one-second maximum wait expires. Caller cancellation and deadlines preserve
-// the corresponding context error.
+// refill to complete. It returns ErrRateLimitCapacityExceeded if the request
+// cannot be admitted, the refill does not provide enough capacity, or the
+// limiter's one-second maximum wait expires. Caller cancellation and deadlines
+// preserve the corresponding context error.
 func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	this.core.mustBeOpen()
 	return this.organization.ConsumeRateLimitCapacity(ctx, cost)
@@ -1346,9 +1346,9 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 			Connections: limits.Connections,
 			Pipelines:   limits.Pipelines,
 		}
-		n.Limits.API.Workspace = state.APILimit(limits.API.Workspace)
-		n.Limits.API.Ingestion = state.APILimit(limits.API.Ingestion)
-		n.Limits.API.Organization = state.APILimit(limits.API.Organization)
+		n.Limits.Rates.Workspace = state.RateLimit(limits.Rates.Workspace)
+		n.Limits.Rates.Events = state.RateLimit(limits.Rates.Events)
+		n.Limits.Rates.Organization = state.RateLimit(limits.Rates.Organization)
 	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var result *db.Result
@@ -1358,13 +1358,13 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 		} else {
 			result, err = tx.Exec(ctx, "UPDATE organizations"+
 				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4, connectors_limit = $5,"+
-				" connections_limit = $6, pipelines_limit = $7, api_workspace_quota_per_hour = $8, api_workspace_burst_capacity = $9,"+
-				" api_ingestion_quota_per_hour = $10, api_ingestion_burst_capacity = $11,"+
-				" api_organization_quota_per_hour = $12, api_organization_burst_capacity = $13 WHERE id = $14",
+				" connections_limit = $6, pipelines_limit = $7, workspace_requests_quota_per_hour = $8, workspace_requests_burst_capacity = $9,"+
+				" workspace_events_quota_per_hour = $10, workspace_events_burst_capacity = $11,"+
+				" organization_requests_quota_per_hour = $12, organization_requests_burst_capacity = $13 WHERE id = $14",
 				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections,
-				n.Limits.Pipelines, n.Limits.API.Workspace.QuotaPerHour, n.Limits.API.Workspace.BurstCapacity,
-				n.Limits.API.Ingestion.QuotaPerHour, n.Limits.API.Ingestion.BurstCapacity,
-				n.Limits.API.Organization.QuotaPerHour, n.Limits.API.Organization.BurstCapacity, this.organization.ID)
+				n.Limits.Pipelines, n.Limits.Rates.Workspace.QuotaPerHour, n.Limits.Rates.Workspace.BurstCapacity,
+				n.Limits.Rates.Events.QuotaPerHour, n.Limits.Rates.Events.BurstCapacity,
+				n.Limits.Rates.Organization.QuotaPerHour, n.Limits.Rates.Organization.BurstCapacity, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err

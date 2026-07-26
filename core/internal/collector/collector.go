@@ -766,17 +766,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ws := connection.Workspace()
 	eventCount := dec.EventCount()
-	err = ws.ConsumeIngestionRateLimitCapacity(r.Context(), eventCount)
+	err = ws.ConsumeEventRateLimitCapacity(r.Context(), eventCount)
 	if err != nil {
-		if err == state.ErrAPICapacityExceeded {
-			return errors.TooManyRequests("ingestion rate limit exceeded")
+		if err == state.ErrRateLimitCapacityExceeded {
+			return errors.TooManyRequests("event rate limit exceeded")
 		}
 		return err
 	}
 	consumedEventCount := 0
 	defer func() {
 		if unusedEventCount := eventCount - consumedEventCount; unusedEventCount > 0 {
-			ws.RestoreIngestionRateLimitCapacity(unusedEventCount)
+			ws.RestoreEventRateLimitCapacity(unusedEventCount)
 		}
 	}()
 	connector := connection.Connector()

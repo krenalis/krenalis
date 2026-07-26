@@ -14,12 +14,12 @@ CREATE TABLE organizations (
     connectors_limit integer NOT NULL CHECK (connectors_limit BETWEEN 0 AND 1000),
     connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
     pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
-    api_workspace_quota_per_hour integer NOT NULL CHECK (api_workspace_quota_per_hour BETWEEN 1 AND 1000000),
-    api_workspace_burst_capacity integer NOT NULL CHECK (api_workspace_burst_capacity BETWEEN 1 AND 100000),
-    api_ingestion_quota_per_hour integer NOT NULL CHECK (api_ingestion_quota_per_hour BETWEEN 1 AND 1000000),
-    api_ingestion_burst_capacity integer NOT NULL CHECK (api_ingestion_burst_capacity BETWEEN 1 AND 100000),
-    api_organization_quota_per_hour integer NOT NULL CHECK (api_organization_quota_per_hour BETWEEN 1 AND 1000000),
-    api_organization_burst_capacity integer NOT NULL CHECK (api_organization_burst_capacity BETWEEN 1 AND 100000),
+    workspace_requests_quota_per_hour integer NOT NULL CHECK (workspace_requests_quota_per_hour BETWEEN 1 AND 1000000),
+    workspace_requests_burst_capacity integer NOT NULL CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 100000),
+    workspace_events_quota_per_hour integer NOT NULL CHECK (workspace_events_quota_per_hour BETWEEN 1 AND 1000000),
+    workspace_events_burst_capacity integer NOT NULL CHECK (workspace_events_burst_capacity BETWEEN 1 AND 100000),
+    organization_requests_quota_per_hour integer NOT NULL CHECK (organization_requests_quota_per_hour BETWEEN 1 AND 1000000),
+    organization_requests_burst_capacity integer NOT NULL CHECK (organization_requests_burst_capacity BETWEEN 1 AND 100000),
     PRIMARY KEY (id)
 );
 
@@ -85,8 +85,8 @@ CREATE TABLE workspaces (
 
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
 
-CREATE TABLE api_rate_limit_buckets (
-    subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'organization')),
+CREATE TABLE rate_limit_buckets (
+    subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'events', 'organization')),
     subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
     workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
@@ -103,7 +103,7 @@ CREATE TABLE api_rate_limit_buckets (
     CHECK (refill_remainder >= 0 AND refill_remainder < 3600000000),
     CHECK (
         (
-            subject_kind IN ('workspace', 'ingestion')
+            subject_kind IN ('workspace', 'events')
             AND subject_id = workspace
             AND organization IS NULL
         )

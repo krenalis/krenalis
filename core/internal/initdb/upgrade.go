@@ -132,26 +132,26 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connectors_limit integer NOT NULL DEFAULT 1000 CHECK (connectors_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connections_limit integer NOT NULL DEFAULT 10000 CHECK (connections_limit BETWEEN 0 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS pipelines_limit integer NOT NULL DEFAULT 10000 CHECK (pipelines_limit BETWEEN 0 AND 10000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_workspace_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_workspace_quota_per_hour BETWEEN 1 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_workspace_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_workspace_burst_capacity BETWEEN 1 AND 100000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_ingestion_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_ingestion_quota_per_hour BETWEEN 1 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_ingestion_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_ingestion_burst_capacity BETWEEN 1 AND 100000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_organization_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (api_organization_quota_per_hour BETWEEN 1 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS api_organization_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (api_organization_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (workspace_requests_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (workspace_events_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_events_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (organization_requests_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (organization_requests_burst_capacity BETWEEN 1 AND 100000)`,
 			`ALTER TABLE organizations ALTER COLUMN members_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN access_keys_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspaces_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connectors_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connections_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN pipelines_limit DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_workspace_quota_per_hour DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_workspace_burst_capacity DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_ingestion_quota_per_hour DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_ingestion_burst_capacity DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_organization_quota_per_hour DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN api_organization_burst_capacity DROP DEFAULT`,
-			`CREATE TABLE IF NOT EXISTS api_rate_limit_buckets (
-				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'ingestion', 'organization')),
+			`ALTER TABLE organizations ALTER COLUMN workspace_requests_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_requests_burst_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_events_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_events_burst_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN organization_requests_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN organization_requests_burst_capacity DROP DEFAULT`,
+			`CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'events', 'organization')),
 				subject_id varchar(12) NOT NULL CHECK (subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
 				organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
 				workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
@@ -168,7 +168,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 				CHECK (refill_remainder >= 0 AND refill_remainder < 3600000000),
 				CHECK (
 					(
-						subject_kind IN ('workspace', 'ingestion')
+						subject_kind IN ('workspace', 'events')
 						AND subject_id = workspace
 						AND organization IS NULL
 					)
@@ -296,8 +296,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 				return fmt.Errorf("cannot execute upgrade query %q: %s", query, err)
 			}
 		}
-		if _, err := tx.Exec(ctx, createAPIRateLimiterLeasesFunction); err != nil {
-			return fmt.Errorf("cannot create API rate-limit lease function: %s", err)
+		if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
+			return fmt.Errorf("cannot create rate-limit lease function: %s", err)
 		}
 		return nil
 	})

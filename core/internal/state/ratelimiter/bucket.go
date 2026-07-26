@@ -6,31 +6,19 @@ package ratelimiter
 
 import "sync"
 
-const (
-	requestLeaseSize   = 100
-	requestMaxCost     = requestLeaseSize
-	eventLeaseSize     = 20_000
-	eventBatchMaxCost  = eventLeaseSize
-	maxRefillThreshold = 25
-)
+const maxRefillThreshold = 25
 
-type subjectKind string
-
-const (
-	organizationSubjectKind subjectKind = "organization"
-	workspaceSubjectKind    subjectKind = "workspace"
-	ingestionSubjectKind    subjectKind = "ingestion"
-)
-
-// Bucket stores process-local capacity for one organization, workspace, or
-// workspace ingestion subject. Its constructors set the subject kind, so
-// callers cannot create an inconsistent subject combination.
+// SubjectKind identifies a class of rate-limit buckets.
 //
-// mu protects local capacity and refill state. It is deliberately separate from
-// State and entity locks, so consuming API capacity does not contend on State
-// maps or unrelated organization data.
+// The limiter treats subject kinds as opaque values. The caller defines which
+// kinds are supported and how their leases are acquired.
+type SubjectKind string
+
+// Bucket stores process-local capacity for one subject kind and identifier.
+//
+// mu protects local capacity and refill state.
 type Bucket struct {
-	subjectKind subjectKind
+	subjectKind SubjectKind
 	subjectID   string
 	leaseSize   int
 	maxCost     int
@@ -40,49 +28,32 @@ type Bucket struct {
 	localTarget     int
 	refillThreshold int
 	refill          *refill
-	disabled        bool
+	closed          bool
 }
 
-// NewIngestionBucket creates the empty local ingestion bucket owned by a
-// Workspace instance.
-func NewIngestionBucket(workspaceID string) *Bucket {
+// NewBucket creates an empty local bucket for subjectKind and subjectID.
+//
+// leaseSize and maxCost must be positive, and maxCost must not exceed
+// leaseSize. NewBucket panics if these conditions are not met.
+func NewBucket(subjectKind SubjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
+	if leaseSize < 1 || maxCost < 1 || maxCost > leaseSize {
+		panic("invalid rate-limit bucket configuration")
+	}
 	return &Bucket{
-		subjectKind: ingestionSubjectKind,
-		subjectID:   workspaceID,
-		leaseSize:   eventLeaseSize,
-		maxCost:     eventBatchMaxCost,
+		subjectKind: subjectKind,
+		subjectID:   subjectID,
+		leaseSize:   leaseSize,
+		maxCost:     maxCost,
 	}
 }
 
-// NewOrganizationBucket creates an organization's empty local bucket for
-// organization-level requests.
-func NewOrganizationBucket(organizationID string) *Bucket {
-	return &Bucket{
-		subjectKind: organizationSubjectKind,
-		subjectID:   organizationID,
-		leaseSize:   requestLeaseSize,
-		maxCost:     requestMaxCost,
-	}
-}
-
-// NewWorkspaceBucket creates the empty local bucket owned by a Workspace
-// instance.
-func NewWorkspaceBucket(workspaceID string) *Bucket {
-	return &Bucket{
-		subjectKind: workspaceSubjectKind,
-		subjectID:   workspaceID,
-		leaseSize:   requestLeaseSize,
-		maxCost:     requestMaxCost,
-	}
-}
-
-// Disable disables the bucket, preventing further consumption and refills.
+// Close closes the bucket, preventing further consumption and refills.
 // It clears local capacity and rejects pending waiters. A queued pointer
 // remains safe because Go keeps the bucket alive; refillRequest and
-// completeRefill discard later work for disabled buckets.
-func (bucket *Bucket) Disable() {
+// completeRefill discards later work for closed buckets.
+func (bucket *Bucket) Close() {
 	bucket.mu.Lock()
-	bucket.disabled = true
+	bucket.closed = true
 	bucket.available = 0
 	refill := bucket.refill
 	rejected := bucket.rejectRefillLocked(refill)
@@ -92,15 +63,15 @@ func (bucket *Bucket) Disable() {
 	}
 }
 
-// Restore restores previously consumed capacity to this bucket on the current
-// node. It does not affect PostgreSQL, pending refills, or admitted waiters.
+// Restore restores previously consumed capacity to this bucket. It does not
+// affect the lease acquirer, pending refills, or admitted waiters.
 func (bucket *Bucket) Restore(cost int) {
 	if cost < 1 || cost > bucket.maxCost {
 		return
 	}
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	if bucket.disabled {
+	if bucket.closed {
 		return
 	}
 	bucket.available = min(bucket.localTarget, bucket.available+cost)
@@ -115,7 +86,7 @@ func (bucket *Bucket) activateRefill(refill *refill, cost int, admit bool, refil
 		bucket.mu.Unlock()
 		return nil
 	}
-	if bucket.disabled || !refillAllowed {
+	if bucket.closed || !refillAllowed {
 		rejected := bucket.rejectRefillLocked(refill)
 		bucket.mu.Unlock()
 		if rejected {
@@ -147,8 +118,7 @@ func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
 	return waiter
 }
 
-// applyLeaseLocked applies capacity already removed from PostgreSQL, capped at
-// the local target.
+// applyLeaseLocked applies granted capacity, capped at the local target.
 func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
 	bucket.localTarget = min(bucket.leaseSize, capacityUnits)
 	// A fixed threshold would trigger a refill after almost every request when
@@ -182,7 +152,7 @@ func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 // consume assigned units.
 func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits int) {
 	bucket.mu.Lock()
-	if bucket.disabled || bucket.refill != refill || !refill.active {
+	if bucket.closed || bucket.refill != refill || !refill.active {
 		bucket.mu.Unlock()
 		return
 	}
@@ -212,7 +182,7 @@ func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits
 func (bucket *Bucket) consume(cost int, refillAllowed bool) (satisfied bool, refill *refill, waiter *waiter) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	if bucket.disabled {
+	if bucket.closed {
 		return false, nil, nil
 	}
 
@@ -244,7 +214,7 @@ func (bucket *Bucket) newRefillLocked() *refill {
 	}
 	refill := &refill{
 		bucket: bucket,
-		request: leaseRequest{
+		request: LeaseRequest{
 			SubjectKind:    bucket.subjectKind,
 			SubjectID:      bucket.subjectID,
 			RequestedUnits: requestedUnits,
@@ -257,11 +227,11 @@ func (bucket *Bucket) newRefillLocked() *refill {
 }
 
 // refillRequest returns the immutable request frozen before queue publication.
-func (bucket *Bucket) refillRequest(refill *refill) (leaseRequest, bool) {
+func (bucket *Bucket) refillRequest(refill *refill) (LeaseRequest, bool) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
-	if bucket.disabled || bucket.refill != refill || !refill.active {
-		return leaseRequest{}, false
+	if bucket.closed || bucket.refill != refill || !refill.active {
+		return LeaseRequest{}, false
 	}
 	return refill.request, true
 }

@@ -276,20 +276,20 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
-		" connectors_limit, connections_limit, pipelines_limit, api_workspace_quota_per_hour, api_workspace_burst_capacity,"+
-		" api_ingestion_quota_per_hour, api_ingestion_burst_capacity, api_organization_quota_per_hour, api_organization_burst_capacity FROM organizations", func(rows *db.Rows) error {
+		" connectors_limit, connections_limit, pipelines_limit, workspace_requests_quota_per_hour, workspace_requests_burst_capacity,"+
+		" workspace_events_quota_per_hour, workspace_events_burst_capacity, organization_requests_quota_per_hour, organization_requests_burst_capacity FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			var limits OrganizationLimits
 			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
 				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
-				&limits.API.Workspace.QuotaPerHour, &limits.API.Workspace.BurstCapacity,
-				&limits.API.Ingestion.QuotaPerHour, &limits.API.Ingestion.BurstCapacity,
-				&limits.API.Organization.QuotaPerHour, &limits.API.Organization.BurstCapacity); err != nil {
+				&limits.Rates.Workspace.QuotaPerHour, &limits.Rates.Workspace.BurstCapacity,
+				&limits.Rates.Events.QuotaPerHour, &limits.Rates.Events.BurstCapacity,
+				&limits.Rates.Organization.QuotaPerHour, &limits.Rates.Organization.BurstCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.rateLimiter = state.rateLimiter
-			org.bucket = ratelimiter.NewOrganizationBucket(org.ID)
+			org.bucket = ratelimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxCost)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}
@@ -356,8 +356,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
-				ws.apiBucket = ratelimiter.NewWorkspaceBucket(ws.ID)
-				ws.ingestionBucket = ratelimiter.NewIngestionBucket(ws.ID)
+				ws.bucket = ratelimiter.NewBucket("workspace", ws.ID, requestLeaseSize, requestMaxCost)
+				ws.eventBucket = ratelimiter.NewBucket("events", ws.ID, eventLeaseSize, eventMaxCost)
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
 					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)

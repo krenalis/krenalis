@@ -10,6 +10,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 	"sort"
@@ -25,6 +26,8 @@ import (
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -32,12 +35,19 @@ var (
 	ErrAccessKeyNotFound      = errors.New("access key not found")
 )
 
-// ErrAPICapacityExceeded is returned when a request cannot be served from
+// ErrRateLimitCapacityExceeded is returned when a request cannot be served from
 // local rate-limit capacity or admitted to the current refill.
-var ErrAPICapacityExceeded = ratelimiter.ErrCapacityExceeded
+var ErrRateLimitCapacityExceeded = ratelimiter.ErrCapacityExceeded
 
-// ErrInvalidAPICost is returned when an API request has an unsupported cost.
-var ErrInvalidAPICost = ratelimiter.ErrInvalidCost
+// ErrInvalidRateLimitCost is returned when a request has an unsupported cost.
+var ErrInvalidRateLimitCost = ratelimiter.ErrInvalidCost
+
+const (
+	requestLeaseSize = 100
+	requestMaxCost   = requestLeaseSize
+	eventLeaseSize   = 20_000
+	eventMaxCost     = eventLeaseSize
+)
 
 // election represents a leader election.
 type election struct {
@@ -105,6 +115,12 @@ type OAuthCredentials struct {
 	ClientSecret string
 }
 
+type rateLimitLeaseRequest struct {
+	SubjectKind    ratelimiter.SubjectKind `json:"subject_kind"`
+	SubjectID      string                  `json:"subject_id"`
+	RequestedUnits int                     `json:"requested_units"`
+}
+
 // New returns a state given the database, the key manager, the 64-byte master
 // key, and the OAuth client credentials for connectors. sendStats indicates
 // whether the state should send statistics or not.
@@ -116,7 +132,6 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state := &State{
 		id:               base58.Generate(22),
 		db:               db,
-		rateLimiter:      ratelimiter.New(db),
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
 		cipher:           cipher.New(kms),
@@ -129,6 +144,16 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		liveRuns:         map[string]*PipelineRun{},
 		sendStats:        sendStats,
 	}
+	state.rateLimiter = ratelimiter.New(state.acquireRateLimitLeases, ratelimiter.Metrics{
+		AcquisitionErrors: registerRateLimiterCounter(prometheus.CounterOpts{
+			Name: "krenalis_rate_limit_refill_errors_total",
+			Help: "Total number of rate-limit lease refill errors",
+		}),
+		QueueFull: registerRateLimiterCounter(prometheus.CounterOpts{
+			Name: "krenalis_rate_limit_refill_queue_full_total",
+			Help: "Total number of rate-limit refill attempts rejected because the queue was full",
+		}),
+	})
 	state.version.next = sync.Cond{L: &state.version.RWMutex}
 
 	// Init the notifier.
@@ -518,6 +543,43 @@ func (state *State) Workspaces() []*Workspace {
 	return workspaces
 }
 
+// acquireRateLimitLeases acquires rate-limit capacity from PostgreSQL.
+func (state *State) acquireRateLimitLeases(ctx context.Context, requests []ratelimiter.LeaseRequest) ([]ratelimiter.LeaseResult, error) {
+	payload := make([]rateLimitLeaseRequest, len(requests))
+	for i, request := range requests {
+		payload[i] = rateLimitLeaseRequest{
+			SubjectKind:    request.SubjectKind,
+			SubjectID:      request.SubjectID,
+			RequestedUnits: request.RequestedUnits,
+		}
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("cannot encode rate-limit lease requests: %w", err)
+	}
+	rows, err := state.db.Query(ctx, `
+		SELECT subject_kind, subject_id, granted_units, capacity_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, string(encoded))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]ratelimiter.LeaseResult, 0, len(requests))
+	for rows.Next() {
+		var result ratelimiter.LeaseResult
+		if err := rows.Scan(&result.SubjectKind, &result.SubjectID, &result.GrantedUnits, &result.CapacityUnits); err != nil {
+			return nil, err
+		}
+		results = append(results, result)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 // AccessKeyType represents an access key type.
 type AccessKeyType int
 
@@ -606,19 +668,19 @@ type OrganizationLimits struct {
 	Connectors  int
 	Connections int
 	Pipelines   int
-	API         APILimits
+	Rates       RateLimits
 }
 
-// APILimits stores the API and ingestion limits for each workspace, together
-// with the API limit for organization-level requests.
-type APILimits struct {
-	Workspace    APILimit
-	Ingestion    APILimit
-	Organization APILimit
+// RateLimits stores the request and event limits for each workspace, together
+// with the request limit for organization-level operations.
+type RateLimits struct {
+	Workspace    RateLimit
+	Events       RateLimit
+	Organization RateLimit
 }
 
-// APILimit defines an hourly quota and the maximum burst capacity.
-type APILimit struct {
+// RateLimit defines an hourly quota and the maximum burst capacity.
+type RateLimit struct {
 	QuotaPerHour  int
 	BurstCapacity int
 }
@@ -632,10 +694,10 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 	return canLogin, ok
 }
 
-// ConsumeRateLimitCapacity consumes capacity from the organization's
-// organization-level API bucket. The bucket belongs to the canonical Organization
-// instance stored in State, so all Core wrappers for that organization share
-// the same process-local lease.
+// ConsumeRateLimitCapacity consumes capacity from the organization's request
+// bucket. The bucket belongs to the canonical Organization instance stored in
+// State, so all Core wrappers for that organization share the same process-local
+// lease.
 func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	return organization.rateLimiter.Consume(ctx, organization.bucket, cost)
 }
@@ -802,10 +864,10 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu              *sync.Mutex
-	apiBucket       *ratelimiter.Bucket
-	ingestionBucket *ratelimiter.Bucket
-	Warehouse       struct {
+	mu          *sync.Mutex
+	bucket      *ratelimiter.Bucket
+	eventBucket *ratelimiter.Bucket
+	Warehouse   struct {
 		Platform       string
 		Mode           WarehouseMode
 		settings       []byte
@@ -886,17 +948,17 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsumeIngestionRateLimitCapacity consumes capacity for eventCount events
-// from the workspace's ingestion bucket.
-func (workspace *Workspace) ConsumeIngestionRateLimitCapacity(ctx context.Context, eventCount int) error {
-	return workspace.organization.rateLimiter.Consume(ctx, workspace.ingestionBucket, eventCount)
+// ConsumeEventRateLimitCapacity consumes capacity for eventCount events from
+// the workspace's event bucket.
+func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, eventCount int) error {
+	return workspace.organization.rateLimiter.Consume(ctx, workspace.eventBucket, eventCount)
 }
 
-// ConsumeRateLimitCapacity consumes capacity from the workspace's API bucket.
+// ConsumeRateLimitCapacity consumes capacity from the workspace's request bucket.
 // The rate limiter is shared with the organization, while the process-local
 // lease belongs to this workspace.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return workspace.organization.rateLimiter.Consume(ctx, workspace.apiBucket, cost)
+	return workspace.organization.rateLimiter.Consume(ctx, workspace.bucket, cost)
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -975,11 +1037,11 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 	return slices.Clone(pipelines)
 }
 
-// RestoreIngestionRateLimitCapacity returns previously consumed ingestion
-// capacity to the workspace bucket on the current node. The caller must invoke
-// this method at most once for each successful local consumption.
-func (workspace *Workspace) RestoreIngestionRateLimitCapacity(eventCount int) {
-	workspace.ingestionBucket.Restore(eventCount)
+// RestoreEventRateLimitCapacity returns previously consumed capacity to the
+// workspace's event bucket on the current node. The caller must invoke this
+// method at most once for each successful local consumption.
+func (workspace *Workspace) RestoreEventRateLimitCapacity(eventCount int) {
+	workspace.eventBucket.Restore(eventCount)
 }
 
 // WarehouseSettings returns the warehouse settings.
@@ -1797,3 +1859,21 @@ const (
 	UpdateOnly     ExportMode = "UpdateOnly"
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
+
+// registerRateLimiterCounter registers a counter in the default Prometheus
+// registry. If a counter with the same name is already registered, it returns
+// the existing counter. It returns nil when registration fails or the existing
+// collector is not a counter.
+func registerRateLimiterCounter(options prometheus.CounterOpts) prometheus.Counter {
+	counter := prometheus.NewCounter(options)
+	if err := prometheus.Register(counter); err != nil {
+		if registered, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			if existingCounter, ok := registered.ExistingCollector.(prometheus.Counter); ok {
+				return existingCounter
+			}
+		}
+		slog.Error("core/state: cannot register rate-limit metric", "metric", options.Name, "error", err)
+		return nil
+	}
+	return counter
+}

@@ -9,33 +9,56 @@ import (
 	"testing"
 )
 
-// TestDisabledBucketDoesNotRequestOrApplyCapacity verifies that a removed
-// subject cannot consume, refill, or receive capacity.
-func TestDisabledBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
-	bucket := NewWorkspaceBucket("222222222222")
+// TestNewBucketRejectsInvalidConfiguration verifies that a bucket has a
+// positive lease size and a supported maximum cost.
+func TestNewBucketRejectsInvalidConfiguration(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		leaseSize int
+		maxCost   int
+	}{
+		{name: "zero lease size", leaseSize: 0, maxCost: 1},
+		{name: "zero maximum cost", leaseSize: 1, maxCost: 0},
+		{name: "maximum cost exceeds lease size", leaseSize: 1, maxCost: 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("NewBucket did not panic")
+				}
+			}()
+			NewBucket(testSubjectKind, testRateLimitID, test.leaseSize, test.maxCost)
+		})
+	}
+}
+
+// TestClosedBucketDoesNotRequestOrApplyCapacity verifies that a removed
+// subject kind and identifier cannot consume, refill, or receive capacity.
+func TestClosedBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
+	bucket := newTestBucketFor("test", "222222222222")
 	applyTestLease(bucket, 10, 10)
-	bucket.Disable()
+	bucket.Close()
 
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill != nil || waiter != nil {
-		t.Fatalf("disabled bucket consumed or requested capacity: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
+		t.Fatalf("closed bucket consumed or requested capacity: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
 	applyTestLease(bucket, 10, 10)
 	state := bucketSnapshot(bucket)
-	if state.available != 0 || !state.disabled {
-		t.Fatalf("disabled bucket state = available:%d disabled:%t, want 0:true", state.available, state.disabled)
+	if state.available != 0 || !state.closed {
+		t.Fatalf("closed bucket state = available:%d closed:%t, want 0:true", state.available, state.closed)
 	}
 	bucket.Restore(1)
 	state = bucketSnapshot(bucket)
 	if state.available != 0 {
-		t.Fatalf("restored capacity on a disabled bucket = %d, want 0", state.available)
+		t.Fatalf("restored capacity on a closed bucket = %d, want 0", state.available)
 	}
 }
 
 // TestBucketRestoresLocalCapacity verifies that returned capacity is available
 // immediately and remains capped at the local target.
 func TestBucketRestoresLocalCapacity(t *testing.T) {
-	bucket := NewWorkspaceBucket("222222222222")
+	bucket := newTestBucketFor("test", "222222222222")
 	applyTestLease(bucket, 10, 10)
 
 	satisfied, _, _ := bucket.consume(4, true)
@@ -65,18 +88,17 @@ func TestBucketRestoresLocalCapacity(t *testing.T) {
 	}
 }
 
-// TestIngestionBucketWaitsForInitialRefill verifies that a first
-// single-event request waits for its initial refill instead of using capacity
-// that has not been leased yet.
-func TestIngestionBucketWaitsForInitialRefill(t *testing.T) {
-	bucket := NewIngestionBucket("222222222222")
+// TestEmptyBucketWaitsForInitialRefill verifies that a request waits for its
+// initial refill instead of using capacity that has not been acquired yet.
+func TestEmptyBucketWaitsForInitialRefill(t *testing.T) {
+	bucket := newTestLargeBucket()
 
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill == nil || waiter != nil {
-		t.Fatalf("initial ingestion consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
+		t.Fatalf("initial consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
 	}
 	if waiter := bucket.activateRefill(refill, 1, true, true); waiter == nil {
-		t.Fatal("initial ingestion request was not admitted as a waiter")
+		t.Fatal("initial request was not admitted as a waiter")
 	}
 	if state := bucketSnapshot(bucket); state.available != 0 {
 		t.Fatalf("available capacity = %d, want 0", state.available)
@@ -87,7 +109,7 @@ func TestIngestionBucketWaitsForInitialRefill(t *testing.T) {
 // TestBucketAdmitsCostOneToPendingRefill verifies that a cost-one request
 // waits for an active refill when local capacity is exhausted.
 func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
-	bucket := NewOrganizationBucket("111111111111")
+	bucket := newTestBucket()
 	satisfied, refill, waiter := bucket.consume(1, true)
 	if satisfied || refill == nil || waiter != nil {
 		t.Fatalf("cold bucket consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
@@ -108,7 +130,7 @@ func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
 // TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an active
 // refill admits requests only while refills are allowed.
 func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
-	bucket := NewOrganizationBucket("111111111111")
+	bucket := newTestBucket()
 	_, refill, _ := bucket.consume(2, true)
 	bucket.activateRefill(refill, 0, false, true)
 
@@ -118,7 +140,7 @@ func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
 	}
 	satisfied, queued, waiter = bucket.consume(1, false)
 	if satisfied || queued != nil || waiter != nil {
-		t.Fatal("disabled refills allowed waiting")
+		t.Fatal("closed refills allowed waiting")
 	}
 }
 
@@ -135,7 +157,7 @@ func TestBucketThresholdScalesWithTarget(t *testing.T) {
 		{target: 1, threshold: 1},
 	} {
 		t.Run(strconv.Itoa(test.target), func(t *testing.T) {
-			bucket := NewOrganizationBucket("111111111111")
+			bucket := newTestBucket()
 			applyTestLease(bucket, 0, test.target)
 			if bucket.refillThreshold != test.threshold {
 				t.Fatalf("refill threshold = %d, want %d", bucket.refillThreshold, test.threshold)
@@ -147,7 +169,7 @@ func TestBucketThresholdScalesWithTarget(t *testing.T) {
 // TestBucketQueuesRefillRelativeToOperationCost verifies that a variable-cost
 // operation queues a refill while one similar operation remains.
 func TestBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
-	bucket := NewIngestionBucket("222222222222")
+	bucket := newTestLargeBucket()
 	applyTestLease(bucket, 1_000, 1_000)
 
 	for range 2 {

@@ -122,8 +122,8 @@ var schema string
 // The PL/pgSQL function is stored separately from schema.sql because the
 // initialization process splits schema.sql at SQL statement terminators.
 //
-//go:embed api_rate_limiter_leases.sql
-var createAPIRateLimiterLeasesFunction string
+//go:embed rate_limiter_leases.sql
+var createRateLimiterLeasesFunction string
 
 // initialize initializes the provided PostgreSQL database by executing the
 // required queries within the given transaction. It creates all database
@@ -147,15 +147,15 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 			return err
 		}
 	}
-	if _, err := tx.Exec(ctx, createAPIRateLimiterLeasesFunction); err != nil {
+	if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
 		return err
 	}
 	// Insert the organization.
 	organizationID := base58.Generate(12)
 	_, err := tx.Exec(ctx, `INSERT INTO organizations`+
 		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,`+
-		` api_workspace_quota_per_hour, api_workspace_burst_capacity, api_ingestion_quota_per_hour, api_ingestion_burst_capacity,`+
-		` api_organization_quota_per_hour, api_organization_burst_capacity)`+
+		` workspace_requests_quota_per_hour, workspace_requests_burst_capacity, workspace_events_quota_per_hour, workspace_events_burst_capacity,`+
+		` organization_requests_quota_per_hour, organization_requests_burst_capacity)`+
 		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000, 25000, 1000, 25000, 1000, 25000, 1000)`,
 		organizationID)
 	if err != nil {

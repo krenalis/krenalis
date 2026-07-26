@@ -269,16 +269,16 @@ var DefaultOrganizationLimits = OrganizationLimits{
 	Connectors:  20,
 	Connections: 100,
 	Pipelines:   100,
-	API: APILimits{
-		Workspace: APILimit{
+	Rates: RateLimits{
+		Workspace: RateLimit{
 			QuotaPerHour:  25000,
 			BurstCapacity: 1000,
 		},
-		Ingestion: APILimit{
+		Events: RateLimit{
 			QuotaPerHour:  25000,
 			BurstCapacity: 1000,
 		},
-		Organization: APILimit{
+		Organization: RateLimit{
 			QuotaPerHour:  25000,
 			BurstCapacity: 1000,
 		},

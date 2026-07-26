@@ -13,9 +13,9 @@ import (
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
-// TestIngestionRateLimiterRejectsBatchBeforePublishing verifies that an
+// TestEventRateLimiterRejectsBatchBeforePublishing verifies that an
 // over-limit batch is rejected without publishing any of its events.
-func TestIngestionRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
+func TestEventRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -29,7 +29,7 @@ func TestIngestionRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
 	}
 	organization := organizations[0]
 	limits := organization.Limits
-	limits.API.Ingestion.BurstCapacity = 1
+	limits.Rates.Events.BurstCapacity = 1
 	k.UpdateOrganization(organization.ID, organization.Name, limits)
 
 	connectionID := k.CreateJavaScriptSource("Rate-limited source", nil)
@@ -73,9 +73,9 @@ func TestIngestionRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
 	}
 }
 
-// TestIngestionRateLimiterRestoresUnusedBatchCapacity verifies that invalid
+// TestEventRateLimiterRestoresUnusedBatchCapacity verifies that invalid
 // events return their capacity while duplicate events consume it.
-func TestIngestionRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
+func TestEventRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -89,8 +89,8 @@ func TestIngestionRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
 	}
 	organization := organizations[0]
 	limits := organization.Limits
-	limits.API.Ingestion.QuotaPerHour = 1
-	limits.API.Ingestion.BurstCapacity = 3
+	limits.Rates.Events.QuotaPerHour = 1
+	limits.Rates.Events.BurstCapacity = 3
 	k.UpdateOrganization(organization.ID, organization.Name, limits)
 
 	connectionID := k.CreateJavaScriptSource("Restored rate-limit capacity source", nil)
