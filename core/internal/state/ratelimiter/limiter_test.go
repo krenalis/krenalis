@@ -34,10 +34,10 @@ func newTestLargeBucket() *Bucket {
 }
 
 // newTestRateLimiter starts a limiter and registers its shutdown with the test.
-func newTestRateLimiter(t *testing.T, acquire func(context.Context, []leaseRequest) ([]leaseResult, error)) *Limiter {
+func newTestRateLimiter(t *testing.T, acquire acquireFunc) *Limiter {
 	t.Helper()
 	limiter := New(context.Background(), nil, Metrics{})
-	limiter.acquireForTest = acquire
+	limiter.acquire = acquire
 	t.Cleanup(limiter.Close)
 	return limiter
 }

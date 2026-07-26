@@ -49,12 +49,13 @@ type Metrics struct {
 	QueueFull         Counter
 }
 
+type acquireFunc func(context.Context, []leaseRequest) ([]leaseResult, error)
+
 // Limiter coordinates refills for local buckets. It owns the refill queue,
 // batching, backoff, and shutdown lifecycle.
 type Limiter struct {
-	db *db.DB
-	// acquireForTest overrides PostgreSQL lease acquisition in tests.
-	acquireForTest func(context.Context, []leaseRequest) ([]leaseResult, error)
+	db      *db.DB
+	acquire acquireFunc
 
 	queue          chan *refill // bounded so queue publication never blocks.
 	queueSaturated atomic.Bool  // suppresses repeated warnings while the queue is full.
@@ -96,6 +97,7 @@ func New(ctx context.Context, db *db.DB, metrics Metrics) *Limiter {
 		queue:   make(chan *refill, queueSize),
 		metrics: metrics,
 	}
+	limiter.acquire = limiter.acquireLeases
 	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(ctx)
 	// Process one collected refill batch at a time.
 	limiter.shutdown.Go(func() {
@@ -161,9 +163,6 @@ func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) e
 
 // acquireLeases acquires rate-limit capacity from PostgreSQL.
 func (limiter *Limiter) acquireLeases(ctx context.Context, requests []leaseRequest) ([]leaseResult, error) {
-	if limiter.acquireForTest != nil {
-		return limiter.acquireForTest(ctx, requests)
-	}
 	encoded, err := json.Marshal(requests)
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode rate-limit lease requests: %w", err)
@@ -283,7 +282,7 @@ func (limiter *Limiter) refill(pendingRefills map[*refill]leaseRequest) {
 	}
 
 	acquireCtx, cancelAcquire := context.WithTimeout(limiter.shutdown.ctx, defaultAcquireTimeout)
-	leaseResults, err := limiter.acquireLeases(acquireCtx, leaseRequests)
+	leaseResults, err := limiter.acquire(acquireCtx, leaseRequests)
 	if err == nil {
 		err = acquireCtx.Err()
 	}
