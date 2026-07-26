@@ -125,46 +125,6 @@ func (limiter *Limiter) Close(ctx context.Context) {
 	}
 }
 
-// Consume consumes cost from bucket. It returns ErrInvalidCost when cost is
-// outside the bucket's supported range. If local capacity is insufficient, it
-// may wait for the refill generation to which the request was admitted.
-func (limiter *Limiter) Consume(ctx context.Context, bucket *Bucket, cost int) error {
-	if cost < 1 || cost > bucket.maxCost {
-		return ErrInvalidCost
-	}
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	now := time.Now()
-	refillAllowed := limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(now)
-	satisfied, refill, waiter := bucket.consume(cost, refillAllowed)
-	if refill != nil {
-		queued, queueFull := limiter.queueRefill(refill)
-		if !queued {
-			bucket.rejectRefill(refill)
-			if queueFull {
-				if limiter.metrics.QueueFull != nil {
-					limiter.metrics.QueueFull.Inc()
-				}
-				if limiter.queueSaturated.CompareAndSwap(false, true) {
-					slog.Warn("rate limiter refill queue is full")
-				}
-			}
-		} else {
-			limiter.queueSaturated.Store(false)
-			refillAllowed = limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(time.Now())
-			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
-		}
-	}
-	if satisfied {
-		return nil
-	}
-	if waiter == nil {
-		return ErrCapacityExceeded
-	}
-	return limiter.waitForRefill(ctx, waiter)
-}
-
 // acquireLeases acquires rate-limit capacity from PostgreSQL.
 func (limiter *Limiter) acquireLeases(ctx context.Context, requests []leaseRequest) ([]leaseResult, error) {
 	encoded, err := json.Marshal(requests)

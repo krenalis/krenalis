@@ -14,7 +14,6 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -288,8 +287,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				&limits.Rates.Organization.QuotaPerHour, &limits.Rates.Organization.BurstCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
-			org.rateLimiter = state.rateLimiter
-			org.bucket = ratelimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxCost)
+			org.bucket = state.rateLimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxCost)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}
@@ -356,8 +354,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
-				ws.bucket = ratelimiter.NewBucket("workspace", ws.ID, requestLeaseSize, requestMaxCost)
-				ws.eventBucket = ratelimiter.NewBucket("events", ws.ID, eventLeaseSize, eventMaxCost)
+				ws.bucket = state.rateLimiter.NewBucket("workspace", ws.ID, requestLeaseSize, requestMaxCost)
+				ws.eventBucket = state.rateLimiter.NewBucket("events", ws.ID, eventLeaseSize, eventMaxCost)
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
 					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)

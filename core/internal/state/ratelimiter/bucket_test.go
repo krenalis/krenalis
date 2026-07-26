@@ -27,7 +27,7 @@ func TestNewBucketRejectsInvalidConfiguration(t *testing.T) {
 					t.Fatal("NewBucket did not panic")
 				}
 			}()
-			NewBucket(testSubjectKind, testRateLimitID, test.leaseSize, test.maxCost)
+			new(Limiter).NewBucket(testSubjectKind, testRateLimitID, test.leaseSize, test.maxCost)
 		})
 	}
 }

@@ -4,7 +4,12 @@
 
 package ratelimiter
 
-import "sync"
+import (
+	"context"
+	"log/slog"
+	"sync"
+	"time"
+)
 
 const maxRefillThreshold = 25
 
@@ -18,6 +23,7 @@ type SubjectKind string
 //
 // mu protects local capacity and refill state.
 type Bucket struct {
+	limiter     *Limiter
 	subjectKind SubjectKind
 	subjectID   string
 	leaseSize   int
@@ -35,16 +41,58 @@ type Bucket struct {
 //
 // leaseSize and maxCost must be positive, and maxCost must not exceed
 // leaseSize. NewBucket panics if these conditions are not met.
-func NewBucket(subjectKind SubjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
+func (limiter *Limiter) NewBucket(subjectKind SubjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
 	if leaseSize < 1 || maxCost < 1 || maxCost > leaseSize {
 		panic("invalid rate-limit bucket configuration")
 	}
 	return &Bucket{
+		limiter:     limiter,
 		subjectKind: subjectKind,
 		subjectID:   subjectID,
 		leaseSize:   leaseSize,
 		maxCost:     maxCost,
 	}
+}
+
+// Consume consumes cost from this bucket. It returns ErrInvalidCost when cost
+// is outside the bucket's supported range. If local capacity is insufficient,
+// it may wait for the refill generation to which the request was admitted.
+func (bucket *Bucket) Consume(ctx context.Context, cost int) error {
+	if cost < 1 || cost > bucket.maxCost {
+		return ErrInvalidCost
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	limiter := bucket.limiter
+	now := time.Now()
+	refillAllowed := limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(now)
+	satisfied, refill, waiter := bucket.consume(cost, refillAllowed)
+	if refill != nil {
+		queued, queueFull := limiter.queueRefill(refill)
+		if !queued {
+			bucket.rejectRefill(refill)
+			if queueFull {
+				if limiter.metrics.QueueFull != nil {
+					limiter.metrics.QueueFull.Inc()
+				}
+				if limiter.queueSaturated.CompareAndSwap(false, true) {
+					slog.Warn("rate limiter refill queue is full")
+				}
+			}
+		} else {
+			limiter.queueSaturated.Store(false)
+			refillAllowed = limiter.shutdown.ctx.Err() == nil && !limiter.backoffActive(time.Now())
+			waiter = bucket.activateRefill(refill, cost, !satisfied, refillAllowed)
+		}
+	}
+	if satisfied {
+		return nil
+	}
+	if waiter == nil {
+		return ErrCapacityExceeded
+	}
+	return limiter.waitForRefill(ctx, waiter)
 }
 
 // Close closes the bucket, preventing further consumption and refills.

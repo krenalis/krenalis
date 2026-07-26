@@ -598,15 +598,14 @@ type AccessKey struct {
 
 // Organization represents an organization.
 type Organization struct {
-	mu          *sync.Mutex
-	rateLimiter *ratelimiter.Limiter
-	bucket      *ratelimiter.Bucket
-	workspaces  map[string]*Workspace
-	members     map[string]bool // true when the member can log in.
-	usage       organizationUsage
-	ID          string
-	Name        string
-	Enabled     bool
+	mu         *sync.Mutex
+	bucket     *ratelimiter.Bucket
+	workspaces map[string]*Workspace
+	members    map[string]bool // true when the member can log in.
+	usage      organizationUsage
+	ID         string
+	Name       string
+	Enabled    bool
 }
 
 // OrganizationCounts stores the resource counts for an organization.
@@ -658,7 +657,7 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 // State, so all Core wrappers for that organization share the same process-local
 // lease.
 func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return organization.rateLimiter.Consume(ctx, organization.bucket, cost)
+	return organization.bucket.Consume(ctx, cost)
 }
 
 // Counts returns the organization's counts.
@@ -910,14 +909,12 @@ func (workspace *Workspace) Connections() []*Connection {
 // ConsumeEventRateLimitCapacity consumes capacity for eventCount events from
 // the workspace's event bucket.
 func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, eventCount int) error {
-	return workspace.organization.rateLimiter.Consume(ctx, workspace.eventBucket, eventCount)
+	return workspace.eventBucket.Consume(ctx, eventCount)
 }
 
 // ConsumeRateLimitCapacity consumes capacity from the workspace's request bucket.
-// The rate limiter is shared with the organization, while the process-local
-// lease belongs to this workspace.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return workspace.organization.rateLimiter.Consume(ctx, workspace.bucket, cost)
+	return workspace.bucket.Consume(ctx, cost)
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.

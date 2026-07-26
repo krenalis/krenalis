@@ -21,16 +21,28 @@ const (
 	testLargeLeaseSize             = 20_000
 )
 
-func newTestBucket() *Bucket {
-	return NewBucket(testSubjectKind, testRateLimitID, testLeaseSize, testLeaseSize)
+func newTestBucket(limiters ...*Limiter) *Bucket {
+	limiter := new(Limiter)
+	if len(limiters) != 0 {
+		limiter = limiters[0]
+	}
+	return limiter.NewBucket(testSubjectKind, testRateLimitID, testLeaseSize, testLeaseSize)
 }
 
-func newTestBucketFor(subjectKind SubjectKind, id string) *Bucket {
-	return NewBucket(subjectKind, id, testLeaseSize, testLeaseSize)
+func newTestBucketFor(subjectKind SubjectKind, id string, limiters ...*Limiter) *Bucket {
+	limiter := new(Limiter)
+	if len(limiters) != 0 {
+		limiter = limiters[0]
+	}
+	return limiter.NewBucket(subjectKind, id, testLeaseSize, testLeaseSize)
 }
 
-func newTestLargeBucket() *Bucket {
-	return NewBucket(testSubjectKind, testRateLimitID, testLargeLeaseSize, testLargeLeaseSize)
+func newTestLargeBucket(limiters ...*Limiter) *Bucket {
+	limiter := new(Limiter)
+	if len(limiters) != 0 {
+		limiter = limiters[0]
+	}
+	return limiter.NewBucket(testSubjectKind, testRateLimitID, testLargeLeaseSize, testLargeLeaseSize)
 }
 
 // newTestRateLimiter starts a limiter and registers its shutdown with the test.
@@ -64,7 +76,7 @@ func TestLimiterCloseHonorsContext(t *testing.T) {
 		return nil, context.Canceled
 	})
 	result := make(chan error, 1)
-	go func() { result <- limiter.Consume(context.Background(), newTestBucket(), 1) }()
+	go func() { result <- newTestBucket(limiter).Consume(context.Background(), 1) }()
 	<-started
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -158,27 +170,27 @@ func TestBucketsConsumeIndependently(t *testing.T) {
 	limiter := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
 		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 2}}, nil
 	})
-	firstBucket := newTestBucketFor("first", "111111111111")
-	secondBucket := newTestBucketFor("second", "222222222222")
-	thirdBucket := newTestBucketFor("third", "222222222222")
+	firstBucket := newTestBucketFor("first", "111111111111", limiter)
+	secondBucket := newTestBucketFor("second", "222222222222", limiter)
+	thirdBucket := newTestBucketFor("third", "222222222222", limiter)
 	applyTestLease(firstBucket, 2, 2)
 	applyTestLease(secondBucket, 2, 2)
 	applyTestLease(thirdBucket, 2, 2)
 
-	if err := limiter.Consume(context.Background(), firstBucket, 2); err != nil {
+	if err := firstBucket.Consume(context.Background(), 2); err != nil {
 		t.Fatalf("first bucket consume: %v", err)
 	}
-	if err := limiter.Consume(context.Background(), firstBucket, 2); !errors.Is(err, ErrCapacityExceeded) {
+	if err := firstBucket.Consume(context.Background(), 2); !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("first bucket second consume: got %v, want ErrCapacityExceeded", err)
 	}
-	if err := limiter.Consume(context.Background(), secondBucket, 2); err != nil {
+	if err := secondBucket.Consume(context.Background(), 2); err != nil {
 		t.Fatalf("second bucket consume: %v", err)
 	}
-	if err := limiter.Consume(context.Background(), thirdBucket, 2); err != nil {
+	if err := thirdBucket.Consume(context.Background(), 2); err != nil {
 		t.Fatalf("third bucket consume: %v", err)
 	}
 	thirdBucket.Restore(2)
-	if err := limiter.Consume(context.Background(), thirdBucket, 2); err != nil {
+	if err := thirdBucket.Consume(context.Background(), 2); err != nil {
 		t.Fatalf("third bucket consume after restoration: %v", err)
 	}
 }
@@ -187,9 +199,9 @@ func TestBucketsConsumeIndependently(t *testing.T) {
 // supported range.
 func TestLimiterValidatesCost(t *testing.T) {
 	l := newTestRateLimiter(t, nil)
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 	for _, cost := range []int{-1, 0, 101} {
-		if err := l.Consume(context.Background(), bucket, cost); !errors.Is(err, ErrInvalidCost) {
+		if err := bucket.Consume(context.Background(), cost); !errors.Is(err, ErrInvalidCost) {
 			t.Fatalf("cost %d: got %v, want ErrInvalidCost", cost, err)
 		}
 	}
@@ -199,14 +211,14 @@ func TestLimiterValidatesCost(t *testing.T) {
 // cost.
 func TestLimiterValidatesLargeCost(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
-	bucket := newTestLargeBucket()
+	bucket := newTestLargeBucket(limiter)
 	for _, count := range []int{-1, 0, testLargeLeaseSize + 1} {
-		if err := limiter.Consume(context.Background(), bucket, count); !errors.Is(err, ErrInvalidCost) {
+		if err := bucket.Consume(context.Background(), count); !errors.Is(err, ErrInvalidCost) {
 			t.Fatalf("cost %d: got %v, want ErrInvalidCost", count, err)
 		}
 	}
 	applyTestLease(bucket, testLargeLeaseSize, testLargeLeaseSize)
-	if err := limiter.Consume(context.Background(), bucket, testLargeLeaseSize); err != nil {
+	if err := bucket.Consume(context.Background(), testLargeLeaseSize); err != nil {
 		t.Fatalf("maximum cost: %v", err)
 	}
 }
@@ -217,16 +229,16 @@ func TestLimiterConsumesLocalCapacity(t *testing.T) {
 	l := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
 		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, CapacityUnits: 10}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 	applyTestLease(bucket, 10, 10)
 
-	if err := l.Consume(context.Background(), bucket, 6); err != nil {
+	if err := bucket.Consume(context.Background(), 6); err != nil {
 		t.Fatalf("consume: %v", err)
 	}
 	if state := bucketSnapshot(bucket); state.available != 4 {
 		t.Fatalf("available capacity = %d, want 4", state.available)
 	}
-	if err := l.Consume(context.Background(), bucket, 5); !errors.Is(err, ErrCapacityExceeded) {
+	if err := bucket.Consume(context.Background(), 5); !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("consume exhausted capacity: got %v, want ErrCapacityExceeded", err)
 	}
 }
@@ -235,12 +247,12 @@ func TestLimiterConsumesLocalCapacity(t *testing.T) {
 // an already canceled request leaves local capacity unchanged.
 func TestLimiterCanceledContextDoesNotConsumeLocalCapacity(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
-	bucket := newTestBucket()
+	bucket := newTestBucket(limiter)
 	applyTestLease(bucket, 10, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if err := limiter.Consume(ctx, bucket, 1); !errors.Is(err, context.Canceled) {
+	if err := bucket.Consume(ctx, 1); !errors.Is(err, context.Canceled) {
 		t.Fatalf("consume with canceled context: %v", err)
 	}
 	if state := bucketSnapshot(bucket); state.available != 10 {
@@ -320,16 +332,16 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 			GrantedUnits: 60, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(limiter)
 
 	resultA := make(chan error, 1)
 	resultB := make(chan error, 1)
 	resultC := make(chan error, 1)
-	go func() { resultA <- limiter.Consume(context.Background(), bucket, 40) }()
+	go func() { resultA <- bucket.Consume(context.Background(), 40) }()
 	<-requests
-	go func() { resultB <- limiter.Consume(context.Background(), bucket, 30) }()
+	go func() { resultB <- bucket.Consume(context.Background(), 30) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 70 })
-	go func() { resultC <- limiter.Consume(context.Background(), bucket, 20) }()
+	go func() { resultC <- bucket.Consume(context.Background(), 20) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 90 })
 	close(release)
 
@@ -364,22 +376,22 @@ func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 			GrantedUnits: 100, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(limiter)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	first := make(chan error, 1)
 	second := make(chan error, 1)
 	third := make(chan error, 1)
-	go func() { first <- limiter.Consume(ctx, bucket, 60) }()
+	go func() { first <- bucket.Consume(ctx, 60) }()
 	<-requests
-	go func() { second <- limiter.Consume(context.Background(), bucket, 40) }()
+	go func() { second <- bucket.Consume(context.Background(), 40) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 100 })
 	cancel()
 	if err := <-first; !errors.Is(err, context.Canceled) {
 		t.Fatalf("canceled waiter: %v", err)
 	}
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 40 })
-	go func() { third <- limiter.Consume(context.Background(), bucket, 60) }()
+	go func() { third <- bucket.Consume(context.Background(), 60) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(bucket) == 100 })
 	close(release)
 
@@ -411,9 +423,9 @@ func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 			CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(limiter)
 	result := make(chan error, 1)
-	go func() { result <- limiter.Consume(context.Background(), bucket, 1) }()
+	go func() { result <- bucket.Consume(context.Background(), 1) }()
 	<-started
 	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("internal timeout: %v", err)
@@ -439,9 +451,9 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 			GrantedUnits: 1, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(limiter)
 	result := make(chan error, 1)
-	go func() { result <- limiter.Consume(context.Background(), bucket, 1) }()
+	go func() { result <- bucket.Consume(context.Background(), 1) }()
 	<-started
 
 	select {
@@ -553,14 +565,14 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 			GrantedUnits: 10, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 	results := make(chan error, 3)
-	go func() { results <- l.Consume(context.Background(), bucket, 1) }()
+	go func() { results <- bucket.Consume(context.Background(), 1) }()
 	if request := <-requests; len(request) != 1 {
 		t.Fatalf("batch contains %d requests, want 1", len(request))
 	}
 	for range 2 {
-		go func() { results <- l.Consume(context.Background(), bucket, 1) }()
+		go func() { results <- bucket.Consume(context.Background(), 1) }()
 	}
 	waitForRateLimit(t, func() bool {
 		bucket.mu.Lock()
@@ -594,7 +606,7 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 
 	refills := make([]*refill, 0, 2)
 	waiters := make([]*waiter, 0, 2)
-	for _, bucket := range []*Bucket{newTestBucketFor("first", "111111111111"), newTestBucketFor("second", "222222222222")} {
+	for _, bucket := range []*Bucket{newTestBucketFor("first", "111111111111", limiter), newTestBucketFor("second", "222222222222", limiter)} {
 		_, refill, _ := bucket.consume(1, true)
 		waiter := bucket.activateRefill(refill, 1, true, true)
 		if waiter == nil {
@@ -632,13 +644,13 @@ func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 			GrantedUnits: 20, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 	applyTestLease(bucket, 10, 100)
-	if err := l.Consume(context.Background(), bucket, 1); err != nil {
+	if err := bucket.Consume(context.Background(), 1); err != nil {
 		t.Fatal(err)
 	}
 	<-started
-	if err := l.Consume(context.Background(), bucket, 5); err != nil {
+	if err := bucket.Consume(context.Background(), 5); err != nil {
 		t.Fatal(err)
 	}
 	close(release)
@@ -665,9 +677,9 @@ func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 				CapacityUnits: 100,
 			}}, nil
 		})
-		bucket := newTestBucket()
+		bucket := newTestBucket(l)
 		applyTestLease(bucket, 2, 100)
-		if err := l.Consume(context.Background(), bucket, 1); err != nil {
+		if err := bucket.Consume(context.Background(), 1); err != nil {
 			t.Fatalf("initial consume: %v", err)
 		}
 		time.Sleep(batchDelay)
@@ -680,10 +692,10 @@ func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 			t.Fatal("failed refill remained queued")
 		}
 
-		if err := l.Consume(context.Background(), bucket, 1); err != nil {
+		if err := bucket.Consume(context.Background(), 1); err != nil {
 			t.Fatalf("consume local capacity during backoff: %v", err)
 		}
-		if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+		if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
 			t.Fatalf("consume without local capacity during backoff: got %v, want ErrCapacityExceeded", err)
 		}
 		if calls.Load() != 1 {
@@ -691,7 +703,7 @@ func TestLimiterStartsGlobalBackoffAfterRefillError(t *testing.T) {
 		}
 
 		time.Sleep(refillBackoffDuration)
-		if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+		if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
 			t.Fatalf("consume after backoff: got %v, want ErrCapacityExceeded", err)
 		}
 		synctest.Wait()
@@ -751,8 +763,8 @@ func TestLimiterBacksOffAfterInvalidLeaseResults(t *testing.T) {
 				l := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 					return test.results(requests[0]), nil
 				})
-				bucket := newTestBucket()
-				_ = l.Consume(context.Background(), bucket, 1)
+				bucket := newTestBucket(l)
+				_ = bucket.Consume(context.Background(), 1)
 				synctest.Wait()
 				if limiterRetryAfter(l).IsZero() {
 					t.Fatal("invalid lease result did not start global backoff")
@@ -773,7 +785,7 @@ func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 		})
 		l.retryAfter.Store(time.Now().Add(refillBackoffDuration).UnixNano())
 
-		queued := newTestBucket()
+		queued := newTestBucket(l)
 		_, queuedRefill, _ := queued.consume(2, true)
 		queued.activateRefill(queuedRefill, 0, false, true)
 		l.queue <- queuedRefill
@@ -786,11 +798,11 @@ func TestLimiterGlobalBackoffBlocksQueuedAndConcurrentRefills(t *testing.T) {
 			t.Fatalf("refill attempts during global backoff = %d, want 0", calls.Load())
 		}
 
-		bucket := newTestBucketFor("other", "222222222222")
+		bucket := newTestBucketFor("other", "222222222222", l)
 		var wg sync.WaitGroup
 		for range 100 {
 			wg.Go(func() {
-				if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+				if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
 					t.Errorf("consume during global backoff: got %v, want ErrCapacityExceeded", err)
 				}
 			})
@@ -821,9 +833,9 @@ func TestLimiterClosedBucketCompletesInFlightRefill(t *testing.T) {
 			CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 	result := make(chan error, 1)
-	go func() { result <- l.Consume(context.Background(), bucket, 1) }()
+	go func() { result <- bucket.Consume(context.Background(), 1) }()
 	<-started
 	bucket.Close()
 	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
@@ -844,12 +856,12 @@ func TestLimiterQueueFullRejectsRequestsWithoutLocalCapacity(t *testing.T) {
 	}
 	l.shutdown.ctx = context.Background()
 	l.queue <- &refill{}
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 
-	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+	if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("consume with a full queue: got %v, want ErrCapacityExceeded", err)
 	}
-	if err := l.Consume(context.Background(), bucket, 1); !errors.Is(err, ErrCapacityExceeded) {
+	if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
 		t.Fatalf("second consume with a full queue: got %v, want ErrCapacityExceeded", err)
 	}
 	if !limiterRetryAfter(l).IsZero() {
@@ -872,9 +884,9 @@ func TestLimiterShutdownDiscardsLateResultWithoutBackoff(t *testing.T) {
 			GrantedUnits: 1, CapacityUnits: 100,
 		}}, nil
 	})
-	bucket := newTestBucket()
+	bucket := newTestBucket(l)
 	result := make(chan error, 1)
-	go func() { result <- l.Consume(context.Background(), bucket, 1) }()
+	go func() { result <- bucket.Consume(context.Background(), 1) }()
 	<-started
 	l.Close(context.Background())
 	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
@@ -899,13 +911,13 @@ func TestLimiterShutdownUnblocksBufferedWaiter(t *testing.T) {
 		<-ctx.Done()
 		return nil, ctx.Err()
 	})
-	firstBucket := newTestBucket()
-	secondBucket := newTestBucketFor("other", "222222222222")
+	firstBucket := newTestBucket(limiter)
+	secondBucket := newTestBucketFor("other", "222222222222", limiter)
 	first := make(chan error, 1)
 	second := make(chan error, 1)
-	go func() { first <- limiter.Consume(context.Background(), firstBucket, 1) }()
+	go func() { first <- firstBucket.Consume(context.Background(), 1) }()
 	<-started
-	go func() { second <- limiter.Consume(context.Background(), secondBucket, 1) }()
+	go func() { second <- secondBucket.Consume(context.Background(), 1) }()
 	waitForRateLimit(t, func() bool { return refillPendingCost(secondBucket) == 1 })
 
 	limiter.Close(context.Background())

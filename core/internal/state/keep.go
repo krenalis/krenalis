@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -507,15 +506,14 @@ func (state *State) createOrganization(n notification) string {
 		return ""
 	}
 	org := &Organization{
-		mu:          &sync.Mutex{},
-		rateLimiter: state.rateLimiter,
-		bucket:      ratelimiter.NewBucket("organization", e.ID, requestLeaseSize, requestMaxCost),
-		workspaces:  map[string]*Workspace{},
-		members:     map[string]bool{},
-		usage:       newOrganizationUsage(e.Limits),
-		ID:          e.ID,
-		Name:        e.Name,
-		Enabled:     e.Enabled,
+		mu:         &sync.Mutex{},
+		bucket:     state.rateLimiter.NewBucket("organization", e.ID, requestLeaseSize, requestMaxCost),
+		workspaces: map[string]*Workspace{},
+		members:    map[string]bool{},
+		usage:      newOrganizationUsage(e.Limits),
+		ID:         e.ID,
+		Name:       e.Name,
+		Enabled:    e.Enabled,
 	}
 	state.mu.Lock()
 	state.organizations[e.ID] = org
@@ -651,8 +649,8 @@ func (state *State) createWorkspace(n notification) string {
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
-		bucket:                         ratelimiter.NewBucket("workspace", e.ID, requestLeaseSize, requestMaxCost),
-		eventBucket:                    ratelimiter.NewBucket("events", e.ID, eventLeaseSize, eventMaxCost),
+		bucket:                         state.rateLimiter.NewBucket("workspace", e.ID, requestLeaseSize, requestMaxCost),
+		eventBucket:                    state.rateLimiter.NewBucket("events", e.ID, eventLeaseSize, eventMaxCost),
 		connections:                    map[string]*Connection{},
 		ID:                             e.ID,
 		organization:                   organization,

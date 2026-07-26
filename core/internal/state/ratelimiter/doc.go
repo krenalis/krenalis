@@ -61,9 +61,10 @@
 //
 // Each canonical Organization owns one organization-level request bucket. Each
 // canonical Workspace owns separate request and event buckets. Core wrappers
-// share these canonical instances. The State-wide Limiter owns the refill
-// queue, batcher, lease acquisition, global backoff, metrics, and shutdown
-// lifecycle.
+// share these canonical instances. The State-wide Limiter creates those
+// buckets, which consume through their owning limiter. The limiter owns the
+// refill queue, batcher, lease acquisition, global backoff, metrics, and
+// shutdown lifecycle.
 //
 // # Local consumption and refill generations
 //

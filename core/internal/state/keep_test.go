@@ -69,7 +69,7 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 // organization retains its local rate-limit bucket.
 func TestReplaceOrganizationPreservesRateLimitBucket(t *testing.T) {
 	const organizationID = "111111111111"
-	bucket := ratelimiter.NewBucket("test", organizationID, 1, 1)
+	bucket := new(ratelimiter.Limiter).NewBucket("test", organizationID, 1, 1)
 	organization := &Organization{
 		mu:         new(sync.Mutex),
 		workspaces: map[string]*Workspace{},
@@ -102,8 +102,8 @@ func TestReplaceWorkspacePreservesRateLimitBuckets(t *testing.T) {
 		workspaces: map[string]*Workspace{},
 		ID:         organizationID,
 	}
-	bucket := ratelimiter.NewBucket("test", workspaceID, 1, 1)
-	eventBucket := ratelimiter.NewBucket("test-events", workspaceID, 1, 1)
+	bucket := new(ratelimiter.Limiter).NewBucket("test", workspaceID, 1, 1)
+	eventBucket := new(ratelimiter.Limiter).NewBucket("test-events", workspaceID, 1, 1)
 	workspace := &Workspace{
 		mu:           new(sync.Mutex),
 		organization: organization,
