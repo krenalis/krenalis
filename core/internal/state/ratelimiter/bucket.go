@@ -37,23 +37,6 @@ type Bucket struct {
 	closed          bool
 }
 
-// NewBucket creates an empty local bucket for subjectKind and subjectID.
-//
-// leaseSize and maxCost must be positive, and maxCost must not exceed
-// leaseSize. NewBucket panics if these conditions are not met.
-func (limiter *Limiter) NewBucket(subjectKind SubjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
-	if leaseSize < 1 || maxCost < 1 || maxCost > leaseSize {
-		panic("invalid rate-limit bucket configuration")
-	}
-	return &Bucket{
-		limiter:     limiter,
-		subjectKind: subjectKind,
-		subjectID:   subjectID,
-		leaseSize:   leaseSize,
-		maxCost:     maxCost,
-	}
-}
-
 // Consume consumes cost from this bucket. It returns ErrInvalidCost when cost
 // is outside the bucket's supported range. If local capacity is insufficient,
 // it may wait for the refill generation to which the request was admitted.
