@@ -1131,7 +1131,10 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	}
 	this.RequiredConsents = RequiredConsents{
 		Operator: ConsentPurposesOperator(pipeline.RequiredConsents.Operator),
-		Purposes: slices.Clone(pipeline.RequiredConsents.Purposes),
+		Purposes: make([]string, len(pipeline.RequiredConsents.Purposes)),
+	}
+	for i, purpose := range pipeline.RequiredConsents.Purposes {
+		this.RequiredConsents.Purposes[i] = purpose.ID
 	}
 	if pipeline.Transformation.Mapping != nil {
 		this.Transformation = &Transformation{
@@ -1526,9 +1529,9 @@ func shouldReload(a *state.Pipeline, n *state.UpdatePipeline) bool {
 }
 
 // toStateRequiredConsents converts the required consents to a
-// state.RequiredConsents value.
-func toStateRequiredConsents(requiredConsents RequiredConsents) state.RequiredConsents {
-	return state.RequiredConsents{
+// state.RequiredConsentIDs value.
+func toStateRequiredConsents(requiredConsents RequiredConsents) state.RequiredConsentIDs {
+	return state.RequiredConsentIDs{
 		Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
 		Purposes: requiredConsents.Purposes,
 	}

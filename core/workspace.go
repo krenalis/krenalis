@@ -900,7 +900,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			return "", errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
 		rc.Operator = state.ConsentPurposesOperator(requiredConsents.Operator)
-		rc.Purposes = make([]string, len(requiredConsents.Purposes))
+		rc.Purposes = make([]*state.ConsentPurpose, len(requiredConsents.Purposes))
 		for i, id := range requiredConsents.Purposes {
 			if !IsValidID(id) {
 				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
@@ -912,7 +912,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			if !ok {
 				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
 			}
-			rc.Purposes[i] = cp.Code
+			rc.Purposes[i] = cp
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)

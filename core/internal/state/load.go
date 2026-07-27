@@ -538,10 +538,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var rawInSchema, rawOutSchema, filter, mapping []byte
 				var function TransformationFunction
 				var format *string
+				var requiredConsentIDs RequiredConsentIDs
 				pipeline := Pipeline{}
 				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID, &function.Version,
+					&filter, &requiredConsentIDs.Purposes, &requiredConsentIDs.Operator, &mapping, &function.ID, &function.Version,
 					&function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
 					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
 					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
@@ -562,6 +563,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline.connection = c
 				pipeline.organization = c.organization
 				pipeline.EventType = eventType
+				pipeline.RequiredConsents = c.workspace.resolveRequiredConsents(requiredConsentIDs)
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
 					return fmt.Errorf("loading input schema for pipeline %s: %s", pipeline.ID, err)

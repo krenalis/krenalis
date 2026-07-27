@@ -4,7 +4,11 @@
 
 package consents
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/krenalis/krenalis/core/internal/state"
+)
 
 func TestSatisfies(t *testing.T) {
 	cases := []struct {
@@ -144,7 +148,11 @@ func TestSatisfies(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := Satisfies(c.required, c.matchAll, c.attributes)
+			purposes := make([]*state.ConsentPurpose, len(c.required))
+			for i, code := range c.required {
+				purposes[i] = &state.ConsentPurpose{ID: code, Name: code, Code: code}
+			}
+			got := Satisfies(purposes, c.matchAll, c.attributes)
 			if got != c.want {
 				t.Fatalf("got %v, want %v", got, c.want)
 			}

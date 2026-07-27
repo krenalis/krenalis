@@ -575,7 +575,7 @@ type CreatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
-	RequiredConsents   RequiredConsents
+	RequiredConsents   RequiredConsentIDs
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -612,6 +612,7 @@ func (state *State) createPipeline(n notification) string {
 	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
+	requiredConsents := c.workspace.resolveRequiredConsents(e.RequiredConsents)
 	pipeline := &Pipeline{
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
@@ -626,7 +627,7 @@ func (state *State) createPipeline(n notification) string {
 		SchedulePeriod:     e.SchedulePeriod,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
-		RequiredConsents:   e.RequiredConsents,
+		RequiredConsents:   requiredConsents,
 		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
@@ -1649,10 +1650,28 @@ func (state *State) updateConsentPurpose(n notification) string {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
-	ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
+	old := ws.consentPurposes[e.ID]
+	cp := ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
 		cp.Name = e.Name
 		cp.Code = e.Code
 	})
+	// Replace the consent purpose in the pipelines that require it.
+	for _, c := range ws.connections {
+		for _, p := range c.pipelines {
+			if !slices.Contains(p.RequiredConsents.Purposes, old) {
+				continue
+			}
+			state.replacePipeline(p.ID, func(p *Pipeline) {
+				purposes := slices.Clone(p.RequiredConsents.Purposes)
+				for i, purpose := range purposes {
+					if purpose == old {
+						purposes[i] = cp
+					}
+				}
+				p.RequiredConsents.Purposes = purposes
+			})
+		}
+	}
 	dispatchNotification(state, e)
 	return ws.organization.ID
 }
@@ -1730,7 +1749,7 @@ type UpdatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
-	RequiredConsents   RequiredConsents
+	RequiredConsents   RequiredConsentIDs
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -1772,6 +1791,8 @@ func (state *State) updatePipeline(n notification) string {
 		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
 	oldFormat := state.pipelines[e.ID].format
+	ws := state.pipelines[e.ID].connection.workspace
+	requiredConsents := ws.resolveRequiredConsents(e.RequiredConsents)
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.format = format
 		p.propertiesToUnset = e.PropertiesToUnset
@@ -1780,7 +1801,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.InSchema = e.InSchema
 		p.OutSchema = e.OutSchema
 		p.Filter = filter
-		p.RequiredConsents = e.RequiredConsents
+		p.RequiredConsents = requiredConsents
 		p.Transformation = e.Transformation
 		p.Query = e.Query
 		p.Path = e.Path
