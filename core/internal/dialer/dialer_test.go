@@ -132,10 +132,12 @@ func echoServer(t *testing.T) string {
 	return l.Addr().String()
 }
 
-// enable enables the metrics for the duration of the test.
+// enable enables counting for the duration of the test, without following the
+// organizations of a state, so that every organization is considered to exist.
 func enable(t *testing.T) {
 	t.Helper()
-	t.Cleanup(EnableCountingForTesting())
+	enabled = true
+	t.Cleanup(func() { enabled = false })
 }
 
 // write writes b to the connection established by dial to addr, reads the echo

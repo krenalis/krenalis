@@ -10,16 +10,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 )
 
-// newHTTP returns an HTTP with no state, that counts the bytes its requests
-// send, and makes the organizations with the given IDs the existing ones, as
-// New does with the ones of a state.
+// newHTTP returns an HTTP with no state, and makes the organizations with the
+// given IDs the existing ones, as New does with the ones of a state.
 func newHTTP(t *testing.T, organizationIDs ...string) *HTTP {
 	t.Helper()
-	t.Cleanup(dialer.EnableCountingForTesting())
 	h := New(nil, http.DefaultTransport.(*http.Transport))
 	h.organizationsMu.Lock()
 	for _, id := range organizationIDs {
@@ -108,28 +105,10 @@ func TestTransportCreatedWhenNeeded(t *testing.T) {
 	}
 }
 
-func TestTransportClonesTheBaseTransport(t *testing.T) {
-	// The transport of an organization is a clone of the base transport, so that
-	// it dials on behalf of the organization with a connection pool of its own.
-	h := newHTTP(t, "org-clone")
-	transport, ok := transportOf(t, h, "org-clone")
-	if ok {
-		t.Fatal("the organization already has a transport, expecting none")
-	}
-	_ = client(t, h, "org-clone")
-	transport, ok = transportOf(t, h, "org-clone")
-	if !ok {
-		t.Fatal("the organization has no transport, expecting one")
-	}
-	if transport.base == http.RoundTripper(h.transport) {
-		t.Fatal("the transport of the organization is the base transport, expecting a clone")
-	}
-}
-
 func TestTransportWithoutCounting(t *testing.T) {
-	// Counting is disabled, because dialer.EnableCountingForTesting is not
-	// called, so there is nothing to attribute to the organization and its
-	// requests are made with the base transport as it is.
+	// Counting is disabled, because dialer.EnableCounting is not called, so
+	// there is nothing to attribute to the organization and its requests are
+	// made with the base transport as it is.
 	h := New(nil, http.DefaultTransport.(*http.Transport))
 	url := server(t)
 	c := client(t, h, "org-not-counted")
@@ -215,7 +194,6 @@ func TestTransportDeletedOrganization(t *testing.T) {
 func TestTransportWithoutListening(t *testing.T) {
 	// The HTTP has no state, so the organizations are not known and every one of
 	// them is considered to exist.
-	t.Cleanup(dialer.EnableCountingForTesting())
 	h := New(nil, http.DefaultTransport.(*http.Transport))
 	url := server(t)
 	if err := get(t, client(t, h, "org-not-listening"), url); err != nil {

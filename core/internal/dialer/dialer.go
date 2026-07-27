@@ -63,17 +63,6 @@ func CountingEnabled() bool {
 	return enabled
 }
 
-// EnableCountingForTesting enables counting, as [EnableCounting] does, but
-// without following the organizations of a state, so that every organization
-// is considered to exist. It returns a function that disables it again.
-//
-// Unlike [EnableCounting], it can be called more than once. It is meant to be
-// used only in the tests of the packages that count the bytes they send.
-func EnableCountingForTesting() (disable func()) {
-	enabled = true
-	return func() { enabled = false }
-}
-
 // ErrNoOrganization is the error the dial functions fail with when the
 // organization the bytes they send would be attributed to does not exist,
 // because it has been deleted or it has never been created.
