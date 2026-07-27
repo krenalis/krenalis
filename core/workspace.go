@@ -905,6 +905,9 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			if !IsValidID(id) {
 				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
+			if slices.Contains(requiredConsents.Purposes[i+1:], id) {
+				return "", errors.BadRequest("required consent purpose %s is duplicated", id)
+			}
 			cp, ok := this.workspace.ConsentPurpose(id)
 			if !ok {
 				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
