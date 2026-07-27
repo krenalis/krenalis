@@ -195,9 +195,6 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 
 // DeleteConsentPurpose deletes a consent purpose of the current workspace.
 func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
