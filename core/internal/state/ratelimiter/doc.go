@@ -95,9 +95,9 @@
 // subtracts granted capacity before returning it. A process crash can lose an
 // unused lease but cannot create additional capacity.
 //
-// The batcher collects generations for a short interval, up to a fixed batch
+// The refiller collects generations for a short interval, up to a fixed batch
 // size. Lease acquisition has its own finite deadline, independent of waiter
-// deadlines, so a stuck query cannot block the single batcher indefinitely.
+// deadlines, so a stuck query cannot block the single refiller indefinitely.
 //
 // The complete acquisition response is validated before any capacity is
 // applied. Every requested subject must have exactly one matching result.
@@ -110,7 +110,7 @@
 // backoff is active may still use positive local capacity, but it neither
 // publishes a new refill nor admits a waiter. If the call cannot use local
 // capacity, it returns the stored error. If backoff is still active when the
-// batcher processes a queued generation, it rejects that generation with the
+// refiller processes a queued generation, it rejects that generation with the
 // stored error. Shutdown cancellation does not start backoff.
 //
 // # Bucket lifetime and shutdown
@@ -126,15 +126,17 @@
 // caller must stop all use of the limiter and every bucket created by it. No
 // exported Limiter or Bucket method may be in progress. The caller keeps
 // buckets for existing subjects reachable until Close returns. Close cancels
-// lease acquisition, stops the batcher, and discards queued refills. It waits
-// until the batcher stops or the context passed to Close ends. If the context
-// ends first, the batcher remains in progress and no capacity is restored.
+// lease acquisition, stops background work, and discards queued refills. It
+// waits for all limiter operations to stop, even if the context passed to Close
+// ends.
 //
-// After the batcher stops, Close makes one best-effort attempt to restore unused
-// local capacity from reachable buckets. The restoration uses the caller's
-// context, is not retried after an error or cancellation, and ignores subjects
-// deleted from PostgreSQL. A process crash or an interrupted shutdown can
-// therefore still lose unused capacity.
+// After background work stops, Close makes one best-effort attempt to restore
+// unused local capacity from reachable buckets. The restoration uses the
+// caller's context, is not retried after an error or cancellation, and ignores
+// subjects deleted from PostgreSQL. If the context is already canceled, Close
+// does not start the restoration. If it is canceled during restoration, Close
+// waits for the restoration to stop. A process crash or cancellation during
+// shutdown can therefore still lose unused capacity.
 //
 // # Important invariants
 //

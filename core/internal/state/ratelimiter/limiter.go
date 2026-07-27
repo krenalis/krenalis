@@ -82,12 +82,11 @@ type Limiter struct {
 		refs []weak.Pointer[Bucket]
 	}
 
-	shutdown struct {
+	close struct {
 		ctx    context.Context
 		cancel context.CancelFunc
-		done   chan struct{}
-
-		closed atomic.Bool
+		atomic.Bool
+		sync.WaitGroup
 	}
 }
 
@@ -101,31 +100,25 @@ func New(db *db.DB, metrics Metrics) *Limiter {
 	}
 	limiter.acquire = limiter.acquireLeases
 	limiter.restoreBatch = limiter.restoreCapacityBatch
-	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
-	limiter.shutdown.done = make(chan struct{})
-	go limiter.runRefiller()
-	go limiter.runCompactor()
+	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
+	limiter.close.Go(limiter.runRefiller)
+	limiter.close.Go(limiter.runCompactor)
 	return limiter
 }
 
-// Close starts shutting down the limiter and waits until the batcher stops or
-// ctx is done. After the batcher stops, it makes one best-effort attempt to
-// restore unused node-local capacity to PostgreSQL. If ctx is done first, the
-// batcher continues in the background and no capacity is restored.
+// Close shuts down the limiter and waits for all its operations to stop, even
+// if ctx is canceled.
 //
 // When Close is called, no other calls to Limiter's methods or to methods of
 // buckets created by it should be in progress and no other shall be made. The
 // caller must keep the buckets for existing subjects reachable until Close
-// returns.
+// returns. Subsequent calls to Close return immediately.
 func (limiter *Limiter) Close(ctx context.Context) {
-	if !limiter.shutdown.closed.CompareAndSwap(false, true) {
+	if limiter.close.Swap(true) {
 		return
 	}
-	limiter.shutdown.cancel()
-	select {
-	case <-limiter.shutdown.done:
-	case <-ctx.Done():
-	}
+	limiter.close.cancel()
+	limiter.close.Wait()
 	if ctx.Err() != nil {
 		return
 	}
@@ -208,7 +201,7 @@ func (limiter *Limiter) collectAndRefill(first *refill) bool {
 	defer timer.Stop()
 	for len(pending) < batchSize {
 		select {
-		case <-limiter.shutdown.ctx.Done():
+		case <-limiter.close.ctx.Done():
 			rejectRefills(pending, ErrLimiterUnavailable)
 			return false
 		case refill := <-limiter.queue:
@@ -223,13 +216,10 @@ func (limiter *Limiter) collectAndRefill(first *refill) bool {
 }
 
 // collectUnusedCapacity gathers unused node-local capacity from buckets that
-// are still reachable during shutdown.
+// are still reachable during shutdown. Close calls it after all background
+// workers have stopped.
 func (limiter *Limiter) collectUnusedCapacity() []unusedCapacity {
-	// The compactor can still replace the reference slice after the batcher
-	// stops. Copy the slice header while holding the same mutex it uses.
-	limiter.buckets.Lock()
 	refs := limiter.buckets.refs
-	limiter.buckets.Unlock()
 
 	available := make(map[subjectKey]int)
 	for _, ref := range refs {
@@ -262,7 +252,7 @@ func (limiter *Limiter) compactBuckets() {
 
 	compacted := make([]weak.Pointer[Bucket], 0, len(refs))
 	for _, ref := range refs {
-		if limiter.shutdown.ctx.Err() != nil {
+		if limiter.close.ctx.Err() != nil {
 			return
 		}
 		if ref.Value() != nil {
@@ -275,7 +265,7 @@ func (limiter *Limiter) compactBuckets() {
 
 	limiter.buckets.Lock()
 	defer limiter.buckets.Unlock()
-	if limiter.shutdown.ctx.Err() != nil {
+	if limiter.close.ctx.Err() != nil {
 		return
 	}
 	compacted = append(compacted, limiter.buckets.refs[len(refs):]...)
@@ -297,7 +287,7 @@ func (limiter *Limiter) discardQueuedRefills() {
 // failBatch starts backoff unless shutdown is in progress, then rejects the
 // pending refills.
 func (limiter *Limiter) failBatch(pending []*refill, err error) {
-	if limiter.shutdown.ctx.Err() == nil {
+	if limiter.close.ctx.Err() == nil {
 		limiter.backoff.Store(&backoffState{until: time.Now().Add(refillBackoffDuration), err: err})
 	}
 	rejectRefills(pending, err)
@@ -339,14 +329,14 @@ func (limiter *Limiter) refill(pending []*refill) {
 	for _, refill := range pending {
 		requests = append(requests, refill.request)
 	}
-	acquireCtx, cancel := context.WithTimeout(limiter.shutdown.ctx, defaultAcquireTimeout)
+	acquireCtx, cancel := context.WithTimeout(limiter.close.ctx, defaultAcquireTimeout)
 	results, err := limiter.acquire(acquireCtx, requests)
 	if err == nil {
 		err = acquireCtx.Err()
 	}
 	cancel()
 	if err != nil {
-		if limiter.shutdown.ctx.Err() == nil {
+		if limiter.close.ctx.Err() == nil {
 			slog.Error("cannot acquire rate-limit leases", "error", err)
 			if limiter.metrics.AcquisitionErrors != nil {
 				limiter.metrics.AcquisitionErrors.Inc()
@@ -447,11 +437,10 @@ func (limiter *Limiter) restoreCapacityBatch(ctx context.Context, unused []unuse
 
 // runRefiller processes queued refills until shutdown.
 func (limiter *Limiter) runRefiller() {
-	defer close(limiter.shutdown.done)
 	defer limiter.discardQueuedRefills()
 	for {
 		select {
-		case <-limiter.shutdown.ctx.Done():
+		case <-limiter.close.ctx.Done():
 			return
 		case refill := <-limiter.queue:
 			if !limiter.collectAndRefill(refill) {
@@ -462,14 +451,12 @@ func (limiter *Limiter) runRefiller() {
 }
 
 // runCompactor periodically cleans up references to buckets that have been
-// garbage-collected by Go. It runs independently of the batcher, so Close does
-// not wait for a scan to finish, though it may briefly block while the
-// compactor updates the reference slice.
+// garbage-collected by Go.
 func (limiter *Limiter) runCompactor() {
 	compaction := time.NewTicker(bucketCompactionInterval)
 	for {
 		select {
-		case <-limiter.shutdown.ctx.Done():
+		case <-limiter.close.ctx.Done():
 			return
 		case <-compaction.C:
 			limiter.compactBuckets()

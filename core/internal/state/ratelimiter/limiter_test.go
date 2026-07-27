@@ -96,17 +96,6 @@ type testCounter struct{ calls atomic.Int32 }
 
 func (counter *testCounter) Inc() { counter.calls.Add(1) }
 
-// TestLimiterCloseStopsRefiller verifies that Close stops the refiller.
-func TestLimiterCloseStopsRefiller(t *testing.T) {
-	limiter := New(nil, Metrics{})
-	limiter.Close(context.Background())
-	select {
-	case <-limiter.shutdown.done:
-	default:
-		t.Fatal("expected Close to stop the batcher, got a running batcher")
-	}
-}
-
 // TestLimiterCloseRestoresUnusedCapacity verifies that Close restores unused
 // capacity from reachable buckets.
 func TestLimiterCloseRestoresUnusedCapacity(t *testing.T) {
@@ -139,6 +128,26 @@ func TestLimiterCloseRestoresUnusedCapacity(t *testing.T) {
 	}
 }
 
+// TestLimiterCloseIsIdempotent verifies that only the first Close restores
+// unused capacity.
+func TestLimiterCloseIsIdempotent(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	var calls atomic.Int32
+	limiter.restoreBatch = func(context.Context, []unusedCapacity) error {
+		calls.Add(1)
+		return nil
+	}
+	bucket := newTestBucket(limiter)
+	applyTestLease(bucket, 10, 10)
+
+	limiter.Close(t.Context())
+	limiter.Close(t.Context())
+	runtime.KeepAlive(bucket)
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("expected one capacity restore, got %d", got)
+	}
+}
+
 // TestLimiterCloseSkipsCapacityRestoreWhenCanceled verifies that a canceled
 // Close does not begin restoring capacity.
 func TestLimiterCloseSkipsCapacityRestoreWhenCanceled(t *testing.T) {
@@ -168,7 +177,7 @@ func TestCompactBucketsStopsDuringShutdown(t *testing.T) {
 	limiter.buckets.refs = append(limiter.buckets.refs, weak.Pointer[Bucket]{})
 	limiter.buckets.Unlock()
 
-	limiter.shutdown.cancel()
+	limiter.close.cancel()
 	limiter.compactBuckets()
 	limiter.buckets.Lock()
 	refs := limiter.buckets.refs
@@ -310,9 +319,9 @@ func TestRestoreUnusedCapacityHonorsCancellation(t *testing.T) {
 	}
 }
 
-// TestLimiterCloseHonorsContextDuringProactiveRefill verifies that a canceled
-// Close returns while a non-cooperative acquisition finishes in the background.
-func TestLimiterCloseHonorsContextDuringProactiveRefill(t *testing.T) {
+// TestLimiterCloseWaitsForProactiveRefill verifies that Close waits for an
+// in-progress acquisition even when its context is canceled.
+func TestLimiterCloseWaitsForProactiveRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 	restored := atomic.Int32{}
@@ -331,17 +340,33 @@ func TestLimiterCloseHonorsContextDuringProactiveRefill(t *testing.T) {
 		t.Fatalf("consume that starts proactive refill: %v", err)
 	}
 	<-started
+	defer func() {
+		select {
+		case <-release:
+		default:
+			close(release)
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	limiter.Close(ctx)
+	closed := make(chan struct{})
+	go func() {
+		limiter.Close(ctx)
+		close(closed)
+	}()
+	waitForRateLimit(t, limiter.close.Load)
 	select {
-	case <-limiter.shutdown.done:
-		t.Fatal("batcher stopped before the non-cooperative acquirer returned")
+	case <-closed:
+		t.Fatal("expected Close to wait for the acquisition, got an early return")
 	default:
 	}
 	close(release)
-	limiter.Close(context.Background())
+	select {
+	case <-closed:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for Close")
+	}
 	if backoff := limiter.backoff.Load(); backoff != nil {
 		t.Fatalf("expected shutdown backoff nil, got %v", backoff)
 	}
@@ -716,8 +741,8 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 // contain different subject kinds.
 func TestLimiterBatchesSubjectKinds(t *testing.T) {
 	limiter := &Limiter{queue: make(chan *refill, queueSize)}
-	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
-	t.Cleanup(limiter.shutdown.cancel)
+	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
+	t.Cleanup(limiter.close.cancel)
 	var acquired []leaseRequest
 	limiter.acquire = func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 		acquired = append(acquired, requests...)
@@ -745,7 +770,7 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 	}
 	limiter.queue <- refills[1]
 	if !limiter.collectAndRefill(refills[0]) {
-		t.Fatal("batcher stopped while collecting refills")
+		t.Fatal("refiller stopped while collecting refills")
 	}
 	if len(acquired) != 2 {
 		t.Fatalf("expected batch to contain 2 requests, got %d", len(acquired))
