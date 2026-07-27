@@ -108,6 +108,50 @@ func TestTransportCreatedWhenNeeded(t *testing.T) {
 	}
 }
 
+func TestTransportClonesTheBaseTransport(t *testing.T) {
+	// The transport of an organization is a clone of the base transport, so that
+	// it dials on behalf of the organization with a connection pool of its own.
+	h := newHTTP(t, "org-clone")
+	transport, ok := transportOf(t, h, "org-clone")
+	if ok {
+		t.Fatal("the organization already has a transport, expecting none")
+	}
+	_ = client(t, h, "org-clone")
+	transport, ok = transportOf(t, h, "org-clone")
+	if !ok {
+		t.Fatal("the organization has no transport, expecting one")
+	}
+	if transport.base == http.RoundTripper(h.transport) {
+		t.Fatal("the transport of the organization is the base transport, expecting a clone")
+	}
+}
+
+func TestTransportWithoutCounting(t *testing.T) {
+	// Counting is disabled, because dialer.EnableCountingForTesting is not
+	// called, so there is nothing to attribute to the organization and its
+	// requests are made with the base transport as it is.
+	h := New(nil, http.DefaultTransport.(*http.Transport))
+	url := server(t)
+	c := client(t, h, "org-not-counted")
+	if err := get(t, c, url); err != nil {
+		t.Fatalf("the request of an organization failed: %s", err)
+	}
+	transport, ok := transportOf(t, h, "org-not-counted")
+	if !ok {
+		t.Fatal("the organization has no transport, expecting one")
+	}
+	if transport.base != http.RoundTripper(h.transport) {
+		t.Fatal("the transport of the organization is a clone, expecting the base transport")
+	}
+
+	// Deleting the organization discards its transport without closing the idle
+	// connections of the base transport, which is shared.
+	h.onDeleteOrganization(state.DeleteOrganization{ID: "org-not-counted"})
+	if err := get(t, client(t, h, "org-other"), url); err != nil {
+		t.Fatalf("the request of another organization failed: %s", err)
+	}
+}
+
 func TestTransportUnknownOrganization(t *testing.T) {
 	// The organization does not exist, because it has never been created, so its
 	// requests fail and no transport is created for it.

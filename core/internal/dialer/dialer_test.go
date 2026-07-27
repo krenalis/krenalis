@@ -9,9 +9,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"sync"
 	"testing"
 
@@ -341,54 +338,6 @@ func TestDialWithContextDisabled(t *testing.T) {
 	}
 }
 
-func TestTransport(t *testing.T) {
-	base := http.DefaultTransport.(*http.Transport)
-
-	// The metrics are disabled, so the base transport is returned unwrapped.
-	if transport := Transport(base, "org-transport"); transport != http.RoundTripper(base) {
-		t.Fatal("the base transport has been wrapped, expecting it unwrapped")
-	}
-
-	enable(t)
-
-	// The organization is unknown, so the base transport is returned unwrapped.
-	if transport := Transport(base, ""); transport != http.RoundTripper(base) {
-		t.Fatal("the base transport has been wrapped, expecting it unwrapped")
-	}
-
-	// The bytes the requests send are counted, the bytes they receive are not.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.Copy(io.Discard, r.Body)
-		_, _ = w.Write([]byte(strings.Repeat("x", 1024)))
-	}))
-	defer server.Close()
-	transport := Transport(base, "org-transport")
-	if transport == http.RoundTripper(base) {
-		t.Fatal("the base transport has not been wrapped")
-	}
-	egress := egress(t, "org-transport")
-	body := strings.Repeat("a", 512)
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, strings.NewReader(body))
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := transport.RoundTrip(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _ = io.Copy(io.Discard, res.Body)
-	_ = res.Body.Close()
-	// The request sends its body plus its headers, and receives a longer
-	// response, that must not be counted.
-	n := egress()
-	if n < uint64(len(body)) {
-		t.Fatalf("counted %d bytes, expecting at least the %d bytes of the request body", n, len(body))
-	}
-	if n >= 1024 {
-		t.Fatalf("counted %d bytes, expecting the bytes received not to be counted", n)
-	}
-}
-
 func TestDialUnknownOrganization(t *testing.T) {
 	// The organizations are known and the one dialing is not among them, so it
 	// does not exist and the dial fails.
@@ -493,24 +442,6 @@ func TestDialWithContextUnknownOrganization(t *testing.T) {
 	_, err := DialWithContext(nil)(ctx, "tcp", addr)
 	if !errors.Is(err, ErrNoOrganization) {
 		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
-	}
-}
-
-func TestTransportUnknownOrganization(t *testing.T) {
-	// The organization does not exist, so the requests made with its transport
-	// fail.
-	enable(t)
-	listen(t, "org-transport-known")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	defer server.Close()
-	transport := Transport(http.DefaultTransport.(*http.Transport), "org-transport-unknown")
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = transport.RoundTrip(req)
-	if !errors.Is(err, ErrNoOrganization) {
-		t.Fatalf("the request returned the error %v, expecting ErrNoOrganization", err)
 	}
 }
 

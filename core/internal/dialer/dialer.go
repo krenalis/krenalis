@@ -2,14 +2,13 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package dialer provides the dial functions and the HTTP transports Krenalis
-// establishes its outbound connections with.
+// Package dialer provides the dial functions Krenalis establishes its outbound
+// connections with.
 //
-// Use it whenever a dial function or a transport is needed, and not only when
-// the bytes sent must be counted: [Dial] and [DialWith] for the connections
-// made on behalf of an organization, [DialWithContext] for a client shared by
-// every organization, [Transport] for the requests of an HTTP client, and
-// [PlainDial] and [PlainDialWith] when there is no organization to dial on
+// Use it whenever a dial function is needed, and not only when the bytes sent
+// must be counted: [Dial] and [DialWith] for the connections made on behalf of
+// an organization, [DialWithContext] for a client shared by every organization,
+// and [PlainDial] and [PlainDialWith] when there is no organization to dial on
 // behalf of. Going through this package keeps every connection dialed the same
 // way, and keeps counting a detail the callers do not have to care about.
 //
@@ -21,8 +20,8 @@
 // Counting is disabled by default and is enabled with [EnableCounting], which
 // is not called at all when the network usage metrics are disabled. While it is
 // disabled, the dial functions returned by [Dial], [DialWith] and
-// [DialWithContext], and the transport returned by [Transport], establish the
-// connections as they would without this package, with no overhead.
+// [DialWithContext] establish the connections as they would without this
+// package, with no overhead.
 //
 // When counting is enabled, this package keeps a counter per organization, so
 // it must know which organizations exist in order not to keep the counters of
@@ -36,7 +35,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"sync"
 	"sync/atomic"
 
@@ -115,12 +113,12 @@ var (
 //
 // It is not called at all when the network usage metrics are disabled, leaving
 // counting disabled: the other functions of this package can still be called,
-// they just return plain, unwrapped dialers and transports and count nothing.
+// they just return plain, unwrapped dialers and count nothing.
 //
 // When it is called, instead, it must be called at startup, before any other
-// function of this package, because the dial functions and the transports
-// already returned keep the setting they were created with, and it panics if it
-// is called more than once.
+// function of this package, because the dial functions already returned keep
+// the setting they were created with, and it panics if it is called more than
+// once.
 func EnableCounting(st *state.State) {
 	if enabled {
 		panic("dialer: EnableCounting called more than once")
@@ -318,28 +316,6 @@ func DialWithContext(dial DialFunc) DialFunc {
 		}
 		return &instrumentedConn{Conn: conn, egress: c}, nil
 	}
-}
-
-// Transport returns the HTTP transport to make the requests of the
-// organization with the given ID with. The bytes the requests send are counted
-// and attributed to the organization.
-//
-// If organizationID is empty, or counting is disabled (see
-// [EnableCounting]), base is returned unwrapped; otherwise the returned
-// transport is a clone of base dialing with [Dial], so that base's timeouts and
-// options are preserved, and its requests fail with [ErrNoOrganization] if the
-// organization does not exist when they are made.
-//
-// A clone does not share the connection pool of base, so the caller should
-// create one transport per organization and reuse it for all its requests,
-// instead of creating one per request.
-func Transport(base *http.Transport, organizationID string) http.RoundTripper {
-	if !enabled || organizationID == "" {
-		return base
-	}
-	t := base.Clone()
-	t.DialContext = dialWith(organizationID, t.DialContext)
-	return t
 }
 
 // dialWith is like [Dial], but the connections are established by dial instead

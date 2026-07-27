@@ -192,8 +192,20 @@ func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 		h.organizations[organizationID] = org
 	}
 	if org.transport == nil {
+		// The transport of the organization is a clone of the base transport
+		// dialing with a dial function of the organization, so that it keeps the
+		// timeouts and the options of the base transport and the bytes its
+		// connections send are attributed to the organization. When counting is
+		// disabled there is nothing to attribute, and the base transport is used
+		// as it is, shared with every other organization.
+		base := http.RoundTripper(h.transport)
+		if dialer.CountingEnabled() {
+			t := h.transport.Clone()
+			t.DialContext = dialer.DialWith(organizationID)(t.DialContext)
+			base = t
+		}
 		org.transport = &organizationTransport{
-			base:         dialer.Transport(h.transport, organizationID),
+			base:         base,
 			organization: org,
 			id:           organizationID,
 		}
