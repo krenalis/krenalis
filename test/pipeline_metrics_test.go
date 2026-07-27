@@ -58,7 +58,7 @@ func TestPipelineMetricsHTTPContract(t *testing.T) {
 		const id = "7QaT3mN7KxP5"
 		for _, path := range []string{
 			"/v1/pipelines/metrics/minutes/1?pipelines=" + id,
-			"/v1/pipelines/metrics/minutes/1?workspaces=" + id,
+			"/v1/pipelines/metrics/minutes/1?workspaces=" + id + "&target=User",
 		} {
 			var res pipelineMetricsResponse
 			k.Call("GET", path, http.Header{"Krenalis-Workspace": nil}, nil, &res)
@@ -74,7 +74,7 @@ func TestPipelineMetricsHTTPContract(t *testing.T) {
 
 	t.Run("workspace-scoped workspace group shape", func(t *testing.T) {
 		var res pipelineMetricsResponse
-		k.Call("GET", "/v1/pipelines/metrics/minutes/15?workspaces="+k.WorkspaceID(), nil, nil, &res)
+		k.Call("GET", "/v1/pipelines/metrics/minutes/15?workspaces="+k.WorkspaceID()+"&target=User", nil, nil, &res)
 		assertPipelineMetricsRange(t, res)
 		if len(res.Metrics) != 1 {
 			t.Fatalf("expected one workspace metric series, got %d", len(res.Metrics))
