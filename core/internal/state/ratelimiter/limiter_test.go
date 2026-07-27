@@ -46,13 +46,13 @@ func bucketAvailable(bucket *Bucket) int {
 	return bucket.available
 }
 
-func pendingCost(bucket *Bucket) int {
+func pendingUnits(bucket *Bucket) int {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	if bucket.refill == nil {
 		return 0
 	}
-	return bucket.refill.pendingCost
+	return bucket.refill.pendingUnits
 }
 
 func waitForRateLimit(t *testing.T, condition func() bool) {
@@ -112,8 +112,8 @@ func TestLimiterCloseHonorsContextDuringProactiveRefill(t *testing.T) {
 	}
 	close(release)
 	limiter.Close(context.Background())
-	if retryAfter := limiter.retryAfter.Load(); retryAfter != 0 {
-		t.Fatalf("shutdown retry deadline = %d, want 0", retryAfter)
+	if backoff := limiter.backoff.Load(); backoff != nil {
+		t.Fatalf("shutdown backoff = %v, want nil", backoff)
 	}
 	if got := bucketAvailable(bucket); got != 20 {
 		t.Fatalf("capacity after shutdown = %d, want 20", got)
@@ -174,8 +174,8 @@ func TestLimiterCanceledContextCancelsWaiterButStartsRefill(t *testing.T) {
 		t.Fatalf("canceled consume: %v", err)
 	}
 	<-started
-	if got := pendingCost(bucket); got != 0 {
-		t.Fatalf("pending cost after cancellation = %d, want 0", got)
+	if got := pendingUnits(bucket); got != 0 {
+		t.Fatalf("pending units after cancellation = %d, want 0", got)
 	}
 	close(release)
 }
@@ -196,7 +196,7 @@ func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 		if err := waitForRefill(ctx, waiter); !errors.Is(err, context.DeadlineExceeded) {
 			t.Fatalf("wait returned %v, want context deadline exceeded", err)
 		}
-		bucket.rejectRefill(refill)
+		bucket.rejectRefill(refill, ErrLimiterUnavailable)
 	}
 }
 
@@ -206,8 +206,8 @@ func TestLimiterKeepsPositiveCapacityForSmallerRequest(t *testing.T) {
 	})
 	bucket := newTestBucket(limiter)
 	applyTestLease(bucket, 90, 100)
-	if err := bucket.Consume(context.Background(), 100); !errors.Is(err, ErrCapacityExceeded) {
-		t.Fatalf("large request = %v, want ErrCapacityExceeded", err)
+	if err := bucket.Consume(context.Background(), 100); !errors.Is(err, ErrLimiterUnavailable) {
+		t.Fatalf("large request = %v, want ErrLimiterUnavailable", err)
 	}
 	if err := bucket.Consume(context.Background(), 90); err != nil {
 		t.Fatalf("smaller request did not use positive local capacity: %v", err)
@@ -233,9 +233,9 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	go func() { first <- bucket.Consume(context.Background(), 40) }()
 	<-requests
 	go func() { second <- bucket.Consume(context.Background(), 30) }()
-	waitForRateLimit(t, func() bool { return pendingCost(bucket) == 70 })
+	waitForRateLimit(t, func() bool { return pendingUnits(bucket) == 70 })
 	go func() { third <- bucket.Consume(context.Background(), 20) }()
-	waitForRateLimit(t, func() bool { return pendingCost(bucket) == 90 })
+	waitForRateLimit(t, func() bool { return pendingUnits(bucket) == 90 })
 	close(release)
 	if err := <-first; err != nil {
 		t.Fatalf("first waiter: %v", err)
@@ -268,12 +268,12 @@ func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 	go func() { first <- bucket.Consume(ctx, 60) }()
 	<-requests
 	go func() { second <- bucket.Consume(context.Background(), 40) }()
-	waitForRateLimit(t, func() bool { return pendingCost(bucket) == 100 })
+	waitForRateLimit(t, func() bool { return pendingUnits(bucket) == 100 })
 	cancel()
 	if err := <-first; !errors.Is(err, context.Canceled) {
 		t.Fatalf("canceled waiter: %v", err)
 	}
-	waitForRateLimit(t, func() bool { return pendingCost(bucket) == 40 })
+	waitForRateLimit(t, func() bool { return pendingUnits(bucket) == 40 })
 	close(release)
 	if err := <-second; err != nil {
 		t.Fatalf("remaining waiter: %v", err)
@@ -333,7 +333,7 @@ func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	bucket.mu.Lock()
 	first := bucket.newRefillLocked()
 	bucket.mu.Unlock()
-	bucket.rejectRefill(first)
+	bucket.rejectRefill(first, ErrLimiterUnavailable)
 
 	bucket.mu.Lock()
 	second := bucket.newRefillLocked()
@@ -375,7 +375,7 @@ func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	result := make(chan error, 1)
 	go func() { result <- newTestBucket(limiter).Consume(context.Background(), 1) }()
 	<-started
-	if err := <-result; !errors.Is(err, ErrCapacityExceeded) {
+	if err := <-result; !errors.Is(err, ErrLimiterUnavailable) {
 		t.Fatalf("internal timeout: %v", err)
 	}
 	close(release)
@@ -403,7 +403,7 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 
 	select {
 	case err := <-result:
-		if !errors.Is(err, ErrCapacityExceeded) {
+		if !errors.Is(err, ErrLimiterUnavailable) {
 			t.Fatalf("acquisition timeout: %v", err)
 		}
 	case <-time.After(time.Second):
@@ -444,7 +444,7 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 	for range 2 {
 		go func() { results <- bucket.Consume(context.Background(), 1) }()
 	}
-	waitForRateLimit(t, func() bool { return pendingCost(bucket) == 3 })
+	waitForRateLimit(t, func() bool { return pendingUnits(bucket) == 3 })
 	close(release)
 	for range 3 {
 		if err := <-results; err != nil {
@@ -555,11 +555,15 @@ func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 			limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 				return test.results(requests[0]), nil
 			})
-			if err := newTestBucket(limiter).Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
-				t.Fatalf("invalid lease result: %v", err)
+			bucket := newTestBucket(limiter)
+			if err := bucket.Consume(context.Background(), 1); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
+				t.Fatalf("invalid lease result = %v, want generic internal error", err)
 			}
-			if retryAfter := limiter.retryAfter.Load(); retryAfter == 0 {
+			if backoff := limiter.backoff.Load(); backoff == nil {
 				t.Fatal("invalid lease result did not start backoff")
+			}
+			if err := bucket.Consume(context.Background(), 1); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
+				t.Fatalf("invalid-response backoff = %v, want generic internal error", err)
 			}
 		})
 	}
@@ -569,7 +573,7 @@ func TestLimiterRejectsWhenQueueIsFull(t *testing.T) {
 	queueFull := new(testCounter)
 	limiter := &Limiter{queue: make(chan *refill, 1), metrics: Metrics{QueueFull: queueFull}}
 	limiter.queue <- new(refill)
-	if err := newTestBucket(limiter).Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
+	if err := newTestBucket(limiter).Consume(context.Background(), 1); !errors.Is(err, ErrLimiterUnavailable) {
 		t.Fatalf("consume with full queue: %v", err)
 	}
 	if got := queueFull.calls.Load(); got != 1 {
@@ -584,10 +588,10 @@ func TestLimiterRejectsRefillsDuringBackoff(t *testing.T) {
 		return nil, errors.New("database unavailable")
 	})
 	bucket := newTestBucket(limiter)
-	if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
+	if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrLimiterUnavailable) {
 		t.Fatalf("failed refill: %v", err)
 	}
-	if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrCapacityExceeded) {
+	if err := bucket.Consume(context.Background(), 1); !errors.Is(err, ErrLimiterUnavailable) {
 		t.Fatalf("backoff refill: %v", err)
 	}
 	if got := calls.Load(); got != 1 {

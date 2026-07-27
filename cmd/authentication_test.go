@@ -88,6 +88,27 @@ func TestApplyRateLimitTo(t *testing.T) {
 		}
 	})
 
+	t.Run("maps limiter unavailability to Service Unavailable", func(t *testing.T) {
+		subject := &rateLimitSubjectStub{err: core.ErrRateLimiterUnavailable}
+
+		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
+		rateLimitError, ok := err.(*errors.UnavailableError)
+		if !ok {
+			t.Fatalf("expected UnavailableError, got %T", err)
+		}
+		response := httptest.NewRecorder()
+		if err := rateLimitError.WriteTo(response); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
+		if response.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected status %d, got %d", http.StatusServiceUnavailable, response.Code)
+		}
+		const expected = "{\"error\":{\"code\":\"ServiceUnavailable\",\"message\":\"request cannot be processed at this time; try again later\"}}\n"
+		if response.Body.String() != expected {
+			t.Fatalf("unexpected response body: %q", response.Body.String())
+		}
+	})
+
 	t.Run("propagates operational errors", func(t *testing.T) {
 		operationalError := stderrors.New("rate limiter unavailable")
 		subject := &rateLimitSubjectStub{err: operationalError}

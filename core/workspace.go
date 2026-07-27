@@ -418,20 +418,16 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
-// ConsumeRateLimitCapacity consumes the specified capacity from the workspace's
-// rate-limit budget.
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
 //
-// cost must be between 1 and the configured maximum. An invalid cost is an
-// internal error and terminates the process. When local capacity is
-// insufficient, the call may wait for one admitted refill to complete. It
-// returns ErrRateLimitCapacityExceeded if capacity cannot be obtained, including
-// when admission or refill fails or the limiter's one-second maximum wait
-// expires. Cancellation and deadlines do not prevent local consumption or
-// publishing a refill; if cancellation wins the race with refill completion,
-// the corresponding context error is returned unchanged.
-func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
+// confirms that the requested capacity is unavailable. It returns an
+// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
+// from determining whether capacity is available.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	this.core.mustBeOpen()
-	return this.workspace.ConsumeRateLimitCapacity(ctx, cost)
+	return this.workspace.ConsumeRateLimitCapacity(ctx, units)
 }
 
 // CreateConnection creates a new connection. authToken is an authorization

@@ -35,15 +35,21 @@ var (
 	ErrAccessKeyNotFound      = errors.New("access key not found")
 )
 
-// ErrRateLimitCapacityExceeded is returned when a request cannot be served from
-// local rate-limit capacity or admitted to the current refill.
-var ErrRateLimitCapacityExceeded = ratelimiter.ErrCapacityExceeded
+var (
+	// ErrRateLimitCapacityExceeded is returned when the requested rate-limit
+	// capacity is not available.
+	ErrRateLimitCapacityExceeded = ratelimiter.ErrCapacityExceeded
+
+	// ErrRateLimiterUnavailable is returned when a temporary condition prevents
+	// the rate limiter from determining capacity availability.
+	ErrRateLimiterUnavailable = ratelimiter.ErrLimiterUnavailable
+)
 
 const (
 	requestLeaseSize = 100
-	requestMaxCost   = requestLeaseSize
+	requestMaxUnits  = requestLeaseSize
 	eventLeaseSize   = 20_000
-	eventMaxCost     = eventLeaseSize
+	eventMaxUnits    = eventLeaseSize
 )
 
 // election represents a leader election.
@@ -649,12 +655,15 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 	return canLogin, ok
 }
 
-// ConsumeRateLimitCapacity consumes capacity from the organization's request
-// bucket. The bucket belongs to the canonical Organization instance stored in
-// State, so all Core wrappers for that organization share the same process-local
-// lease.
-func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return organization.bucket.Consume(ctx, cost)
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// organization's request rate-limit capacity. units must be at least 1.
+//
+// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
+// confirms that the requested capacity is unavailable. It returns an
+// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
+// from determining whether capacity is available.
+func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	return organization.bucket.Consume(ctx, units)
 }
 
 // Counts returns the organization's counts.
@@ -903,15 +912,26 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsumeEventRateLimitCapacity consumes capacity for eventCount events from
-// the workspace's event bucket.
+// ConsumeEventRateLimitCapacity consumes event rate-limit capacity for the
+// specified number of events. eventCount must be at least 1.
+//
+// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
+// confirms that the requested capacity is unavailable. It returns an
+// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
+// from determining whether capacity is available.
 func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, eventCount int) error {
 	return workspace.eventBucket.Consume(ctx, eventCount)
 }
 
-// ConsumeRateLimitCapacity consumes capacity from the workspace's request bucket.
-func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
-	return workspace.bucket.Consume(ctx, cost)
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
+//
+// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
+// confirms that the requested capacity is unavailable. It returns an
+// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
+// from determining whether capacity is available.
+func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	return workspace.bucket.Consume(ctx, units)
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -990,11 +1010,14 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 	return slices.Clone(pipelines)
 }
 
-// RestoreEventRateLimitCapacity returns previously consumed capacity to the
-// workspace's event bucket on the current node. The caller must invoke this
-// method at most once for each successful local consumption.
-func (workspace *Workspace) RestoreEventRateLimitCapacity(eventCount int) {
-	workspace.eventBucket.Restore(eventCount)
+// RestoreEventRateLimitCapacity restores capacity previously consumed for
+// events. Restoring capacity never increases the workspace's local event
+// capacity above its current limit.
+//
+// eventCount must be at least 1. The caller must ensure that it does not exceed
+// the number of events in the corresponding successful consumption.
+func (workspace *Workspace) RestoreEventRateLimitCapacity(eventCount int) error {
+	return workspace.eventBucket.Restore(eventCount)
 }
 
 // WarehouseSettings returns the warehouse settings.

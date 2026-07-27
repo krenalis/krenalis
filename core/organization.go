@@ -50,6 +50,10 @@ var (
 	// ErrRateLimitCapacityExceeded is returned when a subject does not currently
 	// have enough capacity in its rate-limit bucket.
 	ErrRateLimitCapacityExceeded = state.ErrRateLimitCapacityExceeded
+
+	// ErrRateLimiterUnavailable is returned when a temporary condition prevents
+	// the rate limiter from determining capacity availability.
+	ErrRateLimiterUnavailable = state.ErrRateLimiterUnavailable
 )
 
 // Organization represents an organization.
@@ -392,20 +396,17 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 	return canLogin, nil
 }
 
-// ConsumeRateLimitCapacity consumes the specified capacity from the
-// organization's organization-level rate-limit budget.
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// organization's organization-level rate-limit capacity. units must be at
+// least 1.
 //
-// cost must be between 1 and the configured maximum. An invalid cost is an
-// internal error and terminates the process. When local capacity is
-// insufficient, the call may wait for one admitted refill to complete. It
-// returns ErrRateLimitCapacityExceeded if capacity cannot be obtained, including
-// when admission or refill fails or the limiter's one-second maximum wait
-// expires. Cancellation and deadlines do not prevent local consumption or
-// publishing a refill; if cancellation wins the race with refill completion,
-// the corresponding context error is returned unchanged.
-func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
+// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
+// confirms that the requested capacity is unavailable. It returns an
+// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
+// from determining whether capacity is available.
+func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	this.core.mustBeOpen()
-	return this.organization.ConsumeRateLimitCapacity(ctx, cost)
+	return this.organization.ConsumeRateLimitCapacity(ctx, units)
 }
 
 // CreateAccessKey creates a new access key for the organization with the

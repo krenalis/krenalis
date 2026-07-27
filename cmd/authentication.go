@@ -269,6 +269,9 @@ func (authenticated authenticatedRequest) applyRateLimitTo(ctx context.Context, 
 	if errors.Is(err, core.ErrRateLimitCapacityExceeded) {
 		return errors.TooManyRequests("rate limit exceeded")
 	}
+	if errors.Is(err, core.ErrRateLimiterUnavailable) {
+		return errors.Unavailable("request cannot be processed at this time; try again later")
+	}
 	return err
 }
 

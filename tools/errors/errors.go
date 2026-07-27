@@ -138,15 +138,19 @@ func (e *NotFoundError) WriteTo(w http.ResponseWriter) error {
 	return writeTo(w, http.StatusNotFound, "NotFound", e.Message, "")
 }
 
-// TooManyRequestsError represents an exceeded request rate limit.
-type TooManyRequestsError struct {
-	Message string
-}
-
 // TooManyRequests returns an error that formats as the given text, and its
-// WriteTo method replies with an HTTP 429 too many requests error.
+// WriteTo method replies to the request with an HTTP 429 too many requests
+// error.
+//
+// It can be used when a client exceeds a request rate or usage limit.
 func TooManyRequests(format string, a ...any) *TooManyRequestsError {
 	return &TooManyRequestsError{fmt.Sprintf(format, a...)}
+}
+
+// TooManyRequestsError is an implementation of error used to represent an
+// exceeded request rate or usage limit.
+type TooManyRequestsError struct {
+	Message string
 }
 
 // Error implements the error interface.
@@ -159,30 +163,28 @@ func (e *TooManyRequestsError) WriteTo(w http.ResponseWriter) error {
 	return writeTo(w, http.StatusTooManyRequests, "TooManyRequests", e.Message, "")
 }
 
-// Unavailable returns an error with the given code that formats as the given
-// text, and its WriteTo method replies to the request with an HTTP 503
-// service unavailable error.
+// Unavailable returns an error that formats as the given text, and its WriteTo
+// method replies to the request with an HTTP 503 service unavailable error.
 //
 // If format includes a %w verb with an error operand, Unavailable returns
 // an error that implements an Unwrap method returning the operand, and the
 // WriteTo method reports the error message in the "cause" key.
 //
-// Unavailable should be used when a request cannot be fulfilled due to an
-// unexpected error from a connector. For instance, it could be utilized if a
-// connector encounters an error while trying to connect to a database.
+// It can be used when the server cannot currently fulfill a request.
 func Unavailable(format string, a ...any) *UnavailableError {
 	e := fmt.Errorf(format, a...)
 	return &UnavailableError{s: e.Error(), err: Unwrap(e)}
 }
 
-// A UnavailableError value is returned when a connector has returned an
+// UnavailableError is an implementation of error used when a request cannot
+// currently be fulfilled, for example because a connector returned an
 // unexpected error.
 type UnavailableError struct {
 	s   string
 	err error
 }
 
-// Error implements the errors interface.
+// Error implements the error interface.
 func (e *UnavailableError) Error() string {
 	return e.s
 }

@@ -7,8 +7,7 @@ package ratelimiter
 import (
 	"container/list"
 	"context"
-	"log/slog"
-	"os"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -27,7 +26,7 @@ type Bucket struct {
 	subjectKind SubjectKind
 	subjectID   string
 	leaseSize   int
-	maxCost     int
+	maxUnits    int
 
 	mu              sync.Mutex
 	available       int
@@ -39,37 +38,40 @@ type Bucket struct {
 // refill represents one immutable lease request and its admitted waiters.
 // Its mutable state is protected by its bucket mutex.
 type refill struct {
-	bucket      *Bucket
-	request     leaseRequest
-	done        chan struct{}
-	waiters     list.List
-	pendingCost int
+	bucket       *Bucket
+	request      leaseRequest
+	done         chan struct{}
+	waiters      list.List
+	pendingUnits int
 }
 
-// Consume consumes cost from this bucket. An invalid cost is a programming
-// error and terminates the process. If local capacity is insufficient, Consume
-// may wait for the refill generation to which it was admitted.
-func (bucket *Bucket) Consume(ctx context.Context, cost int) error {
-	if cost < 1 || cost > bucket.maxCost {
-		slog.Error("core/internal/state/ratelimiter: cost is not in range [1, max cost]", "cost", cost, "max_cost", bucket.maxCost)
-		os.Exit(1)
+// Consume consumes the specified number of units from this bucket.
+// The units value must be between 1 and the configured maximum, inclusive.
+//
+// It returns an ErrCapacityExceeded error if a successful acquisition confirms
+// that the requested capacity is unavailable. It returns an
+// ErrLimiterUnavailable error if a temporary condition prevents the limiter
+// from determining whether capacity is available.
+func (bucket *Bucket) Consume(ctx context.Context, units int) error {
+	if units < 1 || units > bucket.maxUnits {
+		return fmt.Errorf("rate-limit units %d are not in range [1, %d]", units, bucket.maxUnits)
 	}
 
 	limiter := bucket.limiter
-	refillAllowed := !limiter.backoffActive()
+	backoffErr := limiter.backoffError()
 
 	bucket.mu.Lock()
 
 	// Consume locally and refill when little capacity remains, either
-	// absolutely or relative to the current cost.
-	if cost <= bucket.available {
-		bucket.available -= cost
-		if !refillAllowed {
+	// absolutely or relative to the current consumption.
+	if units <= bucket.available {
+		bucket.available -= units
+		if backoffErr != nil {
 			bucket.mu.Unlock()
 			return nil
 		}
 		startRefill := bucket.refill == nil &&
-			(bucket.available < bucket.refillThreshold || bucket.available <= cost)
+			(bucket.available < bucket.refillThreshold || bucket.available <= units)
 		if !startRefill {
 			bucket.mu.Unlock()
 			return nil
@@ -82,60 +84,63 @@ func (bucket *Bucket) Consume(ctx context.Context, cost int) error {
 	}
 
 	// Reject requests without local capacity during backoff.
-	if !refillAllowed {
+	if backoffErr != nil {
 		bucket.mu.Unlock()
-		return ErrCapacityExceeded
+		return backoffErr
 	}
 
 	// Try to admit the request to the current refill.
 	if bucket.refill != nil {
-		waiter := bucket.admitWaiterLocked(bucket.refill, cost)
+		waiter := bucket.admitWaiterLocked(bucket.refill, units)
 		bucket.mu.Unlock()
 		if waiter == nil {
-			return ErrCapacityExceeded
+			return ErrLimiterUnavailable
 		}
 		return waitForRefill(ctx, waiter)
 	}
 
 	// Start a new refill and try to admit the request.
 	refill := bucket.newRefillLocked()
-	waiter := bucket.admitWaiterLocked(refill, cost)
+	waiter := bucket.admitWaiterLocked(refill, units)
 	bucket.mu.Unlock()
 	if !limiter.publishRefill(refill) {
-		return ErrCapacityExceeded
+		return ErrLimiterUnavailable
 	}
 	if waiter == nil {
-		return ErrCapacityExceeded
+		return ErrLimiterUnavailable
 	}
 
 	return waitForRefill(ctx, waiter)
 }
 
-// Restore restores previously consumed capacity to this bucket. It does not
-// affect the lease acquirer or pending refills.
-func (bucket *Bucket) Restore(cost int) {
-	if cost < 1 || cost > bucket.maxCost {
-		slog.Error("core/internal/state/ratelimiter: cost is not in range [1, max cost]", "cost", cost, "max_cost", bucket.maxCost)
-		os.Exit(1)
+// Restore restores units previously consumed from the bucket.
+// Restoring units never increases local capacity above the current limit.
+//
+// Restore returns an error if the units value is not between 1 and the
+// configured maximum, inclusive.
+func (bucket *Bucket) Restore(units int) error {
+	if units < 1 || units > bucket.maxUnits {
+		return fmt.Errorf("units (%d) are not in range [1, %d]", units, bucket.maxUnits)
 	}
 	bucket.mu.Lock()
-	if cost >= bucket.localTarget-bucket.available {
+	if units >= bucket.localTarget-bucket.available {
 		bucket.available = bucket.localTarget
 	} else {
-		bucket.available += cost
+		bucket.available += units
 	}
 	bucket.mu.Unlock()
+	return nil
 }
 
 // admitWaiterLocked admits a waiter to the refill's FIFO queue. The caller
 // must hold bucket.mu.
-func (bucket *Bucket) admitWaiterLocked(refill *refill, cost int) *waiter {
-	if cost > refill.request.RequestedUnits-refill.pendingCost {
+func (bucket *Bucket) admitWaiterLocked(refill *refill, units int) *waiter {
+	if units > refill.request.RequestedUnits-refill.pendingUnits {
 		return nil
 	}
-	waiter := &waiter{refill: refill, cost: cost}
+	waiter := &waiter{refill: refill, units: units}
 	waiter.element = refill.waiters.PushBack(waiter)
-	refill.pendingCost += cost
+	refill.pendingUnits += units
 	return waiter
 }
 
@@ -159,7 +164,7 @@ func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 	}
 	refill := waiter.refill
 	refill.waiters.Remove(waiter.element)
-	refill.pendingCost -= waiter.cost
+	refill.pendingUnits -= waiter.units
 	waiter.element = nil
 	waiter.err = cancellation
 	return cancellation
@@ -174,7 +179,7 @@ func waitForRefill(ctx context.Context, waiter *waiter) error {
 	case <-ctx.Done():
 		return waiter.refill.bucket.cancelWaiter(waiter, ctx.Err())
 	case <-timer.C:
-		cancellation := ErrCapacityExceeded
+		cancellation := ErrLimiterUnavailable
 		if err := ctx.Err(); err != nil {
 			cancellation = err
 		}
@@ -194,8 +199,8 @@ func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits
 	serve := true
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
 		waiter := element.Value.(*waiter)
-		if serve && bucket.available >= waiter.cost {
-			bucket.available -= waiter.cost
+		if serve && bucket.available >= waiter.units {
+			bucket.available -= waiter.units
 			waiter.err = nil
 		} else {
 			serve = false
@@ -204,7 +209,7 @@ func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits
 		waiter.element = nil
 	}
 	refill.waiters.Init()
-	refill.pendingCost = 0
+	refill.pendingUnits = 0
 	bucket.refill = nil
 	bucket.mu.Unlock()
 	close(refill.done)
@@ -231,7 +236,7 @@ func (bucket *Bucket) newRefillLocked() *refill {
 }
 
 // rejectRefill rejects all remaining waiters and detaches the generation.
-func (bucket *Bucket) rejectRefill(refill *refill) {
+func (bucket *Bucket) rejectRefill(refill *refill, err error) {
 	bucket.mu.Lock()
 	if bucket.refill != refill {
 		bucket.mu.Unlock()
@@ -239,11 +244,11 @@ func (bucket *Bucket) rejectRefill(refill *refill) {
 	}
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
 		waiter := element.Value.(*waiter)
-		waiter.err = ErrCapacityExceeded
+		waiter.err = err
 		waiter.element = nil
 	}
 	refill.waiters.Init()
-	refill.pendingCost = 0
+	refill.pendingUnits = 0
 	bucket.refill = nil
 	bucket.mu.Unlock()
 	close(refill.done)
@@ -253,7 +258,7 @@ func (bucket *Bucket) rejectRefill(refill *refill) {
 // while the waiter belongs to the refill's FIFO queue.
 type waiter struct {
 	refill  *refill
-	cost    int
+	units   int
 	element *list.Element
 	err     error
 }

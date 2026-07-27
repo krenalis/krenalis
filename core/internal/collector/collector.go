@@ -768,15 +768,18 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	eventCount := dec.EventCount()
 	err = ws.ConsumeEventRateLimitCapacity(r.Context(), eventCount)
 	if err != nil {
-		if err == state.ErrRateLimitCapacityExceeded {
+		if errors.Is(err, state.ErrRateLimitCapacityExceeded) {
 			return errors.TooManyRequests("event rate limit exceeded")
+		}
+		if errors.Is(err, state.ErrRateLimiterUnavailable) {
+			return errors.Unavailable("request cannot be processed at this time; try again later")
 		}
 		return err
 	}
 	consumedEventCount := 0
 	defer func() {
 		if unusedEventCount := eventCount - consumedEventCount; unusedEventCount > 0 {
-			ws.RestoreEventRateLimitCapacity(unusedEventCount)
+			_ = ws.RestoreEventRateLimitCapacity(unusedEventCount)
 		}
 	}()
 	connector := connection.Connector()

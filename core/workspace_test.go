@@ -18,6 +18,9 @@ func TestRateLimitErrorsAreStateErrors(t *testing.T) {
 	if ErrRateLimitCapacityExceeded != state.ErrRateLimitCapacityExceeded {
 		t.Fatal("ErrRateLimitCapacityExceeded is not the state error")
 	}
+	if ErrRateLimiterUnavailable != state.ErrRateLimiterUnavailable {
+		t.Fatal("ErrRateLimiterUnavailable is not the state error")
+	}
 }
 
 func Test_suitableAsIdentifier(t *testing.T) {

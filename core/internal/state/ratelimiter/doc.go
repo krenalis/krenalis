@@ -5,10 +5,10 @@
 // Package ratelimiter implements process-local rate limiting using capacity
 // leases acquired from PostgreSQL.
 //
-// A Bucket holds capacity for one SubjectKind and identifier. A Limiter batches
-// refill requests and obtains capacity from PostgreSQL. The local bucket logic
-// does not interpret subject kinds; the PostgreSQL lease store validates the
-// kinds supported by Krenalis.
+// A Bucket holds capacity for one subject, identified by a SubjectKind and an
+// identifier. A Limiter batches refill requests and obtains capacity from
+// PostgreSQL. The local bucket logic does not interpret subject kinds; the
+// PostgreSQL lease store validates the kinds supported by Krenalis.
 //
 // # Krenalis quota model
 //
@@ -29,24 +29,37 @@
 // # Local consumption and refills
 //
 // Consume never accesses PostgreSQL on the caller's goroutine. If sufficient
-// local capacity is available, it deducts the requested cost immediately. If
+// local capacity is available, it deducts the requested units immediately. If
 // local capacity is insufficient, Consume may admit the request to the current
 // refill and wait only for that refill. A request that cannot be admitted
-// returns ErrCapacityExceeded without consuming any remaining local capacity.
+// returns an ErrLimiterUnavailable error without consuming any remaining local
+// capacity.
 //
-// Costs are internal values selected or derived by caller code. They must be
-// between 1 and the bucket's maximum cost. An invalid cost terminates the
-// process. Caller cancellation and deadlines do not prevent local consumption
-// or the publication of a refill. If cancellation wins the race with refill
-// completion, the corresponding context error is returned unchanged. Every
-// waiter also has a fixed maximum wait duration.
+// Units are internal values selected or derived by caller code. They must be
+// between 1 and the bucket's configured maximum. Consume and Restore return an
+// error for an invalid value. Caller cancellation and deadlines do not prevent
+// local consumption or the publication of a refill. If cancellation wins the
+// race with refill completion, the corresponding context error is returned
+// unchanged. Every waiter also has a fixed maximum wait duration. If Consume
+// stops waiting because that duration expires, it returns an
+// ErrLimiterUnavailable error.
+//
+// Consume returns an ErrCapacityExceeded error only after a successful
+// acquisition confirms that the requested capacity is unavailable. It returns
+// an ErrLimiterUnavailable error when a temporary condition prevents the
+// limiter from determining whether capacity is available. This includes
+// acquisition timeouts, active operational backoff, and local queue saturation.
+// Invalid or incomplete acquisition responses are internal failures and are
+// returned without being converted to ErrCapacityExceeded or
+// ErrLimiterUnavailable.
 //
 // A bucket has at most one refill generation. Its immutable lease request and
 // any waiter admitted for the operation that triggered the refill are stored
 // while holding the bucket mutex. This happens before the generation is
 // published to the limiter queue. As a result, every published generation is
 // already fully initialized and does not require a separate activation phase.
-// If publication fails, the generation and all its waiters are rejected.
+// If publication fails, the generation and all its waiters are rejected with
+// an ErrLimiterUnavailable error.
 //
 // Waiters are admitted in FIFO order, up to the number of units requested by
 // the generation. While holding the bucket mutex, the limiter applies the
@@ -58,19 +71,19 @@
 // It is not the bucket's lease size. Positive local capacity is excluded
 // because unrelated local requests may consume it before the lease arrives.
 // A partial grant serves only the first consecutive FIFO waiters that can be
-// satisfied. This deliberately prevents smaller operations from being served
-// before an older, more expensive request. Cancellation removes a pending
-// waiter and returns its reserved units to the admission budget for later
-// waiters.
+// satisfied. This deliberately prevents operations requiring fewer units from
+// being served before an older operation requiring more. Cancellation removes
+// a pending waiter and returns its reserved units to the admission budget for
+// later waiters.
 //
-// A caller may Restore capacity that it consumed but ultimately did not use.
+// A caller may Restore units that it consumed but ultimately did not use.
 // Restoration affects only local capacity and cannot raise it above the local
 // target. It neither cancels refills nor wakes waiters.
 //
 // Each local target is capped by both the lease size and the capacity reported
 // by PostgreSQL. A refill is normally prepared when an operation cannot be
 // served, when local capacity falls below a threshold calculated from the local
-// target, or when an operation leaves no more capacity than its own cost.
+// target, or when an operation leaves no more capacity than it consumed.
 // Targets and thresholds are intentionally simple and do not adapt to traffic
 // rate or acquisition latency.
 //
@@ -92,11 +105,13 @@
 // reported capacity, and the reported capacity must be positive. An invalid or
 // incomplete response causes all requests in the local batch to fail.
 //
-// Acquisition errors and invalid responses start a short global backoff. A
-// call that observes active backoff may still use positive local capacity, but
-// it neither publishes a new refill nor admits a waiter. The batcher discards a
-// queued generation if backoff is still active when the generation is
-// processed. Shutdown cancellation does not start backoff.
+// Acquisition errors and invalid responses start a short global backoff that
+// stores the corresponding operational or internal error. A call made while
+// backoff is active may still use positive local capacity, but it neither
+// publishes a new refill nor admits a waiter. If the call cannot use local
+// capacity, it returns the stored error. If backoff is still active when the
+// batcher processes a queued generation, it rejects that generation with the
+// stored error. Shutdown cancellation does not start backoff.
 //
 // # Bucket lifetime and shutdown
 //
@@ -108,9 +123,9 @@
 // Limiter.Close has a strict lifecycle precondition. Before calling it, the
 // caller must stop all use of the limiter and every bucket created by it. No
 // exported Limiter or Bucket method may be in progress. Close cancels lease
-// acquisition, stops the batcher, and discards queued refills. It waits for the
-// batcher until its context ends. If that context expires, shutdown remains in
-// progress.
+// acquisition, stops the batcher, and discards queued refills. It waits until
+// shutdown completes or the context passed to Close ends. If the context ends
+// first, shutdown remains in progress.
 //
 // Unused leases are never returned during shutdown. Returning them safely
 // would require persistent lease identifiers and a fencing mechanism.
@@ -122,10 +137,11 @@
 //
 //   - Consume never accesses PostgreSQL on the caller's goroutine.
 //   - Each Bucket has at most one local refill generation.
+//   - A batch contains at most one refill for each subject.
 //   - The bucket mutex protects capacity, refill, and waiter state.
 //   - No bucket mutex is held during queue publication or lease acquisition.
 //   - Local available capacity never becomes negative.
-//   - Pending waiter cost never exceeds the units requested when the refill
+//   - Pending waiter units never exceed the units requested when the refill
 //     starts.
 //   - A waiter belongs to one refill generation and is resolved exactly once.
 //   - Granted capacity is added to the current local value, capped at the newly
