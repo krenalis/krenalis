@@ -273,6 +273,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	ctx = dialer.WithoutOrganization(ctx)
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &arn,
 	})

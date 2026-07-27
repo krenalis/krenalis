@@ -166,17 +166,51 @@ func TestDialDisabled(t *testing.T) {
 }
 
 func TestDialWithoutOrganization(t *testing.T) {
-	// The organization is unknown, so the bytes are not counted even if the
-	// metrics are enabled.
+	// The organization is mandatory: an empty one is a broken call site, and it
+	// panics instead of silently counting nothing. It panics even when counting
+	// is disabled, so that it is caught regardless of the metrics.
+	for _, enabled := range []bool{false, true} {
+		if enabled {
+			enable(t)
+		}
+		for name, f := range map[string]func(){
+			"Dial":             func() { Dial("") },
+			"DialWith":         func() { DialWith("") },
+			"WithOrganization": func() { WithOrganization(t.Context(), "") },
+		} {
+			func() {
+				defer func() {
+					if recover() == nil {
+						t.Errorf("%s with an empty organization did not panic (counting enabled: %t)", name, enabled)
+					}
+				}()
+				f()
+			}()
+		}
+	}
+}
+
+func TestPlainDial(t *testing.T) {
+	// The connections dialed with no organization are not instrumented and no
+	// bytes are counted, even when counting is enabled.
 	enable(t)
 	addr := echoServer(t)
-	egress := egress(t, "")
-	conn := write(t, Dial(""), addr, "hello")
+	conn := write(t, PlainDial(), addr, "hello")
 	if _, ok := conn.(*instrumentedConn); ok {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
-	if n := egress(); n != 0 {
-		t.Fatalf("counted %d bytes, expecting 0", n)
+	var dialed bool
+	dial := PlainDialWith()(func(ctx context.Context, network, address string) (net.Conn, error) {
+		dialed = true
+		var d net.Dialer
+		return d.DialContext(ctx, network, address)
+	})
+	conn = write(t, dial, addr, "hello")
+	if !dialed {
+		t.Fatal("the connection has not been established by the given dial function")
+	}
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 }
 
@@ -291,12 +325,27 @@ func TestDialWithContext(t *testing.T) {
 }
 
 func TestDialWithContextWithoutOrganization(t *testing.T) {
-	// The context carries no organization, so the bytes are not counted even if
-	// the metrics are enabled.
-	enable(t)
+	// The context carries no organization at all, which cannot be told from one
+	// that has been forgotten, so the dial fails instead of silently counting
+	// nothing. It fails even when counting is disabled.
 	addr := echoServer(t)
+	for _, enabled := range []bool{false, true} {
+		if enabled {
+			enable(t)
+		}
+		_, err := DialWithContext(nil)(t.Context(), "tcp", addr)
+		if !errors.Is(err, ErrNoOrganizationInContext) {
+			t.Fatalf("dialing returned the error %v, expecting ErrNoOrganizationInContext (counting enabled: %t)", err, enabled)
+		}
+	}
+
+	// A context marked as dialing on behalf of no organization, instead, dials
+	// and counts nothing, even though counting is enabled.
 	egress := egress(t, "")
-	conn := write(t, DialWithContext(nil), addr, "hello")
+	dial := DialWithContext(nil)
+	conn := write(t, func(ctx context.Context, network, address string) (net.Conn, error) {
+		return dial(WithoutOrganization(ctx), network, address)
+	}, addr, "hello")
 	if _, ok := conn.(*instrumentedConn); ok {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
@@ -306,8 +355,8 @@ func TestDialWithContextWithoutOrganization(t *testing.T) {
 }
 
 func TestDialWithContextDisabled(t *testing.T) {
-	// The metrics are disabled, so the organization is not put into the context
-	// and the dialer is transparent.
+	// The metrics are disabled, so no bytes are counted, but the organization is
+	// carried by the context anyway, so that it is checked in any case.
 	addr := echoServer(t)
 	egress := egress(t, "org-ctx-disabled")
 	ctx := WithOrganization(t.Context(), "org-ctx-disabled")

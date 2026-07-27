@@ -76,7 +76,9 @@ func NewApplication[T any](code string, settings any) (T, error) {
 		Code:           code,
 		EndpointGroups: registeredApplications.EndpointGroups,
 	}
-	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).ConnectorClient(connector, "", "", "")
+	// A connector under test is not used on behalf of an organization, so the
+	// bytes it sends are not counted and it uses the base transport.
+	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).PlainConnectorClient(connector)
 	app, err := registeredApplications.New(&connectors.ApplicationEnv{
 		Settings:   newSettingsStore(s),
 		HTTPClient: httpClient,

@@ -173,13 +173,14 @@ func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
 // then reused by all its clients, so that all the connections of an organization
 // share the same connection pool.
 //
-// If organizationID is empty, the requests are not made on behalf of any
-// organization and the base transport is returned. If the organization does not
-// exist, the returned transport fails every request with [ErrNoOrganization],
-// because the clients are created without an error to return.
+// It panics if organizationID is empty: the clients whose requests are not made
+// on behalf of an organization are created with [HTTP.PlainConnectorClient],
+// which uses the base transport as it is. If the organization does not exist,
+// the returned transport fails every request with [ErrNoOrganization], because
+// the clients are created without an error to return.
 func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 	if organizationID == "" {
-		return h.transport
+		panic("core/connectors/httpclient: empty organization ID")
 	}
 	h.organizationsMu.Lock()
 	defer h.organizationsMu.Unlock()
@@ -289,8 +290,9 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // requests it sends are made on behalf of one, like when it serves the UI of a
 // connection that is being created. organizationID is the ID of that
 // organization, and the bytes the returned client sends are attributed to it.
-// If it is empty, the bytes are not counted. If the organization does not
-// exist, or it is deleted later, the requests of the client fail with
+// It panics if it is empty: use [HTTP.PlainConnectorClient] when the connector
+// is not used on behalf of an organization. If the organization does not exist,
+// or it is deleted later, the requests of the client fail with
 // [ErrNoOrganization].
 func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
@@ -302,6 +304,25 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clien
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
 		transport:    h.transportFor(organizationID),
+	}
+	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
+	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
+	return c
+}
+
+// PlainConnectorClient returns an HTTP client for the provided connector whose
+// requests are not made on behalf of any organization: the bytes they send are
+// not counted and they are sent with the base transport, shared with every
+// other client that has no organization.
+//
+// Use it, in place of [HTTP.ConnectorClient], when there is no organization to
+// attribute the bytes sent to, as for a connector under test. The returned
+// client does not support OAuth.
+func (h *HTTP) PlainConnectorClient(connector *state.Connector) *Client {
+	c := &Client{
+		http:      h,
+		connector: connector.Code,
+		transport: h.transport,
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)

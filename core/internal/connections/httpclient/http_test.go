@@ -100,9 +100,21 @@ func TestTransportCreatedWhenNeeded(t *testing.T) {
 	if other := client(t, h, "org-other").transport; other == transport {
 		t.Fatal("two organizations share the same transport")
 	}
-	if none := client(t, h, "").transport; none != h.transport {
+	if none := h.PlainConnectorClient(&state.Connector{Code: "test"}).transport; none != h.transport {
 		t.Fatal("a client with no organization does not make its requests with the base transport")
 	}
+
+	// The organization is mandatory: a client whose requests are not made on
+	// behalf of one is created with PlainConnectorClient, so an empty
+	// organization is a broken call site and it panics.
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("a client with an empty organization did not panic")
+			}
+		}()
+		client(t, h, "")
+	}()
 }
 
 func TestTransportWithoutCounting(t *testing.T) {
