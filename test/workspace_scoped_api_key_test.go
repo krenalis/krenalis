@@ -25,7 +25,8 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 
 	token := k.CreateWorkspaceRestrictedAPIKey("workspace-scoped")
 	headers := http.Header{
-		"Authorization": []string{"Bearer " + token},
+		"Authorization":      []string{"Bearer " + token},
+		"Krenalis-Workspace": nil, // Test endpoint authorization rather than conflicting-header validation.
 	}
 
 	t.Run("list workspaces", func(t *testing.T) {

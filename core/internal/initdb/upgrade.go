@@ -13,8 +13,16 @@ import (
 )
 
 const (
-	workspacesOrganizationIndex = "workspaces_organization_idx"
-	connectionsWorkspaceIndex   = "connections_workspace_idx"
+	workspacesOrganizationIndex                                        = "workspaces_organization_idx"
+	connectionsWorkspaceIndex                                          = "connections_workspace_idx"
+	pipelinesMetricsPipelineIndex                                      = "pipelines_metrics_pipeline_idx"
+	pipelinesMetricsOrganizationWorkspaceTimeslotIndex                 = "pipelines_metrics_organization_workspace_timeslot_idx"
+	pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex = "pipelines_metrics_org_ws_conn_target_timeslot_idx"
+	pipelinesMetricsOrganizationConnectionTimeslotIndex                = "pipelines_metrics_organization_connection_timeslot_idx"
+	pipelinesMetricsOrganizationTimeslotIndex                          = "pipelines_metrics_organization_timeslot_idx"
+	pipelinesMetricsWorkspaceTimeslotIndex                             = "pipelines_metrics_workspace_timeslot_idx"
+	pipelinesMetricsConnectionTimeslotIndex                            = "pipelines_metrics_connection_timeslot_idx"
+	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
 const organizationConnectorReferencesView = `
@@ -132,6 +140,111 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ALTER COLUMN pipelines_limit DROP DEFAULT`,
 			`CREATE INDEX IF NOT EXISTS ` + workspacesOrganizationIndex + ` ON workspaces (organization)`,
 			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceIndex + ` ON connections (workspace)`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS organization varchar(12) REFERENCES organizations ON DELETE CASCADE`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS workspace varchar(12)`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS connection varchar(12)`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS target pipeline_target`,
+			`UPDATE pipelines_metrics m
+				SET organization = w.organization,
+					workspace = c.workspace,
+					connection = c.id,
+					target = p.target
+				FROM pipelines p
+				JOIN connections c ON c.id = p.connection
+				JOIN workspaces w ON w.id = c.workspace
+				WHERE m.pipeline = p.id`,
+			`DELETE FROM pipelines_metrics WHERE organization IS NULL OR workspace IS NULL OR connection IS NULL OR target IS NULL`,
+			`DO $$
+				DECLARE
+					pipeline_position integer;
+					connection_position integer;
+				BEGIN
+					SELECT attnum INTO pipeline_position
+					FROM pg_attribute
+					WHERE attrelid = 'pipelines_metrics'::regclass
+						AND attname = 'pipeline'
+						AND NOT attisdropped;
+
+					SELECT attnum INTO connection_position
+					FROM pg_attribute
+					WHERE attrelid = 'pipelines_metrics'::regclass
+						AND attname = 'connection'
+						AND NOT attisdropped;
+
+					IF pipeline_position < connection_position THEN
+						CREATE TABLE pipelines_metrics_reordered (
+							organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+							workspace varchar(12) NOT NULL,
+							connection varchar(12) NOT NULL,
+							pipeline varchar(12) NOT NULL,
+							target pipeline_target NOT NULL,
+							timeslot integer NOT NULL,
+							passed_0 integer NOT NULL,
+							passed_1 integer NOT NULL,
+							passed_2 integer NOT NULL,
+							passed_3 integer NOT NULL,
+							passed_4 integer NOT NULL,
+							passed_5 integer NOT NULL,
+							failed_0 integer NOT NULL,
+							failed_1 integer NOT NULL,
+							failed_2 integer NOT NULL,
+							failed_3 integer NOT NULL,
+							failed_4 integer NOT NULL,
+							failed_5 integer NOT NULL,
+							PRIMARY KEY (pipeline, timeslot)
+						);
+
+						INSERT INTO pipelines_metrics_reordered (
+							organization, workspace, connection, pipeline, target, timeslot,
+							passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
+							failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+						)
+						SELECT
+							organization, workspace, connection, pipeline, target, timeslot,
+							passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
+							failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+						FROM pipelines_metrics;
+
+						DROP TABLE pipelines_metrics;
+						ALTER TABLE pipelines_metrics_reordered RENAME TO pipelines_metrics;
+					END IF;
+				END $$`,
+			`DO $$
+				DECLARE
+					c record;
+				BEGIN
+					FOR c IN
+						SELECT
+							conname AS old_name,
+							'pipelines_metrics_' ||
+								substr(conname, length('pipelines_metrics_reordered_') + 1) AS new_name
+						FROM pg_constraint
+						WHERE conrelid = 'pipelines_metrics'::regclass
+							AND left(conname, length('pipelines_metrics_reordered_')) =
+								'pipelines_metrics_reordered_'
+					LOOP
+						IF NOT EXISTS (
+							SELECT FROM pg_constraint
+							WHERE conrelid = 'pipelines_metrics'::regclass
+								AND conname = c.new_name
+						) THEN
+							EXECUTE format('ALTER TABLE pipelines_metrics RENAME CONSTRAINT %I TO %I', c.old_name, c.new_name);
+						END IF;
+					END LOOP;
+				END $$`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN organization SET NOT NULL`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN workspace SET NOT NULL`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN connection SET NOT NULL`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN target SET NOT NULL`,
+			`ALTER TABLE pipelines_metrics DROP CONSTRAINT IF EXISTS pipelines_metrics_pipeline_fkey`,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsPipelineIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationWorkspaceTimeslotIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationConnectionTimeslotIndex,
+			`DROP INDEX IF EXISTS ` + pipelinesMetricsOrganizationTimeslotIndex,
+			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
+			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
+			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,

@@ -64,6 +64,13 @@ import { AccessKeyType } from './types/organization';
 
 const API_BASE_PATH = '/v1';
 
+type PipelineMetricsSelection = {
+	workspaces?: string[];
+	connections?: string[];
+	pipelines?: string[];
+	target?: PipelineTarget;
+};
+
 class API {
 	apiURL: string;
 	workspaceID: string;
@@ -827,14 +834,42 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDate = async (start: Date, end: Date, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsQuery = (selection?: PipelineMetricsSelection): string => {
+		if (!selection) {
+			return '';
+		}
+		const selectionCount = [selection.workspaces, selection.connections, selection.pipelines].filter(
+			(v) => v != null,
+		).length;
+		if (selectionCount > 1) {
+			throw new Error('workspaces, connections and pipelines cannot be used together');
+		}
+		let params = [];
+		if (selection.workspaces != null) {
+			params.push(`workspaces=${selection.workspaces.map(encodeURIComponent).join(',')}`);
+		}
+		if (selection.connections != null) {
+			params.push(`connections=${selection.connections.map(encodeURIComponent).join(',')}`);
+		}
+		if (selection.pipelines != null) {
+			params.push(`pipelines=${selection.pipelines.map(encodeURIComponent).join(',')}`);
+		}
+		if (selection.target != null) {
+			params.push(`target=${encodeURIComponent(selection.target)}`);
+		}
+		return params.length > 0 ? `?${params.join('&')}` : '';
+	};
+
+	pipelineMetricsPerDate = async (
+		start: Date,
+		end: Date,
+		selection?: PipelineMetricsSelection,
+	): Promise<PipelineMetrics> => {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/dates/` +
-				`${encodeURIComponent(sd)}/` +
-				`${encodeURIComponent(ed)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/dates/` + `${encodeURIComponent(sd)}/` + `${encodeURIComponent(ed)}` + q,
 			http.GET,
 			this.workspaceID,
 		);
@@ -843,11 +878,10 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerDay = async (days: number, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerDay = async (days: number, selection?: PipelineMetricsSelection): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/days/` +
-				`${encodeURIComponent(days)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/days/` + `${encodeURIComponent(days)}` + q,
 			http.GET,
 			this.workspaceID,
 		);
@@ -856,11 +890,10 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerHour = async (hours: number, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerHour = async (hours: number, selection?: PipelineMetricsSelection): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/hours/` +
-				`${encodeURIComponent(hours)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/hours/` + `${encodeURIComponent(hours)}` + q,
 			http.GET,
 			this.workspaceID,
 		);
@@ -869,11 +902,13 @@ class Workspaces {
 		return r;
 	};
 
-	pipelineMetricsPerMinute = async (minutes: number, pipelines: string[]): Promise<PipelineMetrics> => {
+	pipelineMetricsPerMinute = async (
+		minutes: number,
+		selection?: PipelineMetricsSelection,
+	): Promise<PipelineMetrics> => {
+		const q = this.pipelineMetricsQuery(selection);
 		const r = await call(
-			`${this.apiURL}/pipelines/metrics/minutes/` +
-				`${encodeURIComponent(minutes)}?` +
-				`pipelines=${pipelines.join(',')}`,
+			`${this.apiURL}/pipelines/metrics/minutes/` + `${encodeURIComponent(minutes)}` + q,
 			http.GET,
 			this.workspaceID,
 		);

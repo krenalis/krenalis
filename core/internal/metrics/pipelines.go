@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -32,10 +33,50 @@ type Error struct {
 
 // Metrics represents the metrics for a time period.
 type Metrics struct {
-	Start  time.Time `json:"start"`
-	End    time.Time `json:"end"`
-	Passed [][6]int  `json:"passed"`
-	Failed [][6]int  `json:"failed"`
+	Start  time.Time
+	End    time.Time
+	Series []Series
+}
+
+// Series represents metrics for a single grouping.
+type Series struct {
+	Workspace  string
+	Connection string
+	Pipeline   string
+	Passed     [][6]int
+	Failed     [][6]int
+}
+
+// Selection describes which metric series are returned.
+type Selection struct {
+	Workspaces  []string
+	Connections []string
+	Pipelines   []string
+	Target      Target
+}
+
+// Target represents a target.
+type Target int
+
+const (
+	TargetNone Target = iota
+	TargetEvent
+	TargetUser
+	TargetGroup
+)
+
+func (t Target) String() string {
+	switch t {
+	case TargetNone:
+		return "None"
+	case TargetEvent:
+		return "Event"
+	case TargetUser:
+		return "User"
+	case TargetGroup:
+		return "Group"
+	}
+	panic("core/internal/metrics: invalid Target")
 }
 
 // Errors returns the errors for the provided pipelines within the time range
@@ -100,52 +141,118 @@ func (c *Collector) Errors(ctx context.Context, start, end time.Time, pipelines 
 // MetricsPerDate returns metrics aggregated by day for the time interval
 // between the specified start and end dates. Both dates must be within the
 // range [MinTime,MaxTime], and the day of the start date must be at least one
-// day before the day of the end date. pipelines specifies the pipelines for
-// which metrics are returned and cannot be empty.
-func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, pipelines []string) (Metrics, error) {
+// day before the day of the end date. selection specifies which metric series
+// are returned.
+func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, selection Selection) (Metrics, error) {
+	return c.queryMetrics(ctx, start, end, Day, selection)
+}
 
-	number := int(end.Sub(start).Hours() / 24)
+// MetricsPerTimeUnit returns metrics for the specified number of minutes,
+// hours, or days based on the unit, which can be Minute, Hour, or Day, up to
+// the current time. number must be in the following ranges: [1,60] for minutes,
+// [1,48] for hours, and [1,30] for days. selection specifies which metric
+// series are returned.
+func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, selection Selection) (Metrics, error) {
+	now := time.Now().UTC()
+	end := now.Truncate(unit).Add(unit)
+	start := end.Add(-time.Duration(number) * unit)
+	return c.queryMetrics(ctx, start, end, unit, selection)
+}
 
-	metrics := Metrics{
-		Start:  start,
-		End:    end,
-		Passed: make([][6]int, number),
-		Failed: make([][6]int, number),
+func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, resolution time.Duration, selection Selection) (Metrics, error) {
+
+	var query strings.Builder
+	query.WriteString("SELECT ")
+	switch {
+	case selection.Workspaces != nil:
+		query.WriteString("workspace, ")
+	case selection.Connections != nil:
+		query.WriteString("connection, ")
+	case selection.Pipelines != nil:
+		query.WriteString("pipeline, ")
+	}
+	query.WriteString("timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
+		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
+		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3")
+	switch {
+	case selection.Workspaces != nil:
+		query.WriteString(" AND workspace IN (")
+		writeQuotedValues(&query, selection.Workspaces)
+		query.WriteByte(')')
+	case selection.Connections != nil:
+		query.WriteString(" AND connection IN (")
+		writeQuotedValues(&query, selection.Connections)
+		query.WriteByte(')')
+	case selection.Pipelines != nil:
+		query.WriteString(" AND pipeline IN (")
+		writeQuotedValues(&query, selection.Pipelines)
+		query.WriteByte(')')
+	}
+	if selection.Target != TargetNone {
+		query.WriteString(" AND target = ")
+		query.WriteString(db.Quote(selection.Target.String()))
+	}
+	query.WriteString("\nGROUP BY ")
+	switch {
+	case selection.Workspaces != nil:
+		query.WriteString("workspace, slot\nORDER BY workspace, slot")
+	case selection.Connections != nil:
+		query.WriteString("connection, slot\nORDER BY connection, slot")
+	case selection.Pipelines != nil:
+		query.WriteString("pipeline, slot\nORDER BY pipeline, slot")
 	}
 
+	divisor := int32(resolution / time.Minute)
 	tsStart := TimeSlotFromTime(start)
 	tsEnd := TimeSlotFromTime(end) - 1
 
-	query := bytes.NewBufferString("SELECT timeslot/(24*60) AS day, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
-		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
-		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $1 AND $2 AND pipeline IN (")
-	for i, pipeline := range pipelines {
-		if i > 0 {
-			query.WriteByte(',')
-		}
-		query.WriteString(db.Quote(pipeline))
-	}
-	query.WriteString(")\nGROUP BY day\nORDER BY day")
-
-	rows, err := c.db.Query(ctx, query.String(), tsStart, tsEnd)
+	rows, err := c.db.Query(ctx, query.String(), divisor, tsStart, tsEnd)
 	if err != nil {
 		return Metrics{}, err
 	}
 	defer rows.Close()
 
-	var slot int32
-	var passed, failed [6]int
+	metrics := Metrics{
+		Start: start,
+		End:   end,
+	}
+
+	number := int(end.Sub(start) / resolution)
+
+	var currentID string
+	var series *Series
+
 	for rows.Next() {
-		if err = rows.Scan(&slot, &passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
-			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5]); err != nil {
+		var slot int32
+		var id string
+		var passed, failed [6]int
+		err = rows.Scan(&id, &slot,
+			&passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
+			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5])
+		if err != nil {
 			return Metrics{}, err
 		}
-		i := int(slot - tsStart/(24*60))
+		i := int(slot - tsStart/divisor)
 		if i < 0 || i >= number {
-			return Metrics{}, fmt.Errorf("pipelines_metrics table contains a timeslot that is out of range")
+			return Metrics{}, fmt.Errorf("pipelines_metrics table contains timeslot %d that is out of range", slot)
 		}
-		metrics.Passed[i] = passed
-		metrics.Failed[i] = failed
+		if id != currentID {
+			currentID = id
+			metrics.Series = append(metrics.Series, Series{})
+			series = &metrics.Series[len(metrics.Series)-1]
+			series.Passed = make([][6]int, number)
+			series.Failed = make([][6]int, number)
+			switch {
+			case selection.Workspaces != nil:
+				series.Workspace = id
+			case selection.Connections != nil:
+				series.Connection = id
+			case selection.Pipelines != nil:
+				series.Pipeline = id
+			}
+		}
+		series.Passed[i] = passed
+		series.Failed[i] = failed
 	}
 	if err := rows.Err(); err != nil {
 		return Metrics{}, err
@@ -154,61 +261,11 @@ func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, pi
 	return metrics, nil
 }
 
-// MetricsPerTimeUnit returns metrics for the specified number of minutes,
-// hours, or days based on the unit, which can be Minute, Hour, or Day, up to
-// the current time. number must be in the following ranges: [1,60] for minutes,
-// [1,48] for hours, and [1,30] for days. pipelines represents the pipelines for
-// which metrics are returned and cannot be empty.
-func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, pipelines []string) (Metrics, error) {
-
-	now := time.Now().UTC()
-	end := now.Truncate(unit).Add(unit)
-
-	metrics := Metrics{
-		Start:  end.Add(-time.Duration(number) * unit),
-		End:    end,
-		Passed: make([][6]int, number),
-		Failed: make([][6]int, number),
-	}
-
-	divisor := int32(unit / time.Minute)
-	tsStart := TimeSlotFromTime(metrics.Start)
-	tsEnd := TimeSlotFromTime(metrics.End) - 1
-
-	query := bytes.NewBufferString("SELECT timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
-		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
-		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3 AND pipeline IN (")
-	for i, pipeline := range pipelines {
+func writeQuotedValues(b *strings.Builder, values []string) {
+	for i, value := range values {
 		if i > 0 {
-			query.WriteByte(',')
+			b.WriteByte(',')
 		}
-		query.WriteString(db.Quote(pipeline))
+		b.WriteString(db.Quote(value))
 	}
-	query.WriteString(")\nGROUP BY slot\nORDER BY slot")
-
-	rows, err := c.db.Query(ctx, query.String(), divisor, tsStart, tsEnd)
-	if err != nil {
-		return Metrics{}, err
-	}
-	defer rows.Close()
-
-	var slot int32
-	var passed, failed [6]int
-	for rows.Next() {
-		if err = rows.Scan(&slot, &passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
-			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5]); err != nil {
-			return Metrics{}, err
-		}
-		i := int(slot - tsStart/divisor)
-		if i < 0 || i >= number {
-			return Metrics{}, fmt.Errorf("pipelines_metrics table contains a timeslot that is out of range")
-		}
-		metrics.Passed[i] = passed
-		metrics.Failed[i] = failed
-	}
-	if err := rows.Err(); err != nil {
-		return Metrics{}, err
-	}
-
-	return metrics, nil
 }

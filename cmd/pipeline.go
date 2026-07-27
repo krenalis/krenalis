@@ -18,9 +18,6 @@ type pipeline struct {
 
 // Delete deletes a pipeline.
 func (pipeline pipeline) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := validateForbiddenBody(r); err != nil {
-		return nil, err
-	}
 	p, err := pipeline.id(r)
 	if err != nil {
 		return nil, err

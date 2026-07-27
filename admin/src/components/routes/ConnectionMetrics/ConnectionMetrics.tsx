@@ -8,6 +8,8 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
@@ -71,7 +73,7 @@ const ConnectionMetrics = () => {
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [selectedTarget, setSelectedTarget] = useState<PipelineTarget>(
-		new URLSearchParams(window.location.search).get('target') === 'event'
+		new URLSearchParams(window.location.search).get('target') === 'event' && c.supportsEventTarget
 			? 'Event'
 			: new URLSearchParams(window.location.search).get('target') === 'user'
 				? 'User'
@@ -263,10 +265,25 @@ const ConnectionMetrics = () => {
 				setIsLoading(false);
 			}, 300);
 		};
+
+		const addSupportedTarget = (target: PipelineTarget) => {
+			if (!supportedTargets.current.includes(target)) {
+				supportedTargets.current.push(target);
+			}
+		};
+
 		const fetchData = async () => {
 			let userPipelinesIds: string[] = [];
 			let eventPipelinesIds: string[] = [];
-			if (selectedPipeline == null) {
+			const hasSelectedPipeline = selectedPipeline != null;
+			if (hasSelectedPipeline) {
+				const p = c.pipelines.find((pipeline) => pipeline.id === selectedPipeline);
+				if (p.target === 'User') {
+					userPipelinesIds.push(p.id);
+				} else if (p.target === 'Event') {
+					eventPipelinesIds.push(p.id);
+				}
+			} else {
 				for (const pipeline of c.pipelines) {
 					if (pipeline.target === 'User') {
 						userPipelinesIds.push(pipeline.id);
@@ -274,40 +291,41 @@ const ConnectionMetrics = () => {
 						eventPipelinesIds.push(pipeline.id);
 					}
 				}
+			}
+
+			if (hasSelectedPipeline) {
+				if (userPipelinesIds.length > 0) {
+					addSupportedTarget('User');
+				}
+				if (eventPipelinesIds.length > 0) {
+					addSupportedTarget('Event');
+				}
 			} else {
-				const p = c.pipelines.find((pipeline) => pipeline.id === selectedPipeline);
-				if (p.target === 'User') {
-					userPipelinesIds.push(p.id);
-				} else if (p.target === 'Event') {
-					eventPipelinesIds.push(p.id);
+				addSupportedTarget('User');
+				if (c.supportsEventTarget) {
+					addSupportedTarget('Event');
 				}
 			}
 
-			if (userPipelinesIds.length === 0 && eventPipelinesIds.length === 0) {
-				stopLoading();
-				return;
-			}
-
-			if (userPipelinesIds.length > 0) {
-				supportedTargets.current.push('User');
-			}
-
-			if (eventPipelinesIds.length > 0) {
-				supportedTargets.current.push('Event');
-			}
-
-			let fetchMetrics: (...args) => Promise<PipelineMetrics> = null;
+			let fetchMetrics: (pipelineIds: string[], target: PipelineTarget) => Promise<PipelineMetrics> = null;
 			if (selectedMetricsRange === 'last15Minutes') {
-				fetchMetrics = async (pipelineIds) =>
-					await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, pipelineIds);
+				fetchMetrics = async (pipelineIds, target) =>
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, { pipelines: pipelineIds })
+						: await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, { connections: [c.id], target });
 			} else if (selectedMetricsRange === 'last24Hours') {
-				fetchMetrics = async (pipelineIds) =>
-					await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, pipelineIds);
+				fetchMetrics = async (pipelineIds, target) =>
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, { pipelines: pipelineIds })
+						: await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, { connections: [c.id], target });
 			} else if (selectedMetricsRange === 'last7Days') {
-				fetchMetrics = async (pipelineIds) =>
-					await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, pipelineIds);
+				fetchMetrics = async (pipelineIds, target) =>
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, { pipelines: pipelineIds })
+						: await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, { connections: [c.id], target });
 			} else {
-				// end date must be shifted by one day to retrieve the
+				// Custom range.
+				// End date must be shifted by one day to retrieve the
 				// metrics including the last selected day.
 				const endDate = new Date(customMetricsRange[0].endDate);
 				endDate.setDate(endDate.getDate() + 1);
@@ -319,8 +337,15 @@ const ConnectionMetrics = () => {
 					handleError(err);
 					return;
 				}
-				fetchMetrics = async (pipelineIds) =>
-					await api.workspaces.pipelineMetricsPerDate(customMetricsRange[0].startDate, endDate, pipelineIds);
+				fetchMetrics = async (pipelineIds, target) =>
+					hasSelectedPipeline
+						? await api.workspaces.pipelineMetricsPerDate(customMetricsRange[0].startDate, endDate, {
+								pipelines: pipelineIds,
+							})
+						: await api.workspaces.pipelineMetricsPerDate(customMetricsRange[0].startDate, endDate, {
+								connections: [c.id],
+								target,
+							});
 			}
 
 			let target = selectedTarget;
@@ -333,7 +358,7 @@ const ConnectionMetrics = () => {
 
 			let metrics: PipelineMetrics;
 			try {
-				metrics = await fetchMetrics(ids);
+				metrics = await fetchMetrics(ids, target);
 			} catch (err) {
 				handleError(err);
 				stopLoading();
@@ -347,7 +372,10 @@ const ConnectionMetrics = () => {
 
 			let errorRes: PipelineErrorsResponse;
 			try {
-				errorRes = await api.workspaces.pipelineErrors(metrics.start, metrics.end, ids, 0, 50, null);
+				errorRes =
+					ids.length > 0
+						? await api.workspaces.pipelineErrors(metrics.start, metrics.end, ids, 0, 50, null)
+						: { errors: [] };
 			} catch (err) {
 				handleError(err);
 				stopLoading();
@@ -557,7 +585,7 @@ const ConnectionMetrics = () => {
 								Profiles
 							</SlButton>
 						</SlButtonGroup>
-						{c.pipelines?.length > 1 &&
+						{c.pipelines?.some((p) => p.target === selectedTarget) &&
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
 								<SlSelect
 									size='small'
@@ -663,7 +691,13 @@ const ConnectionMetrics = () => {
 					</div>
 					<div className='connection-metrics__errors'>
 						<div className='connection-metrics__errors-heading'>
-							Error log <span>{titleRange}</span>
+							Error log
+							<div className='connection-metrics__error-count-notice'>
+								<SlTooltip content="These are the last 50 pipeline errors for this connection. They don't include errors from any deleted pipelines.">
+									<SlIcon name='info-circle' />
+								</SlTooltip>
+							</div>
+							<span>{titleRange}</span>
 						</div>
 						<Grid
 							columns={ERRORS_COLUMNS}
@@ -717,20 +751,27 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	if (pipelineMetrics == null) {
 		return [];
 	}
+	const totals = aggregatePipelineMetrics(pipelineMetrics);
 	let points: PipelineMetricsPoint[] = [];
-	const timeLength = pipelineMetrics.passed.length;
-	let counter = timeLength;
-	for (let timeUnit = 0; timeUnit < timeLength; timeUnit++) {
+
+	// Use the number of time units actually returned by the server. If the
+	// response has no series (metrics: []), fall back to the expected time
+	// units for the selected range so the chart still renders a full axis of
+	// empty bars.
+	const timeUnits = totals.passed.length > 0 ? totals.passed.length : computeMetricsTimeUnits(pipelineMetrics, range);
+
+	let counter = timeUnits;
+	for (let timeUnit = 0; timeUnit < timeUnits; timeUnit++) {
 		let failedTotal = 0;
 		for (let i = 0; i < 6; i++) {
 			if (i === 2) {
 				// filtered must not be considered as failed.
 				continue;
 			}
-			failedTotal += pipelineMetrics.failed[timeUnit][i];
+			failedTotal += totals.failed[timeUnit]?.[i] ?? 0;
 		}
-		let filteredTotal = pipelineMetrics.failed[timeUnit][2];
-		let passedTotal = pipelineMetrics.passed[timeUnit][5];
+		let filteredTotal = totals.failed[timeUnit]?.[2] ?? 0;
+		let passedTotal = totals.passed[timeUnit]?.[5] ?? 0;
 		let total = failedTotal + filteredTotal + passedTotal;
 		const d = new Date(pipelineMetrics.end.getTime());
 		let time = '';
@@ -755,6 +796,20 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	return points;
 };
 
+const computeMetricsTimeUnits = (pipelineMetrics: PipelineMetrics, range: metricsRange): number => {
+	if (range === 'last15Minutes') {
+		return MINUTES_COUNT;
+	}
+	if (range === 'last24Hours') {
+		return HOURS_COUNT;
+	}
+	if (range === 'last7Days') {
+		return DAYS_COUNT;
+	}
+	const days = Math.round((pipelineMetrics.end.getTime() - pipelineMetrics.start.getTime()) / ONE_DAY);
+	return Math.max(days, 0);
+};
+
 const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
 	if (pipelineMetrics == null) {
 		return [
@@ -766,14 +821,15 @@ const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
 			{ passed: 0, failed: 0 },
 		];
 	}
+	const totals = aggregatePipelineMetrics(pipelineMetrics);
 	const data = [];
 	for (let i = 0; i < 6; i++) {
 		let totalPassed = 0;
 		let totalFailed = 0;
-		for (const p of pipelineMetrics.passed) {
+		for (const p of totals.passed) {
 			totalPassed += p[i];
 		}
-		for (const f of pipelineMetrics.failed) {
+		for (const f of totals.failed) {
 			totalFailed += f[i];
 		}
 		data.push({
@@ -782,6 +838,26 @@ const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
 		});
 	}
 	return data as FunnelData;
+};
+
+const aggregatePipelineMetrics = (
+	pipelineMetrics: PipelineMetrics,
+): Pick<PipelineMetrics['metrics'][number], 'passed' | 'failed'> => {
+	const first = pipelineMetrics.metrics[0];
+	if (first == null) {
+		return { passed: [], failed: [] };
+	}
+	const passed = first.passed.map(() => [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number]);
+	const failed = first.failed.map(() => [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number]);
+	for (const series of pipelineMetrics.metrics) {
+		for (let timeUnit = 0; timeUnit < series.passed.length; timeUnit++) {
+			for (let step = 0; step < 6; step++) {
+				passed[timeUnit][step] += series.passed[timeUnit][step];
+				failed[timeUnit][step] += series.failed[timeUnit][step];
+			}
+		}
+	}
+	return { passed, failed };
 };
 
 const LOWER_DATE = new Date('1970-01-01');
