@@ -315,7 +315,7 @@ type Warehouse interface {
 	// plain dialer. If it is not called, the warehouse dials with its own default
 	// dialer.
 	//
-	// It cannot be called after any other method, except New.
+	// It cannot be called after any other method of this interface.
 	SetDialWith(dialWith DialWith)
 
 	// Truncate truncates the specified table.
