@@ -118,17 +118,23 @@
 // Buckets are not closed. An owner stops using a bucket when its organization
 // or workspace is no longer canonical. A queued refill, an acquisition in
 // progress, or an admitted waiter may temporarily keep the bucket reachable.
-// After those references are released, Go collects it normally.
+// After those references are released, Go collects it normally. Buckets for
+// deleted organizations and workspaces do not need their unused capacity
+// restored because PostgreSQL removes their authoritative rows by cascade.
 //
 // Limiter.Close has a strict lifecycle precondition. Before calling it, the
 // caller must stop all use of the limiter and every bucket created by it. No
-// exported Limiter or Bucket method may be in progress. Close cancels lease
-// acquisition, stops the batcher, and discards queued refills. It waits until
-// shutdown completes or the context passed to Close ends. If the context ends
-// first, shutdown remains in progress.
+// exported Limiter or Bucket method may be in progress. The caller keeps
+// buckets for existing subjects reachable until Close returns. Close cancels
+// lease acquisition, stops the batcher, and discards queued refills. It waits
+// until the batcher stops or the context passed to Close ends. If the context
+// ends first, the batcher remains in progress and no capacity is restored.
 //
-// Unused leases are never returned during shutdown. Returning them safely
-// would require persistent lease identifiers and a fencing mechanism.
+// After the batcher stops, Close makes one best-effort attempt to restore unused
+// local capacity from reachable buckets. The restoration uses the caller's
+// context, is not retried after an error or cancellation, and ignores subjects
+// deleted from PostgreSQL. A process crash or an interrupted shutdown can
+// therefore still lose unused capacity.
 //
 // # Important invariants
 //
@@ -149,6 +155,6 @@
 //   - Capacity assigned to a waiter is deducted before notification.
 //   - Errors and invalid responses never add capacity.
 //   - Generation identity prevents stale results from affecting newer work.
-//   - Leases are not returned without persistent identity and a fencing
-//     mechanism.
+//   - Shutdown restores unused local capacity at most once and does not retry a
+//     failed or interrupted restoration.
 package ratelimiter

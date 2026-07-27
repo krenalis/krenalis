@@ -194,6 +194,71 @@ $$;
 COMMENT ON FUNCTION acquire_rate_limit_leases(jsonb) IS
     'Refills authoritative rate-limit buckets and leases capacity to application nodes.';
 
+-- restore_rate_limit_capacity adds unused process-local capacity back to the
+-- authoritative buckets during an orderly shutdown. It ignores subjects that
+-- were deleted after the capacity was leased.
+CREATE OR REPLACE FUNCTION restore_rate_limit_capacity(p_restorations jsonb)
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS $$
+BEGIN
+    IF p_restorations IS NULL OR jsonb_typeof(p_restorations) <> 'array' OR jsonb_array_length(p_restorations) = 0 THEN
+        RAISE EXCEPTION 'rate-limit capacity restorations must be a non-empty JSON array';
+    END IF;
+
+    IF jsonb_array_length(p_restorations) > 64 THEN
+        RAISE EXCEPTION 'too many rate-limit capacity restorations';
+    END IF;
+
+    IF EXISTS (
+        SELECT
+        FROM jsonb_to_recordset(p_restorations) AS r(subject_kind text, subject_id text, units integer)
+        WHERE r.subject_kind IS NULL
+           OR r.subject_kind NOT IN ('workspace', 'events', 'organization')
+           OR r.subject_id IS NULL
+           OR r.subject_id !~ '^[1-9A-HJ-NP-Za-km-z]{12}$'
+           OR r.units IS NULL
+           OR r.units < 1
+           OR r.units > 100000
+    ) THEN
+        RAISE EXCEPTION 'invalid rate-limit capacity restoration';
+    END IF;
+
+    IF EXISTS (
+        SELECT r.subject_kind, r.subject_id
+        FROM jsonb_to_recordset(p_restorations) AS r(subject_kind text, subject_id text, units integer)
+        GROUP BY r.subject_kind, r.subject_id
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'duplicate rate-limit capacity restoration subject';
+    END IF;
+
+    -- Lock rows in the same order as acquisition to avoid deadlocks with
+    -- another process that is acquiring or restoring capacity for overlapping
+    -- subjects. The materialized CTE completes that locking before the update.
+    WITH restored AS MATERIALIZED (
+        SELECT r.subject_kind, r.subject_id, r.units
+        FROM jsonb_to_recordset(p_restorations) AS r(subject_kind text, subject_id text, units integer)
+    ), locked AS MATERIALIZED (
+        SELECT b.ctid, r.units
+        FROM restored r
+        JOIN rate_limit_buckets b
+            ON b.subject_kind = r.subject_kind
+            AND b.subject_id = r.subject_id
+        ORDER BY b.subject_kind, b.subject_id
+        FOR UPDATE OF b
+    )
+    UPDATE rate_limit_buckets AS b
+    SET available_units = LEAST(b.capacity_units, b.available_units + locked.units)
+    FROM locked
+    WHERE b.ctid = locked.ctid;
+END;
+$$;
+
+COMMENT ON FUNCTION restore_rate_limit_capacity(jsonb) IS
+    'Restores unused process-local capacity to authoritative rate-limit buckets.';
+
 -- SQL formatting guidelines for this file:
 -- - Use uppercase SQL and PL/pgSQL keywords, including SELECT, FROM, IF, LOOP,
 --   BEGIN, END, and RETURN.

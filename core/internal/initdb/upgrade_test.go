@@ -282,6 +282,45 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	if granted != 30 {
 		t.Fatalf("expected 30-second refill at 60 units per minute to grant 30 units, got %d", granted)
 	}
+
+	_, err = database.Exec(t.Context(), `
+		SELECT restore_rate_limit_capacity($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","units":90},
+			{"subject_kind":"organization","subject_id":"222222222222","units":90}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec(t.Context(), `
+		SELECT restore_rate_limit_capacity($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","units":20}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = database.QueryRow(t.Context(), `
+		SELECT available_units
+		FROM rate_limit_buckets
+		WHERE subject_kind = 'organization'
+		  AND subject_id = '111111111111'`).Scan(&granted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 100 {
+		t.Fatalf("expected restored capacity to be capped at 100 units, got %d", granted)
+	}
+	var count int
+	err = database.QueryRow(t.Context(), `
+		SELECT COUNT(*)
+		FROM rate_limit_buckets
+		WHERE subject_kind = 'organization'
+		  AND subject_id = '222222222222'`).Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected missing subject to remain absent, got %d rows", count)
+	}
 }
 
 func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {

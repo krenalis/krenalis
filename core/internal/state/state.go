@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"runtime"
 	"slices"
 	"sort"
 	"sync"
@@ -219,6 +220,8 @@ func (state *State) Account(id int) (*Account, bool) {
 func (state *State) Close(ctx context.Context) {
 	state.close.cancel()
 	state.rateLimiter.Close(ctx)
+	// Limiter.Close reads unused capacity from buckets still owned by the state.
+	runtime.KeepAlive(state)
 	state.close.Wait()
 	state.notifications.Close()
 }
@@ -1011,7 +1014,7 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 }
 
 // RestoreEventRateLimitCapacity restores capacity previously consumed for
-// events. Restoring capacity never increases the workspace's local event
+// events. Restoring capacity never increases the workspace's node-local event
 // capacity above its current limit.
 //
 // eventCount must be at least 1. The caller must ensure that it does not exceed

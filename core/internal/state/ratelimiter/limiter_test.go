@@ -7,9 +7,15 @@ package ratelimiter
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
+	"runtime"
+	"sort"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+	"weak"
 )
 
 const (
@@ -30,6 +36,7 @@ func newTestRateLimiter(t *testing.T, acquire acquireFunc) *Limiter {
 	t.Helper()
 	limiter := New(nil, Metrics{})
 	limiter.acquire = acquire
+	limiter.restoreBatch = func(context.Context, []unusedCapacity) error { return nil }
 	t.Cleanup(func() { limiter.Close(context.Background()) })
 	return limiter
 }
@@ -55,6 +62,18 @@ func pendingUnits(bucket *Bucket) int {
 	return bucket.refill.pendingUnits
 }
 
+func testUnusedCapacity(count int) []unusedCapacity {
+	unused := make([]unusedCapacity, count)
+	for i := range unused {
+		unused[i] = unusedCapacity{
+			SubjectKind: testSubjectKind,
+			SubjectID:   fmt.Sprintf("subject-%d", i),
+			Units:       1,
+		}
+	}
+	return unused
+}
+
 func waitForRateLimit(t *testing.T, condition func() bool) {
 	t.Helper()
 	deadline := time.NewTimer(time.Second)
@@ -77,7 +96,8 @@ type testCounter struct{ calls atomic.Int32 }
 
 func (counter *testCounter) Inc() { counter.calls.Add(1) }
 
-func TestLimiterCloseStopsBatcher(t *testing.T) {
+// TestLimiterCloseStopsRefiller verifies that Close stops the refiller.
+func TestLimiterCloseStopsRefiller(t *testing.T) {
 	limiter := New(nil, Metrics{})
 	limiter.Close(context.Background())
 	select {
@@ -87,14 +107,224 @@ func TestLimiterCloseStopsBatcher(t *testing.T) {
 	}
 }
 
+// TestLimiterCloseRestoresUnusedCapacity verifies that Close restores unused
+// capacity from reachable buckets.
+func TestLimiterCloseRestoresUnusedCapacity(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	restored := make(chan []unusedCapacity, 1)
+	limiter.restoreBatch = func(_ context.Context, unused []unusedCapacity) error {
+		restored <- append([]unusedCapacity(nil), unused...)
+		return nil
+	}
+
+	requests := limiter.NewBucket("requests", testRateLimitID, testLeaseSize, testLeaseSize)
+	events := limiter.NewBucket("events", testRateLimitID, testLeaseSize, testLeaseSize)
+	applyTestLease(requests, 40, 100)
+	applyTestLease(events, 20, 100)
+	if err := requests.Consume(t.Context(), 10); err != nil {
+		t.Fatalf("consume requests: %v", err)
+	}
+
+	limiter.Close(t.Context())
+	runtime.KeepAlive(requests)
+	runtime.KeepAlive(events)
+	unused := <-restored
+	sort.Slice(unused, func(i, j int) bool { return unused[i].SubjectKind < unused[j].SubjectKind })
+	want := []unusedCapacity{
+		{SubjectKind: "events", SubjectID: testRateLimitID, Units: 20},
+		{SubjectKind: "requests", SubjectID: testRateLimitID, Units: 30},
+	}
+	if !reflect.DeepEqual(unused, want) {
+		t.Fatalf("expected restored capacity %#v, got %#v", want, unused)
+	}
+}
+
+// TestLimiterCloseSkipsCapacityRestoreWhenCanceled verifies that a canceled
+// Close does not begin restoring capacity.
+func TestLimiterCloseSkipsCapacityRestoreWhenCanceled(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	called := atomic.Bool{}
+	limiter.restoreBatch = func(context.Context, []unusedCapacity) error {
+		called.Store(true)
+		return nil
+	}
+	bucket := newTestBucket(limiter)
+	applyTestLease(bucket, 10, 10)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	limiter.Close(ctx)
+	if called.Load() {
+		t.Fatal("expected canceled Close to skip restoring capacity, got a restore attempt")
+	}
+}
+
+// TestCompactBucketsStopsDuringShutdown verifies that shutdown leaves the
+// reference slice unchanged.
+func TestCompactBucketsStopsDuringShutdown(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	bucket := newTestBucket(limiter)
+	limiter.buckets.Lock()
+	limiter.buckets.refs = append(limiter.buckets.refs, weak.Pointer[Bucket]{})
+	limiter.buckets.Unlock()
+
+	limiter.shutdown.cancel()
+	limiter.compactBuckets()
+	limiter.buckets.Lock()
+	refs := limiter.buckets.refs
+	limiter.buckets.Unlock()
+	runtime.KeepAlive(bucket)
+	if len(refs) != 2 || refs[0].Value() != bucket || refs[1].Value() != nil {
+		t.Fatal("expected interrupted compaction to leave references unchanged")
+	}
+}
+
+// TestCompactBucketsRemovesUnavailableReferences verifies that compaction
+// removes unavailable weak references and retains reachable buckets.
+func TestCompactBucketsRemovesUnavailableReferences(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	bucket := newTestBucket(limiter)
+	limiter.buckets.Lock()
+	limiter.buckets.refs = append(limiter.buckets.refs, weak.Pointer[Bucket]{})
+	limiter.buckets.Unlock()
+
+	limiter.compactBuckets()
+	limiter.buckets.Lock()
+	refs := limiter.buckets.refs
+	limiter.buckets.Unlock()
+	runtime.KeepAlive(bucket)
+	if len(refs) != 1 || refs[0].Value() != bucket {
+		t.Fatal("expected compaction to retain the reachable bucket")
+	}
+}
+
+// TestRestoreUnusedCapacityBatchesRequests verifies batching and bounded
+// concurrency when restoring unused capacity.
+func TestRestoreUnusedCapacityBatchesRequests(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	unused := testUnusedCapacity(maxRestoreBatchSize*maxRestoreWorkers + 1)
+	started := make(chan struct{}, maxRestoreWorkers)
+	release := make(chan struct{})
+	var mu sync.Mutex
+	var batches [][]unusedCapacity
+	active := 0
+	maxActive := 0
+	limiter.restoreBatch = func(_ context.Context, batch []unusedCapacity) error {
+		mu.Lock()
+		batches = append(batches, append([]unusedCapacity(nil), batch...))
+		active++
+		maxActive = max(maxActive, active)
+		mu.Unlock()
+		started <- struct{}{}
+		<-release
+		mu.Lock()
+		active--
+		mu.Unlock()
+		return nil
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- limiter.restoreUnusedCapacity(t.Context(), unused) }()
+	for range maxRestoreWorkers {
+		<-started
+	}
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatalf("restore unused capacity: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if maxActive != maxRestoreWorkers {
+		t.Fatalf("expected %d concurrent batches, got %d", maxRestoreWorkers, maxActive)
+	}
+	if got, want := len(batches), maxRestoreWorkers+1; got != want {
+		t.Fatalf("expected %d batches, got %d", want, got)
+	}
+	seen := make(map[string]bool, len(unused))
+	for _, batch := range batches {
+		if len(batch) > maxRestoreBatchSize {
+			t.Fatalf("expected batch size at most %d, got %d", maxRestoreBatchSize, len(batch))
+		}
+		for _, capacity := range batch {
+			if seen[capacity.SubjectID] {
+				t.Fatalf("expected subject %q once, got it more than once", capacity.SubjectID)
+			}
+			seen[capacity.SubjectID] = true
+		}
+	}
+	if got, want := len(seen), len(unused); got != want {
+		t.Fatalf("expected %d restored subjects, got %d", want, got)
+	}
+}
+
+// TestRestoreUnusedCapacityContinuesAfterBatchError verifies that one failed
+// batch does not prevent later batches from being attempted.
+func TestRestoreUnusedCapacityContinuesAfterBatchError(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	unused := testUnusedCapacity(maxRestoreBatchSize*maxRestoreWorkers + 1)
+	var calls atomic.Int32
+	limiter.restoreBatch = func(context.Context, []unusedCapacity) error {
+		if calls.Add(1) == 1 {
+			return errors.New("restore failed")
+		}
+		return nil
+	}
+
+	err := limiter.restoreUnusedCapacity(t.Context(), unused)
+	if err == nil {
+		t.Fatal("expected restore to return an error, got nil")
+	}
+	if got, want := int(calls.Load()), maxRestoreWorkers+1; got != want {
+		t.Fatalf("expected %d restore attempts, got %d", want, got)
+	}
+}
+
+// TestRestoreUnusedCapacityHonorsCancellation verifies that cancellation stops
+// new restore batches.
+func TestRestoreUnusedCapacityHonorsCancellation(t *testing.T) {
+	limiter := newTestRateLimiter(t, nil)
+	unused := testUnusedCapacity(maxRestoreBatchSize*maxRestoreWorkers + 1)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	started := make(chan struct{}, maxRestoreWorkers)
+	var calls atomic.Int32
+	limiter.restoreBatch = func(ctx context.Context, _ []unusedCapacity) error {
+		calls.Add(1)
+		started <- struct{}{}
+		<-ctx.Done()
+		return ctx.Err()
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- limiter.restoreUnusedCapacity(ctx, unused) }()
+	for range maxRestoreWorkers {
+		<-started
+	}
+	cancel()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled, got %v", err)
+	}
+	if got := calls.Load(); got != maxRestoreWorkers {
+		t.Fatalf("expected %d restore attempts before cancellation, got %d", maxRestoreWorkers, got)
+	}
+}
+
+// TestLimiterCloseHonorsContextDuringProactiveRefill verifies that a canceled
+// Close returns while a non-cooperative acquisition finishes in the background.
 func TestLimiterCloseHonorsContextDuringProactiveRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
+	restored := atomic.Int32{}
 	limiter := newTestRateLimiter(t, func(context.Context, []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-release
 		return nil, context.Canceled
 	})
+	limiter.restoreBatch = func(context.Context, []unusedCapacity) error {
+		restored.Add(1)
+		return nil
+	}
 	bucket := newTestBucket(limiter)
 	applyTestLease(bucket, 100, 100)
 	if err := bucket.Consume(context.Background(), 80); err != nil {
@@ -118,8 +348,12 @@ func TestLimiterCloseHonorsContextDuringProactiveRefill(t *testing.T) {
 	if got := bucketAvailable(bucket); got != 20 {
 		t.Fatalf("expected capacity after shutdown 20, got %d", got)
 	}
+	if got := restored.Load(); got != 0 {
+		t.Fatalf("expected canceled Close not to retry restoring capacity, got %d attempts", got)
+	}
 }
 
+// TestLimiterConsumesAndRefills verifies local consumption followed by refill.
 func TestLimiterConsumesAndRefills(t *testing.T) {
 	limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 		results := make([]leaseResult, len(requests))
@@ -140,6 +374,8 @@ func TestLimiterConsumesAndRefills(t *testing.T) {
 	}
 }
 
+// TestLimiterCanceledContextConsumesLocalCapacity verifies that cancellation
+// does not prevent immediate local consumption.
 func TestLimiterCanceledContextConsumesLocalCapacity(t *testing.T) {
 	limiter := newTestRateLimiter(t, nil)
 	bucket := newTestBucket(limiter)
@@ -154,6 +390,8 @@ func TestLimiterCanceledContextConsumesLocalCapacity(t *testing.T) {
 	}
 }
 
+// TestLimiterCanceledContextCancelsWaiterButStartsRefill verifies that a
+// canceled waiter does not cancel its published refill.
 func TestLimiterCanceledContextCancelsWaiterButStartsRefill(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -180,6 +418,8 @@ func TestLimiterCanceledContextCancelsWaiterButStartsRefill(t *testing.T) {
 	close(release)
 }
 
+// TestLimiterCallerDeadlineTakesPrecedence verifies that the caller deadline
+// takes precedence over the internal wait timeout.
 func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 	previous := maxWaitDuration
 	maxWaitDuration = 0
@@ -200,6 +440,8 @@ func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 	}
 }
 
+// TestLimiterKeepsPositiveCapacityForSmallerRequest verifies that a failed
+// larger request does not consume local capacity needed by a smaller request.
 func TestLimiterKeepsPositiveCapacityForSmallerRequest(t *testing.T) {
 	limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
 		return []leaseResult{{SubjectKind: requests[0].SubjectKind, SubjectID: requests[0].SubjectID, GrantedUnits: 10, CapacityUnits: 100}}, nil
@@ -214,6 +456,8 @@ func TestLimiterKeepsPositiveCapacityForSmallerRequest(t *testing.T) {
 	}
 }
 
+// TestLimiterServesOnlySatisfiableFIFOPrefix verifies that a partial grant
+// serves only the satisfiable FIFO prefix.
 func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
@@ -248,6 +492,8 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	}
 }
 
+// TestLimiterCancellationReturnsAdmissionBudget verifies that cancellation
+// makes reserved admission capacity available to later waiters.
 func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
@@ -280,6 +526,8 @@ func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 	}
 }
 
+// TestLimiterCancellationAndGrantResolveOnce verifies that concurrent
+// cancellation and completion resolve a waiter once.
 func TestLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 	for range 100 {
 		bucket := newTestBucket()
@@ -327,6 +575,8 @@ func TestLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 	}
 }
 
+// TestLimiterIgnoresStaleGenerationResult verifies that an older refill result
+// cannot affect the current refill generation.
 func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	bucket := newTestBucket()
 	applyTestLease(bucket, 0, 100)
@@ -357,6 +607,8 @@ func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	}
 }
 
+// TestLimiterWaitHasFiniteInternalTimeout verifies that an admitted waiter has
+// a finite internal timeout.
 func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	previous := maxWaitDuration
 	maxWaitDuration = 5 * time.Millisecond
@@ -381,6 +633,8 @@ func TestLimiterWaitHasFiniteInternalTimeout(t *testing.T) {
 	close(release)
 }
 
+// TestLimiterLeaseAcquisitionHasFiniteTimeout verifies that lease acquisition
+// has a finite timeout.
 func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	previous := defaultAcquireTimeout
 	defaultAcquireTimeout = 10 * time.Millisecond
@@ -418,6 +672,8 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	}
 }
 
+// TestLimiterQueuesOneRefill verifies that concurrent consumption shares one
+// refill generation.
 func TestLimiterQueuesOneRefill(t *testing.T) {
 	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})
@@ -456,6 +712,8 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 	}
 }
 
+// TestLimiterBatchesSubjectKinds verifies that one acquisition batch can
+// contain different subject kinds.
 func TestLimiterBatchesSubjectKinds(t *testing.T) {
 	limiter := &Limiter{queue: make(chan *refill, queueSize)}
 	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
@@ -492,8 +750,17 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 	if len(acquired) != 2 {
 		t.Fatalf("expected batch to contain 2 requests, got %d", len(acquired))
 	}
+	kinds := map[SubjectKind]bool{}
+	for _, request := range acquired {
+		kinds[request.SubjectKind] = true
+	}
+	if !kinds["first"] || !kinds["second"] {
+		t.Fatalf("expected subject kinds first and second, got %#v", kinds)
+	}
 }
 
+// TestLimiterAddsLeaseAfterConcurrentConsumption verifies that a lease is
+// added to capacity remaining after concurrent consumption.
 func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -531,6 +798,8 @@ func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 	}
 }
 
+// TestLimiterRejectsInvalidLeaseResults verifies that invalid acquisition
+// results fail the batch and start internal-error backoff.
 func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 	for _, test := range []struct {
 		name    string
@@ -569,6 +838,8 @@ func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 	}
 }
 
+// TestLimiterRejectsWhenQueueIsFull verifies rejection and metrics when the
+// refill queue is full.
 func TestLimiterRejectsWhenQueueIsFull(t *testing.T) {
 	queueFull := new(testCounter)
 	limiter := &Limiter{queue: make(chan *refill, 1), metrics: Metrics{QueueFull: queueFull}}
@@ -581,6 +852,8 @@ func TestLimiterRejectsWhenQueueIsFull(t *testing.T) {
 	}
 }
 
+// TestLimiterRejectsRefillsDuringBackoff verifies that backoff prevents new
+// lease acquisitions.
 func TestLimiterRejectsRefillsDuringBackoff(t *testing.T) {
 	var calls atomic.Int32
 	limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
