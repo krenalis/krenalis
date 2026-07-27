@@ -16,11 +16,21 @@ const maxRefillThreshold = 25
 
 var maxWaitDuration = time.Second
 
-// Bucket stores process-local capacity for one subject kind and identifier.
+// Bucket manages node-local rate-limit capacity for one subject, identified by
+// a SubjectKind and an identifier. The capacity is used for rate-limited
+// operations associated with that subject.
 //
-// A bucket does not need to be closed. Once its owner stops using it, it is
-// collected after any queued or in-progress refill releases its last reference.
-// mu protects local capacity and refill state.
+// Consume capacity before performing a rate-limited operation:
+//
+//	if err := bucket.Consume(ctx, units); err != nil {
+//		return err
+//	}
+//
+// Optionally restore any consumed capacity that was ultimately not used:
+//
+//	if err := bucket.Restore(unusedUnits); err != nil {
+//		return err
+//	}
 type Bucket struct {
 	limiter     *Limiter
 	subjectKind SubjectKind
