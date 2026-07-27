@@ -106,8 +106,12 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id, name, code 
 	if err := util.ValidateStringField("code", code, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	if _, ok := this.workspace.ConsentPurpose(id); !ok {
+	current, ok := this.workspace.ConsentPurpose(id)
+	if !ok {
 		return errors.NotFound("consent purpose %s does not exist", id)
+	}
+	if name == current.Name && code == current.Code {
+		return nil
 	}
 	n := state.UpdateConsentPurpose{
 		ID:        id,
