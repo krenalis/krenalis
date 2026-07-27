@@ -304,8 +304,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	// Make the dialer package count the network usage of the organizations,
-	// listening to state changes.
+	// Make the dialer package count the network usage of organizations.
 	if conf.PrometheusMetricsEnabled {
 		dialer.EnableCounting(core.state)
 	}
