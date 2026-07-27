@@ -67,10 +67,10 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /organizations/{id}":                          api.Organization,                     /* Needs organizations API key */
 		"GET    /organizations":                               api.Organizations,                    /* Needs organizations API key */
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
-		"GET    /pipelines/metrics/dates/{start}/{end}":       workspace.PipelineMetricsPerDate,
-		"GET    /pipelines/metrics/days/{days}":               workspace.PipelineMetricsPerDay,
-		"GET    /pipelines/metrics/hours/{hours}":             workspace.PipelineMetricsPerHour,
-		"GET    /pipelines/metrics/minutes/{minutes}":         workspace.PipelineMetricsPerMinute,
+		"GET    /pipelines/metrics/dates/{start}/{end}":       organization.PipelineMetricsPerDate,
+		"GET    /pipelines/metrics/days/{days}":               organization.PipelineMetricsPerDay,
+		"GET    /pipelines/metrics/hours/{hours}":             organization.PipelineMetricsPerHour,
+		"GET    /pipelines/metrics/minutes/{minutes}":         organization.PipelineMetricsPerMinute,
 		"GET    /pipelines/runs":                              workspace.PipelineRuns,
 		"GET    /pipelines/runs/{id}":                         workspace.PipelineRun,
 		"GET    /pipelines/{id}":                              workspace.Pipeline,

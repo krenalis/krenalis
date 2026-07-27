@@ -1,7 +1,7 @@
 import './LinkedConnectionSelector.css';
 import React, { ReactNode, useMemo } from 'react';
 import { useLinkedConnectionsGrid } from './useLinkedConnectionsGrid';
-import TransformedConnection, { isEventConnection } from '../../../lib/core/connection';
+import TransformedConnection from '../../../lib/core/connection';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -48,14 +48,7 @@ const LinkedConnectionSelector = ({
 		const linkableConnections: TransformedConnection[] = [];
 		const selectableConnections: TransformedConnection[] = [];
 		for (const c of connections) {
-			if (
-				isEventConnection(
-					c.role,
-					c.connector.type,
-					c.isSource ? c.connector.asSource.targets : c.connector.asDestination.targets,
-				) &&
-				c.role !== role
-			) {
+			if (c.supportsEventTarget && c.role !== role) {
 				linkableConnections.push(c);
 				const isAlreadySelected = linkedConnections?.find((id) => id === c.id) != null;
 				if (!isAlreadySelected) {

@@ -127,6 +127,15 @@
 .connection-metrics__errors-heading {
 	margin: 40px 0 24px 5px;
 	font-size: 16px;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.connection-metrics__error-count-notice {
+	display: flex;
+	position: relative;
+	top: 1px;
 }
 
 .connection-metrics__chart-heading span,

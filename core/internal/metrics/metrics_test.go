@@ -12,6 +12,7 @@ type stubCollector struct{ Collector }
 
 const testPipelineID = "8QaT3mN7KxP5"
 
+// newStubCollector returns a collector suitable for metrics unit tests.
 func newStubCollector() *stubCollector {
 	c := &stubCollector{Collector{metrics: map[string]*metrics{}}}
 	c.stored.L = &c.mu
@@ -21,9 +22,10 @@ func newStubCollector() *stubCollector {
 // Test_CollectorInvalidStep verifies that using an invalid step causes a panic.
 func Test_CollectorInvalidStep(t *testing.T) {
 	c := newStubCollector()
+	c.metrics[testPipelineID] = &metrics{}
 	defer func() {
 		if recover() == nil {
-			t.Fatalf("expected panic with invalid step")
+			t.Fatal("expected panic with invalid step, got no panic")
 		}
 	}()
 	c.Passed(Step(numSteps), testPipelineID, 1)
@@ -33,12 +35,13 @@ func Test_CollectorInvalidStep(t *testing.T) {
 // correctly.
 func Test_CollectorPassedFailed(t *testing.T) {
 	c := newStubCollector()
+	c.metrics[testPipelineID] = &metrics{}
 	c.Passed(ReceiveStep, testPipelineID, 3)
 	c.Failed(FilterStep, testPipelineID, 2, "boom")
 
 	m, ok := c.metrics[testPipelineID]
 	if !ok {
-		t.Fatalf("metrics for pipeline %s not found", testPipelineID)
+		t.Fatalf("expected metrics for pipeline %s, got none", testPipelineID)
 	}
 	if got := m.passed[ReceiveStep]; got != 3 {
 		t.Fatalf("expected 3 passed, got %d", got)
@@ -47,7 +50,7 @@ func Test_CollectorPassedFailed(t *testing.T) {
 		t.Fatalf("expected 2 failed, got %d", got)
 	}
 	if len(m.errors) != 1 || m.errors[0].step != FilterStep || m.errors[0].count != 2 || m.errors[0].message != "boom" {
-		t.Fatalf("unexpected errors: %#v", m.errors)
+		t.Fatalf("expected one filter error with message %q, got %#v", "boom", m.errors)
 	}
 }
 
@@ -73,10 +76,36 @@ func Test_StepString(t *testing.T) {
 func Test_StepString_invalid(t *testing.T) {
 	defer func() {
 		if recover() == nil {
-			t.Fatalf("expected panic for invalid step")
+			t.Fatal("expected panic for invalid step, got no panic")
 		}
 	}()
 	_ = Step(99).String()
+}
+
+// Test_TargetString verifies that String returns the expected label for each
+// Target.
+func Test_TargetString(t *testing.T) {
+	tests := map[Target]string{
+		TargetNone:  "None",
+		TargetEvent: "Event",
+		TargetUser:  "User",
+		TargetGroup: "Group",
+	}
+	for target, want := range tests {
+		if got := target.String(); got != want {
+			t.Fatalf("%v: expected %q, got %q", target, want, got)
+		}
+	}
+}
+
+// Test_TargetString_invalid checks that String panics for an undefined Target.
+func Test_TargetString_invalid(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic for invalid target, got no panic")
+		}
+	}()
+	_ = Target(99).String()
 }
 
 // Test_TimeSlot checks round-trip conversion between time slots and times.
@@ -101,7 +130,7 @@ func Test_TimeSlotToTime_OutOfRange(t *testing.T) {
 		func() {
 			defer func() {
 				if recover() == nil {
-					t.Errorf("TimeSlotToTime(%d) did not panic", ts)
+					t.Errorf("expected TimeSlotToTime(%d) to panic, got no panic", ts)
 				}
 			}()
 			TimeSlotToTime(ts)
