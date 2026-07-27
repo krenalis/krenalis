@@ -5,12 +5,14 @@
 package ratelimiter
 
 import (
+	"context"
+	"os"
+	"os/exec"
 	"strconv"
 	"testing"
+	"time"
 )
 
-// TestNewBucketRejectsInvalidConfiguration verifies that a bucket has a
-// positive lease size and a supported maximum cost.
 func TestNewBucketRejectsInvalidConfiguration(t *testing.T) {
 	for _, test := range []struct {
 		name      string
@@ -32,124 +34,26 @@ func TestNewBucketRejectsInvalidConfiguration(t *testing.T) {
 	}
 }
 
-// TestClosedBucketDoesNotRequestOrApplyCapacity verifies that a removed
-// subject kind and identifier cannot consume, refill, or receive capacity.
-func TestClosedBucketDoesNotRequestOrApplyCapacity(t *testing.T) {
-	bucket := newTestBucketFor("test", "222222222222")
-	applyTestLease(bucket, 10, 10)
-	bucket.Close()
-
-	satisfied, refill, waiter := bucket.consume(1, true)
-	if satisfied || refill != nil || waiter != nil {
-		t.Fatalf("closed bucket consumed or requested capacity: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
-	}
-	applyTestLease(bucket, 10, 10)
-	state := bucketSnapshot(bucket)
-	if state.available != 0 || !state.closed {
-		t.Fatalf("closed bucket state = available:%d closed:%t, want 0:true", state.available, state.closed)
-	}
-	bucket.Restore(1)
-	state = bucketSnapshot(bucket)
-	if state.available != 0 {
-		t.Fatalf("restored capacity on a closed bucket = %d, want 0", state.available)
-	}
-}
-
-// TestBucketRestoresLocalCapacity verifies that returned capacity is available
-// immediately and remains capped at the local target.
 func TestBucketRestoresLocalCapacity(t *testing.T) {
-	bucket := newTestBucketFor("test", "222222222222")
+	bucket := newTestBucket()
 	applyTestLease(bucket, 10, 10)
 
-	satisfied, _, _ := bucket.consume(4, true)
-	if !satisfied {
-		t.Fatal("initial consumption was not satisfied")
+	if err := bucket.Consume(context.Background(), 4); err != nil {
+		t.Fatalf("initial consumption: %v", err)
 	}
 	bucket.Restore(3)
-	state := bucketSnapshot(bucket)
-	if state.available != 9 {
-		t.Fatalf("restored capacity = %d, want 9", state.available)
+	if got := bucketAvailable(bucket); got != 9 {
+		t.Fatalf("restored capacity = %d, want 9", got)
 	}
-
 	bucket.Restore(3)
-	state = bucketSnapshot(bucket)
-	if state.available != 10 {
-		t.Fatalf("capacity above the local target = %d, want 10", state.available)
-	}
-	bucket.Restore(0)
-	state = bucketSnapshot(bucket)
-	if state.available != 10 {
-		t.Fatalf("zero restoration changed capacity to %d, want 10", state.available)
-	}
-	bucket.Restore(bucket.maxCost + 1)
-	state = bucketSnapshot(bucket)
-	if state.available != 10 {
-		t.Fatalf("invalid restoration changed capacity to %d, want 10", state.available)
+	if got := bucketAvailable(bucket); got != 10 {
+		t.Fatalf("capacity above local target = %d, want 10", got)
 	}
 }
 
-// TestEmptyBucketWaitsForInitialRefill verifies that a request waits for its
-// initial refill instead of using capacity that has not been acquired yet.
-func TestEmptyBucketWaitsForInitialRefill(t *testing.T) {
-	bucket := newTestLargeBucket()
-
-	satisfied, refill, waiter := bucket.consume(1, true)
-	if satisfied || refill == nil || waiter != nil {
-		t.Fatalf("initial consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
-	}
-	if waiter := bucket.activateRefill(refill, 1, true, true); waiter == nil {
-		t.Fatal("initial request was not admitted as a waiter")
-	}
-	if state := bucketSnapshot(bucket); state.available != 0 {
-		t.Fatalf("available capacity = %d, want 0", state.available)
-	}
-	bucket.rejectRefill(refill)
-}
-
-// TestBucketAdmitsCostOneToPendingRefill verifies that a cost-one request
-// waits for an active refill when local capacity is exhausted.
-func TestBucketAdmitsCostOneToPendingRefill(t *testing.T) {
-	bucket := newTestBucket()
-	satisfied, refill, waiter := bucket.consume(1, true)
-	if satisfied || refill == nil || waiter != nil {
-		t.Fatalf("cold bucket consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
-	}
-	if waiter := bucket.activateRefill(refill, 0, false, true); waiter != nil {
-		t.Fatal("unexpected waiter")
-	}
-	satisfied, queued, waiter := bucket.consume(1, true)
-	if satisfied || queued != nil || waiter == nil {
-		t.Fatalf("pending refill waiter: satisfied=%t refill=%p waiter=%p", satisfied, queued, waiter)
-	}
-	if state := bucketSnapshot(bucket); state.available != 0 {
-		t.Fatalf("available capacity = %d, want 0", state.available)
-	}
-	bucket.rejectRefill(refill)
-}
-
-// TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed verifies that an active
-// refill admits requests only while refills are allowed.
-func TestBucketAdmitsWaitersOnlyWhileRefillsAreAllowed(t *testing.T) {
-	bucket := newTestBucket()
-	_, refill, _ := bucket.consume(2, true)
-	bucket.activateRefill(refill, 0, false, true)
-
-	satisfied, queued, waiter := bucket.consume(2, true)
-	if satisfied || queued != nil || waiter == nil {
-		t.Fatalf("cost-2 request was not admitted as waiter")
-	}
-	satisfied, queued, waiter = bucket.consume(1, false)
-	if satisfied || queued != nil || waiter != nil {
-		t.Fatal("closed refills allowed waiting")
-	}
-}
-
-// TestBucketThresholdScalesWithTarget verifies that small leases use
-// proportionally smaller refill thresholds.
 func TestBucketThresholdScalesWithTarget(t *testing.T) {
 	for _, test := range []struct {
-		target    int
-		threshold int
+		target, threshold int
 	}{
 		{target: 100, threshold: 25},
 		{target: 40, threshold: 10},
@@ -166,23 +70,89 @@ func TestBucketThresholdScalesWithTarget(t *testing.T) {
 	}
 }
 
-// TestBucketQueuesRefillRelativeToOperationCost verifies that a variable-cost
-// operation queues a refill while one similar operation remains.
-func TestBucketQueuesRefillRelativeToOperationCost(t *testing.T) {
-	bucket := newTestLargeBucket()
-	applyTestLease(bucket, 1_000, 1_000)
+func TestBucketStartsProactiveRefillRelativeToCost(t *testing.T) {
+	requests := make(chan []leaseRequest, 1)
+	limiter := newTestRateLimiter(t, func(_ context.Context, request []leaseRequest) ([]leaseResult, error) {
+		requests <- request
+		return []leaseResult{{
+			SubjectKind:   request[0].SubjectKind,
+			SubjectID:     request[0].SubjectID,
+			GrantedUnits:  request[0].RequestedUnits,
+			CapacityUnits: testLeaseSize,
+		}}, nil
+	})
+	bucket := newTestBucket(limiter)
+	applyTestLease(bucket, testLeaseSize, testLeaseSize)
 
-	for range 2 {
-		satisfied, refill, waiter := bucket.consume(250, true)
-		if !satisfied || refill != nil || waiter != nil {
-			t.Fatalf("early consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
+	// The 40 remaining units are above the absolute threshold but insufficient
+	// for another operation with the same cost.
+	if err := bucket.Consume(context.Background(), 60); err != nil {
+		t.Fatalf("consume: %v", err)
+	}
+	select {
+	case request := <-requests:
+		if got := request[0].RequestedUnits; got != 60 {
+			t.Fatalf("requested units = %d, want 60", got)
 		}
+	case <-time.After(time.Second):
+		t.Fatal("relative cost did not start a refill")
 	}
-	satisfied, refill, waiter := bucket.consume(250, true)
-	if !satisfied || refill == nil || waiter != nil {
-		t.Fatalf("low-capacity consume: satisfied=%t refill=%p waiter=%p", satisfied, refill, waiter)
+}
+
+func TestBucketAdmitsWaitersToPublishedRefill(t *testing.T) {
+	requests := make(chan []leaseRequest, 1)
+	release := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
+		requests <- request
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, GrantedUnits: 100, CapacityUnits: 100}}, nil
+	})
+	bucket := newTestBucket(limiter)
+	first := make(chan error, 1)
+	second := make(chan error, 1)
+	go func() { first <- bucket.Consume(context.Background(), 40) }()
+	<-requests
+	go func() { second <- bucket.Consume(context.Background(), 30) }()
+	waitForRateLimit(t, func() bool { return pendingCost(bucket) == 70 })
+	close(release)
+	if err := <-first; err != nil {
+		t.Fatalf("first waiter: %v", err)
 	}
-	if state := bucketSnapshot(bucket); state.available != 250 {
-		t.Fatalf("available capacity = %d, want 250", state.available)
+	if err := <-second; err != nil {
+		t.Fatalf("second waiter: %v", err)
+	}
+}
+
+func TestInvalidCostTerminatesProcess(t *testing.T) {
+	if operation := os.Getenv("KRENALIS_RATE_LIMIT_INVALID_COST"); operation != "" {
+		bucket := newTestBucket()
+		switch operation {
+		case "consume-zero":
+			bucket.Consume(t.Context(), 0)
+		case "consume-too-large":
+			bucket.Consume(t.Context(), testLeaseSize+1)
+		case "restore-zero":
+			bucket.Restore(0)
+		case "restore-too-large":
+			bucket.Restore(testLeaseSize + 1)
+		default:
+			t.Fatalf("unknown invalid-cost operation %q", operation)
+		}
+		t.Fatalf("%s returned after an invalid cost", operation)
+	}
+	for _, operation := range []string{"consume-zero", "consume-too-large", "restore-zero", "restore-too-large"} {
+		t.Run(operation, func(t *testing.T) {
+			command := exec.Command(os.Args[0], "-test.run=^TestInvalidCostTerminatesProcess$")
+			command.Env = append(os.Environ(), "KRENALIS_RATE_LIMIT_INVALID_COST="+operation)
+			err := command.Run()
+			exitError, ok := err.(*exec.ExitError)
+			if !ok || exitError.ExitCode() != 1 {
+				t.Fatalf("invalid cost exit = %v, want exit status 1", err)
+			}
+		})
 	}
 }

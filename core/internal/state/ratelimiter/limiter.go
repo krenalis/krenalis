@@ -5,7 +5,6 @@
 package ratelimiter
 
 import (
-	"container/list"
 	"context"
 	"errors"
 	"fmt"
@@ -25,22 +24,12 @@ const (
 	refillBackoffDuration = 250 * time.Millisecond
 )
 
-var (
-	maxWaitDuration       = time.Second
-	defaultAcquireTimeout = 5 * time.Second
-)
+var defaultAcquireTimeout = 5 * time.Second
 
-// ErrCapacityExceeded is returned when an operation cannot be served from
-// local capacity or admitted to the current refill.
+// ErrCapacityExceeded is returned when an operation cannot be served, including
+// when it cannot be admitted or its refill fails, grants insufficient capacity,
+// or does not complete before the internal timeout.
 var ErrCapacityExceeded = errors.New("rate-limit capacity exceeded")
-
-// ErrInvalidCost is returned when an operation has an unsupported cost.
-var ErrInvalidCost = errors.New("invalid rate-limit cost")
-
-// Counter records a rate-limiter event.
-type Counter interface {
-	Inc()
-}
 
 // Metrics contains optional counters for rate-limiter events.
 type Metrics struct {
@@ -48,22 +37,24 @@ type Metrics struct {
 	QueueFull         Counter
 }
 
+// Counter records a rate-limiter event.
+type Counter interface {
+	Inc()
+}
+
+// SubjectKind identifies a class of rate-limit buckets.
+type SubjectKind string
+
 type acquireFunc func(context.Context, []leaseRequest) ([]leaseResult, error)
 
-// Limiter coordinates refills for local buckets. It owns the refill queue,
-// batching, backoff, and shutdown lifecycle.
+// Limiter coordinates refills for local buckets.
 type Limiter struct {
 	db      *db.DB
 	acquire acquireFunc
 
-	queue          chan *refill // bounded so queue publication never blocks.
-	queueSaturated atomic.Bool  // suppresses repeated warnings while the queue is full.
-
-	// retryAfter is the Unix-nanosecond deadline for the shared refill
-	// backoff. It is atomic because every consumption checks it, while only the
-	// single batcher updates it. A shared deadline prevents a database outage
-	// from causing rapid retry batches for different buckets.
-	retryAfter atomic.Int64
+	queue           chan *refill
+	queueFullLogged atomic.Bool
+	retryAfter      atomic.Int64
 
 	metrics Metrics
 
@@ -72,21 +63,6 @@ type Limiter struct {
 		cancel context.CancelFunc
 		done   chan struct{}
 	}
-}
-
-// refill represents one refill generation, including its immutable lease
-// request and the waiters admitted to it. Mutations are protected by bucket.mu.
-// Closing done publishes final waiter results to readers.
-// The published channel prevents the batcher from processing the refill before
-// queue publication and activation are complete.
-type refill struct {
-	bucket      *Bucket
-	request     leaseRequest
-	active      bool
-	published   chan struct{}
-	done        chan struct{}
-	waiters     list.List
-	pendingCost int
 }
 
 // New starts a limiter backed by the rate-limit lease store in db.
@@ -99,24 +75,27 @@ func New(db *db.DB, metrics Metrics) *Limiter {
 	limiter.acquire = limiter.acquireLeases
 	limiter.shutdown.ctx, limiter.shutdown.cancel = context.WithCancel(context.Background())
 	limiter.shutdown.done = make(chan struct{})
-	// Process one collected refill batch at a time.
-	go func() {
-		defer close(limiter.shutdown.done)
-		for {
-			select {
-			case <-limiter.shutdown.ctx.Done():
-				return
-			case refill := <-limiter.queue:
-				if !limiter.collectAndRefill(refill) {
-					return
-				}
-			}
-		}
-	}()
+	go limiter.run()
 	return limiter
 }
 
-// Close closes the limiter, waiting for shutdown until ctx is done.
+func (limiter *Limiter) run() {
+	defer close(limiter.shutdown.done)
+	defer limiter.discardQueuedRefills()
+	for {
+		select {
+		case <-limiter.shutdown.ctx.Done():
+			return
+		case refill := <-limiter.queue:
+			if !limiter.collectAndRefill(refill) {
+				return
+			}
+		}
+	}
+}
+
+// Close closes the limiter, waiting for the batcher until ctx is done.
+// The caller must stop using the limiter and all of its buckets before Close.
 func (limiter *Limiter) Close(ctx context.Context) {
 	limiter.shutdown.cancel()
 	select {
@@ -126,7 +105,6 @@ func (limiter *Limiter) Close(ctx context.Context) {
 }
 
 // NewBucket creates an empty local bucket for subjectKind and subjectID.
-//
 // leaseSize and maxCost must be positive, and maxCost must not exceed
 // leaseSize. NewBucket panics if these conditions are not met.
 func (limiter *Limiter) NewBucket(subjectKind SubjectKind, subjectID string, leaseSize, maxCost int) *Bucket {
@@ -170,104 +148,71 @@ func (limiter *Limiter) acquireLeases(ctx context.Context, requests []leaseReque
 	return results, nil
 }
 
-// backoffActive reports whether new refill attempts are temporarily suppressed
-// after an acquisition error or an invalid batch response.
-func (limiter *Limiter) backoffActive(now time.Time) bool {
-	return now.UnixNano() < limiter.retryAfter.Load()
+func (limiter *Limiter) backoffActive() bool {
+	return time.Now().UnixNano() < limiter.retryAfter.Load()
 }
 
-// collectAndRefill collects refill generations for a short window, then
-// acquires their leases in one call. It returns false when shutdown interrupts
-// collection and the batcher should stop.
 func (limiter *Limiter) collectAndRefill(first *refill) bool {
-	pendingRefills := map[*refill]leaseRequest{first: {}}
+	pending := []*refill{first}
 	timer := time.NewTimer(batchDelay)
-	for len(pendingRefills) < batchSize {
+	defer timer.Stop()
+	for len(pending) < batchSize {
 		select {
 		case <-limiter.shutdown.ctx.Done():
-			failCollectedRefills(pendingRefills)
+			rejectRefills(pending)
 			return false
 		case refill := <-limiter.queue:
-			if _, exists := pendingRefills[refill]; !exists {
-				pendingRefills[refill] = leaseRequest{}
-			}
+			pending = append(pending, refill)
 		case <-timer.C:
-			limiter.refill(pendingRefills)
+			limiter.refill(pending)
 			return true
 		}
 	}
-	limiter.refill(pendingRefills)
+	limiter.refill(pending)
 	return true
 }
 
-// failRefill fails a refill batch while preserving current local capacity and
-// starts a fixed backoff that temporarily prevents new refill attempts.
-// The shared deadline applies to every bucket, including those outside this
-// batch, so an acquisition failure cannot trigger rapid retries across the
-// queue.
-//
-// Shutdown only finishes pending refills; it does not start a backoff.
-func (limiter *Limiter) failRefill(pendingRefills map[*refill]leaseRequest) {
-	if limiter.shutdown.ctx.Err() != nil {
-		failCollectedRefills(pendingRefills)
-		return
+func (limiter *Limiter) failBatch(pending []*refill) {
+	if limiter.shutdown.ctx.Err() == nil {
+		limiter.retryAfter.Store(time.Now().Add(refillBackoffDuration).UnixNano())
 	}
-	now := time.Now()
-	limiter.retryAfter.Store(now.Add(refillBackoffDuration).UnixNano())
-	failCollectedRefills(pendingRefills)
+	rejectRefills(pending)
 }
 
-// queueRefill queues a refill generation without blocking the request path.
-func (limiter *Limiter) queueRefill(refill *refill) (queued, queueFull bool) {
-	if limiter.shutdown.ctx.Err() != nil {
-		return false, false
-	}
+// publishRefill queues a refill or rejects it if the queue is full.
+func (limiter *Limiter) publishRefill(refill *refill) bool {
 	select {
 	case limiter.queue <- refill:
-		return true, false
+		limiter.queueFullLogged.Store(false)
+		return true
 	default:
-		return false, true
+		refill.bucket.rejectRefill(refill)
+		if limiter.metrics.QueueFull != nil {
+			limiter.metrics.QueueFull.Inc()
+		}
+		if limiter.queueFullLogged.CompareAndSwap(false, true) {
+			slog.Warn("rate limiter refill queue is full")
+		}
+		return false
 	}
 }
 
-// refill builds, acquires, validates, and applies leases for one collected
-// batch. An acquisition error or invalid response fails the whole batch before
-// any local capacity is changed.
-func (limiter *Limiter) refill(pendingRefills map[*refill]leaseRequest) {
-	if limiter.backoffActive(time.Now()) {
-		// Generations queued before a failed batch may still be in the channel.
-		// They are not acquired during global backoff. Rejecting them also
-		// prevents waiters from relying on a refill that will not run.
-		failCollectedRefills(pendingRefills)
+func (limiter *Limiter) refill(pending []*refill) {
+	if limiter.backoffActive() {
+		rejectRefills(pending)
 		return
 	}
 
-	leaseRequests := make([]leaseRequest, 0, len(pendingRefills))
-	for refill := range pendingRefills {
-		select {
-		case <-refill.published:
-		case <-limiter.shutdown.ctx.Done():
-			failCollectedRefills(pendingRefills)
-			return
-		}
-		request, needed := refill.bucket.refillRequest(refill)
-		if !needed {
-			delete(pendingRefills, refill)
-			continue
-		}
-		pendingRefills[refill] = request
-		leaseRequests = append(leaseRequests, request)
+	requests := make([]leaseRequest, 0, len(pending))
+	for _, refill := range pending {
+		requests = append(requests, refill.request)
 	}
-	if len(leaseRequests) == 0 {
-		return
-	}
-
-	acquireCtx, cancelAcquire := context.WithTimeout(limiter.shutdown.ctx, defaultAcquireTimeout)
-	leaseResults, err := limiter.acquire(acquireCtx, leaseRequests)
+	acquireCtx, cancel := context.WithTimeout(limiter.shutdown.ctx, defaultAcquireTimeout)
+	results, err := limiter.acquire(acquireCtx, requests)
 	if err == nil {
 		err = acquireCtx.Err()
 	}
-	cancelAcquire()
+	cancel()
 	if err != nil {
 		if limiter.shutdown.ctx.Err() == nil {
 			slog.Error("cannot acquire rate-limit leases", "error", err)
@@ -275,99 +220,74 @@ func (limiter *Limiter) refill(pendingRefills map[*refill]leaseRequest) {
 				limiter.metrics.AcquisitionErrors.Inc()
 			}
 		}
-		limiter.failRefill(pendingRefills)
+		limiter.failBatch(pending)
 		return
 	}
 
-	requestedUnitsBySubject := make(map[subjectKey]int, len(pendingRefills))
-	for _, request := range pendingRefills {
-		requestedUnitsBySubject[subjectKey{kind: request.SubjectKind, id: request.SubjectID}] = request.RequestedUnits
+	requestsBySubject := make(map[subjectKey]leaseRequest, len(pending))
+	for _, refill := range pending {
+		request := refill.request
+		key := subjectKey{kind: request.SubjectKind, id: request.SubjectID}
+		if _, duplicate := requestsBySubject[key]; duplicate {
+			slog.Error("rate limiter batch contains duplicate subjects", "subject_kind", request.SubjectKind, "subject_id", request.SubjectID)
+			limiter.failBatch(pending)
+			return
+		}
+		requestsBySubject[key] = request
 	}
-	resultsBySubject := make(map[subjectKey]leaseResult, len(leaseResults))
-	for _, result := range leaseResults {
+	resultsBySubject := make(map[subjectKey]leaseResult, len(results))
+	for _, result := range results {
 		key := subjectKey{kind: result.SubjectKind, id: result.SubjectID}
-		requestedUnits, ok := requestedUnitsBySubject[key]
-		if !ok {
-			limiter.failRefill(pendingRefills)
-			slog.Error("rate limiter lease result does not match its request", "subject_kind", result.SubjectKind, "subject_id", result.SubjectID)
-			return
-		}
-		if _, duplicate := resultsBySubject[key]; duplicate {
-			limiter.failRefill(pendingRefills)
-			slog.Error("rate limiter lease batch returned a duplicate result", "subject_kind", result.SubjectKind, "subject_id", result.SubjectID)
-			return
-		}
-		invalid := result.GrantedUnits < 0 || result.GrantedUnits > requestedUnits ||
-			result.CapacityUnits <= 0 || result.GrantedUnits > result.CapacityUnits
-		if invalid {
-			limiter.failRefill(pendingRefills)
-			slog.Error("rate limiter lease batch returned an invalid result", "subject_kind", result.SubjectKind, "subject_id", result.SubjectID, "granted_units", result.GrantedUnits, "requested_units", requestedUnits, "capacity_units", result.CapacityUnits)
+		request, ok := requestsBySubject[key]
+		if _, duplicate := resultsBySubject[key]; !ok || duplicate ||
+			result.GrantedUnits < 0 || result.GrantedUnits > request.RequestedUnits ||
+			result.CapacityUnits <= 0 || result.GrantedUnits > result.CapacityUnits {
+			limiter.invalidBatch(pending, result)
 			return
 		}
 		resultsBySubject[key] = result
 	}
-	if len(resultsBySubject) != len(pendingRefills) {
-		limiter.failRefill(pendingRefills)
+	if len(resultsBySubject) != len(pending) {
 		slog.Error("rate limiter lease batch returned incomplete results")
+		limiter.failBatch(pending)
 		return
 	}
-
-	for refill, request := range pendingRefills {
-		key := subjectKey{kind: request.SubjectKind, id: request.SubjectID}
-		result := resultsBySubject[key]
+	for _, refill := range pending {
+		request := refill.request
+		result := resultsBySubject[subjectKey{kind: request.SubjectKind, id: request.SubjectID}]
 		refill.bucket.completeRefill(refill, result.GrantedUnits, result.CapacityUnits)
 	}
 	limiter.retryAfter.Store(0)
 }
 
-// waitForRefill waits for the waiter's refill to finish, caller cancellation,
-// limiter shutdown, or the limiter's finite internal deadline. Cancellation
-// competes with refill completion under the bucket mutex, making the first
-// decision definitive.
-func (limiter *Limiter) waitForRefill(ctx context.Context, waiter *waiter) error {
-	timer := time.NewTimer(maxWaitDuration)
-	defer timer.Stop()
-
-	var cancellation error
-	select {
-	case <-waiter.refill.done:
-		return waiter.err
-	case <-ctx.Done():
-		cancellation = ctx.Err()
-	case <-limiter.shutdown.ctx.Done():
-		cancellation = ErrCapacityExceeded
-	case <-timer.C:
-		cancellation = ErrCapacityExceeded
-	}
-	if ctxErr := ctx.Err(); ctxErr != nil {
-		cancellation = ctxErr
-	}
-	return waiter.refill.bucket.cancelWaiter(waiter, cancellation)
+func (limiter *Limiter) invalidBatch(pending []*refill, result leaseResult) {
+	slog.Error("rate limiter lease batch returned an invalid result", "subject_kind", result.SubjectKind, "subject_id", result.SubjectID)
+	limiter.failBatch(pending)
 }
 
-func closeRejectedRefill(refill *refill) {
-	if !refill.active {
-		close(refill.published)
+func (limiter *Limiter) discardQueuedRefills() {
+	for {
+		select {
+		case refill := <-limiter.queue:
+			refill.bucket.rejectRefill(refill)
+		default:
+			return
+		}
 	}
-	close(refill.done)
 }
 
-// failCollectedRefills rejects every waiter in a collected batch without
-// applying capacity.
-func failCollectedRefills(pendingRefills map[*refill]leaseRequest) {
-	for refill := range pendingRefills {
+func rejectRefills(pending []*refill) {
+	for _, refill := range pending {
 		refill.bucket.rejectRefill(refill)
 	}
 }
 
-// leaseRequest requests capacity for one subject kind and identifier.
 type leaseRequest struct {
 	SubjectKind    SubjectKind `json:"subject_kind"`
 	SubjectID      string      `json:"subject_id"`
 	RequestedUnits int         `json:"requested_units"`
 }
 
-// leaseResult reports capacity granted for one subject kind and identifier.
 type leaseResult struct {
 	SubjectKind   SubjectKind
 	SubjectID     string
@@ -375,17 +295,7 @@ type leaseResult struct {
 	CapacityUnits int
 }
 
-// subjectKey identifies one subject kind and identifier in a batch response.
 type subjectKey struct {
 	kind SubjectKind
 	id   string
-}
-
-// waiter represents one request admitted to a refill. element is non-nil only
-// while the waiter belongs to the refill's FIFO queue.
-type waiter struct {
-	refill  *refill
-	cost    int
-	element *list.Element
-	err     error
 }

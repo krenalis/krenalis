@@ -88,15 +88,6 @@ func TestApplyRateLimitTo(t *testing.T) {
 		}
 	})
 
-	t.Run("propagates invalid API costs", func(t *testing.T) {
-		subject := &rateLimitSubjectStub{err: core.ErrInvalidRateLimitCost}
-
-		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
-		if !stderrors.Is(err, core.ErrInvalidRateLimitCost) {
-			t.Fatalf("expected invalid API cost, got %v", err)
-		}
-	})
-
 	t.Run("propagates operational errors", func(t *testing.T) {
 		operationalError := stderrors.New("rate limiter unavailable")
 		subject := &rateLimitSubjectStub{err: operationalError}

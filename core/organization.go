@@ -47,10 +47,6 @@ const invitationTokenMaxAge = 3 * 24 * 60 * 60
 const resetPasswordTokenMaxAge = 1 * 60 * 60
 
 var (
-	// ErrInvalidRateLimitCost is returned when an operation has an unsupported
-	// configured cost.
-	ErrInvalidRateLimitCost = state.ErrInvalidRateLimitCost
-
 	// ErrRateLimitCapacityExceeded is returned when a subject does not currently
 	// have enough capacity in its rate-limit bucket.
 	ErrRateLimitCapacityExceeded = state.ErrRateLimitCapacityExceeded
@@ -399,12 +395,14 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 // ConsumeRateLimitCapacity consumes the specified capacity from the
 // organization's organization-level rate-limit budget.
 //
-// It returns ErrInvalidRateLimitCost when cost is outside the supported range.
-// When local capacity is insufficient, the call may wait for one admitted
-// refill to complete. It returns ErrRateLimitCapacityExceeded if the request
-// cannot be admitted, the refill does not provide enough capacity, or the
-// limiter's one-second maximum wait expires. Caller cancellation and deadlines
-// preserve the corresponding context error.
+// cost must be between 1 and the configured maximum. An invalid cost is an
+// internal error and terminates the process. When local capacity is
+// insufficient, the call may wait for one admitted refill to complete. It
+// returns ErrRateLimitCapacityExceeded if capacity cannot be obtained, including
+// when admission or refill fails or the limiter's one-second maximum wait
+// expires. Cancellation and deadlines do not prevent local consumption or
+// publishing a refill; if cancellation wins the race with refill completion,
+// the corresponding context error is returned unchanged.
 func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, cost int) error {
 	this.core.mustBeOpen()
 	return this.organization.ConsumeRateLimitCapacity(ctx, cost)

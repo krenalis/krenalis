@@ -932,12 +932,9 @@ func (state *State) deleteOrganization(n notification) string {
 	}
 	state.mu.Lock()
 	e.organization = state.organizations[e.ID]
-	e.organization.bucket.Close()
 	delete(state.organizations, e.ID)
 	// Delete all workspaces belonging to the organization.
 	for id, ws := range e.organization.workspaces {
-		ws.bucket.Close()
-		ws.eventBucket.Close()
 		for _, c := range ws.connections {
 			for _, key := range c.Keys {
 				delete(state.connectionsByKey, key)
@@ -1023,8 +1020,6 @@ func (state *State) deleteWorkspace(n notification) string {
 		return ""
 	}
 	e.workspace = state.workspaces[e.ID]
-	e.workspace.bucket.Close()
-	e.workspace.eventBucket.Close()
 	org := e.workspace.organization
 	// Update the organization.
 	org.mu.Lock()

@@ -39,9 +39,6 @@ var (
 // local rate-limit capacity or admitted to the current refill.
 var ErrRateLimitCapacityExceeded = ratelimiter.ErrCapacityExceeded
 
-// ErrInvalidRateLimitCost is returned when a request has an unsupported cost.
-var ErrInvalidRateLimitCost = ratelimiter.ErrInvalidCost
-
 const (
 	requestLeaseSize = 100
 	requestMaxCost   = requestLeaseSize

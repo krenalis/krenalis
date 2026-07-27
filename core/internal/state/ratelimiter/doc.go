@@ -2,347 +2,137 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package ratelimiter implements process-local rate limiting backed by
-// externally acquired leases.
+// Package ratelimiter implements process-local rate limiting using capacity
+// leases acquired from PostgreSQL.
 //
-// A Bucket holds capacity for one opaque SubjectKind and identifier. A Limiter
-// batches refills and obtains capacity from PostgreSQL. The caller defines the
-// supported subject kinds and configures buckets.
+// A Bucket holds capacity for one SubjectKind and identifier. A Limiter batches
+// refill requests and obtains capacity from PostgreSQL. The local bucket logic
+// does not interpret subject kinds; the PostgreSQL lease store validates the
+// kinds supported by Krenalis.
 //
 // # Krenalis quota model
 //
 // Krenalis gives each workspace independent budgets for normal requests and
-// event ingestion, and gives each organization a separate organization-level
-// budget for normal requests.
+// event ingestion. It also gives each organization a separate
+// organization-level budget for normal requests. Every rate-limited request is
+// subject to exactly one of these budgets. Budgets belong to organizations and
+// workspaces, not to API keys.
 //
-// Every rate-limited request consumes exactly one budget:
+// Event ingestion consumes the workspace's event budget. A normal request
+// associated with a workspace consumes that workspace's request budget. A
+// normal request without a workspace consumes the authenticated organization's
+// organization-level request budget. A workspace can be selected through a
+// workspace-scoped endpoint, a workspace-bound API key, or the
+// "Krenalis-Workspace" header. Organization-only endpoints reject requests
+// associated with a workspace instead of charging the organization budget.
 //
-//   - event ingestion consumes its workspace's event budget;
-//   - a normal request associated with a workspace consumes that workspace's
-//     request budget;
-//   - a normal request not associated with a workspace consumes the
-//     authenticated organization's organization-level request budget.
+// # Local consumption and refills
 //
-// A request may be associated with a workspace because the endpoint is
-// workspace-scoped, the API key is bound to a workspace, or the
-// "Krenalis-Workspace" header selects one. This rule also applies to global
-// endpoints: if a workspace is selected directly or indirectly, the request
-// consumes that workspace's request budget.
+// Consume never accesses PostgreSQL on the caller's goroutine. If sufficient
+// local capacity is available, it deducts the requested cost immediately. If
+// local capacity is insufficient, Consume may admit the request to the current
+// refill and wait only for that refill. A request that cannot be admitted
+// returns ErrCapacityExceeded without consuming any remaining local capacity.
 //
-// Organization-only endpoints reject requests associated with a workspace
-// rather than charging the organization's organization-level budget.
+// Costs are internal values selected or derived by caller code. They must be
+// between 1 and the bucket's maximum cost. An invalid cost terminates the
+// process. Caller cancellation and deadlines do not prevent local consumption
+// or the publication of a refill. If cancellation wins the race with refill
+// completion, the corresponding context error is returned unchanged. Every
+// waiter also has a fixed maximum wait duration.
 //
-// Budgets belong to organizations and workspaces, not to individual API keys.
+// A bucket has at most one refill generation. Its immutable lease request and
+// any waiter admitted for the operation that triggered the refill are stored
+// while holding the bucket mutex. This happens before the generation is
+// published to the limiter queue. As a result, every published generation is
+// already fully initialized and does not require a separate activation phase.
+// If publication fails, the generation and all its waiters are rejected.
 //
-// # Architecture overview
+// Waiters are admitted in FIFO order, up to the number of units requested by
+// the generation. While holding the bucket mutex, the limiter applies the
+// lease, assigns capacity to the first consecutive FIFO waiters that can be
+// served, and detaches the refill generation. Capacity assigned to an
+// authorized waiter is deducted before that waiter is notified.
 //
-// PostgreSQL stores authoritative rate-limit capacity and is the only shared
-// coordination mechanism between application nodes. Each node acquires chunks
-// of capacity, called leases, through the limiter's PostgreSQL acquirer and
-// consumes them from process memory.
+// The admission budget is the number of units requested when the refill starts.
+// It is not the bucket's lease size. Positive local capacity is excluded
+// because unrelated local requests may consume it before the lease arrives.
+// A partial grant serves only the first consecutive FIFO waiters that can be
+// satisfied. This deliberately prevents smaller operations from being served
+// before an older, more expensive request. Cancellation removes a pending
+// waiter and returns its reserved units to the admission budget for later
+// waiters.
 //
-// Consume never accesses the authoritative store on the caller's goroutine.
-// Requests normally complete using local capacity. When local capacity is
-// insufficient, a request may wait for one refill that has already been
-// successfully published to the refill queue, subject to a bounded admission
-// budget and a finite deadline.
+// A caller may Restore capacity that it consumed but ultimately did not use.
+// Restoration affects only local capacity and cannot raise it above the local
+// target. It neither cancels refills nor wakes waiters.
 //
-// The public consumption methods on core.Organization and core.Workspace accept
-// a context so caller cancellation and deadlines propagate to the limiter.
-// After decoding an event ingestion request, the collector consumes capacity
-// for its event count through the same context-aware path on the corresponding
-// Workspace instance.
+// Each local target is capped by both the lease size and the capacity reported
+// by PostgreSQL. A refill is normally prepared when an operation cannot be
+// served, when local capacity falls below a threshold calculated from the local
+// target, or when an operation leaves no more capacity than its own cost.
+// Targets and thresholds are intentionally simple and do not adapt to traffic
+// rate or acquisition latency.
 //
-// Normal requests support costs from 1 through 100. Event ingestion operations
-// use their event count as the cost, up to a maximum of 20,000. Invalid costs
-// return ErrInvalidCost. Requests that cannot be served immediately or
-// admitted as waiters return ErrCapacityExceeded. Caller cancellation and
-// caller deadlines preserve the corresponding context error.
+// # PostgreSQL safety and batching
 //
-// Each canonical Organization owns one organization-level request bucket. Each
-// canonical Workspace owns separate request and event buckets. Core wrappers
-// share these canonical instances. The State-wide Limiter creates those
-// buckets, which consume through their owning limiter. The limiter owns the
-// refill queue, batcher, lease acquisition, global backoff, metrics, and
-// shutdown lifecycle.
+// PostgreSQL stores authoritative capacity and is the only shared coordination
+// mechanism between application nodes. The limiter batches organization,
+// workspace, and event requests. PostgreSQL locks the corresponding rows and
+// subtracts granted capacity before returning it. A process crash can lose an
+// unused lease but cannot create additional capacity.
 //
-// # Local consumption and refill generations
-//
-// Each bucket has at most one current refill. Every refill has:
-//
-//   - a unique generation identity;
-//   - an immutable lease request for the acquirer;
-//   - a FIFO list of admitted waiters.
-//
-// Generation identity prevents a late completion from an older refill from
-// changing a newer refill or resolving its waiters.
-//
-// A refill moves through three states:
-//
-//  1. publishing: the immutable lease request has been prepared while holding
-//     the bucket mutex, but publication to the refill queue has not yet been
-//     confirmed;
-//  2. active: publication succeeded and the refill is queued or in progress;
-//  3. finished: the refill completed, failed, was canceled, or was discarded.
-//
-// Publishing to the refill queue never happens while holding the bucket mutex.
-// After a successful non-blocking publication, the publisher reacquires the
-// mutex and atomically activates the refill and decides whether to admit the
-// request that created it.
-//
-// The batcher must not process a published refill until this activation
-// decision is complete. Requests racing with the publishing phase may be
-// rejected.
-//
-// If local capacity is sufficient, the request cost is deducted immediately.
-// A low remaining balance may also prepare and publish a proactive refill.
-// Failure to publish that proactive refill does not change the successful
-// consumption decision.
-//
-// A caller may restore capacity that it consumed but ultimately did not use.
-// Restoration affects only the bucket on the current node, cannot raise its
-// available capacity above the local target, and does not cancel refills or
-// wake admitted waiters.
-//
-// If local capacity is insufficient:
-//
-//   - an existing active refill may admit the request as a waiter;
-//   - otherwise, a new refill is prepared and the request may be admitted only
-//     after publication succeeds;
-//   - active backoff, shutdown, a closed bucket, a full refill queue, a race
-//     with the publishing phase, or exhausted admission capacity causes the
-//     request to be rejected immediately.
-//
-// An admitted request waits only for the refill generation to which it belongs.
-// It is never transferred to a later refill.
-//
-// Waiting ends when:
-//
-//   - the refill finishes;
-//   - the caller context is canceled or reaches its deadline;
-//   - the limiter shuts down;
-//   - the limiter's fixed maximum wait duration expires.
-//
-// Resolution is ordered by the bucket state transition. If caller cancellation
-// removes the waiter before capacity is assigned, the caller receives the
-// context error. If refill completion assigns capacity first, authorization is
-// final.
-//
-// If the waiter is still pending and the caller context is already canceled
-// when shutdown or the internal wait timeout is handled, the caller context
-// error takes precedence.
-//
-// # Admission budget
-//
-// The lease request is calculated and frozen before publication. Each request
-// asks for no more than the bucket's configured lease size.
-//
-// Waiter admission is bounded by the actual frozen request, not by the
-// configured lease size in isolation:
-//
-//	reservable = requested units
-//
-// The total cost of current waiters plus the candidate waiter must not exceed
-// reservable.
-//
-// This guarantees that a full grant can serve all admitted waiters, even if
-// positive local capacity is consumed while the acquirer is processing the
-// request.
-//
-// Positive local capacity is deliberately excluded from the calculation because
-// it remains available to unrelated local requests and may be consumed before
-// the grant arrives.
-//
-// A partial or zero grant may still cause some or all admitted waiters to be
-// rejected.
-//
-// A request that cannot be served completely from local capacity consumes none
-// of that capacity before waiting. Positive residual capacity remains available
-// to smaller operations that can complete immediately.
-//
-// Canceling a waiter removes it from the FIFO list and subtracts its cost from
-// the pending total. The released admission capacity may then be used by a
-// later waiter.
-//
-// # Applying leases and serving waiters
-//
-// The acquirer may grant all, part, or none of a lease request. A valid grant
-// is added to the current local balance rather than replacing it, because local
-// traffic may continue while the acquisition call is running.
-//
-// Applying a grant and allocating capacity to waiters is one atomic operation
-// for the bucket:
-//
-//  1. verify that the result belongs to the current active generation;
-//  2. add the granted units to local capacity;
-//  3. inspect waiters in FIFO order;
-//  4. deduct each authorized request cost before recording success;
-//  5. at the first waiter that cannot be served, reject that waiter and every
-//     waiter after it;
-//  6. make every waiter decision final and detach the generation;
-//  7. notify the waiters.
-//
-// Waiters do not wake merely to compete for the bucket again. Capacity assigned
-// to an authorized waiter has already been deducted, so a concurrent request
-// cannot consume it.
-//
-// The intentional FIFO head-of-line policy prevents smaller requests from
-// bypassing an older, more expensive request.
-//
-// Cancellation and refill completion are serialized through the bucket state.
-// If cancellation resolves the waiter first, the waiter is removed and consumes
-// no later grant. If completion assigns capacity first, authorization is final.
-// Every waiter is resolved exactly once.
-//
-// # Capacity and PostgreSQL safety
-//
-// The batcher sends organization, workspace, and event lease requests through
-// the same acquirer, which calls acquire_rate_limit_leases.
-//
-// PostgreSQL reads the current limits from the authoritative domain tables,
-// locks each relevant bucket, calculates the capacity currently available for
-// refill, and subtracts the granted amount before returning it to the node.
-//
-// This preserves the main distributed safety property:
-//
-//	a process crash may lose unused leased capacity, but it cannot create
-//	additional capacity.
-//
-// Unused leases are not returned during shutdown. Safe return would require
-// persistent lease identities and fencing. A best-effort return could race with
-// local consumption and credit the same capacity twice.
-//
-// # Batching and validation
-//
-// One batcher goroutine collects refill generations for a short interval, up to
-// the configured batch size. PostgreSQL processes bucket rows in deterministic
-// subject order to reduce deadlock risk between application nodes.
-//
-// Lease acquisition has its own finite deadline, independent of waiter
-// deadlines, so a stuck query cannot occupy the single batcher indefinitely.
+// The batcher collects generations for a short interval, up to a fixed batch
+// size. Lease acquisition has its own finite deadline, independent of waiter
+// deadlines, so a stuck query cannot block the single batcher indefinitely.
 //
 // The complete acquisition response is validated before any capacity is
 // applied. Every requested subject must have exactly one matching result.
+// Grants must be non-negative, must not exceed either the request or the
+// reported capacity, and the reported capacity must be positive. An invalid or
+// incomplete response causes all requests in the local batch to fail.
 //
-// Every reported capacity must be positive. Each granted amount must be:
+// Acquisition errors and invalid responses start a short global backoff. A
+// call that observes active backoff may still use positive local capacity, but
+// it neither publishes a new refill nor admits a waiter. The batcher discards a
+// queued generation if backoff is still active when the generation is
+// processed. Shutdown cancellation does not start backoff.
 //
-//   - non-negative;
-//   - no larger than the requested amount;
-//   - no larger than the capacity reported by the acquirer.
+// # Bucket lifetime and shutdown
 //
-// Unexpected, duplicate, invalid, or incomplete results fail the complete local
-// batch. A failed batch applies no capacity, rejects every associated waiter,
-// and activates global backoff.
+// Buckets are not closed. An owner stops using a bucket when its organization
+// or workspace is no longer canonical. A queued refill, an acquisition in
+// progress, or an admitted waiter may temporarily keep the bucket reachable.
+// After those references are released, Go collects it normally.
 //
-// # Targets and refill thresholds
+// Limiter.Close has a strict lifecycle precondition. Before calling it, the
+// caller must stop all use of the limiter and every bucket created by it. No
+// exported Limiter or Bucket method may be in progress. Close cancels lease
+// acquisition, stops the batcher, and discards queued refills. It waits for the
+// batcher until its context ends. If that context expires, shutdown remains in
+// progress.
 //
-// Each local target is capped by both the standard lease size and the
-// configured burst capacity.
-//
-// A refill is normally prepared before the bucket becomes empty when:
-//
-//   - local capacity falls below its scaled threshold;
-//   - an operation leaves no more capacity than the cost it just consumed;
-//   - an operation finds insufficient local capacity.
-//
-// Targets and thresholds are deliberately simple. They are not adaptive to
-// traffic rate or lease-acquisition latency.
-//
-// # Global refill backoff
-//
-// Lease-acquisition errors and invalid batch responses activate a short global
-// backoff. The failed batch receives no capacity, and all of its waiters are
-// rejected.
-//
-// Cancellation caused by Limiter.Close does not activate backoff.
-//
-// During backoff:
-//
-//   - positive local capacity remains usable;
-//   - no new refill is published;
-//   - no waiter is admitted.
-//
-// Refill generations already buffered in the queue are discarded without
-// calling the acquirer when the batcher reaches them. Their waiters are
-// resolved as part of that discard.
-//
-// The first request arriving after the backoff deadline may publish a new
-// refill. No retry timer or additional goroutine is required.
-//
-// # Removal and shutdown
-//
-// Removing an organization or workspace disables its buckets, clears their
-// local capacity, detaches the current refill generation, and rejects every
-// waiter.
-//
-// Pointers to queued generations remain memory-safe. Later requests and late
-// refill results are ignored because the bucket is closed and the generation
-// identity no longer matches.
-//
-// Closing the limiter:
-//
-//   - prevents new refills;
-//   - prevents new waiters;
-//   - cancels in-progress lease acquisition;
-//   - stops the batcher;
-//   - directly unblocks pending waiters, including those belonging to entries
-//     left in the undrained refill queue;
-//   - abandons remaining local capacity without returning it to the
-//     authoritative store.
-//
-// Close waits for the batcher to stop until its context is done. If the
-// context ends first, shutdown continues after Close returns.
+// Unused leases are never returned during shutdown. Returning them safely
+// would require persistent lease identifiers and a fencing mechanism.
 //
 // # Important invariants
 //
 // Future changes should preserve these properties unless they deliberately
 // redefine the limiter's guarantees:
 //
-//  1. Consume never accesses the authoritative store on the caller's
-//     goroutine.
-//  2. Exactly one workspace-request, workspace-event, or organization-request
-//     budget applies to each operation.
-//  3. Each subject kind and identifier has one local bucket per process.
-//  4. The bucket mutex protects all mutations to bucket, refill-generation,
-//     and waiter state. Final waiter results are safely published to readers
-//     after the mutex is released.
-//  5. No bucket mutex is held during refill-queue or lease-acquisition I/O.
-//  6. At most one refill generation is publishing, queued, or in progress per
-//     bucket.
-//  7. A waiter belongs to one active refill generation and never moves to
-//     another.
-//  8. Local available capacity never becomes negative.
-//  9. Pending waiter cost never exceeds requested units.
-//  10. The acquirer reserves capacity in the authoritative store before
-//     returning a lease.
-//  11. Granted capacity is added to the current local value.
-//  12. Capacity assigned to a waiter is deducted atomically before the waiter
-//     is notified.
-//  13. Errors and invalid results never add capacity.
-//  14. Every refill reaches a final state that resolves all waiters still
-//     associated with it.
-//  15. Cancellation and completion resolve every waiter exactly once.
-//  16. Closed buckets cannot consume capacity, request refills, or apply late
-//     results.
-//  17. Generation identity prevents stale results from affecting newer work.
-//  18. Every waiter has a finite maximum wait, even when the caller provides no
-//     deadline.
-//  19. Shutdown unblocks waiters even when the refill queue is not drained.
-//  20. Leases are not returned without persistent identity and fencing.
-//
-// # Possible future work
-//
-// Production observations may justify adapting:
-//
-//   - lease size;
-//   - refill thresholds;
-//   - batching delay;
-//   - waiter maximum duration;
-//   - lease-acquisition deadline;
-//   - global backoff duration.
-//
-// Fairer lease distribution, persistent lease identities, multiple batcher
-// workers, or explicit coordination between nodes would materially increase
-// concurrency complexity and should be introduced only in response to a
-// demonstrated need.
+//   - Consume never accesses PostgreSQL on the caller's goroutine.
+//   - Each Bucket has at most one local refill generation.
+//   - The bucket mutex protects capacity, refill, and waiter state.
+//   - No bucket mutex is held during queue publication or lease acquisition.
+//   - Local available capacity never becomes negative.
+//   - Pending waiter cost never exceeds the units requested when the refill
+//     starts.
+//   - A waiter belongs to one refill generation and is resolved exactly once.
+//   - Granted capacity is added to the current local value, capped at the newly
+//     reported local target.
+//   - Capacity assigned to a waiter is deducted before notification.
+//   - Errors and invalid responses never add capacity.
+//   - Generation identity prevents stale results from affecting newer work.
+//   - Leases are not returned without persistent identity and a fencing
+//     mechanism.
 package ratelimiter
