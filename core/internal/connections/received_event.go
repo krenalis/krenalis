@@ -121,18 +121,19 @@ func (c receivedEventContext) Campaign() (connectors.ReceivedEventContextCampaig
 }
 
 func (c receivedEventContext) Consents() (iter.Seq2[string, bool], bool) {
-	if consents, ok := c.context["consents"].(map[string]any); ok {
-		return func(yield func(string, bool) bool) {
-			for purpose, consented := range consents {
-				if v, ok := consented.(bool); ok {
-					if !yield(purpose, v) {
-						return
-					}
+	consents, ok := c.context["consents"].(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	return func(yield func(string, bool) bool) {
+		for purpose, consented := range consents {
+			if v, ok := consented.(bool); ok {
+				if !yield(purpose, v) {
+					return
 				}
 			}
-		}, true
-	}
-	return nil, false
+		}
+	}, true
 }
 
 func (c receivedEventContext) Device() (connectors.ReceivedEventContextDevice, bool) {
