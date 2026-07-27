@@ -891,13 +891,13 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
-	var consents state.RequiredConsents
+	var rc state.RequiredConsents
 	if requiredConsents != nil {
 		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
 			return "", errors.BadRequest(`required consents operator must be "and" or "or"`)
 		}
-		consents.Operator = state.ConsentPurposesOperator(requiredConsents.Operator)
-		consents.Purposes = make([]string, len(requiredConsents.Purposes))
+		rc.Operator = state.ConsentPurposesOperator(requiredConsents.Operator)
+		rc.Purposes = make([]string, len(requiredConsents.Purposes))
 		for i, id := range requiredConsents.Purposes {
 			if !IsValidID(id) {
 				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
@@ -906,14 +906,14 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			if !ok {
 				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
 			}
-			consents.Purposes[i] = cp.Code
+			rc.Purposes[i] = cp.Code
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
 	if !ok {
 		return "", errors.New("observer either has not been created yet or has already been removed")
 	}
-	id, err := observer.CreateListener(connections, size, where, consents)
+	id, err := observer.CreateListener(connections, size, where, rc)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)
