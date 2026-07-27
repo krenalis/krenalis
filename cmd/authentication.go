@@ -102,35 +102,44 @@ func (s *apisServer) authenticateAPIKeyRequest(r *http.Request, auth []string) (
 	}
 	org, err := s.core.Organization(organizationID)
 	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
+		}
 		return authenticatedRequest{}, err
 	}
 	if !org.Enabled {
 		return authenticatedRequest{}, errors.Unprocessable(core.OrganizationDisabled, "organization %s is disabled", org.ID)
 	}
-	if workspaceID != "" {
-		ws, err := org.Workspace(workspaceID)
+
+	header, ok := r.Header["Krenalis-Workspace"]
+	if ok {
+		if len(header) > 1 {
+			return authenticatedRequest{}, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
+		}
+		if workspaceID != "" {
+			return authenticatedRequest{}, errors.BadRequest(`"Krenalis-Workspace" header cannot be provided with a workspace restricted key`)
+		}
+		id := header[0]
+		if !core.IsValidID(id) {
+			return authenticatedRequest{}, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
+		}
+		ws, err := org.Workspace(id)
 		if err != nil {
 			return authenticatedRequest{}, err
 		}
 		return authenticatedRequest{organization: org, workspace: ws}, nil
 	}
-
-	header, ok := r.Header["Krenalis-Workspace"]
-	if !ok {
-		return authenticatedRequest{organization: org}, nil
+	if workspaceID != "" {
+		ws, err := org.Workspace(workspaceID)
+		if err != nil {
+			if _, ok := err.(*errors.NotFoundError); ok {
+				err = errors.Unauthorized("API key in the Authorization header of the request does not exist")
+			}
+			return authenticatedRequest{}, err
+		}
+		return authenticatedRequest{organization: org, workspace: ws}, nil
 	}
-	if len(header) > 1 {
-		return authenticatedRequest{}, errors.BadRequest("request contains multiple Krenalis-Workspace headers")
-	}
-	id := header[0]
-	if !core.IsValidID(id) {
-		return authenticatedRequest{}, errors.BadRequest("Krenalis-Workspace header is invalid; it should be in the format 'Krenalis-Workspace: <WORKSPACE_ID>'")
-	}
-	ws, err := org.Workspace(id)
-	if err != nil {
-		return authenticatedRequest{}, err
-	}
-	return authenticatedRequest{organization: org, workspace: ws}, nil
+	return authenticatedRequest{organization: org}, nil
 }
 
 // authenticateAdminRequest authenticates a request from the Admin console and
