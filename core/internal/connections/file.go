@@ -22,7 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
-	"github.com/krenalis/krenalis/core/internal/countdial"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
@@ -208,8 +208,8 @@ func (file *File) storage() (any, error) {
 	connector := storage.Connector()
 	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(file.state, storage),
-		Dial:     countdial.Dial(storage.Organization().ID),
-		DialWith: countdial.DialWith(storage.Organization().ID),
+		Dial:     dialer.Dial(storage.Organization().ID),
+		DialWith: dialer.DialWith(storage.Organization().ID),
 	})
 }
 

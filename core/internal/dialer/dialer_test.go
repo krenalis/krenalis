@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package countdial
+package dialer
 
 import (
 	"context"
@@ -70,7 +70,7 @@ func collected(t *testing.T, organizationID string) (uint64, bool) {
 }
 
 // listen makes the given organizations the existing ones for the duration of
-// the test, as EnableAndListen does with the ones of a state.
+// the test, as EnableCounting does with the ones of a state.
 func listen(t *testing.T, organizationIDs ...string) {
 	t.Helper()
 	forget(t, organizationIDs...)
@@ -138,7 +138,7 @@ func echoServer(t *testing.T) string {
 // enable enables the metrics for the duration of the test.
 func enable(t *testing.T) {
 	t.Helper()
-	t.Cleanup(EnableForTesting())
+	t.Cleanup(EnableCountingForTesting())
 }
 
 // write writes b to the connection established by dial to addr, reads the echo
@@ -515,7 +515,7 @@ func TestTransportUnknownOrganization(t *testing.T) {
 }
 
 func TestDialWithoutListening(t *testing.T) {
-	// EnableAndListen has not been called, so the organizations are not known
+	// EnableCounting has not been called, so the organizations are not known
 	// and every one of them is considered to exist.
 	enable(t)
 	addr := echoServer(t)
@@ -526,12 +526,12 @@ func TestDialWithoutListening(t *testing.T) {
 	}
 }
 
-func TestIsEnabled(t *testing.T) {
-	if IsEnabled() {
+func TestCountingEnabled(t *testing.T) {
+	if CountingEnabled() {
 		t.Fatal("enabled, expecting it to be disabled by default")
 	}
 	enable(t)
-	if !IsEnabled() {
+	if !CountingEnabled() {
 		t.Fatal("disabled, expecting it to be enabled")
 	}
 }

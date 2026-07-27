@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/countdial"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/core/internal/transformers/embed"
@@ -83,7 +83,7 @@ func (fn *function) Call(ctx context.Context, organization, id, version string, 
 	if err != nil {
 		return err
 	}
-	ctx = countdial.WithOrganization(ctx, organization)
+	ctx = dialer.WithOrganization(ctx, organization)
 
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
@@ -211,7 +211,7 @@ func (fn *function) Create(ctx context.Context, organization, name string, langu
 	if err != nil {
 		return "", "", err
 	}
-	ctx = countdial.WithOrganization(ctx, organization)
+	ctx = dialer.WithOrganization(ctx, organization)
 	var runtime string
 	var layers []string
 	switch language {
@@ -313,7 +313,7 @@ func (fn *function) Update(ctx context.Context, organization, id, source string)
 	if err != nil {
 		return "", err
 	}
-	ctx = countdial.WithOrganization(ctx, organization)
+	ctx = dialer.WithOrganization(ctx, organization)
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
 		FunctionName: &arn,
 		Publish:      true,
@@ -440,7 +440,7 @@ def _handler(event, context):
 //
 // A single client, shared by every organization, is used: it counts the bytes
 // it sends as the egress traffic of the organization carried by the context of
-// each request, set with [countdial.WithOrganization].
+// each request, set with [dialer.WithOrganization].
 func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	fn.mu.Lock()
 	defer fn.mu.Unlock()
@@ -472,14 +472,14 @@ func countEgress(o *lambda.Options) {
 	// WithTransportOptions returns a copy of the client, leaving the one the
 	// SDK has resolved untouched.
 	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
-		t.DialContext = countdial.DialWithContext(t.DialContext)
+		t.DialContext = dialer.DialWithContext(t.DialContext)
 		// The organization is resolved when a connection is dialed, so a pooled
 		// connection would attribute the bytes of every request it later serves
 		// to the organization that dialed it. Keep-alives are disabled, at the
 		// cost of a handshake per request, so that each request is counted for
 		// its own organization. Only when counting is enabled, as otherwise the
 		// pool can be shared with no loss.
-		t.DisableKeepAlives = countdial.IsEnabled()
+		t.DisableKeepAlives = dialer.CountingEnabled()
 	})
 }
 

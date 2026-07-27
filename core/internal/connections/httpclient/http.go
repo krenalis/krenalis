@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
-	"github.com/krenalis/krenalis/core/internal/countdial"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 )
 
@@ -77,7 +77,7 @@ func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 	defer h.transportsMu.Unlock()
 	transport, ok := h.transports[organizationID]
 	if !ok {
-		transport = countdial.Transport(h.transport, organizationID)
+		transport = dialer.Transport(h.transport, organizationID)
 		h.transports[organizationID] = transport
 	}
 	return transport

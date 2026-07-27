@@ -24,10 +24,10 @@ import (
 	"github.com/krenalis/krenalis/core/internal/collector"
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
 	"github.com/krenalis/krenalis/core/internal/connections"
-	"github.com/krenalis/krenalis/core/internal/countdial"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/requestid"
@@ -304,10 +304,10 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	// Make the countdial package count the network usage of the organizations,
+	// Make the dialer package count the network usage of the organizations,
 	// listening to state changes.
 	if conf.NetworkUsageMetricsEnabled {
-		countdial.EnableAndListen(core.state)
+		dialer.EnableCounting(core.state)
 	}
 
 	// Add the Krenalis installation ID tag to Sentry.
@@ -386,7 +386,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
 			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-			dw.SetDialWith(countdial.DialWith(ws.Organization().ID))
+			dw.SetDialWith(dialer.DialWith(ws.Organization().ID))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -1813,7 +1813,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
 		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-		dw.SetDialWith(countdial.DialWith(ws.Organization().ID))
+		dw.SetDialWith(dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1908,7 +1908,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
 		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-		newWarehouse.SetDialWith(countdial.DialWith(ws.Organization().ID))
+		newWarehouse.SetDialWith(dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]

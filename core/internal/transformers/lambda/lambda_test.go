@@ -10,14 +10,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/countdial"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// egressBytesMetric is the name of the metric countdial exposes.
+// egressBytesMetric is the name of the metric dialer exposes.
 const egressBytesMetric = "krenalis_organization_network_egress_bytes_total"
 
 // egressBytes returns the bytes counted, so far, as the egress traffic of the
@@ -70,7 +70,7 @@ var (
 // counted as the egress traffic of the organization the function belongs to.
 func TestCallCountsEgress(t *testing.T) {
 
-	t.Cleanup(countdial.EnableForTesting())
+	t.Cleanup(dialer.EnableCountingForTesting())
 
 	var invocations int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +113,7 @@ func TestCallCountsEgress(t *testing.T) {
 // invoking a function are only attributed to the organization it belongs to.
 func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 
-	t.Cleanup(countdial.EnableForTesting())
+	t.Cleanup(dialer.EnableCountingForTesting())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))
@@ -147,7 +147,7 @@ func TestCallDoesNotCountEgressOfOtherOrganizations(t *testing.T) {
 // bytes sent invoking a function are not counted.
 func TestCallWithMetricsDisabled(t *testing.T) {
 
-	// The metrics are disabled, because countdial.EnableForTesting is not
+	// The metrics are disabled, because dialer.EnableCountingForTesting is not
 	// called and counting is disabled by default.
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +179,7 @@ func TestCallWithMetricsDisabled(t *testing.T) {
 // the bytes of each call are attributed to the organization that made it.
 func TestCallUsesASingleClient(t *testing.T) {
 
-	t.Cleanup(countdial.EnableForTesting())
+	t.Cleanup(dialer.EnableCountingForTesting())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(callResponse))
