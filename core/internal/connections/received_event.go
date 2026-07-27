@@ -127,10 +127,8 @@ func (c receivedEventContext) Consents() (iter.Seq2[string, bool], bool) {
 	}
 	return func(yield func(string, bool) bool) {
 		for purpose, consented := range consents {
-			if v, ok := consented.(bool); ok {
-				if !yield(purpose, v) {
-					return
-				}
+			if !yield(purpose, consented.(bool)) {
+				return
 			}
 		}
 	}, true
