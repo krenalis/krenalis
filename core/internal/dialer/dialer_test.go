@@ -66,26 +66,6 @@ func collected(t *testing.T, organizationID string) (uint64, bool) {
 	return value, found
 }
 
-// listen makes the given organizations the existing ones for the duration of
-// the test, as EnableCounting does with the ones of a state.
-func listen(t *testing.T, organizationIDs ...string) {
-	t.Helper()
-	forget(t, organizationIDs...)
-	organizationsMu.Lock()
-	for _, id := range organizationIDs {
-		if _, ok := organizations[id]; !ok {
-			organizations[id] = &organization{}
-		}
-	}
-	listening = true
-	organizationsMu.Unlock()
-	t.Cleanup(func() {
-		organizationsMu.Lock()
-		listening = false
-		organizationsMu.Unlock()
-	})
-}
-
 // forget removes the organizations with the given IDs, and unregisters their
 // counters, when the test ends, so that they do not leak into the other tests.
 func forget(t *testing.T, organizationIDs ...string) {
@@ -132,11 +112,18 @@ func echoServer(t *testing.T) string {
 	return l.Addr().String()
 }
 
-// enable enables counting for the duration of the test, without following the
-// organizations of a state, so that every organization is considered to exist.
-func enable(t *testing.T) {
+// enable enables counting for the duration of the test, making the
+// organizations with the given IDs the existing ones, as EnableCounting does
+// with the ones of a state. Every other organization does not exist.
+func enable(t *testing.T, organizationIDs ...string) {
 	t.Helper()
+	forget(t, organizationIDs...)
+	organizationsMu.Lock()
+	for _, id := range organizationIDs {
+		organizations[id] = &organization{}
+	}
 	enabled = true
+	organizationsMu.Unlock()
 	t.Cleanup(func() { enabled = false })
 }
 
@@ -196,7 +183,7 @@ func TestDialWithoutOrganization(t *testing.T) {
 func TestDial(t *testing.T) {
 	// Only the bytes sent are counted, and they are attributed to the
 	// organization the dialer was created for.
-	enable(t)
+	enable(t, "org-a", "org-b")
 	addr := echoServer(t)
 	egressA := egress(t, "org-a")
 	egressB := egress(t, "org-b")
@@ -226,7 +213,7 @@ func TestDial(t *testing.T) {
 func TestDialWith(t *testing.T) {
 	// The bytes are counted and the connection is established by the given dial
 	// function, and not by a plain dialer.
-	enable(t)
+	enable(t, "org-dial-with")
 	addr := echoServer(t)
 	egress := egress(t, "org-dial-with")
 	var dialed bool
@@ -246,7 +233,7 @@ func TestDialWith(t *testing.T) {
 
 func TestDialWithNilDialFunc(t *testing.T) {
 	// A nil dial function is replaced by a plain dialer, as in Dial.
-	enable(t)
+	enable(t, "org-nil-dial")
 	addr := echoServer(t)
 	egress := egress(t, "org-nil-dial")
 	write(t, DialWith("org-nil-dial")(nil), addr, "hello")
@@ -258,7 +245,7 @@ func TestDialWithNilDialFunc(t *testing.T) {
 func TestDialWithContext(t *testing.T) {
 	// A single dial function attributes the bytes to the organization carried
 	// by the context of each dial.
-	enable(t)
+	enable(t, "org-ctx-a", "org-ctx-b")
 	addr := echoServer(t)
 	egressA := egress(t, "org-ctx-a")
 	egressB := egress(t, "org-ctx-b")
@@ -341,10 +328,9 @@ func TestDialWithContextDisabled(t *testing.T) {
 }
 
 func TestDialUnknownOrganization(t *testing.T) {
-	// The organizations are known and the one dialing is not among them, so it
-	// does not exist and the dial fails.
-	enable(t)
-	listen(t, "org-known")
+	// The organization dialing is not among the existing ones, so it does not
+	// exist and the dial fails.
+	enable(t, "org-known")
 	forget(t, "org-unknown")
 	addr := echoServer(t)
 	dial := Dial("org-unknown")
@@ -372,10 +358,10 @@ func TestDialUnknownOrganization(t *testing.T) {
 }
 
 func TestDialCreatedOrganization(t *testing.T) {
-	// An organization created after Listen exists, so it can dial and its bytes
-	// are counted.
+	// An organization created after counting is enabled exists, so it can dial
+	// and its bytes are counted.
 	enable(t)
-	listen(t, "org-created")
+	forget(t, "org-created")
 	addr := echoServer(t)
 	onCreateOrganization(state.CreateOrganization{ID: "org-created"})
 	egress := egress(t, "org-created")
@@ -389,8 +375,7 @@ func TestDeletedOrganization(t *testing.T) {
 	// The counter of a deleted organization is discarded, so that the counters
 	// do not accumulate for the whole life of the process, and the organization
 	// can no longer dial.
-	enable(t)
-	listen(t, "org-deleted")
+	enable(t, "org-deleted")
 	addr := echoServer(t)
 	dial := Dial("org-deleted")
 	conn, err := dial(t.Context(), "tcp", addr)
@@ -437,25 +422,12 @@ func TestDeletedOrganization(t *testing.T) {
 func TestDialWithContextUnknownOrganization(t *testing.T) {
 	// The organization carried by the context does not exist, so the dial
 	// fails.
-	enable(t)
-	listen(t, "org-ctx-known")
+	enable(t, "org-ctx-known")
 	addr := echoServer(t)
 	ctx := WithOrganization(t.Context(), "org-ctx-unknown")
 	_, err := DialWithContext(nil)(ctx, "tcp", addr)
 	if !errors.Is(err, ErrNoOrganization) {
 		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
-	}
-}
-
-func TestDialWithoutListening(t *testing.T) {
-	// EnableCounting has not been called, so the organizations are not known
-	// and every one of them is considered to exist.
-	enable(t)
-	addr := echoServer(t)
-	egress := egress(t, "org-not-listening")
-	write(t, Dial("org-not-listening"), addr, "hello")
-	if n := egress(); n != 5 {
-		t.Fatalf("counted %d bytes, expecting 5", n)
 	}
 }
 

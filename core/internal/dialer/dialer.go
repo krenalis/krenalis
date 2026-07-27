@@ -54,7 +54,9 @@ var egressBytes = prometheus.RegisterCounterVec(
 	[]string{"organization"},
 )
 
-// enabled reports whether the bytes sent must be counted.
+// enabled reports whether the bytes sent must be counted. It also reports
+// whether the organizations are known, because it is only set once they are,
+// see [EnableCounting].
 var enabled bool
 
 // CountingEnabled reports whether counting is enabled, that is whether
@@ -89,10 +91,6 @@ var (
 	// removed when it is deleted, so that the counters do not accumulate for
 	// the whole life of the process.
 	organizations = map[string]*organization{}
-	// listening reports whether the organizations are known, that is whether
-	// EnableCounting has been called. Until it is, every organization is
-	// considered to exist, because this package has no way to tell which ones do.
-	listening bool
 )
 
 // EnableCounting enables counting and makes this package follow the
@@ -106,23 +104,22 @@ var (
 //
 // When it is called, instead, it must be called at startup, before any other
 // function of this package, because the dial functions already returned keep
-// the setting they were created with, and it panics if it is called more than
-// once.
+// the setting they were created with and because the organizations are only
+// known once it has returned, and it panics if it is called more than once.
 func EnableCounting(st *state.State) {
 	if enabled {
 		panic("dialer: EnableCounting called more than once")
 	}
-	enabled = true
 	st.Freeze()
 	st.AddListener(onCreateOrganization)
 	st.AddListener(onDeleteOrganization)
 	organizationsMu.Lock()
 	for _, org := range st.Organizations() {
-		if _, ok := organizations[org.ID]; !ok {
-			organizations[org.ID] = &organization{}
-		}
+		organizations[org.ID] = &organization{}
 	}
-	listening = true
+	// Counting is enabled only now that the organizations are known, so that
+	// the dial functions never resolve one while they are being populated.
+	enabled = true
 	organizationsMu.Unlock()
 	st.Unfreeze()
 }
@@ -162,8 +159,9 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 // resolve returns the organization with the given ID and its egress counter,
 // registering the counter the first time the organization is resolved.
 //
-// It fails with [ErrNoOrganization] if the organization does not exist, unless
-// the organizations are not known yet, see [EnableCounting].
+// It fails with [ErrNoOrganization] if the organization does not exist. It is
+// only called when counting is enabled, so the organizations are known, see
+// [EnableCounting].
 //
 // The dial functions resolve the organization once, when they are created, and
 // keep the returned values, so that they do not have to take organizationsMu to
@@ -173,11 +171,7 @@ func resolve(organizationID string) (*organization, *prometheus.Counter, error) 
 	defer organizationsMu.Unlock()
 	org, ok := organizations[organizationID]
 	if !ok {
-		if listening {
-			return nil, nil, fmt.Errorf("dialer: %w: %s", ErrNoOrganization, organizationID)
-		}
-		org = &organization{}
-		organizations[organizationID] = org
+		return nil, nil, fmt.Errorf("dialer: %w: %s", ErrNoOrganization, organizationID)
 	}
 	if org.egress == nil {
 		org.egress = egressBytes.Register(organizationID)
