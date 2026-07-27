@@ -14,12 +14,12 @@ CREATE TABLE organizations (
     connectors_limit integer NOT NULL CHECK (connectors_limit BETWEEN 0 AND 1000),
     connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
     pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
-    workspace_requests_quota_per_hour integer NOT NULL CHECK (workspace_requests_quota_per_hour BETWEEN 1 AND 1000000),
-    workspace_requests_burst_capacity integer NOT NULL CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 100000),
-    workspace_events_quota_per_hour integer NOT NULL CHECK (workspace_events_quota_per_hour BETWEEN 1 AND 1000000),
+    workspace_requests_rate_per_minute integer NOT NULL CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000),
+    workspace_requests_burst_capacity integer NOT NULL CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 10000),
+    workspace_events_rate_per_minute integer NOT NULL CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000),
     workspace_events_burst_capacity integer NOT NULL CHECK (workspace_events_burst_capacity BETWEEN 1 AND 100000),
-    organization_requests_quota_per_hour integer NOT NULL CHECK (organization_requests_quota_per_hour BETWEEN 1 AND 1000000),
-    organization_requests_burst_capacity integer NOT NULL CHECK (organization_requests_burst_capacity BETWEEN 1 AND 100000),
+    organization_requests_rate_per_minute integer NOT NULL CHECK (organization_requests_rate_per_minute BETWEEN 60 AND 20000),
+    organization_requests_burst_capacity integer NOT NULL CHECK (organization_requests_burst_capacity BETWEEN 1 AND 10000),
     PRIMARY KEY (id)
 );
 
@@ -92,15 +92,21 @@ CREATE TABLE rate_limit_buckets (
     workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
     available_units integer NOT NULL,
     capacity_units integer NOT NULL,
-    quota_per_hour integer NOT NULL,
+    rate_per_minute integer NOT NULL,
     last_refill_at timestamptz NOT NULL,
-    refill_remainder bigint NOT NULL,
+    refill_remainder integer NOT NULL,
     PRIMARY KEY (subject_kind, subject_id),
     CHECK (available_units >= 0),
-    CHECK (capacity_units BETWEEN 1 AND 100000),
+    CHECK (
+        (subject_kind IN ('workspace', 'organization') AND capacity_units BETWEEN 1 AND 10000)
+        OR (subject_kind = 'events' AND capacity_units BETWEEN 1 AND 100000)
+    ),
     CHECK (available_units <= capacity_units),
-    CHECK (quota_per_hour BETWEEN 1 AND 1000000),
-    CHECK (refill_remainder >= 0 AND refill_remainder < 3600000000),
+    CHECK (
+        (subject_kind IN ('workspace', 'organization') AND rate_per_minute BETWEEN 60 AND 20000)
+        OR (subject_kind = 'events' AND rate_per_minute BETWEEN 1000 AND 1000000)
+    ),
+    CHECK (refill_remainder >= 0 AND refill_remainder < 60000000),
     CHECK (
         (
             subject_kind IN ('workspace', 'events')

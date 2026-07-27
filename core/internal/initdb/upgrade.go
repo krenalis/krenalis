@@ -132,23 +132,23 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connectors_limit integer NOT NULL DEFAULT 1000 CHECK (connectors_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connections_limit integer NOT NULL DEFAULT 10000 CHECK (connections_limit BETWEEN 0 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS pipelines_limit integer NOT NULL DEFAULT 10000 CHECK (pipelines_limit BETWEEN 0 AND 10000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (workspace_requests_quota_per_hour BETWEEN 1 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 100000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (workspace_events_quota_per_hour BETWEEN 1 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 10000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_events_burst_capacity BETWEEN 1 AND 100000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_quota_per_hour integer NOT NULL DEFAULT 25000 CHECK (organization_requests_quota_per_hour BETWEEN 1 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (organization_requests_burst_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (organization_requests_rate_per_minute BETWEEN 60 AND 20000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_burst_capacity integer NOT NULL DEFAULT 1000 CHECK (organization_requests_burst_capacity BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ALTER COLUMN members_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN access_keys_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspaces_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connectors_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connections_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN pipelines_limit DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN workspace_requests_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_requests_rate_per_minute DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspace_requests_burst_capacity DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN workspace_events_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_events_rate_per_minute DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspace_events_burst_capacity DROP DEFAULT`,
-			`ALTER TABLE organizations ALTER COLUMN organization_requests_quota_per_hour DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN organization_requests_rate_per_minute DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN organization_requests_burst_capacity DROP DEFAULT`,
 			`CREATE TABLE IF NOT EXISTS rate_limit_buckets (
 				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('workspace', 'events', 'organization')),
@@ -157,15 +157,21 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 				workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
 				available_units integer NOT NULL,
 				capacity_units integer NOT NULL,
-				quota_per_hour integer NOT NULL,
+				rate_per_minute integer NOT NULL,
 				last_refill_at timestamptz NOT NULL,
-				refill_remainder bigint NOT NULL,
+				refill_remainder integer NOT NULL,
 				PRIMARY KEY (subject_kind, subject_id),
 				CHECK (available_units >= 0),
-				CHECK (capacity_units BETWEEN 1 AND 100000),
+				CHECK (
+					(subject_kind IN ('workspace', 'organization') AND capacity_units BETWEEN 1 AND 10000)
+					OR (subject_kind = 'events' AND capacity_units BETWEEN 1 AND 100000)
+				),
 				CHECK (available_units <= capacity_units),
-				CHECK (quota_per_hour BETWEEN 1 AND 1000000),
-				CHECK (refill_remainder >= 0 AND refill_remainder < 3600000000),
+				CHECK (
+					(subject_kind IN ('workspace', 'organization') AND rate_per_minute BETWEEN 60 AND 20000)
+					OR (subject_kind = 'events' AND rate_per_minute BETWEEN 1000 AND 1000000)
+				),
+				CHECK (refill_remainder >= 0 AND refill_remainder < 60000000),
 				CHECK (
 					(
 						subject_kind IN ('workspace', 'events')

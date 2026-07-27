@@ -640,9 +640,9 @@ type RateLimits struct {
 	Organization RateLimit
 }
 
-// RateLimit defines an hourly quota and the maximum burst capacity.
+// RateLimit defines a sustained rate and the maximum burst capacity.
 type RateLimit struct {
-	QuotaPerHour  int
+	RatePerMinute int
 	BurstCapacity int
 }
 

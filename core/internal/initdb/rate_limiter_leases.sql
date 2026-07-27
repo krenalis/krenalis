@@ -17,13 +17,13 @@ AS $$
     #variable_conflict use_column
 DECLARE
     v_request record;
-    v_quota_per_hour integer;
+    v_rate_per_minute integer;
     v_burst_capacity integer;
     v_acquisition_time timestamptz := clock_timestamp();
     v_bucket rate_limit_buckets%ROWTYPE;
     v_elapsed_microseconds numeric;
     v_refilled_units bigint;
-    v_refill_remainder bigint;
+    v_refill_remainder integer;
     v_available_units integer;
     v_refill_numerator numeric;
     v_granted_units integer;
@@ -76,20 +76,20 @@ BEGIN
         -- domain table. A concurrent configuration update may become visible only
         -- to a later lease acquisition.
         IF v_request.subject_kind = 'workspace' THEN
-            SELECT o.workspace_requests_quota_per_hour, o.workspace_requests_burst_capacity
-            INTO v_quota_per_hour, v_burst_capacity
+            SELECT o.workspace_requests_rate_per_minute, o.workspace_requests_burst_capacity
+            INTO v_rate_per_minute, v_burst_capacity
             FROM workspaces w
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
         ELSIF v_request.subject_kind = 'events' THEN
-            SELECT o.workspace_events_quota_per_hour, o.workspace_events_burst_capacity
-            INTO v_quota_per_hour, v_burst_capacity
+            SELECT o.workspace_events_rate_per_minute, o.workspace_events_burst_capacity
+            INTO v_rate_per_minute, v_burst_capacity
             FROM workspaces w
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
         ELSE
-            SELECT organization_requests_quota_per_hour, organization_requests_burst_capacity
-            INTO v_quota_per_hour, v_burst_capacity
+            SELECT organization_requests_rate_per_minute, organization_requests_burst_capacity
+            INTO v_rate_per_minute, v_burst_capacity
             FROM organizations
             WHERE id = v_request.subject_id;
         END IF;
@@ -105,7 +105,7 @@ BEGIN
             workspace,
             available_units,
             capacity_units,
-            quota_per_hour,
+            rate_per_minute,
             last_refill_at,
             refill_remainder
         ) VALUES (
@@ -115,7 +115,7 @@ BEGIN
             CASE WHEN v_request.subject_kind IN ('workspace', 'events') THEN v_request.subject_id END,
             v_burst_capacity,
             v_burst_capacity,
-            v_quota_per_hour,
+            v_rate_per_minute,
             v_acquisition_time,
             0
         )
@@ -129,7 +129,7 @@ BEGIN
         FOR UPDATE;
 
         IF v_bucket.capacity_units <> v_burst_capacity
-            OR v_bucket.quota_per_hour <> v_quota_per_hour
+            OR v_bucket.rate_per_minute <> v_rate_per_minute
         THEN
             -- Preserve available capacity only up to the new burst capacity.
             -- Refill accrued under the previous configuration is discarded
@@ -149,8 +149,8 @@ BEGIN
                 EXTRACT(EPOCH FROM v_acquisition_time - v_bucket.last_refill_at) * 1000000
             );
             v_refill_numerator :=
-                v_elapsed_microseconds * v_quota_per_hour + v_bucket.refill_remainder;
-            v_refilled_units := FLOOR(v_refill_numerator / 3600000000)::bigint;
+                v_elapsed_microseconds * v_rate_per_minute + v_bucket.refill_remainder;
+            v_refilled_units := FLOOR(v_refill_numerator / 60000000)::bigint;
 
             v_available_units := LEAST(
                 v_burst_capacity,
@@ -161,7 +161,7 @@ BEGIN
             IF v_available_units = v_burst_capacity THEN
                 v_refill_remainder := 0;
             ELSE
-                v_refill_remainder := MOD(v_refill_numerator, 3600000000)::bigint;
+                v_refill_remainder := MOD(v_refill_numerator, 60000000)::integer;
             END IF;
         END IF;
 
@@ -176,7 +176,7 @@ BEGIN
         UPDATE rate_limit_buckets AS b
         SET available_units = v_available_units - v_granted_units,
             capacity_units = v_burst_capacity,
-            quota_per_hour = v_quota_per_hour,
+            rate_per_minute = v_rate_per_minute,
             last_refill_at = v_acquisition_time,
             refill_remainder = v_refill_remainder
         WHERE b.subject_kind = v_request.subject_kind

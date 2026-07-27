@@ -271,15 +271,15 @@ var DefaultOrganizationLimits = OrganizationLimits{
 	Pipelines:   100,
 	Rates: RateLimits{
 		Workspace: RateLimit{
-			QuotaPerHour:  25000,
+			RatePerMinute: 1000,
 			BurstCapacity: 1000,
 		},
 		Events: RateLimit{
-			QuotaPerHour:  25000,
+			RatePerMinute: 1000,
 			BurstCapacity: 1000,
 		},
 		Organization: RateLimit{
-			QuotaPerHour:  25000,
+			RatePerMinute: 1000,
 			BurstCapacity: 1000,
 		},
 	},

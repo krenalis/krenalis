@@ -377,9 +377,9 @@ type RateLimits struct {
 	Organization RateLimit `json:"organization"`
 }
 
-// RateLimit defines the hourly quota and the maximum allowed burst capacity.
+// RateLimit defines a sustained rate and the maximum allowed burst capacity.
 type RateLimit struct {
-	QuotaPerHour  int `json:"quotaPerHour"`
+	RatePerMinute int `json:"ratePerMinute"`
 	BurstCapacity int `json:"burstCapacity"`
 }
 

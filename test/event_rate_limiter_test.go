@@ -89,7 +89,7 @@ func TestEventRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
 	}
 	organization := organizations[0]
 	limits := organization.Limits
-	limits.Rates.Events.QuotaPerHour = 1
+	limits.Rates.Events.RatePerMinute = 1000
 	limits.Rates.Events.BurstCapacity = 3
 	k.UpdateOrganization(organization.ID, organization.Name, limits)
 

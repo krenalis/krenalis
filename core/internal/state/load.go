@@ -275,16 +275,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
-		" connectors_limit, connections_limit, pipelines_limit, workspace_requests_quota_per_hour, workspace_requests_burst_capacity,"+
-		" workspace_events_quota_per_hour, workspace_events_burst_capacity, organization_requests_quota_per_hour, organization_requests_burst_capacity FROM organizations", func(rows *db.Rows) error {
+		" connectors_limit, connections_limit, pipelines_limit, workspace_requests_rate_per_minute, workspace_requests_burst_capacity,"+
+		" workspace_events_rate_per_minute, workspace_events_burst_capacity, organization_requests_rate_per_minute, organization_requests_burst_capacity FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			var limits OrganizationLimits
 			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
 				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
-				&limits.Rates.Workspace.QuotaPerHour, &limits.Rates.Workspace.BurstCapacity,
-				&limits.Rates.Events.QuotaPerHour, &limits.Rates.Events.BurstCapacity,
-				&limits.Rates.Organization.QuotaPerHour, &limits.Rates.Organization.BurstCapacity); err != nil {
+				&limits.Rates.Workspace.RatePerMinute, &limits.Rates.Workspace.BurstCapacity,
+				&limits.Rates.Events.RatePerMinute, &limits.Rates.Events.BurstCapacity,
+				&limits.Rates.Organization.RatePerMinute, &limits.Rates.Organization.BurstCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.bucket = state.rateLimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxUnits)

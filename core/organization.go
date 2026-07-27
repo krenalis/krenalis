@@ -88,27 +88,28 @@ type OrganizationCounts struct {
 
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
-	Members     int        `json:"members"`
-	AccessKeys  int        `json:"accessKeys"`
-	Workspaces  int        `json:"workspaces"`
-	Connectors  int        `json:"connectors"`
-	Connections int        `json:"connections"`
-	Pipelines   int        `json:"pipelines"`
-	Rates       RateLimits `json:"rates"`
+	Members     int        `json:"members"`     // Maximum number of members.
+	AccessKeys  int        `json:"accessKeys"`  // Maximum number of access keys.
+	Workspaces  int        `json:"workspaces"`  // Maximum number of workspaces.
+	Connectors  int        `json:"connectors"`  // Maximum number of connectors.
+	Connections int        `json:"connections"` // Maximum number of connections.
+	Pipelines   int        `json:"pipelines"`   // Maximum number of pipelines.
+	Rates       RateLimits `json:"rates"`       // Request and event rate limits.
 }
 
 // RateLimits stores the request and event limits for each workspace, and
-// the request limits for organization-level operations.
+// the request limits for organization-level op/erations.
 type RateLimits struct {
-	Workspace    RateLimit `json:"workspace"`
-	Events       RateLimit `json:"events"`
-	Organization RateLimit `json:"organization"`
+	Workspace    RateLimit `json:"workspace"`    // Request limit for each workspace.
+	Events       RateLimit `json:"events"`       // Event ingestion limit for each workspace, measured in events.
+	Organization RateLimit `json:"organization"` // Request limit for organization-level operations, independent of each workspace's request limit.
 }
 
-// RateLimit defines the hourly quota and the maximum allowed burst capacity.
+// RateLimit defines a sustained rate and a maximum accumulated capacity.
+// Capacity is replenished at RatePerMinute and cannot exceed BurstCapacity.
 type RateLimit struct {
-	QuotaPerHour  int `json:"quotaPerHour"`
-	BurstCapacity int `json:"burstCapacity"`
+	RatePerMinute int `json:"ratePerMinute"` // Sustained rate, in units per minute.
+	BurstCapacity int `json:"burstCapacity"` // Maximum accumulated capacity for traffic spikes.
 }
 
 // Member represents a member of an organization.
@@ -1357,13 +1358,13 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 		} else {
 			result, err = tx.Exec(ctx, "UPDATE organizations"+
 				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4, connectors_limit = $5,"+
-				" connections_limit = $6, pipelines_limit = $7, workspace_requests_quota_per_hour = $8, workspace_requests_burst_capacity = $9,"+
-				" workspace_events_quota_per_hour = $10, workspace_events_burst_capacity = $11,"+
-				" organization_requests_quota_per_hour = $12, organization_requests_burst_capacity = $13 WHERE id = $14",
+				" connections_limit = $6, pipelines_limit = $7, workspace_requests_rate_per_minute = $8, workspace_requests_burst_capacity = $9,"+
+				" workspace_events_rate_per_minute = $10, workspace_events_burst_capacity = $11,"+
+				" organization_requests_rate_per_minute = $12, organization_requests_burst_capacity = $13 WHERE id = $14",
 				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections,
-				n.Limits.Pipelines, n.Limits.Rates.Workspace.QuotaPerHour, n.Limits.Rates.Workspace.BurstCapacity,
-				n.Limits.Rates.Events.QuotaPerHour, n.Limits.Rates.Events.BurstCapacity,
-				n.Limits.Rates.Organization.QuotaPerHour, n.Limits.Rates.Organization.BurstCapacity, this.organization.ID)
+				n.Limits.Pipelines, n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.BurstCapacity,
+				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.BurstCapacity,
+				n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.BurstCapacity, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err

@@ -201,11 +201,11 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 
 	_, err := database.Exec(t.Context(), `
 		UPDATE organizations
-		SET workspace_requests_quota_per_hour = 1,
+		SET workspace_requests_rate_per_minute = 60,
 			workspace_requests_burst_capacity = 100,
-			workspace_events_quota_per_hour = 1,
+			workspace_events_rate_per_minute = 1000,
 			workspace_events_burst_capacity = 20000,
-			organization_requests_quota_per_hour = 1,
+			organization_requests_rate_per_minute = 60,
 			organization_requests_burst_capacity = 100
 		WHERE id = '111111111111'`)
 	if err != nil {
@@ -259,6 +259,28 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	}
 	if granted != 0 {
 		t.Fatalf("second organization lease granted %d units, want 0", granted)
+	}
+
+	_, err = database.Exec(t.Context(), `
+		UPDATE rate_limit_buckets
+		SET available_units = 0,
+			last_refill_at = clock_timestamp() - INTERVAL '30 seconds',
+			refill_remainder = 0
+		WHERE subject_kind = 'organization'
+		  AND subject_id = '111111111111'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = database.QueryRow(t.Context(), `
+		SELECT granted_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","requested_units":30}
+		]`).Scan(&granted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 30 {
+		t.Fatalf("30-second refill at 60 units per minute granted %d units, want 30", granted)
 	}
 }
 
@@ -495,33 +517,33 @@ func assertOrganizationLimits(t *testing.T, database *db.DB) {
 		connectors                        int
 		connections                       int
 		pipelines                         int
-		workspaceRequestsQuotaPerHour     int
+		workspaceRequestsRatePerMinute    int
 		workspaceRequestsBurstCapacity    int
-		workspaceEventsQuotaPerHour       int
+		workspaceEventsRatePerMinute      int
 		workspaceEventsBurstCapacity      int
-		organizationRequestsQuotaPerHour  int
+		organizationRequestsRatePerMinute int
 		organizationRequestsBurstCapacity int
 	)
 	err := database.QueryRow(t.Context(), `
 			SELECT members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,
-				workspace_requests_quota_per_hour, workspace_requests_burst_capacity,
-				workspace_events_quota_per_hour, workspace_events_burst_capacity,
-				organization_requests_quota_per_hour, organization_requests_burst_capacity
+				workspace_requests_rate_per_minute, workspace_requests_burst_capacity,
+				workspace_events_rate_per_minute, workspace_events_burst_capacity,
+				organization_requests_rate_per_minute, organization_requests_burst_capacity
 			FROM organizations
 			WHERE id = '111111111111'`).Scan(&members, &accessKeys, &workspaces, &connectors, &connections, &pipelines,
-		&workspaceRequestsQuotaPerHour, &workspaceRequestsBurstCapacity, &workspaceEventsQuotaPerHour, &workspaceEventsBurstCapacity,
-		&organizationRequestsQuotaPerHour, &organizationRequestsBurstCapacity)
+		&workspaceRequestsRatePerMinute, &workspaceRequestsBurstCapacity, &workspaceEventsRatePerMinute, &workspaceEventsBurstCapacity,
+		&organizationRequestsRatePerMinute, &organizationRequestsBurstCapacity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if members != 10000 || accessKeys != 1000 || workspaces != 1000 || connectors != 1000 ||
-		connections != 10000 || pipelines != 10000 || workspaceRequestsQuotaPerHour != 25000 || workspaceRequestsBurstCapacity != 1000 ||
-		workspaceEventsQuotaPerHour != 25000 || workspaceEventsBurstCapacity != 1000 ||
-		organizationRequestsQuotaPerHour != 25000 || organizationRequestsBurstCapacity != 1000 {
-		t.Fatalf("unexpected limits: members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d workspace_requests_quota_per_hour=%d workspace_requests_burst_capacity=%d workspace_events_quota_per_hour=%d workspace_events_burst_capacity=%d organization_requests_quota_per_hour=%d organization_requests_burst_capacity=%d",
-			members, accessKeys, workspaces, connectors, connections, pipelines, workspaceRequestsQuotaPerHour, workspaceRequestsBurstCapacity,
-			workspaceEventsQuotaPerHour, workspaceEventsBurstCapacity, organizationRequestsQuotaPerHour, organizationRequestsBurstCapacity)
+		connections != 10000 || pipelines != 10000 || workspaceRequestsRatePerMinute != 1000 || workspaceRequestsBurstCapacity != 1000 ||
+		workspaceEventsRatePerMinute != 1000 || workspaceEventsBurstCapacity != 1000 ||
+		organizationRequestsRatePerMinute != 1000 || organizationRequestsBurstCapacity != 1000 {
+		t.Fatalf("unexpected limits: members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d workspace_requests_rate_per_minute=%d workspace_requests_burst_capacity=%d workspace_events_rate_per_minute=%d workspace_events_burst_capacity=%d organization_requests_rate_per_minute=%d organization_requests_burst_capacity=%d",
+			members, accessKeys, workspaces, connectors, connections, pipelines, workspaceRequestsRatePerMinute, workspaceRequestsBurstCapacity,
+			workspaceEventsRatePerMinute, workspaceEventsBurstCapacity, organizationRequestsRatePerMinute, organizationRequestsBurstCapacity)
 	}
 }
 
@@ -537,11 +559,11 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 		"connectors_limit",
 		"connections_limit",
 		"pipelines_limit",
-		"workspace_requests_quota_per_hour",
+		"workspace_requests_rate_per_minute",
 		"workspace_requests_burst_capacity",
-		"workspace_events_quota_per_hour",
+		"workspace_events_rate_per_minute",
 		"workspace_events_burst_capacity",
-		"organization_requests_quota_per_hour",
+		"organization_requests_rate_per_minute",
 		"organization_requests_burst_capacity",
 	} {
 		hasDefault, err := database.QueryExists(t.Context(), `

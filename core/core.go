@@ -779,13 +779,13 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
 				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit,"+
-				" workspace_requests_quota_per_hour, workspace_requests_burst_capacity, workspace_events_quota_per_hour, workspace_events_burst_capacity,"+
-				" organization_requests_quota_per_hour, organization_requests_burst_capacity)"+
+				" workspace_requests_rate_per_minute, workspace_requests_burst_capacity, workspace_events_rate_per_minute, workspace_events_burst_capacity,"+
+				" organization_requests_rate_per_minute, organization_requests_burst_capacity)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
 				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
-				n.Limits.Rates.Workspace.QuotaPerHour, n.Limits.Rates.Workspace.BurstCapacity,
-				n.Limits.Rates.Events.QuotaPerHour, n.Limits.Rates.Events.BurstCapacity,
-				n.Limits.Rates.Organization.QuotaPerHour, n.Limits.Rates.Organization.BurstCapacity)
+				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.BurstCapacity,
+				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.BurstCapacity,
+				n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.BurstCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -2158,6 +2158,18 @@ func stateToCoreTargets(targets state.ConnectorTargets) []Target {
 	return ts
 }
 
+const (
+	minRequestRatePerMinute = 60
+	maxRequestRatePerMinute = 20_000
+	minEventRatePerMinute   = 1_000
+	maxEventRatePerMinute   = 1_000_000
+
+	minRequestBurstCapacity = 1
+	maxRequestBurstCapacity = 10_000
+	minEventBurstCapacity   = 1
+	maxEventBurstCapacity   = 100_000
+)
+
 // validateOrganizationLimits validates the organization limits.
 func validateOrganizationLimits(limits *OrganizationLimits) error {
 	if limits.Members < 1 || limits.Members > MembersLimit {
@@ -2178,23 +2190,23 @@ func validateOrganizationLimits(limits *OrganizationLimits) error {
 	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
 		return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
 	}
-	if q := limits.Rates.Workspace.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("hourly request quota per workspace must be between 1 and 1,000,000")
+	if rate := limits.Rates.Workspace.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
+		return errors.BadRequest("workspace request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
 	}
-	if q := limits.Rates.Workspace.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("request burst capacity per workspace must be between 1 and 100,000")
+	if burst := limits.Rates.Workspace.BurstCapacity; burst < minRequestBurstCapacity || burst > maxRequestBurstCapacity {
+		return errors.BadRequest("workspace request burst capacity must be between %d and %d", minRequestBurstCapacity, maxRequestBurstCapacity)
 	}
-	if q := limits.Rates.Events.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("hourly event quota must be between 1 and 1,000,000")
+	if rate := limits.Rates.Events.RatePerMinute; rate < minEventRatePerMinute || rate > maxEventRatePerMinute {
+		return errors.BadRequest("event rate per minute must be between %d and %d", minEventRatePerMinute, maxEventRatePerMinute)
 	}
-	if q := limits.Rates.Events.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("event burst capacity must be between 1 and 100,000")
+	if burst := limits.Rates.Events.BurstCapacity; burst < minEventBurstCapacity || burst > maxEventBurstCapacity {
+		return errors.BadRequest("event burst capacity must be between %d and %d", minEventBurstCapacity, maxEventBurstCapacity)
 	}
-	if q := limits.Rates.Organization.QuotaPerHour; q < 1 || q > 1_000_000 {
-		return errors.BadRequest("organization hourly request quota must be between 1 and 1,000,000")
+	if rate := limits.Rates.Organization.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
+		return errors.BadRequest("organization request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
 	}
-	if q := limits.Rates.Organization.BurstCapacity; q < 1 || q > 100_000 {
-		return errors.BadRequest("organization request burst capacity must be between 1 and 100,000")
+	if burst := limits.Rates.Organization.BurstCapacity; burst < minRequestBurstCapacity || burst > maxRequestBurstCapacity {
+		return errors.BadRequest("organization request burst capacity must be between %d and %d", minRequestBurstCapacity, maxRequestBurstCapacity)
 	}
 	return nil
 }

@@ -135,15 +135,15 @@ type organizationLimits struct {
 	Pipelines   *int `json:"pipelines"`
 	Rates       *struct {
 		Workspace *struct {
-			QuotaPerHour  *int `json:"quotaPerHour"`
+			RatePerMinute *int `json:"ratePerMinute"`
 			BurstCapacity *int `json:"burstCapacity"`
 		} `json:"workspace"`
 		Events *struct {
-			QuotaPerHour  *int `json:"quotaPerHour"`
+			RatePerMinute *int `json:"ratePerMinute"`
 			BurstCapacity *int `json:"burstCapacity"`
 		} `json:"events"`
 		Organization *struct {
-			QuotaPerHour  *int `json:"quotaPerHour"`
+			RatePerMinute *int `json:"ratePerMinute"`
 			BurstCapacity *int `json:"burstCapacity"`
 		} `json:"organization"`
 	} `json:"rates"`
@@ -533,8 +533,8 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 	if limits.Rates.Workspace == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("workspace request limit is required")
 	}
-	if limits.Rates.Workspace.QuotaPerHour == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("workspace request quota per hour limit is required")
+	if limits.Rates.Workspace.RatePerMinute == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("workspace request rate per minute limit is required")
 	}
 	if limits.Rates.Workspace.BurstCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("workspace request burst capacity limit is required")
@@ -542,8 +542,8 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 	if limits.Rates.Events == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("event limit is required")
 	}
-	if limits.Rates.Events.QuotaPerHour == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("event quota per hour limit is required")
+	if limits.Rates.Events.RatePerMinute == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("event rate per minute limit is required")
 	}
 	if limits.Rates.Events.BurstCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("event burst capacity limit is required")
@@ -551,8 +551,8 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 	if limits.Rates.Organization == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("organization request limit is required")
 	}
-	if limits.Rates.Organization.QuotaPerHour == nil {
-		return core.OrganizationLimits{}, errors.BadRequest("organization request quota per hour limit is required")
+	if limits.Rates.Organization.RatePerMinute == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization request rate per minute limit is required")
 	}
 	if limits.Rates.Organization.BurstCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("organization request burst capacity limit is required")
@@ -566,15 +566,15 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 		Pipelines:   *limits.Pipelines,
 		Rates: core.RateLimits{
 			Workspace: core.RateLimit{
-				QuotaPerHour:  *limits.Rates.Workspace.QuotaPerHour,
+				RatePerMinute: *limits.Rates.Workspace.RatePerMinute,
 				BurstCapacity: *limits.Rates.Workspace.BurstCapacity,
 			},
 			Events: core.RateLimit{
-				QuotaPerHour:  *limits.Rates.Events.QuotaPerHour,
+				RatePerMinute: *limits.Rates.Events.RatePerMinute,
 				BurstCapacity: *limits.Rates.Events.BurstCapacity,
 			},
 			Organization: core.RateLimit{
-				QuotaPerHour:  *limits.Rates.Organization.QuotaPerHour,
+				RatePerMinute: *limits.Rates.Organization.RatePerMinute,
 				BurstCapacity: *limits.Rates.Organization.BurstCapacity,
 			},
 		},
