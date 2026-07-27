@@ -107,7 +107,7 @@ type Config struct {
 	OAuthCredentials              map[string]*OAuthCredentials
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
-	NetworkUsageMetricsEnabled    bool
+	PrometheusMetricsEnabled      bool
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -306,7 +306,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Make the dialer package count the network usage of the organizations,
 	// listening to state changes.
-	if conf.NetworkUsageMetricsEnabled {
+	if conf.PrometheusMetricsEnabled {
 		dialer.EnableCounting(core.state)
 	}
 

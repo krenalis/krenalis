@@ -159,8 +159,8 @@ func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
 	// The transport of an organization is a clone of the base transport, with a
 	// connection pool of its own, so closing its idle connections does not
 	// affect the requests of the other organizations. It is not closed when it
-	// is the base transport itself, which is shared, as when the network usage
-	// metrics are disabled.
+	// is the base transport itself, which is shared, as when the Prometheus are
+	// disabled.
 	if t, ok := transport.base.(*http.Transport); ok && t != h.transport {
 		t.CloseIdleConnections()
 	}

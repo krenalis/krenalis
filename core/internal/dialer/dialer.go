@@ -25,7 +25,7 @@
 // by organization. Only the bytes sent are counted, the bytes received are not.
 //
 // Counting is disabled by default and is enabled with [EnableCounting], which
-// is not called at all when the network usage metrics are disabled. While it is
+// is not called at all when the Prometheus metrics are disabled. While it is
 // disabled, the dial functions returned by [Dial] and [DialWith] establish the
 // connections as they would without this package, with no overhead, and the one
 // returned by [DialWithContext] only reads the organization from the context of
@@ -115,7 +115,7 @@ var (
 // the organization is deleted, and dialing on behalf of an organization that
 // does not exist fails.
 //
-// It is not called at all when the network usage metrics are disabled, leaving
+// It is not called at all when the Prometheus metrics are disabled, leaving
 // counting disabled: the other functions of this package can still be called,
 // they just return plain, unwrapped dialers and count nothing.
 //
@@ -365,7 +365,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 //
 // It panics if organizationID is empty. The check is made even when counting is
 // disabled, so that a caller that does not provide the organization is caught
-// regardless of whether the network usage metrics are enabled.
+// regardless of whether the Prometheus metrics are enabled.
 func dialWith(organizationID string, dial DialFunc) DialFunc {
 	if organizationID == "" {
 		panic("dialer: empty organization ID")
