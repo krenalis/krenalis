@@ -16,10 +16,10 @@ import (
 // are the same values exported by state.
 func TestRateLimitErrorsAreStateErrors(t *testing.T) {
 	if ErrRateLimitCapacityExceeded != state.ErrRateLimitCapacityExceeded {
-		t.Fatal("ErrRateLimitCapacityExceeded is not the state error")
+		t.Fatalf("expected ErrRateLimitCapacityExceeded to equal the state error, got %v", ErrRateLimitCapacityExceeded)
 	}
 	if ErrRateLimiterUnavailable != state.ErrRateLimiterUnavailable {
-		t.Fatal("ErrRateLimiterUnavailable is not the state error")
+		t.Fatalf("expected ErrRateLimiterUnavailable to equal the state error, got %v", ErrRateLimiterUnavailable)
 	}
 }
 

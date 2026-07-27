@@ -235,7 +235,7 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 			wantCapacity = 20000
 		}
 		if capacity != wantCapacity {
-			t.Fatalf("capacity for %s %s = %d, want %d", kind, id, capacity, wantCapacity)
+			t.Fatalf("expected capacity for %s %s %d, got %d", kind, id, wantCapacity, capacity)
 		}
 		grants[kind+":"+id] = granted
 	}
@@ -243,7 +243,7 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 		t.Fatal(err)
 	}
 	if grants["workspace:222222222222"] != 100 || grants["events:222222222222"] != 20000 || grants["organization:111111111111"] != 100 {
-		t.Fatalf("mixed batch grants = %#v, want 100 for workspace, 20,000 for events, and 100 for organization", grants)
+		t.Fatalf("expected mixed batch grants for workspace=100, events=20,000, organization=100, got %#v", grants)
 	}
 
 	// A second limiter process would execute the same database function. Its
@@ -258,7 +258,7 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 		t.Fatal(err)
 	}
 	if granted != 0 {
-		t.Fatalf("second organization lease granted %d units, want 0", granted)
+		t.Fatalf("expected second organization lease to grant 0 units, got %d", granted)
 	}
 
 	_, err = database.Exec(t.Context(), `
@@ -280,7 +280,7 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 		t.Fatal(err)
 	}
 	if granted != 30 {
-		t.Fatalf("30-second refill at 60 units per minute granted %d units, want 30", granted)
+		t.Fatalf("expected 30-second refill at 60 units per minute to grant 30 units, got %d", granted)
 	}
 }
 
@@ -541,7 +541,7 @@ func assertOrganizationLimits(t *testing.T, database *db.DB) {
 		connections != 10000 || pipelines != 10000 || workspaceRequestsRatePerMinute != 1000 || workspaceRequestsBurstCapacity != 1000 ||
 		workspaceEventsRatePerMinute != 1000 || workspaceEventsBurstCapacity != 1000 ||
 		organizationRequestsRatePerMinute != 1000 || organizationRequestsBurstCapacity != 1000 {
-		t.Fatalf("unexpected limits: members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d workspace_requests_rate_per_minute=%d workspace_requests_burst_capacity=%d workspace_events_rate_per_minute=%d workspace_events_burst_capacity=%d organization_requests_rate_per_minute=%d organization_requests_burst_capacity=%d",
+		t.Fatalf("expected default organization limits, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d workspace_requests_rate_per_minute=%d workspace_requests_burst_capacity=%d workspace_events_rate_per_minute=%d workspace_events_burst_capacity=%d organization_requests_rate_per_minute=%d organization_requests_burst_capacity=%d",
 			members, accessKeys, workspaces, connectors, connections, pipelines, workspaceRequestsRatePerMinute, workspaceRequestsBurstCapacity,
 			workspaceEventsRatePerMinute, workspaceEventsBurstCapacity, organizationRequestsRatePerMinute, organizationRequestsBurstCapacity)
 	}

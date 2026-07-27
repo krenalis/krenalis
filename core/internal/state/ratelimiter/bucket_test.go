@@ -42,7 +42,7 @@ func TestNewBucketRejectsInvalidConfiguration(t *testing.T) {
 			err := command.Run()
 			exitError, ok := err.(*exec.ExitError)
 			if !ok || exitError.ExitCode() != 1 {
-				t.Fatalf("invalid configuration exit = %v, want exit status 1", err)
+				t.Fatalf("expected invalid configuration to exit with status 1, got %v", err)
 			}
 		})
 	}
@@ -59,13 +59,13 @@ func TestBucketRestoresLocalCapacity(t *testing.T) {
 		t.Fatalf("first restoration: %v", err)
 	}
 	if got := bucketAvailable(bucket); got != 9 {
-		t.Fatalf("restored capacity = %d, want 9", got)
+		t.Fatalf("expected restored capacity 9, got %d", got)
 	}
 	if err := bucket.Restore(3); err != nil {
 		t.Fatalf("second restoration: %v", err)
 	}
 	if got := bucketAvailable(bucket); got != 10 {
-		t.Fatalf("capacity above local target = %d, want 10", got)
+		t.Fatalf("expected capacity capped at 10, got %d", got)
 	}
 }
 
@@ -82,7 +82,7 @@ func TestBucketThresholdScalesWithTarget(t *testing.T) {
 			bucket := newTestBucket()
 			applyTestLease(bucket, 0, test.target)
 			if bucket.refillThreshold != test.threshold {
-				t.Fatalf("refill threshold = %d, want %d", bucket.refillThreshold, test.threshold)
+				t.Fatalf("expected refill threshold %d, got %d", test.threshold, bucket.refillThreshold)
 			}
 		})
 	}
@@ -110,10 +110,10 @@ func TestBucketStartsProactiveRefillRelativeToConsumption(t *testing.T) {
 	select {
 	case request := <-requests:
 		if got := request[0].RequestedUnits; got != 60 {
-			t.Fatalf("requested units = %d, want 60", got)
+			t.Fatalf("expected requested units 60, got %d", got)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("relative consumption did not start a refill")
+		t.Fatal("expected relative consumption to start a refill, got none")
 	}
 }
 
@@ -149,7 +149,7 @@ func TestConsumeReturnsInvalidUnits(t *testing.T) {
 	bucket := newTestBucket()
 	for _, units := range []int{0, testLeaseSize + 1} {
 		if err := bucket.Consume(t.Context(), units); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
-			t.Fatalf("Consume(%d) = %v, want generic error", units, err)
+			t.Fatalf("expected Consume(%d) to return a generic error, got %v", units, err)
 		}
 	}
 }
@@ -158,7 +158,7 @@ func TestRestoreReturnsInvalidUnits(t *testing.T) {
 	bucket := newTestBucket()
 	for _, units := range []int{0, testLeaseSize + 1} {
 		if err := bucket.Restore(units); err == nil {
-			t.Fatalf("Restore(%d) returned nil", units)
+			t.Fatalf("expected Restore(%d) to return an error, got nil", units)
 		}
 	}
 }

@@ -83,7 +83,7 @@ func TestLimiterCloseStopsBatcher(t *testing.T) {
 	select {
 	case <-limiter.shutdown.done:
 	default:
-		t.Fatal("Close did not stop the batcher")
+		t.Fatal("expected Close to stop the batcher, got a running batcher")
 	}
 }
 
@@ -113,10 +113,10 @@ func TestLimiterCloseHonorsContextDuringProactiveRefill(t *testing.T) {
 	close(release)
 	limiter.Close(context.Background())
 	if backoff := limiter.backoff.Load(); backoff != nil {
-		t.Fatalf("shutdown backoff = %v, want nil", backoff)
+		t.Fatalf("expected shutdown backoff nil, got %v", backoff)
 	}
 	if got := bucketAvailable(bucket); got != 20 {
-		t.Fatalf("capacity after shutdown = %d, want 20", got)
+		t.Fatalf("expected capacity after shutdown 20, got %d", got)
 	}
 }
 
@@ -136,7 +136,7 @@ func TestLimiterConsumesAndRefills(t *testing.T) {
 		t.Fatalf("second consume: %v", err)
 	}
 	if got := bucketAvailable(bucket); got != 0 {
-		t.Fatalf("available capacity = %d, want 0", got)
+		t.Fatalf("expected available capacity 0, got %d", got)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestLimiterCanceledContextConsumesLocalCapacity(t *testing.T) {
 		t.Fatalf("canceled local consume: %v", err)
 	}
 	if got := bucketAvailable(bucket); got != 9 {
-		t.Fatalf("available capacity = %d, want 9", got)
+		t.Fatalf("expected available capacity 9, got %d", got)
 	}
 }
 
@@ -175,7 +175,7 @@ func TestLimiterCanceledContextCancelsWaiterButStartsRefill(t *testing.T) {
 	}
 	<-started
 	if got := pendingUnits(bucket); got != 0 {
-		t.Fatalf("pending units after cancellation = %d, want 0", got)
+		t.Fatalf("expected pending units after cancellation 0, got %d", got)
 	}
 	close(release)
 }
@@ -194,7 +194,7 @@ func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 		waiter := bucket.admitWaiterLocked(refill, 1)
 		bucket.mu.Unlock()
 		if err := waitForRefill(ctx, waiter); !errors.Is(err, context.DeadlineExceeded) {
-			t.Fatalf("wait returned %v, want context deadline exceeded", err)
+			t.Fatalf("expected wait error context deadline exceeded, got %v", err)
 		}
 		bucket.rejectRefill(refill, ErrLimiterUnavailable)
 	}
@@ -207,10 +207,10 @@ func TestLimiterKeepsPositiveCapacityForSmallerRequest(t *testing.T) {
 	bucket := newTestBucket(limiter)
 	applyTestLease(bucket, 90, 100)
 	if err := bucket.Consume(context.Background(), 100); !errors.Is(err, ErrLimiterUnavailable) {
-		t.Fatalf("large request = %v, want ErrLimiterUnavailable", err)
+		t.Fatalf("expected large request error ErrLimiterUnavailable, got %v", err)
 	}
 	if err := bucket.Consume(context.Background(), 90); err != nil {
-		t.Fatalf("smaller request did not use positive local capacity: %v", err)
+		t.Fatalf("expected smaller request to use positive local capacity, got %v", err)
 	}
 }
 
@@ -315,11 +315,11 @@ func TestLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 		switch {
 		case errors.Is(err, context.Canceled):
 			if available != 1 {
-				t.Fatalf("cancellation won but available capacity = %d, want 1", available)
+				t.Fatalf("expected available capacity 1 after cancellation, got %d", available)
 			}
 		case err == nil:
 			if available != 0 {
-				t.Fatalf("grant won but available capacity = %d, want 0", available)
+				t.Fatalf("expected available capacity 0 after grant, got %d", available)
 			}
 		default:
 			t.Fatalf("race result: %v", err)
@@ -407,7 +407,7 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 			t.Fatalf("acquisition timeout: %v", err)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("lease acquisition did not time out")
+		t.Fatal("expected lease acquisition to time out, got no timeout")
 	}
 	bucket.mu.Lock()
 	available := bucket.available
@@ -439,7 +439,7 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 	results := make(chan error, 3)
 	go func() { results <- bucket.Consume(context.Background(), 1) }()
 	if request := <-requests; len(request) != 1 {
-		t.Fatalf("batch contains %d requests, want 1", len(request))
+		t.Fatalf("expected batch to contain 1 request, got %d", len(request))
 	}
 	for range 2 {
 		go func() { results <- bucket.Consume(context.Background(), 1) }()
@@ -452,7 +452,7 @@ func TestLimiterQueuesOneRefill(t *testing.T) {
 		}
 	}
 	if got := bucketAvailable(bucket); got != 7 {
-		t.Fatalf("available capacity = %d, want 7", got)
+		t.Fatalf("expected available capacity 7, got %d", got)
 	}
 }
 
@@ -490,7 +490,7 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 		t.Fatal("batcher stopped while collecting refills")
 	}
 	if len(acquired) != 2 {
-		t.Fatalf("batch contains %d requests, want 2", len(acquired))
+		t.Fatalf("expected batch to contain 2 requests, got %d", len(acquired))
 	}
 }
 
@@ -527,7 +527,7 @@ func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
 		return bucket.refill == nil
 	})
 	if got := bucketAvailable(bucket); got != 24 {
-		t.Fatalf("available capacity = %d, want 24", got)
+		t.Fatalf("expected available capacity 24, got %d", got)
 	}
 }
 
@@ -557,13 +557,13 @@ func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 			})
 			bucket := newTestBucket(limiter)
 			if err := bucket.Consume(context.Background(), 1); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
-				t.Fatalf("invalid lease result = %v, want generic internal error", err)
+				t.Fatalf("expected invalid lease result to return a generic internal error, got %v", err)
 			}
 			if backoff := limiter.backoff.Load(); backoff == nil {
-				t.Fatal("invalid lease result did not start backoff")
+				t.Fatal("expected invalid lease result to start backoff, got no backoff")
 			}
 			if err := bucket.Consume(context.Background(), 1); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
-				t.Fatalf("invalid-response backoff = %v, want generic internal error", err)
+				t.Fatalf("expected invalid-response backoff to return a generic internal error, got %v", err)
 			}
 		})
 	}
@@ -577,7 +577,7 @@ func TestLimiterRejectsWhenQueueIsFull(t *testing.T) {
 		t.Fatalf("consume with full queue: %v", err)
 	}
 	if got := queueFull.calls.Load(); got != 1 {
-		t.Fatalf("queue-full metric = %d, want 1", got)
+		t.Fatalf("expected queue-full metric 1, got %d", got)
 	}
 }
 
@@ -595,6 +595,6 @@ func TestLimiterRejectsRefillsDuringBackoff(t *testing.T) {
 		t.Fatalf("backoff refill: %v", err)
 	}
 	if got := calls.Load(); got != 1 {
-		t.Fatalf("acquisition calls = %d, want 1", got)
+		t.Fatalf("expected acquisition calls 1, got %d", got)
 	}
 }

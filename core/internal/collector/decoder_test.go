@@ -61,13 +61,13 @@ func TestDecoderEventCount(t *testing.T) {
 			}
 			count := dec.EventCount()
 			if count != test.count {
-				t.Fatalf("event count = %d, want %d", count, test.count)
+				t.Fatalf("expected event count %d, got %d", test.count, count)
 			}
 			decoded := 0
 			for event, err := range dec.Events(decoderTestConnectionID, false) {
 				if test.validEvents {
 					if err != nil {
-						t.Fatalf("unexpected event error: %v", err)
+						t.Fatalf("expected no event error, got %v", err)
 					}
 					if event == nil {
 						t.Fatal("decoded event is nil")
@@ -76,7 +76,7 @@ func TestDecoderEventCount(t *testing.T) {
 				decoded++
 			}
 			if decoded != test.count {
-				t.Fatalf("decoded events = %d, want %d", decoded, test.count)
+				t.Fatalf("expected decoded events %d, got %d", test.count, decoded)
 			}
 		})
 	}
@@ -103,7 +103,7 @@ func TestDecoderResetResetsEventCountAndType(t *testing.T) {
 			t.Fatal(err)
 		}
 		if count := dec.EventCount(); count != test.count {
-			t.Fatalf("event count = %d, want %d", count, test.count)
+			t.Fatalf("expected event count %d, got %d", test.count, count)
 		}
 		decoded := 0
 		var eventErr error
@@ -112,10 +112,10 @@ func TestDecoderResetResetsEventCountAndType(t *testing.T) {
 			decoded++
 		}
 		if !reflect.DeepEqual(test.eventErr, eventErr) {
-			t.Fatalf("event error = %#v, want %#v", eventErr, test.eventErr)
+			t.Fatalf("expected event error %#v, got %#v", test.eventErr, eventErr)
 		}
 		if decoded != test.count {
-			t.Fatalf("decoded events = %d, want %d", decoded, test.count)
+			t.Fatalf("expected decoded events %d, got %d", test.count, decoded)
 		}
 	}
 }

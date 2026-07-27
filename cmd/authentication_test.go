@@ -105,7 +105,7 @@ func TestApplyRateLimitTo(t *testing.T) {
 		}
 		const expected = "{\"error\":{\"code\":\"ServiceUnavailable\",\"message\":\"request cannot be processed at this time; try again later\"}}\n"
 		if response.Body.String() != expected {
-			t.Fatalf("unexpected response body: %q", response.Body.String())
+			t.Fatalf("expected service-unavailable response body, got %q", response.Body.String())
 		}
 	})
 
@@ -126,9 +126,9 @@ func TestScopedRateLimitSubject(t *testing.T) {
 	workspace := &core.Workspace{}
 
 	if got := (authenticatedRequest{organization: organization}).scopedRateLimitSubject(); got != organization {
-		t.Fatalf("unscoped rate-limit subject = %T, want organization", got)
+		t.Fatalf("expected unscoped rate-limit subject organization, got %T", got)
 	}
 	if got := (authenticatedRequest{organization: organization, workspace: workspace}).scopedRateLimitSubject(); got != workspace {
-		t.Fatalf("scoped rate-limit subject = %T, want workspace", got)
+		t.Fatalf("expected scoped rate-limit subject workspace, got %T", got)
 	}
 }
