@@ -852,22 +852,17 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
-// If the purposes of requiredConsents are non-empty, only events whose consent
-// satisfies those purposes, according to its operator, will be observed.
+// If requiredConsents is non-nil, only events whose consents satisfy its
+// purposes, according to its operator, will be observed.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents RequiredConsents) (string, error) {
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
-	}
-	if len(requiredConsents.Purposes) > 0 {
-		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
-			return "", errors.BadRequest(`required consents operator must be "and" or "or"`)
-		}
 	}
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -896,8 +891,12 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
-	consents := state.RequiredConsents{Operator: state.ConsentPurposesOperator(requiredConsents.Operator)}
-	if len(requiredConsents.Purposes) > 0 {
+	var consents state.RequiredConsents
+	if requiredConsents != nil {
+		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
+			return "", errors.BadRequest(`required consents operator must be "and" or "or"`)
+		}
+		consents.Operator = state.ConsentPurposesOperator(requiredConsents.Operator)
 		consents.Purposes = make([]string, len(requiredConsents.Purposes))
 		for i, id := range requiredConsents.Purposes {
 			if !IsValidID(id) {
