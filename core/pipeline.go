@@ -922,6 +922,15 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				}
 			}
 		}
+		// Check that the required consent exist
+		if len(n.RequiredConsents.Purposes) > 0 {
+			known := knownConsentPurposeIDs(c.Workspace())
+			for _, id := range n.RequiredConsents.Purposes {
+				if !known[id] {
+					return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
+				}
+			}
+		}
 		// Update the pipeline.
 		result, err := tx.Exec(ctx, update,
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping,
