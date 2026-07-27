@@ -367,9 +367,8 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	return nil
 }
 
-// SetDialWith sets the function used to establish the outbound network
-// connections, so that the driver's own dialer is preserved. If it is not
-// called, the warehouse dials with the driver's default dialer.
+// SetDialWith sets the function that wraps the dial function the warehouse
+// uses to establish its outbound network connections.
 func (warehouse *Snowflake) SetDialWith(dialWith warehouses.DialWith) {
 	warehouse.dialWith = dialWith
 }

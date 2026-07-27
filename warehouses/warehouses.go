@@ -305,19 +305,17 @@ type Warehouse interface {
 	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
 
-	// SetDialWith sets the function the warehouse uses to establish its outbound
-	// network connections, so that Krenalis can count the bytes it sends.
+	// SetDialWith sets the function that wraps the dial function the warehouse uses
+	// to establish its outbound network connections.
 	//
-	// The warehouse calls the given function passing its own dialer, and uses the
-	// returned dial function in place of it, so that it keeps its own dial
-	// options, like its timeouts and its keep-alive. If the warehouse has no
-	// dialer of its own, it calls the function with a nil argument, and the
-	// returned dial function dials with a plain dialer.
+	// If it is called, the warehouse passes its own dialer to the given function
+	// and dials with the returned dial function, so that it keeps its own dial
+	// options, like its timeouts and its keep-alive. A warehouse with no dialer of
+	// its own passes a nil argument, and the returned dial function dials with a
+	// plain dialer. If it is not called, the warehouse dials with its own default
+	// dialer.
 	//
-	// Calling SetDialWith is not mandatory: a warehouse works even if it is never
-	// called, in which case it dials with its own default dialer. The only
-	// constraint is that, if called, it must be called right after New, and never
-	// after any other method.
+	// It cannot be called after any other method, except New.
 	SetDialWith(dialWith DialWith)
 
 	// Truncate truncates the specified table.
