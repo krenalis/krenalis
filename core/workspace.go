@@ -896,6 +896,9 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
 			return "", errors.BadRequest(`required consents operator must be "and" or "or"`)
 		}
+		if len(requiredConsents.Purposes) > MaxRequiredConsentPurposes {
+			return "", errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
+		}
 		rc.Operator = state.ConsentPurposesOperator(requiredConsents.Operator)
 		rc.Purposes = make([]string, len(requiredConsents.Purposes))
 		for i, id := range requiredConsents.Purposes {

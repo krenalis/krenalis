@@ -14,6 +14,8 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
+const MaxRequiredConsentPurposes = 100 // maximum allowed number of required consent purposes.
+
 // ConsentPurpose represents a purpose.
 type ConsentPurpose struct {
 	ID   string `json:"id"`
