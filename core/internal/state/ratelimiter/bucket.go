@@ -35,16 +35,6 @@ type Bucket struct {
 	refill          *refill
 }
 
-// refill represents one immutable lease request and its admitted waiters.
-// Its mutable state is protected by its bucket mutex.
-type refill struct {
-	bucket       *Bucket
-	request      leaseRequest
-	done         chan struct{}
-	waiters      list.List
-	pendingUnits int
-}
-
 // Consume consumes the specified number of units from this bucket.
 // The units value must be between 1 and the configured maximum, inclusive.
 //
@@ -170,23 +160,6 @@ func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 	return cancellation
 }
 
-func waitForRefill(ctx context.Context, waiter *waiter) error {
-	timer := time.NewTimer(maxWaitDuration)
-	defer timer.Stop()
-	select {
-	case <-waiter.refill.done:
-		return waiter.err
-	case <-ctx.Done():
-		return waiter.refill.bucket.cancelWaiter(waiter, ctx.Err())
-	case <-timer.C:
-		cancellation := ErrLimiterUnavailable
-		if err := ctx.Err(); err != nil {
-			cancellation = err
-		}
-		return waiter.refill.bucket.cancelWaiter(waiter, cancellation)
-	}
-}
-
 // completeRefill applies a valid grant and serves the longest satisfiable FIFO
 // prefix. Capacity is assigned before waiters are notified.
 func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits int) {
@@ -252,6 +225,35 @@ func (bucket *Bucket) rejectRefill(refill *refill, err error) {
 	bucket.refill = nil
 	bucket.mu.Unlock()
 	close(refill.done)
+}
+
+// waitForRefill waits until the refill resolves, the caller cancels, or the
+// internal wait deadline expires.
+func waitForRefill(ctx context.Context, waiter *waiter) error {
+	timer := time.NewTimer(maxWaitDuration)
+	defer timer.Stop()
+	select {
+	case <-waiter.refill.done:
+		return waiter.err
+	case <-ctx.Done():
+		return waiter.refill.bucket.cancelWaiter(waiter, ctx.Err())
+	case <-timer.C:
+		cancellation := ErrLimiterUnavailable
+		if err := ctx.Err(); err != nil {
+			cancellation = err
+		}
+		return waiter.refill.bucket.cancelWaiter(waiter, cancellation)
+	}
+}
+
+// refill represents one immutable lease request and its admitted waiters.
+// Its mutable state is protected by its bucket mutex.
+type refill struct {
+	bucket       *Bucket
+	request      leaseRequest
+	done         chan struct{}
+	waiters      list.List
+	pendingUnits int
 }
 
 // waiter represents one request admitted to a refill. element is non-nil only

@@ -38,11 +38,6 @@ var (
 	ErrLimiterUnavailable = errors.New("rate limiter unavailable")
 )
 
-type backoffState struct {
-	until time.Time
-	err   error
-}
-
 // Metrics contains optional counters for rate-limiter events.
 type Metrics struct {
 	AcquisitionErrors Counter
@@ -56,8 +51,6 @@ type Counter interface {
 
 // SubjectKind identifies a class of rate-limit buckets.
 type SubjectKind string
-
-type acquireFunc func(context.Context, []leaseRequest) ([]leaseResult, error)
 
 // Limiter manages rate-limit capacity for the buckets it creates.
 type Limiter struct {
@@ -89,21 +82,6 @@ func New(db *db.DB, metrics Metrics) *Limiter {
 	limiter.shutdown.done = make(chan struct{})
 	go limiter.run()
 	return limiter
-}
-
-func (limiter *Limiter) run() {
-	defer close(limiter.shutdown.done)
-	defer limiter.discardQueuedRefills()
-	for {
-		select {
-		case <-limiter.shutdown.ctx.Done():
-			return
-		case refill := <-limiter.queue:
-			if !limiter.collectAndRefill(refill) {
-				return
-			}
-		}
-	}
 }
 
 // Close starts shutting down the limiter and waits until shutdown completes or
@@ -170,6 +148,7 @@ func (limiter *Limiter) acquireLeases(ctx context.Context, requests []leaseReque
 	return results, nil
 }
 
+// backoffError returns the stored error while a refill backoff is active.
 func (limiter *Limiter) backoffError() error {
 	backoff := limiter.backoff.Load()
 	if backoff == nil || !time.Now().Before(backoff.until) {
@@ -178,6 +157,8 @@ func (limiter *Limiter) backoffError() error {
 	return backoff.err
 }
 
+// collectAndRefill collects a batch starting with first, then processes it. It
+// returns false if shutdown starts while collecting.
 func (limiter *Limiter) collectAndRefill(first *refill) bool {
 	pending := []*refill{first}
 	timer := time.NewTimer(batchDelay)
@@ -198,11 +179,32 @@ func (limiter *Limiter) collectAndRefill(first *refill) bool {
 	return true
 }
 
+// discardQueuedRefills rejects refills still queued during shutdown.
+func (limiter *Limiter) discardQueuedRefills() {
+	for {
+		select {
+		case refill := <-limiter.queue:
+			refill.bucket.rejectRefill(refill, ErrLimiterUnavailable)
+		default:
+			return
+		}
+	}
+}
+
+// failBatch starts backoff unless shutdown is in progress, then rejects the
+// pending refills.
 func (limiter *Limiter) failBatch(pending []*refill, err error) {
 	if limiter.shutdown.ctx.Err() == nil {
 		limiter.backoff.Store(&backoffState{until: time.Now().Add(refillBackoffDuration), err: err})
 	}
 	rejectRefills(pending, err)
+}
+
+// invalidBatch logs and rejects a batch with an invalid lease result.
+func (limiter *Limiter) invalidBatch(pending []*refill, result leaseResult) {
+	err := fmt.Errorf("rate limiter lease batch returned an invalid result for subject %q of kind %q", result.SubjectID, result.SubjectKind)
+	slog.Error("cannot apply rate-limit lease batch", "error", err)
+	limiter.failBatch(pending, err)
 }
 
 // publishRefill queues a refill or rejects it if the queue is full.
@@ -223,6 +225,7 @@ func (limiter *Limiter) publishRefill(refill *refill) bool {
 	}
 }
 
+// refill processes a batch by acquiring capacity and resolving each refill.
 func (limiter *Limiter) refill(pending []*refill) {
 	if err := limiter.backoffError(); err != nil {
 		rejectRefills(pending, err)
@@ -286,35 +289,46 @@ func (limiter *Limiter) refill(pending []*refill) {
 	limiter.backoff.Store(nil)
 }
 
-func (limiter *Limiter) invalidBatch(pending []*refill, result leaseResult) {
-	err := fmt.Errorf("rate limiter lease batch returned an invalid result for subject %q of kind %q", result.SubjectID, result.SubjectKind)
-	slog.Error("cannot apply rate-limit lease batch", "error", err)
-	limiter.failBatch(pending, err)
-}
-
-func (limiter *Limiter) discardQueuedRefills() {
+// run processes queued refills until shutdown.
+func (limiter *Limiter) run() {
+	defer close(limiter.shutdown.done)
+	defer limiter.discardQueuedRefills()
 	for {
 		select {
-		case refill := <-limiter.queue:
-			refill.bucket.rejectRefill(refill, ErrLimiterUnavailable)
-		default:
+		case <-limiter.shutdown.ctx.Done():
 			return
+		case refill := <-limiter.queue:
+			if !limiter.collectAndRefill(refill) {
+				return
+			}
 		}
 	}
 }
 
+// rejectRefills rejects every refill in pending with err.
 func rejectRefills(pending []*refill, err error) {
 	for _, refill := range pending {
 		refill.bucket.rejectRefill(refill, err)
 	}
 }
 
+// acquireFunc obtains capacity for a batch of lease requests.
+type acquireFunc func(context.Context, []leaseRequest) ([]leaseResult, error)
+
+// backoffState stores a temporary failure and its expiration time.
+type backoffState struct {
+	until time.Time
+	err   error
+}
+
+// leaseRequest identifies one subject and the capacity requested for it.
 type leaseRequest struct {
 	SubjectKind    SubjectKind `json:"subject_kind"`
 	SubjectID      string      `json:"subject_id"`
 	RequestedUnits int         `json:"requested_units"`
 }
 
+// leaseResult contains PostgreSQL's capacity result for one subject.
 type leaseResult struct {
 	SubjectKind   SubjectKind
 	SubjectID     string
@@ -322,6 +336,7 @@ type leaseResult struct {
 	CapacityUnits int
 }
 
+// subjectKey identifies a subject in a batch.
 type subjectKey struct {
 	kind SubjectKind
 	id   string
