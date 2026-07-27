@@ -35,8 +35,9 @@ type HTTP struct {
 	// behavior may be unexpected or cause a panic.
 	state *state.State
 
-	// transport is the transport used for the requests that are not attributed
-	// to an organization.
+	// transport is the base transport: the transport of each organization is a
+	// clone of it, so that they all share its timeouts and options, and it is
+	// used as it is for the requests that are not attributed to an organization.
 	transport *http.Transport
 
 	trace io.Writer
