@@ -293,8 +293,7 @@ func WithOrganization(ctx context.Context, organizationID string) context.Contex
 }
 
 // WithoutOrganization returns a copy of ctx marked as not dialing on behalf of
-// any organization, so that the bytes sent by the connections dialed with it
-// are not counted.
+// any organization.
 //
 // Use it, in place of [WithOrganization], when the requests made with a client
 // shared by every organization are not made on behalf of one, as when a
