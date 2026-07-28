@@ -43,17 +43,17 @@ BEGIN
         SELECT
         FROM jsonb_to_recordset(p_requests) AS r(subject_kind text, subject_id text, requested_units integer)
         WHERE r.subject_kind IS NULL
-           OR r.subject_kind NOT IN ('workspace', 'events', 'organization')
+           OR r.subject_kind NOT IN ('organization', 'workspace', 'events')
            OR r.subject_id IS NULL
            OR r.subject_id !~ '^[1-9A-HJ-NP-Za-km-z]{12}$'
            OR r.requested_units IS NULL
            OR r.requested_units < 1
+           OR (r.subject_kind = 'organization' AND r.requested_units > 100)
            OR (r.subject_kind = 'workspace' AND r.requested_units > 100)
            OR (
                 r.subject_kind = 'events'
                 AND r.requested_units > 20000
             )
-           OR (r.subject_kind = 'organization' AND r.requested_units > 100)
     ) THEN
         RAISE EXCEPTION 'invalid rate-limit lease request';
     END IF;
@@ -78,23 +78,23 @@ BEGIN
         -- Read the rate-limit configuration from the subject's authoritative
         -- domain table. A concurrent configuration update may become visible only
         -- to a later lease acquisition.
-        IF v_request.subject_kind = 'workspace' THEN
+        IF v_request.subject_kind = 'organization' THEN
+            SELECT organization_requests_rate_per_minute, organization_requests_burst_capacity
+            INTO v_rate_per_minute, v_burst_capacity
+            FROM organizations
+            WHERE id = v_request.subject_id;
+        ELSIF v_request.subject_kind = 'workspace' THEN
             SELECT o.workspace_requests_rate_per_minute, o.workspace_requests_burst_capacity
             INTO v_rate_per_minute, v_burst_capacity
             FROM workspaces w
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
-        ELSIF v_request.subject_kind = 'events' THEN
+        ELSE
             SELECT o.workspace_events_rate_per_minute, o.workspace_events_burst_capacity
             INTO v_rate_per_minute, v_burst_capacity
             FROM workspaces w
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
-        ELSE
-            SELECT organization_requests_rate_per_minute, organization_requests_burst_capacity
-            INTO v_rate_per_minute, v_burst_capacity
-            FROM organizations
-            WHERE id = v_request.subject_id;
         END IF;
 
         IF NOT FOUND THEN
@@ -221,7 +221,7 @@ BEGIN
         SELECT
         FROM jsonb_to_recordset(p_restorations) AS r(subject_kind text, subject_id text, units integer)
         WHERE r.subject_kind IS NULL
-           OR r.subject_kind NOT IN ('workspace', 'events', 'organization')
+           OR r.subject_kind NOT IN ('organization', 'workspace', 'events')
            OR r.subject_id IS NULL
            OR r.subject_id !~ '^[1-9A-HJ-NP-Za-km-z]{12}$'
            OR r.units IS NULL

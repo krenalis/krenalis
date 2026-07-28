@@ -12,16 +12,16 @@
 //
 // # Krenalis quota model
 //
-// Krenalis gives each workspace independent budgets for normal requests and
-// event ingestion. It also gives each organization a separate
-// organization-level budget for normal requests. Every rate-limited request is
+// Krenalis gives each organization a separate organization-level budget for
+// normal requests. It also gives each workspace independent budgets for normal
+// requests and event ingestion. Every rate-limited request is
 // subject to exactly one of these budgets. Budgets belong to organizations and
 // workspaces, not to API keys.
 //
-// Event ingestion consumes the workspace's event budget. A normal request
-// associated with a workspace consumes that workspace's request budget. A
-// normal request without a workspace consumes the authenticated organization's
-// organization-level request budget. A workspace can be selected through a
+// A normal request without a workspace consumes the authenticated organization's
+// organization-level request budget. A normal request associated with a
+// workspace consumes that workspace's request budget. Event ingestion consumes
+// the workspace's event budget. A workspace can be selected through a
 // workspace-scoped endpoint, a workspace-bound API key, or the
 // "Krenalis-Workspace" header. Organization-only endpoints reject requests
 // associated with a workspace instead of charging the organization budget.

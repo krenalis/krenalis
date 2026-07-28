@@ -201,12 +201,12 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 
 	_, err := database.Exec(t.Context(), `
 		UPDATE organizations
-		SET workspace_requests_rate_per_minute = 60,
+		SET organization_requests_rate_per_minute = 60,
+			organization_requests_burst_capacity = 100,
+			workspace_requests_rate_per_minute = 60,
 			workspace_requests_burst_capacity = 100,
 			workspace_events_rate_per_minute = 1000,
-			workspace_events_burst_capacity = 20000,
-			organization_requests_rate_per_minute = 60,
-			organization_requests_burst_capacity = 100
+			workspace_events_burst_capacity = 20000
 		WHERE id = '111111111111'`)
 	if err != nil {
 		t.Fatal(err)
@@ -216,9 +216,9 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 		SELECT subject_kind, subject_id, granted_units, capacity_units,
 			available_units, rate_per_minute, refill_remainder
 		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","requested_units":100},
 			{"subject_kind":"workspace","subject_id":"222222222222","requested_units":100},
-			{"subject_kind":"events","subject_id":"222222222222","requested_units":20000},
-			{"subject_kind":"organization","subject_id":"111111111111","requested_units":100}
+			{"subject_kind":"events","subject_id":"222222222222","requested_units":20000}
 		]`)
 	if err != nil {
 		t.Fatal(err)
@@ -253,8 +253,8 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if grants["workspace:222222222222"] != 100 || grants["events:222222222222"] != 20000 || grants["organization:111111111111"] != 100 {
-		t.Fatalf("expected mixed batch grants for workspace=100, events=20,000, organization=100, got %#v", grants)
+	if grants["organization:111111111111"] != 100 || grants["workspace:222222222222"] != 100 || grants["events:222222222222"] != 20000 {
+		t.Fatalf("expected mixed batch grants for organization=100, workspace=100, events=20,000, got %#v", grants)
 	}
 
 	// A second limiter process would execute the same database function. Its
@@ -567,33 +567,33 @@ func assertOrganizationLimits(t *testing.T, database *db.DB) {
 		connectors                        int
 		connections                       int
 		pipelines                         int
+		organizationRequestsRatePerMinute int
+		organizationRequestsBurstCapacity int
 		workspaceRequestsRatePerMinute    int
 		workspaceRequestsBurstCapacity    int
 		workspaceEventsRatePerMinute      int
 		workspaceEventsBurstCapacity      int
-		organizationRequestsRatePerMinute int
-		organizationRequestsBurstCapacity int
 	)
 	err := database.QueryRow(t.Context(), `
 			SELECT members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,
+				organization_requests_rate_per_minute, organization_requests_burst_capacity,
 				workspace_requests_rate_per_minute, workspace_requests_burst_capacity,
-				workspace_events_rate_per_minute, workspace_events_burst_capacity,
-				organization_requests_rate_per_minute, organization_requests_burst_capacity
+				workspace_events_rate_per_minute, workspace_events_burst_capacity
 			FROM organizations
 			WHERE id = '111111111111'`).Scan(&members, &accessKeys, &workspaces, &connectors, &connections, &pipelines,
-		&workspaceRequestsRatePerMinute, &workspaceRequestsBurstCapacity, &workspaceEventsRatePerMinute, &workspaceEventsBurstCapacity,
-		&organizationRequestsRatePerMinute, &organizationRequestsBurstCapacity)
+		&organizationRequestsRatePerMinute, &organizationRequestsBurstCapacity,
+		&workspaceRequestsRatePerMinute, &workspaceRequestsBurstCapacity, &workspaceEventsRatePerMinute, &workspaceEventsBurstCapacity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if members != 10000 || accessKeys != 1000 || workspaces != 1000 || connectors != 1000 ||
-		connections != 10000 || pipelines != 10000 || workspaceRequestsRatePerMinute != 1000 || workspaceRequestsBurstCapacity != 1000 ||
-		workspaceEventsRatePerMinute != 1000 || workspaceEventsBurstCapacity != 1000 ||
-		organizationRequestsRatePerMinute != 1000 || organizationRequestsBurstCapacity != 1000 {
-		t.Fatalf("expected default organization limits, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d workspace_requests_rate_per_minute=%d workspace_requests_burst_capacity=%d workspace_events_rate_per_minute=%d workspace_events_burst_capacity=%d organization_requests_rate_per_minute=%d organization_requests_burst_capacity=%d",
-			members, accessKeys, workspaces, connectors, connections, pipelines, workspaceRequestsRatePerMinute, workspaceRequestsBurstCapacity,
-			workspaceEventsRatePerMinute, workspaceEventsBurstCapacity, organizationRequestsRatePerMinute, organizationRequestsBurstCapacity)
+		connections != 10000 || pipelines != 10000 || organizationRequestsRatePerMinute != 1000 || organizationRequestsBurstCapacity != 1000 ||
+		workspaceRequestsRatePerMinute != 1000 || workspaceRequestsBurstCapacity != 1000 ||
+		workspaceEventsRatePerMinute != 1000 || workspaceEventsBurstCapacity != 1000 {
+		t.Fatalf("expected default organization limits, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d organization_requests_rate_per_minute=%d organization_requests_burst_capacity=%d workspace_requests_rate_per_minute=%d workspace_requests_burst_capacity=%d workspace_events_rate_per_minute=%d workspace_events_burst_capacity=%d",
+			members, accessKeys, workspaces, connectors, connections, pipelines, organizationRequestsRatePerMinute, organizationRequestsBurstCapacity,
+			workspaceRequestsRatePerMinute, workspaceRequestsBurstCapacity, workspaceEventsRatePerMinute, workspaceEventsBurstCapacity)
 	}
 }
 
@@ -609,12 +609,12 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 		"connectors_limit",
 		"connections_limit",
 		"pipelines_limit",
+		"organization_requests_rate_per_minute",
+		"organization_requests_burst_capacity",
 		"workspace_requests_rate_per_minute",
 		"workspace_requests_burst_capacity",
 		"workspace_events_rate_per_minute",
 		"workspace_events_burst_capacity",
-		"organization_requests_rate_per_minute",
-		"organization_requests_burst_capacity",
 	} {
 		hasDefault, err := database.QueryExists(t.Context(), `
 			SELECT FROM pg_attrdef d

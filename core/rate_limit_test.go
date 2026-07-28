@@ -55,9 +55,9 @@ func TestValidateOrganizationRateLimits(t *testing.T) {
 		return OrganizationLimits{
 			Members: 1,
 			Rates: RateLimits{
+				Organization: RateLimit{RatePerMinute: minRequestRatePerMinute, BurstCapacity: minRequestBurstCapacity},
 				Workspace:    RateLimit{RatePerMinute: minRequestRatePerMinute, BurstCapacity: minRequestBurstCapacity},
 				Events:       RateLimit{RatePerMinute: minEventRatePerMinute, BurstCapacity: minEventBurstCapacity},
-				Organization: RateLimit{RatePerMinute: minRequestRatePerMinute, BurstCapacity: minRequestBurstCapacity},
 			},
 		}
 	}
@@ -70,10 +70,17 @@ func TestValidateOrganizationRateLimits(t *testing.T) {
 		{
 			name: "accepts maximum values",
 			update: func(limits *OrganizationLimits) {
+				limits.Rates.Organization = RateLimit{RatePerMinute: maxRequestRatePerMinute, BurstCapacity: maxRequestBurstCapacity}
 				limits.Rates.Workspace = RateLimit{RatePerMinute: maxRequestRatePerMinute, BurstCapacity: maxRequestBurstCapacity}
 				limits.Rates.Events = RateLimit{RatePerMinute: maxEventRatePerMinute, BurstCapacity: maxEventBurstCapacity}
-				limits.Rates.Organization = RateLimit{RatePerMinute: maxRequestRatePerMinute, BurstCapacity: maxRequestBurstCapacity}
 			},
+		},
+		{
+			name: "rejects organization request burst above maximum",
+			update: func(limits *OrganizationLimits) {
+				limits.Rates.Organization.BurstCapacity = maxRequestBurstCapacity + 1
+			},
+			wantErr: true,
 		},
 		{
 			name: "rejects workspace request rate below minimum",
@@ -107,13 +114,6 @@ func TestValidateOrganizationRateLimits(t *testing.T) {
 			name: "rejects event rate above maximum",
 			update: func(limits *OrganizationLimits) {
 				limits.Rates.Events.RatePerMinute = maxEventRatePerMinute + 1
-			},
-			wantErr: true,
-		},
-		{
-			name: "rejects organization request burst above maximum",
-			update: func(limits *OrganizationLimits) {
-				limits.Rates.Organization.BurstCapacity = maxRequestBurstCapacity + 1
 			},
 			wantErr: true,
 		},

@@ -154,8 +154,8 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	organizationID := base58.Generate(12)
 	_, err := tx.Exec(ctx, `INSERT INTO organizations`+
 		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,`+
-		` workspace_requests_rate_per_minute, workspace_requests_burst_capacity, workspace_events_rate_per_minute, workspace_events_burst_capacity,`+
-		` organization_requests_rate_per_minute, organization_requests_burst_capacity)`+
+		` organization_requests_rate_per_minute, organization_requests_burst_capacity, workspace_requests_rate_per_minute, workspace_requests_burst_capacity,`+
+		` workspace_events_rate_per_minute, workspace_events_burst_capacity)`+
 		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000, 1000, 1000, 1000, 1000, 1000, 1000)`,
 		organizationID)
 	if err != nil {
