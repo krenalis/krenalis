@@ -20,6 +20,7 @@ package httpclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,11 +43,7 @@ var noOpHandle = noOpHandler{}
 // ErrNoOrganization is the error the requests of a client fail with when the
 // organization they are made on behalf of does not exist, because it has been
 // deleted or it has never been created.
-//
-// It is the same error the dialer package fails a dial with, so that a caller
-// can check for it with errors.Is regardless of whether the request was stopped
-// before it was sent or when its connection was established.
-var ErrNoOrganization = dialer.ErrNoOrganization
+var ErrNoOrganization = errors.New("organization does not exist")
 
 // HTTP allows creating HTTP clients for connections and enables granting,
 // retrieving, and refreshing OAuth access tokens.

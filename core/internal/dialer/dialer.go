@@ -19,15 +19,16 @@
 //
 // Secondarily, the connections dialed on behalf of an organization count the
 // bytes they send, exposing them as a Prometheus counter, see [EnableCounting].
+// An organization that does not exist, because it has been deleted or it has
+// never been created, is never a reason not to dial: its connections are simply
+// established without counting anything.
 package dialer
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
-	"sync/atomic"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/prometheus"
@@ -57,11 +58,6 @@ func CountingEnabled() bool {
 	return enabled
 }
 
-// ErrNoOrganization is the error the dial functions fail with when the
-// organization they dial on behalf of does not exist, because it has been
-// deleted or it has never been created.
-var ErrNoOrganization = errors.New("organization does not exist")
-
 // ErrNoOrganizationInContext is the error [DialWithContext] fails a dial with
 // when the context of the dial carries no organization, that is no ID set with
 // [WithOrganization].
@@ -71,27 +67,19 @@ var ErrNoOrganization = errors.New("organization does not exist")
 // while a request is being served.
 var ErrNoOrganizationInContext = errors.New("dialer: no organization in the context of the dial")
 
-// organization is an organization the connections are dialed on behalf of.
-//
-// The dial functions resolve it once, when they are created, and then only read
-// its deleted field, so that establishing a connection does not have to look it
-// up and does not have to take a lock.
-type organization struct {
-	// egress is the counter of the bytes sent by the organization. It is
-	// registered the first time the organization is resolved, and it is only
-	// written with organizationsMu held.
-	egress *prometheus.Counter
-	// deleted reports whether the organization has been deleted. It is the only
-	// field the dial functions read after they have been created.
-	deleted atomic.Bool
-}
-
 var (
 	organizationsMu sync.Mutex
-	// organizations holds the existing organizations, by ID. An organization is
-	// removed when it is deleted, so that the counters do not accumulate for
-	// the whole life of the process.
-	organizations = map[string]*organization{}
+	// organizations holds the counter of the bytes sent by each existing
+	// organization, by ID. The counter is registered when the organization is
+	// created and it is unregistered when the organization is deleted, so that
+	// the counters do not accumulate for the whole life of the process.
+	//
+	// An organization that does not exist has no entry here, so looking it up
+	// yields a nil counter: dialing on its behalf is not an error, there is
+	// simply nothing to count the bytes it sends for. The dial functions look
+	// it up only when counting is enabled, so the organizations are known, see
+	// [EnableCounting].
+	organizations = map[string]*prometheus.Counter{}
 )
 
 // EnableCounting makes the connections dialed on behalf of an organization
@@ -104,11 +92,11 @@ var (
 // functions of this package can still be called, they just return plain,
 // unwrapped dialers.
 //
-// It also makes this package follow the organizations of st, so that the
-// counter of an organization is discarded when the organization is deleted,
-// instead of being kept for the whole life of the process, and so that dialing
-// on behalf of an organization that does not exist fails. The organizations are
-// therefore only known once counting is enabled.
+// It also makes this package follow the organizations of st, so that every
+// existing organization has a counter, at zero until it dials, and the counter
+// is discarded when the organization is deleted, instead of being kept for the
+// whole life of the process. The organizations are therefore only known once
+// counting is enabled.
 //
 // It must be called at startup, before any other function of this package,
 // because the dial functions already returned keep the setting they were
@@ -122,74 +110,42 @@ func EnableCounting(st *state.State) {
 	st.AddListener(onDeleteOrganization)
 	organizationsMu.Lock()
 	for _, org := range st.Organizations() {
-		organizations[org.ID] = &organization{}
+		organizations[org.ID] = egressBytes.Register(org.ID)
 	}
 	// Counting is enabled only now that the organizations are known, so that
-	// the dial functions never resolve one while they are being populated.
+	// the dial functions never look one up while they are being populated.
 	enabled = true
 	organizationsMu.Unlock()
 	st.Unfreeze()
 }
 
-// onCreateOrganization is called when an organization is created. Its counter
-// is not registered until the organization is resolved.
+// onCreateOrganization is called when an organization is created, registering
+// its counter, which stays at zero until the organization dials.
 func onCreateOrganization(n state.CreateOrganization) {
 	organizationsMu.Lock()
 	if _, ok := organizations[n.ID]; !ok {
-		organizations[n.ID] = &organization{}
+		organizations[n.ID] = egressBytes.Register(n.ID)
 	}
 	organizationsMu.Unlock()
 }
 
-// onDeleteOrganization is called when an organization is deleted. It is marked
-// as deleted, so that the dial functions that resolved it stop dialing, and its
-// counter is unregistered, so that it is no longer collected and it is freed.
+// onDeleteOrganization is called when an organization is deleted. Its counter is
+// unregistered, so that it is no longer collected and it is freed.
 //
 // The connections dialed by the organization before it was deleted may still be
-// written to, and they keep a reference to their counter, but the bytes they
-// add to it are no longer collected and the counter is freed together with the
-// last connection referencing it.
+// written to, and so may the connections its dial functions establish later,
+// but the bytes they add to the counter they hold are no longer collected, and
+// the counter is freed together with the last of them.
 func onDeleteOrganization(n state.DeleteOrganization) {
 	organizationsMu.Lock()
-	org, ok := organizations[n.ID]
+	c := organizations[n.ID]
 	delete(organizations, n.ID)
 	organizationsMu.Unlock()
-	if !ok {
-		return
+	// The counter is nil when the organization does not exist, and there is
+	// then nothing to unregister.
+	if c != nil {
+		c.Unregister()
 	}
-	org.deleted.Store(true)
-	if org.egress != nil {
-		org.egress.Unregister()
-	}
-}
-
-// resolve returns the organization with the given ID and its egress counter,
-// registering the counter the first time the organization is resolved. The
-// boolean return value reports whether the organization exists.
-//
-// A missing organization is not an error here, because the dial functions do
-// not agree on what it means: it is one for those whose organization is fixed
-// when they are created, and it is not for [DialWithContext]. The counter is
-// not registered for it in any case, so that the counters of the deleted
-// organizations are not resurrected.
-//
-// It is only called when counting is enabled, so the organizations are known,
-// see [EnableCounting].
-//
-// The dial functions resolve the organization once, when they are created, and
-// keep the returned values, so that they do not have to take organizationsMu to
-// establish a connection.
-func resolve(organizationID string) (*organization, *prometheus.Counter, bool) {
-	organizationsMu.Lock()
-	defer organizationsMu.Unlock()
-	org, ok := organizations[organizationID]
-	if !ok {
-		return nil, nil, false
-	}
-	if org.egress == nil {
-		org.egress = egressBytes.Register(organizationID)
-	}
-	return org, org.egress, true
 }
 
 // Dial returns the dial function to establish the connections made on behalf of
@@ -197,12 +153,11 @@ func resolve(organizationID string) (*organization, *prometheus.Counter, bool) {
 // [DialWith] instead to keep the dial options of an already configured dialer.
 //
 // It panics if organizationID is empty: use [PlainDial] when there is no
-// organization to dial on behalf of. The returned function fails with
-// [ErrNoOrganization] if the organization does not exist when it is called.
+// organization to dial on behalf of.
 //
 // The connections it establishes count the bytes they send, see
-// [EnableCounting]. While counting is disabled the organizations are not known,
-// so it returns a plain, unwrapped dialer that never fails.
+// [EnableCounting]. It returns a plain, unwrapped dialer, counting nothing,
+// while counting is disabled and when the organization does not exist.
 func Dial(organizationID string) DialFunc {
 	return dialWith(organizationID, nil)
 }
@@ -216,12 +171,11 @@ func Dial(organizationID string) DialFunc {
 // as in [Dial].
 //
 // It panics if organizationID is empty: use [PlainDialWith] when there is no
-// organization to dial on behalf of. The returned function fails with
-// [ErrNoOrganization] if the organization does not exist when it is called.
+// organization to dial on behalf of.
 //
 // As in [Dial], the connections count the bytes they send, see
-// [EnableCounting], and while counting is disabled the dial function is
-// returned unwrapped.
+// [EnableCounting], and the dial function is returned unwrapped while counting
+// is disabled and when the organization does not exist.
 func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 	// The organization is checked here, and not only in dialWith, so that an
 	// empty one panics where DialWith is called and not where the function it
@@ -298,15 +252,10 @@ func WithOrganization(ctx context.Context, organizationID string) context.Contex
 // A dial whose context carries no organization at all fails with
 // [ErrNoOrganizationInContext]: every dial made through this function is made
 // on behalf of an organization, so a context without one is a caller that has
-// forgotten to set it.
-//
-// A dial whose context carries an organization that does not exist, instead,
-// establishes the connection, unlike [Dial] and [DialWith], which fail with
-// [ErrNoOrganization]. The organization is provided at every dial here, by
-// callers that legitimately act on behalf of one that has been deleted: a
-// resource outliving its organization, like a transformation function, is
-// deleted after it, and refusing to dial would leave it undeleted forever. The
-// bytes such a dial sends are counted for no one.
+// forgotten to set it. A context carrying an organization that does not exist,
+// instead, is legitimate, as its callers act on behalf of the organizations
+// that have been deleted: a resource outliving its organization, like a
+// transformation function, is deleted after it.
 //
 // The connections count the bytes they send, see [EnableCounting]. Unlike the
 // other dial functions, this one wraps the given dial function even when
@@ -327,14 +276,14 @@ func DialWithContext(dial DialFunc) DialFunc {
 		if !enabled {
 			return dial(ctx, network, addr)
 		}
-		// Unlike the other dial functions, this one cannot resolve the
-		// organization once, when it is created, because the organization is
-		// only known at every dial, from its context.
-		_, c, ok := resolve(organizationID)
-		if !ok {
-			// The organization does not exist, so there is nothing to attribute
-			// the bytes sent to. It is not an error here, see the comment on
-			// this function.
+		// Unlike the other dial functions, this one cannot take the counter of
+		// the organization once, when it is created, because the organization
+		// is only known at every dial, from its context.
+		organizationsMu.Lock()
+		c := organizations[organizationID]
+		organizationsMu.Unlock()
+		if c == nil {
+			// The organization does not exist: dial without counting.
 			return dial(ctx, network, addr)
 		}
 		conn, err := dial(ctx, network, addr)
@@ -365,21 +314,19 @@ func dialWith(organizationID string, dial DialFunc) DialFunc {
 	if !enabled {
 		return dial
 	}
-	// The organization is resolved once, here, and not at every dial, so that
-	// establishing a connection does not have to look it up and take a lock.
-	org, c, ok := resolve(organizationID)
-	if !ok {
-		err := fmt.Errorf("dialer: %w: %s", ErrNoOrganization, organizationID)
-		return func(context.Context, string, string) (net.Conn, error) {
-			return nil, err
-		}
+	// The counter of the organization is taken once, here, and not at every
+	// dial, so that establishing a connection does not have to look it up and
+	// take the lock.
+	organizationsMu.Lock()
+	c := organizations[organizationID]
+	organizationsMu.Unlock()
+	if c == nil {
+		// The organization does not exist, so there is nothing to count the
+		// bytes sent for and the connections are established as they would be
+		// without this package.
+		return dial
 	}
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
-		// The organization may have been deleted after it was resolved, while
-		// this function was still referenced by a long-lived client.
-		if org.deleted.Load() {
-			return nil, fmt.Errorf("dialer: %w: %s", ErrNoOrganization, organizationID)
-		}
 		conn, err := dial(ctx, network, addr)
 		if err != nil {
 			return nil, err

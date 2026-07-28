@@ -73,8 +73,8 @@ func forget(t *testing.T, organizationIDs ...string) {
 	t.Cleanup(func() {
 		organizationsMu.Lock()
 		for _, id := range organizationIDs {
-			if org, ok := organizations[id]; ok && org.egress != nil {
-				org.egress.Unregister()
+			if c := organizations[id]; c != nil {
+				c.Unregister()
 			}
 			delete(organizations, id)
 		}
@@ -120,7 +120,7 @@ func enable(t *testing.T, organizationIDs ...string) {
 	forget(t, organizationIDs...)
 	organizationsMu.Lock()
 	for _, id := range organizationIDs {
-		organizations[id] = &organization{}
+		organizations[id] = egressBytes.Register(id)
 	}
 	enabled = true
 	organizationsMu.Unlock()
@@ -365,28 +365,30 @@ func TestDialWithContextDisabled(t *testing.T) {
 
 func TestDialUnknownOrganization(t *testing.T) {
 	// The organization dialing is not among the existing ones, so it does not
-	// exist and the dial fails.
+	// exist. The dial is not refused, the connection simply counts nothing.
 	enable(t, "org-known")
 	forget(t, "org-unknown")
 	addr := echoServer(t)
 	dial := Dial("org-unknown")
-	_, err := dial(t.Context(), "tcp", addr)
-	if !errors.Is(err, ErrNoOrganization) {
-		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	conn := write(t, dial, addr, "hello")
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 	// No counter is registered for an organization that does not exist.
 	if _, ok := collected(t, "org-unknown"); ok {
 		t.Fatal("a counter is collected for an organization that does not exist")
 	}
 
-	// The organization is resolved when the dial function is created, so the
-	// dial function keeps failing even if an organization with the same ID is
-	// created later. A dial function created after it, instead, dials.
+	// The counter of the organization is taken when the dial function is
+	// created, so the dial function keeps counting nothing even if an
+	// organization with the same ID is created later. A dial function created
+	// after it, instead, counts.
 	onCreateOrganization(state.CreateOrganization{ID: "org-unknown"})
-	if _, err := dial(t.Context(), "tcp", addr); !errors.Is(err, ErrNoOrganization) {
-		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
-	}
 	egress := egress(t, "org-unknown")
+	write(t, dial, addr, "hello")
+	if n := egress(); n != 0 {
+		t.Fatalf("counted %d bytes, expecting 0", n)
+	}
 	write(t, Dial("org-unknown"), addr, "hello")
 	if n := egress(); n != 5 {
 		t.Fatalf("counted %d bytes, expecting 5", n)
@@ -400,6 +402,12 @@ func TestDialCreatedOrganization(t *testing.T) {
 	forget(t, "org-created")
 	addr := echoServer(t)
 	onCreateOrganization(state.CreateOrganization{ID: "org-created"})
+	// Its counter is registered with the organization, and it is collected at
+	// zero until the organization dials, so that its series does not appear
+	// only once it sends something.
+	if n, ok := collected(t, "org-created"); !ok || n != 0 {
+		t.Fatalf("the counter of the organization is collected at %d (registered: %t), expecting 0", n, ok)
+	}
 	egress := egress(t, "org-created")
 	write(t, Dial("org-created"), addr, "hello")
 	if n := egress(); n != 5 {
@@ -409,8 +417,8 @@ func TestDialCreatedOrganization(t *testing.T) {
 
 func TestDeletedOrganization(t *testing.T) {
 	// The counter of a deleted organization is discarded, so that the counters
-	// do not accumulate for the whole life of the process, and the organization
-	// can no longer dial.
+	// do not accumulate for the whole life of the process. The organization can
+	// still dial, it just counts nothing.
 	enable(t, "org-deleted")
 	addr := echoServer(t)
 	dial := Dial("org-deleted")
@@ -448,10 +456,12 @@ func TestDeletedOrganization(t *testing.T) {
 		t.Fatal("a counter is collected again for the deleted organization")
 	}
 
-	// A dial function created before the deletion no longer dials, because the
-	// organization is looked up at every dial.
-	if _, err := dial(t.Context(), "tcp", addr); !errors.Is(err, ErrNoOrganization) {
-		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	// A dial function created before the deletion still dials, and the bytes
+	// its connections send go to the counter it holds, which is no longer
+	// collected.
+	write(t, dial, addr, "hello")
+	if _, ok := collected(t, "org-deleted"); ok {
+		t.Fatal("a counter is collected again for the deleted organization")
 	}
 }
 
