@@ -441,6 +441,35 @@ func TestLimiterConsumesAndRefills(t *testing.T) {
 	}
 }
 
+// TestLimiterFullBucketChecksCapacityAboveKnownTarget verifies that an
+// operation larger than a full bucket's known target starts a refill and waits
+// for the authoritative capacity result.
+func TestLimiterFullBucketChecksCapacityAboveKnownTarget(t *testing.T) {
+	requests := make(chan leaseRequest, 1)
+	limiter := newTestRateLimiter(t, func(_ context.Context, batch []leaseRequest) ([]leaseResult, error) {
+		request := batch[0]
+		requests <- request
+		return []leaseResult{{
+			SubjectKind:    request.SubjectKind,
+			SubjectID:      request.SubjectID,
+			CapacityUnits:  1_000,
+			RatePerMinute:  1_000,
+			AvailableUnits: 0,
+		}}, nil
+	})
+	bucket := limiter.NewBucket("events", testRateLimitID, 20_000, 20_000)
+	applyTestLease(bucket, 1_000, 1_000)
+
+	err := bucket.Consume(context.Background(), 2_000)
+	if !isCapacityExceeded(err) {
+		t.Fatalf("expected capacity exceeded, got %v", err)
+	}
+	request := <-requests
+	if request.RequestedUnits != 20_000 {
+		t.Fatalf("expected refill request of 20000 units, got %d", request.RequestedUnits)
+	}
+}
+
 // TestLimiterRestoresCapacityThatNoLongerFitsLocally verifies that capacity is
 // not lost when Restore and a proactive refill both fill the same local space.
 func TestLimiterRestoresCapacityThatNoLongerFitsLocally(t *testing.T) {

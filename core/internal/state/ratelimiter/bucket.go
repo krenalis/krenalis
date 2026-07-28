@@ -229,8 +229,8 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 // The caller must hold bucket.mu.
 func (bucket *Bucket) newRefillLocked() *refill {
 	requestedUnits := bucket.leaseSize
-	if bucket.localTarget > 0 {
-		requestedUnits = min(bucket.leaseSize, bucket.localTarget-bucket.available)
+	if missingUnits := bucket.localTarget - bucket.available; missingUnits > 0 {
+		requestedUnits = min(bucket.leaseSize, missingUnits)
 	}
 	refill := &refill{
 		bucket: bucket,
