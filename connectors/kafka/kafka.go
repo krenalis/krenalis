@@ -248,6 +248,9 @@ type innerSettings struct {
 	Topic     string             `json:"topic"`
 }
 
+// TODO(Gianluca): the change made to this connector should be revisited. Maybe
+// it's the wrong one, or maybe it's the right one but there's a simpler way.
+
 const dialTimeout = 5 * time.Second
 
 // opts returns s as options to configure a client. The connections are
