@@ -60,18 +60,18 @@ func New(settings Settings) transformers.FunctionProvider {
 // Call calls the function with the given identifier and version for each record
 // updating its Attributes field with the result of each invocation.
 //
-// The bytes sent invoking the function are attributed to the organization with
-// the given ID.
+// organization is the organization on whose behalf the transformation function
+// is called.
 //
-// Before transformation, record attributes must conform to inSchema.
-// After transformation, they should conform to outSchema, unless an error
-// occurs on the record.
+// Before transformation, record attributes must conform to inSchema. After
+// transformation, they should conform to outSchema, unless an error occurs on
+// the record.
 //
-// If the function does not exist, Call returns an ErrFunctionNotExist error.
-// If the function exists but has an issue preventing execution (e.g., a syntax
-// error), it returns a FunctionExecError.
-// Even if the call succeeds, individual records may still encounter errors,
-// which are stored in the Err field of each record.
+// If the function does not exist, Call returns an ErrFunctionNotExist error. If
+// the function exists but has an issue preventing execution (e.g., a syntax
+// error), it returns a FunctionExecError. Even if the call succeeds, individual
+// records may still encounter errors, which are stored in the Err field of each
+// record.
 func (fn *function) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	arn, language, err := parseID(id)
@@ -194,8 +194,8 @@ func (fn *function) Close(ctx context.Context) error {
 // Create creates a new function with the given name, language, and source and
 // returns its identifier and version.
 //
-// The bytes sent uploading the code of the function are attributed to the
-// organization with the given ID.
+// organization is the organization on behalf of which the transformation
+// function is created.
 func (fn *function) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", "", errors.New("function name is not valid")
@@ -261,9 +261,6 @@ func (fn *function) Create(ctx context.Context, organization, name string, langu
 
 // Delete deletes the function with the given identifier.
 // If a function with the given identifier does not exist, it does nothing.
-//
-// The bytes it sends are not attributed to any organization, as a function is
-// also deleted when the organization it belonged to is no longer known.
 func (fn *function) Delete(ctx context.Context, id string) error {
 	arn, _, err := parseID(id)
 	if err != nil {
