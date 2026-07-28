@@ -1073,6 +1073,9 @@ func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 		{name: "grant exceeds request", results: func(request leaseRequest) []leaseResult {
 			return []leaseResult{{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, GrantedUnits: request.RequestedUnits + 1, CapacityUnits: request.RequestedUnits + 1}}
 		}},
+		{name: "grant plus available exceeds capacity", results: func(request leaseRequest) []leaseResult {
+			return []leaseResult{{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, GrantedUnits: 1, CapacityUnits: 1, AvailableUnits: 1}}
+		}},
 		{name: "zero capacity", results: func(request leaseRequest) []leaseResult {
 			return []leaseResult{{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID}}
 		}},

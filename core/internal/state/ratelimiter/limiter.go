@@ -382,7 +382,7 @@ func (limiter *Limiter) refill(pending []*refill) {
 		if _, duplicate := resultsBySubject[key]; !ok || duplicate ||
 			result.GrantedUnits < 0 || result.GrantedUnits > request.RequestedUnits ||
 			result.CapacityUnits <= 0 || result.GrantedUnits > result.CapacityUnits ||
-			result.AvailableUnits < 0 || result.AvailableUnits > result.CapacityUnits ||
+			result.AvailableUnits < 0 || result.AvailableUnits > result.CapacityUnits-result.GrantedUnits ||
 			result.RatePerMinute <= 0 ||
 			result.RefillRemainder < 0 || result.RefillRemainder >= microsecondsPerMinute {
 			limiter.invalidBatch(pending, result)
