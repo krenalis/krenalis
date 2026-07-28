@@ -27,9 +27,6 @@ const (
 
 	refillBackoffDuration    = 250 * time.Millisecond
 	bucketCompactionInterval = 5 * time.Minute
-	maxRestoreBatchSize      = 64
-	maxRestoreWorkers        = 4
-	maxRestoredUnits         = 100_000
 )
 
 var defaultAcquireTimeout = 5 * time.Second
@@ -77,6 +74,7 @@ type Limiter struct {
 	queue           chan *refill
 	queueFullLogged atomic.Bool
 	backoff         atomic.Pointer[backoffState]
+	restorations    restorationQueue
 
 	metrics Metrics
 
@@ -101,10 +99,12 @@ func New(db *db.DB, metrics Metrics) *Limiter {
 		queue:   make(chan *refill, queueSize),
 		metrics: metrics,
 	}
+	limiter.restorations = newRestorationQueue()
 	limiter.acquire = limiter.acquireLeases
 	limiter.restoreBatch = limiter.restoreCapacityBatch
 	limiter.close.ctx, limiter.close.cancel = context.WithCancel(context.Background())
 	limiter.close.Go(limiter.runRefiller)
+	limiter.close.Go(limiter.runRestorer)
 	limiter.close.Go(limiter.runCompactor)
 	return limiter
 }
@@ -133,13 +133,12 @@ func (limiter *Limiter) Close(ctx context.Context) {
 
 // NewBucket creates an empty node-local bucket. subjectKind identifies the
 // class of rate-limited subject, and subjectID identifies the subject within
-// that class.
-// Together they identify the budget represented by the bucket.
+// that class. Together, they identify the budget represented by the bucket.
 //
 // leaseSize is the maximum number of units reserved locally at one time. Larger
 // values require less frequent acquisitions, while smaller values leave less
-// unused capacity reserved to one process. maxUnits is the maximum number of
-// units accepted by a single Consume or Restore call. Both values must be at
+// unused capacity reserved by one process. maxUnits is the maximum number of
+// units that a single Consume or Restore call accepts. Both values must be at
 // least 1, and maxUnits must not exceed leaseSize.
 func (limiter *Limiter) NewBucket(subjectKind SubjectKind, subjectID string, leaseSize, maxUnits int) *Bucket {
 	if leaseSize < 1 || maxUnits < 1 || maxUnits > leaseSize {
@@ -205,8 +204,8 @@ func (limiter *Limiter) backoffError() error {
 	return backoff.err
 }
 
-// collectAndRefill collects a batch starting with first, then processes it. It
-// returns false if shutdown starts while collecting.
+// collectAndRefill collects a batch starting with first, then processes it.
+// It returns false if shutdown starts while collecting.
 func (limiter *Limiter) collectAndRefill(first *refill) bool {
 	pending := []*refill{first}
 	timer := time.NewTimer(batchDelay)
@@ -227,14 +226,12 @@ func (limiter *Limiter) collectAndRefill(first *refill) bool {
 	return true
 }
 
-// collectUnusedCapacity gathers unused node-local capacity from buckets that
-// are still reachable during shutdown. Close calls it after all background
-// workers have stopped.
+// collectUnusedCapacity gathers unused node-local capacity and capacity queued
+// for restoration during shutdown. Close calls it after all background workers
+// have stopped.
 func (limiter *Limiter) collectUnusedCapacity() []unusedCapacity {
-	refs := limiter.buckets.refs
-
 	available := make(map[subjectKey]int)
-	for _, ref := range refs {
+	for _, ref := range limiter.buckets.refs {
 		bucket := ref.Value()
 		if bucket == nil || bucket.available == 0 {
 			continue
@@ -242,6 +239,8 @@ func (limiter *Limiter) collectUnusedCapacity() []unusedCapacity {
 		key := subjectKey{kind: bucket.subjectKind, id: bucket.subjectID}
 		available[key] = min(maxRestoredUnits, available[key]+bucket.available)
 	}
+	limiter.restorations.mergeInto(available)
+
 	unused := make([]unusedCapacity, 0, len(available))
 	for key, units := range available {
 		unused = append(unused, unusedCapacity{
@@ -330,6 +329,14 @@ func (limiter *Limiter) publishRefill(refill *refill) bool {
 	}
 }
 
+// queueCapacityRestoration schedules capacity that does not fit in a local
+// bucket for best-effort restoration to PostgreSQL.
+func (limiter *Limiter) queueCapacityRestoration(kind SubjectKind, id string, units int) {
+	if units > 0 {
+		limiter.restorations.add(subjectKey{kind: kind, id: id}, units)
+	}
+}
+
 // refill processes a batch by acquiring capacity and resolving each refill.
 func (limiter *Limiter) refill(pending []*refill) {
 	if err := limiter.backoffError(); err != nil {
@@ -397,6 +404,16 @@ func (limiter *Limiter) refill(pending []*refill) {
 	limiter.backoff.Store(nil)
 }
 
+// restoreCapacityBatch restores unused capacity for a batch of subjects.
+func (limiter *Limiter) restoreCapacityBatch(ctx context.Context, unused []unusedCapacity) error {
+	encoded, err := json.Marshal(unused)
+	if err != nil {
+		return fmt.Errorf("cannot encode unused rate-limit capacity: %w", err)
+	}
+	_, err = limiter.db.Exec(ctx, "SELECT restore_rate_limit_capacity($1::jsonb)", string(encoded))
+	return err
+}
+
 // restoreUnusedCapacity restores node-local capacity that remains available at
 // shutdown.
 func (limiter *Limiter) restoreUnusedCapacity(ctx context.Context, unused []unusedCapacity) error {
@@ -440,14 +457,18 @@ func (limiter *Limiter) restoreUnusedCapacity(ctx context.Context, unused []unus
 	return firstErr
 }
 
-// restoreCapacityBatch restores unused capacity for one batch of subjects.
-func (limiter *Limiter) restoreCapacityBatch(ctx context.Context, unused []unusedCapacity) error {
-	encoded, err := json.Marshal(unused)
-	if err != nil {
-		return fmt.Errorf("cannot encode unused rate-limit capacity: %w", err)
+// runCompactor periodically removes references to buckets collected by Go's
+// garbage collector.
+func (limiter *Limiter) runCompactor() {
+	compaction := time.NewTicker(bucketCompactionInterval)
+	for {
+		select {
+		case <-limiter.close.ctx.Done():
+			return
+		case <-compaction.C:
+			limiter.compactBuckets()
+		}
 	}
-	_, err = limiter.db.Exec(ctx, "SELECT restore_rate_limit_capacity($1::jsonb)", string(encoded))
-	return err
 }
 
 // runRefiller processes queued refills until shutdown.
@@ -465,16 +486,37 @@ func (limiter *Limiter) runRefiller() {
 	}
 }
 
-// runCompactor periodically cleans up references to buckets that have been
-// garbage-collected by Go.
-func (limiter *Limiter) runCompactor() {
-	compaction := time.NewTicker(bucketCompactionInterval)
+// runRestorer restores capacity that could not be retained locally to
+// PostgreSQL. Failed batches are not retried because the database operation may
+// have committed even when the caller receives an error.
+func (limiter *Limiter) runRestorer() {
 	for {
 		select {
 		case <-limiter.close.ctx.Done():
 			return
-		case <-compaction.C:
-			limiter.compactBuckets()
+		case <-limiter.restorations.wake:
+		}
+		if limiter.close.ctx.Err() != nil {
+			return
+		}
+		timer := time.NewTimer(batchDelay)
+		select {
+		case <-limiter.close.ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+		for limiter.close.ctx.Err() == nil {
+			batch := limiter.restorations.takeBatch()
+			if len(batch) == 0 {
+				break
+			}
+			restoreCtx, cancel := context.WithTimeout(limiter.close.ctx, defaultRestorationTimeout)
+			err := limiter.restoreBatch(restoreCtx, batch)
+			cancel()
+			if err != nil && limiter.close.ctx.Err() == nil {
+				slog.Warn("cannot restore excess rate-limit capacity", "error", err)
+			}
 		}
 	}
 }
@@ -513,18 +555,8 @@ type leaseResult struct {
 	RefillRemainder int
 }
 
-// restoreBatchFunc restores unused capacity for one batch of subjects.
-type restoreBatchFunc func(context.Context, []unusedCapacity) error
-
 // subjectKey identifies a subject in a batch.
 type subjectKey struct {
 	kind SubjectKind
 	id   string
-}
-
-// unusedCapacity identifies unused node-local capacity for one subject.
-type unusedCapacity struct {
-	SubjectKind SubjectKind `json:"subject_kind"`
-	SubjectID   string      `json:"subject_id"`
-	Units       int         `json:"units"`
 }

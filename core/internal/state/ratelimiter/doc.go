@@ -18,10 +18,10 @@
 // subject to exactly one of these budgets. Budgets belong to organizations and
 // workspaces, not to API keys.
 //
-// A normal request without a workspace consumes the authenticated organization's
-// organization-level request budget. A normal request associated with a
-// workspace consumes that workspace's request budget. Event ingestion consumes
-// the workspace's event budget. A workspace can be selected through a
+// A normal request without a workspace consumes the authenticated
+// organization's organization-level request budget. A normal request associated
+// with a workspace consumes that workspace's request budget. Event ingestion
+// consumes the workspace's event budget. A workspace can be selected through a
 // workspace-scoped endpoint, a workspace-bound API key, or the
 // "Krenalis-Workspace" header. Organization-only endpoints reject requests
 // associated with a workspace instead of charging the organization budget.
@@ -89,8 +89,19 @@
 // budget for later waiters.
 //
 // A caller may Restore units that it consumed but ultimately did not use.
-// Restoration affects only local capacity and cannot raise it above the local
-// target. It neither cancels refills nor wakes waiters.
+// Restoration fills the local bucket up to its target. Capacity that no longer
+// fits locally, for example because an in-flight refill has filled the bucket
+// to its target, is queued for best-effort restoration to PostgreSQL. Restore
+// neither cancels refills nor wakes waiters.
+//
+// PostgreSQL restorations are aggregated by subject and processed
+// asynchronously in bounded batches. A failed batch is not retried because an
+// interrupted database operation can have an ambiguous commit status; retrying
+// it could restore the same capacity twice. A failure may therefore cause
+// capacity to be lost, which is the conservative outcome, but it cannot create
+// capacity. Restore validates and queues the operation synchronously, so a nil
+// error does not guarantee that the asynchronous database operation will
+// succeed.
 //
 // Each local target is capped by both the lease size and the capacity reported
 // by PostgreSQL. A refill is normally prepared when an operation cannot be
@@ -116,9 +127,10 @@
 // Grants must be non-negative and must not exceed either the request or the
 // reported capacity. Reported capacity must be positive. Authoritative
 // available capacity must be within the reported capacity, the refill rate must
-// be positive, and the fractional refill remainder must be non-negative and
-// less than 60,000,000. An invalid or incomplete response causes all requests
-// in the local batch to fail.
+// be positive, and the fractional refill remainder must be in the range
+// [0, 60,000,000), matching the microseconds-per-minute denominator used by the
+// refill calculation. An invalid or incomplete response causes all requests in
+// the local batch to fail.
 //
 // Acquisition errors and invalid responses start a short global backoff that
 // stores the corresponding operational or internal error. A call made while
@@ -135,24 +147,26 @@
 // progress, or an admitted waiter may temporarily keep the bucket reachable.
 // After those references are released, Go collects it normally. Unused capacity
 // from buckets for deleted organizations and workspaces does not need to be
-// restored because PostgreSQL removes their authoritative rows by cascade.
+// restored because their authoritative PostgreSQL rows are removed by cascading
+// deletion.
 //
 // Limiter.Close has a strict lifecycle precondition. Before calling it, the
 // caller must stop all use of the limiter and every bucket created by it. No
 // exported Limiter or Bucket method may be in progress. The caller must keep
 // buckets for existing subjects reachable until Close returns. Close cancels
 // lease acquisition, stops background work, and discards queued refills. It
-// waits for all limiter operations to stop, even if the context passed to Close
-// expires or is canceled.
+// waits for all limiter operations, including asynchronous restorations, to
+// stop even if the context passed to Close expires or is canceled.
 //
-// After background work stops, Close makes one best-effort attempt to restore
-// unused local capacity from buckets that are still reachable. The restoration
-// uses the caller's context. It is not retried after an error or cancellation,
-// and it ignores subjects that have been deleted from PostgreSQL. If the context
-// is already canceled, Close does not start the restoration. If cancellation
-// occurs during restoration, Close waits for the restoration operation to stop.
-// A process crash or cancellation during shutdown can therefore still cause
-// unused capacity to be lost.
+// After background work stops, Close makes one best-effort restoration attempt.
+// It includes unused local capacity from buckets that are still reachable and
+// queued excess capacity that has not yet been submitted to PostgreSQL. The
+// restoration uses the caller's context. It is not retried after an error or
+// cancellation, and it ignores subjects that have been deleted from PostgreSQL.
+// If the context is already canceled, Close does not start the restoration. If
+// cancellation occurs during restoration, Close waits for the restoration
+// operation to stop. A process crash or cancellation during shutdown can
+// therefore still cause unused capacity to be lost.
 //
 // # Important invariants
 //
@@ -169,13 +183,13 @@
 //     starts.
 //   - A waiter belongs to one refill generation and is resolved exactly once.
 //   - Granted capacity is added to the current local value, capped at the newly
-//     reported local target.
+//     reported local target; any excess is returned asynchronously.
 //   - Capacity assigned to a waiter is deducted before notification.
 //   - Retry scheduling accounts for remaining local and authoritative capacity.
 //   - Feasible waiters in a rejected FIFO suffix receive cumulative retry
 //     durations; requests above the reported capacity receive no retry hint.
 //   - Errors and invalid responses never add capacity.
 //   - Generation identity prevents stale results from affecting newer work.
-//   - Shutdown restores unused local capacity at most once and does not retry a
-//     failed or interrupted restoration.
+//   - Every asynchronous or shutdown restoration batch is attempted at most
+//     once and a failed or interrupted restoration is not retried.
 package ratelimiter

@@ -201,8 +201,8 @@ COMMENT ON FUNCTION acquire_rate_limit_leases(jsonb) IS
     'Refills authoritative rate-limit buckets and leases capacity to application nodes.';
 
 -- restore_rate_limit_capacity adds unused process-local capacity back to the
--- authoritative buckets during an orderly shutdown. It ignores subjects that
--- were deleted after the capacity was leased.
+-- authoritative buckets. It is used for asynchronous excess restoration and
+-- during an orderly shutdown. Subjects deleted after leasing are ignored.
 CREATE OR REPLACE FUNCTION restore_rate_limit_capacity(p_restorations jsonb)
     RETURNS void
     LANGUAGE plpgsql

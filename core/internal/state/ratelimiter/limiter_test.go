@@ -152,6 +152,24 @@ func TestLimiterCloseRestoresUnusedCapacity(t *testing.T) {
 	}
 }
 
+// TestCollectUnusedCapacityIncludesQueuedRestorations verifies that shutdown
+// combines local capacity with excess that the background restorer has not yet
+// attempted.
+func TestCollectUnusedCapacityIncludesQueuedRestorations(t *testing.T) {
+	limiter := new(Limiter)
+	bucket := newTestBucket(limiter)
+	applyTestLease(bucket, 10, 100)
+	limiter.queueCapacityRestoration(testSubjectKind, testRateLimitID, 5)
+	limiter.queueCapacityRestoration(testSubjectKind, testRateLimitID, 15)
+
+	unused := limiter.collectUnusedCapacity()
+	want := []unusedCapacity{{SubjectKind: testSubjectKind, SubjectID: testRateLimitID, Units: 30}}
+	if !reflect.DeepEqual(unused, want) {
+		t.Fatalf("expected unused capacity %#v, got %#v", want, unused)
+	}
+	runtime.KeepAlive(bucket)
+}
+
 // TestLimiterCloseIsIdempotent verifies that only the first Close restores
 // unused capacity.
 func TestLimiterCloseIsIdempotent(t *testing.T) {
@@ -420,6 +438,89 @@ func TestLimiterConsumesAndRefills(t *testing.T) {
 	}
 	if got := bucketAvailable(bucket); got != 0 {
 		t.Fatalf("expected available capacity 0, got %d", got)
+	}
+}
+
+// TestLimiterRestoresCapacityThatNoLongerFitsLocally verifies that capacity is
+// not lost when Restore and a proactive refill both fill the same local space.
+func TestLimiterRestoresCapacityThatNoLongerFitsLocally(t *testing.T) {
+	for _, restoreBeforeGrant := range []bool{true, false} {
+		name := "after grant"
+		if restoreBeforeGrant {
+			name = "before grant"
+		}
+		t.Run(name, func(t *testing.T) {
+			requests := make(chan leaseRequest, 1)
+			release := make(chan struct{})
+			restored := make(chan []unusedCapacity, 2)
+			var authoritative atomic.Int64
+			authoritative.Store(900)
+
+			limiter := newTestRateLimiter(t, func(_ context.Context, batch []leaseRequest) ([]leaseResult, error) {
+				request := batch[0]
+				requests <- request
+				<-release
+				remaining := authoritative.Add(int64(-request.RequestedUnits))
+				return []leaseResult{{
+					SubjectKind:    request.SubjectKind,
+					SubjectID:      request.SubjectID,
+					GrantedUnits:   request.RequestedUnits,
+					CapacityUnits:  1000,
+					AvailableUnits: int(remaining),
+					RatePerMinute:  60,
+				}}, nil
+			})
+			limiter.restoreBatch = func(_ context.Context, batch []unusedCapacity) error {
+				for _, capacity := range batch {
+					authoritative.Add(int64(capacity.Units))
+				}
+				restored <- append([]unusedCapacity(nil), batch...)
+				return nil
+			}
+			bucket := newTestBucket(limiter)
+			applyTestLease(bucket, 100, 1000)
+
+			if err := bucket.Consume(context.Background(), 60); err != nil {
+				t.Fatalf("consume: %v", err)
+			}
+			request := <-requests
+			if request.RequestedUnits != 60 {
+				t.Fatalf("expected refill request of 60 units, got %d", request.RequestedUnits)
+			}
+			if restoreBeforeGrant {
+				if err := bucket.Restore(60); err != nil {
+					t.Fatalf("restore before grant: %v", err)
+				}
+				close(release)
+			} else {
+				close(release)
+				waitForRateLimit(t, func() bool {
+					bucket.mu.Lock()
+					defer bucket.mu.Unlock()
+					return bucket.refill == nil
+				})
+				if err := bucket.Restore(60); err != nil {
+					t.Fatalf("restore after grant: %v", err)
+				}
+			}
+
+			select {
+			case batch := <-restored:
+				want := []unusedCapacity{{SubjectKind: testSubjectKind, SubjectID: testRateLimitID, Units: 60}}
+				if !reflect.DeepEqual(batch, want) {
+					t.Fatalf("expected excess restoration %#v, got %#v", want, batch)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("timed out waiting for excess capacity restoration")
+			}
+			if got := bucketAvailable(bucket); got != 100 {
+				t.Fatalf("expected local capacity 100, got %d", got)
+			}
+			if got := authoritative.Load(); got != 900 {
+				t.Fatalf("expected authoritative capacity 900, got %d", got)
+			}
+			runtime.KeepAlive(bucket)
+		})
 	}
 }
 
@@ -766,6 +867,35 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	bucket.mu.Unlock()
 	if hasRefill || available != 0 {
 		t.Fatalf("state after acquisition timeout: pending=%t available=%d", hasRefill, available)
+	}
+}
+
+// TestLimiterExcessRestorationHasFiniteTimeout verifies that a stuck
+// asynchronous restoration cannot block the restorer indefinitely.
+func TestLimiterExcessRestorationHasFiniteTimeout(t *testing.T) {
+	previous := defaultRestorationTimeout
+	defaultRestorationTimeout = 10 * time.Millisecond
+	t.Cleanup(func() { defaultRestorationTimeout = previous })
+	started := make(chan struct{})
+	completed := make(chan struct{})
+	var calls atomic.Int32
+	limiter := newTestRateLimiter(t, nil)
+	limiter.restoreBatch = func(ctx context.Context, _ []unusedCapacity) error {
+		if calls.Add(1) != 1 {
+			return nil
+		}
+		close(started)
+		<-ctx.Done()
+		close(completed)
+		return ctx.Err()
+	}
+	limiter.queueCapacityRestoration(testSubjectKind, testRateLimitID, 1)
+	<-started
+
+	select {
+	case <-completed:
+	case <-time.After(time.Second):
+		t.Fatal("expected excess capacity restoration to time out")
 	}
 }
 

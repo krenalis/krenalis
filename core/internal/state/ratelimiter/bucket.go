@@ -116,21 +116,23 @@ func (bucket *Bucket) Consume(ctx context.Context, units int) error {
 }
 
 // Restore restores units previously consumed from the bucket.
-// Restoring units never increases local capacity above the current limit.
+// Restoring units never increases local capacity above the current limit. Any
+// excess is scheduled for best-effort restoration to PostgreSQL.
 //
-// Restore returns an error if the units value is not between 1 and the
-// configured maximum, inclusive.
+// Restore returns an error if the number of units is not between 1 and the
+// configured maximum, inclusive. A nil error does not guarantee that an
+// asynchronous PostgreSQL restoration will succeed.
 func (bucket *Bucket) Restore(units int) error {
 	if units < 1 || units > bucket.maxUnits {
 		return fmt.Errorf("units (%d) are not in range [1, %d]", units, bucket.maxUnits)
 	}
 	bucket.mu.Lock()
-	if units >= bucket.localTarget-bucket.available {
-		bucket.available = bucket.localTarget
-	} else {
-		bucket.available += units
-	}
+	availableSpace := max(0, bucket.localTarget-bucket.available)
+	localUnits := min(units, availableSpace)
+	bucket.available += localUnits
+	excessUnits := units - localUnits
 	bucket.mu.Unlock()
+	bucket.limiter.queueCapacityRestoration(bucket.subjectKind, bucket.subjectID, excessUnits)
 	return nil
 }
 
@@ -146,15 +148,18 @@ func (bucket *Bucket) admitWaiterLocked(refill *refill, units int) *waiter {
 	return waiter
 }
 
-// applyLeaseLocked applies granted capacity, capped at the local target.
-func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
+// applyLeaseLocked applies the granted capacity up to the local target and
+// returns the number of excess units that do not fit in the bucket.
+func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) int {
 	bucket.localTarget = min(bucket.leaseSize, capacityUnits)
 	bucket.refillThreshold = max(1, min(maxRefillThreshold, bucket.localTarget/4))
-	if grantedUnits >= bucket.localTarget-bucket.available {
+	if bucket.available > bucket.localTarget {
 		bucket.available = bucket.localTarget
-	} else {
-		bucket.available += grantedUnits
 	}
+	availableSpace := bucket.localTarget - bucket.available
+	localUnits := min(grantedUnits, availableSpace)
+	bucket.available += localUnits
+	return grantedUnits - localUnits
 }
 
 // calculateRetryAfter calculates when PostgreSQL can regenerate requiredUnits,
@@ -192,7 +197,7 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 		bucket.mu.Unlock()
 		return
 	}
-	bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits)
+	excessUnits := bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits)
 	serve := true
 	retryUnits := 0
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
@@ -216,6 +221,7 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 	refill.pendingUnits = 0
 	bucket.refill = nil
 	bucket.mu.Unlock()
+	bucket.limiter.queueCapacityRestoration(bucket.subjectKind, bucket.subjectID, excessUnits)
 	close(refill.done)
 }
 
