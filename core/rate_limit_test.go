@@ -4,7 +4,49 @@
 
 package core
 
-import "testing"
+import (
+	stderrors "errors"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
+)
+
+func TestTranslateRateLimitError(t *testing.T) {
+	t.Run("capacity exceeded", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", state.CapacityExceededError{RetryAfter: 1500 * time.Millisecond})
+		err = translateRateLimitError(err)
+		responseErr, ok := err.(*errors.TooManyRequestsError)
+		if !ok {
+			t.Fatalf("expected TooManyRequestsError, got %T", err)
+		}
+		if responseErr.RetryAfter != 1500*time.Millisecond {
+			t.Fatalf("expected retry-after 1.5s, got %v", responseErr.RetryAfter)
+		}
+	})
+
+	t.Run("limiter unavailable", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", state.ErrRateLimiterUnavailable)
+		if err := translateRateLimitError(err); err == nil {
+			t.Fatal("expected UnavailableError, got nil")
+		} else if _, ok := err.(*errors.UnavailableError); !ok {
+			t.Fatalf("expected UnavailableError, got %T", err)
+		}
+	})
+
+	t.Run("other error", func(t *testing.T) {
+		err := stderrors.New("other")
+		if got := translateRateLimitError(err); got != err {
+			t.Fatalf("expected original error, got %v", got)
+		}
+	})
+
+	if err := translateRateLimitError(nil); err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
 
 // TestValidateOrganizationRateLimits verifies the accepted boundaries and
 // rejects values outside the configured organization rate-limit ranges.

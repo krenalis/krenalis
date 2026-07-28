@@ -24,6 +24,11 @@ const (
 	testLeaseSize               = 100
 )
 
+func isCapacityExceeded(err error) bool {
+	_, ok := err.(CapacityExceededError)
+	return ok
+}
+
 func newTestBucket(limiters ...*Limiter) *Bucket {
 	limiter := new(Limiter)
 	if len(limiters) != 0 {
@@ -35,10 +40,29 @@ func newTestBucket(limiters ...*Limiter) *Bucket {
 func newTestRateLimiter(t *testing.T, acquire acquireFunc) *Limiter {
 	t.Helper()
 	limiter := New(nil, Metrics{})
-	limiter.acquire = acquire
+	if acquire != nil {
+		limiter.acquire = func(ctx context.Context, requests []leaseRequest) ([]leaseResult, error) {
+			results, err := acquire(ctx, requests)
+			for i := range results {
+				if results[i].CapacityUnits > 0 && results[i].RatePerMinute == 0 {
+					results[i].RatePerMinute = 60
+				}
+			}
+			return results, err
+		}
+	}
 	limiter.restoreBatch = func(context.Context, []unusedCapacity) error { return nil }
 	t.Cleanup(func() { limiter.Close(context.Background()) })
 	return limiter
+}
+
+func testLeaseResult(granted, capacity int) leaseResult {
+	return leaseResult{
+		GrantedUnits:   granted,
+		CapacityUnits:  capacity,
+		RatePerMinute:  60,
+		AvailableUnits: 0,
+	}
 }
 
 func applyTestLease(bucket *Bucket, granted, capacity int) {
@@ -509,11 +533,59 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 	if err := <-first; err != nil {
 		t.Fatalf("first waiter: %v", err)
 	}
-	if err := <-second; !errors.Is(err, ErrCapacityExceeded) {
+	if err := <-second; !isCapacityExceeded(err) {
 		t.Fatalf("second waiter: %v", err)
+	} else {
+		capacityErr, ok := err.(CapacityExceededError)
+		if !ok || capacityErr.RetryAfter != 10*time.Second {
+			t.Fatalf("second waiter retry-after: %#v", err)
+		}
 	}
-	if err := <-third; !errors.Is(err, ErrCapacityExceeded) {
+	if err := <-third; !isCapacityExceeded(err) {
 		t.Fatalf("third waiter: %v", err)
+	} else {
+		capacityErr, ok := err.(CapacityExceededError)
+		if !ok || capacityErr.RetryAfter != 30*time.Second {
+			t.Fatalf("third waiter retry-after: %#v", err)
+		}
+	}
+}
+
+func TestLimiterOmitsRetryAfterAboveCapacity(t *testing.T) {
+	bucket := newTestBucket()
+	bucket.mu.Lock()
+	refill := bucket.newRefillLocked()
+	waiter := bucket.admitWaiterLocked(refill, 20)
+	bucket.mu.Unlock()
+
+	bucket.completeRefill(refill, leaseResult{CapacityUnits: 10, RatePerMinute: 60})
+	if err, ok := waiter.err.(CapacityExceededError); !ok || err.RetryAfter != 0 {
+		t.Fatalf("capacity error above burst: %#v", waiter.err)
+	}
+}
+
+func TestLimiterRejectsInvalidRetryMetadata(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		result leaseResult
+	}{
+		{name: "negative available units", result: leaseResult{CapacityUnits: 1, AvailableUnits: -1, RatePerMinute: 60}},
+		{name: "available units above capacity", result: leaseResult{CapacityUnits: 1, AvailableUnits: 2, RatePerMinute: 60}},
+		{name: "zero rate", result: leaseResult{CapacityUnits: 1}},
+		{name: "invalid remainder", result: leaseResult{CapacityUnits: 1, RatePerMinute: 60, RefillRemainder: microsecondsPerMinute}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			limiter := newTestRateLimiter(t, nil)
+			limiter.acquire = func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
+				result := test.result
+				result.SubjectKind = requests[0].SubjectKind
+				result.SubjectID = requests[0].SubjectID
+				return []leaseResult{result}, nil
+			}
+			if err := newTestBucket(limiter).Consume(context.Background(), 1); err == nil || isCapacityExceeded(err) || errors.Is(err, ErrLimiterUnavailable) {
+				t.Fatalf("expected generic invalid-result error, got %v", err)
+			}
+		})
 	}
 }
 
@@ -571,7 +643,7 @@ func TestLimiterCancellationAndGrantResolveOnce(t *testing.T) {
 		}()
 		go func() {
 			<-start
-			bucket.completeRefill(refill, 1, 100)
+			bucket.completeRefill(refill, testLeaseResult(1, 100))
 			close(completed)
 		}()
 		close(start)
@@ -614,7 +686,7 @@ func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
 	second := bucket.newRefillLocked()
 	waiter := bucket.admitWaiterLocked(second, 1)
 	bucket.mu.Unlock()
-	bucket.completeRefill(first, 100, 100)
+	bucket.completeRefill(first, testLeaseResult(100, 100))
 
 	bucket.mu.Lock()
 	current := bucket.refill
@@ -625,7 +697,7 @@ func TestLimiterIgnoresStaleGenerationResult(t *testing.T) {
 		t.Fatalf("stale result changed current generation: current=%p available=%d pending=%t", current, available, pending)
 	}
 
-	bucket.completeRefill(second, 1, 100)
+	bucket.completeRefill(second, testLeaseResult(1, 100))
 	<-second.done
 	if waiter.err != nil {
 		t.Fatalf("second-generation waiter: %v", waiter.err)
@@ -752,6 +824,7 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 				SubjectKind:   request.SubjectKind,
 				SubjectID:     request.SubjectID,
 				CapacityUnits: 100,
+				RatePerMinute: 60,
 			}
 		}
 		return results, nil
@@ -850,13 +923,13 @@ func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 				return test.results(requests[0]), nil
 			})
 			bucket := newTestBucket(limiter)
-			if err := bucket.Consume(context.Background(), 1); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
+			if err := bucket.Consume(context.Background(), 1); err == nil || isCapacityExceeded(err) || errors.Is(err, ErrLimiterUnavailable) {
 				t.Fatalf("expected invalid lease result to return a generic internal error, got %v", err)
 			}
 			if backoff := limiter.backoff.Load(); backoff == nil {
 				t.Fatal("expected invalid lease result to start backoff, got no backoff")
 			}
-			if err := bucket.Consume(context.Background(), 1); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
+			if err := bucket.Consume(context.Background(), 1); err == nil || isCapacityExceeded(err) || errors.Is(err, ErrLimiterUnavailable) {
 				t.Fatalf("expected invalid-response backoff to return a generic internal error, got %v", err)
 			}
 		})

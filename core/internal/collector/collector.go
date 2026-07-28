@@ -766,13 +766,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	ws := connection.Workspace()
 	eventCount := dec.EventCount()
-	err = ws.ConsumeEventRateLimitCapacity(r.Context(), eventCount)
-	if err != nil {
-		if errors.Is(err, state.ErrRateLimitCapacityExceeded) {
-			return errors.TooManyRequests("event rate limit exceeded")
-		}
+	if err = ws.ConsumeEventRateLimitCapacity(r.Context(), eventCount); err != nil {
 		if errors.Is(err, state.ErrRateLimiterUnavailable) {
 			return errors.Unavailable("request cannot be processed at this time; try again later")
+		}
+		if err, ok := errors.AsType[state.CapacityExceededError](err); ok {
+			return errors.TooManyRequests(err.RetryAfter, "%s", err)
 		}
 		return err
 	}

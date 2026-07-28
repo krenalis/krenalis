@@ -8,20 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
 )
-
-// TestRateLimitErrorsAreStateErrors verifies that the public rate-limit errors
-// are the same values exported by state.
-func TestRateLimitErrorsAreStateErrors(t *testing.T) {
-	if ErrRateLimitCapacityExceeded != state.ErrRateLimitCapacityExceeded {
-		t.Fatalf("expected ErrRateLimitCapacityExceeded to equal the state error, got %v", ErrRateLimitCapacityExceeded)
-	}
-	if ErrRateLimiterUnavailable != state.ErrRateLimiterUnavailable {
-		t.Fatalf("expected ErrRateLimiterUnavailable to equal the state error, got %v", ErrRateLimiterUnavailable)
-	}
-}
 
 func Test_suitableAsIdentifier(t *testing.T) {
 	tests := []struct {

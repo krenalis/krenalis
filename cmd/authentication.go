@@ -274,14 +274,7 @@ func (authenticated authenticatedRequest) applyRateLimitTo(ctx context.Context, 
 	if authenticated.rateLimitExempt {
 		return nil
 	}
-	err := subject.ConsumeRateLimitCapacity(ctx, cost)
-	if errors.Is(err, core.ErrRateLimitCapacityExceeded) {
-		return errors.TooManyRequests("rate limit exceeded")
-	}
-	if errors.Is(err, core.ErrRateLimiterUnavailable) {
-		return errors.Unavailable("request cannot be processed at this time; try again later")
-	}
-	return err
+	return subject.ConsumeRateLimitCapacity(ctx, cost)
 }
 
 // scopedRateLimitSubject returns the subject whose budget applies to the

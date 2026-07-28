@@ -32,19 +32,13 @@ import (
 )
 
 var (
-	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
 	ErrAccessKeyNotFound      = errors.New("access key not found")
-)
-
-var (
-	// ErrRateLimitCapacityExceeded is returned when the requested rate-limit
-	// capacity is not available.
-	ErrRateLimitCapacityExceeded = ratelimiter.ErrCapacityExceeded
-
-	// ErrRateLimiterUnavailable is returned when a temporary condition prevents
-	// the rate limiter from determining capacity availability.
+	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
 	ErrRateLimiterUnavailable = ratelimiter.ErrLimiterUnavailable
 )
+
+// CapacityExceededError is returned when the requested capacity is unavailable.
+type CapacityExceededError = ratelimiter.CapacityExceededError
 
 const (
 	requestLeaseSize = 100
@@ -661,10 +655,9 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 // ConsumeRateLimitCapacity consumes the specified number of units from the
 // organization's request rate-limit capacity. units must be at least 1.
 //
-// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
-// confirms that the requested capacity is unavailable. It returns an
-// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
-// from determining whether capacity is available.
+// ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
+// capacity is unavailable. It returns ErrLimiterUnavailable when a temporary
+// condition makes capacity availability impossible to determine.
 func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	return organization.bucket.Consume(ctx, units)
 }
@@ -918,10 +911,10 @@ func (workspace *Workspace) Connections() []*Connection {
 // ConsumeEventRateLimitCapacity consumes event rate-limit capacity for the
 // specified number of events. eventCount must be at least 1.
 //
-// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
-// confirms that the requested capacity is unavailable. It returns an
-// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
-// from determining whether capacity is available.
+// ConsumeEventRateLimitCapacity returns a CapacityExceededError when capacity
+// for the requested number of events is unavailable. It returns
+// ErrLimiterUnavailable when a temporary condition makes capacity availability
+// impossible to determine.
 func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, eventCount int) error {
 	return workspace.eventBucket.Consume(ctx, eventCount)
 }
@@ -929,10 +922,9 @@ func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, e
 // ConsumeRateLimitCapacity consumes the specified number of units from the
 // workspace's request rate-limit capacity. units must be at least 1.
 //
-// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
-// confirms that the requested capacity is unavailable. It returns an
-// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
-// from determining whether capacity is available.
+// ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
+// capacity is unavailable. It returns ErrLimiterUnavailable when a temporary
+// condition makes capacity availability impossible to determine.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	return workspace.bucket.Consume(ctx, units)
 }

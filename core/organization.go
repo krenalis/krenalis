@@ -46,16 +46,6 @@ const invitationTokenMaxAge = 3 * 24 * 60 * 60
 // resetPasswordTokenMaxAge represents the max age of a password token (1 hour).
 const resetPasswordTokenMaxAge = 1 * 60 * 60
 
-var (
-	// ErrRateLimitCapacityExceeded is returned when a subject does not currently
-	// have enough capacity in its rate-limit bucket.
-	ErrRateLimitCapacityExceeded = state.ErrRateLimitCapacityExceeded
-
-	// ErrRateLimiterUnavailable is returned when a temporary condition prevents
-	// the rate limiter from determining capacity availability.
-	ErrRateLimiterUnavailable = state.ErrRateLimiterUnavailable
-)
-
 // Organization represents an organization.
 type Organization struct {
 	core         *Core
@@ -397,17 +387,28 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 	return canLogin, nil
 }
 
+func translateRateLimitError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, state.ErrRateLimiterUnavailable) {
+		return errors.Unavailable("request cannot be processed at this time; try again later")
+	}
+	if err, ok := errors.AsType[state.CapacityExceededError](err); ok {
+		return errors.TooManyRequests(err.RetryAfter, "%s", err)
+	}
+	return err
+}
+
 // ConsumeRateLimitCapacity consumes the specified number of units from the
-// organization's organization-level rate-limit capacity. units must be at
-// least 1.
+// organization's request rate-limit capacity. units must be at least 1.
 //
-// It returns an ErrRateLimitCapacityExceeded error if a successful acquisition
-// confirms that the requested capacity is unavailable. It returns an
-// ErrRateLimiterUnavailable error if a temporary condition prevents the limiter
-// from determining whether capacity is available.
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
 func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	this.core.mustBeOpen()
-	return this.organization.ConsumeRateLimitCapacity(ctx, units)
+	return translateRateLimitError(this.organization.ConsumeRateLimitCapacity(ctx, units))
 }
 
 // CreateAccessKey creates a new access key for the organization with the

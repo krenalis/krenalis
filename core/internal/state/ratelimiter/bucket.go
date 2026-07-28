@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const maxRefillThreshold = 25
+const (
+	maxRefillThreshold    = 25
+	microsecondsPerMinute = 60 * 1_000_000
+)
 
 var maxWaitDuration = time.Second
 
@@ -45,13 +48,12 @@ type Bucket struct {
 	refill          *refill
 }
 
-// Consume consumes the specified number of units from this bucket.
-// The units value must be between 1 and the configured maximum, inclusive.
+// Consume consumes the specified number of units from the bucket.
+// units must be between 1 and the configured maximum, inclusive.
 //
-// It returns an ErrCapacityExceeded error if a successful acquisition confirms
-// that the requested capacity is unavailable. It returns an
-// ErrLimiterUnavailable error if a temporary condition prevents the limiter
-// from determining whether capacity is available.
+// Consume returns a CapacityExceededError when the requested capacity is
+// unavailable. It returns ErrLimiterUnavailable when a temporary condition
+// prevents the limiter from determining whether capacity is available.
 func (bucket *Bucket) Consume(ctx context.Context, units int) error {
 	if units < 1 || units > bucket.maxUnits {
 		return fmt.Errorf("rate-limit units %d are not in range [1, %d]", units, bucket.maxUnits)
@@ -155,6 +157,18 @@ func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) {
 	}
 }
 
+// calculateRetryAfter calculates when PostgreSQL can regenerate requiredUnits,
+// after accounting for the capacity that remains authoritative in result.
+func calculateRetryAfter(requiredUnits int, result leaseResult) time.Duration {
+	missing := max(0, requiredUnits-result.AvailableUnits)
+	if missing == 0 {
+		return 0
+	}
+	numerator := max(int64(missing)*microsecondsPerMinute-int64(result.RefillRemainder), 1)
+	microseconds := (numerator + int64(result.RatePerMinute) - 1) / int64(result.RatePerMinute)
+	return time.Duration(microseconds) * time.Microsecond
+}
+
 // cancelWaiter serializes caller cancellation with refill completion.
 func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 	bucket.mu.Lock()
@@ -172,14 +186,15 @@ func (bucket *Bucket) cancelWaiter(waiter *waiter, cancellation error) error {
 
 // completeRefill applies a valid grant and serves the longest satisfiable FIFO
 // prefix. Capacity is assigned before waiters are notified.
-func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits int) {
+func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 	bucket.mu.Lock()
 	if bucket.refill != refill {
 		bucket.mu.Unlock()
 		return
 	}
-	bucket.applyLeaseLocked(grantedUnits, capacityUnits)
+	bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits)
 	serve := true
+	retryUnits := 0
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
 		waiter := element.Value.(*waiter)
 		if serve && bucket.available >= waiter.units {
@@ -187,7 +202,13 @@ func (bucket *Bucket) completeRefill(refill *refill, grantedUnits, capacityUnits
 			waiter.err = nil
 		} else {
 			serve = false
-			waiter.err = ErrCapacityExceeded
+			err := CapacityExceededError{}
+			if waiter.units <= result.CapacityUnits {
+				retryUnits += waiter.units
+				requiredUnits := max(0, retryUnits-bucket.available)
+				err.RetryAfter = calculateRetryAfter(requiredUnits, result)
+			}
+			waiter.err = err
 		}
 		waiter.element = nil
 	}

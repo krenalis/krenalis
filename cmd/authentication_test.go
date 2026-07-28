@@ -7,12 +7,9 @@ package cmd
 import (
 	"context"
 	stderrors "errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/krenalis/krenalis/core"
-	"github.com/krenalis/krenalis/tools/errors"
 )
 
 // rateLimitSubjectStub records rate-limit capacity consumption in tests.
@@ -45,6 +42,16 @@ func TestApplyRateLimitTo(t *testing.T) {
 		}
 	})
 
+	t.Run("propagates rate-limit errors", func(t *testing.T) {
+		rateLimitErr := stderrors.New("rate-limit capacity unavailable")
+		subject := &rateLimitSubjectStub{err: rateLimitErr}
+
+		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
+		if err != rateLimitErr {
+			t.Fatalf("expected rate-limit error %v, got %v", rateLimitErr, err)
+		}
+	})
+
 	t.Run("consumes the selected organization budget", func(t *testing.T) {
 		organization := &rateLimitSubjectStub{}
 		authenticated := authenticatedRequest{}
@@ -68,44 +75,6 @@ func TestApplyRateLimitTo(t *testing.T) {
 		}
 		if workspace.calls != 1 || workspace.cost != 3 {
 			t.Fatalf("expected workspace consumption with cost 3, got calls=%d cost=%d", workspace.calls, workspace.cost)
-		}
-	})
-
-	t.Run("maps exhausted capacity to Too Many Requests", func(t *testing.T) {
-		subject := &rateLimitSubjectStub{err: core.ErrRateLimitCapacityExceeded}
-
-		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
-		rateLimitError, ok := err.(*errors.TooManyRequestsError)
-		if !ok {
-			t.Fatalf("expected TooManyRequestsError, got %T", err)
-		}
-		response := httptest.NewRecorder()
-		if err := rateLimitError.WriteTo(response); err != nil {
-			t.Fatalf("write response: %v", err)
-		}
-		if response.Code != http.StatusTooManyRequests {
-			t.Fatalf("expected status %d, got %d", http.StatusTooManyRequests, response.Code)
-		}
-	})
-
-	t.Run("maps limiter unavailability to Service Unavailable", func(t *testing.T) {
-		subject := &rateLimitSubjectStub{err: core.ErrRateLimiterUnavailable}
-
-		err := (authenticatedRequest{}).applyRateLimitTo(context.Background(), subject, 3)
-		rateLimitError, ok := err.(*errors.UnavailableError)
-		if !ok {
-			t.Fatalf("expected UnavailableError, got %T", err)
-		}
-		response := httptest.NewRecorder()
-		if err := rateLimitError.WriteTo(response); err != nil {
-			t.Fatalf("write response: %v", err)
-		}
-		if response.Code != http.StatusServiceUnavailable {
-			t.Fatalf("expected status %d, got %d", http.StatusServiceUnavailable, response.Code)
-		}
-		const expected = "{\"error\":{\"code\":\"ServiceUnavailable\",\"message\":\"request cannot be processed at this time; try again later\"}}\n"
-		if response.Body.String() != expected {
-			t.Fatalf("expected service-unavailable response body, got %q", response.Body.String())
 		}
 	})
 

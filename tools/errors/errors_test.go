@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // Test_BadRequestError ensures BadRequest returns an error wrapping the cause
@@ -100,12 +101,19 @@ func Test_StdWrappers(t *testing.T) {
 // Test_TooManyRequestsError verifies TooManyRequests formatting and
 // serialization.
 func Test_TooManyRequestsError(t *testing.T) {
-	err := TooManyRequests("slow down")
+	err := TooManyRequests(1500*time.Millisecond, "slow down")
 	if err.Error() != "slow down" {
 		t.Fatalf("expected error string %q, got %q", "slow down", err.Error())
 	}
 	expected := "{\"error\":{\"code\":\"TooManyRequests\",\"message\":\"slow down\"}}\n"
 	checkResponse(t, err, http.StatusTooManyRequests, "TooManyRequests", expected)
+	response := httptest.NewRecorder()
+	if writeErr := err.WriteTo(response); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+	if got := response.Header().Get("Retry-After"); got != "2" {
+		t.Fatalf("expected Retry-After 2, got %q", got)
+	}
 }
 
 // Test_UnauthorizedError verifies Unauthorized formatting and serialization.

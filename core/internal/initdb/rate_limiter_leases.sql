@@ -6,7 +6,10 @@ CREATE OR REPLACE FUNCTION acquire_rate_limit_leases(p_requests jsonb)
         subject_kind varchar,
         subject_id varchar,
         granted_units integer,
-        capacity_units integer
+        capacity_units integer,
+        available_units integer,
+        rate_per_minute integer,
+        refill_remainder integer
     )
     LANGUAGE plpgsql
     VOLATILE
@@ -186,6 +189,9 @@ BEGIN
         subject_id := v_request.subject_id;
         granted_units := v_granted_units;
         capacity_units := v_burst_capacity;
+        available_units := v_available_units - v_granted_units;
+        rate_per_minute := v_rate_per_minute;
+        refill_remainder := v_refill_remainder;
         RETURN NEXT;
     END LOOP;
 END;

@@ -34,16 +34,19 @@ const (
 
 var defaultAcquireTimeout = 5 * time.Second
 
-var (
-	// ErrCapacityExceeded is returned when a successful acquisition confirms
-	// that the requested capacity is unavailable.
-	ErrCapacityExceeded = errors.New("rate-limit capacity exceeded")
+// ErrLimiterUnavailable is returned when the limiter cannot determine
+// whether the requested capacity is available because of a temporary
+// condition.
+var ErrLimiterUnavailable = errors.New("rate limiter unavailable")
 
-	// ErrLimiterUnavailable is returned when the limiter cannot determine
-	// whether the requested capacity is available because of a temporary
-	// condition.
-	ErrLimiterUnavailable = errors.New("rate limiter unavailable")
-)
+// CapacityExceededError is returned when the requested capacity is unavailable.
+type CapacityExceededError struct {
+	RetryAfter time.Duration
+}
+
+func (err CapacityExceededError) Error() string {
+	return "requested rate-limit capacity is unavailable"
+}
 
 // Metrics contains optional counters for rate-limiter events.
 type Metrics struct {
@@ -163,7 +166,8 @@ func (limiter *Limiter) acquireLeases(ctx context.Context, requests []leaseReque
 		return nil, fmt.Errorf("cannot encode rate-limit lease requests: %w", err)
 	}
 	rows, err := limiter.db.Query(ctx, `
-		SELECT subject_kind, subject_id, granted_units, capacity_units
+		SELECT subject_kind, subject_id, granted_units, capacity_units,
+			available_units, rate_per_minute, refill_remainder
 		FROM acquire_rate_limit_leases($1::jsonb)`, string(encoded))
 	if err != nil {
 		return nil, err
@@ -173,7 +177,15 @@ func (limiter *Limiter) acquireLeases(ctx context.Context, requests []leaseReque
 	results := make([]leaseResult, 0, len(requests))
 	for rows.Next() {
 		var result leaseResult
-		if err := rows.Scan(&result.SubjectKind, &result.SubjectID, &result.GrantedUnits, &result.CapacityUnits); err != nil {
+		if err := rows.Scan(
+			&result.SubjectKind,
+			&result.SubjectID,
+			&result.GrantedUnits,
+			&result.CapacityUnits,
+			&result.AvailableUnits,
+			&result.RatePerMinute,
+			&result.RefillRemainder,
+		); err != nil {
 			return nil, err
 		}
 		results = append(results, result)
@@ -362,7 +374,10 @@ func (limiter *Limiter) refill(pending []*refill) {
 		request, ok := requestsBySubject[key]
 		if _, duplicate := resultsBySubject[key]; !ok || duplicate ||
 			result.GrantedUnits < 0 || result.GrantedUnits > request.RequestedUnits ||
-			result.CapacityUnits <= 0 || result.GrantedUnits > result.CapacityUnits {
+			result.CapacityUnits <= 0 || result.GrantedUnits > result.CapacityUnits ||
+			result.AvailableUnits < 0 || result.AvailableUnits > result.CapacityUnits ||
+			result.RatePerMinute <= 0 ||
+			result.RefillRemainder < 0 || result.RefillRemainder >= microsecondsPerMinute {
 			limiter.invalidBatch(pending, result)
 			return
 		}
@@ -377,7 +392,7 @@ func (limiter *Limiter) refill(pending []*refill) {
 	for _, refill := range pending {
 		request := refill.request
 		result := resultsBySubject[subjectKey{kind: request.SubjectKind, id: request.SubjectID}]
-		refill.bucket.completeRefill(refill, result.GrantedUnits, result.CapacityUnits)
+		refill.bucket.completeRefill(refill, result)
 	}
 	limiter.backoff.Store(nil)
 }
@@ -489,10 +504,13 @@ type leaseRequest struct {
 
 // leaseResult contains PostgreSQL's capacity result for one subject.
 type leaseResult struct {
-	SubjectKind   SubjectKind
-	SubjectID     string
-	GrantedUnits  int
-	CapacityUnits int
+	SubjectKind     SubjectKind
+	SubjectID       string
+	GrantedUnits    int
+	CapacityUnits   int
+	AvailableUnits  int
+	RatePerMinute   int
+	RefillRemainder int
 }
 
 // restoreBatchFunc restores unused capacity for one batch of subjects.

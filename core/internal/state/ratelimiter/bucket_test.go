@@ -148,9 +148,49 @@ func TestBucketAdmitsWaitersToPublishedRefill(t *testing.T) {
 func TestConsumeReturnsInvalidUnits(t *testing.T) {
 	bucket := newTestBucket()
 	for _, units := range []int{0, testLeaseSize + 1} {
-		if err := bucket.Consume(t.Context(), units); err == nil || errors.Is(err, ErrCapacityExceeded) || errors.Is(err, ErrLimiterUnavailable) {
+		if err := bucket.Consume(t.Context(), units); err == nil || isCapacityExceeded(err) || errors.Is(err, ErrLimiterUnavailable) {
 			t.Fatalf("expected Consume(%d) to return a generic error, got %v", units, err)
 		}
+	}
+}
+
+func TestCalculateRetryAfter(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		requiredUnits int
+		result        leaseResult
+		want          time.Duration
+	}{
+		{
+			name:          "one unit",
+			requiredUnits: 1,
+			result:        leaseResult{CapacityUnits: 100, RatePerMinute: 60},
+			want:          time.Second,
+		},
+		{
+			name:          "fractional remainder",
+			requiredUnits: 1,
+			result:        leaseResult{CapacityUnits: 100, RatePerMinute: 60, RefillRemainder: 30_000_000},
+			want:          500 * time.Millisecond,
+		},
+		{
+			name:          "available capacity",
+			requiredUnits: 10,
+			result:        leaseResult{CapacityUnits: 100, AvailableUnits: 10, RatePerMinute: 60},
+		},
+		{
+			name:          "cumulative demand above capacity",
+			requiredUnits: 101,
+			result:        leaseResult{CapacityUnits: 100, RatePerMinute: 60},
+			want:          101 * time.Second,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := calculateRetryAfter(test.requiredUnits, test.result)
+			if got != test.want {
+				t.Fatalf("calculateRetryAfter() = %v, want %v", got, test.want)
+			}
+		})
 	}
 }
 

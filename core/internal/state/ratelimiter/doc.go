@@ -44,14 +44,26 @@
 // stops waiting because that duration expires, it returns an
 // ErrLimiterUnavailable error.
 //
-// Consume returns an ErrCapacityExceeded error only after a successful
-// acquisition confirms that the requested capacity is unavailable. It returns
-// an ErrLimiterUnavailable error when a temporary condition prevents the
-// limiter from determining whether capacity is available. This includes
+// Consume returns a CapacityExceededError when the requested capacity is
+// unavailable. It returns ErrLimiterUnavailable when a temporary condition
+// makes capacity availability impossible to determine. This includes
 // acquisition timeouts, active operational backoff, and local queue saturation.
 // Invalid or incomplete acquisition responses are internal failures and are
-// returned without being converted to ErrCapacityExceeded or
+// returned without being converted to CapacityExceededError or
 // ErrLimiterUnavailable.
+//
+// A CapacityExceededError carries an advisory retry duration. The duration is
+// calculated from the capacity remaining in the local bucket, the authoritative
+// PostgreSQL state, and the fractional refill remainder. For waiters in the
+// rejected FIFO suffix that can eventually be served, retry durations are
+// calculated cumulatively. The retry duration for a later waiter therefore
+// includes the capacity required by earlier waiters. A request larger than the
+// reported bucket capacity receives no positive retry duration.
+//
+// The retry duration is not a reservation. It is the earliest FIFO schedule
+// calculated from the state observed when the lease completes. Concurrent
+// consumption, refills already in progress, configuration changes, and the
+// actual retry time may require the caller to wait longer.
 //
 // A bucket has at most one refill generation. Its immutable lease request and
 // any waiter admitted for the operation that triggered the refill are stored
@@ -71,10 +83,10 @@
 // It is not the bucket's lease size. Positive local capacity is excluded
 // because unrelated local requests may consume it before the lease arrives.
 // A partial grant serves only the first consecutive FIFO waiters that can be
-// satisfied. This deliberately prevents operations requiring fewer units from
-// being served before an older operation requiring more. Cancellation removes
-// a pending waiter and returns its reserved units to the admission budget for
-// later waiters.
+// satisfied. This deliberately prevents an operation requiring fewer units
+// from being served before an older operation requiring more. Cancellation
+// removes a pending waiter and returns its reserved units to the admission
+// budget for later waiters.
 //
 // A caller may Restore units that it consumed but ultimately did not use.
 // Restoration affects only local capacity and cannot raise it above the local
@@ -101,42 +113,46 @@
 //
 // The complete acquisition response is validated before any capacity is
 // applied. Every requested subject must have exactly one matching result.
-// Grants must be non-negative, must not exceed either the request or the
-// reported capacity, and the reported capacity must be positive. An invalid or
-// incomplete response causes all requests in the local batch to fail.
+// Grants must be non-negative and must not exceed either the request or the
+// reported capacity. Reported capacity must be positive. Authoritative
+// available capacity must be within the reported capacity, the refill rate must
+// be positive, and the fractional refill remainder must be non-negative and
+// less than 60,000,000. An invalid or incomplete response causes all requests
+// in the local batch to fail.
 //
 // Acquisition errors and invalid responses start a short global backoff that
 // stores the corresponding operational or internal error. A call made while
 // backoff is active may still use positive local capacity, but it neither
 // publishes a new refill nor admits a waiter. If the call cannot use local
 // capacity, it returns the stored error. If backoff is still active when the
-// refiller processes a queued generation, it rejects that generation with the
-// stored error. Shutdown cancellation does not start backoff.
+// refiller processes a queued generation, the refiller rejects that generation
+// with the stored error. Shutdown cancellation does not start backoff.
 //
 // # Bucket lifetime and shutdown
 //
 // Buckets are not closed. An owner stops using a bucket when its organization
 // or workspace is no longer canonical. A queued refill, an acquisition in
 // progress, or an admitted waiter may temporarily keep the bucket reachable.
-// After those references are released, Go collects it normally. Buckets for
-// deleted organizations and workspaces do not need their unused capacity
+// After those references are released, Go collects it normally. Unused capacity
+// from buckets for deleted organizations and workspaces does not need to be
 // restored because PostgreSQL removes their authoritative rows by cascade.
 //
 // Limiter.Close has a strict lifecycle precondition. Before calling it, the
 // caller must stop all use of the limiter and every bucket created by it. No
-// exported Limiter or Bucket method may be in progress. The caller keeps
+// exported Limiter or Bucket method may be in progress. The caller must keep
 // buckets for existing subjects reachable until Close returns. Close cancels
 // lease acquisition, stops background work, and discards queued refills. It
 // waits for all limiter operations to stop, even if the context passed to Close
-// ends.
+// expires or is canceled.
 //
 // After background work stops, Close makes one best-effort attempt to restore
-// unused local capacity from reachable buckets. The restoration uses the
-// caller's context, is not retried after an error or cancellation, and ignores
-// subjects deleted from PostgreSQL. If the context is already canceled, Close
-// does not start the restoration. If it is canceled during restoration, Close
-// waits for the restoration to stop. A process crash or cancellation during
-// shutdown can therefore still lose unused capacity.
+// unused local capacity from buckets that are still reachable. The restoration
+// uses the caller's context. It is not retried after an error or cancellation,
+// and it ignores subjects that have been deleted from PostgreSQL. If the context
+// is already canceled, Close does not start the restoration. If cancellation
+// occurs during restoration, Close waits for the restoration operation to stop.
+// A process crash or cancellation during shutdown can therefore still cause
+// unused capacity to be lost.
 //
 // # Important invariants
 //
@@ -155,6 +171,9 @@
 //   - Granted capacity is added to the current local value, capped at the newly
 //     reported local target.
 //   - Capacity assigned to a waiter is deducted before notification.
+//   - Retry scheduling accounts for remaining local and authoritative capacity.
+//   - Feasible waiters in a rejected FIFO suffix receive cumulative retry
+//     durations; requests above the reported capacity receive no retry hint.
 //   - Errors and invalid responses never add capacity.
 //   - Generation identity prevents stale results from affecting newer work.
 //   - Shutdown restores unused local capacity at most once and does not retry a

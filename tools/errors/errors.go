@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -142,15 +143,18 @@ func (e *NotFoundError) WriteTo(w http.ResponseWriter) error {
 // WriteTo method replies to the request with an HTTP 429 too many requests
 // error.
 //
+// A non-positive duration omits the Retry-After response header.
+//
 // It can be used when a client exceeds a request rate or usage limit.
-func TooManyRequests(format string, a ...any) *TooManyRequestsError {
-	return &TooManyRequestsError{fmt.Sprintf(format, a...)}
+func TooManyRequests(retryAfter time.Duration, format string, a ...any) *TooManyRequestsError {
+	return &TooManyRequestsError{Message: fmt.Sprintf(format, a...), RetryAfter: retryAfter}
 }
 
 // TooManyRequestsError is an implementation of error used to represent an
 // exceeded request rate or usage limit.
 type TooManyRequestsError struct {
-	Message string
+	Message    string
+	RetryAfter time.Duration
 }
 
 // Error implements the error interface.
@@ -160,6 +164,10 @@ func (e *TooManyRequestsError) Error() string {
 
 // WriteTo implements the ResponseWriterTo interface.
 func (e *TooManyRequestsError) WriteTo(w http.ResponseWriter) error {
+	if e.RetryAfter > 0 {
+		seconds := (e.RetryAfter + time.Second - 1) / time.Second
+		w.Header().Set("Retry-After", strconv.Itoa(int(seconds)))
+	}
 	return writeTo(w, http.StatusTooManyRequests, "TooManyRequests", e.Message, "")
 }
 

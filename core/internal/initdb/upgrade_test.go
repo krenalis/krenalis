@@ -213,7 +213,8 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	}
 
 	rows, err := database.Query(t.Context(), `
-		SELECT subject_kind, subject_id, granted_units, capacity_units
+		SELECT subject_kind, subject_id, granted_units, capacity_units,
+			available_units, rate_per_minute, refill_remainder
 		FROM acquire_rate_limit_leases($1::jsonb)`, `[
 			{"subject_kind":"workspace","subject_id":"222222222222","requested_units":100},
 			{"subject_kind":"events","subject_id":"222222222222","requested_units":20000},
@@ -226,8 +227,8 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	grants := map[string]int{}
 	for rows.Next() {
 		var kind, id string
-		var granted, capacity int
-		if err := rows.Scan(&kind, &id, &granted, &capacity); err != nil {
+		var granted, capacity, available, rate, remainder int
+		if err := rows.Scan(&kind, &id, &granted, &capacity, &available, &rate, &remainder); err != nil {
 			t.Fatal(err)
 		}
 		wantCapacity := 100
@@ -236,6 +237,16 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 		}
 		if capacity != wantCapacity {
 			t.Fatalf("expected capacity for %s %s %d, got %d", kind, id, wantCapacity, capacity)
+		}
+		if available != 0 || remainder != 0 {
+			t.Fatalf("expected exhausted bucket state for %s %s, got available=%d remainder=%d", kind, id, available, remainder)
+		}
+		wantRate := 60
+		if kind == "events" {
+			wantRate = 1000
+		}
+		if rate != wantRate {
+			t.Fatalf("expected rate for %s %s %d, got %d", kind, id, wantRate, rate)
 		}
 		grants[kind+":"+id] = granted
 	}
