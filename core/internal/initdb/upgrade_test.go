@@ -6,65 +6,16 @@ package initdb
 
 import (
 	"testing"
-	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/test/testimages"
-
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // TestUpgrade verifies that database upgrades are applied and are idempotent.
 func TestUpgrade(t *testing.T) {
-	const (
-		databaseName = "krenalis"
-		user         = "krenalis"
-		password     = "krenalis"
-	)
-
 	ctx := t.Context()
-	container, err := postgres.Run(ctx,
-		testimages.PostgreSQL,
-		postgres.WithDatabase(databaseName),
-		postgres.WithUsername(user),
-		postgres.WithPassword(password),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := testcontainers.TerminateContainer(container); err != nil {
-			t.Error(err)
-		}
-	})
-	host, err := container.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	port, err := container.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	database := newTestDatabase(t)
 
-	database, err := db.Open(&db.Options{
-		Host:     host,
-		Port:     int(port.Num()),
-		Username: user,
-		Password: password,
-		Database: databaseName,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(database.Close)
-
-	_, err = database.Exec(ctx, `
+	_, err := database.Exec(ctx, `
 		CREATE TYPE notification_name AS ENUM ('EndPipelineRun');
 		CREATE TABLE metadata (
 			singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),

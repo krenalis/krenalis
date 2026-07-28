@@ -22,7 +22,7 @@ DECLARE
     v_request record;
     v_rate_per_minute integer;
     v_burst_capacity integer;
-    v_acquisition_time timestamptz := clock_timestamp();
+    v_refill_time timestamptz;
     v_bucket rate_limit_buckets%ROWTYPE;
     v_elapsed_microseconds numeric;
     v_refilled_units bigint;
@@ -119,7 +119,7 @@ BEGIN
             v_burst_capacity,
             v_burst_capacity,
             v_rate_per_minute,
-            v_acquisition_time,
+            clock_timestamp(),
             0
         )
         ON CONFLICT (subject_kind, subject_id) DO NOTHING;
@@ -130,6 +130,11 @@ BEGIN
         WHERE b.subject_kind = v_request.subject_kind
           AND b.subject_id = v_request.subject_id
         FOR UPDATE;
+
+        -- Choose the refill time only after acquiring the row lock. A batch
+        -- may have waited while a newer acquisition updated this bucket, so
+        -- never move its authoritative refill time backwards.
+        v_refill_time := GREATEST(clock_timestamp(), v_bucket.last_refill_at);
 
         IF v_bucket.capacity_units <> v_burst_capacity
             OR v_bucket.rate_per_minute <> v_rate_per_minute
@@ -147,10 +152,8 @@ BEGIN
             -- Calculate accrued capacity at microsecond precision. The remainder
             -- carries fractional units into the next lease acquisition so they
             -- are not lost through integer rounding.
-            v_elapsed_microseconds := GREATEST(
-                0,
-                EXTRACT(EPOCH FROM v_acquisition_time - v_bucket.last_refill_at) * 1000000
-            );
+            v_elapsed_microseconds :=
+                EXTRACT(EPOCH FROM v_refill_time - v_bucket.last_refill_at) * 1000000;
             v_refill_numerator :=
                 v_elapsed_microseconds * v_rate_per_minute + v_bucket.refill_remainder;
             v_refilled_units := FLOOR(v_refill_numerator / 60000000)::bigint;
@@ -180,7 +183,7 @@ BEGIN
         SET available_units = v_available_units - v_granted_units,
             capacity_units = v_burst_capacity,
             rate_per_minute = v_rate_per_minute,
-            last_refill_at = v_acquisition_time,
+            last_refill_at = v_refill_time,
             refill_remainder = v_refill_remainder
         WHERE b.subject_kind = v_request.subject_kind
           AND b.subject_id = v_request.subject_id;
