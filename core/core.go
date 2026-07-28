@@ -1077,18 +1077,18 @@ const (
 )
 
 // TransformData transforms data using a mapping or a function transformation
-// and returns the transformed data. inSchema is the schema of data, and
-// outSchema is the schema of the transformed data. Only one of mapping and
-// transformation must be non-nil. purpose indicates the intent of the
-// transformation and can be "Import", "Create", or "Update".
-//
-// organization is the ID of the organization performing the transformation.
+// and returns the transformed data. organization is the ID of the organization
+// performing the transformation. inSchema is the schema of data, and outSchema
+// is the schema of the transformed data. Only one of mapping and transformation
+// must be non-nil. purpose indicates the intent of the transformation and can
+// be "Import", "Create", or "Update".
 //
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, organization string, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
+func (core *Core) TransformData(ctx context.Context, organization string, data []byte,
+	inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
 
 	core.mustBeOpen()
 
@@ -1162,7 +1162,8 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 		// no need to list sub-property paths (as the behavior is the same).
 		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
+		provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language,
+			pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
