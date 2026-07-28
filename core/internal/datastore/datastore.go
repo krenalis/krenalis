@@ -70,13 +70,15 @@ func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 	return ds, nil
 }
 
-// CanInitialize indicates whether the warehouse of the organization with the
-// given ID, with the provided platform and settings, can be initialized.
+// CanInitialize indicates whether the warehouse with the provided platform and
+// settings can be initialized.
 //
 // It returns a *warehouses.WarehouseSettingsError error if the settings are not
 // valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
 // not initializable, and *UnavailableError if an error occurred with the data
 // warehouse.
+//
+// organization is the ID of the organization performing the operation.
 func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
@@ -94,7 +96,7 @@ func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform s
 // on the Krenalis tables), returning a *warehouses.WarehouseSettingsNotReadOnly
 // error in case it is not, explaining the reason.
 //
-// organization is the ID of the organization the warehouse belongs to.
+// organization is the ID of the organization performing the operation.
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
@@ -125,10 +127,12 @@ func (ds *Datastore) Close() {
 	ds.mu.Unlock()
 }
 
-// Initialize initializes the database objects on the data warehouse of the
-// organization with the given ID, in order to make it work with Krenalis. The
-// given profile schema will be used by the initialization to build the profile
-// tables on the warehouse with the corresponding columns.
+// Initialize initializes the database objects on the data warehouse in order to
+// make it work with Krenalis. The given profile schema will be used by the
+// initialization to build the profile tables on the warehouse with the
+// corresponding columns.
+//
+// organization is the ID of the organization performing the operation.
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *datastore.UnavailableError error if an error occurs with the data warehouse.
@@ -155,8 +159,10 @@ func (ds *Datastore) Store(workspace string) (*Store, bool) {
 	return store, ok
 }
 
-// ValidateWarehouseSettings validates the settings of the data warehouse of the
-// organization with the given ID and returns them in canonical form.
+// ValidateWarehouseSettings validates data warehouse settings and returns them
+// in canonical form.
+//
+// organization is the ID of the organization performing the operation.
 //
 // It returns ErrWarehousePlatformNotExist if the given warehouse platform does
 // not exist, and *warehouses.SettingsError if the settings are invalid.
