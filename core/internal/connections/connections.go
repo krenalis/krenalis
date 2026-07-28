@@ -201,7 +201,7 @@ func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role sta
 // GrantAuthorization grants an OAuth authorization for an application
 // connector, using the provided authorization code and redirection URI.
 // organization is the ID of the organization on behalf of which the
-// authorization is granted, and to which the bytes sent are attributed.
+// authorization is granted.
 //
 // This method can only be called on a connector that implements OAuth.
 func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, organization, code, redirectionURI string) (*Authorization, error) {
