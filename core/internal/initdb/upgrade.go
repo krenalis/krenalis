@@ -25,6 +25,14 @@ const (
 	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
+// unknownOrganization is the organization given to the rows that predate a
+// column holding one, when it cannot be recovered.
+//
+// It cannot collide with a real organization: identifiers are twelve Base58
+// characters, and Base58 has no '0'. It resolves to no organization, so the
+// bytes sent on its behalf are attributed to nobody.
+const unknownOrganization = "000000000000"
+
 const organizationConnectorReferencesView = `
 	CREATE OR REPLACE VIEW organization_connector_references AS
 	SELECT
@@ -245,6 +253,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
+			`ALTER TABLE discontinued_functions ADD COLUMN IF NOT EXISTS organization varchar(12) NOT NULL DEFAULT '` + unknownOrganization + `'`,
+			`ALTER TABLE discontinued_functions ALTER COLUMN organization DROP DEFAULT`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,

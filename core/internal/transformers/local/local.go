@@ -323,7 +323,7 @@ if __name__ == "__main__":
 
 // Delete deletes the function with the given identifier.
 // If a function with the given identifier does not exist, it does nothing.
-func (fn *function) Delete(ctx context.Context, id string) error {
+func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	name, language, err := parseID(id)
 	if err != nil {
 		return err

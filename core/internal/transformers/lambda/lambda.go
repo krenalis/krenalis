@@ -261,7 +261,12 @@ func (fn *function) Create(ctx context.Context, organization, name string, langu
 
 // Delete deletes the function with the given identifier.
 // If a function with the given identifier does not exist, it does nothing.
-func (fn *function) Delete(ctx context.Context, id string) error {
+//
+// organization is the organization on behalf of which the transformation
+// function is deleted. It may have been deleted already, as a function outlives
+// its organization: Lambda does not care, and the bytes sent are then
+// attributed to nobody.
+func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	arn, _, err := parseID(id)
 	if err != nil {
 		return err
@@ -270,7 +275,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	ctx = dialer.WithoutOrganization(ctx)
+	ctx = dialer.WithOrganization(ctx, organization)
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &arn,
 	})

@@ -14,10 +14,11 @@
 //
 // The organization is mandatory: the functions taking one panic if it is empty,
 // and the connections that are not established on behalf of an organization
-// must be dialed with [PlainDial] or [PlainDialWith], or, for
-// [DialWithContext], with a context marked with [WithoutOrganization]. Not
-// attributing the bytes sent is therefore always a deliberate choice, and never
-// the silent result of an organization a caller has forgotten to provide.
+// must be dialed with [PlainDial] or [PlainDialWith]. Not attributing the bytes
+// sent is therefore always a deliberate choice, and never the silent result of
+// an organization a caller has forgotten to provide. Every dial made with
+// [DialWithContext] is made on behalf of an organization, so it has no such
+// escape hatch and refuses to dial with a context that carries none.
 //
 // Counting is the secondary aspect: the connections established on behalf of an
 // organization count the bytes they send, exposing them as the
@@ -34,8 +35,11 @@
 // When counting is enabled, this package keeps a counter per organization, so
 // it must know which organizations exist in order not to keep the counters of
 // the deleted ones forever. It knows them by listening to the state, see
-// [EnableCounting]: dialing on behalf of an organization that does not exist
-// fails with [ErrNoOrganization].
+// [EnableCounting]. Dialing on behalf of an organization that does not exist
+// fails with [ErrNoOrganization] for [Dial] and [DialWith], whose organization
+// is fixed when they are created, while [DialWithContext] dials and counts
+// nothing, because its callers legitimately act on behalf of an organization
+// that has been deleted.
 package dialer
 
 import (
@@ -79,8 +83,8 @@ func CountingEnabled() bool {
 var ErrNoOrganization = errors.New("organization does not exist")
 
 // ErrNoOrganizationInContext is the error [DialWithContext] fails a dial with
-// when the context of the dial carries no organization, neither an ID set with
-// [WithOrganization] nor the mark set with [WithoutOrganization].
+// when the context of the dial carries no organization, that is no ID set with
+// [WithOrganization].
 //
 // It is a broken call site, and not a condition the callers are expected to
 // recover from: it is an error, and not a panic, only because a dial is made
@@ -174,26 +178,32 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 }
 
 // resolve returns the organization with the given ID and its egress counter,
-// registering the counter the first time the organization is resolved.
+// registering the counter the first time the organization is resolved. The
+// boolean return value reports whether the organization exists.
 //
-// It fails with [ErrNoOrganization] if the organization does not exist. It is
-// only called when counting is enabled, so the organizations are known, see
-// [EnableCounting].
+// A missing organization is not an error here, because the dial functions do
+// not agree on what it means: it is one for those whose organization is fixed
+// when they are created, and it is not for [DialWithContext]. The counter is
+// not registered for it in any case, so that the counters of the deleted
+// organizations are not resurrected.
+//
+// It is only called when counting is enabled, so the organizations are known,
+// see [EnableCounting].
 //
 // The dial functions resolve the organization once, when they are created, and
 // keep the returned values, so that they do not have to take organizationsMu to
 // establish a connection.
-func resolve(organizationID string) (*organization, *prometheus.Counter, error) {
+func resolve(organizationID string) (*organization, *prometheus.Counter, bool) {
 	organizationsMu.Lock()
 	defer organizationsMu.Unlock()
 	org, ok := organizations[organizationID]
 	if !ok {
-		return nil, nil, fmt.Errorf("dialer: %w: %s", ErrNoOrganization, organizationID)
+		return nil, nil, false
 	}
 	if org.egress == nil {
 		org.egress = egressBytes.Register(organizationID)
 	}
-	return org, org.egress, nil
+	return org, org.egress, true
 }
 
 // Dial returns the dial function to establish the connections made on behalf
@@ -267,10 +277,10 @@ func PlainDialWith() func(dial DialFunc) DialFunc {
 }
 
 // organizationKey is the key of the organization a dial is made on behalf of.
-// Its value is a string: the ID of the organization, or the empty string when
-// the dial is explicitly made on behalf of no organization, see
-// [WithoutOrganization]. A context with no value at all, instead, is one whose
-// organization has not been set, and [DialWithContext] refuses to dial with it.
+// Its value is a string, the ID of the organization, and it is never empty,
+// because [WithOrganization] is the only way to set it and it panics on an
+// empty ID. A context with no value at all, instead, is one whose organization
+// has not been set, and [DialWithContext] refuses to dial with it.
 type organizationKey struct{}
 
 // WithOrganization returns a copy of ctx carrying the ID of the organization the
@@ -280,28 +290,17 @@ type organizationKey struct{}
 // organization and the organization is only known when the client is used, so
 // that the dial function does not have to be fixed when the client is created.
 //
-// It panics if organizationID is empty: use [WithoutOrganization] when the
-// connections dialed with the context are not established on behalf of an
-// organization. The organization is carried by the context even when counting
-// is disabled (see [EnableCounting]), so that [DialWithContext] can check that
-// it has been provided regardless of whether the metrics are enabled.
+// It panics if organizationID is empty: every dial made with [DialWithContext]
+// is made on behalf of an organization, and one that has been deleted is no
+// exception, as its ID is passed all the same. The organization is carried by
+// the context even when counting is disabled (see [EnableCounting]), so that
+// [DialWithContext] can check that it has been provided regardless of whether
+// the metrics are enabled.
 func WithOrganization(ctx context.Context, organizationID string) context.Context {
 	if organizationID == "" {
 		panic("dialer: empty organization ID")
 	}
 	return context.WithValue(ctx, organizationKey{}, organizationID)
-}
-
-// WithoutOrganization returns a copy of ctx marked as not dialing on behalf of
-// any organization.
-//
-// Use it, in place of [WithOrganization], when the requests made with a client
-// shared by every organization are not made on behalf of one, as when a
-// resource is deleted after its organization is no longer known. It is the
-// [PlainDial] of [DialWithContext]: without it, [DialWithContext] refuses to
-// dial, so that an organization is never left out by mistake.
-func WithoutOrganization(ctx context.Context) context.Context {
-	return context.WithValue(ctx, organizationKey{}, "")
 }
 
 // DialWithContext wraps the dial function of a client shared by every
@@ -313,11 +312,17 @@ func WithoutOrganization(ctx context.Context) context.Context {
 // created, so a single client can serve every organization.
 //
 // A dial whose context carries no organization at all fails with
-// [ErrNoOrganizationInContext], because an organization that has not been set
-// cannot be told from one that has been forgotten: mark the context with
-// [WithoutOrganization] when the connections are not established on behalf of
-// an organization. A dial whose context carries an organization that does not
-// exist fails with [ErrNoOrganization].
+// [ErrNoOrganizationInContext]: every dial made through this function is made
+// on behalf of an organization, so a context without one is a caller that has
+// forgotten to set it.
+//
+// A dial whose context carries an organization that does not exist, instead,
+// establishes the connection and counts no bytes, unlike [Dial] and [DialWith],
+// which fail with [ErrNoOrganization]. The organization is provided at every
+// dial here, by callers that legitimately act on behalf of one that has been
+// deleted: a resource outliving its organization, like a transformation
+// function, is deleted after it, and refusing to dial would leave it undeleted
+// forever. The bytes such a dial sends are simply not attributed to anyone.
 //
 // If the wrapped dial function is nil, a plain net.Dialer is used, as in
 // [Dial]. Unlike the other dial functions, this one is wrapped even when
@@ -334,19 +339,20 @@ func DialWithContext(dial DialFunc) DialFunc {
 		if v == nil {
 			return nil, ErrNoOrganizationInContext
 		}
+		// The ID is never empty, see organizationKey.
 		organizationID := v.(string)
-		// The organization is empty when the context has been marked as dialing
-		// on behalf of none, see WithoutOrganization, and there is then nothing
-		// to attribute the bytes sent to.
-		if organizationID == "" || !enabled {
+		if !enabled {
 			return dial(ctx, network, addr)
 		}
 		// Unlike the other dial functions, this one cannot resolve the
 		// organization once, when it is created, because the organization is
 		// only known at every dial, from its context.
-		_, c, err := resolve(organizationID)
-		if err != nil {
-			return nil, err
+		_, c, ok := resolve(organizationID)
+		if !ok {
+			// The organization does not exist, so there is nothing to attribute
+			// the bytes sent to. It is not an error here, see the comment on
+			// this function.
+			return dial(ctx, network, addr)
 		}
 		conn, err := dial(ctx, network, addr)
 		if err != nil {
@@ -378,8 +384,9 @@ func dialWith(organizationID string, dial DialFunc) DialFunc {
 	}
 	// The organization is resolved once, here, and not at every dial, so that
 	// establishing a connection does not have to look it up and take a lock.
-	org, c, err := resolve(organizationID)
-	if err != nil {
+	org, c, ok := resolve(organizationID)
+	if !ok {
+		err := fmt.Errorf("dialer: %w: %s", ErrNoOrganization, organizationID)
 		return func(context.Context, string, string) (net.Conn, error) {
 			return nil, err
 		}

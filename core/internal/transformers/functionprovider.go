@@ -39,9 +39,9 @@ func (err FunctionExecError) Error() string {
 //   - terminate with ".js", for JavaScript functions, or with ".py" for Python
 //     functions
 //
-// The organization parameter of the Call, Create, and Update methods is the ID
-// of the organization the function belongs to. A provider that executes the
-// functions remotely, like the Lambda one, attributes the network traffic it
+// The organization parameter of the Call, Create, Delete, and Update methods is
+// the ID of the organization the function belongs to. A provider that executes
+// the functions remotely, like the Lambda one, attributes the network traffic it
 // sends to that organization. It is empty when the function does not belong to
 // an organization, in which case the traffic is not attributed.
 type FunctionProvider interface {
@@ -70,11 +70,11 @@ type FunctionProvider interface {
 	// Delete deletes the function with the given identifier.
 	// If a function with the given identifier does not exist, it does nothing.
 	//
-	// Unlike the other methods, it does not take an organization: functions are
-	// also deleted, by the pipeline cleaner, after the pipelines using them have
-	// been deleted, when their organization is no longer known. The traffic it
-	// sends is negligible, as it only sends the identifier of the function.
-	Delete(ctx context.Context, id string) error
+	// A function outlives its organization, as it is deleted by the pipeline
+	// cleaner after the pipelines using it have been deleted, so organization
+	// may name one that has already been deleted. It is passed all the same:
+	// the traffic is then attributed to nobody.
+	Delete(ctx context.Context, organization, id string) error
 
 	// SupportLanguage reports whether language is supported as a language.
 	// It panics if language is not valid.

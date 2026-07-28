@@ -325,9 +325,10 @@ func TestDialWithContext(t *testing.T) {
 }
 
 func TestDialWithContextWithoutOrganization(t *testing.T) {
-	// The context carries no organization at all, which cannot be told from one
-	// that has been forgotten, so the dial fails instead of silently counting
-	// nothing. It fails even when counting is disabled.
+	// Every dial made with DialWithContext is made on behalf of an
+	// organization, so a context carrying none is a caller that has forgotten
+	// to set it, and the dial fails instead of silently counting nothing. It
+	// fails even when counting is disabled.
 	addr := echoServer(t)
 	for _, enabled := range []bool{false, true} {
 		if enabled {
@@ -337,20 +338,6 @@ func TestDialWithContextWithoutOrganization(t *testing.T) {
 		if !errors.Is(err, ErrNoOrganizationInContext) {
 			t.Fatalf("dialing returned the error %v, expecting ErrNoOrganizationInContext (counting enabled: %t)", err, enabled)
 		}
-	}
-
-	// A context marked as dialing on behalf of no organization, instead, dials
-	// and counts nothing, even though counting is enabled.
-	egress := egress(t, "")
-	dial := DialWithContext(nil)
-	conn := write(t, func(ctx context.Context, network, address string) (net.Conn, error) {
-		return dial(WithoutOrganization(ctx), network, address)
-	}, addr, "hello")
-	if _, ok := conn.(*instrumentedConn); ok {
-		t.Fatal("the connection is instrumented, expecting a plain connection")
-	}
-	if n := egress(); n != 0 {
-		t.Fatalf("counted %d bytes, expecting 0", n)
 	}
 }
 
@@ -469,14 +456,25 @@ func TestDeletedOrganization(t *testing.T) {
 }
 
 func TestDialWithContextUnknownOrganization(t *testing.T) {
-	// The organization carried by the context does not exist, so the dial
-	// fails.
+	// The organization carried by the context does not exist, because it has
+	// been deleted or it has never been created. Unlike Dial and DialWith, the
+	// dial succeeds and counts nothing: its callers delete the resources that
+	// outlive their organization, and refusing to dial would leave them
+	// undeleted forever.
 	enable(t, "org-ctx-known")
 	addr := echoServer(t)
-	ctx := WithOrganization(t.Context(), "org-ctx-unknown")
-	_, err := DialWithContext(nil)(ctx, "tcp", addr)
-	if !errors.Is(err, ErrNoOrganization) {
-		t.Fatalf("dialing returned the error %v, expecting ErrNoOrganization", err)
+	dial := DialWithContext(nil)
+	conn := write(t, func(ctx context.Context, network, address string) (net.Conn, error) {
+		return dial(WithOrganization(ctx, "org-ctx-unknown"), network, address)
+	}, addr, "hello")
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
+	}
+
+	// No counter is collected for it, so that the counters of the deleted
+	// organizations are not resurrected by the traffic that follows them.
+	if _, ok := collected(t, "org-ctx-unknown"); ok {
+		t.Fatal("a counter is collected for an organization that does not exist")
 	}
 }
 

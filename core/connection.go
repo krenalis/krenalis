@@ -645,9 +645,11 @@ func (this *Connection) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the connection's functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.connection = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -2434,7 +2436,7 @@ func (tp *tempFunctionProvider) Call(ctx context.Context, _, _, _ string, inSche
 	}
 	defer func() {
 		go func() {
-			err := tp.provider.Delete(context.Background(), id)
+			err := tp.provider.Delete(context.Background(), tp.organization, id)
 			if err != nil {
 				slog.Warn("core: cannot delete transformation function", "id", id, "error", err)
 			}
@@ -2447,7 +2449,7 @@ func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supp
 func (tp *tempFunctionProvider) Create(_ context.Context, _, _ string, _ state.Language, _ string) (string, string, error) {
 	panic("not supported")
 }
-func (tp *tempFunctionProvider) Delete(_ context.Context, _ string) error {
+func (tp *tempFunctionProvider) Delete(_ context.Context, _, _ string) error {
 	panic("not supported")
 }
 func (tp *tempFunctionProvider) SupportLanguage(_ state.Language) bool {

@@ -608,8 +608,8 @@ func (this *Organization) Delete(ctx context.Context) error {
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the organization's pipeline functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
 			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+

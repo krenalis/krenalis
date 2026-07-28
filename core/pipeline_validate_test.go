@@ -3523,7 +3523,7 @@ func (testProvider) Close(ctx context.Context) error { panic("not implemented") 
 func (testProvider) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	panic("not implemented")
 }
-func (testProvider) Delete(ctx context.Context, id string) error {
+func (testProvider) Delete(ctx context.Context, organization, id string) error {
 	panic("not implemented")
 }
 func (testProvider) SupportLanguage(language state.Language) bool {
