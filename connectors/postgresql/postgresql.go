@@ -281,7 +281,7 @@ func (pg *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 }
 
 // testConnection tests a connection with the given settings, established
-// dialing with dialWith, so that the driver's own dialer is preserved.
+// dialing with dialWith.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *innerSettings, dialWith connectors.DialWith) error {
 	connConfig, err := pgx.ParseConfig(dsn(settings))
