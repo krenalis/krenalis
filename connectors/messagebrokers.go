@@ -44,9 +44,9 @@ type MessageBrokerEnv struct {
 	Dial DialFunc
 
 	// DialWith is the function a connector that has its own dialer must use, in
-	// place of Dial, to establish its outbound network connections. It returns a
-	// dial function that dials with the given one, so that the connector keeps its
-	// own dial options, like its timeouts and its keep-alive.
+	// place of Dial, to establish its outbound network connections. It returns
+	// a dial function that dials with the given one, so that the connector
+	// keeps its own dial options, like its timeouts and its keep-alive.
 	//
 	// If the given dial function is nil, the returned one dials with a plain
 	// dialer, as Dial does.
