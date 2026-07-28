@@ -3,43 +3,22 @@
 // that can be found in the LICENSE file.
 
 // Package dialer provides the dial functions Krenalis establishes its outbound
-// connections with.
+// connections with. Use it whenever a dial function is needed, so that every
+// connection is dialed the same way.
 //
-// Use it whenever a dial function is needed, and not only when the bytes sent
-// must be counted: [Dial] and [DialWith] for the connections made on behalf of
-// an organization, [DialWithContext] for a client shared by every organization,
-// and [PlainDial] and [PlainDialWith] when there is no organization to dial on
-// behalf of. Going through this package keeps every connection dialed the same
-// way, and keeps counting a detail the callers do not have to care about.
+// Every connection is established on behalf of an organization: [Dial] and
+// [DialWith] return the dial functions of a single organization, fixed when
+// they are created, while [DialWithContext] wraps the dial function of a client
+// shared by every organization, taking it from the context of each dial. The
+// organization is mandatory, and the functions taking one panic if it is empty.
 //
-// The organization is mandatory: the functions taking one panic if it is empty,
-// and the connections that are not established on behalf of an organization
-// must be dialed with [PlainDial] or [PlainDialWith]. Not attributing the bytes
-// sent is therefore always a deliberate choice, and never the silent result of
-// an organization a caller has forgotten to provide. Every dial made with
-// [DialWithContext] is made on behalf of an organization, so it has no such
-// escape hatch and refuses to dial with a context that carries none.
+// In the rare cases where there is no organization to dial on behalf of, as for
+// a connector under test, use [PlainDial] and [PlainDialWith]. Dialing without
+// an organization is therefore always a deliberate choice, and never the silent
+// result of one a caller has forgotten to provide.
 //
-// Counting is the secondary aspect: the connections established on behalf of an
-// organization count the bytes they send, exposing them as the
-// krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
-// by organization. Only the bytes sent are counted, the bytes received are not.
-//
-// Counting is disabled by default and is enabled with [EnableCounting], which
-// is not called at all when the Prometheus metrics are disabled. While it is
-// disabled, the dial functions returned by [Dial] and [DialWith] establish the
-// connections as they would without this package, with no overhead, and the one
-// returned by [DialWithContext] only reads the organization from the context of
-// each dial, to check that it carries one.
-//
-// When counting is enabled, this package keeps a counter per organization, so
-// it must know which organizations exist in order not to keep the counters of
-// the deleted ones forever. It knows them by listening to the state, see
-// [EnableCounting]. Dialing on behalf of an organization that does not exist
-// fails with [ErrNoOrganization] for [Dial] and [DialWith], whose organization
-// is fixed when they are created, while [DialWithContext] dials and counts
-// nothing, because its callers legitimately act on behalf of an organization
-// that has been deleted.
+// Secondarily, the connections dialed on behalf of an organization count the
+// bytes they send, exposing them as a Prometheus counter, see [EnableCounting].
 package dialer
 
 import (
@@ -71,15 +50,16 @@ var egressBytes = prometheus.RegisterCounterVec(
 // see [EnableCounting].
 var enabled bool
 
-// CountingEnabled reports whether counting is enabled, that is whether
-// [EnableCounting] has been called.
+// CountingEnabled reports whether the connections dialed on behalf of an
+// organization count the bytes they send, that is whether [EnableCounting] has
+// been called.
 func CountingEnabled() bool {
 	return enabled
 }
 
 // ErrNoOrganization is the error the dial functions fail with when the
-// organization the bytes they send would be attributed to does not exist,
-// because it has been deleted or it has never been created.
+// organization they dial on behalf of does not exist, because it has been
+// deleted or it has never been created.
 var ErrNoOrganization = errors.New("organization does not exist")
 
 // ErrNoOrganizationInContext is the error [DialWithContext] fails a dial with
@@ -91,7 +71,7 @@ var ErrNoOrganization = errors.New("organization does not exist")
 // while a request is being served.
 var ErrNoOrganizationInContext = errors.New("dialer: no organization in the context of the dial")
 
-// organization is an organization the bytes sent can be attributed to.
+// organization is an organization the connections are dialed on behalf of.
 //
 // The dial functions resolve it once, when they are created, and then only read
 // its deleted field, so that establishing a connection does not have to look it
@@ -114,19 +94,25 @@ var (
 	organizations = map[string]*organization{}
 )
 
-// EnableCounting enables counting and makes this package follow the
-// organizations of st, so that the counter of an organization is discarded when
-// the organization is deleted, and dialing on behalf of an organization that
-// does not exist fails.
+// EnableCounting makes the connections dialed on behalf of an organization
+// count the bytes they send, exposing them as the
+// krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
+// by organization. Only the bytes sent are counted, the bytes received are not.
 //
-// It is not called at all when the Prometheus metrics are disabled, leaving
-// counting disabled: the other functions of this package can still be called,
-// they just return plain, unwrapped dialers and count nothing.
+// Counting is disabled by default, and it is left disabled by not calling this
+// function at all, as when the Prometheus metrics are disabled: the other
+// functions of this package can still be called, they just return plain,
+// unwrapped dialers.
 //
-// When it is called, instead, it must be called at startup, before any other
-// function of this package, because the dial functions already returned keep
-// the setting they were created with and because the organizations are only
-// known once it has returned, and it panics if it is called more than once.
+// It also makes this package follow the organizations of st, so that the
+// counter of an organization is discarded when the organization is deleted,
+// instead of being kept for the whole life of the process, and so that dialing
+// on behalf of an organization that does not exist fails. The organizations are
+// therefore only known once counting is enabled.
+//
+// It must be called at startup, before any other function of this package,
+// because the dial functions already returned keep the setting they were
+// created with, and it panics if it is called more than once.
 func EnableCounting(st *state.State) {
 	if enabled {
 		panic("dialer: EnableCounting called more than once")
@@ -206,25 +192,23 @@ func resolve(organizationID string) (*organization, *prometheus.Counter, bool) {
 	return org, org.egress, true
 }
 
-// Dial returns the dial function to establish the connections made on behalf
-// of the organization with the given ID, dialing with a plain net.Dialer. The
-// bytes the connections send are counted and attributed to the organization.
+// Dial returns the dial function to establish the connections made on behalf of
+// the organization with the given ID, dialing with a plain net.Dialer. Use
+// [DialWith] instead to keep the dial options of an already configured dialer.
 //
 // It panics if organizationID is empty: use [PlainDial] when there is no
-// organization to dial on behalf of. If counting is disabled (see
-// [EnableCounting]), the returned function is a plain, unwrapped dialer and no
-// bytes are counted. Otherwise, the returned function fails with
+// organization to dial on behalf of. The returned function fails with
 // [ErrNoOrganization] if the organization does not exist when it is called.
 //
-// Use [DialWith] instead to keep the dial options of an already configured
-// dialer.
+// The connections it establishes count the bytes they send, see
+// [EnableCounting]. While counting is disabled the organizations are not known,
+// so it returns a plain, unwrapped dialer that never fails.
 func Dial(organizationID string) DialFunc {
 	return dialWith(organizationID, nil)
 }
 
 // DialWith returns a function that wraps the dial function establishing the
-// connections made on behalf of the organization with the given ID. The bytes
-// the connections send are counted and attributed to the organization.
+// connections made on behalf of the organization with the given ID.
 //
 // Unlike [Dial], the connections are established by the wrapped dial function,
 // which therefore keeps its own dial options, like its timeouts and its
@@ -232,10 +216,12 @@ func Dial(organizationID string) DialFunc {
 // as in [Dial].
 //
 // It panics if organizationID is empty: use [PlainDialWith] when there is no
-// organization to dial on behalf of. If counting is disabled (see
-// [EnableCounting]), the dial function is returned unwrapped and no bytes are
-// counted. Otherwise, the returned function fails with [ErrNoOrganization] if
-// the organization does not exist when it is called.
+// organization to dial on behalf of. The returned function fails with
+// [ErrNoOrganization] if the organization does not exist when it is called.
+//
+// As in [Dial], the connections count the bytes they send, see
+// [EnableCounting], and while counting is disabled the dial function is
+// returned unwrapped.
 func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 	// The organization is checked here, and not only in dialWith, so that an
 	// empty one panics where DialWith is called and not where the function it
@@ -248,22 +234,22 @@ func DialWith(organizationID string) func(dial DialFunc) DialFunc {
 	}
 }
 
-// PlainDial returns a plain net.Dialer dial function, that counts no bytes.
+// PlainDial returns a plain net.Dialer dial function.
 //
 // Use it, in place of [Dial], when the connections it establishes are not made
-// on behalf of an organization, and there is therefore no organization to
-// attribute the bytes they send to, as for a connector under test. Dialing
-// through this package, instead of with a net.Dialer of its own, keeps every
-// connection Krenalis establishes dialed the same way.
+// on behalf of an organization, as for a connector under test. Dialing through
+// this package, instead of with a net.Dialer of its own, keeps every connection
+// Krenalis establishes dialed the same way. The bytes such connections send are
+// counted for no one.
 func PlainDial() DialFunc {
 	var d net.Dialer
 	return d.DialContext
 }
 
 // PlainDialWith returns a function that returns the dial function it is given
-// unwrapped, so that it establishes the connections with its own dial options
-// and no bytes are counted. If the given dial function is nil, a plain
-// net.Dialer is returned, as in [PlainDial].
+// unwrapped, so that it establishes the connections with its own dial options.
+// If the given dial function is nil, a plain net.Dialer is returned, as in
+// [PlainDial].
 //
 // Use it, in place of [DialWith], when the connections are not established on
 // behalf of an organization, as for [PlainDial].
@@ -283,8 +269,8 @@ func PlainDialWith() func(dial DialFunc) DialFunc {
 // has not been set, and [DialWithContext] refuses to dial with it.
 type organizationKey struct{}
 
-// WithOrganization returns a copy of ctx carrying the ID of the organization the
-// bytes sent by the connections dialed with it are attributed to.
+// WithOrganization returns a copy of ctx carrying the ID of the organization
+// the connections dialed with it are established on behalf of.
 //
 // Use it, together with [DialWithContext], when a client is shared by every
 // organization and the organization is only known when the client is used, so
@@ -294,8 +280,7 @@ type organizationKey struct{}
 // is made on behalf of an organization, and one that has been deleted is no
 // exception, as its ID is passed all the same. The organization is carried by
 // the context even when counting is disabled (see [EnableCounting]), so that
-// [DialWithContext] can check that it has been provided regardless of whether
-// the metrics are enabled.
+// [DialWithContext] can check that it has been provided in any case.
 func WithOrganization(ctx context.Context, organizationID string) context.Context {
 	if organizationID == "" {
 		panic("dialer: empty organization ID")
@@ -304,12 +289,11 @@ func WithOrganization(ctx context.Context, organizationID string) context.Contex
 }
 
 // DialWithContext wraps the dial function of a client shared by every
-// organization. The bytes the connections it establishes send are counted and
-// attributed to the organization carried by the context of each dial, set with
-// [WithOrganization].
-//
-// Unlike [DialWith], the organization is not fixed when the dial function is
-// created, so a single client can serve every organization.
+// organization, establishing each connection on behalf of the organization
+// carried by the context of the dial, set with [WithOrganization]. Unlike
+// [DialWith], the organization is not fixed when the dial function is created,
+// so a single client can serve every organization. If the wrapped dial function
+// is nil, a plain net.Dialer is used, as in [Dial].
 //
 // A dial whose context carries no organization at all fails with
 // [ErrNoOrganizationInContext]: every dial made through this function is made
@@ -317,18 +301,17 @@ func WithOrganization(ctx context.Context, organizationID string) context.Contex
 // forgotten to set it.
 //
 // A dial whose context carries an organization that does not exist, instead,
-// establishes the connection and counts no bytes, unlike [Dial] and [DialWith],
-// which fail with [ErrNoOrganization]. The organization is provided at every
-// dial here, by callers that legitimately act on behalf of one that has been
-// deleted: a resource outliving its organization, like a transformation
-// function, is deleted after it, and refusing to dial would leave it undeleted
-// forever. The bytes such a dial sends are simply not attributed to anyone.
+// establishes the connection, unlike [Dial] and [DialWith], which fail with
+// [ErrNoOrganization]. The organization is provided at every dial here, by
+// callers that legitimately act on behalf of one that has been deleted: a
+// resource outliving its organization, like a transformation function, is
+// deleted after it, and refusing to dial would leave it undeleted forever. The
+// bytes such a dial sends are counted for no one.
 //
-// If the wrapped dial function is nil, a plain net.Dialer is used, as in
-// [Dial]. Unlike the other dial functions, this one is wrapped even when
-// counting is disabled (see [EnableCounting]), because it checks the context of
-// every dial in any case: it then only reads the organization from the context,
-// counting no bytes.
+// The connections count the bytes they send, see [EnableCounting]. Unlike the
+// other dial functions, this one wraps the given dial function even when
+// counting is disabled, because it checks the context of every dial in any
+// case: it then only reads the organization from the context.
 func DialWithContext(dial DialFunc) DialFunc {
 	if dial == nil {
 		var d net.Dialer
