@@ -446,13 +446,14 @@ def _handler(event, context):
 func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	fn.mu.Lock()
 	defer fn.mu.Unlock()
-	if fn.client == nil {
-		cfg, err := awsconfig.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
-		}
-		fn.client = lambda.NewFromConfig(cfg, countEgress)
+	if fn.client != nil {
+		return fn.client, nil
 	}
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
+	}
+	fn.client = lambda.NewFromConfig(cfg, countEgress)
 	return fn.client, nil
 }
 
