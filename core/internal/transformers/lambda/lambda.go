@@ -457,23 +457,11 @@ func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	return fn.client, nil
 }
 
-// countEgress is the option that makes the Lambda client count the bytes it
-// sends as the egress traffic of the organization carried by the context of
-// each request.
-//
-// It only wraps the dial function of the HTTP client the AWS SDK has resolved,
-// which is a buildable one, leaving everything else, like its timeouts and its
-// connection pool sizes, as the SDK has configured it.
 func countEgress(o *lambda.Options) {
-	// The AWS SDK resolves the HTTP client, from the configuration, before
-	// applying this option, so it is a buildable client unless a client that is
-	// not buildable has been explicitly configured, which Krenalis does not do.
 	client, ok := o.HTTPClient.(*awshttp.BuildableClient)
 	if !ok {
 		client = awshttp.NewBuildableClient()
 	}
-	// WithTransportOptions returns a copy of the client, leaving the one the
-	// SDK has resolved untouched.
 	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
 		t.DialContext = dialer.DialWithContext(t.DialContext)
 		// The organization is resolved when a connection is dialed, so a pooled
