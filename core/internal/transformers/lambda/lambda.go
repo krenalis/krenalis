@@ -186,9 +186,7 @@ func (fn *function) Call(ctx context.Context, organization, id, version string, 
 // Close closes the function. When Close is called, no other calls to the
 // function provider's methods are in progress and no more will be made.
 func (fn *function) Close(ctx context.Context) error {
-	fn.mu.Lock()
 	fn.client = nil
-	fn.mu.Unlock()
 	return nil
 }
 
