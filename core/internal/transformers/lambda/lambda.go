@@ -300,8 +300,8 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 // returns a new version, which has a length in the range [1, 128].
 // If the function does not exist, it returns the ErrFunctionNotExist error.
 //
-// The bytes sent uploading the code of the function are attributed to the
-// organization with the given ID.
+// organization is the organization on behalf of which the transformation
+// function is updated.
 func (fn *function) Update(ctx context.Context, organization, id, source string) (string, error) {
 	arn, language, err := parseID(id)
 	if err != nil {
