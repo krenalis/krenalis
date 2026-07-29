@@ -63,15 +63,15 @@ func New(settings Settings) transformers.FunctionProvider {
 // organization is the organization on whose behalf the transformation function
 // is called.
 //
-// Before transformation, record attributes must conform to inSchema. After
-// transformation, they should conform to outSchema, unless an error occurs on
-// the record.
+// Before transformation, record attributes must conform to inSchema.
+// After transformation, they should conform to outSchema, unless an error
+// occurs on the record.
 //
-// If the function does not exist, Call returns an ErrFunctionNotExist error. If
-// the function exists but has an issue preventing execution (e.g., a syntax
-// error), it returns a FunctionExecError. Even if the call succeeds, individual
-// records may still encounter errors, which are stored in the Err field of each
-// record.
+// If the function does not exist, Call returns an ErrFunctionNotExist error.
+// If the function exists but has an issue preventing execution (e.g., a syntax
+// error), it returns a FunctionExecError.
+// Even if the call succeeds, individual records may still encounter errors,
+// which are stored in the Err field of each record.
 func (fn *function) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	arn, language, err := parseID(id)
@@ -262,9 +262,7 @@ func (fn *function) Create(ctx context.Context, organization, name string, langu
 // If a function with the given identifier does not exist, it does nothing.
 //
 // organization is the organization on behalf of which the transformation
-// function is deleted. It may have been deleted already, as a function outlives
-// its organization: Lambda does not care, and the bytes sent are then
-// attributed to nobody.
+// function is deleted.
 func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	arn, _, err := parseID(id)
 	if err != nil {
@@ -439,10 +437,6 @@ def _handler(event, context):
 
 // lambdaClient returns the Lambda client, loading the AWS configuration from
 // the environment (IAM role, etc.) on first call.
-//
-// A single client, shared by every organization, is used: it counts the bytes
-// it sends as the egress traffic of the organization carried by the context of
-// each request, set with [dialer.WithOrganization].
 func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	fn.mu.Lock()
 	defer fn.mu.Unlock()
