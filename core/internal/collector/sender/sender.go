@@ -359,6 +359,7 @@ func (s *Sender) discard(err error) {
 	s.iterator.numConsumed--
 	if s.iterator.numConsumed == 0 {
 		s.iterator.sameUser.user = nil
+		s.iterator.index = i + 1
 	}
 	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %s, message ID %q\n",
 		s.iterator, i, s.iterator.index, e.pipeline, e.Received.MessageID())

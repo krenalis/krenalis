@@ -226,6 +226,91 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 	})
 }
 
+// Test_Sender_SameUserRebindPreservesOrder verifies that, after Peek skips an
+// event from another user, discarding the iterator's only consumed event allows
+// it to bind to the skipped event's user without consuming events out of order.
+func Test_Sender_SameUserRebindPreservesOrder(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		var delivered []string
+		var peeked string
+		var peekedOK bool
+		var unexpected []string
+		done := make(chan struct{})
+		discardErr := errors.New("event is invalid")
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for event := range events.SameUser() {
+				switch id := event.Received.MessageID(); id {
+				case "w-0":
+					// Peek the next event of the same user, reading past the
+					// event of the other user that precedes it.
+					peekedEvent, ok := events.Peek()
+					peekedOK = ok
+					if ok {
+						peeked = peekedEvent.Received.MessageID()
+					}
+					events.Discard(discardErr)
+				case "w-1":
+					events.Discard(discardErr)
+				case "u-0", "u-1":
+					delivered = append(delivered, id)
+					if len(delivered) == 2 {
+						close(done)
+					}
+				default:
+					unexpected = append(unexpected, id)
+				}
+			}
+			return nil
+		}
+		s := New(app, nil)
+		defer s.Close(t.Context())
+
+		newEvent := func(anonymousID, messageID string) *Event {
+			return s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
+				Attributes: map[string]any{
+					"anonymousId": anonymousID,
+					"messageId":   messageID,
+				},
+				Ack: nopAck,
+			})
+		}
+
+		// Discarding w-0 releases user-w, so the iteration binds to user-u
+		// after Peek has already read past u-0 to find w-1.
+		s.SendEvent(newEvent("user-w", "w-0"))
+		s.SendEvent(newEvent("user-u", "u-0"))
+		s.SendEvent(newEvent("user-w", "w-1"))
+		s.SendEvent(newEvent("user-u", "u-1"))
+
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for events")
+		}
+
+		s.Close(t.Context())
+
+		if !peekedOK {
+			t.Fatal("expected Peek to return an event")
+		}
+		if peeked != "w-1" {
+			t.Fatalf("expected Peek to return event %q, got %q", "w-1", peeked)
+		}
+		if len(unexpected) != 0 {
+			t.Fatalf("unexpected delivered events: %v", unexpected)
+		}
+
+		want := []string{"u-0", "u-1"}
+		if !slices.Equal(delivered, want) {
+			t.Fatalf("expected the events delivered in order %v, got %v", want, delivered)
+		}
+
+	})
+}
+
 // Test_Sender_SequenceOverflowRescale verifies that per-user ordering holds
 // across sequence overflow.
 func Test_Sender_SequenceOverflowRescale(t *testing.T) {
