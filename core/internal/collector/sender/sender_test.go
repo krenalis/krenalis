@@ -795,7 +795,7 @@ type application struct {
 	seed uint64
 
 	mu        sync.Mutex
-	iteration uint64
+	iteration uint64   // protected by mu
 	n         int      // protected by mu
 	consumed  []string // ids of the consumed events; protected by mu
 	sends     []send   // protected by mu
