@@ -21,14 +21,30 @@ import (
 )
 
 const (
-	batchSize  = 64
-	batchDelay = 2 * time.Millisecond
-	queueSize  = batchSize * 4
+	// batchSize is the maximum number of refill generations acquired in a
+	// single PostgreSQL call.
+	batchSize = 64
 
-	refillBackoffDuration    = 250 * time.Millisecond
+	// batchDelay is the collection interval used to coalesce refill and
+	// restoration work into batches.
+	batchDelay = 2 * time.Millisecond
+
+	// queueSize is the maximum number of refill generations waiting to be
+	// collected.
+	queueSize = batchSize * 4
+
+	// refillBackoffDuration is the delay during which new refills are rejected
+	// after an acquisition error or invalid response.
+	refillBackoffDuration = 250 * time.Millisecond
+
+	// bucketCompactionInterval controls how often weak references to
+	// unreachable buckets are removed.
 	bucketCompactionInterval = 5 * time.Minute
 )
 
+// defaultAcquireTimeout limits the duration of a single PostgreSQL
+// lease-acquisition operation. It is a variable so tests can use a shorter
+// duration.
 var defaultAcquireTimeout = 5 * time.Second
 
 // ErrLimiterUnavailable is returned when the limiter cannot determine
@@ -67,27 +83,27 @@ type SubjectKind string
 //	limiter := New(db, metrics)
 //	bucket := limiter.NewBucket(subjectKind, subjectID, leaseSize, maxUnits)
 type Limiter struct {
-	db           *db.DB
-	acquire      acquireFunc
-	restoreBatch restoreBatchFunc
+	db           *db.DB           // PostgreSQL backing store
+	acquire      acquireFunc      // lease acquisition function
+	restoreBatch restoreBatchFunc // capacity restoration function
 
-	queue           chan *refill
-	queueFullLogged atomic.Bool
-	backoff         atomic.Pointer[backoffState]
-	restorations    restorationQueue
+	queue           chan *refill                 // pending refill generations
+	queueFullLogged atomic.Bool                  // whether the current queue-full condition was logged
+	backoff         atomic.Pointer[backoffState] // current acquisition backoff, if any
+	restorations    restorationQueue             // capacity waiting to be restored
 
-	metrics Metrics
+	metrics Metrics // event counters
 
-	buckets struct {
+	buckets struct { // tracked buckets
 		sync.Mutex
-		refs []weak.Pointer[Bucket]
+		refs []weak.Pointer[Bucket] // weak references to created buckets; protected by the embedded mutex
 	}
 
 	close struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		atomic.Bool
-		sync.WaitGroup
+		ctx            context.Context    // canceled when shutdown starts
+		cancel         context.CancelFunc // cancels ctx
+		atomic.Bool                       // whether shutdown has started
+		sync.WaitGroup                    // active background workers
 	}
 }
 

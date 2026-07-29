@@ -13,10 +13,18 @@ import (
 )
 
 const (
-	maxRefillThreshold    = 25
+	// maxRefillThreshold caps the local-capacity threshold used to start
+	// proactive refills.
+	maxRefillThreshold = 25
+
+	// microsecondsPerMinute is the denominator used by PostgreSQL's fractional
+	// per-minute refill calculation.
 	microsecondsPerMinute = 60 * 1_000_000
 )
 
+// maxWaitDuration limits how long a caller waits for a single refill
+// generation.
+// It is a variable so tests can use a shorter duration.
 var maxWaitDuration = time.Second
 
 // Bucket manages node-local rate-limit capacity for one subject, identified by
@@ -35,17 +43,17 @@ var maxWaitDuration = time.Second
 //		return err
 //	}
 type Bucket struct {
-	limiter     *Limiter
-	subjectKind SubjectKind
-	subjectID   string
-	leaseSize   int
-	maxUnits    int
+	limiter     *Limiter    // limiter that owns the bucket
+	subjectKind SubjectKind // subject class
+	subjectID   string      // subject identifier within its class
+	leaseSize   int         // maximum capacity reserved locally
+	maxUnits    int         // maximum units accepted by a single operation
 
 	mu              sync.Mutex
-	available       int
-	localTarget     int
-	refillThreshold int
-	refill          *refill
+	available       int     // locally available capacity; protected by mu
+	localTarget     int     // desired local capacity after a refill; protected by mu
+	refillThreshold int     // capacity below which a proactive refill starts; protected by mu
+	refill          *refill // current refill generation, if any; protected by mu
 }
 
 // Consume consumes the specified number of units from the bucket.

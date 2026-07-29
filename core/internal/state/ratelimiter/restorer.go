@@ -31,8 +31,8 @@ var defaultRestorationTimeout = 5 * time.Second
 // PostgreSQL.
 type restorationQueue struct {
 	sync.Mutex
-	pending map[subjectKey]int
-	wake    chan struct{}
+	pending map[subjectKey]int // capacity aggregated by subject; protected by the embedded mutex
+	wake    chan struct{}      // coalesced notification for the background restorer
 }
 
 // newRestorationQueue creates an empty queue with a wake-up channel that
