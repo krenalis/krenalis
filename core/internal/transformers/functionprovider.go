@@ -60,7 +60,8 @@ type FunctionProvider interface {
 	// which are stored in the Err field of each record.
 	Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
 
-	// Close closes the function.
+	// Close closes the function. When Close is called, no other calls to the
+	// function provider's methods are in progress and no more will be made.
 	Close(ctx context.Context) error
 
 	// Create creates a new function with the given name, language, and source and

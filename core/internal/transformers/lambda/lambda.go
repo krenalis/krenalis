@@ -36,7 +36,7 @@ import (
 type function struct {
 	settings Settings
 	mu       sync.Mutex
-	client   *lambda.Client
+	client   *lambda.Client // protected by mu
 }
 
 type Settings struct {
@@ -183,7 +183,8 @@ func (fn *function) Call(ctx context.Context, organization, id, version string, 
 	return nil
 }
 
-// Close closes the function.
+// Close closes the function. When Close is called, no other calls to the
+// function provider's methods are in progress and no more will be made.
 func (fn *function) Close(ctx context.Context) error {
 	fn.mu.Lock()
 	fn.client = nil

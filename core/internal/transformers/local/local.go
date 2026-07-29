@@ -149,7 +149,8 @@ func (fn *function) Call(ctx context.Context, organization, id, version string, 
 	return transformers.Unmarshal(&stdout, records, outSchema, language, preserveJSON)
 }
 
-// Close closes the function.
+// Close closes the function. When Close is called, no other calls to the
+// function provider's methods are in progress and no more will be made.
 func (fn *function) Close(ctx context.Context) error {
 	return nil
 }
