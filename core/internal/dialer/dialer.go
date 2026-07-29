@@ -41,16 +41,14 @@ var egressBytes = prometheus.RegisterCounterVec(
 	[]string{"organization"},
 )
 
-// enabled reports whether the bytes sent must be counted. It also reports
-// whether the organizations are known, because it is only set once they are,
-// see [EnableCounting].
-var enabled bool
+// countingEnabled reports whether the bytes sent must be counted.
+var countingEnabled bool
 
 // CountingEnabled reports whether the connections dialed on behalf of an
 // organization count the bytes they send, that is whether [EnableCounting] has
 // been called.
 func CountingEnabled() bool {
-	return enabled
+	return countingEnabled
 }
 
 // ErrNoOrganizationInContext is the error [DialWithContext] fails a dial with
@@ -97,7 +95,7 @@ var (
 // because the dial functions already returned keep the setting they were
 // created with, and it panics if it is called more than once.
 func EnableCounting(st *state.State) {
-	if enabled {
+	if countingEnabled {
 		panic("dialer: EnableCounting called more than once")
 	}
 	st.Freeze()
@@ -109,7 +107,7 @@ func EnableCounting(st *state.State) {
 	}
 	// Counting is enabled only now that the organizations are known, so that
 	// the dial functions never look one up while they are being populated.
-	enabled = true
+	countingEnabled = true
 	organizationsMu.Unlock()
 	st.Unfreeze()
 }
@@ -268,7 +266,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 		}
 		// The ID is never empty, see organizationKey.
 		organizationID := v.(string)
-		if !enabled {
+		if !countingEnabled {
 			return dial(ctx, network, addr)
 		}
 		// Unlike the other dial functions, this one cannot take the counter of
@@ -306,7 +304,7 @@ func dialWith(organizationID string, dial DialFunc) DialFunc {
 		var d net.Dialer
 		dial = d.DialContext
 	}
-	if !enabled {
+	if !countingEnabled {
 		return dial
 	}
 	// The counter of the organization is taken once, here, and not at every

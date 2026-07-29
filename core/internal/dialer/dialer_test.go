@@ -122,9 +122,9 @@ func enable(t *testing.T, organizationIDs ...string) {
 	for _, id := range organizationIDs {
 		organizations[id] = egressBytes.Register(id)
 	}
-	enabled = true
+	countingEnabled = true
 	organizationsMu.Unlock()
-	t.Cleanup(func() { enabled = false })
+	t.Cleanup(func() { countingEnabled = false })
 }
 
 // write writes b to the connection established by dial to addr, reads the echo
