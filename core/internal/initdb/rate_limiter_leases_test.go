@@ -7,6 +7,7 @@ package initdb
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,12 +26,7 @@ func TestRateLimitLeaseTimestampMonotonic(t *testing.T) {
 	const workspaceID = "222222222222"
 
 	ctx := t.Context()
-	database := newTestDatabase(t)
-	if err := database.Transaction(ctx, func(tx *db.Tx) error {
-		return initialize(ctx, tx, false)
-	}); err != nil {
-		t.Fatal(err)
-	}
+	database := newInitializedTestDatabase(t)
 
 	var organizationID string
 	if err := database.QueryRow(ctx, "SELECT id FROM organizations").Scan(&organizationID); err != nil {
@@ -106,25 +102,7 @@ func TestRateLimitLeaseTimestampMonotonic(t *testing.T) {
 		olderDone <- acquireTestLeases(ctx, older, olderRequests)
 	}()
 
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		var waiting bool
-		if err := database.QueryRow(ctx, `
-			SELECT COALESCE((
-				SELECT wait_event_type = 'Lock'
-				FROM pg_stat_activity
-				WHERE pid = $1
-			), false)`, olderPID).Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
-		if waiting {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("older rate-limit acquisition did not wait for the row lock")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	waitForDatabaseLock(t, database, olderPID)
 
 	if err := acquireTestLeases(ctx, database, newerRequest); err != nil {
 		t.Fatal(err)
@@ -155,6 +133,164 @@ func TestRateLimitLeaseTimestampMonotonic(t *testing.T) {
 	}
 	if finalTimestamp.Before(newerTimestamp) {
 		t.Fatalf("rate-limit refill timestamp moved backwards from %s to %s", newerTimestamp, finalTimestamp)
+	}
+}
+
+// TestRestoreRateLimitCapacityAfterConcurrentUpdate verifies that restoration
+// follows an updated row version after waiting for its lock.
+func TestRestoreRateLimitCapacityAfterConcurrentUpdate(t *testing.T) {
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+
+	var organizationID string
+	if err := database.QueryRow(ctx, "SELECT id FROM organizations").Scan(&organizationID); err != nil {
+		t.Fatal(err)
+	}
+	requests := fmt.Sprintf(`[
+		{"subject_kind":"organization","subject_id":%q,"requested_units":1}
+	]`, organizationID)
+	if err := acquireTestLeases(ctx, database, requests); err != nil {
+		t.Fatal(err)
+	}
+	_, err := database.Exec(ctx, `
+		UPDATE rate_limit_buckets
+		SET available_units = 10,
+			capacity_units = 100
+		WHERE subject_kind = 'organization'
+			AND subject_id = $1`, organizationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	blocker, err := database.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restorer *db.Conn
+	defer func() {
+		_ = blocker.Rollback(ctx)
+		if restorer != nil {
+			_ = restorer.Close()
+		}
+	}()
+	_, err = blocker.Exec(ctx, `
+		UPDATE rate_limit_buckets
+		SET available_units = 5
+		WHERE subject_kind = 'organization'
+			AND subject_id = $1`, organizationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	restorer, err = database.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restorerPID int
+	if err := restorer.QueryRow(ctx, "SELECT pg_backend_pid()").Scan(&restorerPID); err != nil {
+		t.Fatal(err)
+	}
+	restored := make(chan error, 1)
+	go func() {
+		_, err := restorer.Exec(ctx, "SELECT restore_rate_limit_capacity($1::jsonb)", fmt.Sprintf(`[
+			{"subject_kind":"organization","subject_id":%q,"units":20}
+		]`, organizationID))
+		restored <- err
+	}()
+
+	waitForDatabaseLock(t, database, restorerPID)
+	if err := blocker.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-restored; err != nil {
+		t.Fatal(err)
+	}
+
+	var available int
+	if err := database.QueryRow(ctx, `
+		SELECT available_units
+		FROM rate_limit_buckets
+		WHERE subject_kind = 'organization'
+			AND subject_id = $1`, organizationID).Scan(&available); err != nil {
+		t.Fatal(err)
+	}
+	if available != 25 {
+		t.Fatalf("expected restored capacity 25, got %d", available)
+	}
+}
+
+// TestAcquireRateLimitLeaseRejectsMissingBucket verifies that acquisition does
+// not grant capacity when the authoritative bucket cannot be locked.
+func TestAcquireRateLimitLeaseRejectsMissingBucket(t *testing.T) {
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+
+	var organizationID string
+	if err := database.QueryRow(ctx, "SELECT id FROM organizations").Scan(&organizationID); err != nil {
+		t.Fatal(err)
+	}
+	_, err := database.Exec(ctx, `
+		CREATE FUNCTION suppress_rate_limit_bucket_insert()
+		RETURNS trigger
+		LANGUAGE plpgsql
+		AS $$
+		BEGIN
+			RETURN NULL;
+		END;
+		$$;
+
+		CREATE TRIGGER suppress_rate_limit_bucket_insert
+		BEFORE INSERT ON rate_limit_buckets
+		FOR EACH ROW
+		EXECUTE FUNCTION suppress_rate_limit_bucket_insert()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests := fmt.Sprintf(`[
+		{"subject_kind":"organization","subject_id":%q,"requested_units":1}
+	]`, organizationID)
+	err = acquireTestLeases(ctx, database, requests)
+	if err == nil || !strings.Contains(err.Error(), "rate-limit bucket for subject "+organizationID+" is not available") {
+		t.Fatalf("expected missing rate-limit bucket error, got %v", err)
+	}
+}
+
+// newInitializedTestDatabase creates a test database initialized with the
+// current schema and database functions.
+func newInitializedTestDatabase(t *testing.T) *db.DB {
+	t.Helper()
+	ctx := t.Context()
+	database := newTestDatabase(t)
+	if err := database.Transaction(ctx, func(tx *db.Tx) error {
+		return initialize(ctx, tx, false)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return database
+}
+
+// waitForDatabaseLock waits until a PostgreSQL backend is blocked on a lock.
+func waitForDatabaseLock(t *testing.T, database *db.DB, pid int) {
+	t.Helper()
+	ctx := t.Context()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var waiting bool
+		if err := database.QueryRow(ctx, `
+			SELECT COALESCE((
+				SELECT wait_event_type = 'Lock'
+				FROM pg_stat_activity
+				WHERE pid = $1
+			), false)`, pid).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expected backend %d to wait for a database lock, got no lock wait", pid)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"os"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -246,14 +247,24 @@ func (limiter *Limiter) collectAndRefill(first *refill) bool {
 // for restoration during shutdown. Close calls it after all background workers
 // have stopped.
 func (limiter *Limiter) collectUnusedCapacity() []unusedCapacity {
+	limiter.buckets.Lock()
+	refs := slices.Clone(limiter.buckets.refs)
+	limiter.buckets.Unlock()
+
 	available := make(map[subjectKey]int)
-	for _, ref := range limiter.buckets.refs {
+	for _, ref := range refs {
 		bucket := ref.Value()
-		if bucket == nil || bucket.available == 0 {
+		if bucket == nil {
+			continue
+		}
+		bucket.mu.Lock()
+		units := bucket.available
+		bucket.mu.Unlock()
+		if units == 0 {
 			continue
 		}
 		key := subjectKey{kind: bucket.subjectKind, id: bucket.subjectID}
-		available[key] = min(maxRestoredUnits, available[key]+bucket.available)
+		available[key] = min(maxRestoredUnits, available[key]+units)
 	}
 	limiter.restorations.mergeInto(available)
 
@@ -361,8 +372,18 @@ func (limiter *Limiter) refill(pending []*refill) {
 	}
 
 	requests := make([]leaseRequest, 0, len(pending))
+	requestsBySubject := make(map[subjectKey]leaseRequest, len(pending))
 	for _, refill := range pending {
-		requests = append(requests, refill.request)
+		request := refill.request
+		key := subjectKey{kind: request.SubjectKind, id: request.SubjectID}
+		if _, duplicate := requestsBySubject[key]; duplicate {
+			err := fmt.Errorf("rate limiter refill batch contains duplicate subject %q of kind %q", request.SubjectID, request.SubjectKind)
+			slog.Error("cannot prepare rate-limit lease batch", "error", err)
+			limiter.failBatch(pending, err)
+			return
+		}
+		requestsBySubject[key] = request
+		requests = append(requests, request)
 	}
 	acquireCtx, cancel := context.WithTimeout(limiter.close.ctx, defaultAcquireTimeout)
 	results, err := limiter.acquire(acquireCtx, requests)
@@ -381,16 +402,6 @@ func (limiter *Limiter) refill(pending []*refill) {
 		return
 	}
 
-	requestsBySubject := make(map[subjectKey]leaseRequest, len(pending))
-	for _, refill := range pending {
-		request := refill.request
-		key := subjectKey{kind: request.SubjectKind, id: request.SubjectID}
-		if _, duplicate := requestsBySubject[key]; duplicate {
-			slog.Error("core/internal/state/ratelimiter: batch contains duplicate subject", "subject_kind", request.SubjectKind, "subject_id", request.SubjectID)
-			os.Exit(1)
-		}
-		requestsBySubject[key] = request
-	}
 	resultsBySubject := make(map[subjectKey]leaseResult, len(results))
 	for _, result := range results {
 		key := subjectKey{kind: result.SubjectKind, id: result.SubjectID}

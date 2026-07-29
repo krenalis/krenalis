@@ -131,6 +131,10 @@ BEGIN
           AND b.subject_id = v_request.subject_id
         FOR UPDATE;
 
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'rate-limit bucket for subject % is not available', v_request.subject_id;
+        END IF;
+
         -- Choose the refill time only after acquiring the row lock. A batch
         -- may have waited while a newer acquisition updated this bucket, so
         -- never move its authoritative refill time backwards.
@@ -250,7 +254,7 @@ BEGIN
         SELECT r.subject_kind, r.subject_id, r.units
         FROM jsonb_to_recordset(p_restorations) AS r(subject_kind text, subject_id text, units integer)
     ), locked AS MATERIALIZED (
-        SELECT b.ctid, r.units
+        SELECT b.subject_kind, b.subject_id, r.units
         FROM restored r
         JOIN rate_limit_buckets b
             ON b.subject_kind = r.subject_kind
@@ -261,7 +265,8 @@ BEGIN
     UPDATE rate_limit_buckets AS b
     SET available_units = LEAST(b.capacity_units, b.available_units + locked.units)
     FROM locked
-    WHERE b.ctid = locked.ctid;
+    WHERE b.subject_kind = locked.subject_kind
+      AND b.subject_id = locked.subject_id;
 END;
 $$;
 

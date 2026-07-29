@@ -130,13 +130,15 @@
 //
 // The complete acquisition response is validated before any capacity is
 // applied. Every requested subject must have exactly one matching result.
-// Grants must be non-negative and must not exceed either the request or the
-// reported capacity. Reported capacity must be positive. Authoritative
-// available capacity must be within the reported capacity, the refill rate must
-// be positive, and the fractional refill remainder must be in the range
-// [0, 60,000,000), matching the microseconds-per-minute denominator used by the
-// refill calculation. An invalid or incomplete response causes all requests in
-// the local batch to fail.
+// Grants must be non-negative and must not exceed either the requested amount
+// or the reported capacity. Reported capacity must be positive. Authoritative
+// available capacity must be non-negative, and the sum of authoritative
+// available capacity and granted capacity must not exceed the reported
+// capacity. The refill rate must be positive, and the fractional refill
+// remainder must be in the range [0, 60,000,000), which matches the number of
+// microseconds per minute used as the denominator in the refill calculation.
+// An invalid or incomplete response causes all requests in the local batch to
+// fail.
 //
 // Acquisition errors and invalid responses start a short global backoff that
 // stores the corresponding operational or internal error. A call made while

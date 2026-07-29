@@ -213,10 +213,10 @@ func (state *State) Account(id int) (*Account, bool) {
 // should be in progress, and no further calls should be made.
 func (state *State) Close(ctx context.Context) {
 	state.close.cancel()
+	state.close.Wait()
 	state.rateLimiter.Close(ctx)
 	// Limiter.Close reads unused capacity from buckets still owned by the state.
 	runtime.KeepAlive(state)
-	state.close.Wait()
 	state.notifications.Close()
 }
 

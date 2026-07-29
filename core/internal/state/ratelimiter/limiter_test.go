@@ -1016,6 +1016,39 @@ func TestLimiterBatchesSubjectKinds(t *testing.T) {
 	}
 }
 
+// TestLimiterRejectsDuplicateSubjectsBeforeAcquisition verifies that malformed
+// local batches fail without reaching the lease store.
+func TestLimiterRejectsDuplicateSubjectsBeforeAcquisition(t *testing.T) {
+	var acquisitions atomic.Int32
+	limiter := newTestRateLimiter(t, func(context.Context, []leaseRequest) ([]leaseResult, error) {
+		acquisitions.Add(1)
+		return nil, nil
+	})
+	buckets := []*Bucket{newTestBucket(limiter), newTestBucket(limiter)}
+	refills := make([]*refill, len(buckets))
+	waiters := make([]*waiter, len(buckets))
+	for i, bucket := range buckets {
+		bucket.mu.Lock()
+		refills[i] = bucket.newRefillLocked()
+		waiters[i] = bucket.admitWaiterLocked(refills[i], 1)
+		bucket.mu.Unlock()
+	}
+
+	limiter.refill(refills)
+
+	if got := acquisitions.Load(); got != 0 {
+		t.Fatalf("expected no lease acquisitions, got %d", got)
+	}
+	for i, waiter := range waiters {
+		if waiter.err == nil {
+			t.Fatalf("expected waiter %d to receive a duplicate-subject error, got nil", i)
+		}
+	}
+	if backoff := limiter.backoff.Load(); backoff == nil {
+		t.Fatal("expected duplicate-subject backoff, got no backoff")
+	}
+}
+
 // TestLimiterAddsLeaseAfterConcurrentConsumption verifies that a lease is
 // added to capacity remaining after concurrent consumption.
 func TestLimiterAddsLeaseAfterConcurrentConsumption(t *testing.T) {
