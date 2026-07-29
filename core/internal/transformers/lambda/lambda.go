@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -32,6 +33,7 @@ import (
 
 type function struct {
 	settings Settings
+	mu       sync.Mutex // for client.
 	client   *lambda.Client
 }
 
@@ -175,7 +177,8 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	return nil
 }
 
-// Close closes the function.
+// Close closes the function. When Close is called, no other calls to the
+// function provider's methods are in progress and no more will be made.
 func (fn *function) Close(ctx context.Context) error {
 	fn.client = nil
 	return nil
@@ -417,6 +420,8 @@ def _handler(event, context):
 // lambdaClient returns the Lambda client, loading the AWS configuration from
 // the environment (IAM role, etc.) on first call.
 func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
+	fn.mu.Lock()
+	defer fn.mu.Unlock()
 	if fn.client != nil {
 		return fn.client, nil
 	}
