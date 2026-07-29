@@ -33,8 +33,8 @@ import (
 
 type function struct {
 	settings Settings
-	mu       sync.Mutex // for client.
-	client   *lambda.Client
+	mu       sync.Mutex
+	client   *lambda.Client // protected by mu
 }
 
 type Settings struct {
