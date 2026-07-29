@@ -922,13 +922,18 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				}
 			}
 		}
-		// Check that the required consent exist
+		// Check that the required consent purposes exist.
 		if len(n.RequiredConsents.Purposes) > 0 {
-			known := knownConsentPurposeIDs(c.Workspace())
-			for _, id := range n.RequiredConsents.Purposes {
-				if !known[id] {
-					return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
-				}
+			var missing string
+			err := tx.QueryRow(ctx, "SELECT purpose\n"+
+				"FROM UNNEST($1::varchar[]) AS purpose\n"+
+				"WHERE NOT EXISTS (SELECT FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
+				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+			if err == nil {
+				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
 			}
 		}
 		// Update the pipeline.
