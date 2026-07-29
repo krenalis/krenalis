@@ -332,10 +332,10 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 func Test_Sender_MinQueuedEvents(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 1
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		var total = 100
 		var consumed int
@@ -370,10 +370,10 @@ func Test_Sender_MinQueuedEvents(t *testing.T) {
 func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 100
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		app := newTestApplication()
 		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
@@ -415,10 +415,10 @@ func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
 func Test_Sender_QueueEventUnblocksAfterCloseWhenFull(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 100
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		app := newTestApplication()
 		app.SendEventsFunc = func(_ context.Context, _ connectors.Events) error {
@@ -458,10 +458,10 @@ func Test_Sender_QueueEventUnblocksAfterCloseWhenFull(t *testing.T) {
 func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 100
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		app := newTestApplication()
 		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
