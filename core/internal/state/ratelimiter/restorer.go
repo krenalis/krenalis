@@ -17,8 +17,10 @@ const (
 	// maxRestoreWorkers limits the number of concurrent PostgreSQL calls during
 	// shutdown.
 	maxRestoreWorkers = 4
-	// maxRestoredUnits is the largest restoration accepted for one subject. It
-	// matches the maximum event-bucket capacity allowed by the schema.
+	// maxRestoredUnits caps the pending restoration units stored for one subject.
+	// It matches the largest authoritative bucket capacity allowed by the schema,
+	// preventing the restoration queue from accumulating capacity beyond the
+	// largest permitted burst.
 	maxRestoredUnits = 100_000
 )
 

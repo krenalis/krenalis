@@ -98,7 +98,19 @@ BEGIN
         END IF;
 
         IF NOT FOUND THEN
-            RAISE EXCEPTION 'rate-limit subject % does not exist', v_request.subject_id;
+            -- A result with all numeric fields set to zero is the
+            -- missing-subject sentinel. Returning one row preserves batch
+            -- completeness and lets the caller reject only this subject while
+            -- applying valid results for the others.
+            subject_kind := v_request.subject_kind;
+            subject_id := v_request.subject_id;
+            granted_units := 0;
+            capacity_units := 0;
+            available_units := 0;
+            rate_per_minute := 0;
+            refill_remainder := 0;
+            RETURN NEXT;
+            CONTINUE;
         END IF;
 
         INSERT INTO rate_limit_buckets (
@@ -132,7 +144,18 @@ BEGIN
         FOR UPDATE;
 
         IF NOT FOUND THEN
-            RAISE EXCEPTION 'rate-limit bucket for subject % is not available', v_request.subject_id;
+            -- The subject may have been deleted after its configuration was
+            -- read. Return the same missing-subject sentinel without granting
+            -- capacity that was not deducted from an authoritative bucket.
+            subject_kind := v_request.subject_kind;
+            subject_id := v_request.subject_id;
+            granted_units := 0;
+            capacity_units := 0;
+            available_units := 0;
+            rate_per_minute := 0;
+            refill_remainder := 0;
+            RETURN NEXT;
+            CONTINUE;
         END IF;
 
         -- Choose the refill time only after acquiring the row lock. A batch

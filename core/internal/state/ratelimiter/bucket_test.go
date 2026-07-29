@@ -69,6 +69,25 @@ func TestBucketRestoresLocalCapacity(t *testing.T) {
 	}
 }
 
+// TestBucketCapacityReductionRevokesLocalExcess verifies that reducing the
+// local target clamps existing capacity without making it restorable.
+func TestBucketCapacityReductionRevokesLocalExcess(t *testing.T) {
+	bucket := newTestBucket()
+	applyTestLease(bucket, 100, 100)
+
+	bucket.mu.Lock()
+	restorable := bucket.applyLeaseLocked(0, 10)
+	available := bucket.available
+	bucket.mu.Unlock()
+
+	if available != 10 {
+		t.Fatalf("expected clamped local capacity 10, got %d", available)
+	}
+	if restorable != 0 {
+		t.Fatalf("expected no restorable revoked capacity, got %d", restorable)
+	}
+}
+
 func TestBucketThresholdScalesWithTarget(t *testing.T) {
 	for _, test := range []struct {
 		target, threshold int

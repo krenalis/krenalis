@@ -7,7 +7,6 @@ package initdb
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -219,9 +218,9 @@ func TestRestoreRateLimitCapacityAfterConcurrentUpdate(t *testing.T) {
 	}
 }
 
-// TestAcquireRateLimitLeaseRejectsMissingBucket verifies that acquisition does
-// not grant capacity when the authoritative bucket cannot be locked.
-func TestAcquireRateLimitLeaseRejectsMissingBucket(t *testing.T) {
+// TestAcquireRateLimitLeaseReturnsMissingBucket verifies that acquisition
+// returns a zero sentinel when the authoritative bucket cannot be locked.
+func TestAcquireRateLimitLeaseReturnsMissingBucket(t *testing.T) {
 	ctx := t.Context()
 	database := newInitializedTestDatabase(t)
 
@@ -249,9 +248,61 @@ func TestAcquireRateLimitLeaseRejectsMissingBucket(t *testing.T) {
 	requests := fmt.Sprintf(`[
 		{"subject_kind":"organization","subject_id":%q,"requested_units":1}
 	]`, organizationID)
-	err = acquireTestLeases(ctx, database, requests)
-	if err == nil || !strings.Contains(err.Error(), "rate-limit bucket for subject "+organizationID+" is not available") {
-		t.Fatalf("expected missing rate-limit bucket error, got %v", err)
+	var kind, id string
+	var granted, capacity, available, rate, remainder int
+	err = database.QueryRow(ctx, `
+		SELECT subject_kind, subject_id, granted_units, capacity_units,
+			available_units, rate_per_minute, refill_remainder
+		FROM acquire_rate_limit_leases($1::jsonb)`, requests).Scan(
+		&kind, &id, &granted, &capacity, &available, &rate, &remainder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kind != "organization" || id != organizationID || granted != 0 || capacity != 0 ||
+		available != 0 || rate != 0 || remainder != 0 {
+		t.Fatalf("expected missing bucket sentinel for organization %s, got kind=%s id=%s granted=%d capacity=%d available=%d rate=%d remainder=%d",
+			organizationID, kind, id, granted, capacity, available, rate, remainder)
+	}
+}
+
+// TestAcquireRateLimitLeasesIsolatesMissingSubject verifies that one missing
+// subject does not prevent another subject in the batch from acquiring capacity.
+func TestAcquireRateLimitLeasesIsolatesMissingSubject(t *testing.T) {
+	const missingWorkspaceID = "222222222222"
+
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+	var organizationID string
+	if err := database.QueryRow(ctx, "SELECT id FROM organizations").Scan(&organizationID); err != nil {
+		t.Fatal(err)
+	}
+	requests := fmt.Sprintf(`[
+		{"subject_kind":"organization","subject_id":%q,"requested_units":1},
+		{"subject_kind":"events","subject_id":%q,"requested_units":1}
+	]`, organizationID, missingWorkspaceID)
+	var valid, missing int
+	if err := database.QueryRow(ctx, `
+		SELECT
+			COUNT(*) FILTER (
+				WHERE subject_kind = 'organization'
+					AND subject_id = $2
+					AND granted_units = 1
+					AND capacity_units > 0
+			),
+			COUNT(*) FILTER (
+				WHERE subject_kind = 'events'
+					AND subject_id = $3
+					AND granted_units = 0
+					AND capacity_units = 0
+					AND available_units = 0
+					AND rate_per_minute = 0
+					AND refill_remainder = 0
+			)
+		FROM acquire_rate_limit_leases($1::jsonb)`, requests, organizationID, missingWorkspaceID).Scan(&valid, &missing); err != nil {
+		t.Fatal(err)
+	}
+	if valid != 1 || missing != 1 {
+		t.Fatalf("expected one valid result and one missing-subject sentinel, got valid=%d missing=%d", valid, missing)
 	}
 }
 

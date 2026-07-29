@@ -13,8 +13,11 @@ import (
 )
 
 const (
-	// maxRefillThreshold caps the local-capacity threshold used to start
-	// proactive refills.
+	// maxRefillThreshold caps only the absolute local-capacity threshold for
+	// starting a proactive refill. Consume may also start a refill when the
+	// remaining capacity is no greater than the units just consumed. Capacity
+	// below this threshold remains available for consumption while the refill is
+	// in progress.
 	maxRefillThreshold = 25
 
 	// microsecondsPerMinute is the denominator used by PostgreSQL's fractional
@@ -144,8 +147,10 @@ func (bucket *Bucket) Restore(units int) error {
 	return nil
 }
 
-// admitWaiterLocked admits a waiter to the refill's FIFO queue. The caller
-// must hold bucket.mu.
+// admitWaiterLocked adds a waiter to the refill generation's FIFO queue. It
+// returns nil if the requested units exceed the generation's remaining
+// admission budget. This indicates local saturation, not authoritative
+// capacity exhaustion. The caller must hold bucket.mu.
 func (bucket *Bucket) admitWaiterLocked(refill *refill, units int) *waiter {
 	if units > refill.request.RequestedUnits-refill.pendingUnits {
 		return nil
@@ -157,10 +162,12 @@ func (bucket *Bucket) admitWaiterLocked(refill *refill, units int) *waiter {
 }
 
 // applyLeaseLocked applies the granted capacity up to the local target and
-// returns the number of excess units that do not fit in the bucket.
+// returns the number of newly granted units that do not fit in the bucket.
 func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) int {
 	bucket.localTarget = min(bucket.leaseSize, capacityUnits)
 	bucket.refillThreshold = max(1, min(maxRefillThreshold, bucket.localTarget/4))
+	// A lower target revokes previously leased local capacity above the new
+	// limit. Revoked capacity is discarded rather than returned to PostgreSQL.
 	if bucket.available > bucket.localTarget {
 		bucket.available = bucket.localTarget
 	}

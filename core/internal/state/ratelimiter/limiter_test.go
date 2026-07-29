@@ -719,6 +719,50 @@ func TestLimiterRejectsInvalidRetryMetadata(t *testing.T) {
 	}
 }
 
+// TestLimiterIsolatesMissingSubject verifies that a missing-subject sentinel
+// rejects only its refill and does not start global backoff.
+func TestLimiterIsolatesMissingSubject(t *testing.T) {
+	const missingSubjectID = "222222222222"
+
+	limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
+		results := make([]leaseResult, len(requests))
+		for i, request := range requests {
+			results[i].SubjectKind = request.SubjectKind
+			results[i].SubjectID = request.SubjectID
+			if request.SubjectID != missingSubjectID {
+				results[i].GrantedUnits = 1
+				results[i].CapacityUnits = 100
+				results[i].AvailableUnits = 99
+				results[i].RatePerMinute = 60
+			}
+		}
+		return results, nil
+	})
+	missingBucket := limiter.NewBucket(testSubjectKind, missingSubjectID, testLeaseSize, testLeaseSize)
+	validBucket := newTestBucket(limiter)
+	buckets := []*Bucket{missingBucket, validBucket}
+	refills := make([]*refill, len(buckets))
+	waiters := make([]*waiter, len(buckets))
+	for i, bucket := range buckets {
+		bucket.mu.Lock()
+		refills[i] = bucket.newRefillLocked()
+		waiters[i] = bucket.admitWaiterLocked(refills[i], 1)
+		bucket.mu.Unlock()
+	}
+
+	limiter.refill(refills)
+
+	if !errors.Is(waiters[0].err, ErrLimiterUnavailable) {
+		t.Fatalf("expected missing subject error %v, got %v", ErrLimiterUnavailable, waiters[0].err)
+	}
+	if waiters[1].err != nil {
+		t.Fatalf("expected valid subject refill to succeed, got %v", waiters[1].err)
+	}
+	if backoff := limiter.backoff.Load(); backoff != nil {
+		t.Fatalf("expected no global backoff, got %v", backoff.err)
+	}
+}
+
 // TestLimiterCancellationReturnsAdmissionBudget verifies that cancellation
 // makes reserved admission capacity available to later waiters.
 func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
@@ -867,15 +911,10 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	defaultAcquireTimeout = 10 * time.Millisecond
 	t.Cleanup(func() { defaultAcquireTimeout = previous })
 	started := make(chan struct{})
-	limiter := newTestRateLimiter(t, func(ctx context.Context, request []leaseRequest) ([]leaseResult, error) {
+	limiter := newTestRateLimiter(t, func(ctx context.Context, _ []leaseRequest) ([]leaseResult, error) {
 		close(started)
 		<-ctx.Done()
-		return []leaseResult{{
-			SubjectKind:   request[0].SubjectKind,
-			SubjectID:     request[0].SubjectID,
-			GrantedUnits:  1,
-			CapacityUnits: 100,
-		}}, nil
+		return nil, ctx.Err()
 	})
 	bucket := newTestBucket(limiter)
 	result := make(chan error, 1)
@@ -885,7 +924,7 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	select {
 	case err := <-result:
 		if !errors.Is(err, ErrLimiterUnavailable) {
-			t.Fatalf("acquisition timeout: %v", err)
+			t.Fatalf("expected acquisition timeout error %v, got %v", ErrLimiterUnavailable, err)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("expected lease acquisition to time out, got no timeout")
@@ -895,7 +934,41 @@ func TestLimiterLeaseAcquisitionHasFiniteTimeout(t *testing.T) {
 	hasRefill := bucket.refill != nil
 	bucket.mu.Unlock()
 	if hasRefill || available != 0 {
-		t.Fatalf("state after acquisition timeout: pending=%t available=%d", hasRefill, available)
+		t.Fatalf("expected no refill and no available capacity after acquisition timeout, got pending=%t available=%d", hasRefill, available)
+	}
+}
+
+// TestLimiterAppliesSuccessfulAcquisitionAfterDeadline verifies that a complete
+// successful response remains authoritative after its context expires.
+func TestLimiterAppliesSuccessfulAcquisitionAfterDeadline(t *testing.T) {
+	previous := defaultAcquireTimeout
+	defaultAcquireTimeout = 10 * time.Millisecond
+	t.Cleanup(func() { defaultAcquireTimeout = previous })
+	started := make(chan struct{})
+	limiter := newTestRateLimiter(t, func(ctx context.Context, requests []leaseRequest) ([]leaseResult, error) {
+		close(started)
+		<-ctx.Done()
+		return []leaseResult{{
+			SubjectKind:   requests[0].SubjectKind,
+			SubjectID:     requests[0].SubjectID,
+			GrantedUnits:  1,
+			CapacityUnits: 100,
+		}}, nil
+	})
+	result := make(chan error, 1)
+	go func() { result <- newTestBucket(limiter).Consume(context.Background(), 1) }()
+	<-started
+
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatalf("expected successful consumption, got %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected successful acquisition after deadline, got no result")
+	}
+	if backoff := limiter.backoff.Load(); backoff != nil {
+		t.Fatalf("expected no acquisition backoff, got %v", backoff.err)
 	}
 }
 
@@ -1109,8 +1182,8 @@ func TestLimiterRejectsInvalidLeaseResults(t *testing.T) {
 		{name: "grant plus available exceeds capacity", results: func(request leaseRequest) []leaseResult {
 			return []leaseResult{{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, GrantedUnits: 1, CapacityUnits: 1, AvailableUnits: 1}}
 		}},
-		{name: "zero capacity", results: func(request leaseRequest) []leaseResult {
-			return []leaseResult{{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID}}
+		{name: "zero capacity with nonzero rate", results: func(request leaseRequest) []leaseResult {
+			return []leaseResult{{SubjectKind: request.SubjectKind, SubjectID: request.SubjectID, RatePerMinute: 60}}
 		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {

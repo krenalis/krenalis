@@ -47,9 +47,10 @@
 // Consume returns a CapacityExceededError when the requested capacity is
 // unavailable. It returns ErrLimiterUnavailable when a temporary condition
 // makes capacity availability impossible to determine. This includes
-// acquisition timeouts, active operational backoff, and local queue saturation.
-// Invalid or incomplete acquisition responses are internal failures and are
-// returned without being converted to CapacityExceededError or
+// acquisition timeouts, active operational backoff, saturation of the refill
+// queue, and insufficient remaining admission budget in the current refill
+// generation. Invalid or incomplete acquisition responses are internal failures
+// and are returned without being converted to CapacityExceededError or
 // ErrLimiterUnavailable.
 //
 // A CapacityExceededError carries an advisory retry duration. The duration is
@@ -88,6 +89,12 @@
 // removes a pending waiter and returns its reserved units to the admission
 // budget for later waiters.
 //
+// If a request cannot be admitted because the refill generation has
+// insufficient remaining admission budget, no authoritative lease result is
+// available. This is local saturation, not evidence that the authoritative
+// quota is exhausted. Consume therefore returns ErrLimiterUnavailable rather
+// than CapacityExceededError.
+//
 // A caller may Restore units that it consumed but ultimately did not use.
 // Restoration fills the local bucket up to its target. Capacity that no longer
 // fits locally, for example because an in-flight refill has filled the bucket
@@ -103,12 +110,26 @@
 // error does not guarantee that the asynchronous database operation will
 // succeed.
 //
+// Pending restoration units are aggregated per subject and capped at the
+// maximum authoritative bucket capacity. Units above this limit are discarded
+// instead of being retained as deferred restoration credit. Otherwise, the
+// queued excess could be restored after earlier capacity has been consumed,
+// allowing unused leases to accumulate outside the token bucket and provide
+// additional burst capacity over time. Discarding the excess may conservatively
+// lose capacity, but it cannot create additional capacity.
+//
 // Each local target is capped by both the lease size and the capacity reported
 // by PostgreSQL. A refill is normally prepared when an operation cannot be
 // served, when local capacity falls below a threshold calculated from the local
 // target, or when an operation leaves no more capacity than it consumed.
 // Targets and thresholds are intentionally simple and do not adapt to traffic
 // rate or acquisition latency.
+//
+// If the reported capacity causes the local target to decrease, any capacity
+// already held above the new target is revoked and discarded. It is not
+// returned to PostgreSQL because it was leased under the previous, higher
+// target. In this case, only capacity from the new grant that does not fit
+// within the new target is restored asynchronously.
 //
 // # PostgreSQL safety and batching
 //
@@ -127,18 +148,23 @@
 // The refiller collects generations for a short interval, up to a fixed batch
 // size. Lease acquisition has its own finite deadline, independent of waiter
 // deadlines, so a stuck query cannot block the single refiller indefinitely.
+// A response returned without an acquisition error is still validated even if
+// the acquisition context has been canceled or its deadline has expired. If the
+// response is complete and valid, it is applied.
 //
 // The complete acquisition response is validated before any capacity is
 // applied. Every requested subject must have exactly one matching result.
-// Grants must be non-negative and must not exceed either the requested amount
-// or the reported capacity. Reported capacity must be positive. Authoritative
-// available capacity must be non-negative, and the sum of authoritative
-// available capacity and granted capacity must not exceed the reported
-// capacity. The refill rate must be positive, and the fractional refill
-// remainder must be in the range [0, 60,000,000), which matches the number of
-// microseconds per minute used as the denominator in the refill calculation.
-// An invalid or incomplete response causes all requests in the local batch to
-// fail.
+// In an otherwise valid response, a missing subject has all numeric result
+// fields set to zero and causes only its refill generation to fail with
+// ErrLimiterUnavailable. For existing subjects, grants must be non-negative and
+// must not exceed either the requested amount or the reported capacity.
+// Reported capacity must be positive. Authoritative available capacity must be
+// non-negative, and the sum of authoritative available capacity and granted
+// capacity must not exceed the reported capacity. The refill rate must be
+// positive, and the fractional refill remainder must be in the range
+// [0, 60,000,000), which matches the number of microseconds per minute used as
+// the denominator in the refill calculation. An invalid or incomplete response
+// causes all requests in the local batch to fail.
 //
 // Acquisition errors and invalid responses start a short global backoff that
 // stores the corresponding operational or internal error. A call made while

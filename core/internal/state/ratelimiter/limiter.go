@@ -387,9 +387,6 @@ func (limiter *Limiter) refill(pending []*refill) {
 	}
 	acquireCtx, cancel := context.WithTimeout(limiter.close.ctx, defaultAcquireTimeout)
 	results, err := limiter.acquire(acquireCtx, requests)
-	if err == nil {
-		err = acquireCtx.Err()
-	}
 	cancel()
 	if err != nil {
 		if limiter.close.ctx.Err() == nil {
@@ -406,12 +403,25 @@ func (limiter *Limiter) refill(pending []*refill) {
 	for _, result := range results {
 		key := subjectKey{kind: result.SubjectKind, id: result.SubjectID}
 		request, ok := requestsBySubject[key]
-		if _, duplicate := resultsBySubject[key]; !ok || duplicate ||
-			result.GrantedUnits < 0 || result.GrantedUnits > request.RequestedUnits ||
-			result.CapacityUnits <= 0 || result.GrantedUnits > result.CapacityUnits ||
-			result.AvailableUnits < 0 || result.AvailableUnits > result.CapacityUnits-result.GrantedUnits ||
-			result.RatePerMinute <= 0 ||
-			result.RefillRemainder < 0 || result.RefillRemainder >= microsecondsPerMinute {
+		_, duplicate := resultsBySubject[key]
+		missingSubject :=
+			result.GrantedUnits == 0 &&
+				result.CapacityUnits == 0 &&
+				result.AvailableUnits == 0 &&
+				result.RatePerMinute == 0 &&
+				result.RefillRemainder == 0
+		invalidValues :=
+			result.GrantedUnits < 0 ||
+				result.GrantedUnits > request.RequestedUnits ||
+				result.CapacityUnits <= 0 ||
+				result.GrantedUnits > result.CapacityUnits ||
+				result.AvailableUnits < 0 ||
+				result.AvailableUnits > result.CapacityUnits-result.GrantedUnits ||
+				result.RatePerMinute <= 0 ||
+				result.RefillRemainder < 0 ||
+				result.RefillRemainder >= microsecondsPerMinute
+		invalidBatch := !ok || duplicate || (!missingSubject && invalidValues)
+		if invalidBatch {
 			limiter.invalidBatch(pending, result)
 			return
 		}
@@ -426,6 +436,10 @@ func (limiter *Limiter) refill(pending []*refill) {
 	for _, refill := range pending {
 		request := refill.request
 		result := resultsBySubject[subjectKey{kind: request.SubjectKind, id: request.SubjectID}]
+		if result.CapacityUnits == 0 {
+			refill.bucket.rejectRefill(refill, ErrLimiterUnavailable)
+			continue
+		}
 		refill.bucket.completeRefill(refill, result)
 	}
 	limiter.backoff.Store(nil)
@@ -487,7 +501,7 @@ func (limiter *Limiter) restoreUnusedCapacity(ctx context.Context, unused []unus
 // runCompactor periodically removes references to buckets collected by Go's
 // garbage collector.
 func (limiter *Limiter) runCompactor() {
-	compaction := time.NewTicker(bucketCompactionInterval)
+	compaction := time.NewTicker(bucketCompactionInterval) // Go 1.23+ GC reclaims unreachable tickers; no Stop needed.
 	for {
 		select {
 		case <-limiter.close.ctx.Done():
