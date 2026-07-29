@@ -3,25 +3,20 @@
 // that can be found in the LICENSE file.
 
 // Package dialer provides the dial functions Krenalis establishes its outbound
-// connections with. Use it whenever a dial function is needed, so that every
-// connection is dialed the same way.
+// connections with.
 //
 // Every connection is established on behalf of an organization: [Dial] and
 // [DialWith] return the dial functions of a single organization, fixed when
 // they are created, while [DialWithContext] wraps the dial function of a client
-// shared by every organization, taking it from the context of each dial. The
-// organization is mandatory, and the functions taking one panic if it is empty.
+// shared by every organization, taking it from the context of each dial.
 //
 // In the rare cases where there is no organization to dial on behalf of, as for
-// a connector under test, use [PlainDial] and [PlainDialWith]. Dialing without
-// an organization is therefore always a deliberate choice, and never the silent
-// result of one a caller has forgotten to provide.
+// a connector under test, use [PlainDial] and [PlainDialWith].
 //
-// Secondarily, the connections dialed on behalf of an organization count the
-// bytes they send, exposing them as a Prometheus counter, see [EnableCounting].
-// An organization that does not exist, because it has been deleted or it has
-// never been created, is never a reason not to dial: its connections are simply
-// established without counting anything.
+// The connections dialed on behalf of an organization count the bytes they
+// send, exposing them as a Prometheus counter, see [EnableCounting]. If an
+// organization does not exist (eg. it has been deleted), its connections are
+// simply established without counting anything.
 package dialer
 
 import (
