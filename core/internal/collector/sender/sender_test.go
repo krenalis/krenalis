@@ -795,7 +795,7 @@ type application struct {
 	seed uint64
 
 	mu        sync.Mutex
-	iteration uint64
+	iteration uint64   // protected by mu
 	n         int      // protected by mu
 	consumed  []string // ids of the consumed events; protected by mu
 	sends     []send   // protected by mu
@@ -844,13 +844,13 @@ func (app *application) SendEvents(ctx context.Context, events connectors.Events
 	// Get the current iteration number.
 	var iteration uint64
 	app.mu.Lock()
+	if app.iteration == math.MaxUint64 {
+		app.mu.Unlock()
+		panic("iteration is out of range")
+	}
 	iteration = app.iteration
 	app.iteration++
 	app.mu.Unlock()
-
-	if app.iteration == math.MaxUint64 {
-		panic("iteration is out of range")
-	}
 
 	seed := app.seed + iteration
 	src := rand.NewPCG(seed, ^seed)
