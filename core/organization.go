@@ -95,11 +95,16 @@ type RateLimits struct {
 	Events       RateLimit `json:"events"`       // Event ingestion limit for each workspace, measured in events.
 }
 
-// RateLimit defines a sustained rate and a maximum accumulated capacity.
-// Capacity is replenished at RatePerMinute and cannot exceed BurstCapacity.
+// RateLimit defines the refill rate and maximum capacity of an authoritative
+// rate-limit bucket.
 type RateLimit struct {
-	RatePerMinute int `json:"ratePerMinute"` // Sustained rate, in units per minute.
-	BurstCapacity int `json:"burstCapacity"` // Maximum accumulated capacity for traffic spikes.
+
+	// Sustained rate, in units per minute.
+	RatePerMinute int `json:"ratePerMinute"`
+
+	// BurstCapacity is the maximum capacity of the authoritative bucket.
+	// Process-local leasing can allow greater short-term traffic concentration.
+	BurstCapacity int `json:"burstCapacity"`
 }
 
 // Member represents a member of an organization.

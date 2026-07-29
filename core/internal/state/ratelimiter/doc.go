@@ -118,6 +118,12 @@
 // subtracts granted capacity before returning it. A process crash can lose an
 // unused lease but cannot create additional capacity.
 //
+// Leased capacity is deducted from PostgreSQL before it is consumed locally.
+// Because PostgreSQL may refill while earlier leases remain unused,
+// BurstCapacity bounds the authoritative bucket and each local target, but does
+// not strictly bound the total number of operations performed within a short
+// time interval.
+//
 // The refiller collects generations for a short interval, up to a fixed batch
 // size. Lease acquisition has its own finite deadline, independent of waiter
 // deadlines, so a stuck query cannot block the single refiller indefinitely.
