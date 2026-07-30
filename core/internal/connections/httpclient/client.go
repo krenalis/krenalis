@@ -181,10 +181,6 @@ func (c *Client) ClientSecret() (string, error) {
 // a fixed limit) before closing it.
 //
 // It does not follow redirects.
-//
-// It fails with [ErrNoOrganization], without retrying, if the organization the
-// request is made on behalf of has been deleted, as it can be for a client
-// created before the deletion.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.do(req, false)
 }
@@ -280,13 +276,6 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		res, err := c.transport.RoundTrip(req)
 		duration := time.Since(start)
 		if err != nil {
-			// The organization the request is made on behalf of no longer
-			// exists, so the request can never succeed and it is not retried.
-			// The failure is not reported to the rate limiter either, because it
-			// is not a failure of the endpoint.
-			if errors.Is(err, ErrNoOrganization) {
-				return nil, err
-			}
 			limiter.OnFailure(duration, connectors.NetFailure, 0)
 			if !retriable {
 				return nil, err

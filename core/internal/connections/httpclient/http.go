@@ -8,13 +8,11 @@ package httpclient
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -27,11 +25,6 @@ type noOpHandler struct{}
 func (h noOpHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 var noOpHandle = noOpHandler{}
-
-// ErrNoOrganization is the error the requests of a client fail with when the
-// organization they are made on behalf of does not exist, because it has been
-// deleted or it has never been created.
-var ErrNoOrganization = errors.New("organization does not exist")
 
 // HTTP allows creating HTTP clients for connections and enables granting,
 // retrieving, and refreshing OAuth access tokens.
@@ -49,63 +42,59 @@ type HTTP struct {
 
 	trace io.Writer
 
-	// organizations holds the organizations the requests can be made on behalf
-	// of, by ID. An organization is added when it is created and it is removed
-	// when it is deleted, so that its transport is discarded with it.
-	organizationsMu sync.Mutex               // protects organizations and listening
-	organizations   map[string]*organization // by organization ID; protected by organizationsMu
-
-	// listening reports whether the organizations are known, that is whether
-	// this HTTP has a state to listen to. Until they are, every organization is
-	// considered to exist, because there is no way to tell which ones do.
-	listening bool // protected by organizationsMu
+	// organizations holds the transport of each organization the requests can be
+	// made on behalf of, by ID. The transport is created the first time the
+	// organization needs one, so it is nil until then. An organization is added
+	// when it is created and it is removed when it is deleted, so that its
+	// transport is discarded with it.
+	//
+	// An organization that does not exist has no entry here: making requests on
+	// its behalf is not an error, there is simply nothing to attribute the bytes
+	// they send to, and they are made with the base transport.
+	//
+	// It is nil when the organizations are not known, that is when there is no
+	// state to follow or the bytes sent are not counted at all, so that no
+	// transport is cloned for anyone.
+	organizationsMu sync.Mutex                 // protects organizations
+	organizations   map[string]*http.Transport // by organization ID; protected by organizationsMu
 
 	// muxes maps each connector code to the corresponding ServeMux handling its rate limits.
 	mu    sync.Mutex                // protect muxes
 	muxes map[string]*http.ServeMux // nil if state is nil; protected by mu
 }
 
-// organization is an organization the requests of a client are made on behalf
-// of.
-type organization struct {
-	// transport is the transport making the requests of the organization. It is
-	// created the first time the organization needs one, and it is only written
-	// with organizationsMu held.
-	transport *organizationTransport
-	// deleted reports whether the organization has been deleted. It is the only
-	// field its transport reads after it has been created.
-	deleted atomic.Bool
-}
-
 // New returns an HTTP instance given the state and the transport to use for
 // HTTP connections.
 //
 // The returned HTTP follows the organizations of the state, so that the
-// transport of an organization is discarded when the organization is deleted,
-// and the requests made on behalf of an organization that does not exist fail
-// with [ErrNoOrganization].
+// transport of an organization is discarded when the organization is deleted.
+// The requests made on behalf of an organization that does not exist are sent
+// all the same, they are just made with the base transport and the bytes they
+// send are counted for no one, as in the dialer package.
 //
 // It is possible to provide a nil state; in that case the returned HTTP client
 // will be restricted and will not allow invocation of OAuth-related methods, as
 // their behavior may be unexpected or may cause a panic. Moreover, it does not
-// know which organizations exist, so every organization is considered to exist
-// and no transport is ever discarded.
+// know which organizations exist, so every request is made with the base
+// transport.
 func New(state *state.State, transport *http.Transport) *HTTP {
 	h := &HTTP{
-		state:         state,
-		transport:     transport,
-		organizations: map[string]*organization{},
+		state:     state,
+		transport: transport,
+		muxes:     map[string]*http.ServeMux{},
 	}
-	h.muxes = map[string]*http.ServeMux{}
-	if state != nil {
+	// The organizations are followed only when the bytes sent are counted, and
+	// there is a state to take them from: there is nothing to attribute them to
+	// otherwise, and every request is made with the base transport.
+	if state != nil && dialer.CountingEnabled() {
 		state.Freeze()
 		state.AddListener(h.onCreateOrganization)
 		state.AddListener(h.onDeleteOrganization)
 		h.organizationsMu.Lock()
+		h.organizations = map[string]*http.Transport{}
 		for _, org := range state.Organizations() {
-			h.organizations[org.ID] = &organization{}
+			h.organizations[org.ID] = nil
 		}
-		h.listening = true
 		h.organizationsMu.Unlock()
 		state.Unfreeze()
 	}
@@ -117,37 +106,30 @@ func New(state *state.State, transport *http.Transport) *HTTP {
 func (h *HTTP) onCreateOrganization(n state.CreateOrganization) {
 	h.organizationsMu.Lock()
 	if _, ok := h.organizations[n.ID]; !ok {
-		h.organizations[n.ID] = &organization{}
+		h.organizations[n.ID] = nil
 	}
 	h.organizationsMu.Unlock()
 }
 
-// onDeleteOrganization is called when an organization is deleted. It is marked
-// as deleted, so that the clients holding its transport stop making requests,
-// and its transport is discarded, closing the connections it keeps idle.
+// onDeleteOrganization is called when an organization is deleted. Its transport
+// is discarded, closing the connections it keeps idle, so that the transports do
+// not accumulate for the whole life of the process.
+//
+// The clients created before the deletion keep the transport they were created
+// with, and they can still make requests with it, as the connections a deleted
+// organization has already dialed can still be written to: the bytes they send
+// are added to a counter that is no longer collected, see [dialer.EnableCounting].
 func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
 	h.organizationsMu.Lock()
-	org, ok := h.organizations[n.ID]
+	transport := h.organizations[n.ID]
 	delete(h.organizations, n.ID)
-	var transport *organizationTransport
-	if ok {
-		transport = org.transport
-	}
 	h.organizationsMu.Unlock()
-	if !ok {
-		return
-	}
-	org.deleted.Store(true)
-	if transport == nil {
-		return
-	}
-	// The transport of an organization is a clone of the base transport, with a
-	// connection pool of its own, so closing its idle connections does not
-	// affect the requests of the other organizations. It is not closed when it
-	// is the base transport itself, which is shared, as when the Prometheus are
-	// disabled.
-	if t, ok := transport.base.(*http.Transport); ok && t != h.transport {
-		t.CloseIdleConnections()
+	// The transport is nil when the organization does not exist, or when it has
+	// never needed one, and there is then nothing to discard. It is a clone of
+	// the base transport, with a connection pool of its own, so closing its idle
+	// connections does not affect the requests of the other organizations.
+	if transport != nil {
+		transport.CloseIdleConnections()
 	}
 }
 
@@ -160,80 +142,33 @@ func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
 //
 // It panics if organizationID is empty: the clients whose requests are not made
 // on behalf of an organization are created with [HTTP.PlainConnectorClient],
-// which uses the base transport as it is. If the organization does not exist,
-// the returned transport fails every request with [ErrNoOrganization], because
-// the clients are created without an error to return.
+// which uses the base transport as it is. The base transport is returned, as it
+// is, when the organization does not exist, so that the requests are made all
+// the same, counting nothing.
 func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 	if organizationID == "" {
 		panic("core/connectors/httpclient: empty organization ID")
 	}
 	h.organizationsMu.Lock()
 	defer h.organizationsMu.Unlock()
-	org, ok := h.organizations[organizationID]
+	transport, ok := h.organizations[organizationID]
 	if !ok {
-		if h.listening {
-			return errorTransport{noOrganizationError(organizationID)}
-		}
-		org = &organization{}
-		h.organizations[organizationID] = org
+		// The organization does not exist, or the organizations are not known:
+		// there is nothing to attribute the bytes sent to, and the requests are
+		// made with the base transport, as those of a client with no
+		// organization.
+		return h.transport
 	}
-	if org.transport == nil {
+	if transport == nil {
 		// The transport of the organization is a clone of the base transport
 		// dialing with a dial function of the organization, so that it keeps the
 		// timeouts and the options of the base transport and the bytes its
-		// connections send are attributed to the organization. When counting is
-		// disabled there is nothing to attribute, and the base transport is used
-		// as it is, shared with every other organization.
-		base := http.RoundTripper(h.transport)
-		if dialer.CountingEnabled() {
-			t := h.transport.Clone()
-			t.DialContext = dialer.DialWith(organizationID)(t.DialContext)
-			base = t
-		}
-		org.transport = &organizationTransport{
-			base:         base,
-			organization: org,
-			id:           organizationID,
-		}
+		// connections send are attributed to the organization.
+		transport = h.transport.Clone()
+		transport.DialContext = dialer.DialWith(organizationID)(transport.DialContext)
+		h.organizations[organizationID] = transport
 	}
-	return org.transport
-}
-
-// organizationTransport is the transport of an organization: it makes the
-// requests with the transport attributing the bytes they send to the
-// organization, failing them once the organization has been deleted.
-//
-// A client keeps the transport it was created with, and it can live long enough
-// to make requests after its organization has been deleted, so the transport
-// checks that the organization still exists at every request, and not only when
-// a connection is established.
-type organizationTransport struct {
-	base         http.RoundTripper // transport of the organization
-	organization *organization     // organization the requests are made on behalf of
-	id           string            // ID of the organization, for the error
-}
-
-func (t *organizationTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if t.organization.deleted.Load() {
-		return nil, noOrganizationError(t.id)
-	}
-	return t.base.RoundTrip(req)
-}
-
-// errorTransport is a transport failing every request with err. It is the
-// transport of the clients of an organization that does not exist.
-type errorTransport struct {
-	err error
-}
-
-func (t errorTransport) RoundTrip(*http.Request) (*http.Response, error) {
-	return nil, t.err
-}
-
-// noOrganizationError returns the error the requests made on behalf of the
-// organization with the given ID fail with when it does not exist.
-func noOrganizationError(organizationID string) error {
-	return fmt.Errorf("core/connectors/httpclient: %w: %s", ErrNoOrganization, organizationID)
+	return transport
 }
 
 // ConnectionClient returns an HTTP client for the provided connection.
@@ -242,8 +177,9 @@ func noOrganizationError(organizationID string) error {
 // from the connector.
 //
 // The requests of the client are made on behalf of the organization of the
-// connection, and they fail with [ErrNoOrganization] if the organization is
-// deleted, even if the client was created before the deletion.
+// connection, and the bytes they send are attributed to it. If the organization
+// does not exist, they are made all the same and the bytes they send are counted
+// for no one.
 //
 // ConnectionClient must be called only once per connection.
 func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
@@ -277,8 +213,8 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // organization, and the bytes the returned client sends are attributed to it.
 // It panics if it is empty: use [HTTP.PlainConnectorClient] when the connector
 // is not used on behalf of an organization. If the organization does not exist,
-// or it is deleted later, the requests of the client fail with
-// [ErrNoOrganization].
+// the requests are made all the same and the bytes they send are counted for no
+// one.
 func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
