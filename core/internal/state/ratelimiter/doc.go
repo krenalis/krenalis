@@ -118,9 +118,9 @@
 // maximum authoritative bucket capacity. Units above this limit are discarded
 // instead of being retained as deferred restoration credit. Otherwise, the
 // queued excess could be restored after earlier capacity has been consumed,
-// allowing unused leases to accumulate outside the token bucket and provide
-// additional burst capacity over time. Discarding the excess may conservatively
-// lose capacity, but it cannot create additional capacity.
+// allowing unused leases to accumulate outside the token bucket and act as
+// additional stored capacity. Discarding the excess may conservatively lose
+// capacity, but it cannot create additional capacity.
 //
 // Each local target is capped by both the lease size and the capacity reported
 // by PostgreSQL. A refill is normally prepared when an operation cannot be
@@ -145,10 +145,10 @@
 // capacity.
 //
 // Leased capacity is deducted from PostgreSQL before it is consumed locally.
-// Because PostgreSQL may refill while earlier leases remain unused,
-// BurstCapacity bounds the authoritative bucket and each local target, but does
-// not strictly bound the total number of operations performed within a short
-// time interval.
+// Because PostgreSQL may refill while earlier leases remain unused, the
+// configured maximum capacity bounds the authoritative bucket and each local
+// target, but does not strictly bound the total number of operations performed
+// within a short time interval.
 //
 // The refiller collects generations for a short interval, up to a fixed batch
 // size. Lease acquisition has its own finite deadline, independent of waiter

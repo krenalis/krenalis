@@ -21,7 +21,7 @@ AS $$
 DECLARE
     v_request record;
     v_rate_per_minute integer;
-    v_burst_capacity integer;
+    v_max_capacity integer;
     v_refill_time timestamptz;
     v_bucket rate_limit_buckets%ROWTYPE;
     v_elapsed_microseconds numeric;
@@ -79,24 +79,24 @@ BEGIN
         -- domain table. A concurrent configuration update may become visible only
         -- to a later lease acquisition.
         IF v_request.subject_kind = 'platform' THEN
-            SELECT requests_rate_per_minute, requests_burst_capacity
-            INTO v_rate_per_minute, v_burst_capacity
+            SELECT requests_rate_per_minute, requests_max_capacity
+            INTO v_rate_per_minute, v_max_capacity
             FROM metadata
             WHERE singleton;
         ELSIF v_request.subject_kind = 'organization' THEN
-            SELECT organization_requests_rate_per_minute, organization_requests_burst_capacity
-            INTO v_rate_per_minute, v_burst_capacity
+            SELECT organization_requests_rate_per_minute, organization_requests_max_capacity
+            INTO v_rate_per_minute, v_max_capacity
             FROM organizations
             WHERE id = v_request.subject_id;
         ELSIF v_request.subject_kind = 'workspace' THEN
-            SELECT o.workspace_requests_rate_per_minute, o.workspace_requests_burst_capacity
-            INTO v_rate_per_minute, v_burst_capacity
+            SELECT o.workspace_requests_rate_per_minute, o.workspace_requests_max_capacity
+            INTO v_rate_per_minute, v_max_capacity
             FROM workspaces w
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
         ELSE
-            SELECT o.workspace_events_rate_per_minute, o.workspace_events_burst_capacity
-            INTO v_rate_per_minute, v_burst_capacity
+            SELECT o.workspace_events_rate_per_minute, o.workspace_events_max_capacity
+            INTO v_rate_per_minute, v_max_capacity
             FROM workspaces w
             JOIN organizations o ON o.id = w.organization
             WHERE w.id = v_request.subject_id;
@@ -133,8 +133,8 @@ BEGIN
             v_request.subject_id,
             CASE WHEN v_request.subject_kind = 'organization' THEN v_request.subject_id END,
             CASE WHEN v_request.subject_kind IN ('workspace', 'events') THEN v_request.subject_id END,
-            v_burst_capacity,
-            v_burst_capacity,
+            v_max_capacity,
+            v_max_capacity,
             v_rate_per_minute,
             clock_timestamp(),
             0
@@ -168,16 +168,16 @@ BEGIN
         -- never move its authoritative refill time backwards.
         v_refill_time := GREATEST(clock_timestamp(), v_bucket.last_refill_at);
 
-        IF v_bucket.capacity_units <> v_burst_capacity
+        IF v_bucket.capacity_units <> v_max_capacity
             OR v_bucket.rate_per_minute <> v_rate_per_minute
         THEN
-            -- Preserve available capacity only up to the new burst capacity.
+            -- Preserve available capacity only up to the new maximum capacity.
             -- Refill accrued under the previous configuration is discarded
             -- because the exact time at which the new configuration took effect
             -- is unknown.
             v_available_units := LEAST(
                 v_bucket.available_units,
-                v_burst_capacity
+                v_max_capacity
             );
             v_refill_remainder := 0;
         ELSE
@@ -191,12 +191,12 @@ BEGIN
             v_refilled_units := FLOOR(v_refill_numerator / 60000000)::bigint;
 
             v_available_units := LEAST(
-                v_burst_capacity,
+                v_max_capacity,
                 v_bucket.available_units
-                    + LEAST(v_refilled_units, v_burst_capacity::bigint)::integer
+                    + LEAST(v_refilled_units, v_max_capacity::bigint)::integer
             );
 
-            IF v_available_units = v_burst_capacity THEN
+            IF v_available_units = v_max_capacity THEN
                 v_refill_remainder := 0;
             ELSE
                 v_refill_remainder := MOD(v_refill_numerator, 60000000)::integer;
@@ -213,7 +213,7 @@ BEGIN
 
         UPDATE rate_limit_buckets AS b
         SET available_units = v_available_units - v_granted_units,
-            capacity_units = v_burst_capacity,
+            capacity_units = v_max_capacity,
             rate_per_minute = v_rate_per_minute,
             last_refill_at = v_refill_time,
             refill_remainder = v_refill_remainder
@@ -223,7 +223,7 @@ BEGIN
         subject_kind := v_request.subject_kind;
         subject_id := v_request.subject_id;
         granted_units := v_granted_units;
-        capacity_units := v_burst_capacity;
+        capacity_units := v_max_capacity;
         available_units := v_available_units - v_granted_units;
         rate_per_minute := v_rate_per_minute;
         refill_remainder := v_refill_remainder;

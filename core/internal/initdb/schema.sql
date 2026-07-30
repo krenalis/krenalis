@@ -15,11 +15,11 @@ CREATE TABLE organizations (
     connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
     pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
     organization_requests_rate_per_minute integer NOT NULL CHECK (organization_requests_rate_per_minute BETWEEN 60 AND 20000),
-    organization_requests_burst_capacity integer NOT NULL CHECK (organization_requests_burst_capacity BETWEEN 1 AND 10000),
+    organization_requests_max_capacity integer NOT NULL CHECK (organization_requests_max_capacity BETWEEN 1 AND 10000),
     workspace_requests_rate_per_minute integer NOT NULL CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000),
-    workspace_requests_burst_capacity integer NOT NULL CHECK (workspace_requests_burst_capacity BETWEEN 1 AND 10000),
+    workspace_requests_max_capacity integer NOT NULL CHECK (workspace_requests_max_capacity BETWEEN 1 AND 10000),
     workspace_events_rate_per_minute integer NOT NULL CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000),
-    workspace_events_burst_capacity integer NOT NULL CHECK (workspace_events_burst_capacity BETWEEN 1 AND 100000),
+    workspace_events_max_capacity integer NOT NULL CHECK (workspace_events_max_capacity BETWEEN 1 AND 100000),
     PRIMARY KEY (id)
 );
 
@@ -420,7 +420,7 @@ CREATE TABLE metadata (
     kms_encrypted_notification_key bytea NOT NULL,
     kms_encrypted_api_key_pepper bytea NOT NULL,
     requests_rate_per_minute integer NOT NULL CHECK (requests_rate_per_minute BETWEEN 60 AND 20000),
-    requests_burst_capacity integer NOT NULL CHECK (requests_burst_capacity BETWEEN 1 AND 10000)
+    requests_max_capacity integer NOT NULL CHECK (requests_max_capacity BETWEEN 1 AND 10000)
 );
 
 INSERT INTO metadata (
@@ -430,7 +430,7 @@ INSERT INTO metadata (
     kms_encrypted_notification_key,
     kms_encrypted_api_key_pepper,
     requests_rate_per_minute,
-    requests_burst_capacity
+    requests_max_capacity
 ) VALUES (
     gen_random_uuid(),
     '\x'::bytea,

@@ -38,15 +38,15 @@ func TestOrganizationResourceLimits(t *testing.T) {
 			Rates: krenalistester.RateLimits{
 				Workspace: krenalistester.RateLimit{
 					RatePerMinute: 202,
-					BurstCapacity: 22,
+					MaxCapacity:   22,
 				},
 				Events: krenalistester.RateLimit{
 					RatePerMinute: 1303,
-					BurstCapacity: 33,
+					MaxCapacity:   33,
 				},
 				Organization: krenalistester.RateLimit{
 					RatePerMinute: 101,
-					BurstCapacity: 11,
+					MaxCapacity:   11,
 				},
 			},
 		}
@@ -106,11 +106,11 @@ func TestOrganizationResourceLimits(t *testing.T) {
 		org := k.Organization(activeOrg.ID)
 		limits := org.Limits
 		limits.Rates.Workspace.RatePerMinute = 402
-		limits.Rates.Workspace.BurstCapacity = 42
+		limits.Rates.Workspace.MaxCapacity = 42
 		limits.Rates.Events.RatePerMinute = 1503
-		limits.Rates.Events.BurstCapacity = 53
+		limits.Rates.Events.MaxCapacity = 53
 		limits.Rates.Organization.RatePerMinute = 301
-		limits.Rates.Organization.BurstCapacity = 31
+		limits.Rates.Organization.MaxCapacity = 31
 		k.UpdateOrganization(org.ID, org.Name, limits)
 
 		org = k.Organization(activeOrg.ID)

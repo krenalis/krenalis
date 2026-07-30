@@ -26,7 +26,7 @@ func TestPlatformRateLimiter(t *testing.T) {
 	k.ExecQueryTestDatabase(t.Context(), `
 		UPDATE metadata
 		SET requests_rate_per_minute = 60,
-			requests_burst_capacity = 1
+			requests_max_capacity = 1
 		WHERE singleton`)
 
 	organizations, err := k.TryOrganizations(0, 1)

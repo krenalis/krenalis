@@ -690,7 +690,7 @@ func TestLimiterOmitsRetryAfterAboveCapacity(t *testing.T) {
 
 	bucket.completeRefill(refill, leaseResult{CapacityUnits: 10, RatePerMinute: 60})
 	if err, ok := waiter.err.(CapacityExceededError); !ok || err.RetryAfter != 0 {
-		t.Fatalf("capacity error above burst: %#v", waiter.err)
+		t.Fatalf("capacity error for request above maximum capacity: %#v", waiter.err)
 	}
 }
 

@@ -29,7 +29,7 @@ func TestEventRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
 	}
 	organization := organizations[0]
 	limits := organization.Limits
-	limits.Rates.Events.BurstCapacity = 1
+	limits.Rates.Events.MaxCapacity = 1
 	k.UpdateOrganization(organization.ID, organization.Name, limits)
 
 	connectionID := k.CreateJavaScriptSource("Rate-limited source", nil)
@@ -90,7 +90,7 @@ func TestEventRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
 	organization := organizations[0]
 	limits := organization.Limits
 	limits.Rates.Events.RatePerMinute = 1000
-	limits.Rates.Events.BurstCapacity = 3
+	limits.Rates.Events.MaxCapacity = 3
 	k.UpdateOrganization(organization.ID, organization.Name, limits)
 
 	connectionID := k.CreateJavaScriptSource("Restored rate-limit capacity source", nil)

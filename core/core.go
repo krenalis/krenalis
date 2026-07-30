@@ -791,13 +791,13 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
 				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit,"+
-				" organization_requests_rate_per_minute, organization_requests_burst_capacity, workspace_requests_rate_per_minute, workspace_requests_burst_capacity,"+
-				" workspace_events_rate_per_minute, workspace_events_burst_capacity)"+
+				" organization_requests_rate_per_minute, organization_requests_max_capacity, workspace_requests_rate_per_minute, workspace_requests_max_capacity,"+
+				" workspace_events_rate_per_minute, workspace_events_max_capacity)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
 				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
-				n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.BurstCapacity,
-				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.BurstCapacity,
-				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.BurstCapacity)
+				n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.MaxCapacity,
+				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.MaxCapacity,
+				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.MaxCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -2176,10 +2176,10 @@ const (
 	minEventRatePerMinute   = 1_000
 	maxEventRatePerMinute   = 1_000_000
 
-	minRequestBurstCapacity = 1
-	maxRequestBurstCapacity = 10_000
-	minEventBurstCapacity   = 1
-	maxEventBurstCapacity   = 100_000
+	minRequestMaxCapacity = 1
+	maxRequestMaxCapacity = 10_000
+	minEventMaxCapacity   = 1
+	maxEventMaxCapacity   = 100_000
 )
 
 // validateOrganizationLimits validates the organization limits.
@@ -2205,20 +2205,20 @@ func validateOrganizationLimits(limits *OrganizationLimits) error {
 	if rate := limits.Rates.Organization.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
 		return errors.BadRequest("organization request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
 	}
-	if burst := limits.Rates.Organization.BurstCapacity; burst < minRequestBurstCapacity || burst > maxRequestBurstCapacity {
-		return errors.BadRequest("organization request burst capacity must be between %d and %d", minRequestBurstCapacity, maxRequestBurstCapacity)
+	if maxCapacity := limits.Rates.Organization.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
+		return errors.BadRequest("organization request maximum capacity must be between %d and %d", minRequestMaxCapacity, maxRequestMaxCapacity)
 	}
 	if rate := limits.Rates.Workspace.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
 		return errors.BadRequest("workspace request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
 	}
-	if burst := limits.Rates.Workspace.BurstCapacity; burst < minRequestBurstCapacity || burst > maxRequestBurstCapacity {
-		return errors.BadRequest("workspace request burst capacity must be between %d and %d", minRequestBurstCapacity, maxRequestBurstCapacity)
+	if maxCapacity := limits.Rates.Workspace.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
+		return errors.BadRequest("workspace request maximum capacity must be between %d and %d", minRequestMaxCapacity, maxRequestMaxCapacity)
 	}
 	if rate := limits.Rates.Events.RatePerMinute; rate < minEventRatePerMinute || rate > maxEventRatePerMinute {
 		return errors.BadRequest("event rate per minute must be between %d and %d", minEventRatePerMinute, maxEventRatePerMinute)
 	}
-	if burst := limits.Rates.Events.BurstCapacity; burst < minEventBurstCapacity || burst > maxEventBurstCapacity {
-		return errors.BadRequest("event burst capacity must be between %d and %d", minEventBurstCapacity, maxEventBurstCapacity)
+	if maxCapacity := limits.Rates.Events.MaxCapacity; maxCapacity < minEventMaxCapacity || maxCapacity > maxEventMaxCapacity {
+		return errors.BadRequest("event maximum capacity must be between %d and %d", minEventMaxCapacity, maxEventMaxCapacity)
 	}
 	return nil
 }

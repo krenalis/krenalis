@@ -650,10 +650,10 @@ type RateLimits struct {
 	Events       RateLimit
 }
 
-// RateLimit defines a sustained rate and the maximum burst capacity.
+// RateLimit defines a sustained rate and a maximum capacity.
 type RateLimit struct {
 	RatePerMinute int
-	BurstCapacity int
+	MaxCapacity   int
 }
 
 // CanMemberLogin reports whether the member with the given ID can log in and

@@ -36,7 +36,7 @@ func TestPlatformRateLimitLeaseUsesMetadata(t *testing.T) {
 	_, err := database.Exec(ctx, `
 		UPDATE metadata
 		SET requests_rate_per_minute = 60,
-			requests_burst_capacity = 10
+			requests_max_capacity = 10
 		WHERE singleton`)
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestPlatformRateLimitLeaseUsesMetadata(t *testing.T) {
 	_, err = database.Exec(ctx, `
 		UPDATE metadata
 		SET requests_rate_per_minute = 120,
-			requests_burst_capacity = 5
+			requests_max_capacity = 5
 		WHERE singleton`)
 	if err != nil {
 		t.Fatal(err)

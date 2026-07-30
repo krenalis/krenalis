@@ -20,7 +20,7 @@ const (
 	// maxRestoredUnits caps the pending restoration units stored for one subject.
 	// It matches the largest authoritative bucket capacity allowed by the schema,
 	// preventing the restoration queue from accumulating capacity beyond the
-	// largest permitted burst.
+	// maximum permitted capacity.
 	maxRestoredUnits = 100_000
 )
 

@@ -272,15 +272,15 @@ var DefaultOrganizationLimits = OrganizationLimits{
 	Rates: RateLimits{
 		Workspace: RateLimit{
 			RatePerMinute: 1000,
-			BurstCapacity: 1000,
+			MaxCapacity:   1000,
 		},
 		Events: RateLimit{
 			RatePerMinute: 1000,
-			BurstCapacity: 1000,
+			MaxCapacity:   1000,
 		},
 		Organization: RateLimit{
 			RatePerMinute: 1000,
-			BurstCapacity: 1000,
+			MaxCapacity:   1000,
 		},
 	},
 }

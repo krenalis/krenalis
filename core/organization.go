@@ -102,9 +102,9 @@ type RateLimit struct {
 	// Sustained rate, in units per minute.
 	RatePerMinute int `json:"ratePerMinute"`
 
-	// BurstCapacity is the maximum capacity of the authoritative bucket.
+	// MaxCapacity is the configured maximum capacity of the authoritative bucket.
 	// Process-local leasing can allow greater short-term traffic concentration.
-	BurstCapacity int `json:"burstCapacity"`
+	MaxCapacity int `json:"maxCapacity"`
 }
 
 // Member represents a member of an organization.
@@ -1364,13 +1364,13 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 		} else {
 			result, err = tx.Exec(ctx, "UPDATE organizations"+
 				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4, connectors_limit = $5,"+
-				" connections_limit = $6, pipelines_limit = $7, organization_requests_rate_per_minute = $8, organization_requests_burst_capacity = $9,"+
-				" workspace_requests_rate_per_minute = $10, workspace_requests_burst_capacity = $11,"+
-				" workspace_events_rate_per_minute = $12, workspace_events_burst_capacity = $13 WHERE id = $14",
+				" connections_limit = $6, pipelines_limit = $7, organization_requests_rate_per_minute = $8, organization_requests_max_capacity = $9,"+
+				" workspace_requests_rate_per_minute = $10, workspace_requests_max_capacity = $11,"+
+				" workspace_events_rate_per_minute = $12, workspace_events_max_capacity = $13 WHERE id = $14",
 				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections,
-				n.Limits.Pipelines, n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.BurstCapacity,
-				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.BurstCapacity,
-				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.BurstCapacity, this.organization.ID)
+				n.Limits.Pipelines, n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.MaxCapacity,
+				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.MaxCapacity,
+				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.MaxCapacity, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err
