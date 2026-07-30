@@ -17,7 +17,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// TestWriteSessionCookie verifies session cookie creation and replacement.
 func TestWriteSessionCookie(t *testing.T) {
 
 	t.Run("ignores empty cookie string", func(t *testing.T) {
@@ -75,7 +74,6 @@ func TestWriteSessionCookie(t *testing.T) {
 
 }
 
-// TestNewAPIsServerInitializesHTTPSecretKey verifies server initialization.
 func TestNewAPIsServerInitializesHTTPSecretKey(t *testing.T) {
 	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil, "", nil)
 	if s.httpSecretKey == nil {
@@ -83,7 +81,6 @@ func TestNewAPIsServerInitializesHTTPSecretKey(t *testing.T) {
 	}
 }
 
-// TestSecureCookieCachesResult verifies successful cookie codec caching.
 func TestSecureCookieCachesResult(t *testing.T) {
 	kms := &cookieTestKMS{
 		load: func(context.Context) ([]byte, error) {
@@ -109,8 +106,6 @@ func TestSecureCookieCachesResult(t *testing.T) {
 	}
 }
 
-// TestSecureCookieCanceledLoadCanBeRetried verifies canceled key loading does
-// not prevent a later retry.
 func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -161,7 +156,6 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 	}
 }
 
-// TestValidateForbiddenBody verifies rejection of unexpected request bodies.
 func TestValidateForbiddenBody(t *testing.T) {
 
 	t.Run("allows empty body with zero content length", func(t *testing.T) {
@@ -339,7 +333,7 @@ func TestValidateRequiredBody(t *testing.T) {
 
 }
 
-// TestMaxBytesNormalizedReader verifies request body normalization and limits.
+// TestMaxBytesNormalizedReader tests the maxBytesNormalizedReader function.
 func TestMaxBytesNormalizedReader(t *testing.T) {
 
 	t.Run("normalizes body", func(t *testing.T) {
@@ -377,12 +371,10 @@ func TestMaxBytesNormalizedReader(t *testing.T) {
 
 }
 
-// errReader always returns its configured error.
 type errReader struct {
 	err error
 }
 
-// Read returns the configured error without producing bytes.
 func (r errReader) Read(p []byte) (int, error) {
 	return 0, r.err
 }
