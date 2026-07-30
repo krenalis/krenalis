@@ -164,9 +164,9 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 
 // Delete deletes the organization with the given identifier.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (organization organization) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := organization.authenticateOrganizationsRequest(r); err != nil {
+	if err := organization.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	org, err := organization.core.Organization(r.PathValue("id"))
@@ -386,9 +386,9 @@ func (organization organization) PipelineMetricsPerMinute(_ http.ResponseWriter,
 
 // SetStatus sets the status of an organization.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (organization organization) SetStatus(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := organization.authenticateOrganizationsRequest(r); err != nil {
+	if err := organization.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	if err := validateRequiredBody(r, false); err != nil {
@@ -502,9 +502,9 @@ func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Req
 // Update updates the name and the limits of the organization with the given
 // identifier.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (organization organization) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := organization.authenticateOrganizationsRequest(r); err != nil {
+	if err := organization.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	if err := validateRequiredBody(r, false); err != nil {

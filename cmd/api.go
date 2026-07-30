@@ -151,9 +151,9 @@ type organizationLimits struct {
 
 // CreateOrganization creates a new organization.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
+	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	if err := validateRequiredBody(r, false); err != nil {
@@ -280,9 +280,9 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 
 // Organization returns the organization with the given identifier.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
+	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return api.core.Organization(r.PathValue("id"))
@@ -290,9 +290,9 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 
 // Organizations returns the organizations.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
+	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	q := r.URL.Query()

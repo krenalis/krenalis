@@ -67,9 +67,10 @@ type metadata struct {
 
 // State represents the application state.
 type State struct {
-	id          string
-	db          *db.DB
-	rateLimiter *ratelimiter.Limiter
+	id             string
+	db             *db.DB
+	rateLimiter    *ratelimiter.Limiter
+	platformBucket *ratelimiter.Bucket
 
 	changing           *sync.RWMutex
 	cipher             *cipher.Cipher
@@ -150,6 +151,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 			Help: "Total number of rate-limit refill attempts rejected because the queue was full",
 		}),
 	})
+	state.platformBucket = state.rateLimiter.NewBucket("platform", "platform", requestLeaseSize, requestMaxUnits)
 
 	// Init the notifier.
 	ch := make(chan notification, 10)
@@ -274,6 +276,17 @@ func (state *State) Connectors() []*Connector {
 		return connectors[i].Code < connectors[j].Code
 	})
 	return connectors
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// request rate-limit capacity for the platform management API. Units must be at
+// least 1.
+//
+// ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
+// capacity is unavailable. It returns ErrLimiterUnavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (state *State) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	return state.platformBucket.Consume(ctx, units)
 }
 
 // EncryptSettings encrypts the provided settings.

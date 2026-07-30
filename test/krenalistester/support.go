@@ -540,16 +540,24 @@ func (k *Krenalis) Organization(id string) Organization {
 
 // Organizations returns the organizations in the given range.
 func (k *Krenalis) Organizations(first, limit int) []Organization {
+	organizations, err := k.TryOrganizations(first, limit)
+	must(k.t, err)
+	return organizations
+}
+
+// TryOrganizations is like Organizations but returns an error instead of
+// failing the test.
+func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 	var response struct {
 		Organizations []Organization `json:"organizations"`
 	}
 	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
-	k.Call("GET", path, organizationsHeaders(), nil, &response)
-	return response.Organizations
+	err := k.TryCall("GET", path, organizationsHeaders(), nil, &response)
+	return response.Organizations, err
 }
 
-// organizationsHeaders returns the headers needed to call the organizations
-// API.
+// organizationsHeaders returns the headers needed to call the platform
+// management API.
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
@@ -739,7 +747,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 }
 
 // SetOrganizationStatus enables or disables an organization through the
-// organizations API.
+// platform management API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }

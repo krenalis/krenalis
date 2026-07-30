@@ -18,6 +18,87 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+// TestPlatformRateLimitLeaseUsesMetadata verifies that the singleton platform
+// bucket reads its configuration from metadata, applies configuration changes,
+// and accepts restored capacity.
+func TestPlatformRateLimitLeaseUsesMetadata(t *testing.T) {
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+
+	if _, err := database.Exec(ctx, `
+		SELECT granted_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"platform","subject_id":"invalid","requested_units":1}
+		]`); err == nil {
+		t.Fatal("platform lease request with a non-canonical subject ID succeeded")
+	}
+
+	_, err := database.Exec(ctx, `
+		UPDATE metadata
+		SET requests_rate_per_minute = 60,
+			requests_burst_capacity = 10
+		WHERE singleton`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var kind, id string
+	var granted, capacity, available, rate, remainder int
+	err = database.QueryRow(ctx, `
+		SELECT subject_kind, subject_id, granted_units, capacity_units,
+			available_units, rate_per_minute, refill_remainder
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"platform","subject_id":"platform","requested_units":6}
+		]`).Scan(&kind, &id, &granted, &capacity, &available, &rate, &remainder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kind != "platform" || id != "platform" || granted != 6 || capacity != 10 ||
+		available != 4 || rate != 60 || remainder != 0 {
+		t.Fatalf("unexpected initial platform lease: kind=%s id=%s granted=%d capacity=%d available=%d rate=%d remainder=%d",
+			kind, id, granted, capacity, available, rate, remainder)
+	}
+
+	_, err = database.Exec(ctx, `
+		UPDATE metadata
+		SET requests_rate_per_minute = 120,
+			requests_burst_capacity = 5
+		WHERE singleton`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = database.QueryRow(ctx, `
+		SELECT granted_units, capacity_units, available_units, rate_per_minute, refill_remainder
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"platform","subject_id":"platform","requested_units":1}
+		]`).Scan(&granted, &capacity, &available, &rate, &remainder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 1 || capacity != 5 || available != 3 || rate != 120 || remainder != 0 {
+		t.Fatalf("unexpected reconfigured platform lease: granted=%d capacity=%d available=%d rate=%d remainder=%d",
+			granted, capacity, available, rate, remainder)
+	}
+
+	_, err = database.Exec(ctx, `
+		SELECT restore_rate_limit_capacity($1::jsonb)`, `[
+			{"subject_kind":"platform","subject_id":"platform","units":10}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.QueryRow(ctx, `
+		SELECT available_units
+		FROM rate_limit_buckets
+		WHERE subject_kind = 'platform'
+			AND subject_id = 'platform'`).Scan(&available); err != nil {
+		t.Fatal(err)
+	}
+	if available != 5 {
+		t.Fatalf("expected restored platform capacity to be capped at 5, got %d", available)
+	}
+}
+
 // TestRateLimitLeaseTimestampMonotonic verifies that an older batch cannot move
 // a bucket's refill timestamp backwards after waiting for a lock on another
 // row.

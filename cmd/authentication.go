@@ -22,7 +22,8 @@ const x1 = 1
 // applies the organization's organization-level rate-limit budget unless the request
 // is from the Admin console, and returns the organization.
 //
-// See also [admitWorkspaceOptionalRequest] and [admitWorkspaceRequest].
+// See also [admitPlatformRequest], [admitWorkspaceOptionalRequest] and
+// [admitWorkspaceRequest].
 func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int) (*core.Organization, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
@@ -37,13 +38,30 @@ func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int
 	return authenticated.organization, nil
 }
 
+// admitPlatformRequest authenticates a platform-only request and applies the
+// rate-limit budget for the platform management API.
+//
+// See also [admitOrganizationRequest], [admitWorkspaceOptionalRequest] and
+// [admitWorkspaceRequest].
+func (s *apisServer) admitPlatformRequest(r *http.Request, rateLimitCost int) error {
+	err := s.authenticatePlatformRequest(r)
+	if err != nil {
+		return err
+	}
+	if err := s.core.ConsumeRateLimitCapacity(r.Context(), rateLimitCost); err != nil {
+		return err
+	}
+	return nil
+}
+
 // admitWorkspaceOptionalRequest authenticates a request for which selecting a
 // workspace is optional. Unless the request comes from the Admin console, it
 // applies the selected workspace's rate-limit budget or, if no workspace is
 // selected, the authenticated organization's organization-level budget. It returns
 // the authenticated organization and optional workspace.
 //
-// See also [admitOrganizationRequest] and [admitWorkspaceRequest].
+// See also [admitPlatformRequest], [admitOrganizationRequest] and
+// [admitWorkspaceRequest].
 func (s *apisServer) admitWorkspaceOptionalRequest(r *http.Request, rateLimitCost int) (*core.Organization, *core.Workspace, error) {
 	authenticated, err := s.authenticateRequest(r)
 	if err != nil {
@@ -204,25 +222,26 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	return org, ws, session.Member, nil
 }
 
-// authenticateOrganizationsRequest authenticates a request to the organizations
-// API using an organizations API key from the Authorization header.
-func (s *apisServer) authenticateOrganizationsRequest(r *http.Request) error {
+// authenticatePlatformRequest authenticates a request to the platform
+// management API using a platform management API key from the Authorization
+// header.
+func (s *apisServer) authenticatePlatformRequest(r *http.Request) error {
 	auth, ok := r.Header["Authorization"]
 	if !ok {
-		return errors.Unauthorized("Authorization header with the organizations API key is not present in the request")
+		return errors.Unauthorized("Authorization header with the platform management API key is not present in the request")
 	}
 	if len(auth) > 1 {
 		return errors.BadRequest("request contains multiple Authorization headers")
 	}
 	token, found := validation.ParseBearer(auth[0])
 	if !found {
-		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_ORGANIZATIONS_API_KEY>'")
+		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_PLATFORM_MANAGEMENT_API_KEY>'")
 	}
 	if !strings.HasPrefix(token, "org_") {
-		return errors.BadRequest("organizations APIs require specific keys for authentication (these are keys that begin with 'org_')")
+		return errors.BadRequest("platform management APIs require specific keys for authentication (these are keys that begin with 'org_')")
 	}
 	if s.organizationsAPIKey == "" || token != s.organizationsAPIKey {
-		return errors.Unauthorized("organizations API key in the Authorization header of the request is not valid")
+		return errors.Unauthorized("platform management API key in the Authorization header of the request is not valid")
 	}
 	return nil
 }

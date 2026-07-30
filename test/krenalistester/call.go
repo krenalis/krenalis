@@ -26,6 +26,7 @@ type StatusCodeError struct {
 	}
 	Response struct {
 		Code         int
+		Header       http.Header
 		Text         string
 		BodyExpected bool
 	}
@@ -111,6 +112,7 @@ func (k *Krenalis) tryCall(method, path string, headers http.Header, body any, r
 		scErr.Request.Path = path
 		scErr.Request.HasBody = body != nil
 		scErr.Response.Code = resp.StatusCode
+		scErr.Response.Header = resp.Header.Clone()
 		scErr.Response.Text = string(bytes.TrimSpace(text))
 		scErr.Response.BodyExpected = response != nil
 		return &scErr

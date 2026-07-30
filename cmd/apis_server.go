@@ -79,7 +79,7 @@ type apisServer struct {
 	externalAssetsURLs     []string
 	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
 	inviteMembersViaEmail  bool
-	organizationsAPIKey    string // can be empty (which means that organizations APIs cannot be used)
+	organizationsAPIKey    string // can be empty (which means that the platform management API cannot be used)
 	workOS                 *workos.WorkOS
 	sentryTelemetry        struct {
 		level       core.TelemetryLevel

@@ -6,18 +6,22 @@
 // leases acquired from PostgreSQL.
 //
 // A Bucket holds capacity for one subject, identified by a SubjectKind and an
+// identifier. The single platform subject uses "platform" as its canonical
 // identifier. A Limiter batches refill requests and obtains capacity from
 // PostgreSQL. The local bucket logic does not interpret subject kinds; the
 // PostgreSQL lease store validates the kinds supported by Krenalis.
 //
 // # Krenalis quota model
 //
-// Krenalis gives each organization a separate organization-level budget for
-// normal requests. It also gives each workspace independent budgets for normal
-// requests and event ingestion. Every rate-limited request is
-// subject to exactly one of these budgets. Budgets belong to organizations and
-// workspaces, not to API keys.
+// Krenalis has one global budget for requests to the platform management API.
+// It also gives each organization a separate organization-level budget for
+// normal requests and each workspace independent budgets for normal requests
+// and event ingestion. Every rate-limited request is subject to exactly one of
+// these budgets. Organization and workspace budgets belong to those subjects,
+// not to API keys. The global platform budget belongs to the single platform
+// subject.
 //
+// A request to the platform management API consumes the global platform budget.
 // A normal request without a workspace consumes the authenticated
 // organization's organization-level request budget. A normal request associated
 // with a workspace consumes that workspace's request budget. Event ingestion
@@ -134,10 +138,11 @@
 // # PostgreSQL safety and batching
 //
 // PostgreSQL stores authoritative capacity and is the only shared coordination
-// mechanism between application nodes. The limiter batches organization,
-// workspace, and event requests. PostgreSQL locks the corresponding rows and
-// subtracts granted capacity before returning it. A process crash can lose an
-// unused lease but cannot create additional capacity.
+// mechanism between application nodes. The limiter batches lease requests for
+// platform, organization, workspace, and event-ingestion buckets. PostgreSQL
+// locks the corresponding rows and subtracts granted capacity before returning
+// it. A process crash can lose an unused lease but cannot create additional
+// capacity.
 //
 // Leased capacity is deducted from PostgreSQL before it is consumed locally.
 // Because PostgreSQL may refill while earlier leases remain unused,

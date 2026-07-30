@@ -151,6 +151,10 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	}
 
 	_, err := database.Exec(t.Context(), `
+		UPDATE metadata
+		SET requests_rate_per_minute = 60,
+			requests_burst_capacity = 100
+		WHERE singleton;
 		UPDATE organizations
 		SET organization_requests_rate_per_minute = 60,
 			organization_requests_burst_capacity = 100,
@@ -167,6 +171,7 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 		SELECT subject_kind, subject_id, granted_units, capacity_units,
 			available_units, rate_per_minute, refill_remainder
 		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"platform","subject_id":"platform","requested_units":100},
 			{"subject_kind":"organization","subject_id":"111111111111","requested_units":100},
 			{"subject_kind":"workspace","subject_id":"222222222222","requested_units":100},
 			{"subject_kind":"events","subject_id":"222222222222","requested_units":20000}
@@ -204,8 +209,9 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if grants["organization:111111111111"] != 100 || grants["workspace:222222222222"] != 100 || grants["events:222222222222"] != 20000 {
-		t.Fatalf("expected mixed batch grants for organization=100, workspace=100, events=20,000, got %#v", grants)
+	if grants["platform:platform"] != 100 || grants["organization:111111111111"] != 100 ||
+		grants["workspace:222222222222"] != 100 || grants["events:222222222222"] != 20000 {
+		t.Fatalf("expected mixed batch grants for platform=100, organization=100, workspace=100, events=20,000, got %#v", grants)
 	}
 
 	// A second limiter process would execute the same database function. Its

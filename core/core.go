@@ -98,7 +98,7 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	KMS                           string
-	OrganizationsAPIKey           string // can be empty (which means that organizations APIs cannot be used)
+	OrganizationsAPIKey           string // can be empty (which means that the platform management API cannot be used)
 	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
@@ -730,6 +730,18 @@ func (core *Core) Connectors() []*Connector {
 		return 1
 	})
 	return connectors
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// request rate-limit capacity for the platform management API. Units must be at
+// least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (core *Core) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	core.mustBeOpen()
+	return translateRateLimitError(core.state.ConsumeRateLimitCapacity(ctx, units))
 }
 
 // CountOrganizations returns the total number of organizations.
