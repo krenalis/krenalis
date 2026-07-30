@@ -39,8 +39,7 @@ type HTTP struct {
 	// clone of it, so that they all share its timeouts and options, and it is
 	// used as it is for the requests that are not attributed to an organization.
 	transport *http.Transport
-
-	trace io.Writer
+	trace     io.Writer
 
 	// organizations holds the transport of each organization the requests can be
 	// made on behalf of, by ID. The transport is created the first time the
@@ -66,27 +65,16 @@ type HTTP struct {
 // New returns an HTTP instance given the state and the transport to use for
 // HTTP connections.
 //
-// The returned HTTP follows the organizations of the state, so that the
-// transport of an organization is discarded when the organization is deleted.
-// The requests made on behalf of an organization that does not exist are sent
-// all the same, they are just made with the base transport and the bytes they
-// send are counted for no one, as in the dialer package.
-//
 // It is possible to provide a nil state; in that case the returned HTTP client
 // will be restricted and will not allow invocation of OAuth-related methods, as
-// their behavior may be unexpected or may cause a panic. Moreover, it does not
-// know which organizations exist, so every request is made with the base
-// transport.
+// their behavior may be unexpected or may cause a panic.
 func New(state *state.State, transport *http.Transport) *HTTP {
 	h := &HTTP{
 		state:     state,
 		transport: transport,
-		muxes:     map[string]*http.ServeMux{},
 	}
-	// The organizations are followed only when the bytes sent are counted, and
-	// there is a state to take them from: there is nothing to attribute them to
-	// otherwise, and every request is made with the base transport.
-	if state != nil && dialer.CountingEnabled() {
+	h.muxes = map[string]*http.ServeMux{}
+	if state != nil {
 		state.Freeze()
 		state.AddListener(h.onCreateOrganization)
 		state.AddListener(h.onDeleteOrganization)
@@ -145,18 +133,17 @@ func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
 // which uses the base transport as it is. The base transport is returned, as it
 // is, when the organization does not exist, so that the requests are made all
 // the same, counting nothing.
-func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
-	if organizationID == "" {
+func (h *HTTP) transportFor(organization string) http.RoundTripper {
+	if organization == "" {
 		panic("core/connectors/httpclient: empty organization ID")
 	}
 	h.organizationsMu.Lock()
 	defer h.organizationsMu.Unlock()
-	transport, ok := h.organizations[organizationID]
+	transport, ok := h.organizations[organization]
 	if !ok {
 		// The organization does not exist, or the organizations are not known:
 		// there is nothing to attribute the bytes sent to, and the requests are
-		// made with the base transport, as those of a client with no
-		// organization.
+		// made with the base transport.
 		return h.transport
 	}
 	if transport == nil {
@@ -165,8 +152,8 @@ func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 		// timeouts and the options of the base transport and the bytes its
 		// connections send are attributed to the organization.
 		transport = h.transport.Clone()
-		transport.DialContext = dialer.DialWith(organizationID)(transport.DialContext)
-		h.organizations[organizationID] = transport
+		transport.DialContext = dialer.DialWith(organization)(transport.DialContext)
+		h.organizations[organization] = transport
 	}
 	return transport
 }
@@ -175,11 +162,6 @@ func (h *HTTP) transportFor(organizationID string) http.RoundTripper {
 // If the connection supports OAuth, the client is capable of retrieving OAuth
 // credentials from it. The client's rate limits and retry policy are inherited
 // from the connector.
-//
-// The requests of the client are made on behalf of the organization of the
-// connection, and the bytes they send are attributed to it. If the organization
-// does not exist, they are made all the same and the bytes they send are counted
-// for no one.
 //
 // ConnectionClient must be called only once per connection.
 func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
@@ -215,7 +197,7 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // is not used on behalf of an organization. If the organization does not exist,
 // the requests are made all the same and the bytes they send are counted for no
 // one.
-func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clientSecret, accessToken string) *Client {
+func (h *HTTP) ConnectorClient(connector *state.Connector, organization, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
 	}
@@ -224,7 +206,7 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clien
 		connector:    connector.Code,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
-		transport:    h.transportFor(organizationID),
+		transport:    h.transportFor(organization),
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
@@ -232,13 +214,8 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, organizationID, clien
 }
 
 // PlainConnectorClient returns an HTTP client for the provided connector whose
-// requests are not made on behalf of any organization: the bytes they send are
-// not counted and they are sent with the base transport, shared with every
-// other client that has no organization.
-//
-// Use it, in place of [HTTP.ConnectorClient], when there is no organization to
-// attribute the bytes sent to, as for a connector under test. The returned
-// client does not support OAuth.
+// requests are not made on behalf of any organization. This is useful in test
+// scenarios.
 func (h *HTTP) PlainConnectorClient(connector *state.Connector) *Client {
 	c := &Client{
 		http:      h,
@@ -252,10 +229,10 @@ func (h *HTTP) PlainConnectorClient(connector *state.Connector) *Client {
 
 // GrantAuthorization grants an OAuth authorization code and returns the access
 // token, the refresh token and the expiration time. redirectionURI is the
-// redirection URI, and organizationID is the ID of the organization on behalf
+// redirection URI, and organization is the ID of the organization on behalf
 // of which the authorization is granted.
-func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, organizationID, code, redirectionURI string) (string, string, time.Time, error) {
-	client := h.ConnectorClient(connector, organizationID, "", "")
+func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, organization, code, redirectionURI string) (string, string, time.Time, error) {
+	client := h.ConnectorClient(connector, organization, "", "")
 	return client.retrieveOAuthToken(ctx, connector.OAuth, code, redirectionURI, "")
 }
 
