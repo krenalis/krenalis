@@ -564,7 +564,7 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	}
 	s.iterator.index = i
 	if event != nil && consume {
-		s.queue.events[i].iterator = s.iterator
+		event.iterator = s.iterator
 		s.iterator.index++
 		if event.user.consumed == 0 {
 			event.user.iterator = s.iterator
