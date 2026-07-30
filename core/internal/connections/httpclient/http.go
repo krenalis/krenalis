@@ -4,18 +4,6 @@
 
 // Package httpclient provides an HTTP client with OAuth support for
 // connections.
-//
-// The requests made on behalf of an organization are sent with a transport of
-// the organization, so that the bytes they send are attributed to it, see the
-// dialer package. The transport is created the first time the organization needs
-// one, and not when the organization is created, because most organizations
-// never make a request, and it is discarded when the organization is deleted, so
-// that the transports do not accumulate for the whole life of the process.
-//
-// The clients of an organization can live long enough to make requests after the
-// organization has been deleted: those requests fail with [ErrNoOrganization].
-// To know which organizations exist, an HTTP listens to the state it is
-// instantiated with, see [New].
 package httpclient
 
 import (
