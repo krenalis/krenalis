@@ -83,6 +83,7 @@ func New(state *state.State, transport *http.Transport) *HTTP {
 func (h *HTTP) onCreateOrganization(n state.CreateOrganization) {
 	h.organizationsMu.Lock()
 	if _, ok := h.organizations[n.ID]; !ok {
+		// The transport will be instantiated only when actually needed.
 		h.organizations[n.ID] = nil
 	}
 	h.organizationsMu.Unlock()
