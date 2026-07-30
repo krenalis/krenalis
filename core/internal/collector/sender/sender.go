@@ -128,7 +128,8 @@ type queue struct {
 }
 
 // dequeue removes the event at index i and updates the queue state.
-// It must be called holding the sender's mu mutex.
+//
+// It must be called holding the owning Sender's mutex.
 func (q *queue) dequeue(i int) {
 	q.events[i] = nil
 	q.total--
@@ -140,8 +141,9 @@ func (q *queue) dequeue(i int) {
 	}
 }
 
-// enqueue appends event to the queue, blocking while it is full.
-// It must be called holding the sender's mu mutex.
+// enqueue appends event to the queue.
+//
+// It must be called holding the owning Sender's mutex.
 func (q *queue) enqueue(event *Event) {
 	q.events = append(q.events, event)
 	q.total++
@@ -149,7 +151,7 @@ func (q *queue) enqueue(event *Event) {
 
 // assertTotal asserts that the events are n.
 //
-// It must be called holding the s.mu mutex.
+// It must be called holding the owning Sender's mutex.
 func (q *queue) assertTotal(n int) {
 	total := 0
 	for _, event := range q.events {
