@@ -4,13 +4,11 @@
 
 package consents
 
-import "github.com/krenalis/krenalis/core/internal/state"
-
-// Satisfies reports whether the given attributes satisfy the required consent
-// purposes. If matchAll is true, the attributes must satisfy every required
+// Satisfies reports whether the given attributes satisfy the consent purposes
+// with the given codes. If matchAll is true, the attributes must satisfy every
 // purpose; otherwise, satisfying at least one is enough.
-func Satisfies(purposes []*state.ConsentPurpose, matchAll bool, attributes map[string]any) bool {
-	if len(purposes) == 0 {
+func Satisfies(codes []string, matchAll bool, attributes map[string]any) bool {
+	if len(codes) == 0 {
 		return true
 	}
 	context, ok := attributes["context"].(map[string]any)
@@ -21,8 +19,8 @@ func Satisfies(purposes []*state.ConsentPurpose, matchAll bool, attributes map[s
 	if !ok {
 		return false
 	}
-	for _, purpose := range purposes {
-		granted, _ := consents[purpose.Code].(bool)
+	for _, code := range codes {
+		granted, _ := consents[code].(bool)
 		if granted {
 			if !matchAll {
 				return true

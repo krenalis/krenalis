@@ -26,7 +26,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /connections/{id}":                            connection.Delete,
 		"DELETE /connections/{id}/event-write-keys/{key}":     connection.DeleteEventWriteKey,
 		"DELETE /connections/{src}/links/{dst}":               connection.UnlinkConnection,
-		"DELETE /consent-purposes/{id}":                       workspace.DeleteConsentPurpose,
+		"DELETE /consent-purposes/{code}":                     workspace.DeleteConsentPurpose,
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* Admin console only */
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* Admin console only */
@@ -119,7 +119,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /workspaces":                                  organization.CreateWorkspace,
 		"POST   /workspaces/test":                             organization.TestWorkspaceCreation,
 		"PUT    /connections/{id}":                            connection.Update,
-		"PUT    /consent-purposes/{id}":                       workspace.UpdateConsentPurpose,
+		"PUT    /consent-purposes/{code}":                     workspace.UpdateConsentPurpose,
 		"PUT    /identity-resolution/settings":                workspace.UpdateIdentityResolutionSettings,
 		"PUT    /keys/{key}":                                  organization.UpdateAccessKey,    /* Admin console only */
 		"PUT    /members/current":                             organization.UpdateMember,       /* Admin console only */

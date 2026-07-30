@@ -60,11 +60,6 @@ type validationState struct {
 
 	// provider is the transformers.FunctionProvider instantiated on the Core.
 	provider transformers.FunctionProvider
-
-	// knownConsentPurposeIDs is the set of identifiers of the consent purposes
-	// defined in the pipeline's workspace. It is only populated by the caller
-	// when the pipeline to validate has non-empty required consent purposes.
-	knownConsentPurposeIDs map[string]bool
 }
 
 // validatePipelineToSet validates the given PipelineToSet, in the context of
@@ -72,7 +67,6 @@ type validationState struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - FormatNotExist, if the pipeline is on file and the specified format does
 //     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
@@ -179,15 +173,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		for i, id := range pipeline.RequiredConsents.Purposes {
-			if !IsValidID(id) {
-				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
+		for i, code := range pipeline.RequiredConsents.Purposes {
+			if !consentPurposeCodeFormat.MatchString(code) {
+				return errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
 			}
-			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
-				return errors.BadRequest("required consent purpose %s is duplicated", id)
-			}
-			if !v.knownConsentPurposeIDs[id] {
-				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
+				return errors.BadRequest("required consent purpose %q is duplicated", code)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {

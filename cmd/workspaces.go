@@ -39,11 +39,8 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := ws.AddConsentPurpose(r.Context(), body.Name, body.Code)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]string{"id": id}, nil
+	err = ws.AddConsentPurpose(r.Context(), body.Name, body.Code)
+	return nil, err
 }
 
 // AlterProfileSchema alters the profile schema of a workspace.
@@ -199,7 +196,7 @@ func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("id"))
+	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("code"))
 	return nil, err
 }
 
@@ -866,7 +863,7 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("id"), body.Name, body.Code)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), body.Name, body.Code)
 	return nil, err
 }
 

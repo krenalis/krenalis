@@ -6,8 +6,6 @@ package consents
 
 import (
 	"testing"
-
-	"github.com/krenalis/krenalis/core/internal/state"
 )
 
 func TestSatisfies(t *testing.T) {
@@ -125,6 +123,32 @@ func TestSatisfies(t *testing.T) {
 			want: true,
 		},
 		{
+			name:     "OR: one required code is missing and the other is true",
+			required: []string{"marketing", "analytics"},
+			matchAll: false,
+			attributes: map[string]any{
+				"context": map[string]any{
+					"consents": map[string]any{
+						"analytics": true,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name:     "OR: every required code is missing",
+			required: []string{"marketing", "analytics"},
+			matchAll: false,
+			attributes: map[string]any{
+				"context": map[string]any{
+					"consents": map[string]any{
+						"other": true,
+					},
+				},
+			},
+			want: false,
+		},
+		{
 			name:     "OR: no required code is true",
 			required: []string{"marketing", "analytics"},
 			matchAll: false,
@@ -148,11 +172,7 @@ func TestSatisfies(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			purposes := make([]*state.ConsentPurpose, len(c.required))
-			for i, code := range c.required {
-				purposes[i] = &state.ConsentPurpose{ID: code, Name: code, Code: code}
-			}
-			got := Satisfies(purposes, c.matchAll, c.attributes)
+			got := Satisfies(c.required, c.matchAll, c.attributes)
 			if got != c.want {
 				t.Fatalf("got %v, want %v", got, c.want)
 			}

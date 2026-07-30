@@ -179,10 +179,6 @@ interface ConsentPurposesResponse {
 	purposes: ConsentPurpose[];
 }
 
-interface AddConsentPurposeResponse {
-	id: string;
-}
-
 type RePaths = Record<string, string | null>;
 
 interface PreviewAlterProfileSchemaResponse {
@@ -236,7 +232,6 @@ export type {
 	AccessKeyResponse,
 	CreateAccessKeyResponse,
 	ConsentPurposesResponse,
-	AddConsentPurposeResponse,
 	PreviewSendEventResponse,
 	PreviewAlterProfileSchemaResponse,
 	RePaths,

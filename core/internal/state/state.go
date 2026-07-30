@@ -817,11 +817,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsentPurpose returns the consent purpose of the workspace with identifier
-// id. The boolean return value reports whether the consent purpose exists.
-func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
+// ConsentPurpose returns the consent purpose of the workspace with the given
+// code. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(code string) (*ConsentPurpose, bool) {
 	workspace.mu.Lock()
-	cp, ok := workspace.consentPurposes[id]
+	cp, ok := workspace.consentPurposes[code]
 	workspace.mu.Unlock()
 	return cp, ok
 }
@@ -837,22 +837,6 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 	}
 	workspace.mu.Unlock()
 	return purposes
-}
-
-// resolveRequiredConsents returns the required consents of a pipeline of the
-// workspace, given the required consent purposes referred to by identifier.
-func (workspace *Workspace) resolveRequiredConsents(ids RequiredConsentIDs) RequiredConsents {
-	rc := RequiredConsents{Operator: ids.Operator}
-	if len(ids.Purposes) == 0 {
-		return rc
-	}
-	rc.Purposes = make([]*ConsentPurpose, len(ids.Purposes))
-	workspace.mu.Lock()
-	for i, id := range ids.Purposes {
-		rc.Purposes[i] = workspace.consentPurposes[id]
-	}
-	workspace.mu.Unlock()
-	return rc
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -1211,7 +1195,6 @@ func (account *Account) Connector() *Connector {
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
 	mu   *sync.Mutex
-	ID   string
 	Name string
 	Code string
 }
@@ -1759,16 +1742,7 @@ const (
 // RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator
-	Purposes []*ConsentPurpose
-}
-
-// RequiredConsentIDs represents the consent purposes required by a pipeline,
-// referred to by their identifiers. It is used where the consent purposes
-// cannot be referred to by pointer, as in the notifications that create and
-// update a pipeline and when reading a pipeline from the database.
-type RequiredConsentIDs struct {
-	Operator ConsentPurposesOperator
-	Purposes []string // consent purpose identifiers.
+	Purposes []string // consent purpose codes.
 }
 
 // ConsentPurposesOperator represents the logical operator applied to the

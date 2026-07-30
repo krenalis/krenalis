@@ -94,12 +94,10 @@ CREATE TABLE access_keys (
 );
 
 CREATE TABLE consent_purposes (
-    id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    code varchar(100) NOT NULL CHECK (code ~ '^[0-9A-Za-z._-]{1,100}$'),
     name varchar(100) NOT NULL,
-    code varchar(100) NOT NULL,
-    UNIQUE (workspace, code),
-    PRIMARY KEY (id)
+    PRIMARY KEY (workspace, code)
 );
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
@@ -145,7 +143,7 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
-    required_consents varchar(12)[] NOT NULL DEFAULT '{}',
+    required_consents varchar(100)[] NOT NULL DEFAULT '{}',
     required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',

@@ -61,7 +61,6 @@ import {
 	profileAttributesResponse,
 	PublicMetadata,
 	ConsentPurposesResponse,
-	AddConsentPurposeResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
@@ -899,16 +898,19 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	addConsentPurpose = async (name: string, code: string): Promise<AddConsentPurposeResponse> => {
+	addConsentPurpose = async (name: string, code: string): Promise<void> => {
 		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { name, code });
 	};
 
-	updateConsentPurpose = async (id: string, name: string, code: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, { name, code });
+	updateConsentPurpose = async (code: string, name: string, newCode: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${code}`, http.PUT, this.workspaceID, {
+			name,
+			code: newCode,
+		});
 	};
 
-	deleteConsentPurpose = async (id: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${id}`, http.DELETE, this.workspaceID);
+	deleteConsentPurpose = async (code: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${code}`, http.DELETE, this.workspaceID);
 	};
 }
 

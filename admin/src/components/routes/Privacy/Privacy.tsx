@@ -24,12 +24,21 @@ interface PurposePipeline {
 	connector: string;
 }
 
+const CODE_FORMAT = /^[0-9A-Za-z._-]+$/;
+
 const validatePurposeField = (name: string, value: string) => {
 	if (value === '') {
 		throw new Error(`${name} is required`);
 	}
 	if (Array.from(value).length > 100) {
 		throw new Error(`${name} must be no longer than 100 characters`);
+	}
+};
+
+const validatePurposeCode = (value: string) => {
+	validatePurposeField('Code', value);
+	if (!CODE_FORMAT.test(value)) {
+		throw new Error('Code can only contain letters, digits, dots, hyphens and underscores');
 	}
 };
 
@@ -65,7 +74,9 @@ const Privacy = () => {
 		return result;
 	}, [connections]);
 
-	const purposeToDeletePipelines = purposeToDelete == null ? [] : (pipelinesByPurpose.get(purposeToDelete.id) ?? []);
+	const purposeToDeletePipelines =
+		purposeToDelete == null ? [] : (pipelinesByPurpose.get(purposeToDelete.code) ?? []);
+	const purposeToEditPipelines = purposeToEdit == null ? [] : (pipelinesByPurpose.get(purposeToEdit.code) ?? []);
 
 	useLayoutEffect(() => {
 		setTitle('Settings / Privacy');
@@ -105,7 +116,7 @@ const Privacy = () => {
 	const onConfirmDelete = async () => {
 		setIsDeleting(true);
 		try {
-			await api.workspaces.deleteConsentPurpose(purposeToDelete.id);
+			await api.workspaces.deleteConsentPurpose(purposeToDelete.code);
 		} catch (err) {
 			setIsDeleting(false);
 			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeInUse') {
@@ -133,7 +144,7 @@ const Privacy = () => {
 			return [];
 		}
 		return purposes.map((p) => {
-			const pipelines = pipelinesByPurpose.get(p.id) ?? [];
+			const pipelines = pipelinesByPurpose.get(p.code) ?? [];
 			const codeCell = <span className='privacy__grid-code'>{p.code}</span>;
 			const pipelinesCell =
 				pipelines.length === 0 ? (
@@ -165,7 +176,7 @@ const Privacy = () => {
 			);
 			return {
 				cells: [p.name, codeCell, pipelinesCell, actionsCell],
-				key: p.id,
+				key: p.code,
 			};
 		});
 	}, [pipelinesByPurpose, purposes, redirect]);
@@ -221,12 +232,14 @@ const Privacy = () => {
 				<PurposeDialog
 					isOpen={isCreating}
 					purposeToEdit={null}
+					pipelines={[]}
 					onClose={() => setIsCreating(false)}
 					onSaved={() => setIsLoading(true)}
 				/>
 				<PurposeDialog
 					isOpen={purposeToEdit != null}
 					purposeToEdit={purposeToEdit}
+					pipelines={purposeToEditPipelines}
 					onClose={() => setPurposeToEdit(null)}
 					onSaved={() => setIsLoading(true)}
 				/>
@@ -238,11 +251,12 @@ const Privacy = () => {
 interface PurposeDialogProps {
 	isOpen: boolean;
 	purposeToEdit: ConsentPurpose | null;
+	pipelines: PurposePipeline[];
 	onClose: () => void;
 	onSaved: () => void;
 }
 
-const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialogProps) => {
+const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: PurposeDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [code, setCode] = useState<string>('');
 	const [nameError, setNameError] = useState<string>('');
@@ -282,7 +296,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			return;
 		}
 		try {
-			validatePurposeField('Code', code);
+			validatePurposeCode(code);
 		} catch (err) {
 			setCodeError(err.message);
 			return;
@@ -291,7 +305,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		setIsSaving(true);
 		try {
 			if (isEditing) {
-				await api.workspaces.updateConsentPurpose(purposeToEdit.id, name, code);
+				await api.workspaces.updateConsentPurpose(purposeToEdit.code, name, code);
 			} else {
 				await api.workspaces.addConsentPurpose(name, code);
 			}
@@ -348,6 +362,14 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 					<div className='privacy__dialog-error'>
 						<SlIcon slot='icon' name='exclamation-octagon' />
 						{codeError}
+					</div>
+				)}
+				{isEditing && code !== purposeToEdit.code && pipelines.length > 0 && (
+					<div className='privacy__dialog-warning'>
+						<SlIcon slot='icon' name='exclamation-triangle' />
+						{pipelines.length === 1
+							? `1 pipeline requires the "${purposeToEdit.code}" code. It will stop processing events until you update it too.`
+							: `${pipelines.length} pipelines require the "${purposeToEdit.code}" code. They will stop processing events until you update them too.`}
 					</div>
 				)}
 				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>

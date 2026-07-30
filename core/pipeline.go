@@ -693,7 +693,7 @@ func (this *Pipeline) SetStatus(ctx context.Context, enabled bool) error {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
-//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist, only when the pipeline is on events.
 //   - FormatNotExist, if the format does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - SchemaNotAligned, if the output schema is not aligned with the event type
@@ -727,17 +727,15 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
-	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		v.knownConsentPurposeIDs = knownConsentPurposeIDs(c.Workspace())
-	}
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return err
 	}
 
-	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/krenalis/krenalis/issues/2086.
 	if this.pipeline.EventType != "" {
+		// Only for destination event pipeline checks that the out schema is
+		// aligned with the event type's schema. See issue
+		// https://github.com/krenalis/krenalis/issues/2086.
 		app := this.application()
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, this.pipeline.EventType)
 		if err != nil {
@@ -746,6 +744,12 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, new(state.CreateOnly))
 		if err != nil {
 			return errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
+		}
+		// Check that the required consent purposes exist, so that the events do
+		// not fail all together.
+		err = checkConsentPurposesExist(c.Workspace(), pipeline.RequiredConsents.Purposes)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -920,20 +924,6 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				if _, ok := hasPath[path]; !ok && !slices.Contains(n.PropertiesToUnset, path) {
 					n.PropertiesToUnset = append(n.PropertiesToUnset, path)
 				}
-			}
-		}
-		// Check that the required consent purposes exist.
-		if len(n.RequiredConsents.Purposes) > 0 {
-			var missing string
-			err := tx.QueryRow(ctx, "SELECT purpose\n"+
-				"FROM UNNEST($1::varchar[]) AS purpose\n"+
-				"WHERE NOT EXISTS (SELECT FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
-				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
-			if err != nil && err != sql.ErrNoRows {
-				return nil, err
-			}
-			if err == nil {
-				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
 			}
 		}
 		// Update the pipeline.
@@ -1136,10 +1126,7 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	}
 	this.RequiredConsents = RequiredConsents{
 		Operator: ConsentPurposesOperator(pipeline.RequiredConsents.Operator),
-		Purposes: make([]string, len(pipeline.RequiredConsents.Purposes)),
-	}
-	for i, purpose := range pipeline.RequiredConsents.Purposes {
-		this.RequiredConsents.Purposes[i] = purpose.ID
+		Purposes: slices.Clone(pipeline.RequiredConsents.Purposes),
 	}
 	if pipeline.Transformation.Mapping != nil {
 		this.Transformation = &Transformation{
@@ -1534,9 +1521,9 @@ func shouldReload(a *state.Pipeline, n *state.UpdatePipeline) bool {
 }
 
 // toStateRequiredConsents converts the required consents to a
-// state.RequiredConsentIDs value.
-func toStateRequiredConsents(requiredConsents RequiredConsents) state.RequiredConsentIDs {
-	return state.RequiredConsentIDs{
+// state.RequiredConsents value.
+func toStateRequiredConsents(requiredConsents RequiredConsents) state.RequiredConsents {
+	return state.RequiredConsents{
 		Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
 		Purposes: requiredConsents.Purposes,
 	}
