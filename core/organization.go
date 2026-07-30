@@ -90,9 +90,9 @@ type OrganizationLimits struct {
 // RateLimits stores the request limits for organization-level operations and
 // the request and event limits for each workspace.
 type RateLimits struct {
-	Organization RateLimit `json:"organization"` // Request limit for organization-level operations, independent of each workspace's request limit.
-	Workspace    RateLimit `json:"workspace"`    // Request limit for each workspace.
-	Events       RateLimit `json:"events"`       // Event ingestion limit for each workspace, measured in events.
+	OrganizationSpecific RateLimit `json:"organizationSpecific"` // Request limit for organization-level operations, independent of each workspace's request limit.
+	WorkspaceSpecific    RateLimit `json:"workspaceSpecific"`    // Request limit for each workspace.
+	EventsSpecific       RateLimit `json:"eventsSpecific"`       // Event ingestion limit for each workspace, measured in events.
 }
 
 // RateLimit defines the refill rate and maximum capacity of an authoritative
@@ -1352,9 +1352,9 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 			Connections: limits.Connections,
 			Pipelines:   limits.Pipelines,
 		}
-		n.Limits.Rates.Organization = state.RateLimit(limits.Rates.Organization)
-		n.Limits.Rates.Workspace = state.RateLimit(limits.Rates.Workspace)
-		n.Limits.Rates.Events = state.RateLimit(limits.Rates.Events)
+		n.Limits.Rates.OrganizationSpecific = state.RateLimit(limits.Rates.OrganizationSpecific)
+		n.Limits.Rates.WorkspaceSpecific = state.RateLimit(limits.Rates.WorkspaceSpecific)
+		n.Limits.Rates.EventsSpecific = state.RateLimit(limits.Rates.EventsSpecific)
 	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var result *db.Result
@@ -1368,9 +1368,9 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 				" workspace_requests_rate_per_minute = $10, workspace_requests_max_capacity = $11,"+
 				" workspace_events_rate_per_minute = $12, workspace_events_max_capacity = $13 WHERE id = $14",
 				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections,
-				n.Limits.Pipelines, n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.MaxCapacity,
-				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.MaxCapacity,
-				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.MaxCapacity, this.organization.ID)
+				n.Limits.Pipelines, n.Limits.Rates.OrganizationSpecific.RatePerMinute, n.Limits.Rates.OrganizationSpecific.MaxCapacity,
+				n.Limits.Rates.WorkspaceSpecific.RatePerMinute, n.Limits.Rates.WorkspaceSpecific.MaxCapacity,
+				n.Limits.Rates.EventsSpecific.RatePerMinute, n.Limits.Rates.EventsSpecific.MaxCapacity, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err

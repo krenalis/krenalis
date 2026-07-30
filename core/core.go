@@ -783,9 +783,9 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 			Pipelines:   limits.Pipelines,
 		},
 	}
-	n.Limits.Rates.Organization = state.RateLimit(limits.Rates.Organization)
-	n.Limits.Rates.Workspace = state.RateLimit(limits.Rates.Workspace)
-	n.Limits.Rates.Events = state.RateLimit(limits.Rates.Events)
+	n.Limits.Rates.OrganizationSpecific = state.RateLimit(limits.Rates.OrganizationSpecific)
+	n.Limits.Rates.WorkspaceSpecific = state.RateLimit(limits.Rates.WorkspaceSpecific)
+	n.Limits.Rates.EventsSpecific = state.RateLimit(limits.Rates.EventsSpecific)
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
@@ -795,9 +795,9 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 				" workspace_events_rate_per_minute, workspace_events_max_capacity)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
 				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
-				n.Limits.Rates.Organization.RatePerMinute, n.Limits.Rates.Organization.MaxCapacity,
-				n.Limits.Rates.Workspace.RatePerMinute, n.Limits.Rates.Workspace.MaxCapacity,
-				n.Limits.Rates.Events.RatePerMinute, n.Limits.Rates.Events.MaxCapacity)
+				n.Limits.Rates.OrganizationSpecific.RatePerMinute, n.Limits.Rates.OrganizationSpecific.MaxCapacity,
+				n.Limits.Rates.WorkspaceSpecific.RatePerMinute, n.Limits.Rates.WorkspaceSpecific.MaxCapacity,
+				n.Limits.Rates.EventsSpecific.RatePerMinute, n.Limits.Rates.EventsSpecific.MaxCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -940,9 +940,9 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		Connections: limits.Connections,
 		Pipelines:   limits.Pipelines,
 	}
-	organization.Limits.Rates.Organization = RateLimit(limits.Rates.Organization)
-	organization.Limits.Rates.Workspace = RateLimit(limits.Rates.Workspace)
-	organization.Limits.Rates.Events = RateLimit(limits.Rates.Events)
+	organization.Limits.Rates.OrganizationSpecific = RateLimit(limits.Rates.OrganizationSpecific)
+	organization.Limits.Rates.WorkspaceSpecific = RateLimit(limits.Rates.WorkspaceSpecific)
+	organization.Limits.Rates.EventsSpecific = RateLimit(limits.Rates.EventsSpecific)
 	organization.Counts = OrganizationCounts(org.Counts())
 	return &organization, nil
 }
@@ -996,9 +996,9 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			Connections: limits.Connections,
 			Pipelines:   limits.Pipelines,
 		}
-		orgs[i].Limits.Rates.Organization = RateLimit(limits.Rates.Organization)
-		orgs[i].Limits.Rates.Workspace = RateLimit(limits.Rates.Workspace)
-		orgs[i].Limits.Rates.Events = RateLimit(limits.Rates.Events)
+		orgs[i].Limits.Rates.OrganizationSpecific = RateLimit(limits.Rates.OrganizationSpecific)
+		orgs[i].Limits.Rates.WorkspaceSpecific = RateLimit(limits.Rates.WorkspaceSpecific)
+		orgs[i].Limits.Rates.EventsSpecific = RateLimit(limits.Rates.EventsSpecific)
 		orgs[i].Counts = OrganizationCounts(organization.Counts())
 	}
 	return orgs, nil
@@ -2202,22 +2202,22 @@ func validateOrganizationLimits(limits *OrganizationLimits) error {
 	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
 		return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
 	}
-	if rate := limits.Rates.Organization.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
+	if rate := limits.Rates.OrganizationSpecific.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
 		return errors.BadRequest("organization request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
 	}
-	if maxCapacity := limits.Rates.Organization.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
+	if maxCapacity := limits.Rates.OrganizationSpecific.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
 		return errors.BadRequest("organization request maximum capacity must be between %d and %d", minRequestMaxCapacity, maxRequestMaxCapacity)
 	}
-	if rate := limits.Rates.Workspace.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
+	if rate := limits.Rates.WorkspaceSpecific.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
 		return errors.BadRequest("workspace request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
 	}
-	if maxCapacity := limits.Rates.Workspace.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
+	if maxCapacity := limits.Rates.WorkspaceSpecific.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
 		return errors.BadRequest("workspace request maximum capacity must be between %d and %d", minRequestMaxCapacity, maxRequestMaxCapacity)
 	}
-	if rate := limits.Rates.Events.RatePerMinute; rate < minEventRatePerMinute || rate > maxEventRatePerMinute {
+	if rate := limits.Rates.EventsSpecific.RatePerMinute; rate < minEventRatePerMinute || rate > maxEventRatePerMinute {
 		return errors.BadRequest("event rate per minute must be between %d and %d", minEventRatePerMinute, maxEventRatePerMinute)
 	}
-	if maxCapacity := limits.Rates.Events.MaxCapacity; maxCapacity < minEventMaxCapacity || maxCapacity > maxEventMaxCapacity {
+	if maxCapacity := limits.Rates.EventsSpecific.MaxCapacity; maxCapacity < minEventMaxCapacity || maxCapacity > maxEventMaxCapacity {
 		return errors.BadRequest("event maximum capacity must be between %d and %d", minEventMaxCapacity, maxEventMaxCapacity)
 	}
 	return nil

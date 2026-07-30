@@ -372,9 +372,9 @@ type OrganizationLimits struct {
 // RateLimits stores the request and event limits for each workspace, and
 // the request limits for organization-level operations.
 type RateLimits struct {
-	Workspace    RateLimit `json:"workspace"`
-	Events       RateLimit `json:"events"`
-	Organization RateLimit `json:"organization"`
+	OrganizationSpecific RateLimit `json:"organizationSpecific"`
+	WorkspaceSpecific    RateLimit `json:"workspaceSpecific"`
+	EventsSpecific       RateLimit `json:"eventsSpecific"`
 }
 
 // RateLimit defines a sustained rate and a maximum capacity.

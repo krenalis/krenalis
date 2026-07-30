@@ -282,9 +282,9 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			var limits OrganizationLimits
 			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
 				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
-				&limits.Rates.Organization.RatePerMinute, &limits.Rates.Organization.MaxCapacity,
-				&limits.Rates.Workspace.RatePerMinute, &limits.Rates.Workspace.MaxCapacity,
-				&limits.Rates.Events.RatePerMinute, &limits.Rates.Events.MaxCapacity); err != nil {
+				&limits.Rates.OrganizationSpecific.RatePerMinute, &limits.Rates.OrganizationSpecific.MaxCapacity,
+				&limits.Rates.WorkspaceSpecific.RatePerMinute, &limits.Rates.WorkspaceSpecific.MaxCapacity,
+				&limits.Rates.EventsSpecific.RatePerMinute, &limits.Rates.EventsSpecific.MaxCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
 			org.bucket = state.rateLimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxUnits)

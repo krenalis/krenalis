@@ -134,18 +134,18 @@ type organizationLimits struct {
 	Connections *int `json:"connections"`
 	Pipelines   *int `json:"pipelines"`
 	Rates       *struct {
-		Organization *struct {
+		OrganizationSpecific *struct {
 			RatePerMinute *int `json:"ratePerMinute"`
 			MaxCapacity   *int `json:"maxCapacity"`
-		} `json:"organization"`
-		Workspace *struct {
+		} `json:"organizationSpecific"`
+		WorkspaceSpecific *struct {
 			RatePerMinute *int `json:"ratePerMinute"`
 			MaxCapacity   *int `json:"maxCapacity"`
-		} `json:"workspace"`
-		Events *struct {
+		} `json:"workspaceSpecific"`
+		EventsSpecific *struct {
 			RatePerMinute *int `json:"ratePerMinute"`
 			MaxCapacity   *int `json:"maxCapacity"`
-		} `json:"events"`
+		} `json:"eventsSpecific"`
 	} `json:"rates"`
 }
 
@@ -530,31 +530,31 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 	if limits.Rates == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("rate limit is required")
 	}
-	if limits.Rates.Organization == nil {
+	if limits.Rates.OrganizationSpecific == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("organization request limit is required")
 	}
-	if limits.Rates.Organization.RatePerMinute == nil {
+	if limits.Rates.OrganizationSpecific.RatePerMinute == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("organization request rate per minute limit is required")
 	}
-	if limits.Rates.Organization.MaxCapacity == nil {
+	if limits.Rates.OrganizationSpecific.MaxCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("organization request maximum capacity is required")
 	}
-	if limits.Rates.Workspace == nil {
+	if limits.Rates.WorkspaceSpecific == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("workspace request limit is required")
 	}
-	if limits.Rates.Workspace.RatePerMinute == nil {
+	if limits.Rates.WorkspaceSpecific.RatePerMinute == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("workspace request rate per minute limit is required")
 	}
-	if limits.Rates.Workspace.MaxCapacity == nil {
+	if limits.Rates.WorkspaceSpecific.MaxCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("workspace request maximum capacity is required")
 	}
-	if limits.Rates.Events == nil {
+	if limits.Rates.EventsSpecific == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("event limit is required")
 	}
-	if limits.Rates.Events.RatePerMinute == nil {
+	if limits.Rates.EventsSpecific.RatePerMinute == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("event rate per minute limit is required")
 	}
-	if limits.Rates.Events.MaxCapacity == nil {
+	if limits.Rates.EventsSpecific.MaxCapacity == nil {
 		return core.OrganizationLimits{}, errors.BadRequest("event maximum capacity is required")
 	}
 	return core.OrganizationLimits{
@@ -565,17 +565,17 @@ func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimit
 		Connections: *limits.Connections,
 		Pipelines:   *limits.Pipelines,
 		Rates: core.RateLimits{
-			Organization: core.RateLimit{
-				RatePerMinute: *limits.Rates.Organization.RatePerMinute,
-				MaxCapacity:   *limits.Rates.Organization.MaxCapacity,
+			OrganizationSpecific: core.RateLimit{
+				RatePerMinute: *limits.Rates.OrganizationSpecific.RatePerMinute,
+				MaxCapacity:   *limits.Rates.OrganizationSpecific.MaxCapacity,
 			},
-			Workspace: core.RateLimit{
-				RatePerMinute: *limits.Rates.Workspace.RatePerMinute,
-				MaxCapacity:   *limits.Rates.Workspace.MaxCapacity,
+			WorkspaceSpecific: core.RateLimit{
+				RatePerMinute: *limits.Rates.WorkspaceSpecific.RatePerMinute,
+				MaxCapacity:   *limits.Rates.WorkspaceSpecific.MaxCapacity,
 			},
-			Events: core.RateLimit{
-				RatePerMinute: *limits.Rates.Events.RatePerMinute,
-				MaxCapacity:   *limits.Rates.Events.MaxCapacity,
+			EventsSpecific: core.RateLimit{
+				RatePerMinute: *limits.Rates.EventsSpecific.RatePerMinute,
+				MaxCapacity:   *limits.Rates.EventsSpecific.MaxCapacity,
 			},
 		},
 	}, nil

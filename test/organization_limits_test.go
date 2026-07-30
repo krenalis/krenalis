@@ -36,17 +36,17 @@ func TestOrganizationResourceLimits(t *testing.T) {
 			Connections: 7,
 			Pipelines:   8,
 			Rates: krenalistester.RateLimits{
-				Workspace: krenalistester.RateLimit{
+				OrganizationSpecific: krenalistester.RateLimit{
+					RatePerMinute: 101,
+					MaxCapacity:   11,
+				},
+				WorkspaceSpecific: krenalistester.RateLimit{
 					RatePerMinute: 202,
 					MaxCapacity:   22,
 				},
-				Events: krenalistester.RateLimit{
+				EventsSpecific: krenalistester.RateLimit{
 					RatePerMinute: 1303,
 					MaxCapacity:   33,
-				},
-				Organization: krenalistester.RateLimit{
-					RatePerMinute: 101,
-					MaxCapacity:   11,
 				},
 			},
 		}
@@ -105,12 +105,12 @@ func TestOrganizationResourceLimits(t *testing.T) {
 	t.Run("rate limits are updated", func(t *testing.T) {
 		org := k.Organization(activeOrg.ID)
 		limits := org.Limits
-		limits.Rates.Workspace.RatePerMinute = 402
-		limits.Rates.Workspace.MaxCapacity = 42
-		limits.Rates.Events.RatePerMinute = 1503
-		limits.Rates.Events.MaxCapacity = 53
-		limits.Rates.Organization.RatePerMinute = 301
-		limits.Rates.Organization.MaxCapacity = 31
+		limits.Rates.OrganizationSpecific.RatePerMinute = 301
+		limits.Rates.OrganizationSpecific.MaxCapacity = 31
+		limits.Rates.WorkspaceSpecific.RatePerMinute = 402
+		limits.Rates.WorkspaceSpecific.MaxCapacity = 42
+		limits.Rates.EventsSpecific.RatePerMinute = 1503
+		limits.Rates.EventsSpecific.MaxCapacity = 53
 		k.UpdateOrganization(org.ID, org.Name, limits)
 
 		org = k.Organization(activeOrg.ID)

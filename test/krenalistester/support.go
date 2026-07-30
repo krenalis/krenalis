@@ -270,15 +270,15 @@ var DefaultOrganizationLimits = OrganizationLimits{
 	Connections: 100,
 	Pipelines:   100,
 	Rates: RateLimits{
-		Workspace: RateLimit{
+		OrganizationSpecific: RateLimit{
 			RatePerMinute: 1000,
 			MaxCapacity:   1000,
 		},
-		Events: RateLimit{
+		WorkspaceSpecific: RateLimit{
 			RatePerMinute: 1000,
 			MaxCapacity:   1000,
 		},
-		Organization: RateLimit{
+		EventsSpecific: RateLimit{
 			RatePerMinute: 1000,
 			MaxCapacity:   1000,
 		},
