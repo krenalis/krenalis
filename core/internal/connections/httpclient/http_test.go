@@ -13,8 +13,8 @@ import (
 )
 
 // newHTTP returns an HTTP with no state following the organizations with the
-// given IDs, as New does with the ones of a state when the bytes sent are
-// counted. Every other organization does not exist.
+// given IDs, as New does with the ones of a state. Every other organization does
+// not exist.
 func newHTTP(t *testing.T, organizationIDs ...string) *HTTP {
 	t.Helper()
 	h := New(nil, http.DefaultTransport.(*http.Transport))
@@ -97,46 +97,33 @@ func TestTransportCreatedWhenNeeded(t *testing.T) {
 	if other := client(t, h, "org-other").transport; other == transport {
 		t.Fatal("two organizations share the same transport")
 	}
-	if none := h.PlainConnectorClient(&state.Connector{Code: "test"}).transport; none != h.transport {
+	if none := client(t, h, "").transport; none != http.RoundTripper(h.transport) {
 		t.Fatal("a client with no organization does not make its requests with the base transport")
 	}
-
-	// The organization is mandatory: a client whose requests are not made on
-	// behalf of one is created with PlainConnectorClient, so an empty
-	// organization is a broken call site and it panics.
-	func() {
-		defer func() {
-			if recover() == nil {
-				t.Error("a client with an empty organization did not panic")
-			}
-		}()
-		client(t, h, "")
-	}()
 }
 
-func TestTransportWithoutCounting(t *testing.T) {
-	// The organizations are not followed, because there is no state and counting
-	// is disabled, so there is nothing to attribute to the organization: its
-	// requests are made with the base transport, as it is, and no transport is
-	// cloned for it.
+func TestTransportWithoutOrganizations(t *testing.T) {
+	// The organizations are not followed, because there is no state: the requests
+	// of an organization are made with the base transport, as it is, and no
+	// transport is cloned for it.
 	h := New(nil, http.DefaultTransport.(*http.Transport))
 	url := server(t)
-	c := client(t, h, "org-not-counted")
+	c := client(t, h, "org-not-followed")
 	if err := get(t, c, url); err != nil {
 		t.Fatalf("the request of an organization failed: %s", err)
 	}
 	if c.transport != http.RoundTripper(h.transport) {
 		t.Fatal("the requests of the organization are made with a clone, expecting the base transport")
 	}
-	if _, ok := transportOf(t, h, "org-not-counted"); ok {
+	if _, ok := transportOf(t, h, "org-not-followed"); ok {
 		t.Fatal("a transport is created for an organization while the organizations are not followed")
 	}
 }
 
 func TestTransportUnknownOrganization(t *testing.T) {
 	// The organization does not exist, because it has never been created. Its
-	// requests are not refused, they are simply made with the base transport,
-	// counting nothing, and no transport is created for it.
+	// requests are not refused, they are simply made with the base transport, and
+	// no transport is created for it.
 	h := newHTTP(t, "org-known")
 	url := server(t)
 	c := client(t, h, "org-unknown")
@@ -153,7 +140,7 @@ func TestTransportUnknownOrganization(t *testing.T) {
 
 func TestTransportCreatedOrganization(t *testing.T) {
 	// An organization created after the HTTP exists, so its requests are made
-	// with a transport of its own, attributing to it the bytes they send.
+	// with a transport of its own.
 	h := newHTTP(t, "org-known")
 	url := server(t)
 	h.onCreateOrganization(state.CreateOrganization{ID: "org-created"})
@@ -186,8 +173,7 @@ func TestTransportDeletedOrganization(t *testing.T) {
 	}
 
 	// A client created before the deletion keeps the transport it was created
-	// with, and it still makes its requests with it: the bytes they send go to a
-	// counter that is no longer collected.
+	// with, and it still makes its requests with it.
 	if err := get(t, c, url); err != nil {
 		t.Fatalf("the request of a client created before the deletion failed: %s", err)
 	}
