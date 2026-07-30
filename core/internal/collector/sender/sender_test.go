@@ -332,10 +332,10 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 func Test_Sender_MinQueuedEvents(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 1
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		var total = 100
 		var consumed int
@@ -370,10 +370,10 @@ func Test_Sender_MinQueuedEvents(t *testing.T) {
 func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 100
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		app := newTestApplication()
 		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
@@ -415,10 +415,10 @@ func Test_Sender_QueueEventBlocksWhenQueueFull(t *testing.T) {
 func Test_Sender_QueueEventUnblocksAfterCloseWhenFull(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 100
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		app := newTestApplication()
 		app.SendEventsFunc = func(_ context.Context, _ connectors.Events) error {
@@ -458,10 +458,10 @@ func Test_Sender_QueueEventUnblocksAfterCloseWhenFull(t *testing.T) {
 func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
+		defer func(previous int) {
+			MaxQueuedEvents = previous
+		}(MaxQueuedEvents)
 		MaxQueuedEvents = 100
-		defer func() {
-			MaxQueuedEvents = 5_000
-		}()
 
 		app := newTestApplication()
 		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
@@ -795,7 +795,7 @@ type application struct {
 	seed uint64
 
 	mu        sync.Mutex
-	iteration uint64
+	iteration uint64   // protected by mu
 	n         int      // protected by mu
 	consumed  []string // ids of the consumed events; protected by mu
 	sends     []send   // protected by mu
@@ -844,13 +844,13 @@ func (app *application) SendEvents(ctx context.Context, events connectors.Events
 	// Get the current iteration number.
 	var iteration uint64
 	app.mu.Lock()
+	if app.iteration == math.MaxUint64 {
+		app.mu.Unlock()
+		panic("iteration is out of range")
+	}
 	iteration = app.iteration
 	app.iteration++
 	app.mu.Unlock()
-
-	if app.iteration == math.MaxUint64 {
-		panic("iteration is out of range")
-	}
 
 	seed := app.seed + iteration
 	src := rand.NewPCG(seed, ^seed)
