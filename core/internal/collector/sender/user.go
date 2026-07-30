@@ -22,6 +22,8 @@ type user struct {
 
 // disposable reports whether the user has no pending or queued events and can
 // be safely removed from the sender.
+//
+// It must be called holding the owning Sender's mutex.
 func (u *user) disposable() bool {
 	seq := u.queue.sequence
 	return seq.expected == seq.next && u.totals == 0 && u.consumed == 0
@@ -61,6 +63,8 @@ type userQueue struct {
 // until all earlier sequence numbers have been processed.
 //
 // If sender is closed, forward returns false and enqueue returns immediately.
+//
+// It must be called holding the owning Sender's mutex.
 func (q *userQueue) enqueue(event *Event, forward func(event *Event) bool) {
 	// If the sequence has been rescaled, realign the current event's number.
 	if event.sequence > q.sequence.next {
@@ -100,6 +104,8 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event) bool) {
 
 // next returns the next sequence number for this user.
 // It is called for each new event of this user.
+//
+// It must be called holding the owning Sender's mutex.
 func (q *userQueue) next() int {
 	next := q.sequence.next
 	q.sequence.next++
