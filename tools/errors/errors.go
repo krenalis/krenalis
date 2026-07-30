@@ -29,6 +29,7 @@ package errors
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -165,8 +166,8 @@ func (e *TooManyRequestsError) Error() string {
 // WriteTo implements the ResponseWriterTo interface.
 func (e *TooManyRequestsError) WriteTo(w http.ResponseWriter) error {
 	if e.RetryAfter > 0 {
-		seconds := (e.RetryAfter + time.Second - 1) / time.Second
-		w.Header().Set("Retry-After", strconv.Itoa(int(seconds)))
+		seconds := int(math.Ceil(e.RetryAfter.Seconds()))
+		w.Header().Set("Retry-After", strconv.Itoa(seconds))
 	}
 	return writeTo(w, http.StatusTooManyRequests, "TooManyRequests", e.Message, "")
 }
