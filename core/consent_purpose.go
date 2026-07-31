@@ -22,30 +22,30 @@ var consentPurposeCodeFormat = regexp.MustCompile(`^[0-9A-Za-z._-]{1,100}$`)
 
 // ConsentPurpose represents a purpose.
 type ConsentPurpose struct {
-	Name string `json:"name"`
 	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
-// AddConsentPurpose adds a consent purpose with the given name and code.
+// AddConsentPurpose adds a consent purpose with the given code and name.
 //
-// name must be between 1 and 100 runes long and code must be a valid consent
-// purpose code.
+// code must be a valid consent purpose code and name must be between 1 and 100
+// runes long.
 //
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if a consent purpose with the same code already
 // exists in the workspace.
-func (this *Workspace) AddConsentPurpose(ctx context.Context, name, code string) error {
+func (this *Workspace) AddConsentPurpose(ctx context.Context, code, name string) error {
 	this.core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 100); err != nil {
-		return errors.BadRequest("%s", err)
-	}
 	if !consentPurposeCodeFormat.MatchString(code) {
 		return errors.BadRequest("code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
 	}
+	if err := util.ValidateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
+	}
 	n := state.AddConsentPurpose{
 		Workspace: this.workspace.ID,
-		Name:      name,
 		Code:      code,
+		Name:      name,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, code, name) VALUES ($1, $2, $3)",
@@ -71,7 +71,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 	consentPurposes := this.workspace.ConsentPurposes()
 	purposes := make([]*ConsentPurpose, len(consentPurposes))
 	for i, cp := range consentPurposes {
-		purposes[i] = &ConsentPurpose{Name: cp.Name, Code: cp.Code}
+		purposes[i] = &ConsentPurpose{Code: cp.Code, Name: cp.Name}
 	}
 	sort.Slice(purposes, func(i, j int) bool {
 		a, b := purposes[i], purposes[j]
@@ -81,7 +81,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 }
 
 // UpdateConsentPurpose updates the consent purpose with the given code, setting
-// its name to name and its code to newCode.
+// its code to newCode and its name to name.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
@@ -89,22 +89,22 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if another consent purpose with code newCode already
 // exists in the workspace.
-func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code, name, newCode string) error {
+func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code, newCode, name string) error {
 	this.core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 100); err != nil {
-		return errors.BadRequest("%s", err)
-	}
 	if !consentPurposeCodeFormat.MatchString(code) {
 		return errors.BadRequest("code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
 	}
 	if !consentPurposeCodeFormat.MatchString(newCode) {
 		return errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
 	}
+	if err := util.ValidateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
+	}
 	current, ok := this.workspace.ConsentPurpose(code)
 	if !ok {
 		return errors.NotFound("consent purpose %q does not exist", code)
 	}
-	if name == current.Name && newCode == current.Code {
+	if newCode == current.Code && name == current.Name {
 		return nil
 	}
 	n := state.UpdateConsentPurpose{

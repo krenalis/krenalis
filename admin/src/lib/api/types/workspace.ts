@@ -40,8 +40,8 @@ interface LatestAlterProfileSchema {
 }
 
 interface ConsentPurpose {
-	name: string;
 	code: string;
+	name: string;
 }
 
 export default Workspace;

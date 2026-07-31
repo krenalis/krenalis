@@ -32,14 +32,14 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
 		Code string `json:"code"`
+		Name string `json:"name"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AddConsentPurpose(r.Context(), body.Name, body.Code)
+	err = ws.AddConsentPurpose(r.Context(), body.Code, body.Name)
 	return nil, err
 }
 
@@ -856,14 +856,14 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
 		Code string `json:"code"`
+		Name string `json:"name"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), body.Name, body.Code)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), body.Code, body.Name)
 	return nil, err
 }
 

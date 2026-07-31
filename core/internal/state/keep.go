@@ -341,8 +341,8 @@ func (state *State) acceptInvitation(n notification) string {
 // AddConsentPurpose is the event sent when a new consent purpose is added.
 type AddConsentPurpose struct {
 	Workspace string
-	Name      string
 	Code      string
+	Name      string
 }
 
 // addConsentPurpose adds a new consent purpose.
@@ -354,8 +354,8 @@ func (state *State) addConsentPurpose(n notification) string {
 	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
 		mu:   new(sync.Mutex),
-		Name: e.Name,
 		Code: e.Code,
+		Name: e.Name,
 	}
 	ws.mu.Lock()
 	ws.consentPurposes[cp.Code] = cp
@@ -1635,8 +1635,8 @@ func (state *State) updateConsentPurpose(n notification) string {
 	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
 		mu:   new(sync.Mutex),
-		Name: e.Name,
 		Code: e.NewCode,
+		Name: e.Name,
 	}
 	ws.mu.Lock()
 	delete(ws.consentPurposes, e.Code)

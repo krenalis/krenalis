@@ -898,14 +898,14 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	addConsentPurpose = async (name: string, code: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { name, code });
+	addConsentPurpose = async (code: string, name: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { code, name });
 	};
 
-	updateConsentPurpose = async (code: string, name: string, newCode: string): Promise<void> => {
+	updateConsentPurpose = async (code: string, newCode: string, name: string): Promise<void> => {
 		return await call(`${this.apiURL}/consent-purposes/${code}`, http.PUT, this.workspaceID, {
-			name,
 			code: newCode,
+			name,
 		});
 	};
 
