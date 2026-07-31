@@ -85,13 +85,14 @@
 // authorized waiter is deducted before that waiter is notified.
 //
 // The admission budget is the number of units requested when the refill starts.
-// It is not the bucket's lease size. Positive local capacity is excluded
-// because unrelated local requests may consume it before the lease arrives.
-// A partial grant serves only the first consecutive FIFO waiters that can be
-// satisfied. This deliberately prevents an operation requiring fewer units
-// from being served before an older operation requiring more. Cancellation
-// removes a pending waiter and returns its reserved units to the admission
-// budget for later waiters.
+// It is not the bucket's lease size. When an operation triggers a refill, the
+// admission budget is at least the number of units required by that operation.
+// Positive local capacity is excluded because unrelated local requests may
+// consume it before the lease arrives. A partial grant serves only the first
+// consecutive FIFO waiters that can be satisfied. This deliberately prevents
+// an operation requiring fewer units from being served before an older
+// operation requiring more. Cancellation removes a pending waiter and returns
+// its reserved units to the admission budget for later waiters.
 //
 // If a request cannot be admitted because the refill generation has
 // insufficient remaining admission budget, no authoritative lease result is
@@ -221,8 +222,9 @@
 //   - Pending waiter units never exceed the units requested when the refill
 //     starts.
 //   - A waiter belongs to one refill generation and is resolved exactly once.
-//   - Granted capacity is added to the current local value, capped at the newly
-//     reported local target; any excess is returned asynchronously.
+//   - Granted capacity is added to the current local value and capped at the
+//     newly reported local target. Any excess from the new grant is returned
+//     asynchronously.
 //   - Capacity assigned to a waiter is deducted before notification.
 //   - Retry scheduling accounts for remaining local and authoritative capacity.
 //   - Feasible waiters in a rejected FIFO suffix receive cumulative retry

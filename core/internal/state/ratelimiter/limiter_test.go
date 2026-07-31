@@ -623,15 +623,51 @@ func TestLimiterCallerDeadlineTakesPrecedence(t *testing.T) {
 // larger request does not consume local capacity needed by a smaller request.
 func TestLimiterKeepsPositiveCapacityForSmallerRequest(t *testing.T) {
 	limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
-		return []leaseResult{{SubjectKind: requests[0].SubjectKind, SubjectID: requests[0].SubjectID, GrantedUnits: 10, CapacityUnits: 100}}, nil
+		return []leaseResult{{SubjectKind: requests[0].SubjectKind, SubjectID: requests[0].SubjectID, CapacityUnits: 100}}, nil
 	})
 	bucket := newTestBucket(limiter)
 	applyTestLease(bucket, 90, 100)
-	if err := bucket.Consume(context.Background(), 100); !errors.Is(err, ErrLimiterUnavailable) {
-		t.Fatalf("expected large request error ErrLimiterUnavailable, got %v", err)
+	if err := bucket.Consume(context.Background(), 100); !isCapacityExceeded(err) {
+		t.Fatalf("expected large request capacity error, got %v", err)
 	}
 	if err := bucket.Consume(context.Background(), 90); err != nil {
 		t.Fatalf("expected smaller request to use positive local capacity, got %v", err)
+	}
+}
+
+// TestLimiterAdmissionBudgetIncludesTriggeringOperation verifies that a refill
+// triggered by an operation requests enough units to include that operation in
+// its admission budget, even when positive local capacity would otherwise make
+// the refill request smaller.
+func TestLimiterAdmissionBudgetIncludesTriggeringOperation(t *testing.T) {
+	const (
+		leaseSize      = 20_000
+		localCapacity  = 11_000
+		operationUnits = 15_000
+	)
+	requests := make(chan leaseRequest, 1)
+	limiter := newTestRateLimiter(t, func(_ context.Context, batch []leaseRequest) ([]leaseResult, error) {
+		request := batch[0]
+		requests <- request
+		return []leaseResult{{
+			SubjectKind:   request.SubjectKind,
+			SubjectID:     request.SubjectID,
+			GrantedUnits:  request.RequestedUnits,
+			CapacityUnits: leaseSize,
+		}}, nil
+	})
+	bucket := limiter.NewBucket(testSubjectKind, testRateLimitID, leaseSize, leaseSize)
+	applyTestLease(bucket, localCapacity, leaseSize)
+
+	if err := bucket.Consume(context.Background(), operationUnits); err != nil {
+		t.Fatalf("consume: %v", err)
+	}
+	request := <-requests
+	if request.RequestedUnits != operationUnits {
+		t.Fatalf("expected refill request for %d units, got %d", operationUnits, request.RequestedUnits)
+	}
+	if available := bucketAvailable(bucket); available != leaseSize-operationUnits {
+		t.Fatalf("expected %d locally available units, got %d", leaseSize-operationUnits, available)
 	}
 }
 

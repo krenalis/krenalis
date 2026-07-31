@@ -113,7 +113,7 @@ func (bucket *Bucket) Consume(ctx context.Context, units int) error {
 	}
 
 	// Start a new refill and try to admit the request.
-	refill := bucket.newRefillLocked()
+	refill := bucket.newRefillWithAdmissionLocked(units)
 	waiter := bucket.admitWaiterLocked(refill, units)
 	bucket.mu.Unlock()
 	if !limiter.publishRefill(refill) {
@@ -243,10 +243,18 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 // newRefillLocked creates the immutable lease request for the next refill.
 // The caller must hold bucket.mu.
 func (bucket *Bucket) newRefillLocked() *refill {
+	return bucket.newRefillWithAdmissionLocked(0)
+}
+
+// newRefillWithAdmissionLocked creates the immutable lease request for the next
+// refill with an admission budget of at least minAdmissionUnits. The caller
+// must hold bucket.mu.
+func (bucket *Bucket) newRefillWithAdmissionLocked(minAdmissionUnits int) *refill {
 	requestedUnits := bucket.leaseSize
 	if missingUnits := bucket.localTarget - bucket.available; missingUnits > 0 {
 		requestedUnits = min(bucket.leaseSize, missingUnits)
 	}
+	requestedUnits = max(requestedUnits, minAdmissionUnits)
 	refill := &refill{
 		bucket: bucket,
 		request: leaseRequest{
