@@ -836,6 +836,9 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 		i++
 	}
 	workspace.mu.Unlock()
+	sort.Slice(purposes, func(i, j int) bool {
+		return purposes[i].Code < purposes[j].Code
+	})
 	return purposes
 }
 
