@@ -68,7 +68,7 @@ type listener struct {
 	id               string
 	connections      []string
 	filter           *state.Where
-	requiredConsents state.RequiredConsents
+	requiredConsents *state.RequiredConsents
 	sync.Mutex       // for the events and omitted fields
 	events           []json.Value
 	times            []time.Time
@@ -88,15 +88,15 @@ func newObserver() *Observer {
 // size specifies the maximum number of observed events to be returned by a
 // subsequent call to the Events method. size must be in range [1, 1000]. If
 // filter is non-nil, only events that satisfy the filter will be observed. If
-// the purposes of requiredConsents are non-empty, only events that have those
-// consent purposes, according to its operator, will be observed.
+// requiredConsents is non-nil, only events that satisfy its consent purposes,
+// according to its operator, will be observed.
 //
 // CreateListener does not validate its arguments, so it is the caller's
 // responsibility to pass valid arguments.
 //
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
-func (observer *Observer) CreateListener(connections []string, size int, filter *state.Where, requiredConsents state.RequiredConsents) (string, error) {
+func (observer *Observer) CreateListener(connections []string, size int, filter *state.Where, requiredConsents *state.RequiredConsents) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
 		id:               id,
@@ -178,7 +178,8 @@ func (observer *Observer) addEvent(event events.Event) {
 		if !filters.Applies(listener.filter, event) {
 			continue
 		}
-		if !consents.Satisfies(listener.requiredConsents.Purposes, listener.requiredConsents.Operator != state.PurposesOr, event) {
+		if rc := listener.requiredConsents; rc != nil &&
+			!consents.Satisfies(rc.Purposes, rc.Operator != state.PurposesOr, event) {
 			continue
 		}
 		listener.Lock()

@@ -890,7 +890,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
-	var rc state.RequiredConsents
+	var rc *state.RequiredConsents
 	if requiredConsents != nil {
 		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
 			return "", errors.BadRequest(`required consents operator must be "and" or "or"`)
@@ -898,8 +898,10 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		if len(requiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return "", errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		rc.Operator = state.ConsentPurposesOperator(requiredConsents.Operator)
-		rc.Purposes = slices.Clone(requiredConsents.Purposes)
+		rc = &state.RequiredConsents{
+			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
+			Purposes: slices.Clone(requiredConsents.Purposes),
+		}
 		for i, code := range rc.Purposes {
 			if !consentPurposeCodeFormat.MatchString(code) {
 				return "", errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
