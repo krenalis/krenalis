@@ -343,7 +343,7 @@ func Test_Decoder(t *testing.T) {
 			typ:  "track",
 			body: `{"context":{"consents":{"analytics":"no"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
 			expected: []expectedEvent{{
-				err: errors.BadRequest(`property 'context.consents."analytics"' is not a valid boolean`),
+				err: errors.BadRequest(`value of "analytics" in 'context.consents' is not a valid boolean`),
 			}},
 		},
 		// context.consents with a non-object value.
