@@ -81,7 +81,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 }
 
 // UpdateConsentPurpose updates the consent purpose with the given code, setting
-// its code to newCode and its name to name.
+// its code to code and its name to name.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
@@ -89,44 +89,44 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if another consent purpose with code newCode already
 // exists in the workspace.
-func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code, newCode, name string) error {
+func (this *Workspace) UpdateConsentPurpose(ctx context.Context, purpose, code, name string) error {
 	this.core.mustBeOpen()
-	if !consentPurposeCodeFormat.MatchString(code) {
+	if !consentPurposeCodeFormat.MatchString(purpose) {
 		return errors.BadRequest("code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
 	}
-	if !consentPurposeCodeFormat.MatchString(newCode) {
+	if !consentPurposeCodeFormat.MatchString(code) {
 		return errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	current, ok := this.workspace.ConsentPurpose(code)
+	current, ok := this.workspace.ConsentPurpose(purpose)
 	if !ok {
-		return errors.NotFound("consent purpose %q does not exist", code)
+		return errors.NotFound("consent purpose %q does not exist", purpose)
 	}
-	if newCode == current.Code && name == current.Name {
+	if code == current.Code && name == current.Name {
 		return nil
 	}
 	n := state.UpdateConsentPurpose{
 		Workspace: this.workspace.ID,
+		Purpose:   purpose,
 		Code:      code,
-		NewCode:   newCode,
 		Name:      name,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2 WHERE workspace = $3 AND code = $4",
-			n.NewCode, n.Name, n.Workspace, n.Code)
+			n.Code, n.Name, n.Workspace, n.Purpose)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("consent purpose %q does not exist", n.Code)
+			return nil, errors.NotFound("consent purpose %q does not exist", n.Purpose)
 		}
 		return n, nil
 	})
 	if err != nil {
 		if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "consent_purposes_pkey" {
-			return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", n.NewCode)
+			return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", n.Code)
 		}
 		return err
 	}

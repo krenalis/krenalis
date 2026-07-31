@@ -1621,8 +1621,8 @@ func (state *State) updateConnection(n notification) string {
 // UpdateConsentPurpose is the event sent when a consent purpose is updated.
 type UpdateConsentPurpose struct {
 	Workspace string
+	Purpose   string
 	Code      string
-	NewCode   string
 	Name      string
 }
 
@@ -1635,11 +1635,11 @@ func (state *State) updateConsentPurpose(n notification) string {
 	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
 		mu:   new(sync.Mutex),
-		Code: e.NewCode,
+		Code: e.Code,
 		Name: e.Name,
 	}
 	ws.mu.Lock()
-	delete(ws.consentPurposes, e.Code)
+	delete(ws.consentPurposes, e.Purpose)
 	ws.consentPurposes[cp.Code] = cp
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
