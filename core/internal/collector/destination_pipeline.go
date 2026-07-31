@@ -184,7 +184,7 @@ func (dp *destinationPipeline) transform() {
 	if err != nil {
 		for i := range n {
 			dp.queue.sender.DiscardEvent(events[i].senderEvent)
-			events[i].streamEvent.Ack()
+			events[i].streamEvent.Ack.Acknowledge()
 		}
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
@@ -202,7 +202,7 @@ func (dp *destinationPipeline) transform() {
 	for i, record := range records {
 		if err := record.Err; err != nil {
 			dp.queue.sender.DiscardEvent(events[i].senderEvent)
-			events[i].streamEvent.Ack()
+			events[i].streamEvent.Ack.Acknowledge()
 			switch err.(type) {
 			case transformers.RecordTransformationError:
 				dp.queue.metrics.TransformationFailed(dp.id, 1, err.Error())

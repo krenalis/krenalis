@@ -23,7 +23,7 @@ type flusherRow[T any] struct {
 	pipeline string      // pipeline identifier; if empty, no metrics are recorded
 	key      any         // deduplication key; if nil, deduplication is disabled
 	row      T           // row to be flushed
-	ack      streams.Ack // ack callback; if nil, it is not invoked
+	ack      streams.Ack // event acknowledgment; if nil, it is not performed
 }
 
 type flusher[T any] struct {
@@ -199,7 +199,7 @@ func (f *flusher[T]) loop(opts flusherOptions, startOperation startOperationFunc
 			return
 		}
 		for _, ack := range acks {
-			ack()
+			ack.Acknowledge()
 		}
 		for pipeline, count := range metrics {
 			opts.MetricsFinalizer(pipeline, count)

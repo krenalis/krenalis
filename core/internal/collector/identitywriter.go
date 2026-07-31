@@ -132,7 +132,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 	err := transformer.Transform(ctx, records)
 	if err != nil {
 		for _, event := range events {
-			event.Ack()
+			event.Ack.Acknowledge()
 		}
 		if err2, ok := err.(transformers.FunctionExecError); ok {
 			iw.metrics.TransformationFailed(iw.pipeline, len(records), err2.Error())
@@ -151,7 +151,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 				iw.metrics.TransformationPassed(iw.pipeline, 1)
 				iw.metrics.OutputValidationFailed(iw.pipeline, 1, err.Error())
 			}
-			events[i].Ack()
+			events[i].Ack.Acknowledge()
 			continue
 		}
 		iw.metrics.TransformationPassed(iw.pipeline, 1)
