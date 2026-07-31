@@ -315,7 +315,6 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
-//   - ConsentPurposeNotExist, if a consent purpose does not exist, only when the pipeline is on events.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
@@ -407,12 +406,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, new(state.CreateOnly))
 		if err != nil {
 			return "", errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
-		}
-		// Check that the required consent purposes exist, so that the events do
-		// not fail all together.
-		err = checkConsentPurposesExist(c.Workspace(), pipeline.RequiredConsents.Purposes)
-		if err != nil {
-			return "", err
 		}
 	}
 

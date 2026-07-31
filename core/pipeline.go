@@ -693,7 +693,6 @@ func (this *Pipeline) SetStatus(ctx context.Context, enabled bool) error {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
-//   - ConsentPurposeNotExist, if a required consent purpose does not exist, only when the pipeline is on events.
 //   - FormatNotExist, if the format does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - SchemaNotAligned, if the output schema is not aligned with the event type
@@ -744,12 +743,6 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		err = schemas.CheckAlignment(pipeline.OutSchema, eventTypeSchema, new(state.CreateOnly))
 		if err != nil {
 			return errors.Unprocessable(SchemaNotAligned, "output schema is not aligned with the event type schema: %w", err)
-		}
-		// Check that the required consent purposes exist, so that the events do
-		// not fail all together.
-		err = checkConsentPurposesExist(c.Workspace(), pipeline.RequiredConsents.Purposes)
-		if err != nil {
-			return err
 		}
 	}
 

@@ -173,17 +173,3 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) er
 		return n, nil
 	})
 }
-
-// checkConsentPurposesExist checks that the workspace defines a consent purpose
-// for each of the given codes.
-//
-// It returns an errors.UnprocessableError error with code
-// ConsentPurposeNotExist, if a consent purpose does not exist.
-func checkConsentPurposesExist(ws *state.Workspace, codes []string) error {
-	for _, code := range codes {
-		if _, ok := ws.ConsentPurpose(code); !ok {
-			return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %q does not exist", code)
-		}
-	}
-	return nil
-}
