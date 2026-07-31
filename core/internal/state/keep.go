@@ -353,7 +353,6 @@ func (state *State) addConsentPurpose(n notification) string {
 	}
 	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
-		mu:   new(sync.Mutex),
 		Code: e.Code,
 		Name: e.Name,
 	}
@@ -1634,7 +1633,6 @@ func (state *State) updateConsentPurpose(n notification) string {
 	}
 	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
-		mu:   new(sync.Mutex),
 		Code: e.Code,
 		Name: e.Name,
 	}

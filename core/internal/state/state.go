@@ -1197,7 +1197,6 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
-	mu   *sync.Mutex
 	Code string
 	Name string
 }

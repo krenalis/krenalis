@@ -433,7 +433,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				if err := rows.Scan(&workspaceID, &cp.Code, &cp.Name); err != nil {
 					return fmt.Errorf("loading consent purpose %s: %s", cp.Code, err)
 				}
-				cp.mu = new(sync.Mutex)
 				state.workspaces[workspaceID].consentPurposes[cp.Code] = &cp
 			}
 			return nil
