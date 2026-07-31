@@ -853,7 +853,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
 // If requiredConsents is non-nil, only events whose consents satisfy its
-// purposes, according to its operator, will be observed.
+// purposes, according to its operator, will be observed. Its purposes must be
+// at most MaxRequiredConsentPurposes and must not contain duplicates.
 //
 // It returns an errors.UnprocessableError error with code:
 //
