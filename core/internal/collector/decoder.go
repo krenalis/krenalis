@@ -1158,7 +1158,7 @@ func (d *decoder) decodeConsents() (map[string]any, error) {
 			return nil, err
 		}
 		if tok.Kind() != json.True && tok.Kind() != json.False {
-			return nil, errors.BadRequest("property 'context.consents.%q' is not a valid boolean", purpose)
+			return nil, errors.BadRequest("value of %q in 'context.consents' is not a valid boolean", purpose)
 		}
 		v := tok.Bool()
 		if consents == nil {
