@@ -5,8 +5,12 @@
 package nats
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -138,6 +142,70 @@ func TestAckStopPreventsDestinationAcknowledgment(t *testing.T) {
 		}
 		if got := msg.ackCount(); got != 0 {
 			t.Fatalf("expected no acknowledgment, got %d", got)
+		}
+	})
+}
+
+// TestAckManagerRateLimitsFinalAcknowledgmentErrors verifies that repeated
+// equal final acknowledgment errors are logged at a limited rate and that a
+// later successful acknowledgment logs recovery.
+func TestAckManagerRateLimitsFinalAcknowledgmentErrors(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var output bytes.Buffer
+		previousLogger := slog.Default()
+		slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
+		defer slog.SetDefault(previousLogger)
+
+		manager := newAckManager(3 * time.Second)
+		defer manager.Close()
+		acknowledge := func(err error) {
+			destinations := destinationsForMessage(manager.Track(&testJetStreamMsg{ackErr: err}), nil)
+			destinations[0].Ack.Acknowledge()
+		}
+		countLogs := func(message string) int {
+			return strings.Count(output.String(), message)
+		}
+
+		acknowledge(nil)
+		if got := output.Len(); got != 0 {
+			t.Fatalf("expected no log before an acknowledgment error, got %d bytes", got)
+		}
+
+		err := errors.New("request timed out")
+		acknowledge(err)
+		acknowledge(err)
+		acknowledge(err)
+		if got := countLogs("failed to acknowledge NATS message"); got != 1 {
+			t.Fatalf("expected 1 error log, got %d: %s", got, output.String())
+		}
+
+		time.Sleep(ackErrorLogInterval - time.Nanosecond)
+		acknowledge(err)
+		if got := countLogs("failed to acknowledge NATS message"); got != 1 {
+			t.Fatalf("expected 1 error log before the interval elapsed, got %d: %s", got, output.String())
+		}
+
+		time.Sleep(time.Nanosecond)
+		acknowledge(err)
+		if got := countLogs("failed to acknowledge NATS message"); got != 2 {
+			t.Fatalf("expected 2 error logs after the interval elapsed, got %d: %s", got, output.String())
+		}
+
+		acknowledge(nil)
+		if got := countLogs("NATS message acknowledgment delivery recovered"); got != 1 {
+			t.Fatalf("expected 1 recovery log, got %d: %s", got, output.String())
+		}
+
+		acknowledge(err)
+		acknowledge(nil)
+		if got := countLogs("NATS message acknowledgment delivery recovered"); got != 1 {
+			t.Fatalf("expected no recovery log after a single failure, got %d: %s", got, output.String())
+		}
+
+		acknowledge(err)
+		acknowledge(errors.New("connection closed"))
+		if got := countLogs("failed to acknowledge NATS message"); got != 5 {
+			t.Fatalf("expected a different error to be logged immediately, got %d error logs: %s", got, output.String())
 		}
 	})
 }
@@ -522,6 +590,7 @@ type testJetStreamMsg struct {
 	mu         sync.Mutex // protects acks, naks, and inProgress
 	data       []byte
 	dataReady  <-chan struct{}
+	ackErr     error
 	acks       int
 	naks       int
 	inProgress int
@@ -545,7 +614,7 @@ func (m *testJetStreamMsg) Ack() error {
 	m.mu.Lock()
 	m.acks++
 	m.mu.Unlock()
-	return nil
+	return m.ackErr
 }
 
 // Nak records a negative acknowledgment.
