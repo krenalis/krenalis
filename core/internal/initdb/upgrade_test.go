@@ -54,6 +54,7 @@ func TestUpgrade(t *testing.T) {
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			target pipeline_target NOT NULL,
 			filter jsonb,
+			event_type varchar(100) NOT NULL,
 			format varchar
 		);
 		CREATE TABLE pipelines_metrics (
@@ -86,12 +87,15 @@ func TestUpgrade(t *testing.T) {
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
-		INSERT INTO connections (id, workspace, connector, role) VALUES ('333333333333', '222222222222', 'dummy', 'Source');
-		INSERT INTO pipelines (id, connection, target, filter, format) VALUES
+		INSERT INTO connections (id, workspace, connector, role) VALUES
+			('333333333333', '222222222222', 'dummy', 'Source'),
+			('999999999999', '222222222222', 'dummy', 'Destination');
+		INSERT INTO pipelines (id, connection, target, event_type, filter, format) VALUES
 			(
 				'444444444444',
 				'333333333333',
 				'User',
+				'',
 				'{
 					"logical": "And",
 					"conditions": [
@@ -105,6 +109,7 @@ func TestUpgrade(t *testing.T) {
 				'666666666666',
 				'333333333333',
 				'User',
+				'',
 				'{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}',
 				NULL
 			),
@@ -112,7 +117,16 @@ func TestUpgrade(t *testing.T) {
 				'777777777777',
 				'333333333333',
 				'User',
+				'',
 				'{"operator":"And","rules":[{"rules":[{"property":["b"],"operator":"OpIsNotBetween","values":[25,30]},{"property":["literal"],"operator":"Contains","values":["OpIsNotBetween"]}],"operator":"Or"}]}',
+				NULL
+			),
+			(
+				'888888888888',
+				'999999999999',
+				'Event',
+				'send_event_with_no_schema',
+				NULL,
 				NULL
 			);
 		INSERT INTO pipelines_metrics (
@@ -151,6 +165,7 @@ func TestUpgrade(t *testing.T) {
 	assertOrganizationConnectorReferences(t, database)
 	assertNodeIDsUpgraded(t, database)
 	assertPipelineFiltersUpgraded(t, database)
+	assertPipelineEventTypesUpgraded(t, database)
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
@@ -320,6 +335,54 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	if count != 0 {
 		t.Fatalf("expected missing subject to remain absent, got %d rows", count)
 	}
+}
+
+// assertPipelineEventTypesUpgraded verifies event type identifier limits and
+// persisted ordering groups.
+func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []string{"event_type", "ordering_group"} {
+		var length int
+		err := database.QueryRow(t.Context(), `
+			SELECT character_maximum_length
+			FROM information_schema.columns
+			WHERE table_schema = current_schema()
+				AND table_name = 'pipelines'
+				AND column_name = $1`, column).Scan(&length)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if length != 25 {
+			t.Fatalf("expected pipelines.%s to have length 25, got %d", column, length)
+		}
+	}
+
+	var eventType, orderingGroup string
+	err := database.QueryRow(t.Context(), `
+		SELECT event_type, ordering_group
+		FROM pipelines
+		WHERE id = '888888888888'`).Scan(&eventType, &orderingGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eventType != "send_event_with_no_schema" || orderingGroup != "events" {
+		t.Fatalf("expected event type %q and ordering group %q, got %q and %q", "send_event_with_no_schema", "events", eventType, orderingGroup)
+	}
+
+	err = database.QueryRow(t.Context(), `
+		SELECT event_type, ordering_group
+		FROM pipelines
+		WHERE id = '444444444444'`).Scan(&eventType, &orderingGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eventType != "" || orderingGroup != "" {
+		t.Fatalf("expected empty event type and ordering group, got %q and %q", eventType, orderingGroup)
+	}
+
+	assertConstraintExists(t, database, "pipelines", "pipelines_event_type_check")
+	assertConstraintExists(t, database, "pipelines", "pipelines_ordering_group_check")
 }
 
 func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {

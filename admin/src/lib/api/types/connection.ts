@@ -11,6 +11,7 @@ interface EventType {
 	id: string;
 	name: string;
 	description: string;
+	orderingGroup: string;
 	defaultFilter: string;
 }
 
