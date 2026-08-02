@@ -188,7 +188,11 @@ CREATE TABLE pipelines (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
     target pipeline_target NOT NULL,
-    event_type varchar(100) NOT NULL,
+    event_type varchar(25) NOT NULL CONSTRAINT pipelines_event_type_check
+        CHECK (event_type = '' OR event_type ~ '^[A-Za-z_][A-Za-z0-9_]*$'),
+    ordering_group varchar(25) NOT NULL CONSTRAINT pipelines_ordering_group_check
+        CHECK ((event_type = '' AND ordering_group = '') OR
+            (event_type <> '' AND ordering_group ~ '^[A-Za-z_][A-Za-z0-9_]*$')),
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
     schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),
