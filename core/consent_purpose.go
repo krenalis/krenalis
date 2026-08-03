@@ -181,8 +181,8 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) er
 func validateConsentPurposeCode(code string) error {
 	if len(code) > maxConsentPurposeCodeLen || !types.IsValidPropertyName(code) {
 		return errors.BadRequest("code %q is not a valid consent purpose code. Consent purpose codes must be from 1 to %d"+
-			" characters long, must start with a letter or an underscore and must contain only letters, numbers, or"+
-			" underscores", code, maxConsentPurposeCodeLen)
+			" characters long, must start with a letter or underscore [A-Za-z_] and subsequently contain only letters,"+
+			" numbers, or underscores [A-Za-z0-9_]", code, maxConsentPurposeCodeLen)
 	}
 	return nil
 }
