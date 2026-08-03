@@ -253,8 +253,26 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
-			`ALTER TABLE discontinued_functions ADD COLUMN IF NOT EXISTS organization varchar(12) NOT NULL DEFAULT '` + unknownOrganization + `'`,
-			`ALTER TABLE discontinued_functions ALTER COLUMN organization DROP DEFAULT`,
+			`DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT FROM pg_attribute
+						WHERE attrelid = 'discontinued_functions'::regclass
+							AND attname = 'organization'
+							AND NOT attisdropped
+					) THEN
+						ALTER TABLE discontinued_functions
+							ADD COLUMN organization varchar(12) NOT NULL DEFAULT '` + unknownOrganization + `';
+						ALTER TABLE discontinued_functions ALTER COLUMN organization DROP DEFAULT;
+
+						ALTER TABLE discontinued_functions ADD COLUMN discontinued_at_reordered timestamp(0);
+						UPDATE discontinued_functions SET discontinued_at_reordered = discontinued_at;
+						ALTER TABLE discontinued_functions DROP COLUMN discontinued_at;
+						ALTER TABLE discontinued_functions
+							RENAME COLUMN discontinued_at_reordered TO discontinued_at;
+						ALTER TABLE discontinued_functions ALTER COLUMN discontinued_at SET NOT NULL;
+					END IF;
+				END $$`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,

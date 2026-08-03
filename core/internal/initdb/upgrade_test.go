@@ -222,12 +222,28 @@ func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
 // assertDiscontinuedFunctionsUpgrade verifies that discontinued functions gain
 // their organization column, which holds the unknown organization for the rows
 // already in the table and is not a foreign key, as a function outlives its
-// organization.
+// organization, and that the upgraded table keeps the canonical column order.
 func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
 	t.Helper()
 
-	var organization string
+	var organizationPosition, discontinuedAtPosition int
 	err := database.QueryRow(t.Context(), `
+		SELECT
+			MAX(CASE WHEN attname = 'organization' THEN attnum END),
+			MAX(CASE WHEN attname = 'discontinued_at' THEN attnum END)
+		FROM pg_attribute
+		WHERE attrelid = 'discontinued_functions'::regclass
+			AND attname IN ('organization', 'discontinued_at')
+			AND NOT attisdropped`).Scan(&organizationPosition, &discontinuedAtPosition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if organizationPosition >= discontinuedAtPosition {
+		t.Fatalf("expected organization column before discontinued_at column, got organization=%d discontinued_at=%d", organizationPosition, discontinuedAtPosition)
+	}
+
+	var organization string
+	err = database.QueryRow(t.Context(), `
 		SELECT organization
 		FROM discontinued_functions
 		WHERE id = 'arn:aws:lambda:eu-west-1:1:function:transform.js'`).Scan(&organization)
