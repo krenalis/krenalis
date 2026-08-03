@@ -6,6 +6,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -37,7 +38,7 @@ type ConsentPurpose struct {
 func (this *Workspace) AddConsentPurpose(ctx context.Context, code, name string) error {
 	this.core.mustBeOpen()
 	if err := validateConsentPurposeCode(code); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
@@ -91,7 +92,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) error {
 	this.core.mustBeOpen()
 	if err := validateConsentPurposeCode(code); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 	if _, ok := this.workspace.ConsentPurpose(code); !ok {
 		return errors.NotFound("consent purpose %q does not exist", code)
@@ -133,10 +134,10 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) er
 func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code string, purpose ConsentPurpose) error {
 	this.core.mustBeOpen()
 	if err := validateConsentPurposeCode(code); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 	if err := validateConsentPurposeCode(purpose.Code); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
 		return errors.BadRequest("%s", err)
@@ -186,7 +187,7 @@ func IsValidConsentPurposeCode(code string) bool {
 // validateConsentPurposeCode validates the given consent purpose code.
 func validateConsentPurposeCode(code string) error {
 	if len(code) > maxConsentPurposeCodeLen || !types.IsValidPropertyName(code) {
-		return errors.BadRequest("code %q is not a valid consent purpose code. Consent purpose codes must be from 1 to %d"+
+		return fmt.Errorf("code %q is not a valid consent purpose code. Consent purpose codes must be from 1 to %d"+
 			" characters long, must start with a letter or underscore [A-Za-z_] and subsequently contain only letters,"+
 			" numbers, or underscores [A-Za-z0-9_]", code, maxConsentPurposeCodeLen)
 	}

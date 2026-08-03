@@ -175,7 +175,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		for i, code := range pipeline.RequiredConsents.Purposes {
 			if err := validateConsentPurposeCode(code); err != nil {
-				return err
+				return errors.BadRequest("%s", err)
 			}
 			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
 				return errors.BadRequest("required consent purpose %q is duplicated", code)

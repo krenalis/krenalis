@@ -905,7 +905,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		for i, code := range rc.Purposes {
 			if err := validateConsentPurposeCode(code); err != nil {
-				return "", err
+				return "", errors.BadRequest("%s", err)
 			}
 			if slices.Contains(rc.Purposes[i+1:], code) {
 				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
