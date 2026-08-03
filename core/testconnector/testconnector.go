@@ -76,8 +76,6 @@ func NewApplication[T any](code string, settings any) (T, error) {
 		Code:           code,
 		EndpointGroups: registeredApplications.EndpointGroups,
 	}
-	// A connector under test is not used on behalf of an organization, so the
-	// bytes it sends are not counted and it uses the base transport.
 	httpClient := httpclient.New(nil, http.DefaultTransport.(*http.Transport)).ConnectorClient(connector, "", "", "")
 	app, err := registeredApplications.New(&connectors.ApplicationEnv{
 		Settings:   newSettingsStore(s),
@@ -100,8 +98,6 @@ func NewDatabase[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredDatabases.New(&connectors.DatabaseEnv{
 		Settings: newSettingsStore(s),
-		// A connector under test is not used on behalf of an organization, so
-		// the bytes it sends are not counted and it dials with a plain dialer.
 		Dial:     dialer.PlainDial(),
 		DialWith: dialer.PlainDialWith(),
 	})
@@ -122,8 +118,6 @@ func NewStorage[T any](code string, settings any) (T, error) {
 	}
 	app, err := registeredStorage.New(&connectors.FileStorageEnv{
 		Settings: newSettingsStore(s),
-		// A connector under test is not used on behalf of an organization, so
-		// the bytes it sends are not counted and it dials with a plain dialer.
 		Dial:     dialer.PlainDial(),
 		DialWith: dialer.PlainDialWith(),
 	})
