@@ -530,13 +530,14 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all pipelines.
-	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, ordering_group, name, enabled, schedule_start,\n"+
-		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_operator,\n"+
-		"transformation_mapping, transformation_id, transformation_version, transformation_language,\n"+
-		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
-		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
-		"matching_out, update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n"+
-		"updated_at_format, incremental, health, properties_to_unset FROM pipelines",
+	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, ordering_group, delivery_endpoint,\n"+
+		"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n"+
+		"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n"+
+		"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n"+
+		"transformation_out_paths, query, format, path, sheet, compression::TEXT, order_by, format_settings,\n"+
+		"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, user_id_column,\n"+
+		"updated_at_column, updated_at_format, incremental, health, properties_to_unset\n"+
+		"FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID string
@@ -545,7 +546,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var function TransformationFunction
 				var format *string
 				pipeline := Pipeline{}
-				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup, &pipeline.Name,
+				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup, &pipeline.DeliveryEndpoint, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
 					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID,
 					&function.Version, &function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
