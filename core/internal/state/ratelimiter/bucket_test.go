@@ -302,6 +302,53 @@ func TestBucketColdRefillReservesAdmissionHeadroom(t *testing.T) {
 	}
 }
 
+// TestBucketLargeAdmissionDoesNotRestoreConsumedGrant verifies that capacity
+// needed by an admitted waiter is consumed before unused grant capacity is
+// queued for restoration.
+func TestBucketLargeAdmissionDoesNotRestoreConsumedGrant(t *testing.T) {
+	const (
+		leaseSize      = 20_000
+		localCapacity  = 11_000
+		operationUnits = 15_000
+	)
+	limiter := new(Limiter)
+	limiter.restorations = newRestorationQueue()
+	bucket := limiter.NewBucket(testSubjectKind, testRateLimitID, leaseSize, leaseSize)
+	applyTestLease(bucket, localCapacity, leaseSize)
+
+	bucket.mu.Lock()
+	refill := bucket.newRefillWithAdmissionLocked(operationUnits)
+	waiter := bucket.admitWaiterLocked(refill, operationUnits)
+	bucket.mu.Unlock()
+	if waiter == nil {
+		t.Fatal("expected triggering operation to be admitted")
+	}
+
+	wantGranted := operationUnits + initialLeaseTarget
+	if grantedUnits := refill.request.RequestedUnits; grantedUnits != wantGranted {
+		t.Fatalf("expected grant request of %d units, got %d", wantGranted, grantedUnits)
+	}
+	bucket.completeRefill(refill, leaseResult{
+		GrantedUnits:  wantGranted,
+		CapacityUnits: leaseSize,
+		RatePerMinute: 60,
+	})
+	if waiter.err != nil {
+		t.Fatalf("expected admitted operation to succeed, got %v", waiter.err)
+	}
+	wantAvailable := localCapacity + wantGranted - operationUnits
+	if available := bucketAvailable(bucket); available != wantAvailable {
+		t.Fatalf("expected %d locally available units, got %d", wantAvailable, available)
+	}
+
+	limiter.restorations.Lock()
+	restoredUnits := limiter.restorations.pending[subjectKey{kind: testSubjectKind, id: testRateLimitID}]
+	limiter.restorations.Unlock()
+	if restoredUnits != 0 {
+		t.Fatalf("expected no capacity queued for restoration, got %d units", restoredUnits)
+	}
+}
+
 func TestBucketAdmitsWaitersToPublishedRefill(t *testing.T) {
 	requests := make(chan []leaseRequest, 1)
 	release := make(chan struct{})

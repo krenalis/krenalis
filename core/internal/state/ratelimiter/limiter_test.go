@@ -541,6 +541,7 @@ func TestLimiterFullBucketChecksCapacityAboveKnownTarget(t *testing.T) {
 		return []leaseResult{{
 			SubjectKind:    request.SubjectKind,
 			SubjectID:      request.SubjectID,
+			GrantedUnits:   1_000,
 			CapacityUnits:  1_000,
 			RatePerMinute:  1_000,
 			AvailableUnits: 0,
@@ -756,8 +757,9 @@ func TestLimiterAdmissionBudgetIncludesTriggeringOperation(t *testing.T) {
 	if request.RequestedUnits != wantRequested {
 		t.Fatalf("expected refill request for %d units, got %d", wantRequested, request.RequestedUnits)
 	}
-	if available := bucketAvailable(bucket); available != leaseSize-operationUnits {
-		t.Fatalf("expected %d locally available units, got %d", leaseSize-operationUnits, available)
+	wantAvailable := localCapacity + wantRequested - operationUnits
+	if available := bucketAvailable(bucket); available != wantAvailable {
+		t.Fatalf("expected %d locally available units, got %d", wantAvailable, available)
 	}
 }
 

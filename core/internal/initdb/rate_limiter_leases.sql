@@ -106,7 +106,9 @@ BEGIN
             -- A result with all numeric fields set to zero is the
             -- missing-subject sentinel. Returning one row preserves batch
             -- completeness and lets the caller reject only this subject while
-            -- applying valid results for the others.
+            -- applying valid results for the others. This encoding is unambiguous
+            -- because schema constraints require existing subjects to have positive
+            -- refill rates and maximum capacities.
             subject_kind := v_request.subject_kind;
             subject_id := v_request.subject_id;
             granted_units := 0;

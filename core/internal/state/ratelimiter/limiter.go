@@ -404,6 +404,8 @@ func (limiter *Limiter) refill(pending []*refill) {
 		key := subjectKey{kind: result.SubjectKind, id: result.SubjectID}
 		request, ok := requestsBySubject[key]
 		_, duplicate := resultsBySubject[key]
+		// The all-zero encoding is unambiguous because schema constraints require
+		// existing subjects to have positive refill rates and maximum capacities.
 		missingSubject :=
 			result.GrantedUnits == 0 &&
 				result.CapacityUnits == 0 &&

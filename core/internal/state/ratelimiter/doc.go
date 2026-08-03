@@ -236,8 +236,9 @@
 //   - Pending waiter units never exceed the units requested when the refill
 //     starts.
 //   - A waiter belongs to one refill generation and is resolved exactly once.
-//   - Granted capacity is added to the current local value and capped at the
-//     newly reported local target. Any excess from the new grant is returned
+//   - Granted capacity and existing local capacity are used to serve admitted
+//     waiters. Any remaining local capacity is capped at the newly reported
+//     local target, and any unused excess from the new grant is returned
 //     asynchronously.
 //   - Capacity assigned to a waiter is deducted before notification.
 //   - Retry scheduling accounts for remaining local and authoritative capacity.

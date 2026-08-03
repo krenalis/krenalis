@@ -229,29 +229,39 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 		bucket.mu.Unlock()
 		return
 	}
-	excessUnits := bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits, refill.targetUnits)
+	unappliedGrant := bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits, refill.targetUnits)
 	if result.GrantedUnits > 0 {
 		bucket.growthGrantAt = time.Now()
 	} else {
 		bucket.growthGrantAt = time.Time{}
 	}
-	serve := true
-	retryUnits := 0
-	for element := refill.waiters.Front(); element != nil; element = element.Next() {
+	// Units that do not fit within the local target may still be consumed by
+	// admitted waiters. Keep those units outside bucket.available until the
+	// satisfiable prefix has been served, then restore only the unused remainder.
+	availableUnits := bucket.available + unappliedGrant
+	element := refill.waiters.Front()
+	for ; element != nil; element = element.Next() {
 		waiter := element.Value.(*waiter)
-		if serve && bucket.available >= waiter.units {
-			bucket.available -= waiter.units
-			waiter.err = nil
-		} else {
-			serve = false
-			err := CapacityExceededError{}
-			if waiter.units <= result.CapacityUnits {
-				retryUnits += waiter.units
-				requiredUnits := max(0, retryUnits-bucket.available)
-				err.RetryAfter = calculateRetryAfter(requiredUnits, result)
-			}
-			waiter.err = err
+		if waiter.units > result.CapacityUnits || availableUnits < waiter.units {
+			break
 		}
+		availableUnits -= waiter.units
+		waiter.err = nil
+		waiter.element = nil
+	}
+	excessUnits := max(0, availableUnits-bucket.localTarget)
+	bucket.available = availableUnits - excessUnits
+
+	retryUnits := 0
+	for ; element != nil; element = element.Next() {
+		waiter := element.Value.(*waiter)
+		err := CapacityExceededError{}
+		if waiter.units <= result.CapacityUnits {
+			retryUnits += waiter.units
+			requiredUnits := max(0, retryUnits-bucket.available)
+			err.RetryAfter = calculateRetryAfter(requiredUnits, result)
+		}
+		waiter.err = err
 		waiter.element = nil
 	}
 	refill.waiters.Init()
