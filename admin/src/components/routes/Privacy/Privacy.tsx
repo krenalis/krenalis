@@ -38,7 +38,9 @@ const validatePurposeField = (name: string, value: string) => {
 const validatePurposeCode = (value: string) => {
 	validatePurposeField('Code', value);
 	if (!CODE_FORMAT.test(value)) {
-		throw new Error('Code must start with a letter or an underscore and can only contain letters, digits and underscores');
+		throw new Error(
+			'Code must start with a letter or an underscore and can only contain letters, digits and underscores',
+		);
 	}
 };
 

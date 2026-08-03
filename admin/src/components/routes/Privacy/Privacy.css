@@ -72,18 +72,18 @@
 }
 
 .privacy__dialog-error sl-icon {
-    color: var(--sl-color-danger-600);
-    font-size: 14px;
-    flex-shrink: 0;
+	color: var(--sl-color-danger-600);
+	font-size: 14px;
+	flex-shrink: 0;
 }
 
-.privacy__dialog-warning  {
-    color: var(--sl-color-warning-700);
-    display: flex;
-    align-items: start;
-    gap: 7px;
-    margin-top: 3px;
-    font-size: 15px;
+.privacy__dialog-warning {
+	color: var(--sl-color-warning-700);
+	display: flex;
+	align-items: start;
+	gap: 7px;
+	margin-top: 3px;
+	font-size: 15px;
 }
 
 .privacy__dialog-warning sl-icon {
