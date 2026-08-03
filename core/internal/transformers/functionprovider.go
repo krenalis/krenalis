@@ -40,10 +40,7 @@ func (err FunctionExecError) Error() string {
 //     functions
 //
 // The organization parameter of the Call, Create, Delete, and Update methods is
-// the ID of the organization the function belongs to. A provider that executes
-// the functions remotely, like the Lambda one, attributes the network traffic it
-// sends to that organization. It is empty when the function does not belong to
-// an organization, in which case the traffic is not attributed.
+// the ID of the organization the function belongs to.
 type FunctionProvider interface {
 
 	// Call calls the function with the given identifier and version for each record
@@ -73,8 +70,7 @@ type FunctionProvider interface {
 	//
 	// A function outlives its organization, as it is deleted by the pipeline
 	// cleaner after the pipelines using it have been deleted, so organization
-	// may name one that has already been deleted. It is passed all the same:
-	// the traffic is then attributed to nobody.
+	// may name one that has already been deleted.
 	Delete(ctx context.Context, organization, id string) error
 
 	// SupportLanguage reports whether language is supported as a language.
