@@ -9,6 +9,7 @@ package metrics
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"math"
 	"strconv"
@@ -129,7 +130,13 @@ func (c *Collector) Failed(step Step, pipeline string, count int, message string
 	c.mu.Lock()
 	m, ok := c.metrics[pipeline]
 	if !ok {
-		m = &metrics{}
+		var err error
+		m, err = c.newMetrics(pipeline)
+		if err != nil {
+			// The pipeline no longer exists.
+			c.mu.Unlock()
+			return
+		}
 		c.metrics[pipeline] = m
 	}
 	m.failed[step] += count
@@ -218,7 +225,13 @@ func (c *Collector) Passed(step Step, pipeline string, count int) {
 	c.mu.Lock()
 	m, ok := c.metrics[pipeline]
 	if !ok {
-		m = &metrics{}
+		var err error
+		m, err = c.newMetrics(pipeline)
+		if err != nil {
+			// The pipeline no longer exists.
+			c.mu.Unlock()
+			return
+		}
 		c.metrics[pipeline] = m
 	}
 	m.passed[step] += count
@@ -270,16 +283,16 @@ func (c *Collector) WaitStore() {
 // 48 hours, or 30 days, respectively. timeslot represents the current timeslot.
 func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 
-	var interval int32
-	var threshold int32
+	var interval int32  // Bucket width in minutes.
+	var threshold int32 // Rows before this timeslot are aggregated.
 
 	switch unit {
 	case Hour:
 		interval = 60
 		threshold = timeslot + 1 - interval
 	case Day:
-		interval = 48 * 60
-		threshold = timeslot + (60 - (timeslot % 60)) - interval
+		interval = 24 * 60
+		threshold = timeslot + (60 - (timeslot % 60)) - 48*60
 	case Month:
 		interval = 30 * 24 * 60
 		threshold = timeslot + (24*60 - (timeslot % (24 * 60))) - interval
@@ -287,7 +300,11 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 
 	query := `WITH aggregated AS (
 	SELECT
+		organization,
+		workspace,
+		connection,
 		pipeline,
+		target,
 		timeslot - (timeslot % $1) AS slot,
 		SUM(passed_0) AS passed_0,
 		SUM(passed_1) AS passed_1,
@@ -306,11 +323,11 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 		ARRAY_AGG(ctid) AS row_ctids
 	FROM pipelines_metrics
 	WHERE timeslot < $2 AND timeslot % $1 <> 0
-	GROUP BY pipeline, slot
+	GROUP BY organization, workspace, connection, pipeline, target, slot
 ),
 inserted AS (
-	INSERT INTO pipelines_metrics (pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)
-	SELECT pipeline, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6
+	INSERT INTO pipelines_metrics (organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)
+	SELECT organization, workspace, connection, pipeline, target, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6
 	FROM aggregated
 	ON CONFLICT (pipeline, timeslot)
 	DO UPDATE SET
@@ -423,7 +440,7 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 	var hasErrors bool
 
 	c.buf.Reset()
-	c.buf.WriteString("WITH t(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6) AS (\n\tVALUES ")
+	c.buf.WriteString("WITH t(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6) AS (\n\tVALUES ")
 	i := 0
 	for pipeline, m := range metrics {
 		hasErrors = hasErrors || len(m.errors) > 0
@@ -437,7 +454,16 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 			c.buf.WriteByte(',')
 		}
 		c.buf.WriteByte('(')
+		c.buf.WriteString(db.Quote(m.organization))
+		c.buf.WriteByte(',')
+		c.buf.WriteString(db.Quote(m.workspace))
+		c.buf.WriteByte(',')
+		c.buf.WriteString(db.Quote(m.connection))
+		c.buf.WriteByte(',')
 		c.buf.WriteString(db.Quote(pipeline))
+		c.buf.WriteByte(',')
+		c.buf.WriteString(db.Quote(m.target.String()))
+		c.buf.WriteString("::pipeline_target")
 		c.buf.WriteByte(',')
 		c.buf.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		c.buf.WriteByte(',')
@@ -458,8 +484,8 @@ func (c *Collector) store(timeslot int32, metrics map[string]*metrics) {
 	if i > 0 {
 
 		c.buf.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
-			`(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)` +
-			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM pipelines p WHERE p.id = t.pipeline)` +
+			`(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)` +
+			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM organizations o WHERE o.id = t.organization)` +
 			` ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
 			`passed_1 = m.passed_1 + EXCLUDED.passed_1, ` +
@@ -564,7 +590,27 @@ type pipelineError struct {
 // period, pending their eventual write to the database.
 type metrics struct {
 	sync.Mutex
-	passed [numSteps]int
-	failed [numSteps]int
-	errors []pipelineError
+	organization string
+	workspace    string
+	connection   string
+	target       state.Target
+	passed       [numSteps]int
+	failed       [numSteps]int
+	errors       []pipelineError
+}
+
+// newMetrics creates metrics for the pipeline identified by the provided ID.
+// It returns an error only if the pipeline no longer exists.
+func (c *Collector) newMetrics(pipeline string) (*metrics, error) {
+	p, ok := c.state.Pipeline(pipeline)
+	if !ok {
+		return nil, errors.New("pipeline not found")
+	}
+	connection := p.Connection()
+	return &metrics{
+		organization: connection.Organization().ID,
+		workspace:    connection.Workspace().ID,
+		connection:   connection.ID,
+		target:       p.Target,
+	}, nil
 }

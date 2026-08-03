@@ -27,7 +27,7 @@ import Type, {
 	StringType,
 } from '../api/types/types';
 import API from '../api/api';
-import TransformedConnection, { isSourceEventConnection } from './connection';
+import TransformedConnection from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
 import {
 	formatString,
@@ -1922,7 +1922,8 @@ const getTransformationFunctionParameter = (
 	connection: TransformedConnection,
 	pipelineType: TransformedPipelineType,
 ): string => {
-	if (isSourceEventConnection(connection.role, connection.connector.type) && pipelineType.target === 'User') {
+	if (connection.isSource && connection.supportsEventTarget && pipelineType.target === 'User') {
+		// The pipeline extracts identities from events.
 		return 'event';
 	}
 	if (pipelineType.target === 'User') {

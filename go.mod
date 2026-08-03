@@ -1,7 +1,6 @@
 module github.com/krenalis/krenalis
 
-// Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
-// Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
+// Keep in sync with the version within ".github/workflows/*.yml".
 // Keep in sync with the version within "Dockerfile".
 go 1.26
 
@@ -30,16 +29,16 @@ require (
 	github.com/itchyny/timefmt-go v0.1.8
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/klauspost/compress v1.19.0
+	github.com/klauspost/compress v1.19.1
 	github.com/krenalis/analytics-go v0.0.8
 	github.com/mark3labs/mcp-go v0.52.0
 	github.com/nats-io/nats.go v1.52.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/oschwald/maxminddb-golang/v2 v2.4.1
-	github.com/pkg/sftp v1.13.10
-	github.com/prometheus/client_golang v1.23.2
+	github.com/pkg/sftp v1.13.11
+	github.com/prometheus/client_golang v1.24.0
 	github.com/rabbitmq/amqp091-go v1.11.0
-	github.com/relvacode/iso8601 v1.7.0
+	github.com/relvacode/iso8601 v1.8.0
 	github.com/snowflakedb/gosnowflake/v2 v2.1.0
 	github.com/testcontainers/testcontainers-go v0.43.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.43.0
@@ -135,8 +134,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.66.1 // indirect
-	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/prometheus/common v0.70.0 // indirect
+	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
@@ -161,7 +160,6 @@ require (
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect

@@ -1,16 +1,7 @@
-import {
-	Connection,
-	Health,
-	ConnectionRole,
-	ConnectorType,
-	Compression,
-	Strategy,
-	SendingMode,
-} from '../api/types/connection';
+import { Connection, Health, ConnectionRole, Compression, Strategy, SendingMode } from '../api/types/connection';
 import { Pipeline, PipelineTarget, PipelineType } from '../api/types/pipeline';
 import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
-import { ConnectorTarget } from '../api/types/connector';
 import { TransformedEventType } from './pipeline';
 
 interface ConnectionStatus {
@@ -114,6 +105,15 @@ class TransformedConnection {
 		return this.connector.type === 'SDK' || this.connector.type === 'Webhook';
 	}
 
+	get supportsEventTarget() {
+		if (this.isSource) {
+			return this.isSDK || this.isWebhook;
+		}
+		return (
+			this.isDestination && this.isApplication && (this.connector.asDestination?.targets ?? []).includes('Event')
+		);
+	}
+
 	get hasIdentities() {
 		return this.role === 'Source' && this.connector.type !== 'MessageBroker';
 	}
@@ -208,17 +208,6 @@ const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 	}
 };
 
-const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boolean => {
-	return role === 'Source' && (type === 'SDK' || type == 'Webhook');
-};
-
-const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
-	return (
-		(role === 'Source' && (type === 'SDK' || type === 'Webhook')) ||
-		(role === 'Destination' && type === 'Application' && targets.includes('Event'))
-	);
-};
-
 const getFileStorageConnections = (
 	storageID: string,
 	connections: TransformedConnection[],
@@ -233,7 +222,5 @@ export {
 	getConnectionFullConnector,
 	getConnectionStatus,
 	getFileStorageConnections,
-	isEventConnection,
-	isSourceEventConnection,
 };
 export type { ConnectionStatus };

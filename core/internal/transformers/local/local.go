@@ -74,7 +74,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return errors.New("language is not supported")
 	}
 
-	if v, _ := strconv.Atoi(version); v <= 0 || version[0] == '+' {
+	if v, err := strconv.Atoi(version); err != nil || v <= 0 || version[0] == '+' {
 		return fmt.Errorf("invalid version %q", version)
 	}
 	filename := fn.filename(name, version, language)
@@ -149,7 +149,8 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	return transformers.Unmarshal(&stdout, records, outSchema, language, preserveJSON)
 }
 
-// Close closes the function.
+// Close closes the function. When Close is called, no other calls to the
+// function provider's methods are in progress and no more will be made.
 func (fn *function) Close(ctx context.Context) error {
 	return nil
 }

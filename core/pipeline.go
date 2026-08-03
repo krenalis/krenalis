@@ -145,7 +145,8 @@ const (
 type Target int
 
 const (
-	TargetEvent Target = iota + 1
+	TargetNone Target = iota
+	TargetEvent
 	TargetUser
 	TargetGroup
 )
@@ -205,12 +206,17 @@ func (op *ConsentPurposesOperator) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalJSON implements the json.Marshaler interface.
-func (at Target) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + at.String() + `"`), nil
+func (t Target) MarshalJSON() ([]byte, error) {
+	if t == TargetNone {
+		return []byte(`null`), nil
+	}
+	return []byte(`"` + t.String() + `"`), nil
 }
 
-func (at Target) String() string {
-	switch at {
+func (t Target) String() string {
+	switch t {
+	case TargetNone:
+		return "None"
 	case TargetEvent:
 		return "Event"
 	case TargetUser:
@@ -223,9 +229,10 @@ func (at Target) String() string {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (at *Target) UnmarshalJSON(data []byte) error {
+func (t *Target) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, null) {
-		return errors.BadRequest("target cannot be null")
+		*t = TargetNone
+		return nil
 	}
 	var s string
 	err := json.Unmarshal(data, &s)
@@ -234,11 +241,11 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	}
 	switch s {
 	case "Event":
-		*at = TargetEvent
+		*t = TargetEvent
 	case "User":
-		*at = TargetUser
+		*t = TargetUser
 	case "Group":
-		*at = TargetGroup
+		*t = TargetGroup
 	default:
 		return errors.BadRequest(`target must be "Event", "User", or "Group"`)
 	}

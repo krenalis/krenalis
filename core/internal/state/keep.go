@@ -17,7 +17,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/analytics-go"
 )
 
@@ -56,7 +55,7 @@ func (state *State) keep() {
 		case n = <-notifications:
 		}
 		if logNotifications {
-			slog.Info("core/state: received notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
+			slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
 		}
 		var org string
 		state.changing.Lock()
@@ -159,12 +158,19 @@ func (state *State) keep() {
 		case "UpdateWorkspace":
 			org = state.updateWorkspace(n)
 		default:
-			slog.Warn("core/internal/state: unknown notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
+			slog.Warn("core/internal/state: unknown notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
+		}
+		// Notify any goroutines waiting for a new version.
+		if n.Version > 0 {
+			state.version.Lock()
+			state.version.current = n.Version
+			state.version.next.Broadcast()
+			state.version.Unlock()
 		}
 		state.changing.Unlock()
-		if n.ID > 0 {
+		if n.Version > 0 {
 			// Acknowledge that the notification has been received.
-			if ack, ok := state.notifications.acks.LoadAndDelete(n.ID); ok {
+			if ack, ok := state.notifications.acks.LoadAndDelete(n.Version); ok {
 				ack.(chan struct{}) <- struct{}{}
 			}
 		}
@@ -179,7 +185,7 @@ func (state *State) keep() {
 func decodeNotification(n notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
-		slog.Error("core/state: cannot unmarshal notification", "id", n.ID, "name", n.Name, "error", err)
+		slog.Error("core/state: cannot unmarshal notification", "version", n.Version, "name", n.Name, "error", err)
 		return false
 	}
 	return true
@@ -333,7 +339,7 @@ func (state *State) acceptInvitation(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	org.members[e.Member] = struct{}{}
+	org.members[e.Member] = true
 	org.mu.Unlock()
 	return org.ID
 }
@@ -377,7 +383,7 @@ func (state *State) addMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	org.members[e.ID] = struct{}{}
+	org.members[e.ID] = true
 	org.usage.addMember()
 	org.mu.Unlock()
 	return org.ID
@@ -533,7 +539,7 @@ func (state *State) createOrganization(n notification) string {
 	org := &Organization{
 		mu:         &sync.Mutex{},
 		workspaces: map[string]*Workspace{},
-		members:    map[string]struct{}{},
+		members:    map[string]bool{},
 		usage:      newOrganizationUsage(e.Limits),
 		ID:         e.ID,
 		Name:       e.Name,
@@ -929,7 +935,7 @@ func (state *State) deleteMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
-	delete(org.members, e.ID) // This is a no-op for invited members, which are not in org.members.
+	delete(org.members, e.ID)
 	org.usage.removeMember()
 	org.mu.Unlock()
 	return e.Organization
@@ -1107,7 +1113,7 @@ func (state *State) deleteWorkspace(n notification) string {
 // ElectLeader is the event sent when a leader is elected.
 type ElectLeader struct {
 	Number int
-	Leader uuid.UUID
+	Leader string
 }
 
 // electLeader elects a leader.
@@ -1232,6 +1238,7 @@ func (state *State) inviteMember(n notification) string {
 	}
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
+	org.members[e.Member] = false
 	org.usage.addMember()
 	org.mu.Unlock()
 	return org.ID

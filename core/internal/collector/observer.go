@@ -17,11 +17,10 @@ import (
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 const MaxEventListeners = 100 // maximum number of event listeners.
@@ -97,7 +96,7 @@ func newObserver() *Observer {
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
 func (observer *Observer) CreateListener(connections []string, size int, filter *state.Where, requiredConsents *state.RequiredConsents) (string, error) {
-	id := uuid.New().String()
+	id := base58.Generate(12)
 	listener := listener{
 		id:               id,
 		connections:      connections,

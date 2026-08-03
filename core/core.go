@@ -29,6 +29,7 @@ import (
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/requestid"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
@@ -52,6 +53,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Core is the application core. It owns the database connection, in-memory
+// state, event collector, schedulers, integrations, and other components that
+// implement the application's behavior.
+//
+// Request contexts may carry a request ID, which is included in log messages
+// produced while handling the request. Use [WithRequestID] to add a request ID
+// to a context and [RequestID] to retrieve it.
 type Core struct {
 	db                *dbpkg.DB
 	stream            streams.Stream
@@ -591,12 +599,6 @@ func (core *Core) Close(ctx context.Context) {
 	coreActive.Store(false)
 }
 
-// CookieKeys decrypts and returns the two 32-byte keys stored in the cookie
-// key material.
-func (core *Core) CookieKeys(ctx context.Context) ([]byte, []byte, error) {
-	return core.state.CookieKeys(ctx)
-}
-
 // Connector returns the connector with the provided code.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
@@ -836,6 +838,11 @@ func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID stri
 	})
 }
 
+// HTTPSecretKey decrypts and returns the HTTP secret key material.
+func (core *Core) HTTPSecretKey(ctx context.Context) ([]byte, error) {
+	return core.state.HTTPSecretKey(ctx)
+}
+
 // InstallationID returns the installation ID.
 func (core *Core) InstallationID() string {
 	return core.state.InstallationID()
@@ -976,6 +983,12 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.collector.ServeHTTP(w, r)
 }
 
+// StateVersion returns the current state version.
+func (core *Core) StateVersion() int {
+	core.mustBeOpen()
+	return core.state.Version()
+}
+
 // UpdateMembersByWorkOSID updates the name and email of all members across all
 // organizations that have the given WorkOS user ID. It returns an
 // errors.UnprocessableError with code MemberEmailExists if the new email is
@@ -1023,6 +1036,11 @@ func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token st
 		return "", errors.NotFound("reset password token %q does not exist or is expired", token)
 	}
 	return organizationID, nil
+}
+
+// WaitStateVersion waits until the given state version has been reached.
+func (core *Core) WaitStateVersion(ctx context.Context, version int) error {
+	return core.state.WaitVersion(ctx, version)
 }
 
 // DataTransformation represents transformation passed to (*Core).TransformData
@@ -2057,6 +2075,21 @@ func EventSchema() types.Type {
 // members, access keys, workspaces, connections, pipelines, and pipeline runs).
 func IsValidID(id string) bool {
 	return len(id) == 12 && base58.IsValid(id)
+}
+
+// RequestID returns the request ID associated with ctx.
+// It returns an empty string if the context does not contain one.
+//
+// See also [WithRequestID].
+func RequestID(ctx context.Context) string {
+	return requestid.RequestID(ctx)
+}
+
+// WithRequestID stores requestID in ctx and returns the updated context.
+//
+// See also [RequestID].
+func WithRequestID(ctx context.Context, requestID string) context.Context {
+	return requestid.WithRequestID(ctx, requestID)
 }
 
 // categoryBitmaskToCategoryNames converts a bitmask representing a connector's

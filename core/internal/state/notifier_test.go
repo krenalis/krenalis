@@ -12,7 +12,7 @@ func TestParsePayload(t *testing.T) {
 
 	tests := []struct {
 		notification string
-		id           int64
+		version      int
 		name         string
 		payload      string
 		err          bool
@@ -30,7 +30,7 @@ func TestParsePayload(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		id, name, payload, err := parsePayload(test.notification)
+		version, name, payload, err := parsePayload(test.notification)
 		if err != nil {
 			if !test.err {
 				t.Fatalf("%s: cannot parse notification: %s", test.notification, err)
@@ -40,8 +40,8 @@ func TestParsePayload(t *testing.T) {
 		if test.err {
 			t.Fatalf("%s: expected error, got no errors", test.notification)
 		}
-		if id != test.id {
-			t.Fatalf("%s: expected identifier %d, got %d", test.notification, test.id, id)
+		if version != test.version {
+			t.Fatalf("%s: expected version %d, got %d", test.notification, test.version, version)
 		}
 		if name != test.name {
 			t.Fatalf("%s: expected name %q, got %q", test.notification, test.name, name)

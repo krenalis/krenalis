@@ -17,6 +17,7 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
+// TestWriteSessionCookie verifies session cookie creation and replacement.
 func TestWriteSessionCookie(t *testing.T) {
 
 	t.Run("ignores empty cookie string", func(t *testing.T) {
@@ -74,21 +75,23 @@ func TestWriteSessionCookie(t *testing.T) {
 
 }
 
-func TestNewAPIsServerInitializesCookieKeys(t *testing.T) {
-	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", "", nil, "", "", "", "", false)
-	if s.cookieKeys == nil {
-		t.Fatal("expected newAPIsServer to initialize cookieKeys")
+// TestNewAPIsServerInitializesHTTPSecretKey verifies server initialization.
+func TestNewAPIsServerInitializesHTTPSecretKey(t *testing.T) {
+	s := newAPIsServer(nil, false, "", "", "", nil, "", false, "", nil, "", nil)
+	if s.httpSecretKey == nil {
+		t.Fatal("expected newAPIsServer to initialize httpSecretKey")
 	}
 }
 
+// TestSecureCookieCachesResult verifies successful cookie codec caching.
 func TestSecureCookieCachesResult(t *testing.T) {
 	kms := &cookieTestKMS{
-		load: func(context.Context) ([]byte, []byte, error) {
-			return make([]byte, 32), make([]byte, 32), nil
+		load: func(context.Context) ([]byte, error) {
+			return make([]byte, 64), nil
 		},
 	}
 
-	s := &apisServer{cookieKeys: kms.Load}
+	s := &apisServer{httpSecretKey: kms.Load}
 
 	first, err := s.secureCookie(context.Background())
 	if err != nil {
@@ -102,16 +105,18 @@ func TestSecureCookieCachesResult(t *testing.T) {
 		t.Fatal("expected secureCookie to cache and reuse the same SecureCookie instance")
 	}
 	if kms.calls != 1 {
-		t.Fatalf("expected CookieKeys loading to be performed once, got %d", kms.calls)
+		t.Fatalf("expected HTTP secret key loading to be performed once, got %d", kms.calls)
 	}
 }
 
+// TestSecureCookieCanceledLoadCanBeRetried verifies canceled key loading does
+// not prevent a later retry.
 func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 
 	kms := &cookieTestKMS{
-		load: func(ctx context.Context) ([]byte, []byte, error) {
+		load: func(ctx context.Context) ([]byte, error) {
 			select {
 			case <-started:
 			default:
@@ -119,13 +124,13 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 			}
 			select {
 			case <-release:
-				return make([]byte, 32), make([]byte, 32), nil
+				return make([]byte, 64), nil
 			case <-ctx.Done():
-				return nil, nil, ctx.Err()
+				return nil, ctx.Err()
 			}
 		},
 	}
-	s := &apisServer{cookieKeys: kms.Load}
+	s := &apisServer{httpSecretKey: kms.Load}
 
 	firstCtx, cancelFirst := context.WithCancel(context.Background())
 	firstDone := make(chan error, 1)
@@ -152,10 +157,11 @@ func TestSecureCookieCanceledLoadCanBeRetried(t *testing.T) {
 		t.Fatal("expected secureCookie retry to return a SecureCookie instance, got nil")
 	}
 	if kms.calls != 2 {
-		t.Fatalf("expected CookieKeys loading to be retried once, got %d calls", kms.calls)
+		t.Fatalf("expected HTTP secret key loading to be retried once, got %d calls", kms.calls)
 	}
 }
 
+// TestValidateForbiddenBody verifies rejection of unexpected request bodies.
 func TestValidateForbiddenBody(t *testing.T) {
 
 	t.Run("allows empty body with zero content length", func(t *testing.T) {
@@ -223,12 +229,14 @@ func TestValidateForbiddenBody(t *testing.T) {
 	})
 }
 
+// cookieTestKMS records cookie key load calls in tests.
 type cookieTestKMS struct {
 	calls int
-	load  func(context.Context) ([]byte, []byte, error)
+	load  func(context.Context) ([]byte, error)
 }
 
-func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, []byte, error) {
+// Load returns cookie test keys.
+func (k *cookieTestKMS) Load(ctx context.Context) ([]byte, error) {
 	k.calls++
 	return k.load(ctx)
 }
@@ -331,7 +339,7 @@ func TestValidateRequiredBody(t *testing.T) {
 
 }
 
-// TestMaxBytesNormalizedReader tests the maxBytesNormalizedReader function.
+// TestMaxBytesNormalizedReader verifies request body normalization and limits.
 func TestMaxBytesNormalizedReader(t *testing.T) {
 
 	t.Run("normalizes body", func(t *testing.T) {
@@ -369,10 +377,12 @@ func TestMaxBytesNormalizedReader(t *testing.T) {
 
 }
 
+// errReader always returns its configured error.
 type errReader struct {
 	err error
 }
 
+// Read returns the configured error without producing bytes.
 func (r errReader) Read(p []byte) (int, error) {
 	return 0, r.err
 }

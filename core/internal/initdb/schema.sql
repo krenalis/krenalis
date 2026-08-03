@@ -206,7 +206,7 @@ CREATE TABLE pipelines_runs (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
     function varchar(200) NOT NULL DEFAULT '',
-    node uuid,
+    node varchar(22) CHECK (node IS NULL OR node ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
     incremental boolean NOT NULL DEFAULT FALSE,
     cursor timestamp NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     start_time timestamp NOT NULL,
@@ -251,7 +251,11 @@ CREATE INDEX ON pipelines_errors (timeslot);
 CREATE INDEX ON pipelines_errors (step);
 
 CREATE TABLE pipelines_metrics (
-    pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
+    organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+    workspace varchar(12) NOT NULL,
+    connection varchar(12) NOT NULL,
+    pipeline varchar(12) NOT NULL,
+    target pipeline_target NOT NULL,
     timeslot integer NOT NULL,
     passed_0 integer NOT NULL,
     passed_1 integer NOT NULL,
@@ -270,8 +274,9 @@ CREATE TABLE pipelines_metrics (
     PRIMARY KEY (pipeline, timeslot)
 );
 
-CREATE INDEX ON pipelines_metrics (pipeline);
-CREATE INDEX ON pipelines_metrics (timeslot);
+CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
+CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
+CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
 
 CREATE TABLE discontinued_functions (
     id varchar(200) NOT NULL,
@@ -281,12 +286,12 @@ CREATE TABLE discontinued_functions (
 
 CREATE TABLE election (
     number integer NOT NULL,
-    leader uuid NOT NULL,
+    leader varchar(22) NOT NULL CHECK (leader = '' OR leader ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
     date timestamp NOT NULL,
     PRIMARY KEY (number)
 );
 
-INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
+INSERT INTO election (number, leader, date) VALUES (1, '', '2023-01-01 00:00:00.000000');
 
 CREATE TABLE event_write_keys (
     connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
@@ -363,17 +368,17 @@ CREATE TYPE notification_name AS ENUM (
 );
 
 CREATE TABLE notifications (
-    id bigint NOT NULL,
+    version bigint NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name notification_name NOT NULL,
     payload jsonb NOT NULL,
-    PRIMARY KEY (id)
+    PRIMARY KEY (version)
 );
 
 CREATE TABLE metadata (
     singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
     installation_id text UNIQUE NOT NULL,
-    kms_encrypted_cookie_key bytea NOT NULL,
+    kms_encrypted_http_secret_key bytea NOT NULL,
     kms_encrypted_oauth_key bytea NOT NULL,
     kms_encrypted_notification_key bytea NOT NULL,
     kms_encrypted_api_key_pepper bytea NOT NULL
@@ -381,7 +386,7 @@ CREATE TABLE metadata (
 
 INSERT INTO metadata (
     installation_id,
-    kms_encrypted_cookie_key,
+    kms_encrypted_http_secret_key,
     kms_encrypted_oauth_key,
     kms_encrypted_notification_key,
     kms_encrypted_api_key_pepper
