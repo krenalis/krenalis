@@ -182,7 +182,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
-			return errors.BadRequest(`required consents operator must be "and" or "or"`)
+			return errors.BadRequest(`required consents operator %q is not valid. It must be "and" or "or"`, op)
 		}
 	}
 	// Validate the transformation.
