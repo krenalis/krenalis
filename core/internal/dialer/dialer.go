@@ -10,8 +10,8 @@
 // they are created, while [DialWithContext] wraps the dial function of a client
 // shared by every organization, taking it from the context of each dial.
 //
-// In the rare cases where there is no organization to dial on behalf of, as for
-// a connector under test, use [PlainDial] and [PlainDialWith].
+// In cases where there is no organization to dial on behalf of, as for a
+// connector under test, use [PlainDial] and [PlainDialWith].
 //
 // The connections dialed on behalf of an organization count the bytes they
 // send, exposing them as a Prometheus counter, see [EnableCounting]. If an
@@ -43,15 +43,6 @@ var egressBytes = prometheus.RegisterCounterVec(
 
 // countingEnabled reports whether the bytes sent must be counted.
 var countingEnabled bool
-
-// ErrNoOrganizationInContext is the error [DialWithContext] fails a dial with
-// when the context of the dial carries no organization, that is no ID set with
-// [WithOrganization].
-//
-// It is a broken call site, and not a condition the callers are expected to
-// recover from: it is an error, and not a panic, only because a dial is made
-// while a request is being served.
-var ErrNoOrganizationInContext = errors.New("dialer: no organization in the context of the dial")
 
 var (
 	organizationsMu sync.Mutex
@@ -235,13 +226,12 @@ func WithOrganization(ctx context.Context, organization string) context.Context 
 // so a single client can serve every organization. If the wrapped dial function
 // is nil, a plain net.Dialer is used, as in [Dial].
 //
-// A dial whose context carries no organization at all fails with
-// [ErrNoOrganizationInContext]: every dial made through this function is made
-// on behalf of an organization, so a context without one is a caller that has
-// forgotten to set it. A context carrying an organization that does not exist,
-// instead, is legitimate, as its callers act on behalf of the organizations
-// that have been deleted: a resource outliving its organization, like a
-// transformation function, is deleted after it.
+// A dial whose context carries no organization at all fails: every dial made
+// through this function is made on behalf of an organization, so a context
+// without one is a caller that has forgotten to set it. A context carrying an
+// organization that does not exist, instead, is legitimate, as its callers act
+// on behalf of the organizations that have been deleted: a resource outliving
+// its organization, like a transformation function, is deleted after it.
 //
 // The connections count the bytes they send, see [EnableCounting]. Unlike the
 // other dial functions, this one wraps the given dial function even when
@@ -255,7 +245,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
 		v := ctx.Value(organizationKey{})
 		if v == nil {
-			return nil, ErrNoOrganizationInContext
+			return nil, errors.New("dialer: no organization in the context of the dial")
 		}
 		// The ID is never empty, see organizationKey.
 		organization := v.(string)

@@ -6,7 +6,6 @@ package dialer
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net"
 	"sync"
@@ -334,9 +333,10 @@ func TestDialWithContextWithoutOrganization(t *testing.T) {
 		if enabled {
 			enable(t)
 		}
-		_, err := DialWithContext(nil)(t.Context(), "tcp", addr)
-		if !errors.Is(err, ErrNoOrganizationInContext) {
-			t.Fatalf("dialing returned the error %v, expecting ErrNoOrganizationInContext (counting enabled: %t)", err, enabled)
+		conn, err := DialWithContext(nil)(t.Context(), "tcp", addr)
+		if err == nil {
+			conn.Close()
+			t.Fatalf("dialing with no organization in the context succeeded, expecting it to fail (counting enabled: %t)", enabled)
 		}
 	}
 }
