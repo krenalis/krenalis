@@ -487,13 +487,3 @@ func TestDialWithContextUnknownOrganization(t *testing.T) {
 		t.Fatal("a counter is collected for an organization that does not exist")
 	}
 }
-
-func TestCountingEnabled(t *testing.T) {
-	if CountingEnabled() {
-		t.Fatal("enabled, expecting it to be disabled by default")
-	}
-	enable(t)
-	if !CountingEnabled() {
-		t.Fatal("disabled, expecting it to be enabled")
-	}
-}

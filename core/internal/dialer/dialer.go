@@ -44,13 +44,6 @@ var egressBytes = prometheus.RegisterCounterVec(
 // countingEnabled reports whether the bytes sent must be counted.
 var countingEnabled bool
 
-// CountingEnabled reports whether the connections dialed on behalf of an
-// organization count the bytes they send, that is whether [EnableCounting] has
-// been called.
-func CountingEnabled() bool {
-	return countingEnabled
-}
-
 // ErrNoOrganizationInContext is the error [DialWithContext] fails a dial with
 // when the context of the dial carries no organization, that is no ID set with
 // [WithOrganization].
