@@ -138,14 +138,14 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 // the organization with the given ID, dialing with a plain net.Dialer. Use
 // [DialWith] instead to keep the dial options of an already configured dialer.
 //
-// It panics if organizationID is empty: use [PlainDial] when there is no
+// It panics if organization is empty: use [PlainDial] when there is no
 // organization to dial on behalf of.
 //
 // The connections it establishes count the bytes they send, see
 // [EnableCounting]. It returns a plain, unwrapped dialer, counting nothing,
 // while counting is disabled and when the organization does not exist.
-func Dial(organizationID string) DialFunc {
-	return dialWith(organizationID, nil)
+func Dial(organization string) DialFunc {
+	return dialWith(organization, nil)
 }
 
 // DialWith returns a function that wraps the dial function establishing the
@@ -156,21 +156,21 @@ func Dial(organizationID string) DialFunc {
 // keep-alive. If the wrapped dial function is nil, a plain net.Dialer is used,
 // as in [Dial].
 //
-// It panics if organizationID is empty: use [PlainDialWith] when there is no
+// It panics if organization is empty: use [PlainDialWith] when there is no
 // organization to dial on behalf of.
 //
 // As in [Dial], the connections count the bytes they send, see
 // [EnableCounting], and the dial function is returned unwrapped while counting
 // is disabled and when the organization does not exist.
-func DialWith(organizationID string) func(dial DialFunc) DialFunc {
+func DialWith(organization string) func(dial DialFunc) DialFunc {
 	// The organization is checked here, and not only in dialWith, so that an
 	// empty one panics where DialWith is called and not where the function it
 	// returns is, which may be far from it.
-	if organizationID == "" {
+	if organization == "" {
 		panic("dialer: empty organization ID")
 	}
 	return func(dial DialFunc) DialFunc {
-		return dialWith(organizationID, dial)
+		return dialWith(organization, dial)
 	}
 }
 
@@ -216,16 +216,16 @@ type organizationKey struct{}
 // organization and the organization is only known when the client is used, so
 // that the dial function does not have to be fixed when the client is created.
 //
-// It panics if organizationID is empty: every dial made with [DialWithContext]
+// It panics if organization is empty: every dial made with [DialWithContext]
 // is made on behalf of an organization, and one that has been deleted is no
 // exception, as its ID is passed all the same. The organization is carried by
 // the context even when counting is disabled (see [EnableCounting]), so that
 // [DialWithContext] can check that it has been provided in any case.
-func WithOrganization(ctx context.Context, organizationID string) context.Context {
-	if organizationID == "" {
+func WithOrganization(ctx context.Context, organization string) context.Context {
+	if organization == "" {
 		panic("dialer: empty organization ID")
 	}
-	return context.WithValue(ctx, organizationKey{}, organizationID)
+	return context.WithValue(ctx, organizationKey{}, organization)
 }
 
 // DialWithContext wraps the dial function of a client shared by every
@@ -258,7 +258,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 			return nil, ErrNoOrganizationInContext
 		}
 		// The ID is never empty, see organizationKey.
-		organizationID := v.(string)
+		organization := v.(string)
 		if !countingEnabled {
 			return dial(ctx, network, addr)
 		}
@@ -266,7 +266,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 		// the organization once, when it is created, because the organization
 		// is only known at every dial, from its context.
 		organizationsMu.Lock()
-		c := organizations[organizationID]
+		c := organizations[organization]
 		organizationsMu.Unlock()
 		if c == nil {
 			// The organization does not exist: dial without counting.
@@ -286,11 +286,11 @@ func DialWithContext(dial DialFunc) DialFunc {
 // It allows counting the bytes sent by an already configured dialer, like the
 // one of an http.Transport, preserving its timeouts and options.
 //
-// It panics if organizationID is empty. The check is made even when counting is
+// It panics if organization is empty. The check is made even when counting is
 // disabled, so that a caller that does not provide the organization is caught
 // regardless of whether the Prometheus metrics are enabled.
-func dialWith(organizationID string, dial DialFunc) DialFunc {
-	if organizationID == "" {
+func dialWith(organization string, dial DialFunc) DialFunc {
+	if organization == "" {
 		panic("dialer: empty organization ID")
 	}
 	if dial == nil {
@@ -304,7 +304,7 @@ func dialWith(organizationID string, dial DialFunc) DialFunc {
 	// dial, so that establishing a connection does not have to look it up and
 	// take the lock.
 	organizationsMu.Lock()
-	c := organizations[organizationID]
+	c := organizations[organization]
 	organizationsMu.Unlock()
 	if c == nil {
 		// The organization does not exist, so there is nothing to count the
