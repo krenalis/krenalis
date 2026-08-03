@@ -855,15 +855,12 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Code string `json:"code"`
-		Name string `json:"name"`
-	}
-	err = json.Decode(r.Body, &body)
+	var purpose core.ConsentPurpose
+	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), body.Code, body.Name)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), purpose)
 	return nil, err
 }
 

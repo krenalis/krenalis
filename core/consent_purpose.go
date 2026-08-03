@@ -81,7 +81,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 }
 
 // UpdateConsentPurpose updates the consent purpose with the given code, setting
-// its code to code and its name to name.
+// its code and name to those of purpose.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
@@ -89,29 +89,29 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if another consent purpose with the new code already
 // exists in the workspace.
-func (this *Workspace) UpdateConsentPurpose(ctx context.Context, purpose, code, name string) error {
+func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code string, purpose ConsentPurpose) error {
 	this.core.mustBeOpen()
-	if err := validateConsentPurposeCode(purpose); err != nil {
-		return err
-	}
 	if err := validateConsentPurposeCode(code); err != nil {
 		return err
 	}
-	if err := util.ValidateStringField("name", name, 100); err != nil {
+	if err := validateConsentPurposeCode(purpose.Code); err != nil {
+		return err
+	}
+	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	current, ok := this.workspace.ConsentPurpose(purpose)
+	current, ok := this.workspace.ConsentPurpose(code)
 	if !ok {
-		return errors.NotFound("consent purpose %q does not exist", purpose)
+		return errors.NotFound("consent purpose %q does not exist", code)
 	}
-	if code == current.Code && name == current.Name {
+	if purpose.Code == current.Code && purpose.Name == current.Name {
 		return nil
 	}
 	n := state.UpdateConsentPurpose{
 		Workspace: this.workspace.ID,
-		Purpose:   purpose,
-		Code:      code,
-		Name:      name,
+		Purpose:   code,
+		Code:      purpose.Code,
+		Name:      purpose.Name,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2 WHERE workspace = $3 AND code = $4",
