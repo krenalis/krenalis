@@ -731,10 +731,9 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		return err
 	}
 
+	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
+	// See issue https://github.com/krenalis/krenalis/issues/2086.
 	if this.pipeline.EventType != "" {
-		// Only for destination event pipeline checks that the out schema is
-		// aligned with the event type's schema. See issue
-		// https://github.com/krenalis/krenalis/issues/2086.
 		app := this.application()
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, this.pipeline.EventType)
 		if err != nil {
