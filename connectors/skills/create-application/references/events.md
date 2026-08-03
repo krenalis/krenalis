@@ -19,7 +19,12 @@ Use it to choose the right iteration method and payload-building pattern.
 - Set `OrderingGroup` to the same value on event types whose events must remain
   ordered for each user. Ordering groups follow the same syntax and length
   limit as IDs. If `OrderingGroup` is empty, the event type ID is used.
-- Do not change an ID or ordering group after the connector has been released.
+- Set `DeliveryEndpoint` when event types use separate destination endpoints.
+  Event types in the same ordering group must use the same delivery endpoint.
+  An empty value identifies the connector's default endpoint. Explicit endpoint
+  identifiers follow the same syntax and length limit as event type IDs.
+- Do not change an ID, ordering group, or delivery endpoint after the connector
+  has been released.
 - Return only event types the connector actually supports.
 
 ## EventTypeSchema

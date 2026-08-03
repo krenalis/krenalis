@@ -60,6 +60,7 @@ type Pipeline struct {
 	Enabled            bool             `json:"enabled"`
 	EventType          *string          `json:"eventType"`
 	OrderingGroup      *string          `json:"orderingGroup"`
+	DeliveryEndpoint   *string          `json:"deliveryEndpoint"`
 	Running            bool             `json:"running"`
 	ScheduleStart      *int             `json:"scheduleStart"`
 	SchedulePeriod     *SchedulePeriod  `json:"schedulePeriod"`
@@ -524,6 +525,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 				serializedPipeline
 				EventType        string           `json:"eventType"`
 				OrderingGroup    string           `json:"orderingGroup"`
+				DeliveryEndpoint string           `json:"deliveryEndpoint"`
 				Filter           *Filter          `json:"filter"`
 				RequiredConsents RequiredConsents `json:"requiredConsents"`
 				Transformation   *Transformation  `json:"transformation"`
@@ -533,6 +535,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 				serializedPipeline: p,
 				EventType:          *this.EventType,
 				OrderingGroup:      *this.OrderingGroup,
+				DeliveryEndpoint:   *this.DeliveryEndpoint,
 				Filter:             this.Filter,
 				RequiredConsents:   this.RequiredConsents,
 				Transformation:     this.Transformation,
@@ -1114,6 +1117,7 @@ func (this *Pipeline) fromState(core *Core, store *datastore.Store, pipeline *st
 	if pipeline.EventType != "" {
 		this.EventType = new(pipeline.EventType)
 		this.OrderingGroup = new(pipeline.OrderingGroup)
+		this.DeliveryEndpoint = new(pipeline.DeliveryEndpoint)
 	}
 	_, this.Running = this.pipeline.Run()
 	if pipeline.Target == state.TargetUser || pipeline.Target == state.TargetGroup {
