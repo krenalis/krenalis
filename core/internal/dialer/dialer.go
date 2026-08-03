@@ -64,20 +64,15 @@ var (
 // krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
 // by organization. Only the bytes sent are counted, the bytes received are not.
 //
+// st is the Krenalis state that this package listens on to track changes to
+// organizations.
+//
 // Counting is disabled by default, and it is left disabled by not calling this
-// function at all, as when the Prometheus metrics are disabled: the other
-// functions of this package can still be called, they just return plain,
-// unwrapped dialers.
+// function at all: the other functions of this package can still be called,
+// they just return plain, unwrapped dialers.
 //
-// It also makes this package follow the organizations of st, so that every
-// existing organization has a counter, at zero until it dials, and the counter
-// is discarded when the organization is deleted, instead of being kept for the
-// whole life of the process. The organizations are therefore only known once
-// counting is enabled.
-//
-// It must be called at startup, before any other function of this package,
-// because the dial functions already returned keep the setting they were
-// created with, and it panics if it is called more than once.
+// If this function is called, it must be called before any other function in
+// the package.
 func EnableCounting(st *state.State) {
 	if countingEnabled {
 		panic("dialer: EnableCounting called more than once")
@@ -126,8 +121,8 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 }
 
 // Dial returns the dial function to establish the connections made on behalf of
-// the organization with the given ID, dialing with a plain net.Dialer. Use
-// [DialWith] instead to keep the dial options of an already configured dialer.
+// the given organization, dialing with a plain net.Dialer. Use [DialWith]
+// instead to keep the dial options of an already configured dialer.
 //
 // It panics if organization is empty: use [PlainDial] when there is no
 // organization to dial on behalf of.
@@ -140,7 +135,7 @@ func Dial(organization string) DialFunc {
 }
 
 // DialWith returns a function that wraps the dial function establishing the
-// connections made on behalf of the organization with the given ID.
+// connections made on behalf of the given organization.
 //
 // Unlike [Dial], the connections are established by the wrapped dial function,
 // which therefore keeps its own dial options, like its timeouts and its
