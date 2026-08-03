@@ -461,8 +461,8 @@ func countEgress(o *lambda.Options) {
 		// TODO(Gianluca): the organization is resolved when a connection is
 		// dialed, so a pooled connection would attribute the bytes of every
 		// request it later serves to the organization that dialed it.
-		// Keep-alives are disabled, at the cost of a handshake per request, so
-		// that each request is counted for its own organization.
+		// Keep-alives are disabled, so that each request is counted for its own
+		// organization.
 		t.DisableKeepAlives = true
 	})
 }
