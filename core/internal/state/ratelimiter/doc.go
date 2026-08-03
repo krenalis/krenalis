@@ -85,14 +85,16 @@
 // authorized waiter is deducted before that waiter is notified.
 //
 // The admission budget is the number of units requested when the refill starts.
-// It is not the bucket's lease size. When an operation triggers a refill, the
-// admission budget is at least the number of units required by that operation.
-// Positive local capacity is excluded because unrelated local requests may
-// consume it before the lease arrives. A partial grant serves only the first
-// consecutive FIFO waiters that can be satisfied. This deliberately prevents
-// an operation requiring fewer units from being served before an older
-// operation requiring more. Cancellation removes a pending waiter and returns
-// its reserved units to the admission budget for later waiters.
+// It is not necessarily the bucket's lease size. When an operation triggers a
+// refill, the admission budget includes the units required by that operation
+// and, if the lease size permits, up to 10 additional units of baseline
+// headroom for other waiters. Positive local capacity is excluded because
+// unrelated local requests may consume it before the lease arrives. A partial
+// grant serves only the first consecutive FIFO waiters that can be satisfied.
+// This deliberately prevents an operation requiring fewer units from being
+// served before an older operation requiring more. Cancellation removes a
+// pending waiter and returns its reserved units to the admission budget for
+// later waiters.
 //
 // If a request cannot be admitted because the refill generation has
 // insufficient remaining admission budget, no authoritative lease result is
@@ -124,11 +126,23 @@
 // capacity, but it cannot create additional capacity.
 //
 // Each local target is capped by both the lease size and the capacity reported
-// by PostgreSQL. A refill is normally prepared when an operation cannot be
-// served, when local capacity falls below a threshold calculated from the local
-// target, or when an operation leaves no more capacity than it consumed.
-// Targets and thresholds are intentionally simple and do not adapt to traffic
-// rate or acquisition latency.
+// by PostgreSQL. A bucket without a recent positive grant uses a baseline target
+// of at most 10 units. If the next refill is needed within five seconds of a
+// positive grant, the target doubles, up to the lease size. If more than five
+// seconds have passed, or if the previous refill granted no capacity, the next
+// refill uses a target of at most 10 units. An operation that triggers a refill
+// raises the target to include both the units it requires and, where possible,
+// the baseline admission headroom.
+//
+// Lowering the target does not discard capacity already held locally. If the
+// existing local capacity is sufficient for the lower target, the limiter lets
+// operations drain that capacity before acquiring another lease. There is no
+// idle timer, so a bucket that receives no further operations retains its
+// unused local capacity. A refill is normally considered when an operation
+// cannot be served, when local capacity falls below a threshold calculated from
+// the current target, or when an operation leaves no more capacity than it
+// consumed. No lease is acquired if the existing local capacity already
+// satisfies the lower adaptive target.
 //
 // If the reported capacity causes the local target to decrease, any capacity
 // already held above the new target is revoked and discarded. It is not

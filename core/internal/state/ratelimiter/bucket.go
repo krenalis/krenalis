@@ -20,6 +20,15 @@ const (
 	// in progress.
 	maxRefillThreshold = 25
 
+	// initialLeaseTarget is the baseline local target used before a subject has
+	// shown sustained demand on this node. A larger operation raises the target
+	// for the refill that admits it.
+	initialLeaseTarget = 10
+
+	// leaseGrowthWindow is the interval after a positive grant during which the
+	// next refill doubles the local target.
+	leaseGrowthWindow = 5 * time.Second
+
 	// microsecondsPerMinute is the denominator used by PostgreSQL's fractional
 	// per-minute refill calculation.
 	microsecondsPerMinute = 60 * 1_000_000
@@ -53,10 +62,11 @@ type Bucket struct {
 	maxUnits    int         // maximum units accepted by a single operation
 
 	mu              sync.Mutex
-	available       int     // locally available capacity; protected by mu
-	localTarget     int     // desired local capacity after a refill; protected by mu
-	refillThreshold int     // capacity below which a proactive refill starts; protected by mu
-	refill          *refill // current refill generation, if any; protected by mu
+	available       int       // locally available capacity; protected by mu
+	localTarget     int       // current local capacity limit; protected by mu
+	refillThreshold int       // capacity below which a proactive refill starts; protected by mu
+	growthGrantAt   time.Time // positive grant time used to determine target growth; protected by mu
+	refill          *refill   // current refill generation, if any; protected by mu
 }
 
 // Consume consumes the specified number of units from the bucket.
@@ -90,6 +100,10 @@ func (bucket *Bucket) Consume(ctx context.Context, units int) error {
 			return nil
 		}
 		refill := bucket.newRefillLocked()
+		if refill == nil {
+			bucket.mu.Unlock()
+			return nil
+		}
 		bucket.mu.Unlock()
 		// Refill failure does not affect capacity already consumed.
 		limiter.publishRefill(refill)
@@ -163,8 +177,11 @@ func (bucket *Bucket) admitWaiterLocked(refill *refill, units int) *waiter {
 
 // applyLeaseLocked applies the granted capacity up to the local target and
 // returns the number of newly granted units that do not fit in the bucket.
-func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits int) int {
-	bucket.localTarget = min(bucket.leaseSize, capacityUnits)
+func (bucket *Bucket) applyLeaseLocked(grantedUnits, capacityUnits, targetUnits int) int {
+	// An adaptive target decrease drains capacity already held locally instead
+	// of revoking it. A decrease in authoritative capacity may still revoke
+	// local capacity immediately.
+	bucket.localTarget = min(capacityUnits, max(targetUnits, bucket.available))
 	bucket.refillThreshold = max(1, min(maxRefillThreshold, bucket.localTarget/4))
 	// A lower target revokes previously leased local capacity above the new
 	// limit. Revoked capacity is discarded rather than returned to PostgreSQL.
@@ -212,7 +229,12 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 		bucket.mu.Unlock()
 		return
 	}
-	excessUnits := bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits)
+	excessUnits := bucket.applyLeaseLocked(result.GrantedUnits, result.CapacityUnits, refill.targetUnits)
+	if result.GrantedUnits > 0 {
+		bucket.growthGrantAt = time.Now()
+	} else {
+		bucket.growthGrantAt = time.Time{}
+	}
 	serve := true
 	retryUnits := 0
 	for element := refill.waiters.Front(); element != nil; element = element.Next() {
@@ -240,23 +262,41 @@ func (bucket *Bucket) completeRefill(refill *refill, result leaseResult) {
 	close(refill.done)
 }
 
-// newRefillLocked creates the immutable lease request for the next refill.
-// The caller must hold bucket.mu.
+// newRefillLocked creates the immutable lease request for the next refill. It
+// returns nil when the existing local capacity already satisfies the next
+// adaptive target. The caller must hold bucket.mu.
 func (bucket *Bucket) newRefillLocked() *refill {
 	return bucket.newRefillWithAdmissionLocked(0)
 }
 
 // newRefillWithAdmissionLocked creates the immutable lease request for the next
-// refill with an admission budget of at least minAdmissionUnits. The caller
-// must hold bucket.mu.
+// refill and ensures an admission budget of at least minAdmissionUnits. It
+// returns nil when minAdmissionUnits is zero and the existing local capacity
+// already satisfies the next adaptive target. The caller must hold bucket.mu.
 func (bucket *Bucket) newRefillWithAdmissionLocked(minAdmissionUnits int) *refill {
-	requestedUnits := bucket.leaseSize
-	if missingUnits := bucket.localTarget - bucket.available; missingUnits > 0 {
-		requestedUnits = min(bucket.leaseSize, missingUnits)
+	baselineTarget := min(initialLeaseTarget, bucket.leaseSize)
+	targetUnits := baselineTarget
+	if !bucket.growthGrantAt.IsZero() && time.Since(bucket.growthGrantAt) <= leaseGrowthWindow {
+		grownTarget := bucket.leaseSize
+		if bucket.localTarget <= bucket.leaseSize/2 {
+			grownTarget = bucket.localTarget * 2
+		}
+		targetUnits = max(targetUnits, grownTarget)
 	}
-	requestedUnits = max(requestedUnits, minAdmissionUnits)
+	admissionUnits := minAdmissionUnits
+	if minAdmissionUnits > 0 {
+		// Include as much baseline admission headroom as the lease size permits
+		// after accounting for the operation that triggered the refill.
+		admissionUnits += min(baselineTarget, bucket.leaseSize-minAdmissionUnits)
+		targetUnits = max(targetUnits, admissionUnits)
+	}
+	requestedUnits := max(admissionUnits, targetUnits-bucket.available)
+	if requestedUnits == 0 {
+		return nil
+	}
 	refill := &refill{
-		bucket: bucket,
+		bucket:      bucket,
+		targetUnits: targetUnits,
 		request: leaseRequest{
 			SubjectKind:    bucket.subjectKind,
 			SubjectID:      bucket.subjectID,
@@ -310,6 +350,7 @@ func waitForRefill(ctx context.Context, waiter *waiter) error {
 // Its mutable state is protected by its bucket mutex.
 type refill struct {
 	bucket       *Bucket
+	targetUnits  int
 	request      leaseRequest
 	done         chan struct{}
 	waiters      list.List

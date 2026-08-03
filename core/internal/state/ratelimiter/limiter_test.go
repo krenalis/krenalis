@@ -67,7 +67,18 @@ func testLeaseResult(granted, capacity int) leaseResult {
 
 func applyTestLease(bucket *Bucket, granted, capacity int) {
 	bucket.mu.Lock()
-	bucket.applyLeaseLocked(granted, capacity)
+	bucket.applyLeaseLocked(granted, capacity, min(bucket.leaseSize, capacity))
+	if granted > 0 {
+		bucket.growthGrantAt = time.Now()
+	}
+	bucket.mu.Unlock()
+}
+
+func setTestRecentLocalTarget(bucket *Bucket, target int) {
+	bucket.mu.Lock()
+	bucket.localTarget = target
+	bucket.refillThreshold = max(1, min(maxRefillThreshold, target/4))
+	bucket.growthGrantAt = time.Now()
 	bucket.mu.Unlock()
 }
 
@@ -420,6 +431,84 @@ func TestLimiterCloseWaitsForProactiveRefill(t *testing.T) {
 	}
 }
 
+// TestLimiterColdBucketRetainsInitialTarget verifies that a cold bucket keeps
+// its baseline capacity after serving the operation that triggers the refill.
+func TestLimiterColdBucketRetainsInitialTarget(t *testing.T) {
+	requests := make(chan leaseRequest, 1)
+	limiter := newTestRateLimiter(t, func(_ context.Context, batch []leaseRequest) ([]leaseResult, error) {
+		request := batch[0]
+		requests <- request
+		return []leaseResult{{
+			SubjectKind:   request.SubjectKind,
+			SubjectID:     request.SubjectID,
+			GrantedUnits:  request.RequestedUnits,
+			CapacityUnits: testLeaseSize,
+		}}, nil
+	})
+	bucket := newTestBucket(limiter)
+
+	if err := bucket.Consume(context.Background(), 1); err != nil {
+		t.Fatalf("consume: %v", err)
+	}
+	request := <-requests
+	if request.RequestedUnits != initialLeaseTarget+1 {
+		t.Fatalf("expected initial lease request of %d units, got %d", initialLeaseTarget+1, request.RequestedUnits)
+	}
+	if available := bucketAvailable(bucket); available != initialLeaseTarget {
+		t.Fatalf("expected %d locally available units, got %d", initialLeaseTarget, available)
+	}
+}
+
+// TestLimiterColdBucketsShareAuthoritativeCapacity verifies that cold buckets
+// for the same subject on separate nodes do not let the first node reserve the
+// full authoritative capacity.
+func TestLimiterColdBucketsShareAuthoritativeCapacity(t *testing.T) {
+	const capacityUnits = 100
+	var authoritative struct {
+		sync.Mutex
+		available int
+	}
+	authoritative.available = capacityUnits
+	acquire := func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
+		authoritative.Lock()
+		defer authoritative.Unlock()
+		results := make([]leaseResult, len(requests))
+		for i, request := range requests {
+			granted := min(request.RequestedUnits, authoritative.available)
+			authoritative.available -= granted
+			results[i] = leaseResult{
+				SubjectKind:    request.SubjectKind,
+				SubjectID:      request.SubjectID,
+				GrantedUnits:   granted,
+				CapacityUnits:  capacityUnits,
+				AvailableUnits: authoritative.available,
+			}
+		}
+		return results, nil
+	}
+
+	first := newTestBucket(newTestRateLimiter(t, acquire))
+	second := newTestBucket(newTestRateLimiter(t, acquire))
+	for i, bucket := range []*Bucket{first, second} {
+		if err := bucket.Consume(context.Background(), 1); err != nil {
+			t.Fatalf("node %d consume: %v", i+1, err)
+		}
+	}
+
+	authoritative.Lock()
+	available := authoritative.available
+	authoritative.Unlock()
+	wantAuthoritative := capacityUnits - 2*(initialLeaseTarget+1)
+	if available != wantAuthoritative {
+		t.Fatalf("expected %d authoritative units, got %d", wantAuthoritative, available)
+	}
+	for i, bucket := range []*Bucket{first, second} {
+		if available := bucketAvailable(bucket); available != initialLeaseTarget {
+			t.Fatalf("expected node %d to retain %d units, got %d", i+1, initialLeaseTarget, available)
+		}
+	}
+}
+
 // TestLimiterConsumesAndRefills verifies local consumption followed by refill.
 func TestLimiterConsumesAndRefills(t *testing.T) {
 	limiter := newTestRateLimiter(t, func(_ context.Context, requests []leaseRequest) ([]leaseResult, error) {
@@ -436,8 +525,8 @@ func TestLimiterConsumesAndRefills(t *testing.T) {
 	if err := bucket.Consume(context.Background(), 40); err != nil {
 		t.Fatalf("second consume: %v", err)
 	}
-	if got := bucketAvailable(bucket); got != 0 {
-		t.Fatalf("expected available capacity 0, got %d", got)
+	if got := bucketAvailable(bucket); got != 60 {
+		t.Fatalf("expected available capacity 60, got %d", got)
 	}
 }
 
@@ -465,8 +554,8 @@ func TestLimiterFullBucketChecksCapacityAboveKnownTarget(t *testing.T) {
 		t.Fatalf("expected capacity exceeded, got %v", err)
 	}
 	request := <-requests
-	if request.RequestedUnits != 20_000 {
-		t.Fatalf("expected refill request of 20000 units, got %d", request.RequestedUnits)
+	if request.RequestedUnits != 2_000+initialLeaseTarget {
+		t.Fatalf("expected refill request of %d units, got %d", 2_000+initialLeaseTarget, request.RequestedUnits)
 	}
 }
 
@@ -636,9 +725,9 @@ func TestLimiterKeepsPositiveCapacityForSmallerRequest(t *testing.T) {
 }
 
 // TestLimiterAdmissionBudgetIncludesTriggeringOperation verifies that a refill
-// triggered by an operation requests enough units to include that operation in
-// its admission budget, even when positive local capacity would otherwise make
-// the refill request smaller.
+// triggered by an operation requests enough units to include that operation
+// and the baseline headroom in its admission budget, even when positive local
+// capacity would otherwise make the refill request smaller.
 func TestLimiterAdmissionBudgetIncludesTriggeringOperation(t *testing.T) {
 	const (
 		leaseSize      = 20_000
@@ -663,8 +752,9 @@ func TestLimiterAdmissionBudgetIncludesTriggeringOperation(t *testing.T) {
 		t.Fatalf("consume: %v", err)
 	}
 	request := <-requests
-	if request.RequestedUnits != operationUnits {
-		t.Fatalf("expected refill request for %d units, got %d", operationUnits, request.RequestedUnits)
+	wantRequested := operationUnits + initialLeaseTarget
+	if request.RequestedUnits != wantRequested {
+		t.Fatalf("expected refill request for %d units, got %d", wantRequested, request.RequestedUnits)
 	}
 	if available := bucketAvailable(bucket); available != leaseSize-operationUnits {
 		t.Fatalf("expected %d locally available units, got %d", leaseSize-operationUnits, available)
@@ -686,6 +776,7 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, GrantedUnits: 60, CapacityUnits: 100}}, nil
 	})
 	bucket := newTestBucket(limiter)
+	setTestRecentLocalTarget(bucket, testLeaseSize)
 	first := make(chan error, 1)
 	second := make(chan error, 1)
 	third := make(chan error, 1)
@@ -720,7 +811,7 @@ func TestLimiterServesOnlySatisfiableFIFOPrefix(t *testing.T) {
 func TestLimiterOmitsRetryAfterAboveCapacity(t *testing.T) {
 	bucket := newTestBucket()
 	bucket.mu.Lock()
-	refill := bucket.newRefillLocked()
+	refill := bucket.newRefillWithAdmissionLocked(20)
 	waiter := bucket.admitWaiterLocked(refill, 20)
 	bucket.mu.Unlock()
 
@@ -814,6 +905,7 @@ func TestLimiterCancellationReturnsAdmissionBudget(t *testing.T) {
 		return []leaseResult{{SubjectKind: request[0].SubjectKind, SubjectID: request[0].SubjectID, GrantedUnits: 100, CapacityUnits: 100}}, nil
 	})
 	bucket := newTestBucket(limiter)
+	setTestRecentLocalTarget(bucket, testLeaseSize)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	first := make(chan error, 1)
