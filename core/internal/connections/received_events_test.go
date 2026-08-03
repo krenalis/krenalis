@@ -40,6 +40,11 @@ func Test_ReceivedEvent(t *testing.T) {
 				"term":    "term",
 				"content": "cont",
 			},
+			"consents": map[string]any{
+				"analytics":            false,
+				"essential_services":   true,
+				"targeted_advertising": false,
+			},
 			"device": map[string]any{
 				"id":                "dev1",
 				"advertisingId":     "ad1",
@@ -92,11 +97,6 @@ func Test_ReceivedEvent(t *testing.T) {
 			"session": map[string]any{
 				"id":    1751031467043,
 				"start": true,
-			},
-			"consents": map[string]any{
-				"analytics":            false,
-				"essential_services":   true,
-				"targeted_advertising": false,
 			},
 			"timezone":  "Europe/Rome",
 			"userAgent": "UA",
@@ -209,6 +209,15 @@ func Test_ReceivedEvent(t *testing.T) {
 	}
 	if content, _ := campaign.Content(); content != "cont" {
 		t.Fatalf("unexpected campaign context")
+	}
+
+	consentSeq, ok := ctx.Consents()
+	if !ok {
+		t.Fatalf("unexpected consent context")
+	}
+	consent := maps.Collect(consentSeq)
+	if len(consent) != 3 || consent["analytics"] || !consent["essential_services"] || consent["targeted_advertising"] {
+		t.Fatalf("unexpected consent %v", consent)
 	}
 
 	device, ok := ctx.Device()
@@ -357,15 +366,6 @@ func Test_ReceivedEvent(t *testing.T) {
 	}
 	if start, _ := session.Start(); !start {
 		t.Fatalf("unexpected session context")
-	}
-
-	consentSeq, ok := ctx.Consents()
-	if !ok {
-		t.Fatalf("unexpected consent context")
-	}
-	consent := maps.Collect(consentSeq)
-	if len(consent) != 3 || consent["analytics"] || !consent["essential_services"] || consent["targeted_advertising"] {
-		t.Fatalf("unexpected consent %v", consent)
 	}
 
 	if tz, _ := ctx.Timezone(); tz != "Europe/Rome" {
