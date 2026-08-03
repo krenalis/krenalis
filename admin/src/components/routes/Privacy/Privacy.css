@@ -72,8 +72,9 @@
 }
 
 .privacy__dialog-error sl-icon {
-	color: var(--sl-color-danger-600);
-	font-size: 14px;
+    color: var(--sl-color-danger-600);
+    font-size: 14px;
+    flex-shrink: 0;
 }
 
 .privacy__dialog-warning  {
