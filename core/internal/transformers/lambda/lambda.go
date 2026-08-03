@@ -458,13 +458,12 @@ func countEgress(o *lambda.Options) {
 	}
 	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
 		t.DialContext = dialer.DialWithContext(t.DialContext)
-		// The organization is resolved when a connection is dialed, so a pooled
-		// connection would attribute the bytes of every request it later serves
-		// to the organization that dialed it. Keep-alives are disabled, at the
-		// cost of a handshake per request, so that each request is counted for
-		// its own organization. Only when counting is enabled, as otherwise the
-		// pool can be shared with no loss.
-		t.DisableKeepAlives = dialer.CountingEnabled()
+		// TODO(Gianluca): the organization is resolved when a connection is
+		// dialed, so a pooled connection would attribute the bytes of every
+		// request it later serves to the organization that dialed it.
+		// Keep-alives are disabled, at the cost of a handshake per request, so
+		// that each request is counted for its own organization.
+		t.DisableKeepAlives = true
 	})
 }
 
