@@ -174,10 +174,16 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code string, pu
 	return nil
 }
 
-// validateConsentPurposeCode validates the given consent purpose code.
+// IsValidConsentPurposeCode returns whether the given consent purpose code is
+// valid.
 //
 // A valid consent purpose code has the same format as a property name and is at
 // most maxConsentPurposeCodeLen characters long.
+func IsValidConsentPurposeCode(code string) bool {
+	return validateConsentPurposeCode(code) == nil
+}
+
+// validateConsentPurposeCode validates the given consent purpose code.
 func validateConsentPurposeCode(code string) error {
 	if len(code) > maxConsentPurposeCodeLen || !types.IsValidPropertyName(code) {
 		return errors.BadRequest("code %q is not a valid consent purpose code. Consent purpose codes must be from 1 to %d"+
