@@ -174,8 +174,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
 		for i, code := range pipeline.RequiredConsents.Purposes {
-			if !consentPurposeCodeFormat.MatchString(code) {
-				return errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
+			if err := validateConsentPurposeCode(code); err != nil {
+				return err
 			}
 			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
 				return errors.BadRequest("required consent purpose %q is duplicated", code)

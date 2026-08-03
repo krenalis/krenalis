@@ -6,19 +6,19 @@ package core
 
 import (
 	"context"
-	"regexp"
 	"sort"
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
-const MaxRequiredConsentPurposes = 100 // maximum allowed number of required consent purposes.
-
-// consentPurposeCodeFormat is the format of a consent purpose code.
-var consentPurposeCodeFormat = regexp.MustCompile(`^[0-9A-Za-z._-]{1,100}$`)
+const (
+	MaxRequiredConsentPurposes = 100 // maximum allowed number of required consent purposes.
+	maxConsentPurposeCodeLen   = 100 // maximum length of a consent purpose code.
+)
 
 // ConsentPurpose represents a purpose.
 type ConsentPurpose struct {
@@ -36,8 +36,8 @@ type ConsentPurpose struct {
 // exists in the workspace.
 func (this *Workspace) AddConsentPurpose(ctx context.Context, code, name string) error {
 	this.core.mustBeOpen()
-	if !consentPurposeCodeFormat.MatchString(code) {
-		return errors.BadRequest("code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
+	if err := validateConsentPurposeCode(code); err != nil {
+		return err
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
@@ -91,11 +91,11 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 // exists in the workspace.
 func (this *Workspace) UpdateConsentPurpose(ctx context.Context, purpose, code, name string) error {
 	this.core.mustBeOpen()
-	if !consentPurposeCodeFormat.MatchString(purpose) {
-		return errors.BadRequest("code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
+	if err := validateConsentPurposeCode(purpose); err != nil {
+		return err
 	}
-	if !consentPurposeCodeFormat.MatchString(code) {
-		return errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
+	if err := validateConsentPurposeCode(code); err != nil {
+		return err
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
@@ -143,8 +143,8 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, purpose, code, 
 // workspace.
 func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) error {
 	this.core.mustBeOpen()
-	if !consentPurposeCodeFormat.MatchString(code) {
-		return errors.BadRequest("code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
+	if err := validateConsentPurposeCode(code); err != nil {
+		return err
 	}
 	if _, ok := this.workspace.ConsentPurpose(code); !ok {
 		return errors.NotFound("consent purpose %q does not exist", code)
@@ -172,4 +172,17 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) er
 		}
 		return n, nil
 	})
+}
+
+// validateConsentPurposeCode validates the given consent purpose code.
+//
+// A valid consent purpose code has the same format as a property name and is at
+// most maxConsentPurposeCodeLen characters long.
+func validateConsentPurposeCode(code string) error {
+	if len(code) > maxConsentPurposeCodeLen || !types.IsValidPropertyName(code) {
+		return errors.BadRequest("code %q is not a valid consent purpose code. Consent purpose codes must be from 1 to %d"+
+			" characters long, must start with a letter or an underscore and must contain only letters, numbers, or"+
+			" underscores", code, maxConsentPurposeCodeLen)
+	}
+	return nil
 }

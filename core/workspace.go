@@ -904,8 +904,8 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			Purposes: slices.Clone(requiredConsents.Purposes),
 		}
 		for i, code := range rc.Purposes {
-			if !consentPurposeCodeFormat.MatchString(code) {
-				return "", errors.BadRequest("new code must be between 1 and 100 characters long and can only contain letters, digits, dots, hyphens and underscores")
+			if err := validateConsentPurposeCode(code); err != nil {
+				return "", err
 			}
 			if slices.Contains(rc.Purposes[i+1:], code) {
 				return "", errors.BadRequest("required consent purpose %q is duplicated", code)

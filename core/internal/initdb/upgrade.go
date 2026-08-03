@@ -20,7 +20,7 @@ const (
 const consentPurposesTable = `
 	CREATE TABLE IF NOT EXISTS consent_purposes (
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-		code varchar(100) NOT NULL CHECK (code ~ '^[0-9A-Za-z._-]{1,100}$'),
+		code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
 		name varchar(100) NOT NULL,
 		PRIMARY KEY (workspace, code)
 	)`
