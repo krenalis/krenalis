@@ -87,7 +87,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 // exist.
 //
 // It returns an errors.UnprocessableError error with code
-// ConsentPurposeCodeExists if another consent purpose with code newCode already
+// ConsentPurposeCodeExists if another consent purpose with the new code already
 // exists in the workspace.
 func (this *Workspace) UpdateConsentPurpose(ctx context.Context, purpose, code, name string) error {
 	this.core.mustBeOpen()
