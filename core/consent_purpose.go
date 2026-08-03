@@ -80,6 +80,47 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 	return purposes
 }
 
+// DeleteConsentPurpose deletes the consent purpose with the given code.
+//
+// It returns an errors.NotFoundError error if the consent purpose does not
+// exist.
+//
+// It returns an errors.UnprocessableError error with code ConsentPurposeInUse
+// if the consent purpose is currently required by one or more pipelines of the
+// workspace.
+func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) error {
+	this.core.mustBeOpen()
+	if err := validateConsentPurposeCode(code); err != nil {
+		return err
+	}
+	if _, ok := this.workspace.ConsentPurpose(code); !ok {
+		return errors.NotFound("consent purpose %q does not exist", code)
+	}
+	n := state.DeleteConsentPurpose{
+		Workspace: this.workspace.ID,
+		Code:      code,
+	}
+	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var inUse bool
+		err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
+			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", n.Workspace, n.Code).Scan(&inUse)
+		if err != nil {
+			return nil, err
+		}
+		if inUse {
+			return nil, errors.Unprocessable(ConsentPurposeInUse, "consent purpose %q is required by one or more pipelines", n.Code)
+		}
+		result, err := tx.Exec(ctx, "DELETE FROM consent_purposes WHERE workspace = $1 AND code = $2", n.Workspace, n.Code)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("consent purpose %q does not exist", n.Code)
+		}
+		return n, nil
+	})
+}
+
 // UpdateConsentPurpose updates the consent purpose with the given code, setting
 // its code and name to those of purpose.
 //
@@ -131,47 +172,6 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code string, pu
 		return err
 	}
 	return nil
-}
-
-// DeleteConsentPurpose deletes the consent purpose with the given code.
-//
-// It returns an errors.NotFoundError error if the consent purpose does not
-// exist.
-//
-// It returns an errors.UnprocessableError error with code ConsentPurposeInUse
-// if the consent purpose is currently required by one or more pipelines of the
-// workspace.
-func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) error {
-	this.core.mustBeOpen()
-	if err := validateConsentPurposeCode(code); err != nil {
-		return err
-	}
-	if _, ok := this.workspace.ConsentPurpose(code); !ok {
-		return errors.NotFound("consent purpose %q does not exist", code)
-	}
-	n := state.DeleteConsentPurpose{
-		Workspace: this.workspace.ID,
-		Code:      code,
-	}
-	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var inUse bool
-		err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
-			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", n.Workspace, n.Code).Scan(&inUse)
-		if err != nil {
-			return nil, err
-		}
-		if inUse {
-			return nil, errors.Unprocessable(ConsentPurposeInUse, "consent purpose %q is required by one or more pipelines", n.Code)
-		}
-		result, err := tx.Exec(ctx, "DELETE FROM consent_purposes WHERE workspace = $1 AND code = $2", n.Workspace, n.Code)
-		if err != nil {
-			return nil, err
-		}
-		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("consent purpose %q does not exist", n.Code)
-		}
-		return n, nil
-	})
 }
 
 // validateConsentPurposeCode validates the given consent purpose code.
