@@ -207,6 +207,7 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.writeKey = ""
 	d.connectionId = ""
 	d.context = nil
+	d.typ = ""
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
 	switch path {
