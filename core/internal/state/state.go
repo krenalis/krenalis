@@ -10,7 +10,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"log/slog"
 	"maps"
 	"runtime"
 	"slices"
@@ -25,16 +24,24 @@ import (
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
+	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	ErrAccessKeyNotFound      = errors.New("access key not found")
 	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
 	ErrRateLimiterUnavailable = ratelimiter.ErrLimiterUnavailable
+
+	rateLimiterAcquisitionErrors = prometheus.RegisterCounter(
+		"krenalis_rate_limit_refill_errors_total",
+		"Total number of rate-limit lease refill errors",
+	)
+	rateLimiterQueueFull = prometheus.RegisterCounter(
+		"krenalis_rate_limit_refill_queue_full_total",
+		"Total number of rate-limit refill attempts rejected because the queue was full",
+	)
 )
 
 // CapacityExceededError is returned when the requested capacity is unavailable.
@@ -142,14 +149,8 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 
 	// Init the rate limiter.
 	state.rateLimiter = ratelimiter.New(db, ratelimiter.Metrics{
-		AcquisitionErrors: registerRateLimiterCounter(prometheus.CounterOpts{
-			Name: "krenalis_rate_limit_refill_errors_total",
-			Help: "Total number of rate-limit lease refill errors",
-		}),
-		QueueFull: registerRateLimiterCounter(prometheus.CounterOpts{
-			Name: "krenalis_rate_limit_refill_queue_full_total",
-			Help: "Total number of rate-limit refill attempts rejected because the queue was full",
-		}),
+		AcquisitionErrors: rateLimiterAcquisitionErrors,
+		QueueFull:         rateLimiterQueueFull,
 	})
 	state.platformBucket = state.rateLimiter.NewBucket("platform", "platform", requestLeaseSize, requestMaxUnits)
 
@@ -1843,21 +1844,3 @@ const (
 	UpdateOnly     ExportMode = "UpdateOnly"
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
-
-// registerRateLimiterCounter registers a counter in the default Prometheus
-// registry. If a counter with the same name is already registered, it returns
-// the existing counter. It returns nil when registration fails or the existing
-// collector is not a counter.
-func registerRateLimiterCounter(options prometheus.CounterOpts) prometheus.Counter {
-	counter := prometheus.NewCounter(options)
-	if err := prometheus.Register(counter); err != nil {
-		if registered, ok := err.(prometheus.AlreadyRegisteredError); ok {
-			if existingCounter, ok := registered.ExistingCollector.(prometheus.Counter); ok {
-				return existingCounter
-			}
-		}
-		slog.Error("core/state: cannot register rate-limit metric", "metric", options.Name, "error", err)
-		return nil
-	}
-	return counter
-}
