@@ -167,8 +167,7 @@ type innerSettings struct {
 var falseStrPtr = new("false")
 
 // connector returns a driver.Connector from the settings, whose connections are
-// established dialing with dialWith, so that the dial options of the driver's
-// own dialer are preserved.
+// established dialing with dialWith.
 func connector(s *innerSettings, dialWith connectors.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
