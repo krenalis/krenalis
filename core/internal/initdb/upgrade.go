@@ -25,6 +25,14 @@ const (
 	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
+const consentPurposesTable = `
+	CREATE TABLE IF NOT EXISTS consent_purposes (
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+		name varchar(100) NOT NULL,
+		PRIMARY KEY (workspace, code)
+	)`
+
 const organizationConnectorReferencesView = `
 	CREATE OR REPLACE VIEW organization_connector_references AS
 	SELECT
@@ -248,6 +256,18 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
+			consentPurposesTable,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

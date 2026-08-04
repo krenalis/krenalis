@@ -65,6 +65,8 @@ func (state *State) keep() {
 		switch n.Name {
 		case "AcceptInvitation":
 			org = state.acceptInvitation(n)
+		case "AddConsentPurpose":
+			org = state.addConsentPurpose(n)
 		case "AddMember":
 			org = state.addMember(n)
 		case "CreateAccessKey":
@@ -83,6 +85,8 @@ func (state *State) keep() {
 			org = state.deleteAccessKey(n)
 		case "DeleteConnection":
 			org = state.deleteConnection(n)
+		case "DeleteConsentPurpose":
+			org = state.deleteConsentPurpose(n)
 		case "DeleteEventWriteKey":
 			org = state.deleteEventWriteKey(n)
 		case "DeleteMember":
@@ -137,6 +141,8 @@ func (state *State) keep() {
 			org = state.unlinkConnection(n)
 		case "UpdateConnection":
 			org = state.updateConnection(n)
+		case "UpdateConsentPurpose":
+			org = state.updateConsentPurpose(n)
 		case "UpdateIdentityPropertiesToUnset":
 			org = state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
@@ -338,6 +344,31 @@ func (state *State) acceptInvitation(n notification) string {
 	return org.ID
 }
 
+// AddConsentPurpose is the event sent when a new consent purpose is added.
+type AddConsentPurpose struct {
+	Workspace string
+	Code      string
+	Name      string
+}
+
+// addConsentPurpose adds a new consent purpose.
+func (state *State) addConsentPurpose(n notification) string {
+	e := AddConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	cp := &ConsentPurpose{
+		Code: e.Code,
+		Name: e.Name,
+	}
+	ws.mu.Lock()
+	ws.consentPurposes[cp.Code] = cp
+	ws.mu.Unlock()
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
 // AddMember is the event sent when a member is added.
 type AddMember struct {
 	ID           string
@@ -533,6 +564,7 @@ type CreatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
+	RequiredConsents   RequiredConsents
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -583,6 +615,7 @@ func (state *State) createPipeline(n notification) string {
 		SchedulePeriod:     e.SchedulePeriod,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
+		RequiredConsents:   e.RequiredConsents,
 		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
@@ -655,6 +688,7 @@ func (state *State) createWorkspace(n notification) string {
 		ProfileSchema:                  e.ProfileSchema,
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
+		consentPurposes:                map[string]*ConsentPurpose{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
 		UIPreferences:                  e.UIPreferences,
@@ -834,6 +868,26 @@ func (state *State) deleteConnection(n notification) string {
 			lc.LinkedConnections = removeLinkedConnection(lc.LinkedConnections, e.ID)
 		})
 	}
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
+// DeleteConsentPurpose is the event sent when a consent purpose is deleted.
+type DeleteConsentPurpose struct {
+	Workspace string
+	Code      string
+}
+
+// deleteConsentPurpose deletes a consent purpose.
+func (state *State) deleteConsentPurpose(n notification) string {
+	e := DeleteConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.mu.Lock()
+	delete(ws.consentPurposes, e.Code)
+	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
 }
@@ -1570,6 +1624,33 @@ func (state *State) updateConnection(n notification) string {
 	return c.organization.ID
 }
 
+// UpdateConsentPurpose is the event sent when a consent purpose is updated.
+type UpdateConsentPurpose struct {
+	Workspace string
+	Purpose   string
+	Code      string
+	Name      string
+}
+
+// updateConsentPurpose updates a consent purpose.
+func (state *State) updateConsentPurpose(n notification) string {
+	e := UpdateConsentPurpose{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	cp := &ConsentPurpose{
+		Code: e.Code,
+		Name: e.Name,
+	}
+	ws.mu.Lock()
+	delete(ws.consentPurposes, e.Purpose)
+	ws.consentPurposes[cp.Code] = cp
+	ws.mu.Unlock()
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
 // UpdateIdentityPropertiesToUnset is the event sent when the identity
 // properties to unset of a pipeline are updated.
 type UpdateIdentityPropertiesToUnset struct {
@@ -1643,6 +1724,7 @@ type UpdatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
+	RequiredConsents   RequiredConsents
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -1692,6 +1774,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.InSchema = e.InSchema
 		p.OutSchema = e.OutSchema
 		p.Filter = filter
+		p.RequiredConsents = e.RequiredConsents
 		p.Transformation = e.Transformation
 		p.Query = e.Query
 		p.Path = e.Path

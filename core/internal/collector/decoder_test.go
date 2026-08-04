@@ -296,6 +296,65 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
+		// krenalis.track('click', {}, {context: {consents: {...}}})
+		{
+			typ:  "track",
+			body: `{"context":{"consents":{"analytics":false,"essential_services":true,"my_test_purpose":false,"targeted_advertising":false}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context": map[string]any{
+						"consents": map[string]any{
+							"analytics":            false,
+							"essential_services":   true,
+							"my_test_purpose":      false,
+							"targeted_advertising": false,
+						},
+						"ip": ip,
+					},
+					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
+					"type":       "track",
+					"event":      "Product View",
+				}},
+			},
+		},
+		// Batch-level default context.consents is merged into the event, without
+		// overriding consent purposes already specified at the event level.
+		{
+			body: `{"batch":[{"type":"track","event":"click","anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","context":{"consents":{"analytics":true}}}],"context":{"consents":{"analytics":false,"essential_services":true}}}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context": map[string]any{
+						"consents": map[string]any{
+							"analytics":          true,
+							"essential_services": true,
+						},
+						"ip": ip,
+					},
+					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
+					"type":       "track",
+					"event":      "click",
+				}},
+			},
+		},
+		// context.consents with a non-boolean value.
+		{
+			typ:  "track",
+			body: `{"context":{"consents":{"analytics":"no"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				err: errors.BadRequest(`value of "analytics" in 'context.consents' is not a valid boolean`),
+			}},
+		},
+		// context.consents with a non-object value.
+		{
+			typ:  "track",
+			body: `{"context":{"consents":"no"},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				err: errors.BadRequest("property 'context.consents' is not a valid object"),
+			}},
+		},
+
 		// krenalis.track('click'); krenalis.track('click');
 		{
 			// The 'integrations' field is included in the event's body even if

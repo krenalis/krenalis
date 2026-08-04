@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/events"
@@ -810,6 +811,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
+			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				c.metrics.ConsentFailed(p.ID, 1)
+				continue
+			}
+			c.metrics.ConsentPassed(p.ID, 1)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -826,6 +832,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
+			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				c.metrics.ConsentFailed(p.ID, 1)
+				continue
+			}
+			c.metrics.ConsentPassed(p.ID, 1)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -847,6 +858,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.FilterPassed(p.ID, 1)
+				if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+					c.metrics.ConsentFailed(p.ID, 1)
+					continue
+				}
+				c.metrics.ConsentPassed(p.ID, 1)
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {

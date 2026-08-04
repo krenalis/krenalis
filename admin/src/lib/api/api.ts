@@ -13,6 +13,7 @@ import {
 	PipelineStep,
 	PipelineMetrics,
 	Filter,
+	RequiredConsents,
 } from './types/pipeline';
 import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
@@ -59,6 +60,7 @@ import {
 	authTokenResponse,
 	profileAttributesResponse,
 	PublicMetadata,
+	ConsentPurposesResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
@@ -533,11 +535,13 @@ class EventListeners {
 		connection: string | null,
 		size: number | null,
 		filter: Filter | null,
+		requiredConsents?: RequiredConsents | null,
 	): Promise<CreateEventListenerResponse> => {
 		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
 			connection,
 			size,
 			filter,
+			requiredConsents,
 		});
 	};
 
@@ -923,6 +927,25 @@ class Workspaces {
 
 	LatestAlterProfileSchema = async (): Promise<LatestAlterProfileSchema> => {
 		return await call(`${this.apiURL}/profiles/schema/latest-alter`, http.GET, this.workspaceID);
+	};
+
+	consentPurposes = async (): Promise<ConsentPurposesResponse> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
+	};
+
+	addConsentPurpose = async (code: string, name: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { code, name });
+	};
+
+	updateConsentPurpose = async (code: string, newCode: string, name: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${code}`, http.PUT, this.workspaceID, {
+			code: newCode,
+			name,
+		});
+	};
+
+	deleteConsentPurpose = async (code: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${code}`, http.DELETE, this.workspaceID);
 	};
 }
 

@@ -781,6 +781,7 @@ type Workspace struct {
 	ProfileSchema                  types.Type // without meta properties.
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
+	consentPurposes                map[string]*ConsentPurpose
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 	UIPreferences                  UIPreferences
@@ -845,6 +846,31 @@ func (workspace *Workspace) Connections() []*Connection {
 	}
 	workspace.mu.Unlock()
 	return connections
+}
+
+// ConsentPurpose returns the consent purpose of the workspace with the given
+// code. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(code string) (*ConsentPurpose, bool) {
+	workspace.mu.Lock()
+	cp, ok := workspace.consentPurposes[code]
+	workspace.mu.Unlock()
+	return cp, ok
+}
+
+// ConsentPurposes returns all the consent purposes of the workspace.
+func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
+	workspace.mu.Lock()
+	purposes := make([]*ConsentPurpose, len(workspace.consentPurposes))
+	i := 0
+	for _, cp := range workspace.consentPurposes {
+		purposes[i] = cp
+		i++
+	}
+	workspace.mu.Unlock()
+	sort.Slice(purposes, func(i, j int) bool {
+		return purposes[i].Code < purposes[j].Code
+	})
+	return purposes
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -1198,6 +1224,12 @@ func (account *Account) Connector() *Connector {
 	c := account.connector
 	account.mu.Unlock()
 	return c
+}
+
+// ConsentPurpose represents a consent purpose.
+type ConsentPurpose struct {
+	Code string
+	Name string
 }
 
 // Strategy represents a strategy.
@@ -1554,6 +1586,7 @@ type Pipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             *Where
+	RequiredConsents   RequiredConsents
 	Transformation     Transformation
 	Query              string
 	Path               string
@@ -1738,3 +1771,57 @@ const (
 	UpdateOnly     ExportMode = "UpdateOnly"
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
+
+// RequiredConsents represents the consent purposes required by a pipeline.
+type RequiredConsents struct {
+	Operator ConsentPurposesOperator
+	Purposes []string // consent purpose codes.
+}
+
+// ConsentPurposesOperator represents the logical operator applied to the
+// consent purposes required by a pipeline.
+type ConsentPurposesOperator int
+
+const (
+	PurposesAnd ConsentPurposesOperator = iota // and
+	PurposesOr                                 // or
+)
+
+// Scan implements the sql.Scanner interface.
+func (op *ConsentPurposesOperator) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an state.ConsentPurposesOperator value", src)
+	}
+	switch s {
+	case "and":
+		*op = PurposesAnd
+	case "or":
+		*op = PurposesOr
+	default:
+		return fmt.Errorf("invalid state.ConsentPurposesOperator: %s", s)
+	}
+	return nil
+}
+
+// String returns the string representation of op.
+// It panics if op is not a valid ConsentPurposesOperator value.
+func (op ConsentPurposesOperator) String() string {
+	v, err := op.Value()
+	if err != nil {
+		panic(err)
+	}
+	return v.(string)
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if op is not a valid ConsentPurposesOperator.
+func (op ConsentPurposesOperator) Value() (driver.Value, error) {
+	switch op {
+	case PurposesAnd:
+		return "and", nil
+	case PurposesOr:
+		return "or", nil
+	}
+	return nil, fmt.Errorf("not a valid ConsentPurposesOperator: %d", op)
+}

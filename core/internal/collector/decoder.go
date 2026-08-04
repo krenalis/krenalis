@@ -857,6 +857,17 @@ func (d *decoder) decodeContext() (map[string]any, error) {
 				return nil, errors.BadRequest("property 'context.traits' is not a valid object")
 			}
 			context["traits"], _ = d.dec.ReadValue()
+		case "consents":
+			if kind != '{' {
+				return nil, errors.BadRequest("property 'context.consents' is not a valid object")
+			}
+			consents, err := d.decodeConsents()
+			if err != nil {
+				return nil, err
+			}
+			if consents != nil {
+				context["consents"] = consents
+			}
 		default:
 			section, ok := contextSections[name]
 			if !ok {
@@ -1110,6 +1121,54 @@ func (d *decoder) decodeContextSection(section *contextSection) (map[string]any,
 	}
 
 	return sec, nil
+}
+
+// decodeConsents decodes and returns 'context.consents'.
+//
+// Before returning, decodeConsents attempts to advance the decoder so that the
+// next token is the one following the end of the object, even in case of error.
+func (d *decoder) decodeConsents() (map[string]any, error) {
+
+	skipOut := true
+	defer func() {
+		if skipOut {
+			_ = d.dec.SkipOut()
+		}
+	}()
+
+	_ = d.dec.SkipToken() // skip the first token.
+
+	var consents map[string]any
+
+	for {
+		tok, err := d.dec.ReadToken()
+		if err != nil {
+			return nil, err
+		}
+		if tok.Kind() == '}' {
+			skipOut = false
+			break
+		}
+		purpose := tok.String()
+		if purpose == "" {
+			return nil, errors.BadRequest("property 'context.consents' contains an empty purpose")
+		}
+		tok, err = d.dec.ReadToken()
+		if err != nil {
+			return nil, err
+		}
+		if tok.Kind() != json.True && tok.Kind() != json.False {
+			return nil, errors.BadRequest("value of %q in 'context.consents' is not a valid boolean", purpose)
+		}
+		v := tok.Bool()
+		if consents == nil {
+			consents = map[string]any{purpose: v}
+		} else {
+			consents[purpose] = v
+		}
+	}
+
+	return consents, nil
 }
 
 // parseRemoteAddr parses s as an IPv4 or IPv6 address, including IPv4-mapped
