@@ -206,10 +206,11 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 func (file *File) storage() (any, error) {
 	storage := file.pipeline.Connection()
 	connector := storage.Connector()
+	organization := storage.Organization()
 	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(file.state, storage),
-		Dial:     dialer.Dial(storage.Organization().ID),
-		DialWith: dialer.DialWith(storage.Organization().ID),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 }
 
