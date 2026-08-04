@@ -85,10 +85,11 @@ func (c *Connections) Database(connection *state.Connection) *Database {
 		connector:   connector.Code,
 		timeLayouts: &connector.TimeLayouts,
 	}
+	organization := connection.Organization()
 	inner, err := connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
-		Dial:     dialer.Dial(connection.Organization().ID),
-		DialWith: dialer.DialWith(connection.Organization().ID),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	database.inner = inner.(databaseConnection)
 	database.err = connectorError(err)
