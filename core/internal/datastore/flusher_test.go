@@ -19,6 +19,16 @@ type testRow struct {
 	id int
 }
 
+// testAck is a streams.Ack implementation for tests.
+type testAck struct {
+	acknowledge func()
+}
+
+// Acknowledge implements streams.Ack.
+func (a testAck) Acknowledge() {
+	a.acknowledge()
+}
+
 const (
 	testPipeline1 = "8QaT3mN7KxP5"
 	testPipeline2 = "5zBpR9Y2QnM3"
@@ -322,7 +332,7 @@ func TestFlusherAckAfterRetry(t *testing.T) {
 		}
 		f := newTestFlusher(opts, flushFn)
 		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, ack: nil}
-		f.Ch() <- flusherRow[testRow]{row: testRow{id: 2}, ack: ack}
+		f.Ch() <- flusherRow[testRow]{row: testRow{id: 2}, ack: testAck{acknowledge: ack}}
 
 		<-thirdStart
 		if got := ackCount.Load(); got != 0 {
@@ -366,7 +376,7 @@ func TestFlusherStartOperationRetry(t *testing.T) {
 		}
 		acked := make(chan struct{}, 1)
 		f := newFlusher[testRow](opts, startOp, flushFn)
-		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, ack: func() { acked <- struct{}{} }}
+		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, ack: testAck{acknowledge: func() { acked <- struct{}{} }}}
 
 		receiveWithin(t, flushCh, 30*time.Second, "flush")
 		receiveWithin(t, acked, 30*time.Second, "ack")
@@ -406,7 +416,7 @@ func TestFlusherStartOperationCanceled(t *testing.T) {
 		}
 		acked := make(chan struct{}, 1)
 		f := newFlusher[testRow](opts, startOp, flushFn)
-		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, ack: func() { acked <- struct{}{} }}
+		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, ack: testAck{acknowledge: func() { acked <- struct{}{} }}}
 
 		<-started
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -532,7 +542,7 @@ func TestFlusherRetryLogErrorDedup(t *testing.T) {
 			return nil
 		}
 		f := newTestFlusher(opts, flushFn)
-		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: testPipeline1, ack: ack}
+		f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: testPipeline1, ack: testAck{acknowledge: ack}}
 
 		receiveWithin(t, ackCh, 30*time.Second, "ack")
 		receiveWithin(t, finalizeCh, 30*time.Second, "metrics finalize")

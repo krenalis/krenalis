@@ -747,7 +747,7 @@ func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern st
 	}
 
 	for _, ack := range acks {
-		ack()
+		ack.Acknowledge()
 	}
 
 	for key, count := range metricsCounts {

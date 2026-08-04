@@ -169,7 +169,10 @@ func Test_iterator_invalidUsage(t *testing.T) {
 }
 
 // nopAck is a no-op streams.Ack implementation.
-func nopAck() {}
+type nopAck struct{}
+
+// Acknowledge implements streams.Ack.
+func (nopAck) Acknowledge() {}
 
 // Test_Sender_DiscardedOutOfOrderEvent verifies that discarding an out-of-order
 // event does not prevent delivering the next event exactly once.
@@ -195,14 +198,14 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 				"anonymousId": "user",
 				"messageId":   "msg-0",
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
 			Attributes: map[string]any{
 				"anonymousId": "user",
 				"messageId":   "msg-1",
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 
 		s.DiscardEvent(event1)
@@ -265,7 +268,7 @@ func Test_Sender_SameUserRebindPreservesOrder(t *testing.T) {
 					"anonymousId": anonymousID,
 					"messageId":   messageID,
 				},
-				Ack: nopAck,
+				Ack: nopAck{},
 			})
 		}
 
@@ -335,7 +338,7 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 					"anonymousId": userID,
 					"messageId":   messageID,
 				},
-				Ack: nopAck,
+				Ack: nopAck{},
 			})
 		}
 
@@ -388,7 +391,7 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 				"anonymousId": "user",
 				"messageId":   "msg-0",
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 		s.SendEvent(event)
 
@@ -592,7 +595,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 				"anonymousId": "user-1",
 				"messageId":   "msg-1",
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 
 		s.DiscardEvent(event)
@@ -629,7 +632,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 				"anonymousId": "user-2",
 				"messageId":   "msg-2",
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 		s.SendEvent(event)
 
@@ -667,7 +670,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 				"anonymousId": "user-3",
 				"messageId":   "msg-3",
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 		s.SendEvent(event)
 
@@ -693,6 +696,6 @@ func createTestEvent(s *Sender, i int) *Event {
 			"anonymousId": "user123",
 			"messageId":   fmt.Sprintf("msg-%d", i),
 		},
-		Ack: nopAck,
+		Ack: nopAck{},
 	})
 }
