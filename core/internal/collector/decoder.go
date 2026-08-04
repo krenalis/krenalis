@@ -215,7 +215,6 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.writeKey = ""
 	d.connectionId = ""
 	d.context = nil
-	d.typ = ""
 	d.eventCount = 1
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
