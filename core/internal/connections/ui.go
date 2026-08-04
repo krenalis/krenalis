@@ -75,6 +75,7 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	var inner any
 	var err error
 	settingsStore := newConnectionSettingStore(c.state, connection)
+	organization := connection.Organization()
 	switch connector := connection.Connector(); connector.Type {
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
@@ -87,22 +88,22 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 		var database any
 		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 			Settings: settingsStore,
-			Dial:     dialer.Dial(connection.Organization().ID),
-			DialWith: dialer.DialWith(connection.Organization().ID),
+			Dial:     dialer.Dial(organization.ID),
+			DialWith: dialer.DialWith(organization.ID),
 		})
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 			Settings: settingsStore,
-			Dial:     dialer.Dial(connection.Organization().ID),
-			DialWith: dialer.DialWith(connection.Organization().ID),
+			Dial:     dialer.Dial(organization.ID),
+			DialWith: dialer.DialWith(organization.ID),
 		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
 			Settings: settingsStore,
-			Dial:     dialer.Dial(connection.Organization().ID),
-			DialWith: dialer.DialWith(connection.Organization().ID),
+			Dial:     dialer.Dial(organization.ID),
+			DialWith: dialer.DialWith(organization.ID),
 		})
 	case state.SDK:
 		inner, err = connectors.RegisteredSDK(connector.Code).New(&connectors.SDKEnv{
