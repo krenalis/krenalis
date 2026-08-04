@@ -248,8 +248,7 @@ type innerSettings struct {
 	Topic     string             `json:"topic"`
 }
 
-// TODO(Gianluca): the change made to this connector should be revisited. Maybe
-// it's the wrong one, or maybe it's the right one but there's a simpler way.
+// TODO(Gianluca): the change made to this connector should be revisited.
 
 const dialTimeout = 5 * time.Second
 
