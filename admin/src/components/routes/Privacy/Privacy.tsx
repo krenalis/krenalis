@@ -369,9 +369,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: P
 				{isEditing && code !== purposeToEdit.code && pipelines.length > 0 && (
 					<div className='privacy__dialog-warning'>
 						<SlIcon slot='icon' name='exclamation-triangle' />
-						{pipelines.length === 1
-							? `1 pipeline requires the "${purposeToEdit.code}" code. It will stop processing events until you update it too.`
-							: `${pipelines.length} pipelines require the "${purposeToEdit.code}" code. They will stop processing events until you update them too.`}
+						{`This purpose is used by ${pipelines.length} ${pipelines.length === 1 ? 'pipeline' : 'pipelines'}. Changing its code may cause events to be filtered incorrectly.`}
 					</div>
 				)}
 				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
