@@ -62,10 +62,11 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 		state:     c.state,
 		storage:   storage,
 	}
+	organization := storage.Organization()
 	s.inner, s.err = connectors.RegisteredFileStorage(storage.Connector().Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(c.state, storage),
-		Dial:     dialer.Dial(storage.Organization().ID),
-		DialWith: dialer.DialWith(storage.Organization().ID),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	s.err = connectorError(s.err)
 	return s
