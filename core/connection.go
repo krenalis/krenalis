@@ -2418,15 +2418,15 @@ type ConnectionToSet struct {
 // call and deletes it after the call returns. Any call to a method that is not
 // CallFunction panics.
 type tempFunctionProvider struct {
+	organization string                        // ID of the organization performing the transformation.
 	name         string                        // function name.
 	language     state.Language                // language.
 	source       string                        // source code.
 	provider     transformers.FunctionProvider // underlying function provider.
-	organization string                        // ID of the organization performing the transformation.
 }
 
 func newTempTransformerProvider(organization, name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
-	return &tempFunctionProvider{name, language, source, provider, organization}
+	return &tempFunctionProvider{organization, name, language, source, provider}
 }
 
 func (tp *tempFunctionProvider) Call(ctx context.Context, _, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
