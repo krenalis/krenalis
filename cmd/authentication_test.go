@@ -52,29 +52,16 @@ func TestApplyRateLimitTo(t *testing.T) {
 		}
 	})
 
-	t.Run("consumes the selected organization budget", func(t *testing.T) {
-		organization := &rateLimitSubjectStub{}
+	t.Run("consumes the rate-limit budget", func(t *testing.T) {
+		subject := &rateLimitSubjectStub{}
 		authenticated := authenticatedRequest{}
 
-		err := authenticated.applyRateLimitTo(context.Background(), organization, 3)
+		err := authenticated.applyRateLimitTo(context.Background(), subject, 3)
 		if err != nil {
 			t.Fatalf("apply rate limit: %v", err)
 		}
-		if organization.calls != 1 || organization.cost != 3 {
-			t.Fatalf("expected organization consumption with cost 3, got calls=%d cost=%d", organization.calls, organization.cost)
-		}
-	})
-
-	t.Run("consumes the selected workspace budget", func(t *testing.T) {
-		workspace := &rateLimitSubjectStub{}
-		authenticated := authenticatedRequest{}
-
-		err := authenticated.applyRateLimitTo(context.Background(), workspace, 3)
-		if err != nil {
-			t.Fatalf("apply rate limit: %v", err)
-		}
-		if workspace.calls != 1 || workspace.cost != 3 {
-			t.Fatalf("expected workspace consumption with cost 3, got calls=%d cost=%d", workspace.calls, workspace.cost)
+		if subject.calls != 1 || subject.cost != 3 {
+			t.Fatalf("expected budget consumption with cost 3, got calls=%d cost=%d", subject.calls, subject.cost)
 		}
 	})
 
