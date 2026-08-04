@@ -126,14 +126,14 @@ func TestNewSSHClientConfigPinnedRSAHostKey(t *testing.T) {
 // TestOpenClientRejectsInvalidHostPublicKey tests that openClient rejects host
 // public keys that do not satisfy the connector validation rules.
 func TestOpenClientRejectsInvalidHostPublicKey(t *testing.T) {
-	dial := (&net.Dialer{}).DialContext
+	var dialer net.Dialer
 	_, err := openClient(context.Background(), &innerSettings{
 		Host:          "example.com",
 		Port:          22,
 		Username:      "username",
 		Password:      "password",
 		HostPublicKey: `command="echo hi" ` + testHostPublicKey,
-	}, dial)
+	}, dialer.DialContext)
 	if err == nil {
 		t.Fatal("expected non-nil error, got nil")
 	}
