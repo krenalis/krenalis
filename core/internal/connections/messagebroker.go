@@ -57,10 +57,11 @@ func (c *Connections) MessageBroker(connection *state.Connection) (*MessageBroke
 	broker := &MessageBroker{
 		connector: connection.Connector().Code,
 	}
+	organization := connection.Organization()
 	inner, err := connectors.RegisteredMessageBroker(connection.Connector().Code).New(&connectors.MessageBrokerEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
-		Dial:     dialer.Dial(connection.Organization().ID),
-		DialWith: dialer.DialWith(connection.Organization().ID),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	if err != nil {
 		return nil, connectorError(err)
