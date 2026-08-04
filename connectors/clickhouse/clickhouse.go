@@ -246,8 +246,8 @@ type innerSettings struct {
 	Database string `json:"database"`
 }
 
-// options returns the connection options, from s. The connections are
-// established using dial, in place of the driver's default dialer.
+// options returns the connection options, from s.
+// The connections are established using dial.
 func options(s *innerSettings, dial connectors.DialFunc) *clickhouse.Options {
 	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
