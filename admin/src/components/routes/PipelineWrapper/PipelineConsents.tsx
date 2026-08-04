@@ -45,15 +45,29 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		? selectedCodes.filter((code) => !purposes.some((p) => p.code === code))
 		: [];
 
-	const onToggle = (e: any) => {
+	const setEnabled = (enabled: boolean) => {
 		const p = structuredClone(pipeline);
-		setIsEnabled(e.target.checked);
-		if (e.target.checked) {
+		setIsEnabled(enabled);
+		if (enabled) {
 			p.requiredConsents = { operator: 'and', purposes: [] };
 		} else {
 			p.requiredConsents = null;
 		}
 		setPipeline(p);
+	};
+
+	const onToggle = (e: any) => {
+		setEnabled(e.target.checked);
+	};
+
+	const onSentenceClick = (e: React.MouseEvent) => {
+		if (purposes.length === 0) {
+			return;
+		}
+		if ((e.target as HTMLElement).closest('sl-select')) {
+			return;
+		}
+		setEnabled(!isEnabled);
 	};
 
 	const onChangePurposes = (e: any) => {
@@ -79,7 +93,12 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		>
 			<div className='pipeline__consents-toggle'>
 				<SlCheckbox checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
-				<div className='pipeline__consents-logical-sentence'>
+				<div
+					className={`pipeline__consents-logical-sentence${
+						purposes.length === 0 ? ' pipeline__consents-logical-sentence--disabled' : ''
+					}`}
+					onClick={onSentenceClick}
+				>
 					An event must have consent for
 					<SlSelect
 						className='pipeline__consents-logical-select'

@@ -1975,7 +1975,7 @@ inherit the disabled style */
 	display: flex;
 	flex-flow: row;
 	align-items: flex-start;
-	gap: 2px;
+	gap: 3px;
 }
 
 .pipeline__consents-details {
@@ -2016,6 +2016,12 @@ inherit the disabled style */
 	align-items: center;
 	gap: 8px;
 	font-size: 15px;
+	cursor: pointer;
+	user-select: none;
+}
+
+.pipeline__consents-logical-sentence--disabled {
+	cursor: not-allowed;
 }
 
 .pipeline__consents-logical-select {
