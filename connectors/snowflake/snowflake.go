@@ -316,7 +316,7 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 }
 
 // testConnection tests a connection with the given settings, established
-// dialing with dialWith, so that the driver's own dialer is preserved.
+// dialing with dialWith.
 // Returns an error if the connection cannot be established.
 func testConnection(ctx context.Context, settings *innerSettings, dialWith connectors.DialWith) error {
 	db := sql.OpenDB(connector(settings, dialWith))
