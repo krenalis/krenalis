@@ -59,7 +59,7 @@ type CapacityExceededError struct {
 }
 
 func (err CapacityExceededError) Error() string {
-	return "requested rate-limit capacity is unavailable"
+	return "rate limit exceeded; retry according to the Retry-After header"
 }
 
 // Metrics contains optional counters for rate-limiter events.
