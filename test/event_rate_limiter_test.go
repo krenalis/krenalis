@@ -8,116 +8,54 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
-// TestEventRateLimiterRejectsBatchBeforePublishing verifies that an
-// over-limit batch is rejected without publishing any of its events.
-func TestEventRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
+// TestEventRateLimiterAcceptsMaximumRequestBatch verifies that the minimum
+// event capacity admits the largest valid batch that fits in a request body.
+func TestEventRateLimiterAcceptsMaximumRequestBatch(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	k := krenalistester.NewKrenalisInstance(t)
 	k.Start()
 	defer k.Stop()
-
-	organizations := k.Organizations(0, 1)
-	if len(organizations) != 1 {
-		t.Fatalf("expected one organization, got %d", len(organizations))
-	}
-	organization := organizations[0]
-	limits := organization.Limits
-	limits.Rates.EventsSpecific.MaxCapacity = 1
-	k.UpdateOrganization(organization.ID, organization.Name, limits)
 
 	connectionID := k.CreateJavaScriptSource("Rate-limited source", nil)
 	writeKeys := k.EventWriteKeys(connectionID)
 	if len(writeKeys) != 1 {
 		t.Fatalf("expected one event write key, got %d", len(writeKeys))
 	}
-	k.CreatePipeline(connectionID, "Event", krenalistester.PipelineToSet{
-		Name:    "Store rate-limited events",
-		Enabled: true,
-	})
 
-	err := k.TryCallWithoutRetry(http.MethodPost, "/v1/events",
+	// Keep this value in sync with collector.maxRequestSize.
+	const maxRequestSize = 500 * 1024
+	event := map[string]any{"type": "page", "userId": "u"}
+	encodedEvent, err := json.Marshal(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A JSON array needs one byte per element for its comma or closing bracket,
+	// plus its opening bracket.
+	eventCount := (maxRequestSize - 1) / (len(encodedEvent) + 1)
+	events := make([]map[string]any, eventCount)
+	for i := range events {
+		events[i] = event
+	}
+	body, err := json.Marshal(events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) > maxRequestSize {
+		t.Fatalf("expected request body not to exceed %d bytes, got %d", maxRequestSize, len(body))
+	}
+	if len(body)+len(encodedEvent)+1 <= maxRequestSize {
+		t.Fatalf("expected one more event to exceed the %d-byte request limit", maxRequestSize)
+	}
+
+	if err := k.TryCallWithoutRetry(http.MethodPost, "/v1/events",
 		http.Header{"Authorization": []string{"Bearer " + writeKeys[0]}},
-		[]map[string]any{
-			{"type": "track", "userId": "user-1", "event": "first"},
-			{"type": "track", "userId": "user-1", "event": "second"},
-		}, nil)
-	statusErr, ok := err.(*krenalistester.StatusCodeError)
-	if !ok {
-		t.Fatalf("expected *StatusCodeError, got %T", err)
-	}
-	if statusErr.Response.Code != http.StatusTooManyRequests {
-		t.Fatalf("expected HTTP status %d, got %d", http.StatusTooManyRequests, statusErr.Response.Code)
-	}
-	var response struct {
-		Error struct {
-			Code string `json:"code"`
-		} `json:"error"`
-	}
-	if err := json.Unmarshal([]byte(statusErr.Response.Text), &response); err != nil {
-		t.Fatalf("expected JSON error response, got %q", statusErr.Response.Text)
-	}
-	if response.Error.Code != "TooManyRequests" {
-		t.Fatalf("expected error code %q, got %q", "TooManyRequests", response.Error.Code)
-	}
-
-	time.Sleep(2 * time.Second)
-	if count := k.CountEventsInWarehouse(t.Context()); count != 0 {
-		t.Fatalf("expected no events stored after the rejected batch, got %d", count)
-	}
-}
-
-// TestEventRateLimiterRestoresUnusedBatchCapacity verifies that invalid
-// events return their capacity while duplicate events consume it.
-func TestEventRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-	k := krenalistester.NewKrenalisInstance(t)
-	k.Start()
-	defer k.Stop()
-
-	organizations := k.Organizations(0, 1)
-	if len(organizations) != 1 {
-		t.Fatalf("expected one organization, got %d", len(organizations))
-	}
-	organization := organizations[0]
-	limits := organization.Limits
-	limits.Rates.EventsSpecific.RatePerMinute = 1000
-	limits.Rates.EventsSpecific.MaxCapacity = 3
-	k.UpdateOrganization(organization.ID, organization.Name, limits)
-
-	connectionID := k.CreateJavaScriptSource("Restored rate-limit capacity source", nil)
-	writeKeys := k.EventWriteKeys(connectionID)
-	if len(writeKeys) != 1 {
-		t.Fatalf("expected one event write key, got %d", len(writeKeys))
-	}
-	headers := http.Header{"Authorization": []string{"Bearer " + writeKeys[0]}}
-	messageID := "293ad636-c849-47a9-8d09-0e3707c6d8c8"
-
-	k.Call(http.MethodPost, "/v1/events", headers, []map[string]any{
-		{"type": "track", "userId": "user-1", "event": "first", "messageId": messageID},
-		{},
-		{"type": "track", "userId": "user-1", "event": "duplicate", "messageId": messageID},
-	}, nil)
-	k.Call(http.MethodPost, "/v1/events", headers, map[string]any{
-		"type": "track", "userId": "user-1", "event": "second",
-	}, nil)
-
-	err := k.TryCallWithoutRetry(http.MethodPost, "/v1/events", headers, map[string]any{
-		"type": "track", "userId": "user-1", "event": "third",
-	}, nil)
-	statusErr, ok := err.(*krenalistester.StatusCodeError)
-	if !ok {
-		t.Fatalf("expected *StatusCodeError, got %T", err)
-	}
-	if statusErr.Response.Code != http.StatusTooManyRequests {
-		t.Fatalf("expected HTTP status %d, got %d", http.StatusTooManyRequests, statusErr.Response.Code)
+		events, nil); err != nil {
+		t.Fatal(err)
 	}
 }

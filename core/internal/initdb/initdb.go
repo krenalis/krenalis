@@ -156,7 +156,7 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,`+
 		` organization_requests_rate_per_minute, organization_requests_max_capacity, workspace_requests_rate_per_minute, workspace_requests_max_capacity,`+
 		` workspace_events_rate_per_minute, workspace_events_max_capacity)`+
-		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000, 1000, 1000, 1000, 1000, 1000, 1000)`,
+		` VALUES ($1, 'ACME inc', true, 10000, 1000, 1000, 1000, 10000, 10000, 1000, 1000, 1000, 1000, 1000, 20000)`,
 		organizationID)
 	if err != nil {
 		return err

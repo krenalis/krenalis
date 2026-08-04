@@ -547,7 +547,7 @@ func assertOrganizationLimits(t *testing.T, database *db.DB) {
 	if members != 10000 || accessKeys != 1000 || workspaces != 1000 || connectors != 1000 ||
 		connections != 10000 || pipelines != 10000 || organizationRequestsRatePerMinute != 1000 || organizationRequestsMaxCapacity != 1000 ||
 		workspaceRequestsRatePerMinute != 1000 || workspaceRequestsMaxCapacity != 1000 ||
-		workspaceEventsRatePerMinute != 1000 || workspaceEventsMaxCapacity != 1000 {
+		workspaceEventsRatePerMinute != 1000 || workspaceEventsMaxCapacity != 20000 {
 		t.Fatalf("expected default organization limits, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d organization_requests_rate_per_minute=%d organization_requests_max_capacity=%d workspace_requests_rate_per_minute=%d workspace_requests_max_capacity=%d workspace_events_rate_per_minute=%d workspace_events_max_capacity=%d",
 			members, accessKeys, workspaces, connectors, connections, pipelines, organizationRequestsRatePerMinute, organizationRequestsMaxCapacity,
 			workspaceRequestsRatePerMinute, workspaceRequestsMaxCapacity, workspaceEventsRatePerMinute, workspaceEventsMaxCapacity)

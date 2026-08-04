@@ -139,7 +139,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_max_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_max_capacity BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000)`,
-			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_max_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_events_max_capacity BETWEEN 1 AND 100000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_max_capacity integer NOT NULL DEFAULT 20000 CHECK (workspace_events_max_capacity BETWEEN 20000 AND 100000)`,
 			`ALTER TABLE organizations ALTER COLUMN members_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN access_keys_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspaces_limit DROP DEFAULT`,
@@ -171,7 +171,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 				CHECK (available_units >= 0),
 				CHECK (
 					(subject_kind IN ('platform', 'organization', 'workspace') AND capacity_units BETWEEN 1 AND 10000)
-					OR (subject_kind = 'events' AND capacity_units BETWEEN 1 AND 100000)
+					OR (subject_kind = 'events' AND capacity_units BETWEEN 20000 AND 100000)
 				),
 				CHECK (available_units <= capacity_units),
 				CHECK (

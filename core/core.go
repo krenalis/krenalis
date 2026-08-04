@@ -2178,7 +2178,7 @@ const (
 
 	minRequestMaxCapacity = 1
 	maxRequestMaxCapacity = 10_000
-	minEventMaxCapacity   = 1
+	minEventMaxCapacity   = 20_000
 	maxEventMaxCapacity   = 100_000
 )
 

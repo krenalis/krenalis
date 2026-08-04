@@ -19,7 +19,7 @@ CREATE TABLE organizations (
     workspace_requests_rate_per_minute integer NOT NULL CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000),
     workspace_requests_max_capacity integer NOT NULL CHECK (workspace_requests_max_capacity BETWEEN 1 AND 10000),
     workspace_events_rate_per_minute integer NOT NULL CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000),
-    workspace_events_max_capacity integer NOT NULL CHECK (workspace_events_max_capacity BETWEEN 1 AND 100000),
+    workspace_events_max_capacity integer NOT NULL CHECK (workspace_events_max_capacity BETWEEN 20000 AND 100000),
     PRIMARY KEY (id)
 );
 
@@ -102,7 +102,7 @@ CREATE TABLE rate_limit_buckets (
     CHECK (available_units >= 0),
     CHECK (
         (subject_kind IN ('platform', 'organization', 'workspace') AND capacity_units BETWEEN 1 AND 10000)
-        OR (subject_kind = 'events' AND capacity_units BETWEEN 1 AND 100000)
+        OR (subject_kind = 'events' AND capacity_units BETWEEN 20000 AND 100000)
     ),
     CHECK (available_units <= capacity_units),
     CHECK (

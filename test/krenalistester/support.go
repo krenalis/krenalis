@@ -286,7 +286,7 @@ var DefaultOrganizationLimits = OrganizationLimits{
 		},
 		EventsSpecific: RateLimit{
 			RatePerMinute: 1000,
-			MaxCapacity:   1000,
+			MaxCapacity:   20_000,
 		},
 	},
 }

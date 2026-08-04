@@ -46,7 +46,7 @@ func TestOrganizationResourceLimits(t *testing.T) {
 				},
 				EventsSpecific: krenalistester.RateLimit{
 					RatePerMinute: 1303,
-					MaxCapacity:   33,
+					MaxCapacity:   20_033,
 				},
 			},
 		}
@@ -110,7 +110,7 @@ func TestOrganizationResourceLimits(t *testing.T) {
 		limits.Rates.WorkspaceSpecific.RatePerMinute = 402
 		limits.Rates.WorkspaceSpecific.MaxCapacity = 42
 		limits.Rates.EventsSpecific.RatePerMinute = 1503
-		limits.Rates.EventsSpecific.MaxCapacity = 53
+		limits.Rates.EventsSpecific.MaxCapacity = 20_053
 		k.UpdateOrganization(org.ID, org.Name, limits)
 
 		org = k.Organization(activeOrg.ID)
