@@ -417,6 +417,18 @@ func TestCalculateRetryAfter(t *testing.T) {
 			result:        leaseResult{CapacityUnits: 100, RatePerMinute: 60},
 			want:          101 * time.Second,
 		},
+		{
+			name:          "maximum supported event retry",
+			requiredUnits: 20_000,
+			result:        leaseResult{CapacityUnits: 100_000, RatePerMinute: 1_000},
+			want:          maxRetryAfter,
+		},
+		{
+			name:          "retry above maximum is capped",
+			requiredUnits: 1_201,
+			result:        leaseResult{CapacityUnits: 2_000, RatePerMinute: 60},
+			want:          maxRetryAfter,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got := calculateRetryAfter(test.requiredUnits, test.result)

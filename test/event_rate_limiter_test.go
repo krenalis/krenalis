@@ -42,7 +42,7 @@ func TestEventRateLimiterRejectsBatchBeforePublishing(t *testing.T) {
 		Enabled: true,
 	})
 
-	err := k.TryCall(http.MethodPost, "/v1/events",
+	err := k.TryCallWithoutRetry(http.MethodPost, "/v1/events",
 		http.Header{"Authorization": []string{"Bearer " + writeKeys[0]}},
 		[]map[string]any{
 			{"type": "track", "userId": "user-1", "event": "first"},
@@ -110,7 +110,7 @@ func TestEventRateLimiterRestoresUnusedBatchCapacity(t *testing.T) {
 		"type": "track", "userId": "user-1", "event": "second",
 	}, nil)
 
-	err := k.TryCall(http.MethodPost, "/v1/events", headers, map[string]any{
+	err := k.TryCallWithoutRetry(http.MethodPost, "/v1/events", headers, map[string]any{
 		"type": "track", "userId": "user-1", "event": "third",
 	}, nil)
 	statusErr, ok := err.(*krenalistester.StatusCodeError)

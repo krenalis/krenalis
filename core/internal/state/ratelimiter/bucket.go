@@ -29,6 +29,9 @@ const (
 	// next refill doubles the local target.
 	leaseGrowthWindow = 5 * time.Second
 
+	// maxRetryAfter is the maximum advisory retry duration returned to callers.
+	maxRetryAfter = 20 * time.Minute
+
 	// microsecondsPerMinute is the denominator used by PostgreSQL's fractional
 	// per-minute refill calculation.
 	microsecondsPerMinute = 60 * 1_000_000
@@ -203,7 +206,7 @@ func calculateRetryAfter(requiredUnits int, result leaseResult) time.Duration {
 	}
 	numerator := max(int64(missing)*microsecondsPerMinute-int64(result.RefillRemainder), 1)
 	microseconds := (numerator + int64(result.RatePerMinute) - 1) / int64(result.RatePerMinute)
-	return time.Duration(microseconds) * time.Microsecond
+	return min(time.Duration(microseconds)*time.Microsecond, maxRetryAfter)
 }
 
 // cancelWaiter serializes caller cancellation with refill completion.

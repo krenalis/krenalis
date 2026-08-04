@@ -56,7 +56,7 @@ func TestPlatformRateLimiter(t *testing.T) {
 		WHERE subject_kind = 'platform'
 			AND subject_id = 'platform'`)
 
-	err = k.CanGetOrganization(organizations[0].ID)
+	err = k.CanGetOrganizationWithoutRetry(organizations[0].ID)
 	statusErr, ok := err.(*krenalistester.StatusCodeError)
 	if !ok {
 		t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)

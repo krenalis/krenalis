@@ -107,6 +107,12 @@ func (k *Krenalis) CanGetOrganization(id string) error {
 	return k.TryCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
+// CanGetOrganizationWithoutRetry is like CanGetOrganization but returns a 429
+// response without retrying it.
+func (k *Krenalis) CanGetOrganizationWithoutRetry(id string) error {
+	return k.TryCallWithoutRetry("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+}
+
 // ConnectionIdentities returns the connection's identities in the given range,
 // together with their total count.
 func (k *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identity, int) {
