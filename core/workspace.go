@@ -39,7 +39,6 @@ const (
 // Workspace represents a workspace.
 type Workspace struct {
 	core                           *Core
-	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
 	ID                             string            `json:"id"`
