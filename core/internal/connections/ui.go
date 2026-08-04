@@ -127,8 +127,7 @@ type ConnectorConfig struct {
 	Role state.Role
 
 	// Organization is the ID of the organization on behalf of which the
-	// connector is used. A connector, unlike a connection, does not belong to
-	// an organization, but it is always used on behalf of one.
+	// connector is used.
 	Organization string
 
 	OAuth struct {
