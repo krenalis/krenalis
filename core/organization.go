@@ -1367,7 +1367,6 @@ func (this *Organization) Workspace(id string) (*Workspace, error) {
 	}
 	workspace := Workspace{
 		core:                           this.core,
-		organization:                   this,
 		store:                          store,
 		workspace:                      ws,
 		ID:                             ws.ID,
@@ -1394,7 +1393,6 @@ func (this *Organization) Workspaces() []*Workspace {
 		}
 		workspace := Workspace{
 			core:                           this.core,
-			organization:                   this,
 			store:                          store,
 			workspace:                      ws,
 			ID:                             ws.ID,
