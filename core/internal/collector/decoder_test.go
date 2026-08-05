@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"reflect"
@@ -645,6 +646,33 @@ func Test_Decoder(t *testing.T) {
 		})
 	}
 
+}
+
+// TestDecoderResetClearsType verifies that a generic request is not decoded
+// using the endpoint type from a previous request.
+func TestDecoderResetClearsType(t *testing.T) {
+	dec := &decoder{}
+	for _, test := range []struct {
+		path string
+		body string
+	}{
+		{path: "/events/track", body: `{"userId":"x","event":"click"}`},
+		{path: "/events", body: `{"userId":"x","event":"click"}`},
+	} {
+		r := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(test.body))
+		r.Header.Set("Content-Type", "application/json")
+		if err := dec.Reset(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, err := range dec.Events(decoderTestConnectionID, false) {
+		if want := errors.BadRequest("property 'type' is required for a single-event request"); !reflect.DeepEqual(err, want) {
+			t.Fatalf("expected event error %#v, got %#v", want, err)
+		}
+		return
+	}
+	t.Fatal("expected an event decoding error")
 }
 
 // Test_mergeDefaultContext verifies the merge semantics for event-level and
