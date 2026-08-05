@@ -511,18 +511,19 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 						err = fmt.Errorf("invalid event data: %s", err)
 						return
 					}
+					var destinations []string
 					if header := msg.Headers(); header != nil {
-						if destinations, ok := header["destinations"]; ok {
-							for _, d := range destinations {
-								if !isValidDestination(d) {
-									err = fmt.Errorf("invalid event destination: %q", d)
+						if ids, ok := header["destinations"]; ok {
+							for _, id := range ids {
+								if !isValidDestination(id) {
+									err = fmt.Errorf("invalid event destination: %q", id)
 									return
 								}
 							}
-							event.Destinations = destinations
+							destinations = ids
 						}
 					}
-					event.Ack = &ack{msg: msg}
+					event.Destinations = destinationsForMessage(msg, destinations)
 					select {
 					case consumer.events <- event:
 					case <-done:
@@ -551,15 +552,37 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 	return consumer
 }
 
-// ack acknowledges a NATS event.
+// ack coordinates the destination acknowledgments of a NATS message.
 type ack struct {
-	msg jetstream.Msg
+	mu        sync.Mutex // protects remaining and the done field of each destination acknowledgment.
+	msg       jetstream.Msg
+	remaining int // number of destinations that have not acknowledged the message; protected by mu.
 }
 
-// Acknowledge acknowledges the event.
-func (a *ack) Acknowledge() {
-	if err := a.msg.Ack(); err != nil {
-		slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
+// destinationAck acknowledges one destination of a NATS message.
+type destinationAck struct {
+	parent *ack
+	done   bool // whether the destination has acknowledged the message; protected by parent.mu.
+}
+
+// Acknowledge marks the destination as complete and acknowledges the NATS
+// message after all of its destinations have completed.
+func (d *destinationAck) Acknowledge() {
+	p := d.parent
+	p.mu.Lock()
+	if d.done {
+		p.mu.Unlock()
+		return
+	}
+	d.done = true
+	p.remaining--
+	isLast := p.remaining == 0
+	p.mu.Unlock()
+	if isLast {
+		err := p.msg.Ack()
+		if err != nil {
+			slog.Warn(fmt.Sprintf("nats: cannot ack event: %s", err))
+		}
 	}
 }
 
@@ -640,6 +663,25 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 		batch.futures = append(batch.futures, future)
 	}
 	return nil
+}
+
+// destinationsForMessage returns the destinations and their acknowledgments for
+// a NATS message. A message without explicit destinations has one destination
+// whose ID is empty.
+func destinationsForMessage(msg jetstream.Msg, ids []string) []streams.Destination {
+	parent := &ack{msg: msg, remaining: 1}
+	switch n := len(ids); n {
+	case 0:
+		return []streams.Destination{{Ack: &destinationAck{parent: parent}}}
+	default:
+		parent.remaining = n
+		destinations := make([]streams.Destination, n)
+		for i := range destinations {
+			destinations[i].ID = ids[i]
+			destinations[i].Ack = &destinationAck{parent: parent}
+		}
+		return destinations
+	}
 }
 
 // isValidDestination reports whether s is a valid destination identifier.

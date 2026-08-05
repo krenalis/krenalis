@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
-	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -193,20 +192,14 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event0 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user",
-				"messageId":   "msg-0",
-			},
-			Ack: nopAck{},
-		})
-		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user",
-				"messageId":   "msg-1",
-			},
-			Ack: nopAck{},
-		})
+		event0 := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user",
+			"messageId":   "msg-0",
+		}, nopAck{})
+		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user",
+			"messageId":   "msg-1",
+		}, nopAck{})
 
 		s.DiscardEvent(event1)
 		s.SendEvent(event0)
@@ -263,13 +256,10 @@ func Test_Sender_SameUserRebindPreservesOrder(t *testing.T) {
 		defer s.Close(t.Context())
 
 		newEvent := func(anonymousID, messageID string) *Event {
-			return s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-				Attributes: map[string]any{
-					"anonymousId": anonymousID,
-					"messageId":   messageID,
-				},
-				Ack: nopAck{},
-			})
+			return s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+				"anonymousId": anonymousID,
+				"messageId":   messageID,
+			}, nopAck{})
 		}
 
 		// Discarding w-0 releases user-w, so the iteration binds to user-u
@@ -333,13 +323,10 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 
 		makeEvent := func(messageID string) *Event {
 			t.Helper()
-			return s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-				Attributes: map[string]any{
-					"anonymousId": userID,
-					"messageId":   messageID,
-				},
-				Ack: nopAck{},
-			})
+			return s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+				"anonymousId": userID,
+				"messageId":   messageID,
+			}, nopAck{})
 		}
 
 		e0 := makeEvent("msg-0")
@@ -386,13 +373,10 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user",
-				"messageId":   "msg-0",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user",
+			"messageId":   "msg-0",
+		}, nopAck{})
 		s.SendEvent(event)
 
 		time.Sleep(maxQueueDelay)
@@ -590,13 +574,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		s := New(app, nil)
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user-1",
-				"messageId":   "msg-1",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-1",
+		}, nopAck{})
 
 		s.DiscardEvent(event)
 
@@ -627,13 +608,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user-2",
-				"messageId":   "msg-2",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user-2",
+			"messageId":   "msg-2",
+		}, nopAck{})
 		s.SendEvent(event)
 
 		select {
@@ -665,13 +643,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user-3",
-				"messageId":   "msg-3",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user-3",
+			"messageId":   "msg-3",
+		}, nopAck{})
 		s.SendEvent(event)
 
 		select {
@@ -691,11 +666,8 @@ func Test_Sender_UserRemoval(t *testing.T) {
 
 // createTestEvent creates a minimal event for tests.
 func createTestEvent(s *Sender, i int) *Event {
-	return s.CreateEvent(testPipelineID, "page", types.Type{}, streams.Event{
-		Attributes: map[string]any{
-			"anonymousId": "user123",
-			"messageId":   fmt.Sprintf("msg-%d", i),
-		},
-		Ack: nopAck{},
-	})
+	return s.CreateEvent(testPipelineID, "page", types.Type{}, map[string]any{
+		"anonymousId": "user123",
+		"messageId":   fmt.Sprintf("msg-%d", i),
+	}, nopAck{})
 }
