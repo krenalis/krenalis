@@ -128,7 +128,8 @@ type queue struct {
 }
 
 // dequeue removes the event at index i and updates the queue state.
-// It must be called holding the sender's mu mutex.
+//
+// It must be called holding the owning Sender's mutex.
 func (q *queue) dequeue(i int) {
 	q.events[i] = nil
 	q.total--
@@ -140,8 +141,9 @@ func (q *queue) dequeue(i int) {
 	}
 }
 
-// enqueue appends event to the queue, blocking while it is full.
-// It must be called holding the sender's mu mutex.
+// enqueue appends event to the queue.
+//
+// It must be called holding the owning Sender's mutex.
 func (q *queue) enqueue(event *Event) {
 	q.events = append(q.events, event)
 	q.total++
@@ -149,7 +151,7 @@ func (q *queue) enqueue(event *Event) {
 
 // assertTotal asserts that the events are n.
 //
-// It must be called holding the s.mu mutex.
+// It must be called holding the owning Sender's mutex.
 func (q *queue) assertTotal(n int) {
 	total := 0
 	for _, event := range q.events {
@@ -359,6 +361,7 @@ func (s *Sender) discard(err error) {
 	s.iterator.numConsumed--
 	if s.iterator.numConsumed == 0 {
 		s.iterator.sameUser.user = nil
+		s.iterator.index = i + 1
 	}
 	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %s, message ID %q\n",
 		s.iterator, i, s.iterator.index, e.pipeline, e.Received.MessageID())
@@ -564,7 +567,7 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	}
 	s.iterator.index = i
 	if event != nil && consume {
-		s.queue.events[i].iterator = s.iterator
+		event.iterator = s.iterator
 		s.iterator.index++
 		if event.user.consumed == 0 {
 			event.user.iterator = s.iterator
@@ -744,7 +747,7 @@ func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern st
 	}
 
 	for _, ack := range acks {
-		ack()
+		ack.Acknowledge()
 	}
 
 	for key, count := range metricsCounts {

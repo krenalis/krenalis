@@ -68,7 +68,13 @@ import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import { PipelineToSet, Filter, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/pipeline';
+import {
+	PipelineToSet,
+	Filter,
+	RequiredConsents,
+	TransformationFunction,
+	TransformationPurpose,
+} from '../../../lib/api/types/pipeline';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
@@ -1315,6 +1321,16 @@ const FullscreenTransformation = ({
 		return f;
 	}, [pipeline.filter]);
 
+	const normalizedConsents = useMemo(() => {
+		// Discard the required consents (and their operator) when no purpose
+		// has been selected.
+		let consents: RequiredConsents | null = null;
+		if (pipeline.requiredConsents != null && pipeline.requiredConsents.purposes.length > 0) {
+			consents = pipeline.requiredConsents;
+		}
+		return consents;
+	}, [pipeline.requiredConsents]);
+
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
 			setEvents((prevEvents) => [...prevEvents, ...newly]);
@@ -1322,6 +1338,7 @@ const FullscreenTransformation = ({
 		null,
 		connection.id,
 		normalizedFilter,
+		normalizedConsents,
 	);
 
 	useEffect(() => {
@@ -1344,7 +1361,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter]);
+	}, [pipeline.filter, pipeline.requiredConsents]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);

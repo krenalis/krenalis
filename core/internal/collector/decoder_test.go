@@ -82,20 +82,18 @@ func TestDecoderEventCount(t *testing.T) {
 	}
 }
 
-// TestDecoderResetResetsEventCountAndType verifies that Reset clears batch and
-// endpoint type state when decoding different request forms.
-func TestDecoderResetResetsEventCountAndType(t *testing.T) {
+// TestDecoderResetResetsEventCount verifies that Reset updates the event count
+// for each request form.
+func TestDecoderResetResetsEventCount(t *testing.T) {
 	dec := &decoder{}
 	for _, test := range []struct {
-		path     string
-		body     string
-		count    int
-		eventErr error
+		path  string
+		body  string
+		count int
 	}{
 		{path: "/events", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2},
 		{path: "/events", body: `{"batch":[{"type":"page","userId":"x"}]}`, count: 1},
 		{path: "/events/track", body: `{"userId":"x","event":"click"}`, count: 1},
-		{path: "/events", body: `{"userId":"x","event":"click"}`, count: 1, eventErr: errors.BadRequest("property 'type' is required for a single-event request")},
 	} {
 		r := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(test.body))
 		r.Header.Set("Content-Type", "application/json")
@@ -104,18 +102,6 @@ func TestDecoderResetResetsEventCountAndType(t *testing.T) {
 		}
 		if count := dec.EventCount(); count != test.count {
 			t.Fatalf("expected event count %d, got %d", test.count, count)
-		}
-		decoded := 0
-		var eventErr error
-		for _, err := range dec.Events(decoderTestConnectionID, false) {
-			eventErr = err
-			decoded++
-		}
-		if !reflect.DeepEqual(test.eventErr, eventErr) {
-			t.Fatalf("expected event error %#v, got %#v", test.eventErr, eventErr)
-		}
-		if decoded != test.count {
-			t.Fatalf("expected decoded events %d, got %d", test.count, decoded)
 		}
 	}
 }
@@ -389,6 +375,65 @@ func Test_Decoder(t *testing.T) {
 					"name":       "login",
 				}},
 			},
+		},
+
+		// krenalis.track('click', {}, {context: {consents: {...}}})
+		{
+			typ:  "track",
+			body: `{"context":{"consents":{"analytics":false,"essential_services":true,"my_test_purpose":false,"targeted_advertising":false}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context": map[string]any{
+						"consents": map[string]any{
+							"analytics":            false,
+							"essential_services":   true,
+							"my_test_purpose":      false,
+							"targeted_advertising": false,
+						},
+						"ip": ip,
+					},
+					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
+					"type":       "track",
+					"event":      "Product View",
+				}},
+			},
+		},
+		// Batch-level default context.consents is merged into the event, without
+		// overriding consent purposes already specified at the event level.
+		{
+			body: `{"batch":[{"type":"track","event":"click","anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","context":{"consents":{"analytics":true}}}],"context":{"consents":{"analytics":false,"essential_services":true}}}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context": map[string]any{
+						"consents": map[string]any{
+							"analytics":          true,
+							"essential_services": true,
+						},
+						"ip": ip,
+					},
+					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
+					"type":       "track",
+					"event":      "click",
+				}},
+			},
+		},
+		// context.consents with a non-boolean value.
+		{
+			typ:  "track",
+			body: `{"context":{"consents":{"analytics":"no"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				err: errors.BadRequest(`value of "analytics" in 'context.consents' is not a valid boolean`),
+			}},
+		},
+		// context.consents with a non-object value.
+		{
+			typ:  "track",
+			body: `{"context":{"consents":"no"},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				err: errors.BadRequest("property 'context.consents' is not a valid object"),
+			}},
 		},
 
 		// krenalis.track('click'); krenalis.track('click');

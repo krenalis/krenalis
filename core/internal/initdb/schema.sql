@@ -146,6 +146,13 @@ CREATE TABLE access_keys (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE consent_purposes (
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+    name varchar(100) NOT NULL,
+    PRIMARY KEY (workspace, code)
+);
+
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError');
@@ -189,6 +196,8 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
+    required_consents varchar(100)[] NOT NULL DEFAULT '{}',
+    required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
     transformation_version varchar(128) NOT NULL DEFAULT '',
@@ -262,12 +271,14 @@ CREATE TABLE pipelines_runs (
     passed_3 integer NOT NULL DEFAULT 0,
     passed_4 integer NOT NULL DEFAULT 0,
     passed_5 integer NOT NULL DEFAULT 0,
+    passed_6 integer NOT NULL DEFAULT 0,
     failed_0 integer NOT NULL DEFAULT 0,
     failed_1 integer NOT NULL DEFAULT 0,
     failed_2 integer NOT NULL DEFAULT 0,
     failed_3 integer NOT NULL DEFAULT 0,
     failed_4 integer NOT NULL DEFAULT 0,
     failed_5 integer NOT NULL DEFAULT 0,
+    failed_6 integer NOT NULL DEFAULT 0,
     error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -305,12 +316,14 @@ CREATE TABLE pipelines_metrics (
     passed_3 integer NOT NULL,
     passed_4 integer NOT NULL,
     passed_5 integer NOT NULL,
+    passed_6 integer NOT NULL,
     failed_0 integer NOT NULL,
     failed_1 integer NOT NULL,
     failed_2 integer NOT NULL,
     failed_3 integer NOT NULL,
     failed_4 integer NOT NULL,
     failed_5 integer NOT NULL,
+    failed_6 integer NOT NULL,
     PRIMARY KEY (pipeline, timeslot)
 );
 
@@ -361,6 +374,7 @@ CREATE INDEX ON accounts (connector);
 
 CREATE TYPE notification_name AS ENUM (
     'AcceptInvitation',
+    'AddConsentPurpose',
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',
@@ -370,6 +384,7 @@ CREATE TYPE notification_name AS ENUM (
     'CreateWorkspace',
     'DeleteAccessKey',
     'DeleteConnection',
+    'DeleteConsentPurpose',
     'DeleteEventWriteKey',
     'DeleteMember',
     'DeleteMembers',
@@ -395,6 +410,7 @@ CREATE TYPE notification_name AS ENUM (
     'StartIdentityResolution',
     'UnlinkConnection',
     'UpdateConnection',
+    'UpdateConsentPurpose',
     'UpdateIdentityPropertiesToUnset',
     'UpdateIdentityResolutionSettings',
     'UpdateOrganization',

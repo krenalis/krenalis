@@ -522,11 +522,7 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 							event.Destinations = destinations
 						}
 					}
-					event.Ack = func() {
-						if err := msg.Ack(); err != nil {
-							slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
-						}
-					}
+					event.Ack = &ack{msg: msg}
 					select {
 					case consumer.events <- event:
 					case <-done:
@@ -553,6 +549,18 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 		<-done
 	}()
 	return consumer
+}
+
+// ack acknowledges a NATS event.
+type ack struct {
+	msg jetstream.Msg
+}
+
+// Acknowledge acknowledges the event.
+func (a *ack) Acknowledge() {
+	if err := a.msg.Ack(); err != nil {
+		slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
+	}
 }
 
 // consumer implements the streams.Consumer interface.

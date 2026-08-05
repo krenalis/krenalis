@@ -127,6 +127,7 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertRateLimitLeaseFunction(t, database)
+	assertConsentStepColumns(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
@@ -430,12 +431,14 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 		"passed_3",
 		"passed_4",
 		"passed_5",
+		"passed_6",
 		"failed_0",
 		"failed_1",
 		"failed_2",
 		"failed_3",
 		"failed_4",
 		"failed_5",
+		"failed_6",
 	} {
 		expectedConstraints = append(expectedConstraints, "pipelines_metrics_"+column+"_not_null")
 	}
@@ -573,21 +576,44 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 		"workspace_events_rate_per_minute",
 		"workspace_events_max_capacity",
 	} {
-		hasDefault, err := database.QueryExists(t.Context(), `
-			SELECT FROM pg_attrdef d
-			JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
-			JOIN pg_class c ON c.oid = d.adrelid
-			JOIN pg_namespace n ON n.oid = c.relnamespace
-			WHERE n.nspname = current_schema()
-				AND c.relname = 'organizations'
-				AND a.attname = $1`, column)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if hasDefault {
+		if hasDefault(t, database, "organizations", column) {
 			t.Fatalf("expected column organizations.%s to have no default, got a default", column)
 		}
 	}
+}
+
+// assertConsentStepColumns verifies that the consent step columns were added,
+// keeping their default on pipelines_runs and dropping it on
+// pipelines_metrics.
+func assertConsentStepColumns(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []string{"passed_6", "failed_6"} {
+		if !hasDefault(t, database, "pipelines_runs", column) {
+			t.Fatalf("expected column pipelines_runs.%s to have a default, got no default", column)
+		}
+		if hasDefault(t, database, "pipelines_metrics", column) {
+			t.Fatalf("expected column pipelines_metrics.%s to have no default, got a default", column)
+		}
+	}
+}
+
+// hasDefault reports whether table.column has a database default.
+func hasDefault(t *testing.T, database *db.DB, table, column string) bool {
+	t.Helper()
+
+	found, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_attrdef d
+		JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+		JOIN pg_class c ON c.oid = d.adrelid
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = current_schema()
+			AND c.relname = $1
+			AND a.attname = $2`, table, column)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return found
 }
 
 // assertIndexExists verifies that an index with name exists.

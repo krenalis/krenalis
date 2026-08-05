@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/events"
@@ -795,6 +796,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	var observedEvents []events.Event
 	var pendingReceivePassed []string
+	var pendingConsentPassed []string
+	var pendingConsentFailed []string
 	var pendingFilterPassed []string
 	var pendingFilterFailed []string
 
@@ -830,6 +833,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
+			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				pendingConsentFailed = append(pendingConsentFailed, p.ID)
+				continue
+			}
+			pendingConsentPassed = append(pendingConsentPassed, p.ID)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -846,6 +854,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
+			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				pendingConsentFailed = append(pendingConsentFailed, p.ID)
+				continue
+			}
+			pendingConsentPassed = append(pendingConsentPassed, p.ID)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -867,6 +880,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				pendingFilterPassed = append(pendingFilterPassed, p.ID)
+				if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+					pendingConsentFailed = append(pendingConsentFailed, p.ID)
+					continue
+				}
+				pendingConsentPassed = append(pendingConsentPassed, p.ID)
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {
@@ -893,6 +911,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	for _, pipeline := range pendingReceivePassed {
 		c.metrics.ReceivePassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingConsentPassed {
+		c.metrics.ConsentPassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingConsentFailed {
+		c.metrics.ConsentFailed(pipeline, 1)
 	}
 	for _, pipeline := range pendingFilterPassed {
 		c.metrics.FilterPassed(pipeline, 1)

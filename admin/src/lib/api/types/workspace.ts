@@ -39,6 +39,11 @@ interface LatestAlterProfileSchema {
 	error: string | null;
 }
 
+interface ConsentPurpose {
+	code: string;
+	name: string;
+}
+
 export default Workspace;
 export type {
 	CreateWorkspaceResponse,
@@ -47,4 +52,5 @@ export type {
 	PrimarySources,
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
+	ConsentPurpose,
 };
