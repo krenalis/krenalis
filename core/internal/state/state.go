@@ -218,7 +218,8 @@ func (state *State) Close(ctx context.Context) {
 	state.close.cancel()
 	state.close.Wait()
 	state.rateLimiter.Close(ctx)
-	// Limiter.Close reads unused capacity from buckets still owned by the state.
+	// Keep state-owned buckets reachable until Limiter.Close returns so their
+	// unused capacity can be restored.
 	runtime.KeepAlive(state)
 	state.notifications.Close()
 }

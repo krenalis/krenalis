@@ -126,13 +126,19 @@ func New(db *db.DB, metrics Metrics) *Limiter {
 	return limiter
 }
 
-// Close shuts down the limiter and waits for all its operations to stop, even
-// if ctx is canceled.
+// Close shuts down the limiter and waits for its background workers to stop,
+// even if ctx is canceled.
 //
-// When Close is called, no other calls to Limiter's methods or to methods of
-// buckets created by it should be in progress and no other shall be made. The
-// caller must keep the buckets for existing subjects reachable until Close
-// returns. Subsequent calls to Close return immediately.
+// Close must not be called concurrently with any other method on the Limiter
+// or on buckets created by it. No such methods may be called after shutdown
+// begins.
+//
+// Close restores unused capacity from buckets that remain reachable. The caller
+// must therefore keep all buckets for existing subjects reachable until Close
+// returns. For example, it can call runtime.KeepAlive with the object that owns
+// them immediately after calling Close.
+//
+// Subsequent calls to Close return immediately.
 func (limiter *Limiter) Close(ctx context.Context) {
 	if limiter.close.Swap(true) {
 		return
